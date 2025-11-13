@@ -133,6 +133,10 @@ function extractPhone(description) {
  * Extrait l'ID de réservation
  */
 function extractBookingId(description, uid) {
+  // Vérifier que description et uid existent
+  if (!description) description = '';
+  if (!uid) uid = '';
+  
   // Airbnb
   const airbnbMatch = description.match(/Confirmation code[:\s]+([A-Z0-9]+)/i);
   if (airbnbMatch) return airbnbMatch[1];
