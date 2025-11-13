@@ -7,6 +7,7 @@ const cron = require('node-cron');
 const fs = require('fs').promises;
 const icalService = require('./services/icalService');
 const notificationService = require('./services/notificationService');
+const messagingService = require('./services/messagingService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -478,7 +479,81 @@ app.get('/api/config', (req, res) => {
 // ============================================
 // DÉMARRAGE
 // ============================================
+// ============================================
+// ROUTES API - MESSAGES
+// ============================================
 
+// GET - Templates de messages
+app.get('/api/messages/templates', (req, res) => {
+  res.json({
+    templates: messagingService.MESSAGE_TEMPLATES
+  });
+});
+
+// POST - Générer un message
+app.post('/api/messages/generate', (req, res) => {
+  const { reservationUid, templateKey } = req.body;
+  
+  if (!reservationUid || !templateKey) {
+    return res.status(400).json({ error: 'reservationUid et templateKey requis' });
+  }
+  
+  // Trouver la réservation
+  let reservation = null;
+  for (const propertyId in reservationsStore.properties) {
+    const found = reservationsStore.properties[propertyId].find(r => r.uid === reservationUid);
+    if (found) {
+      reservation = found;
+      break;
+    }
+  }
+  
+  if (!reservation) {
+    return res.status(404).json({ error: 'Réservation non trouvée' });
+  }
+  
+  // Données personnalisées par logement (à adapter)
+  const customData = {
+    propertyAddress: 'Adresse du logement à définir',
+    accessCode: 'Code à définir'
+  };
+  
+  const message = messagingService.generateQuickMessage(reservation, templateKey, customData);
+  
+  if (!message) {
+    return res.status(404).json({ error: 'Template non trouvé' });
+  }
+  
+  res.json(message);
+});
+
+// GET - Arrivées/Départs à venir
+app.get('/api/messages/upcoming', (req, res) => {
+  const allReservations = [];
+  
+  PROPERTIES.forEach(property => {
+    const propertyReservations = reservationsStore.properties[property.id] || [];
+    propertyReservations.forEach(reservation => {
+      allReservations.push({
+        ...reservation,
+        property: {
+          id: property.id,
+          name: property.name,
+          color: property.color
+        }
+      });
+    });
+  });
+  
+  res.json({
+    checkinsToday: messagingService.getUpcomingCheckIns(allReservations, 0),
+    checkinsTomorrow: messagingService.getUpcomingCheckIns(allReservations, 1),
+    checkinsIn3Days: messagingService.getUpcomingCheckIns(allReservations, 3),
+    checkinsIn7Days: messagingService.getUpcomingCheckIns(allReservations, 7),
+    currentStays: messagingService.getCurrentStays(allReservations),
+    checkoutsToday: messagingService.getUpcomingCheckOuts(allReservations, 0)
+  });
+});
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
