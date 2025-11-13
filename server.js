@@ -25,12 +25,21 @@ let reservationsStore = {
 // Configuration des logements
 const PROPERTIES = [
   {
-    id: 'saint-gratien',
-    name: 'Saint-Gratien',
+    id: 'saint-gratien-RDC',
+    name: 'Saint-Gratien - Logement RDC',
     color: '#E67E50',
     icalUrls: [
-      process.env.SAINT_GRATIEN_ICAL_URL,
-      process.env.SAINT_GRATIEN_BOOKING_URL
+      process.env.SAINT_GRATIEN_RDC_AIRBNB_URL,
+      process.env.SAINT_GRATIEN__RDC_BOOKING_URL
+    ].filter(Boolean)
+  },
+  {
+    id: 'saint-gratien-ETG',
+    name: 'Saint-Gratien - Logement ETG',
+    color: '#D4754A',
+    icalUrls: [
+      process.env.SAINT_GRATIEN_ETG_AIRBNB_URL,
+      process.env.SAINT_GRATIEN_ETG_BOOKING_URL
     ].filter(Boolean)
   },
   {
@@ -38,7 +47,7 @@ const PROPERTIES = [
     name: 'Montmorency',
     color: '#B87A5C',
     icalUrls: [
-      process.env.MONTMORENCY_ICAL_URL,
+      process.env.MONTMORENCY_AIRBNB_URL,
       process.env.MONTMORENCY_BOOKING_URL
     ].filter(Boolean)
   },
@@ -47,7 +56,7 @@ const PROPERTIES = [
     name: 'Bessancourt',
     color: '#8B7355',
     icalUrls: [
-      process.env.BESSANCOURT_ICAL_URL,
+      process.env.BESSANCOURT_AIRBNB_URL,
       process.env.BESSANCOURT_BOOKING_URL
     ].filter(Boolean)
   },
@@ -56,9 +65,9 @@ const PROPERTIES = [
     name: 'Frépillon',
     color: '#A0826D',
     icalUrls: [
-      process.env.FREPILLON_ICAL_URL,
+      process.env.FREPILLON_AIRBNB_URL,
       process.env.FREPILLON_BOOKING_URL
-    ].filter(Boolean)
+      ].filter(Boolean)
   }
 ];
 
