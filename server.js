@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const cron = require('node-cron');
+const fs = require('fs').promises;
 const icalService = require('./services/icalService');
 const notificationService = require('./services/notificationService');
 
@@ -22,54 +23,78 @@ let reservationsStore = {
   syncStatus: 'idle'
 };
 
-// Configuration des logements
-const PROPERTIES = [
-  {
-    id: 'saint-gratien-RDC',
-    name: 'Saint-Gratien - Logement RDC',
-    color: '#E67E50',
-    icalUrls: [
-      process.env.SAINT_GRATIEN_RDC_AIRBNB_URL,
-      process.env.SAINT_GRATIEN__RDC_BOOKING_URL
-    ].filter(Boolean)
-  },
-  {
-    id: 'saint-gratien-ETG',
-    name: 'Saint-Gratien - Logement ETG',
-    color: '#D4754A',
-    icalUrls: [
-      process.env.SAINT_GRATIEN_ETG_AIRBNB_URL,
-      process.env.SAINT_GRATIEN_ETG_BOOKING_URL
-    ].filter(Boolean)
-  },
-  {
-    id: 'montmorency',
-    name: 'Montmorency',
-    color: '#B87A5C',
-    icalUrls: [
-      process.env.MONTMORENCY_AIRBNB_URL,
-      process.env.MONTMORENCY_BOOKING_URL
-    ].filter(Boolean)
-  },
-  {
-    id: 'bessancourt',
-    name: 'Bessancourt',
-    color: '#8B7355',
-    icalUrls: [
-      process.env.BESSANCOURT_AIRBNB_URL,
-      process.env.BESSANCOURT_BOOKING_URL
-    ].filter(Boolean)
-  },
-  {
-    id: 'frepillon',
-    name: 'Frépillon',
-    color: '#A0826D',
-    icalUrls: [
-      process.env.FREPILLON_AIRBNB_URL,
-      process.env.FREPILLON_BOOKING_URL
-      ].filter(Boolean)
+// Configuration file path
+const CONFIG_FILE = path.join(__dirname, 'properties-config.json');
+
+// Load properties from config file or use defaults
+let PROPERTIES = [];
+
+async function loadProperties() {
+  try {
+    const data = await fs.readFile(CONFIG_FILE, 'utf8');
+    PROPERTIES = JSON.parse(data);
+    console.log('✅ Configuration chargée depuis properties-config.json');
+  } catch (error) {
+    // Si le fichier n'existe pas, utiliser la config par défaut depuis .env
+    PROPERTIES = [
+      {
+        id: 'saint-gratien-1',
+        name: 'Saint-Gratien - Logement RDC',
+        color: '#E67E50',
+        icalUrls: [
+          process.env.SAINT_GRATIEN_1_AIRBNB_URL,
+          process.env.SAINT_GRATIEN_1_BOOKING_URL
+        ].filter(Boolean)
+      },
+      {
+        id: 'saint-gratien-2',
+        name: 'Saint-Gratien - Logement ETG',
+        color: '#D4754A',
+        icalUrls: [
+          process.env.SAINT_GRATIEN_2_AIRBNB_URL,
+          process.env.SAINT_GRATIEN_2_BOOKING_URL
+        ].filter(Boolean)
+      },
+      {
+        id: 'montmorency',
+        name: 'Montmorency',
+        color: '#B87A5C',
+        icalUrls: [
+          process.env.MONTMORENCY_AIRBNB_URL,
+          process.env.MONTMORENCY_BOOKING_URL
+        ].filter(Boolean)
+      },
+      {
+        id: 'bessancourt',
+        name: 'Bessancourt',
+        color: '#8B7355',
+        icalUrls: [
+          process.env.BESSANCOURT_AIRBNB_URL,
+          process.env.BESSANCOURT_BOOKING_URL
+        ].filter(Boolean)
+      },
+      {
+        id: 'frepillon',
+        name: 'Frépillon',
+        color: '#A0826D',
+        icalUrls: [
+          process.env.FREPILLON_AIRBNB_URL,
+          process.env.FREPILLON_BOOKING_URL
+        ].filter(Boolean)
+      }
+    ];
+    console.log('⚠️  Utilisation de la configuration par défaut (.env)');
   }
-];
+}
+
+async function saveProperties() {
+  try {
+    await fs.writeFile(CONFIG_FILE, JSON.stringify(PROPERTIES, null, 2));
+    console.log('✅ Configuration sauvegardée dans properties-config.json');
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde:', error.message);
+  }
+}
 
 // Fonction de synchronisation
 async function syncAllCalendars() {
@@ -94,7 +119,7 @@ async function syncAllCalendars() {
       const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
       
       if (trulyNewReservations.length > 0) {
-  newReservations.push(...trulyNewReservations.map(r => ({
+        newReservations.push(...trulyNewReservations.map(r => ({
           ...r,
           propertyName: property.name,
           propertyColor: property.color
@@ -123,10 +148,9 @@ async function syncAllCalendars() {
 }
 
 // ============================================
-// ROUTES API
+// ROUTES API - RESERVATIONS
 // ============================================
 
-// GET - Récupérer toutes les réservations
 app.get('/api/reservations', (req, res) => {
   const allReservations = [];
   
@@ -157,7 +181,6 @@ app.get('/api/reservations', (req, res) => {
   });
 });
 
-// GET - Réservations par logement
 app.get('/api/reservations/:propertyId', (req, res) => {
   const { propertyId } = req.params;
   const property = PROPERTIES.find(p => p.id === propertyId);
@@ -179,7 +202,6 @@ app.get('/api/reservations/:propertyId', (req, res) => {
   });
 });
 
-// POST - Forcer la synchronisation
 app.post('/api/sync', async (req, res) => {
   if (reservationsStore.syncStatus === 'syncing') {
     return res.status(409).json({ 
@@ -207,7 +229,6 @@ app.post('/api/sync', async (req, res) => {
   }
 });
 
-// GET - Statistiques
 app.get('/api/stats', (req, res) => {
   const stats = {
     totalReservations: 0,
@@ -239,7 +260,6 @@ app.get('/api/stats', (req, res) => {
       current
     };
     
-    // Stats par mois
     reservations.forEach(r => {
       const month = new Date(r.start).toISOString().slice(0, 7);
       stats.byMonth[month] = (stats.byMonth[month] || 0) + 1;
@@ -249,7 +269,6 @@ app.get('/api/stats', (req, res) => {
   res.json(stats);
 });
 
-// GET - Disponibilités
 app.get('/api/availability/:propertyId', (req, res) => {
   const { propertyId } = req.params;
   const { startDate, endDate } = req.query;
@@ -263,7 +282,6 @@ app.get('/api/availability/:propertyId', (req, res) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
-  // Vérifier les chevauchements
   const overlappingReservations = reservations.filter(r => {
     const rStart = new Date(r.start);
     const rEnd = new Date(r.end);
@@ -279,6 +297,154 @@ app.get('/api/availability/:propertyId', (req, res) => {
     available: overlappingReservations.length === 0,
     overlappingReservations
   });
+});
+
+// ============================================
+// ROUTES API - GESTION DES LOGEMENTS
+// ============================================
+
+// GET - Liste des logements
+app.get('/api/properties', (req, res) => {
+  res.json({
+    properties: PROPERTIES.map(p => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      icalUrls: p.icalUrls.map(url => ({
+        url,
+        source: icalService.extractSource ? icalService.extractSource(url) : 'Inconnu'
+      })),
+      reservationCount: (reservationsStore.properties[p.id] || []).length
+    }))
+  });
+});
+
+// GET - Détails d'un logement
+app.get('/api/properties/:propertyId', (req, res) => {
+  const { propertyId } = req.params;
+  const property = PROPERTIES.find(p => p.id === propertyId);
+  
+  if (!property) {
+    return res.status(404).json({ error: 'Logement non trouvé' });
+  }
+  
+  res.json({
+    id: property.id,
+    name: property.name,
+    color: property.color,
+    icalUrls: property.icalUrls,
+    reservationCount: (reservationsStore.properties[property.id] || []).length
+  });
+});
+
+// POST - Créer un nouveau logement
+app.post('/api/properties', async (req, res) => {
+  const { name, color, icalUrls } = req.body;
+  
+  if (!name || !color) {
+    return res.status(400).json({ error: 'Nom et couleur requis' });
+  }
+  
+  const id = name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  
+  if (PROPERTIES.find(p => p.id === id)) {
+    return res.status(409).json({ error: 'Un logement avec cet identifiant existe déjà' });
+  }
+  
+  const newProperty = {
+    id,
+    name,
+    color,
+    icalUrls: icalUrls || []
+  };
+  
+  PROPERTIES.push(newProperty);
+  await saveProperties();
+  
+  res.status(201).json({
+    message: 'Logement créé avec succès',
+    property: newProperty
+  });
+});
+
+// PUT - Modifier un logement
+app.put('/api/properties/:propertyId', async (req, res) => {
+  const { propertyId } = req.params;
+  const { name, color, icalUrls } = req.body;
+  
+  const propertyIndex = PROPERTIES.findIndex(p => p.id === propertyId);
+  
+  if (propertyIndex === -1) {
+    return res.status(404).json({ error: 'Logement non trouvé' });
+  }
+  
+  if (name) PROPERTIES[propertyIndex].name = name;
+  if (color) PROPERTIES[propertyIndex].color = color;
+  if (icalUrls !== undefined) PROPERTIES[propertyIndex].icalUrls = icalUrls;
+  
+  await saveProperties();
+  
+  res.json({
+    message: 'Logement modifié avec succès',
+    property: PROPERTIES[propertyIndex]
+  });
+});
+
+// DELETE - Supprimer un logement
+app.delete('/api/properties/:propertyId', async (req, res) => {
+  const { propertyId } = req.params;
+  
+  const propertyIndex = PROPERTIES.findIndex(p => p.id === propertyId);
+  
+  if (propertyIndex === -1) {
+    return res.status(404).json({ error: 'Logement non trouvé' });
+  }
+  
+  const deletedProperty = PROPERTIES.splice(propertyIndex, 1)[0];
+  delete reservationsStore.properties[propertyId];
+  
+  await saveProperties();
+  
+  res.json({
+    message: 'Logement supprimé avec succès',
+    property: deletedProperty
+  });
+});
+
+// POST - Tester une URL iCal
+app.post('/api/properties/test-ical', async (req, res) => {
+  const { url } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ error: 'URL requise' });
+  }
+  
+  try {
+    const testProperty = {
+      id: 'test',
+      name: 'Test',
+      color: '#000000',
+      icalUrls: [url]
+    };
+    
+    const reservations = await icalService.fetchReservations(testProperty);
+    
+    res.json({
+      success: true,
+      message: 'URL iCal valide',
+      reservationCount: reservations.length,
+      sampleReservation: reservations[0] || null
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: 'URL iCal invalide ou inaccessible',
+      details: error.message
+    });
+  }
 });
 
 // POST - Test notification
@@ -322,6 +488,10 @@ app.listen(PORT, async () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
   console.log('📅 Interface web disponible');
   console.log('');
+  
+  // Charger la configuration
+  await loadProperties();
+  
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
     const status = p.icalUrls.length > 0 ? '✅' : '⚠️';
