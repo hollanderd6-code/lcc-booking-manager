@@ -1,0 +1,29 @@
+{
+  "name": "lcc-booking-manager",
+  "version": "1.0.0",
+  "description": "Système professionnel de gestion de réservations iCal pour La Conciergerie de Charles",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "install-deps": "npm install"
+  },
+  "keywords": ["reservation", "ical", "airbnb", "booking", "calendar", "conciergerie"],
+  "author": "La Conciergerie de Charles",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-ical": "^0.18.0",
+    "axios": "^1.6.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7",
+    "dotenv": "^16.3.1",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "moment-timezone": "^0.5.43",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

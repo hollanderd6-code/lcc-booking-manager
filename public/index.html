@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCC Booking Manager - Gestion des Réservations</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <div class="logo">
+          <i class="fas fa-home"></i>
+          <span>LCC Booking Manager</span>
+        </div>
+        
+        <div class="header-actions">
+          <button class="btn-icon" id="syncBtn" title="Synchroniser">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <button class="btn-icon" id="statsBtn" title="Statistiques">
+            <i class="fas fa-chart-bar"></i>
+          </button>
+          <button class="btn-icon" id="settingsBtn" title="Paramètres">
+            <i class="fas fa-cog"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <div class="status-item">
+          <i class="fas fa-calendar-check"></i>
+          <span id="totalReservations">-</span> réservations
+        </div>
+        <div class="status-item">
+          <i class="fas fa-clock"></i>
+          <span id="upcomingReservations">-</span> à venir
+        </div>
+        <div class="status-item">
+          <i class="fas fa-door-open"></i>
+          <span id="currentReservations">-</span> en cours
+        </div>
+        <div class="status-item sync-status">
+          <i class="fas fa-sync-alt" id="syncIcon"></i>
+          <span id="lastSync">Jamais synchronisé</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Filters -->
+      <div class="filters-section">
+        <div class="filter-group">
+          <label>
+            <i class="fas fa-home"></i>
+            Logements
+          </label>
+          <div class="property-filters" id="propertyFilters">
+            <!-- Generated dynamically -->
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <label>
+            <i class="fas fa-eye"></i>
+            Affichage
+          </label>
+          <div class="view-toggle">
+            <button class="view-btn active" data-view="month">
+              <i class="fas fa-calendar"></i> Mois
+            </button>
+            <button class="view-btn" data-view="week">
+              <i class="fas fa-calendar-week"></i> Semaine
+            </button>
+            <button class="view-btn" data-view="list">
+              <i class="fas fa-list"></i> Liste
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="calendar-container">
+        <div id="calendar"></div>
+      </div>
+
+      <!-- Reservations List -->
+      <div class="reservations-list" id="reservationsList" style="display: none;">
+        <!-- Generated dynamically -->
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Reservation Modal -->
+  <div class="modal" id="reservationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Détails de la réservation</h2>
+        <button class="modal-close" id="modalClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Content generated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Modal -->
+  <div class="modal" id="statsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-chart-bar"></i>
+          Statistiques
+        </h2>
+        <button class="modal-close" onclick="closeStatsModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="statsModalBody">
+        <div class="stats-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          Chargement des statistiques...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-cog"></i>
+          Paramètres
+        </h2>
+        <button class="modal-close" onclick="closeSettingsModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="settingsModalBody">
+        <!-- Content generated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Synchronisation en cours...</p>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
