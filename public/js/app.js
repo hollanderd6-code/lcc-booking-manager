@@ -1,217 +1,233 @@
 // ========================================
-// CONFIGURATION & STATE
+// PLATFORM APP - MODERN BOOKING MANAGER
 // ========================================
+
 const API_URL = '';
-let calendar;
+let calendar = null;
 let allReservations = [];
-let allProperties = [];
-let activePropertyFilters = new Set();
-let currentView = 'month';
+let activeFilters = new Set();
 
 // ========================================
 // INITIALIZATION
 // ========================================
+
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('🚀 LCC Booking Manager - Initialisation...');
+  console.log('🚀 Platform initializing...');
   
-  // Initialize components
-  await loadConfiguration();
-  await loadReservations();
+  // Initialize theme
+  initializeTheme();
+  
+  // Initialize calendar
   initializeCalendar();
-  initializeEventListeners();
   
-  console.log('✅ Application initialisée');
+  // Load data
+  await loadReservations();
+  
+  // Setup event listeners
+  setupEventListeners();
+  
+  console.log('✅ Platform ready');
 });
 
 // ========================================
-// API CALLS
+// THEME MANAGEMENT
 // ========================================
-async function loadConfiguration() {
-  try {
-    const response = await fetch(`${API_URL}/api/config`);
-    const config = await response.json();
-    
-    allProperties = config.properties;
-    
-    // Initialize all filters as active
-    allProperties.forEach(p => activePropertyFilters.add(p.id));
-    
-    renderPropertyFilters();
-  } catch (error) {
-    console.error('Erreur chargement configuration:', error);
-    showToast('Erreur de connexion au serveur', 'error');
+
+function initializeTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeIcon(newTheme);
+  
+  // Refresh calendar to update colors
+  if (calendar) {
+    calendar.render();
   }
 }
 
-async function loadReservations() {
-  try {
-    const response = await fetch(`${API_URL}/api/reservations`);
-    const data = await response.json();
-    
-    allReservations = data.reservations;
-    
-    updateStatusBar(data);
-    updateCalendarEvents();
-    
-    console.log(`📅 ${allReservations.length} réservations chargées`);
-  } catch (error) {
-    console.error('Erreur chargement réservations:', error);
-    showToast('Erreur lors du chargement des réservations', 'error');
+function updateThemeIcon(theme) {
+  const icon = document.querySelector('#themeToggle i');
+  if (icon) {
+    icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
   }
 }
 
-async function syncCalendars() {
+// ========================================
+// EVENT LISTENERS
+// ========================================
+
+function setupEventListeners() {
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+  
+  // Sync button
   const syncBtn = document.getElementById('syncBtn');
-  const syncIcon = document.getElementById('syncIcon');
-  const loadingOverlay = document.getElementById('loadingOverlay');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', syncReservations);
+  }
   
-  syncBtn.classList.add('syncing');
-  syncIcon.classList.add('syncing');
-  loadingOverlay.classList.add('active');
-  
-  try {
-    const response = await fetch(`${API_URL}/api/sync`, {
-      method: 'POST'
+  // View buttons
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const view = e.currentTarget.dataset.view;
+      changeCalendarView(view);
+      
+      // Update active state
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
     });
-    
-    const result = await response.json();
-    
-    await loadReservations();
-    showToast('✅ Synchronisation réussie', 'success');
-    
-    console.log('✅ Synchronisation terminée:', result);
-  } catch (error) {
-    console.error('Erreur synchronisation:', error);
-    showToast('❌ Erreur lors de la synchronisation', 'error');
-  } finally {
-    syncBtn.classList.remove('syncing');
-    syncIcon.classList.remove('syncing');
-    loadingOverlay.classList.remove('active');
+  });
+  
+  // Modal close
+  const modalClose = document.getElementById('modalClose');
+  if (modalClose) {
+    modalClose.addEventListener('click', () => {
+      document.getElementById('reservationModal').classList.remove('active');
+    });
   }
-}
-
-async function loadStats() {
-  try {
-    const response = await fetch(`${API_URL}/api/stats`);
-    const stats = await response.json();
-    
-    displayStats(stats);
-  } catch (error) {
-    console.error('Erreur chargement stats:', error);
-    showToast('Erreur lors du chargement des statistiques', 'error');
+  
+  // Close modal on backdrop click
+  const modal = document.getElementById('reservationModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
   }
 }
 
 // ========================================
-// CALENDAR INITIALIZATION
+// CALENDAR
 // ========================================
+
 function initializeCalendar() {
   const calendarEl = document.getElementById('calendar');
+  if (!calendarEl) return;
   
   calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
     locale: 'fr',
-    firstDay: 1,
-    height: 'auto',
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
-      right: 'dayGridMonth,timeGridWeek,listWeek'
+      right: ''
     },
     buttonText: {
-      today: "Aujourd'hui",
-      month: 'Mois',
-      week: 'Semaine',
-      list: 'Liste'
+      today: 'Aujourd\'hui'
     },
-    events: [],
+    height: 'auto',
     eventClick: function(info) {
-      const reservation = allReservations.find(r => r.uid === info.event.id);
-      if (reservation) {
-        showReservationModal(reservation);
-      }
+      showReservationModal(info.event.extendedProps.reservation);
     },
-    eventDidMount: function(info) {
-      // Add tooltip
-      info.el.title = info.event.extendedProps.tooltip;
-    },
-    dayCellDidMount: function(info) {
-      // Could add availability indicators here
-    }
+    events: []
   });
   
   calendar.render();
 }
 
-function updateCalendarEvents() {
-  const filteredReservations = allReservations.filter(r => 
-    activePropertyFilters.has(r.property.id)
-  );
+function changeCalendarView(view) {
+  if (!calendar) return;
   
-  const events = filteredReservations.map(r => ({
-    id: r.uid,
-    title: `${r.property.name} - ${r.guestName}`,
-    start: r.start,
-    end: r.end,
-    backgroundColor: r.property.color,
-    borderColor: r.property.color,
-    extendedProps: {
-      reservation: r,
-      tooltip: `${r.property.name}\n${r.guestName}\n${r.nights} nuit(s)\nSource: ${r.source}`
-    }
-  }));
+  const viewMap = {
+    'month': 'dayGridMonth',
+    'week': 'timeGridWeek',
+    'list': 'listMonth'
+  };
+  
+  calendar.changeView(viewMap[view] || 'dayGridMonth');
+}
+
+function updateCalendarEvents() {
+  if (!calendar) return;
+  
+  const events = allReservations
+    .filter(r => activeFilters.size === 0 || activeFilters.has(r.property.id))
+    .map(r => ({
+      title: `${r.property.name} - ${r.guestName}`,
+      start: r.start,
+      end: r.end,
+      backgroundColor: r.property.color,
+      borderColor: r.property.color,
+      extendedProps: {
+        reservation: r
+      }
+    }));
   
   calendar.removeAllEvents();
   calendar.addEventSource(events);
 }
 
 // ========================================
-// UI RENDERING
+// DATA LOADING
 // ========================================
-function renderPropertyFilters() {
-  const container = document.getElementById('propertyFilters');
+
+async function loadReservations() {
+  showLoading();
   
-  container.innerHTML = allProperties.map(property => `
-    <div class="property-filter active" data-property-id="${property.id}">
-      <div class="property-color" style="background-color: ${property.color}"></div>
-      <span>${property.name}</span>
-      <span class="property-count" id="count-${property.id}">0</span>
-    </div>
-  `).join('');
-  
-  // Add click handlers
-  container.querySelectorAll('.property-filter').forEach(filter => {
-    filter.addEventListener('click', () => {
-      const propertyId = filter.dataset.propertyId;
-      
-      if (activePropertyFilters.has(propertyId)) {
-        activePropertyFilters.delete(propertyId);
-        filter.classList.remove('active');
-      } else {
-        activePropertyFilters.add(propertyId);
-        filter.classList.add('active');
-      }
-      
-      updateCalendarEvents();
-      updateReservationsList();
-    });
-  });
-  
-  updatePropertyCounts();
+  try {
+    const response = await fetch(`${API_URL}/api/reservations`);
+    const data = await response.json();
+    
+    allReservations = data.reservations;
+    
+    // Update stats
+    updateStats(data);
+    
+    // Render property filters
+    renderPropertyFilters(data.properties);
+    
+    // Update calendar
+    updateCalendarEvents();
+    
+    console.log(`📦 ${allReservations.length} reservations loaded`);
+  } catch (error) {
+    console.error('Error loading reservations:', error);
+    showToast('Erreur lors du chargement des réservations', 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
-function updatePropertyCounts() {
-  allProperties.forEach(property => {
-    const count = allReservations.filter(r => r.property.id === property.id).length;
-    const countEl = document.getElementById(`count-${property.id}`);
-    if (countEl) {
-      countEl.textContent = count;
-    }
-  });
+async function syncReservations() {
+  const syncBtn = document.getElementById('syncBtn');
+  const icon = syncBtn.querySelector('i');
+  
+  icon.classList.add('fa-spin');
+  syncBtn.disabled = true;
+  
+  try {
+    const response = await fetch(`${API_URL}/api/sync`, { method: 'POST' });
+    const data = await response.json();
+    
+    showToast('Synchronisation réussie', 'success');
+    await loadReservations();
+  } catch (error) {
+    console.error('Error syncing:', error);
+    showToast('Erreur lors de la synchronisation', 'error');
+  } finally {
+    icon.classList.remove('fa-spin');
+    syncBtn.disabled = false;
+  }
 }
 
-function updateStatusBar(data) {
-  document.getElementById('totalReservations').textContent = data.reservations.length;
+// ========================================
+// UI UPDATES
+// ========================================
+
+function updateStats(data) {
+  document.getElementById('statTotal').textContent = data.reservations.length;
   
   const now = new Date();
   const upcoming = data.reservations.filter(r => new Date(r.start) > now).length;
@@ -219,407 +235,165 @@ function updateStatusBar(data) {
     new Date(r.start) <= now && new Date(r.end) >= now
   ).length;
   
-  document.getElementById('upcomingReservations').textContent = upcoming;
-  document.getElementById('currentReservations').textContent = current;
+  document.getElementById('statUpcoming').textContent = upcoming;
+  document.getElementById('statCurrent').textContent = current;
   
-  if (data.lastSync) {
-    const lastSyncDate = new Date(data.lastSync);
-    const lastSyncText = formatRelativeTime(lastSyncDate);
-    document.getElementById('lastSync').textContent = `Dernière synchro: ${lastSyncText}`;
+  // Update nav badge
+  const navBadge = document.getElementById('navTotalReservations');
+  if (navBadge) {
+    navBadge.textContent = data.reservations.length;
   }
 }
 
-function updateReservationsList() {
-  const listContainer = document.getElementById('reservationsList');
+function renderPropertyFilters(properties) {
+  const container = document.getElementById('propertyFilters');
+  if (!container) return;
   
-  const filteredReservations = allReservations
-    .filter(r => activePropertyFilters.has(r.property.id))
-    .sort((a, b) => new Date(a.start) - new Date(b.start));
-  
-  if (filteredReservations.length === 0) {
-    listContainer.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
-        <i class="fas fa-calendar-times" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
-        <p>Aucune réservation à afficher</p>
-      </div>
-    `;
-    return;
-  }
-  
-  listContainer.innerHTML = filteredReservations.map(r => `
-    <div class="reservation-card" data-uid="${r.uid}" style="border-left-color: ${r.property.color}">
-      <div class="reservation-content">
-        <div class="reservation-header">
-          <div class="reservation-property" style="color: ${r.property.color}">
-            <i class="fas fa-home"></i>
-            ${r.property.name}
-          </div>
-          <span class="reservation-source">${r.source}</span>
-        </div>
-        
-        <div class="reservation-details">
-          <div class="reservation-detail">
-            <i class="fas fa-user"></i>
-            <span><strong>${r.guestName}</strong></span>
-          </div>
-          
-          <div class="reservation-detail">
-            <i class="fas fa-calendar-alt"></i>
-            <span>${formatDate(r.start)} → ${formatDate(r.end)}</span>
-          </div>
-          
-          <div class="reservation-detail">
-            <i class="fas fa-moon"></i>
-            <span><strong>${r.nights}</strong> nuit${r.nights > 1 ? 's' : ''}</span>
-          </div>
-          
-          ${r.guestPhone ? `
-          <div class="reservation-detail">
-            <i class="fas fa-phone"></i>
-            <span>${r.guestPhone}</span>
-          </div>
-          ` : ''}
-        </div>
-      </div>
+  container.innerHTML = properties.map(p => `
+    <div class="property-badge" 
+         style="border-color: ${p.color}; color: ${p.color};"
+         data-property-id="${p.id}"
+         onclick="togglePropertyFilter('${p.id}')">
+      <i class="fas fa-home"></i>
+      <span>${p.name}</span>
+      <span class="property-count">${p.count}</span>
     </div>
   `).join('');
+}
+
+function togglePropertyFilter(propertyId) {
+  if (activeFilters.has(propertyId)) {
+    activeFilters.delete(propertyId);
+  } else {
+    activeFilters.add(propertyId);
+  }
   
-  // Add click handlers
-  listContainer.querySelectorAll('.reservation-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const uid = card.dataset.uid;
-      const reservation = allReservations.find(r => r.uid === uid);
-      if (reservation) {
-        showReservationModal(reservation);
-      }
-    });
+  // Update UI
+  const badge = document.querySelector(`[data-property-id="${propertyId}"]`);
+  if (badge) {
+    badge.classList.toggle('active');
+  }
+  
+  // Update calendar
+  updateCalendarEvents();
+}
+
+function clearFilters() {
+  activeFilters.clear();
+  
+  document.querySelectorAll('.property-badge').forEach(badge => {
+    badge.classList.remove('active');
   });
+  
+  updateCalendarEvents();
 }
 
 // ========================================
-// MODALS
+// MODAL
 // ========================================
+
 function showReservationModal(reservation) {
   const modal = document.getElementById('reservationModal');
-  const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
   
-  modalTitle.innerHTML = `
-    <i class="fas fa-home" style="color: ${reservation.property.color}"></i>
-    ${reservation.property.name}
-  `;
+  const checkin = new Date(reservation.start);
+  const checkout = new Date(reservation.end);
   
   modalBody.innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-section" style="border-left-color: ${reservation.property.color}">
-        <div class="detail-section-title">
-          <i class="fas fa-user"></i>
-          Informations Voyageur
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      
+      <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-md);">
+        <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: ${reservation.property.color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+          <i class="fas fa-home"></i>
+        </div>
+        <div>
+          <div style="font-weight: 700; font-size: 18px; color: var(--text-primary);">${reservation.property.name}</div>
+          <div style="color: var(--text-secondary); font-size: 14px;">${reservation.source}</div>
+        </div>
+      </div>
+      
+      <div>
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px;">Voyageur</div>
+        <div style="font-size: 18px; font-weight: 700; color: var(--text-primary);">
+          <i class="fas fa-user" style="color: var(--primary-color); margin-right: 8px;"></i>
+          ${reservation.guestName}
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px;">Arrivée</div>
+          <div style="font-weight: 600; color: var(--text-primary);">
+            <i class="fas fa-calendar-check" style="color: var(--success); margin-right: 8px;"></i>
+            ${checkin.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+          <div style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">${checkin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
         
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-user"></i>
-            Nom
+        <div>
+          <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px;">Départ</div>
+          <div style="font-weight: 600; color: var(--text-primary);">
+            <i class="fas fa-calendar-times" style="color: var(--error); margin-right: 8px;"></i>
+            ${checkout.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
-          <div class="detail-value highlight">${reservation.guestName}</div>
+          <div style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">${checkout.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
-        
-        ${reservation.guestEmail ? `
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-envelope"></i>
-            Email
-          </div>
-          <div class="detail-value">
-            <a href="mailto:${reservation.guestEmail}">${reservation.guestEmail}</a>
+      </div>
+      
+      <div style="display: flex; gap: 16px;">
+        <div style="flex: 1; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-md); text-align: center;">
+          <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">Nuits</div>
+          <div style="font-size: 24px; font-weight: 700; color: var(--primary-color);">
+            <i class="fas fa-moon"></i> ${reservation.nights}
           </div>
         </div>
-        ` : ''}
         
         ${reservation.guestPhone ? `
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-phone"></i>
-            Téléphone
-          </div>
-          <div class="detail-value">
-            <a href="tel:${reservation.guestPhone}">${reservation.guestPhone}</a>
+        <div style="flex: 1; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-md);">
+          <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">Contact</div>
+          <div style="font-weight: 600; color: var(--text-primary);">
+            <a href="tel:${reservation.guestPhone}" style="color: var(--primary-color); text-decoration: none;">
+              <i class="fas fa-phone"></i> ${reservation.guestPhone}
+            </a>
           </div>
         </div>
         ` : ''}
       </div>
       
-      <div class="detail-section">
-        <div class="detail-section-title">
-          <i class="fas fa-calendar"></i>
-          Dates & Durée
-        </div>
-        
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-sign-in-alt"></i>
-            Arrivée
-          </div>
-          <div class="detail-value highlight">${formatDateTime(reservation.start)}</div>
-        </div>
-        
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-sign-out-alt"></i>
-            Départ
-          </div>
-          <div class="detail-value highlight">${formatDateTime(reservation.end)}</div>
-        </div>
-        
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-moon"></i>
-            Nuits
-          </div>
-          <div class="detail-value highlight">${reservation.nights} nuit${reservation.nights > 1 ? 's' : ''}</div>
-        </div>
-      </div>
-      
-      <div class="detail-section">
-        <div class="detail-section-title">
-          <i class="fas fa-info-circle"></i>
-          Détails Réservation
-        </div>
-        
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-globe"></i>
-            Plateforme
-          </div>
-          <div class="detail-value">${reservation.source}</div>
-        </div>
-        
-        ${reservation.bookingId ? `
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-hashtag"></i>
-            ID Réservation
-          </div>
-          <div class="detail-value"><code>${reservation.bookingId}</code></div>
-        </div>
-        ` : ''}
-        
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-check-circle"></i>
-            Statut
-          </div>
-          <div class="detail-value">${reservation.status}</div>
-        </div>
-        
-        <div class="detail-row">
-          <div class="detail-label">
-            <i class="fas fa-clock"></i>
-            Créée le
-          </div>
-          <div class="detail-value">${formatDateTime(reservation.created)}</div>
-        </div>
-      </div>
-      
-      ${reservation.description ? `
-      <div class="detail-section">
-        <div class="detail-section-title">
-          <i class="fas fa-sticky-note"></i>
-          Notes
-        </div>
-        <div style="white-space: pre-wrap; color: var(--text-secondary); line-height: 1.6;">
-          ${reservation.description}
+      ${reservation.notes ? `
+      <div>
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px;">Notes</div>
+        <div style="padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); color: var(--text-secondary);">
+          ${reservation.notes}
         </div>
       </div>
       ` : ''}
+      
+      <div style="display: flex; gap: 12px; margin-top: 8px;">
+        <a href="/messages.html" class="btn btn-primary" style="flex: 1;">
+          <i class="fas fa-comment-dots"></i>
+          Envoyer un message
+        </a>
+        <button class="btn btn-secondary" onclick="document.getElementById('reservationModal').classList.remove('active')">
+          Fermer
+        </button>
+      </div>
     </div>
   `;
   
   modal.classList.add('active');
-}
-
-function showStatsModal() {
-  const modal = document.getElementById('statsModal');
-  modal.classList.add('active');
-  loadStats();
-}
-
-function displayStats(stats) {
-  const modalBody = document.getElementById('statsModalBody');
-  
-  modalBody.innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value">${stats.totalReservations}</div>
-        <div class="stat-label">Réservations totales</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-value">${stats.upcomingReservations}</div>
-        <div class="stat-label">À venir</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-value">${stats.currentReservations}</div>
-        <div class="stat-label">En cours</div>
-      </div>
-    </div>
-    
-    <div class="detail-section">
-      <div class="detail-section-title">
-        <i class="fas fa-home"></i>
-        Par Logement
-      </div>
-      ${Object.entries(stats.byProperty).map(([id, data]) => `
-        <div class="detail-row">
-          <div class="detail-label">${data.name}</div>
-          <div class="detail-value">
-            <strong>${data.total}</strong> réservations
-            (${data.upcoming} à venir, ${data.current} en cours)
-          </div>
-        </div>
-      `).join('')}
-    </div>
-    
-    ${Object.keys(stats.byMonth).length > 0 ? `
-    <div class="detail-section">
-      <div class="detail-section-title">
-        <i class="fas fa-chart-line"></i>
-        Par Mois
-      </div>
-      ${Object.entries(stats.byMonth)
-        .sort((a, b) => b[0].localeCompare(a[0]))
-        .slice(0, 6)
-        .map(([month, count]) => `
-          <div class="detail-row">
-            <div class="detail-label">${formatMonth(month)}</div>
-            <div class="detail-value highlight">${count} réservation${count > 1 ? 's' : ''}</div>
-          </div>
-        `).join('')}
-    </div>
-    ` : ''}
-  `;
-}
-
-function closeStatsModal() {
-  document.getElementById('statsModal').classList.remove('active');
-}
-
-function closeSettingsModal() {
-  document.getElementById('settingsModal').classList.remove('active');
-}
-
-// ========================================
-// EVENT LISTENERS
-// ========================================
-function initializeEventListeners() {
-  // Sync button
-  document.getElementById('syncBtn').addEventListener('click', syncCalendars);
-  
-  // Stats button
-  document.getElementById('statsBtn').addEventListener('click', showStatsModal);
-  
-  // Settings button
-  document.getElementById('settingsBtn').addEventListener('click', () => {
-    showToast('Paramètres à venir', 'info');
-  });
-  
-  // Modal close buttons
-  document.getElementById('modalClose').addEventListener('click', () => {
-    document.getElementById('reservationModal').classList.remove('active');
-  });
-  
-  // Close modals on backdrop click
-  document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
-      }
-    });
-  });
-  
-  // View toggle buttons
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const view = btn.dataset.view;
-      
-      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      
-      currentView = view;
-      
-      if (view === 'list') {
-        document.getElementById('calendar').parentElement.style.display = 'none';
-        document.getElementById('reservationsList').style.display = 'block';
-        updateReservationsList();
-      } else {
-        document.getElementById('calendar').parentElement.style.display = 'block';
-        document.getElementById('reservationsList').style.display = 'none';
-        
-        const calendarView = view === 'month' ? 'dayGridMonth' : 'timeGridWeek';
-        calendar.changeView(calendarView);
-      }
-    });
-  });
-  
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      document.querySelectorAll('.modal.active').forEach(modal => {
-        modal.classList.remove('active');
-      });
-    }
-  });
 }
 
 // ========================================
 // UTILITIES
 // ========================================
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+
+function showLoading() {
+  document.getElementById('loadingOverlay').classList.add('active');
 }
 
-function formatDateTime(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-function formatMonth(monthString) {
-  const [year, month] = monthString.split('-');
-  const date = new Date(year, month - 1);
-  return date.toLocaleDateString('fr-FR', {
-    month: 'long',
-    year: 'numeric'
-  });
-}
-
-function formatRelativeTime(date) {
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  
-  if (diffMins < 1) return 'à l\'instant';
-  if (diffMins < 60) return `il y a ${diffMins} min`;
-  
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `il y a ${diffHours}h`;
-  
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `il y a ${diffDays}j`;
-  
-  return formatDate(date);
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
 }
 
 function showToast(message, type = 'info') {
@@ -647,8 +421,7 @@ function showToast(message, type = 'info') {
 }
 
 // ========================================
-// AUTO-REFRESH
+// MOBILE MENU (TODO)
 // ========================================
-setInterval(() => {
-  loadReservations();
-}, 5 * 60 * 1000); // Refresh every 5 minutes
+
+// Add mobile menu toggle functionality if needed
