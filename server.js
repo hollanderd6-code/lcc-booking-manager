@@ -82,10 +82,10 @@ async function syncAllCalendars() {
       const oldReservations = reservationsStore.properties[property.id] || [];
       const oldIds = new Set(oldReservations.map(r => r.uid));
       
-      const truly NewReservations = reservations.filter(r => !oldIds.has(r.uid));
+      const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
       
       if (trulyNewReservations.length > 0) {
-        newReservations.push(...trulyNewReservations.map(r => ({
+  newReservations.push(...trulyNewReservations.map(r => ({
           ...r,
           propertyName: property.name,
           propertyColor: property.color
