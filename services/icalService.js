@@ -85,6 +85,7 @@ function calculateNights(start, end) {
  * Extrait la source de la réservation depuis l'URL
  */
 function extractSource(url) {
+  if (!url) return 'Autre';
   if (url.includes('airbnb')) return 'Airbnb';
   if (url.includes('booking')) return 'Booking.com';
   if (url.includes('vrbo')) return 'VRBO';
@@ -96,6 +97,9 @@ function extractSource(url) {
  * Extrait le nom du voyageur
  */
 function extractGuestName(summary, description) {
+  if (!summary) summary = '';
+  if (!description) description = '';
+  
   // Airbnb format: "Réservation Airbnb (John Doe)"
   const airbnbMatch = summary.match(/\(([^)]+)\)/);
   if (airbnbMatch) return airbnbMatch[1];
@@ -115,6 +119,8 @@ function extractGuestName(summary, description) {
  * Extrait l'email du voyageur
  */
 function extractEmail(description) {
+  if (!description) return null;
+  
   const emailRegex = /[\w.-]+@[\w.-]+\.\w+/;
   const match = description.match(emailRegex);
   return match ? match[0] : null;
@@ -124,6 +130,8 @@ function extractEmail(description) {
  * Extrait le téléphone du voyageur
  */
 function extractPhone(description) {
+  if (!description) return null;
+  
   const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{2,3}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}[-.\s]?\d{2,4}/;
   const match = description.match(phoneRegex);
   return match ? match[0] : null;
@@ -133,7 +141,6 @@ function extractPhone(description) {
  * Extrait l'ID de réservation
  */
 function extractBookingId(description, uid) {
-  // Vérifier que description et uid existent
   if (!description) description = '';
   if (!uid) uid = '';
   
