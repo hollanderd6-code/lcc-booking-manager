@@ -39,6 +39,10 @@ let USERS = [];
 // Welcome data file path
 const WELCOME_FILE = path.join(__dirname, 'welcome-config.json');
 let WELCOME_DATA = []; // { userId, data: {...} } par utilisateur
+// Manual reservations file path
+const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
+let MANUAL_RESERVATIONS = {}; // { [propertyId]: [reservations] }
+
 
 async function loadUsers() {
   try {
@@ -77,6 +81,25 @@ async function saveWelcomeData() {
     console.log('✅ Données livret sauvegardées');
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde du livret:', error.message);
+  }
+}
+async function loadManualReservations() {
+  try {
+    const data = await fs.readFile(MANUAL_RES_FILE, 'utf8');
+    MANUAL_RESERVATIONS = JSON.parse(data);
+    console.log('✅ Réservations manuelles chargées depuis manual-reservations.json');
+  } catch (error) {
+    MANUAL_RESERVATIONS = {};
+    console.log('⚠️  Aucun fichier manual-reservations.json, démarrage sans réservations manuelles');
+  }
+}
+
+async function saveManualReservations() {
+  try {
+    await fs.writeFile(MANUAL_RES_FILE, JSON.stringify(MANUAL_RESERVATIONS, null, 2));
+    console.log('✅ Réservations manuelles sauvegardées');
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde des réservations manuelles:', error.message);
   }
 }
 
@@ -179,8 +202,37 @@ async function syncAllCalendars() {
       continue;
     }
     
-    try {
+        try {
       const reservations = await icalService.fetchReservations(property);
+      
+      // Détecter les nouvelles réservations (ICAL uniquement)
+      const oldReservations = reservationsStore.properties[property.id] || [];
+      const oldIds = new Set(oldReservations.map(r => r.uid));
+      
+      const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
+      
+      if (trulyNewReservations.length > 0) {
+        newReservations.push(...trulyNewReservations.map(r => ({
+          ...r,
+          propertyName: property.name,
+          propertyColor: property.color
+        })));
+      }
+      
+      // Base = réservations iCal
+      reservationsStore.properties[property.id] = reservations;
+
+      // Ajouter les réservations manuelles pour ce logement
+      const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
+      if (manualForProperty.length > 0) {
+        reservationsStore.properties[property.id] = [
+          ...reservationsStore.properties[property.id],
+          ...manualForProperty
+        ];
+      }
+
+      console.log(`✅ ${property.name}: ${reservationsStore.properties[property.id].length} réservations (iCal + manuelles)`);
+
       
       // Détecter les nouvelles réservations
       const oldReservations = reservationsStore.properties[property.id] || [];
@@ -223,7 +275,53 @@ async function syncAllCalendars() {
 
 app.get('/api/reservations', (req, res) => {
   const allReservations = [];
-  
+  // POST - Créer une réservation manuelle
+app.post('/api/reservations/manual', async (req, res) => {
+  try {
+    const { propertyId, start, end, guestName, notes } = req.body;
+
+    if (!propertyId || !start || !end) {
+      return res.status(400).json({ error: 'propertyId, start et end sont requis' });
+    }
+
+    const property = PROPERTIES.find(p => p.id === propertyId);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    const reservation = {
+      uid: 'manual_' + Date.now(),
+      start,
+      end,
+      source: 'MANUEL',
+      platform: 'MANUEL',
+      guestName: guestName || 'Réservation manuelle',
+      notes: notes || '',
+      createdAt: new Date().toISOString()
+    };
+
+    if (!MANUAL_RESERVATIONS[propertyId]) {
+      MANUAL_RESERVATIONS[propertyId] = [];
+    }
+    MANUAL_RESERVATIONS[propertyId].push(reservation);
+    await saveManualReservations();
+
+    // Mettre à jour le store en mémoire pour affichage immédiat
+    if (!reservationsStore.properties[propertyId]) {
+      reservationsStore.properties[propertyId] = [];
+    }
+    reservationsStore.properties[propertyId].push(reservation);
+
+    res.status(201).json({
+      message: 'Réservation manuelle créée',
+      reservation
+    });
+  } catch (err) {
+    console.error('Erreur création réservation manuelle:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
   PROPERTIES.forEach(property => {
     const propertyReservations = reservationsStore.properties[property.id] || [];
     propertyReservations.forEach(reservation => {
@@ -815,6 +913,7 @@ app.listen(PORT, async () => {
   await loadProperties();
   await loadUsers();
   await loadWelcomeData();
+  await loadManualReservations();
   
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
