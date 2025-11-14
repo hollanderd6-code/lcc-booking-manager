@@ -235,7 +235,7 @@ async function syncAllCalendars() {
 
       
       // Détecter les nouvelles réservations
-      const oldReservations = reservationsStore.properties[property.id] || [];
+      let oldReservations = reservationsStore.properties[property.id] || [];
       const oldIds = new Set(oldReservations.map(r => r.uid));
       
       const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
