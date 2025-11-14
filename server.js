@@ -34,6 +34,8 @@ const CONFIG_FILE = path.join(__dirname, 'properties-config.json');
 // Users file path
 const USERS_FILE = path.join(__dirname, 'users-config.json');
 let USERS = [];
+const WELCOME_FILE = path.join(__dirname, 'welcome-config.json');
+let WELCOME_DATA = []; // { userId, data: {...} } par utilisateur
 
 async function loadUsers() {
   try {
@@ -47,6 +49,35 @@ async function loadUsers() {
 }
 
 async function saveUsers() {
+  try {
+    await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
+    console.log('✅ Utilisateurs sauvegardés');
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde des utilisateurs:', error.message);
+  }
+}
+
+async function loadWelcomeData() {
+  try {
+    const data = await fs.readFile(WELCOME_FILE, 'utf8');
+    WELCOME_DATA = JSON.parse(data);
+    console.log('✅ Données livret chargées depuis welcome-config.json');
+  } catch (error) {
+    WELCOME_DATA = [];
+    console.log('⚠️  Aucun fichier welcome-config.json, démarrage sans livret');
+  }
+}
+
+async function saveWelcomeData() {
+  try {
+    await fs.writeFile(WELCOME_FILE, JSON.stringify(WELCOME_DATA, null, 2));
+    console.log('✅ Données livret sauvegardées');
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde du livret:', error.message);
+  }
+}
+
+
   try {
     await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
     console.log('✅ Utilisateurs sauvegardés');
@@ -345,6 +376,84 @@ app.get('/api/availability/:propertyId', (req, res) => {
 // ============================================
 // ROUTES API - GESTION DES LOGEMENTS
 // ============================================
+function getUserFromRequest(req) {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return null;
+
+  try {
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const payload = jwt.verify(token, secret);
+    const user = USERS.find(u => u.id === payload.id);
+    return user || null;
+  } catch (err) {
+    return null;
+  }
+}
+// ============================================
+// ROUTES API - LIVRET D'ACCUEIL
+// ============================================
+
+function defaultWelcomeData(user) {
+  return {
+    propertyName: '',
+    address: '',
+    accessCode: '',
+    accessInstructions: '',
+    emergencyPhone: '',
+    wifiName: '',
+    wifiPassword: '',
+    wifiNote: '',
+    generalNotes: '',
+    restaurants: [], // { name, type, address, notes }
+    shops: [],       // { name, type, address, notes }
+    photos: []       // { id, label, dataUrl }
+  };
+}
+
+// GET - Récupérer les infos de livret pour l'utilisateur courant
+app.get('/api/welcome', (req, res) => {
+  const user = getUserFromRequest(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Non autorisé' });
+  }
+
+  let entry = WELCOME_DATA.find(w => w.userId === user.id);
+  if (!entry) {
+    entry = { userId: user.id, data: defaultWelcomeData(user) };
+    WELCOME_DATA.push(entry);
+  }
+
+  res.json(entry.data);
+});
+
+// POST - Sauvegarder les infos de livret
+app.post('/api/welcome', async (req, res) => {
+  const user = getUserFromRequest(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Non autorisé' });
+  }
+
+  const payload = req.body || {};
+
+  let entry = WELCOME_DATA.find(w => w.userId === user.id);
+  if (!entry) {
+    entry = { userId: user.id, data: defaultWelcomeData(user) };
+    WELCOME_DATA.push(entry);
+  }
+
+  entry.data = {
+    ...defaultWelcomeData(user),
+    ...payload
+  };
+
+  await saveWelcomeData();
+
+  res.json({
+    message: 'Livret sauvegardé',
+    data: entry.data
+  });
+});
 
 // GET - Liste des logements
 app.get('/api/properties', (req, res) => {
@@ -709,9 +818,7 @@ app.listen(PORT, async () => {
     // Charger la configuration
   await loadProperties();
   await loadUsers();
-  
-  console.log('Logements configurés:');
-
+  await loadWelcomeData();
   
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
