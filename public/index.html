@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Booking Platform</title>
+  <title>LCC Booking Manager – Dashboard</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,7 +18,6 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  
   <div class="app-container">
     
     <!-- Sidebar -->
@@ -26,7 +25,10 @@
       <div class="sidebar-header">
         <a href="/" class="sidebar-logo">
           <i class="fas fa-home"></i>
-          <span>Booking Platform</span>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">LCC Booking</span>
+            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+          </div>
         </a>
       </div>
       
@@ -52,7 +54,7 @@
           <div class="nav-section-title">Gestion</div>
           <a href="/settings.html" class="nav-item">
             <i class="fas fa-home"></i>
-            <span>Mes Logements</span>
+            <span>Mes logements</span>
           </a>
           <a href="#" class="nav-item">
             <i class="fas fa-chart-bar"></i>
@@ -95,11 +97,19 @@
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
+          <div class="page-kicker">Vue d’ensemble</div>
           <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">
+            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
+          </p>
         </div>
         
         <div class="header-actions">
-          <button class="btn-icon" id="syncBtn" title="Synchroniser">
+          <button class="btn btn-ghost hide-on-mobile">
+            <i class="fas fa-plus"></i>
+            Nouvelle réservation
+          </button>
+          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
             <i class="fas fa-sync-alt"></i>
           </button>
           <button class="btn-icon" title="Notifications">
@@ -116,10 +126,10 @@
       <div class="page-content">
         
         <!-- Stats Grid -->
-        <div class="stats-grid">
+        <section class="stats-grid">
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">Total Réservations</span>
+              <span class="stat-label">Total réservations</span>
               <div class="stat-icon green">
                 <i class="fas fa-calendar-check"></i>
               </div>
@@ -127,7 +137,7 @@
             <div class="stat-value" id="statTotal">-</div>
             <div class="stat-trend up">
               <i class="fas fa-arrow-up"></i>
-              <span>12% ce mois</span>
+              <span>12 % ce mois</span>
             </div>
           </div>
           
@@ -141,13 +151,13 @@
             <div class="stat-value" id="statUpcoming">-</div>
             <div class="stat-trend up">
               <i class="fas fa-arrow-up"></i>
-              <span>8% ce mois</span>
+              <span>+8 % vs mois dernier</span>
             </div>
           </div>
           
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">En cours</span>
+              <span class="stat-label">Séjours en cours</span>
               <div class="stat-icon purple">
                 <i class="fas fa-door-open"></i>
               </div>
@@ -161,7 +171,7 @@
           
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">Taux d'occupation</span>
+              <span class="stat-label">Taux d’occupation</span>
               <div class="stat-icon orange">
                 <i class="fas fa-chart-pie"></i>
               </div>
@@ -169,13 +179,13 @@
             <div class="stat-value">78%</div>
             <div class="stat-trend up">
               <i class="fas fa-arrow-up"></i>
-              <span>5% vs mois dernier</span>
+              <span>+5 % vs mois dernier</span>
             </div>
           </div>
-        </div>
+        </section>
         
         <!-- Property Filters -->
-        <div class="card mb-lg">
+        <section class="card mb-lg">
           <div class="card-header">
             <div class="card-title">
               <i class="fas fa-filter"></i>
@@ -187,12 +197,12 @@
             </button>
           </div>
           <div class="property-filters" id="propertyFilters">
-            <!-- Generated dynamically -->
+            <!-- Généré dynamiquement par app.js -->
           </div>
-        </div>
+        </section>
         
         <!-- Calendar Card -->
-        <div class="card">
+        <section class="card">
           <div class="card-header">
             <div class="card-title">
               <i class="fas fa-calendar-alt"></i>
@@ -211,12 +221,11 @@
             </div>
           </div>
           <div id="calendar"></div>
-        </div>
+        </section>
         
       </div>
       
     </main>
-    
   </div>
   
   <!-- Reservation Modal -->
@@ -229,7 +238,7 @@
         </button>
       </div>
       <div class="modal-body" id="modalBody">
-        <!-- Content generated dynamically -->
+        <!-- Contenu généré dynamiquement -->
       </div>
     </div>
   </div>
@@ -251,7 +260,7 @@
   <script src="/js/app.js"></script>
   
   <style>
-    /* Calendar specific styles for platform */
+    /* Styles spécifiques calendrier & UI complémentaire */
     #calendar {
       margin-top: 24px;
     }
@@ -311,7 +320,7 @@
     
     .property-badge.active {
       background: var(--primary-color);
-      color: white;
+      color: #fff;
       border-color: var(--primary-color);
     }
     
@@ -322,13 +331,35 @@
       font-size: 12px;
     }
     
+    .page-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .hide-on-mobile {
+      display: inline-flex;
+    }
+    
+    @media (max-width: 768px) {
+      .hide-on-mobile {
+        display: none;
+      }
+    }
+    
     .modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(0, 0, 0, 0.5);
       z-index: 1000;
       align-items: center;
@@ -387,10 +418,7 @@
     .loading-overlay {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(0, 0, 0, 0.5);
       z-index: 9999;
       align-items: center;
