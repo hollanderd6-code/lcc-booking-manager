@@ -580,7 +580,49 @@
         transform: translateX(0);
         opacity: 1;
       }
-    }
+    .notifications-panel {
+  position: fixed;
+  top: 0;
+  right: -360px;
+  width: 360px;
+  height: 100vh;
+  background: var(--bg-primary);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.25s ease;
+  border-left: 1px solid var(--border-color);
+}
+
+.notifications-panel.open {
+  right: 0;
+}
+
+.notifications-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notifications-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.notifications-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.empty-state {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
   </style>
   <script>
   (function () {
@@ -651,6 +693,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    // --- NOUVELLE RÉSERVATION ---
     const newReservationBtn = document.getElementById('newReservationBtn');
     const newReservationModal = document.getElementById('newReservationModal');
     const newReservationClose = document.getElementById('newReservationClose');
@@ -670,30 +713,54 @@
       }
     }
 
-    // Clic sur le bouton en haut → ouverture
     if (newReservationBtn) {
       newReservationBtn.addEventListener('click', openNewReservationModal);
     }
-
-    // Clic sur la croix → fermeture
     if (newReservationClose) {
       newReservationClose.addEventListener('click', closeNewReservationModal);
     }
-
-    // Clic sur "Annuler" → fermeture
     if (newReservationCancel) {
       newReservationCancel.addEventListener('click', closeNewReservationModal);
     }
 
-    // Pour l’instant : on bloque juste le submit et on ferme (sans appel API)
     if (newReservationForm) {
       newReservationForm.addEventListener('submit', function (e) {
         e.preventDefault();
-
-        // Ici tu mettras ton fetch() plus tard
         alert('Réservation enregistrée (démo)');
         closeNewReservationModal();
       });
+    }
+
+    // --- NOTIFICATIONS ---
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    const notificationsPanel = document.getElementById('notificationsPanel');
+    const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+
+    function openNotifications() {
+      if (notificationsPanel) {
+        notificationsPanel.classList.add('open');
+      }
+    }
+
+    function closeNotifications() {
+      if (notificationsPanel) {
+        notificationsPanel.classList.remove('open');
+      }
+    }
+
+    if (notificationsBtn) {
+      notificationsBtn.addEventListener('click', function () {
+        if (!notificationsPanel) return;
+        if (notificationsPanel.classList.contains('open')) {
+          closeNotifications();
+        } else {
+          openNotifications();
+        }
+      });
+    }
+
+    if (notificationsCloseBtn) {
+      notificationsCloseBtn.addEventListener('click', closeNotifications);
     }
   });
 </script>
@@ -701,6 +768,3 @@
 </body>
 </html>
 
-
-</body>
-</html>
