@@ -356,7 +356,7 @@
   <!-- Toast Notifications -->
   <div class="toast-container" id="toastContainer"></div>
   
-  <!-- Scripts -->
+    <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
   <script src="/js/app.js"></script>
@@ -580,190 +580,177 @@
         transform: translateX(0);
         opacity: 1;
       }
+    }
+
+    /* === Notifications panel === */
     .notifications-panel {
-  position: fixed;
-  top: 0;
-  right: -360px;
-  width: 360px;
-  height: 100vh;
-  background: var(--bg-primary);
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  transition: right 0.25s ease;
-  border-left: 1px solid var(--border-color);
-}
+      position: fixed;
+      top: 0;
+      right: -360px;
+      width: 360px;
+      height: 100vh;
+      background: var(--bg-primary);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s ease;
+      border-left: 1px solid var(--border-color);
+    }
 
-.notifications-panel.open {
-  right: 0;
-}
+    .notifications-panel.open {
+      right: 0;
+    }
 
-.notifications-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+    .notifications-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-.notifications-header h2 {
-  font-size: 16px;
-  font-weight: 600;
-}
+    .notifications-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
 
-.notifications-body {
-  padding: 16px 20px;
-  overflow-y: auto;
-  flex: 1;
-}
+    .notifications-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
 
-.empty-state {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
+    .empty-state {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
   </style>
+
+  <!-- Script auth + user + logout -->
   <script>
-  (function () {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      window.location.href = '/login.html';
-    }
-  })();
-</script>
-<script>
-  (function () {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      window.location.href = '/login.html';
-    }
-  })();
-<script>
-  (function () {
-    // Protection : si pas de token, on renvoie vers login
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      window.location.href = '/login.html';
-      return;
-    }
-
-    // Récupération de l'utilisateur depuis le localStorage
-    const rawUser = localStorage.getItem('lcc_user');
-    let user = null;
-
-    try {
-      user = rawUser ? JSON.parse(rawUser) : null;
-    } catch (e) {
-      console.error('Impossible de lire lcc_user', e);
-    }
-
-    if (user) {
-      const nameEl = document.getElementById('sidebarUserName');
-      const companyEl = document.getElementById('sidebarUserCompany');
-      const avatarEl = document.getElementById('sidebarUserAvatar');
-
-      if (nameEl) {
-        nameEl.textContent = user.firstName
-          ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-          : (user.email || 'Mon compte');
-      }
-
-      if (companyEl) {
-        companyEl.textContent = user.company || 'Mon espace';
-      }
-
-      if (avatarEl) {
-        const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-        avatarEl.textContent = initial.toUpperCase();
-      }
-    }
-
-    // Gestion du bouton de déconnexion
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function () {
-                localStorage.removeItem('lcc_token');
-        localStorage.removeItem('lcc_user');
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
         window.location.href = '/login.html';
-      });
-    }
-  })();
-</script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // --- NOUVELLE RÉSERVATION ---
-    const newReservationBtn = document.getElementById('newReservationBtn');
-    const newReservationModal = document.getElementById('newReservationModal');
-    const newReservationClose = document.getElementById('newReservationClose');
-    const newReservationCancel = document.getElementById('newReservationCancel');
-    const newReservationForm = document.getElementById('newReservationForm');
-
-    function openNewReservationModal() {
-      if (newReservationModal) {
-        newReservationModal.classList.add('active');
+        return;
       }
-    }
 
-    function closeNewReservationModal() {
-      if (newReservationModal) {
-        newReservationModal.classList.remove('active');
-        if (newReservationForm) newReservationForm.reset();
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
       }
-    }
 
-    if (newReservationBtn) {
-      newReservationBtn.addEventListener('click', openNewReservationModal);
-    }
-    if (newReservationClose) {
-      newReservationClose.addEventListener('click', closeNewReservationModal);
-    }
-    if (newReservationCancel) {
-      newReservationCancel.addEventListener('click', closeNewReservationModal);
-    }
+      if (user) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const companyEl = document.getElementById('sidebarUserCompany');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
 
-    if (newReservationForm) {
-      newReservationForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        alert('Réservation enregistrée (démo)');
-        closeNewReservationModal();
-      });
-    }
-
-    // --- NOTIFICATIONS ---
-    const notificationsBtn = document.getElementById('notificationsBtn');
-    const notificationsPanel = document.getElementById('notificationsPanel');
-    const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
-
-    function openNotifications() {
-      if (notificationsPanel) {
-        notificationsPanel.classList.add('open');
-      }
-    }
-
-    function closeNotifications() {
-      if (notificationsPanel) {
-        notificationsPanel.classList.remove('open');
-      }
-    }
-
-    if (notificationsBtn) {
-      notificationsBtn.addEventListener('click', function () {
-        if (!notificationsPanel) return;
-        if (notificationsPanel.classList.contains('open')) {
-          closeNotifications();
-        } else {
-          openNotifications();
+        if (nameEl) {
+          nameEl.textContent = user.firstName
+            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+            : (user.email || 'Mon compte');
         }
-      });
-    }
 
-    if (notificationsCloseBtn) {
-      notificationsCloseBtn.addEventListener('click', closeNotifications);
-    }
-  });
-</script>
+        if (companyEl) {
+          companyEl.textContent = user.company || 'Mon espace';
+        }
+
+        if (avatarEl) {
+          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+          avatarEl.textContent = initial.toUpperCase();
+        }
+      }
+
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          localStorage.removeItem('lcc_token');
+          localStorage.removeItem('lcc_user');
+          window.location.href = '/login.html';
+        });
+      }
+    })();
+  </script>
+
+  <!-- Script pour Nouvelle réservation + Notifications -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // --- NOUVELLE RÉSERVATION ---
+      const newReservationBtn = document.getElementById('newReservationBtn');
+      const newReservationModal = document.getElementById('newReservationModal');
+      const newReservationClose = document.getElementById('newReservationClose');
+      const newReservationCancel = document.getElementById('newReservationCancel');
+      const newReservationForm = document.getElementById('newReservationForm');
+
+      function openNewReservationModal() {
+        if (newReservationModal) {
+          newReservationModal.classList.add('active');
+        }
+      }
+
+      function closeNewReservationModal() {
+        if (newReservationModal) {
+          newReservationModal.classList.remove('active');
+          if (newReservationForm) newReservationForm.reset();
+        }
+      }
+
+      if (newReservationBtn) {
+        newReservationBtn.addEventListener('click', openNewReservationModal);
+      }
+      if (newReservationClose) {
+        newReservationClose.addEventListener('click', closeNewReservationModal);
+      }
+      if (newReservationCancel) {
+        newReservationCancel.addEventListener('click', closeNewReservationModal);
+      }
+
+      if (newReservationForm) {
+        newReservationForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          alert('Réservation enregistrée (démo)');
+          closeNewReservationModal();
+        });
+      }
+
+      // --- NOTIFICATIONS ---
+      const notificationsBtn = document.getElementById('notificationsBtn');
+      const notificationsPanel = document.getElementById('notificationsPanel');
+      const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+
+      function openNotifications() {
+        if (notificationsPanel) {
+          notificationsPanel.classList.add('open');
+        }
+      }
+
+      function closeNotifications() {
+        if (notificationsPanel) {
+          notificationsPanel.classList.remove('open');
+        }
+      }
+
+      if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', function () {
+          if (!notificationsPanel) return;
+          if (notificationsPanel.classList.contains('open')) {
+            closeNotifications();
+          } else {
+            openNotifications();
+          }
+        });
+      }
+
+      if (notificationsCloseBtn) {
+        notificationsCloseBtn.addEventListener('click', closeNotifications);
+      }
+    });
+  </script>
 
 </body>
 </html>
