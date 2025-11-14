@@ -48,6 +48,17 @@ async function loadUsers() {
   }
 }
 
+async function loadUsers() {
+  try {
+    const data = await fs.readFile(USERS_FILE, 'utf8');
+    USERS = JSON.parse(data);
+    console.log('✅ Utilisateurs chargés depuis users-config.json');
+  } catch (error) {
+    USERS = [];
+    console.log('⚠️  Aucun fichier users-config.json, démarrage avec 0 utilisateur');
+  }
+}
+
 async function saveUsers() {
   try {
     await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
@@ -76,7 +87,14 @@ async function saveWelcomeData() {
     console.error('❌ Erreur lors de la sauvegarde du livret:', error.message);
   }
 }
-
+function generateToken(user) {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  return jwt.sign(
+    { id: user.id, email: user.email },
+    secret,
+    { expiresIn: '7d' }
+  );
+}
 
   try {
     await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
