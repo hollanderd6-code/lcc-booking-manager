@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCC Booking – Création de compte</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <i class="fas fa-home"></i>
+        </div>
+        <div>
+          <div class="auth-logo-title">LCC Booking Manager</div>
+          <div class="auth-logo-subtitle">Créer un espace conciergerie</div>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Créer un compte</h1>
+      <p class="auth-subtitle">
+        Configurez votre espace pour gérer vos logements et vos réservations.
+      </p>
+
+      <form class="auth-form" id="registerForm">
+        <div class="form-group">
+          <label for="company">Nom de la conciergerie / structure</label>
+          <div class="input-with-icon">
+            <i class="fas fa-building"></i>
+            <input type="text" id="company" name="company" placeholder="La Conciergerie de Charles" required>
+          </div>
+        </div>
+
+        <div class="form-row-two">
+          <div class="form-group">
+            <label for="firstName">Prénom</label>
+            <div class="input-with-icon">
+              <i class="fas fa-user"></i>
+              <input type="text" id="firstName" name="firstName" placeholder="Charles" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="lastName">Nom</label>
+            <div class="input-with-icon">
+              <i class="fas fa-user"></i>
+              <input type="text" id="lastName" name="lastName" placeholder="Dupont" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Adresse e-mail</label>
+          <div class="input-with-icon">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="regEmail" name="email" placeholder="vous@exemple.com" required>
+          </div>
+        </div>
+
+        <div class="form-row-two">
+          <div class="form-group">
+            <label for="regPassword">Mot de passe</label>
+            <div class="input-with-icon">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="regPassword" name="password" placeholder="••••••••" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="regPasswordConfirm">Confirmation</label>
+            <div class="input-with-icon">
+              <i class="fas fa-lock"></i>
+              <input type="password" id="regPasswordConfirm" name="passwordConfirm" placeholder="••••••••" required>
+            </div>
+          </div>
+        </div>
+
+        <label class="checkbox-label" style="margin-top: 4px;">
+          <input type="checkbox" id="terms" required>
+          <span>J’accepte les conditions générales d’utilisation.</span>
+        </label>
+
+        <button type="submit" class="btn btn-primary auth-submit">
+          Créer mon compte
+        </button>
+      </form>
+
+      <div class="auth-footer-text">
+        Déjà un compte ?
+        <a href="/login.html" class="auth-link">Se connecter</a>
+      </div>
+    </div>
+
+    <div class="auth-side">
+      <h2>Prêt à centraliser vos réservations ?</h2>
+      <p>
+        En quelques minutes, créez votre espace, ajoutez vos logements et
+        connectez vos calendriers Airbnb, Booking et autres plateformes.
+      </p>
+      <ul>
+        <li><i class="fas fa-check"></i> Multi-logements & multi-plateformes</li>
+        <li><i class="fas fa-check"></i> Synchronisation iCal automatique</li>
+        <li><i class="fas fa-check"></i> Vue d’ensemble claire des séjours</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // À brancher plus tard sur ton API /auth/register
+    document.getElementById('registerForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const pwd = document.getElementById('regPassword').value;
+      const confirm = document.getElementById('regPasswordConfirm').value;
+      if (pwd !== confirm) {
+        alert("Les mots de passe ne correspondent pas.");
+        return;
+      }
+
+      // TODO: fetch('/api/auth/register', { ... })
+      alert("Soumission du formulaire de création de compte – à brancher sur l'API.");
+    });
+  </script>
+
+  <style>
+    /* On réutilise le même CSS que login.html,
+       seules quelques classes supplémentaires sont définies ici */
+
+    .form-row-two {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .form-row-two {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</body>
+</html>
