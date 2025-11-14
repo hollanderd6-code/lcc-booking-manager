@@ -3,491 +3,759 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LCC Booking Manager – Dashboard</title>
-  
+  <title>LCC Booking Manager – Gérez vos réservations simplement</title>
+
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
-  
-  <!-- Platform CSS -->
+  <!-- Style global de la plateforme -->
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">
-          <i class="fas fa-home"></i>
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">LCC Booking</span>
-            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+<body class="landing-body">
+  <!-- HEADER -->
+  <header class="landing-header">
+    <div class="landing-container header-inner">
+      <div class="header-left">
+        <a href="/" class="logo-link">
+          <div class="logo-icon">
+            <i class="fas fa-home"></i>
+          </div>
+          <div class="logo-text">
+            <span class="logo-title">LCC Booking Manager</span>
+            <span class="logo-subtitle">La Conciergerie de Charles</span>
           </div>
         </a>
       </div>
-      
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-          <a href="/" class="nav-item active">
-            <i class="fas fa-th-large"></i>
-            <span>Dashboard</span>
-          </a>
-          <a href="#" class="nav-item">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-            <span class="nav-badge" id="navTotalReservations">0</span>
-          </a>
-          <a href="/messages.html" class="nav-item">
-            <i class="fas fa-comment-dots"></i>
-            <span>Messages</span>
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-          <a href="/settings.html" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Mes logements</span>
-          </a>
-          <a href="#" class="nav-item">
-            <i class="fas fa-chart-bar"></i>
-            <span>Statistiques</span>
-          </a>
-          <a href="#" class="nav-item">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-          <a href="#" class="nav-item">
-            <i class="fas fa-cog"></i>
-            <span>Paramètres</span>
-          </a>
-          <a href="#" class="nav-item">
-            <i class="fas fa-question-circle"></i>
-            <span>Aide</span>
-          </a>
-        </div>
+      <nav class="header-nav">
+        <a href="#features" class="nav-link">Fonctionnalités</a>
+        <a href="#how" class="nav-link">Comment ça marche</a>
+        <a href="#pour-qui" class="nav-link">Pour qui ?</a>
       </nav>
-      
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar">C</div>
-          <div class="user-info">
-            <div class="user-name">Charles</div>
-            <div class="user-email">La Conciergerie</div>
-          </div>
-          <i class="fas fa-chevron-down" style="color: var(--text-tertiary);"></i>
-        </div>
+      <div class="header-actions">
+        <a href="/login.html" class="btn btn-ghost small">Se connecter</a>
+        <a href="/register.html" class="btn btn-primary small">Créer un compte</a>
       </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Vue d’ensemble</div>
-          <h1 class="page-title">Dashboard</h1>
-          <p class="page-subtitle">
-            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <!-- HERO -->
+    <section class="landing-hero">
+      <div class="landing-container hero-inner">
+        <div class="hero-text">
+          <div class="hero-badge">
+            <i class="fas fa-calendar-check"></i>
+            Synchronisation Airbnb & Booking en temps réel
+          </div>
+          <h1>Centralisez toutes vos réservations en un seul endroit.</h1>
+          <p class="hero-subtitle">
+            LCC Booking Manager vous donne une vue claire de vos séjours, arrivées, départs et disponibilités.
+            Pensé pour les conciergeries, multi-logements et hôtes exigeants.
           </p>
+          <div class="hero-actions">
+            <a href="/register.html" class="btn btn-primary hero-btn">
+              <i class="fas fa-rocket"></i>
+              Créer mon espace gratuitement
+            </a>
+            <a href="/login.html" class="btn btn-ghost hero-btn">
+              <i class="fas fa-sign-in-alt"></i>
+              J’ai déjà un compte
+            </a>
+          </div>
+          <div class="hero-footnote">
+            <i class="fas fa-shield-alt"></i>
+            Aucune carte bancaire demandée • Annulable à tout moment
+          </div>
         </div>
-        
-        <div class="header-actions">
-          <button class="btn btn-ghost hide-on-mobile">
-            <i class="fas fa-plus"></i>
-            Nouvelle réservation
-          </button>
-          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-          <button class="btn-icon" title="Notifications">
-            <i class="fas fa-bell"></i>
-            <span class="notification-badge"></span>
-          </button>
-          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
-            <i class="fas fa-moon"></i>
-          </button>
+
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="hero-card-header">
+              <span class="hero-card-title">Vue d’ensemble</span>
+              <span class="hero-card-tag">Dashboard temps réel</span>
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <span class="hero-stat-label">Réservations à venir</span>
+                <span class="hero-stat-value">12</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Séjours en cours</span>
+                <span class="hero-stat-value">3</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Taux d’occupation</span>
+                <span class="hero-stat-value">78%</span>
+              </div>
+            </div>
+            <div class="hero-calendar-placeholder">
+              <div class="hero-calendar-row">
+                <span class="hero-dot dot-green"></span>
+                <span class="hero-line">Arrivée – Villa Deuil • 16:00</span>
+              </div>
+              <div class="hero-calendar-row">
+                <span class="hero-dot dot-blue"></span>
+                <span class="hero-line">Séjour en cours – Studio Gare</span>
+              </div>
+              <div class="hero-calendar-row">
+                <span class="hero-dot dot-orange"></span>
+                <span class="hero-line">Départ – Montmorency • 11:00</span>
+              </div>
+              <div class="hero-calendar-footer">
+                Calendrier synchronisé avec vos annonces Airbnb / Booking.
+              </div>
+            </div>
+          </div>
         </div>
-      </header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-        
-        <!-- Stats Grid -->
-        <section class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Total réservations</span>
-              <div class="stat-icon green">
-                <i class="fas fa-calendar-check"></i>
-              </div>
-            </div>
-            <div class="stat-value" id="statTotal">-</div>
-            <div class="stat-trend up">
-              <i class="fas fa-arrow-up"></i>
-              <span>12 % ce mois</span>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">À venir</span>
-              <div class="stat-icon blue">
-                <i class="fas fa-clock"></i>
-              </div>
-            </div>
-            <div class="stat-value" id="statUpcoming">-</div>
-            <div class="stat-trend up">
-              <i class="fas fa-arrow-up"></i>
-              <span>+8 % vs mois dernier</span>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Séjours en cours</span>
-              <div class="stat-icon purple">
-                <i class="fas fa-door-open"></i>
-              </div>
-            </div>
-            <div class="stat-value" id="statCurrent">-</div>
-            <div class="stat-trend">
-              <i class="fas fa-minus"></i>
-              <span>Stable</span>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Taux d’occupation</span>
-              <div class="stat-icon orange">
-                <i class="fas fa-chart-pie"></i>
-              </div>
-            </div>
-            <div class="stat-value">78%</div>
-            <div class="stat-trend up">
-              <i class="fas fa-arrow-up"></i>
-              <span>+5 % vs mois dernier</span>
-            </div>
-          </div>
-        </section>
-        
-        <!-- Property Filters -->
-        <section class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-filter"></i>
-              Filtrer par logement
-            </div>
-            <button class="btn btn-ghost" onclick="clearFilters()">
-              <i class="fas fa-times"></i>
-              Réinitialiser
-            </button>
-          </div>
-          <div class="property-filters" id="propertyFilters">
-            <!-- Généré dynamiquement par app.js -->
-          </div>
-        </section>
-        
-        <!-- Calendar Card -->
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-calendar-alt"></i>
-              Calendrier des réservations
-            </div>
-            <div class="flex gap-sm">
-              <button class="btn btn-ghost view-btn active" data-view="month">
-                <i class="fas fa-calendar"></i> Mois
-              </button>
-              <button class="btn btn-ghost view-btn" data-view="week">
-                <i class="fas fa-calendar-week"></i> Semaine
-              </button>
-              <button class="btn btn-ghost view-btn" data-view="list">
-                <i class="fas fa-list"></i> Liste
-              </button>
-            </div>
-          </div>
-          <div id="calendar"></div>
-        </section>
-        
       </div>
-      
-    </main>
-  </div>
-  
-  <!-- Reservation Modal -->
-  <div class="modal" id="reservationModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modalTitle">Détails de la réservation</h2>
-        <button class="modal-close" id="modalClose">
-          <i class="fas fa-times"></i>
-        </button>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="landing-section">
+      <div class="landing-container">
+        <h2 class="section-title">Pensé pour la réalité du terrain</h2>
+        <p class="section-subtitle">
+          LCC Booking Manager a été conçu par une conciergerie, pour des conciergeries.
+        </p>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-layer-group"></i>
+            </div>
+            <h3>Calendrier unifié</h3>
+            <p>
+              Visualisez toutes vos réservations (Airbnb, Booking, direct) dans un seul calendrier clair et
+              coloré par logement.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-house-user"></i>
+            </div>
+            <h3>Multi-logements</h3>
+            <p>
+              Ajoutez autant de logements que nécessaire, avec leurs couleurs, leurs calendriers et leurs stats.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-envelope-open-text"></i>
+            </div>
+            <h3>Messages rapides</h3>
+            <p>
+              Préparez des templates de messages pour les arrivées, départs, remerciements et infos pratiques.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-bell"></i>
+            </div>
+            <h3>Rappels intelligents</h3>
+            <p>
+              Identifiez en un coup d’œil les arrivées et départs du jour, les séjours en cours et les ménages à prévoir.
+            </p>
+          </div>
+        </div>
       </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Contenu généré dynamiquement -->
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="landing-section alt">
+      <div class="landing-container">
+        <h2 class="section-title">Comment ça marche ?</h2>
+        <p class="section-subtitle">
+          Quelques minutes suffisent pour connecter vos annonces et commencer à piloter vos séjours.
+        </p>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <span class="step-number">1</span>
+            <h3>Créez votre compte</h3>
+            <p>
+              Renseignez votre conciergerie, vos coordonnées, et accédez à votre espace sécurisé.
+            </p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">2</span>
+            <h3>Ajoutez vos logements</h3>
+            <p>
+              Pour chaque logement, enregistrez les URLs iCal Airbnb / Booking. La synchro se fait automatiquement.
+            </p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">3</span>
+            <h3>Gérez vos séjours</h3>
+            <p>
+              Consultez votre calendrier, vos stats, préparez vos ménages et communiquez avec vos voyageurs.
+            </p>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <!-- POUR QUI -->
+    <section id="pour-qui" class="landing-section">
+      <div class="landing-container">
+        <h2 class="section-title">Pour qui est fait LCC Booking Manager ?</h2>
+        <div class="audience-grid">
+          <div class="audience-card">
+            <h3>Conciergeries locales</h3>
+            <p>
+              Vous gérez plusieurs appartements ou maisons pour vos clients ? Centralisez tout dans un seul outil.
+            </p>
+          </div>
+          <div class="audience-card">
+            <h3>Propriétaires multi-biens</h3>
+            <p>
+              Plusieurs logements sur Airbnb / Booking ? Visualisez tout d’un coup, évitez les doublons.
+            </p>
+          </div>
+          <div class="audience-card">
+            <h3>Hôtes indépendants</h3>
+            <p>
+              Même avec 1 ou 2 logements, un bon calendrier change tout : moins de stress, moins d’oubli.
+            </p>
+          </div>
+        </div>
+
+        <div class="landing-cta">
+          <h2>Prêt à simplifier votre gestion de réservations ?</h2>
+          <p>
+            Créez votre espace en quelques clics et commencez à connecter vos logements dès aujourd’hui.
+          </p>
+          <div class="landing-cta-actions">
+            <a href="/register.html" class="btn btn-primary hero-btn">
+              <i class="fas fa-user-plus"></i>
+              Créer mon compte
+            </a>
+            <a href="/login.html" class="btn btn-ghost hero-btn">
+              Se connecter
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="landing-footer">
+    <div class="landing-container footer-inner">
+      <span>© <span id="year"></span> LCC Booking Manager</span>
+      <span class="footer-note">Outil créé par une conciergerie, pour des conciergeries.</span>
+      <a href="/login.html" class="footer-link">Accéder à mon espace</a>
     </div>
-  </div>
-  
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Synchronisation en cours...</p>
-    </div>
-  </div>
-  
-  <!-- Toast Notifications -->
-  <div class="toast-container" id="toastContainer"></div>
-  
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
-  <script src="/js/app.js"></script>
-  
+  </footer>
+
+  <script>
+    // Année dynamique
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+
   <style>
-    /* Styles spécifiques calendrier & UI complémentaire */
-    #calendar {
-      margin-top: 24px;
-    }
-    
-    .fc {
-      --fc-border-color: var(--border-color);
-      --fc-button-bg-color: var(--primary-color);
-      --fc-button-border-color: var(--primary-color);
-      --fc-button-hover-bg-color: var(--primary-hover);
-      --fc-button-hover-border-color: var(--primary-hover);
-      --fc-button-active-bg-color: var(--primary-dark);
-      --fc-today-bg-color: var(--primary-light);
-    }
-    
-    [data-theme="dark"] .fc {
-      --fc-page-bg-color: var(--bg-primary);
-      --fc-neutral-bg-color: var(--bg-secondary);
-      --fc-today-bg-color: rgba(16, 185, 129, 0.1);
-    }
-    
-    .fc .fc-button {
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      text-transform: none;
-      padding: 8px 16px;
-    }
-    
-    .fc-event {
-      border-radius: var(--radius-sm);
-      border: none;
-      padding: 4px 8px;
-    }
-    
-    .property-filters {
+    .landing-body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
+      color: var(--text-primary, #0f172a);
+      min-height: 100vh;
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
+      flex-direction: column;
     }
-    
-    .property-badge {
-      padding: 8px 16px;
-      border-radius: var(--radius-full);
-      border: 2px solid;
-      cursor: pointer;
-      transition: var(--transition-fast);
-      font-weight: 600;
-      font-size: 14px;
+
+    .landing-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .landing-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+      background: rgba(248, 250, 252, 0.9);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      gap: 16px;
+    }
+
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
+      font-size: 16px;
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .logo-subtitle {
+      font-size: 11px;
+      color: var(--text-tertiary, #6b7280);
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      text-decoration: none;
+      color: var(--text-secondary, #4b5563);
+      font-weight: 500;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary, #111827);
+    }
+
+    .header-actions {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    
-    .property-badge:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
+
+    .btn.small {
+      padding: 8px 14px;
+      font-size: 13px;
     }
-    
-    .property-badge.active {
-      background: var(--primary-color);
-      color: #fff;
-      border-color: var(--primary-color);
-    }
-    
-    .property-count {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      font-size: 12px;
-    }
-    
-    .page-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-tertiary);
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
-    
-    .page-subtitle {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-    
-    .hide-on-mobile {
+
+    .btn-primary {
       display: inline-flex;
-    }
-    
-    @media (max-width: 768px) {
-      .hide-on-mobile {
-        display: none;
-      }
-    }
-    
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
       align-items: center;
+      gap: 8px;
+      background: var(--primary-color, #059669);
+      border-radius: 999px;
+      padding: 10px 18px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.25);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark, #047857);
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(16, 185, 129, 0.38);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 9px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      text-decoration: none;
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      background: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(148, 163, 184, 0.9);
+    }
+
+    .landing-hero {
+      padding: 32px 0 40px;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      gap: 32px;
+      align-items: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.08);
+      color: #047857;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .hero-badge i {
+      font-size: 12px;
+    }
+
+    .hero-text h1 {
+      font-size: 30px;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #020617;
+    }
+
+    .hero-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      max-width: 480px;
+      margin-bottom: 18px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .hero-btn {
+      font-size: 14px;
+    }
+
+    .hero-footnote {
+      font-size: 12px;
+      color: var(--text-tertiary, #6b7280);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-footnote i {
+      font-size: 11px;
+    }
+
+    .hero-visual {
+      display: flex;
       justify-content: center;
     }
-    
-    .modal.active {
+
+    .hero-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .hero-card-header {
       display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
     }
-    
-    .modal-content {
-      background: var(--bg-primary);
-      border-radius: var(--radius-xl);
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
+
+    .hero-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .hero-card-tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.08);
+      color: #1d4ed8;
+      font-weight: 500;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .hero-stat-label {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .hero-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .hero-calendar-placeholder {
+      padding: 10px 10px 8px;
+      border-radius: 16px;
+      background: #0f172a;
+      color: #e5e7eb;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hero-calendar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .dot-green { background: #22c55e; }
+    .dot-blue { background: #3b82f6; }
+    .dot-orange { background: #fb923c; }
+
+    .hero-line {
+      white-space: nowrap;
       overflow: hidden;
-      box-shadow: var(--shadow-xl);
+      text-overflow: ellipsis;
     }
-    
-    .modal-header {
-      padding: var(--spacing-lg);
-      border-bottom: 1px solid var(--border-color);
+
+    .hero-calendar-footer {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .landing-section {
+      padding: 32px 0;
+    }
+
+    .landing-section.alt {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      text-align: center;
+      color: var(--text-secondary, #4b5563);
+      max-width: 520px;
+      margin: 0 auto 20px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      font-size: 13px;
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .feature-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #047857;
+      margin-bottom: 8px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      position: relative;
+      font-size: 13px;
+    }
+
+    .step-number {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .step-card h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+      margin-bottom: 24px;
+    }
+
+    .audience-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      font-size: 13px;
+    }
+
+    .landing-cta {
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .landing-cta h2 {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .landing-cta p {
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      max-width: 480px;
+      margin: 0 auto 16px;
+    }
+
+    .landing-cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .landing-footer {
+      margin-top: auto;
+      padding: 16px 0;
+      background: rgba(15, 23, 42, 0.96);
+      color: #e5e7eb;
+    }
+
+    .footer-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
     }
-    
-    .modal-header h2 {
-      font-size: 20px;
-      font-weight: 700;
+
+    .footer-note {
+      color: #9ca3af;
     }
-    
-    .modal-close {
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: var(--bg-hover);
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: var(--transition-fast);
+
+    .footer-link {
+      color: #a5b4fc;
+      text-decoration: none;
+      font-weight: 500;
     }
-    
-    .modal-close:hover {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
+
+    .footer-link:hover {
+      text-decoration: underline;
     }
-    
-    .modal-body {
-      padding: var(--spacing-lg);
-      overflow-y: auto;
-      max-height: calc(90vh - 80px);
-    }
-    
-    .loading-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .loading-overlay.active {
-      display: flex;
-    }
-    
-    .loading-spinner {
-      background: var(--bg-primary);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-xl);
-      text-align: center;
-    }
-    
-    .loading-spinner i {
-      font-size: 48px;
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-md);
-    }
-    
-    .toast-container {
-      position: fixed;
-      bottom: var(--spacing-lg);
-      right: var(--spacing-lg);
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-sm);
-    }
-    
-    .toast {
-      background: var(--bg-primary);
-      padding: var(--spacing-md) var(--spacing-lg);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      border-left: 4px solid;
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      min-width: 300px;
-      animation: slideInRight 0.3s ease;
-    }
-    
-    .toast.success { border-color: var(--success); }
-    .toast.error { border-color: var(--error); }
-    .toast.info { border-color: var(--info); }
-    
-    @keyframes slideInRight {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
+
+    @media (max-width: 960px) {
+      .hero-inner {
+        grid-template-columns: minmax(0, 1fr);
       }
-      to {
-        transform: translateX(0);
-        opacity: 1;
+      .hero-visual {
+        order: -1;
+      }
+      .features-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .steps-grid,
+      .audience-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .header-nav {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .features-grid,
+      .steps-grid,
+      .audience-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .hero-text h1 {
+        font-size: 24px;
+      }
+      .hero-card {
+        max-width: 100%;
+      }
+      .header-actions .btn.small {
+        padding-inline: 10px;
+      }
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
   </style>
-  <script>
-  (function () {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      window.location.href = '/login.html';
-    }
-  })();
-</script>
-
 </body>
 </html>
