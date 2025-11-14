@@ -109,6 +109,14 @@
   </div>
 
   <script>
+      // Si déjà connecté, inutile de revenir ici
+  (function () {
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
+      window.location.href = '/app.html';
+    }
+  })();
+
   document.getElementById('registerForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
