@@ -32,21 +32,13 @@ let reservationsStore = {
 // Configuration file path
 const CONFIG_FILE = path.join(__dirname, 'properties-config.json');
 // Users file path
+// Users file path
 const USERS_FILE = path.join(__dirname, 'users-config.json');
 let USERS = [];
+
+// Welcome data file path
 const WELCOME_FILE = path.join(__dirname, 'welcome-config.json');
 let WELCOME_DATA = []; // { userId, data: {...} } par utilisateur
-
-async function loadUsers() {
-  try {
-    const data = await fs.readFile(USERS_FILE, 'utf8');
-    USERS = JSON.parse(data);
-    console.log('✅ Utilisateurs chargés depuis users-config.json');
-  } catch (error) {
-    USERS = [];
-    console.log('⚠️  Aucun fichier users-config.json, démarrage avec 0 utilisateur');
-  }
-}
 
 async function loadUsers() {
   try {
@@ -87,22 +79,6 @@ async function saveWelcomeData() {
     console.error('❌ Erreur lors de la sauvegarde du livret:', error.message);
   }
 }
-function generateToken(user) {
-  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-  return jwt.sign(
-    { id: user.id, email: user.email },
-    secret,
-    { expiresIn: '7d' }
-  );
-}
-
-  try {
-    await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
-    console.log('✅ Utilisateurs sauvegardés');
-  } catch (error) {
-    console.error('❌ Erreur lors de la sauvegarde des utilisateurs:', error.message);
-  }
-}
 
 function generateToken(user) {
   const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -117,6 +93,10 @@ function publicUser(user) {
   const { passwordHash, ...safe } = user;
   return safe;
 }
+
+// Load properties from config file or use defaults
+let PROPERTIES = [];
+
 
 // Load properties from config file or use defaults
 let PROPERTIES = [];
