@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCC Booking – Connexion</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <i class="fas fa-home"></i>
+        </div>
+        <div>
+          <div class="auth-logo-title">LCC Booking Manager</div>
+          <div class="auth-logo-subtitle">La Conciergerie de Charles</div>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Connexion</h1>
+      <p class="auth-subtitle">
+        Accédez à votre espace de gestion des réservations.
+      </p>
+
+      <form class="auth-form" id="loginForm">
+        <div class="form-group">
+          <label for="email">Adresse e-mail</label>
+          <div class="input-with-icon">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="email" name="email" placeholder="vous@exemple.com" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <div class="input-with-icon">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="password" name="password" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <div class="form-row-between">
+          <label class="checkbox-label">
+            <input type="checkbox" name="remember">
+            <span>Se souvenir de moi</span>
+          </label>
+          <a href="#" class="auth-link">Mot de passe oublié ?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-submit">
+          Se connecter
+        </button>
+      </form>
+
+      <div class="auth-footer-text">
+        Pas encore de compte ?
+        <a href="/register.html" class="auth-link">Créer un compte</a>
+      </div>
+    </div>
+
+    <div class="auth-side">
+      <h2>Gérez vos logements en quelques clics</h2>
+      <p>
+        Synchronisation automatique Airbnb / Booking, vision claire de vos séjours,
+        messages rapides pour vos voyageurs… Tout au même endroit.
+      </p>
+      <ul>
+        <li><i class="fas fa-check"></i> Vue calendrier unifiée</li>
+        <li><i class="fas fa-check"></i> Gestion multi-logements</li>
+        <li><i class="fas fa-check"></i> Rappels arrivées / départs</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // À brancher plus tard sur ton API /auth/login
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      // TODO: fetch('/api/auth/login', { ... })
+      alert("Soumission du formulaire de connexion – à brancher sur l'API.");
+    });
+  </script>
+
+  <style>
+    .auth-body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .auth-container {
+      max-width: 980px;
+      width: 100%;
+      margin: 32px;
+      background: var(--bg-primary, #ffffff);
+      border-radius: 24px;
+      box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.18));
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
+      overflow: hidden;
+    }
+
+    .auth-card {
+      padding: 32px 32px 28px;
+    }
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .auth-logo-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
+    }
+
+    .auth-logo-title {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .auth-logo-subtitle {
+      font-size: 12px;
+      color: var(--text-tertiary, #6b7280);
+    }
+
+    .auth-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary, #6b7280);
+      margin-bottom: 24px;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-icon i {
+      position: absolute;
+      left: 12px;
+      color: var(--text-tertiary, #9ca3af);
+      font-size: 13px;
+    }
+
+    .input-with-icon input {
+      width: 100%;
+      padding: 10px 12px 10px 32px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      background: var(--bg-secondary, #f9fafb);
+      font-size: 14px;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    .input-with-icon input:focus {
+      outline: none;
+      border-color: var(--primary-color, #059669);
+      box-shadow: 0 0 0 1px var(--primary-color, #05966910);
+      background: #fff;
+    }
+
+    .form-row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary, #6b7280);
+      cursor: pointer;
+    }
+
+    .checkbox-label input {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--primary-color, #059669);
+    }
+
+    .auth-submit {
+      margin-top: 8px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .auth-footer-text {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text-secondary, #6b7280);
+      text-align: center;
+    }
+
+    .auth-link {
+      color: var(--primary-color, #059669);
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .auth-link:hover {
+      text-decoration: underline;
+    }
+
+    .auth-side {
+      padding: 32px 28px;
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .auth-side h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .auth-side p {
+      font-size: 14px;
+      color: #cbd5f5;
+    }
+
+    .auth-side ul {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .auth-side li i {
+      margin-right: 8px;
+      color: #22c55e;
+    }
+
+    @media (max-width: 900px) {
+      .auth-container {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .auth-side {
+        display: none;
+      }
+      .auth-card {
+        padding: 24px 20px 20px;
+      }
+    }
+  </style>
+</body>
+</html>
