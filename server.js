@@ -8,6 +8,9 @@ const fs = require('fs').promises;
 const icalService = require('./services/icalService');
 const notificationService = require('./services/notificationService');
 const messagingService = require('./services/messagingService');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,7 +18,9 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser());
 app.use(express.static('public'));
+
 
 // Store for reservations
 let reservationsStore = {
@@ -26,6 +31,43 @@ let reservationsStore = {
 
 // Configuration file path
 const CONFIG_FILE = path.join(__dirname, 'properties-config.json');
+// Users file path
+const USERS_FILE = path.join(__dirname, 'users-config.json');
+let USERS = [];
+
+async function loadUsers() {
+  try {
+    const data = await fs.readFile(USERS_FILE, 'utf8');
+    USERS = JSON.parse(data);
+    console.log('✅ Utilisateurs chargés depuis users-config.json');
+  } catch (error) {
+    USERS = [];
+    console.log('⚠️  Aucun fichier users-config.json, démarrage avec 0 utilisateur');
+  }
+}
+
+async function saveUsers() {
+  try {
+    await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
+    console.log('✅ Utilisateurs sauvegardés');
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde des utilisateurs:', error.message);
+  }
+}
+
+function generateToken(user) {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  return jwt.sign(
+    { id: user.id, email: user.email },
+    secret,
+    { expiresIn: '7d' }
+  );
+}
+
+function publicUser(user) {
+  const { passwordHash, ...safe } = user;
+  return safe;
+}
 
 // Load properties from config file or use defaults
 let PROPERTIES = [];
@@ -475,6 +517,106 @@ app.get('/api/config', (req, res) => {
     timezone: process.env.TIMEZONE || 'Europe/Paris'
   });
 });
+// ============================================
+// ROUTES API - AUTH
+// ============================================
+
+// Création de compte
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { company, firstName, lastName, email, password } = req.body;
+
+    if (!company || !firstName || !lastName || !email || !password) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants' });
+    }
+
+    const existing = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const id = `u_${Date.now().toString(36)}`;
+
+    const user = {
+      id,
+      company,
+      firstName,
+      lastName,
+      email,
+      passwordHash,
+      createdAt: new Date().toISOString()
+    };
+
+    USERS.push(user);
+    await saveUsers();
+
+    const token = generateToken(user);
+
+    res.json({
+      user: publicUser(user),
+      token
+    });
+  } catch (err) {
+    console.error('Erreur register:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Connexion
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email et mot de passe requis' });
+    }
+
+    const user = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) {
+      return res.status(401).json({ error: 'Identifiants invalides' });
+    }
+
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: 'Identifiants invalides' });
+    }
+
+    const token = generateToken(user);
+
+    res.json({
+      user: publicUser(user),
+      token
+    });
+  } catch (err) {
+    console.error('Erreur login:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Récupérer l’utilisateur courant depuis un token
+app.get('/api/auth/me', (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token manquant' });
+  }
+
+  try {
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const payload = jwt.verify(token, secret);
+    const user = USERS.find(u => u.id === payload.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    return res.status(401).json({ error: 'Token invalide ou expiré' });
+  }
+});
 
 // ============================================
 // DÉMARRAGE
@@ -564,8 +706,12 @@ app.listen(PORT, async () => {
   console.log('📅 Interface web disponible');
   console.log('');
   
-  // Charger la configuration
+    // Charger la configuration
   await loadProperties();
+  await loadUsers();
+  
+  console.log('Logements configurés:');
+
   
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
