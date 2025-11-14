@@ -641,13 +641,66 @@
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
-        localStorage.removeItem('lcc_token');
+                localStorage.removeItem('lcc_token');
         localStorage.removeItem('lcc_user');
         window.location.href = '/login.html';
       });
     }
   })();
 </script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const newReservationBtn = document.getElementById('newReservationBtn');
+    const newReservationModal = document.getElementById('newReservationModal');
+    const newReservationClose = document.getElementById('newReservationClose');
+    const newReservationCancel = document.getElementById('newReservationCancel');
+    const newReservationForm = document.getElementById('newReservationForm');
+
+    function openNewReservationModal() {
+      if (newReservationModal) {
+        newReservationModal.classList.add('active');
+      }
+    }
+
+    function closeNewReservationModal() {
+      if (newReservationModal) {
+        newReservationModal.classList.remove('active');
+        if (newReservationForm) newReservationForm.reset();
+      }
+    }
+
+    // Clic sur le bouton en haut → ouverture
+    if (newReservationBtn) {
+      newReservationBtn.addEventListener('click', openNewReservationModal);
+    }
+
+    // Clic sur la croix → fermeture
+    if (newReservationClose) {
+      newReservationClose.addEventListener('click', closeNewReservationModal);
+    }
+
+    // Clic sur "Annuler" → fermeture
+    if (newReservationCancel) {
+      newReservationCancel.addEventListener('click', closeNewReservationModal);
+    }
+
+    // Pour l’instant : on bloque juste le submit et on ferme (sans appel API)
+    if (newReservationForm) {
+      newReservationForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // Ici tu mettras ton fetch() plus tard
+        alert('Réservation enregistrée (démo)');
+        closeNewReservationModal();
+      });
+    }
+  });
+</script>
+
+</body>
+</html>
+
 
 </body>
 </html>
