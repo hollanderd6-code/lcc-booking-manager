@@ -94,8 +94,6 @@ function publicUser(user) {
   return safe;
 }
 
-// Load properties from config file or use defaults
-let PROPERTIES = [];
 
 
 // Load properties from config file or use defaults
