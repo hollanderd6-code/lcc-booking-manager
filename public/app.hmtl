@@ -79,13 +79,19 @@
         </div>
       </nav>
       
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar">C</div>
-          <div class="user-info">
-            <div class="user-name">Charles</div>
-            <div class="user-email">La Conciergerie</div>
-          </div>
+      <div class="user-profile">
+  <div class="user-avatar" id="sidebarUserAvatar">C</div>
+  <div class="user-info">
+    <div class="user-name" id="sidebarUserName">Utilisateur</div>
+    <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+  </div>
+
+  <button class="btn btn-ghost" id="logoutBtn" style="padding: 4px 10px; font-size: 12px; margin-left: auto;">
+    <i class="fas fa-sign-out-alt"></i>
+    <span>Quitter</span>
+  </button>
+</div>
+
           <i class="fas fa-chevron-down" style="color: var(--text-tertiary);"></i>
         </div>
       </div>
@@ -493,6 +499,56 @@
     const token = localStorage.getItem('lcc_token');
     if (!token) {
       window.location.href = '/login.html';
+    }
+  })();
+<script>
+  (function () {
+    // Protection : si pas de token, on renvoie vers login
+    const token = localStorage.getItem('lcc_token');
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    // Récupération de l'utilisateur depuis le localStorage
+    const rawUser = localStorage.getItem('lcc_user');
+    let user = null;
+
+    try {
+      user = rawUser ? JSON.parse(rawUser) : null;
+    } catch (e) {
+      console.error('Impossible de lire lcc_user', e);
+    }
+
+    if (user) {
+      const nameEl = document.getElementById('sidebarUserName');
+      const companyEl = document.getElementById('sidebarUserCompany');
+      const avatarEl = document.getElementById('sidebarUserAvatar');
+
+      if (nameEl) {
+        nameEl.textContent = user.firstName
+          ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+          : (user.email || 'Mon compte');
+      }
+
+      if (companyEl) {
+        companyEl.textContent = user.company || 'Mon espace';
+      }
+
+      if (avatarEl) {
+        const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+        avatarEl.textContent = initial.toUpperCase();
+      }
+    }
+
+    // Gestion du bouton de déconnexion
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        localStorage.removeItem('lcc_token');
+        localStorage.removeItem('lcc_user');
+        window.location.href = '/login.html';
+      });
     }
   })();
 </script>
