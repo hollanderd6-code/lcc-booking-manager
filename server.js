@@ -196,7 +196,7 @@ async function syncAllCalendars() {
   
   const newReservations = [];
   
-  ffor (const property of PROPERTIES) {
+  for (const property of PROPERTIES) {
   if (property.icalUrls.length === 0) {
     console.log(`⚠️  Aucune URL iCal configurée pour ${property.name}`);
     continue;
