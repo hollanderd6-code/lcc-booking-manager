@@ -196,68 +196,63 @@ async function syncAllCalendars() {
   
   const newReservations = [];
   
-  for (const property of PROPERTIES) {
-    if (property.icalUrls.length === 0) {
-      console.log(`⚠️  Aucune URL iCal configurée pour ${property.name}`);
-      continue;
-    }
-    
-        try {
-      const reservations = await icalService.fetchReservations(property);
-      
-      // Détecter les nouvelles réservations (ICAL uniquement)
-      const oldReservations = reservationsStore.properties[property.id] || [];
-      const oldIds = new Set(oldReservations.map(r => r.uid));
-      
-      const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
-      
-      if (trulyNewReservations.length > 0) {
-        newReservations.push(...trulyNewReservations.map(r => ({
-          ...r,
-          propertyName: property.name,
-          propertyColor: property.color
-        })));
-      }
-      
-      // Base = réservations iCal
-      reservationsStore.properties[property.id] = reservations;
-
-      // Ajouter les réservations manuelles pour ce logement
-      const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
-      if (manualForProperty.length > 0) {
-        reservationsStore.properties[property.id] = [
-          ...reservationsStore.properties[property.id],
-          ...manualForProperty
-        ];
-      }
-
-      console.log(`✅ ${property.name}: ${reservationsStore.properties[property.id].length} réservations (iCal + manuelles)`);
-
-      
-      // Détecter les nouvelles réservations
-      let oldReservations = reservationsStore.properties[property.id] || [];
-      const oldIds = new Set(oldReservations.map(r => r.uid));
-      
-      const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
-      
-      if (trulyNewReservations.length > 0) {
-        newReservations.push(...trulyNewReservations.map(r => ({
-          ...r,
-          propertyName: property.name,
-          propertyColor: property.color
-        })));
-      }
-      
-      reservationsStore.properties[property.id] = reservations;
-      console.log(`✅ ${property.name}: ${reservations.length} réservations synchronisées`);
-      
-    } catch (error) {
-      console.error(`❌ Erreur lors de la synchronisation de ${property.name}:`, error.message);
-    }
+  ffor (const property of PROPERTIES) {
+  if (property.icalUrls.length === 0) {
+    console.log(`⚠️  Aucune URL iCal configurée pour ${property.name}`);
+    continue;
   }
   
-  reservationsStore.lastSync = new Date();
-  reservationsStore.syncStatus = 'idle';
+  try {
+    const reservations = await icalService.fetchReservations(property);
+    
+    // Détecter les nouvelles réservations (ICAL uniquement)
+    const oldReservations = reservationsStore.properties[property.id] || [];
+    const oldIds = new Set(oldReservations.map(r => r.uid));
+    
+    const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
+    
+    if (trulyNewReservations.length > 0) {
+      newReservations.push(...trulyNewReservations.map(r => ({
+        ...r,
+        propertyName: property.name,
+        propertyColor: property.color
+      })));
+    }
+    
+    // Base = réservations iCal
+    reservationsStore.properties[property.id] = reservations;
+
+    // Ajouter les réservations manuelles pour ce logement
+    const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
+    if (manualForProperty.length > 0) {
+      reservationsStore.properties[property.id] = [
+        ...reservationsStore.properties[property.id],
+        ...manualForProperty
+      ];
+    }
+
+    console.log(
+      `✅ ${property.name}: ${reservationsStore.properties[property.id].length} ` +
+      `réservations (iCal + manuelles)`
+    );
+    
+  } catch (error) {
+    console.error(`❌ Erreur lors de la synchronisation de ${property.name}:`, error.message);
+  }
+}
+
+reservationsStore.lastSync = new Date();
+reservationsStore.syncStatus = 'idle';
+
+// Envoyer notifications pour nouvelles réservations
+if (newReservations.length > 0) {
+  console.log(`📧 ${newReservations.length} nouvelle(s) réservation(s) détectée(s)`);
+  await notificationService.sendNewBookingNotifications(newReservations);
+}
+
+console.log('✅ Synchronisation terminée');
+return reservationsStore;
+
   
   // Envoyer notifications pour nouvelles réservations
   if (newReservations.length > 0) {
