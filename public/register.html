@@ -109,21 +109,53 @@
   </div>
 
   <script>
-    // À brancher plus tard sur ton API /auth/register
-    document.getElementById('registerForm').addEventListener('submit', function (e) {
-      e.preventDefault();
+  document.getElementById('registerForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-      const pwd = document.getElementById('regPassword').value;
-      const confirm = document.getElementById('regPasswordConfirm').value;
-      if (pwd !== confirm) {
-        alert("Les mots de passe ne correspondent pas.");
+    const company = document.getElementById('company').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regPasswordConfirm').value;
+    const terms = document.getElementById('terms').checked;
+
+    if (!terms) {
+      alert("Vous devez accepter les conditions générales d’utilisation.");
+      return;
+    }
+
+    if (password !== confirm) {
+      alert("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, firstName, lastName, email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Impossible de créer le compte.");
         return;
       }
 
-      // TODO: fetch('/api/auth/register', { ... })
-      alert("Soumission du formulaire de création de compte – à brancher sur l'API.");
-    });
-  </script>
+      localStorage.setItem('lcc_token', data.token);
+      localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+      // Redirection vers le dashboard
+      window.location.href = '/';
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau lors de la création du compte.");
+    }
+  });
+</script>
+
 
   <style>
     /* mêmes styles de base que login.html */
