@@ -78,13 +78,39 @@
   </div>
 
   <script>
-    // À brancher plus tard sur ton API /auth/login
-    document.getElementById('loginForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      // TODO: fetch('/api/auth/login', { ... })
-      alert("Soumission du formulaire de connexion – à brancher sur l'API.");
-    });
-  </script>
+  document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Impossible de se connecter.");
+        return;
+      }
+
+      // Stocker le token + user
+      localStorage.setItem('lcc_token', data.token);
+      localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+      // Redirection vers le dashboard
+      window.location.href = '/';
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau lors de la connexion.");
+    }
+  });
+</script>
+
 
   <style>
     .auth-body {
