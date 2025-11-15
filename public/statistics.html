@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>LCC Booking Manager – Statistiques</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Si tu as déjà un CSS global, remplace par ton fichier -->
+  <link rel="stylesheet" href="public/css/app.css" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f4f5f7;
+      color: #1f2933;
+    }
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .logo {
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    nav a {
+      color: #9ca3af;
+      margin-left: 16px;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    nav a.active,
+    nav a:hover {
+      color: #fff;
+    }
+    main {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .page-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .page-title h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    .filters select,
+    .filters input[type="date"] {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 0.9rem;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+    .card-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .card-value {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .card-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    .card-sub span.positive {
+      color: #047857;
+      font-weight: 600;
+    }
+    .card-sub span.negative {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+
+    .chart-section {
+      margin-bottom: 32px;
+    }
+    .chart-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .chart-container {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+
+    .table-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+    th,
+    td {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #4b5563;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    @media (max-width: 640px) {
+      .page-title {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">LCC Booking Manager</div>
+    <nav>
+      <a href="app.html">Tableau de bord</a>
+      <a href="cleaning.html">Ménage</a>
+      <a href="messages.html">Messages</a>
+      <a href="settings.html">Paramètres</a>
+      <a href="statistics.html" class="active">Statistiques</a>
+      <a href="notifications.html">Notifications</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-title">
+      <h1>Statistiques</h1>
+      <div class="filters">
+        <label for="period-select">Période :</label>
+        <select id="period-select">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">3 derniers mois</option>
+          <option value="365">12 derniers mois</option>
+          <option value="custom">Personnalisée</option>
+        </select>
+
+        <span id="custom-range" style="display:none;">
+          <input type="date" id="start-date" />
+          <span>→</span>
+          <input type="date" id="end-date" />
+        </span>
+      </div>
+    </section>
+
+    <section class="kpi-grid">
+      <div class="card">
+        <div class="card-title">Réservations</div>
+        <div class="card-value" id="kpi-reservations">128</div>
+        <div class="card-sub">
+          <span class="positive">+12%</span> vs période précédente
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Taux d'occupation moyen</div>
+        <div class="card-value" id="kpi-occupancy">78%</div>
+        <div class="card-sub">
+          <span class="positive">+5 pts</span> vs période précédente
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Revenu total</div>
+        <div class="card-value" id="kpi-revenue">32 450 €</div>
+        <div class="card-sub">
+          <span class="positive">+9%</span> vs période précédente
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Annulations</div>
+        <div class="card-value" id="kpi-cancellations">6</div>
+        <div class="card-sub">
+          <span class="negative">+2</span> annulations
+        </div>
+      </div>
+    </section>
+
+    <section class="chart-section">
+      <h2>Évolution des réservations</h2>
+      <p style="font-size:0.85rem;color:#6b7280;margin-top:0;margin-bottom:8px;">
+        Nombre de réservations confirmées par jour sur la période sélectionnée.
+      </p>
+      <div class="chart-container">
+        <canvas id="reservationsChart" height="80"></canvas>
+      </div>
+    </section>
+
+    <section class="table-section">
+      <h2>Performances par villa</h2>
+      <p style="font-size:0.85rem;color:#6b7280;margin-top:0;margin-bottom:8px;">
+        Vue synthétique du taux d’occupation et du revenu généré.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Villa</th>
+            <th>Réservations</th>
+            <th>Taux d'occupation</th>
+            <th>Revenu</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody id="villa-table-body">
+          <tr>
+            <td>Villa Deuil – Suite 1</td>
+            <td>32</td>
+            <td>82%</td>
+            <td>12 800 €</td>
+            <td><span class="badge">Top</span></td>
+          </tr>
+          <tr>
+            <td>Villa Deuil – Suite 2</td>
+            <td>28</td>
+            <td>75%</td>
+            <td>10 950 €</td>
+            <td><span class="badge">Stable</span></td>
+          </tr>
+          <tr>
+            <td>Villa LCC – Loft</td>
+            <td>18</td>
+            <td>64%</td>
+            <td>6 300 €</td>
+            <td><span class="badge">À suivre</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Chart.js depuis CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Données d'exemple – à remplacer par tes vraies données via ton back-end
+    const ctx = document.getElementById('reservationsChart').getContext('2d');
+    const reservationsChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['J-6', 'J-5', 'J-4', 'J-3', 'J-2', 'Hier', 'Aujourd\'hui'],
+        datasets: [{
+          label: 'Réservations confirmées',
+          data: [10, 14, 9, 12, 16, 11, 18],
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 5
+            }
+          }
+        }
+      }
+    });
+
+    // Gestion simple du sélecteur de période
+    const periodSelect = document.getElementById('period-select');
+    const customRange = document.getElementById('custom-range');
+
+    periodSelect.addEventListener('change', () => {
+      if (periodSelect.value === 'custom') {
+        customRange.style.display = 'inline-flex';
+      } else {
+        customRange.style.display = 'none';
+        // Ici tu peux rappeler ton API pour recharger les stats
+        // loadStats(periodSelect.value);
+      }
+    });
+  </script>
+</body>
+</html>
