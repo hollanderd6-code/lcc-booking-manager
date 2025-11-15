@@ -63,11 +63,12 @@
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
-          <a href="#" class="nav-item" id="navCalendarLink">
+        <a href="#" class="nav-item" id="navCalendarLink">
   <i class="fas fa-calendar"></i>
   <span>Calendrier</span>
   <span class="nav-badge" id="navTotalReservations">0</span>
 </a>
+
 
           <a href="/messages.html" class="nav-item">
             <i class="fas fa-comment-dots"></i>
@@ -921,18 +922,199 @@
       }
     });
  <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const calendarLink = document.getElementById("navCalendarLink");
-  const calendarSection = document.getElementById("calendarSection");
+  document.addEventListener('DOMContentLoaded', function () {
+    /* ------------------- NOUVELLE RÉSERVATION ------------------- */
 
-  if (calendarLink && calendarSection) {
-    calendarLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      calendarSection.scrollIntoView({ behavior: "smooth" });
-    });
-  }
-});
+    const newReservationBtn = document.getElementById('newReservationBtn');
+    const newReservationModal = document.getElementById('newReservationModal');
+    const newReservationClose = document.getElementById('newReservationClose');
+    const newReservationCancel = document.getElementById('newReservationCancel');
+    const newReservationForm = document.getElementById('newReservationForm');
+
+    function openNewReservationModal() {
+      if (newReservationModal) {
+        newReservationModal.classList.add('active');
+      }
+    }
+
+    function closeNewReservationModal() {
+      if (newReservationModal) {
+        newReservationModal.classList.remove('active');
+        if (newReservationForm) newReservationForm.reset();
+      }
+    }
+
+    if (newReservationBtn) {
+      newReservationBtn.addEventListener('click', openNewReservationModal);
+    }
+    if (newReservationClose) {
+      newReservationClose.addEventListener('click', closeNewReservationModal);
+    }
+    if (newReservationCancel) {
+      newReservationCancel.addEventListener('click', closeNewReservationModal);
+    }
+
+    if (newReservationForm) {
+      newReservationForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        alert('Réservation enregistrée (démo)');
+        closeNewReservationModal();
+      });
+    }
+
+    /* ------------------------- NOTIFICATIONS ------------------------- */
+
+    const notificationsBtn = document.getElementById('notificationsBtn');
+    const notificationsPanel = document.getElementById('notificationsPanel');
+    const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+    const notificationsList = document.getElementById('notificationsList');
+
+    function buildNotificationsFromReservations() {
+      if (!notificationsList) return;
+
+      notificationsList.innerHTML = '<p class="empty-state">Chargement...</p>';
+
+      const reservations = window.LCC_RESERVATIONS;
+      if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
+        notificationsList.innerHTML = '<p class="empty-state">Aucune notification pour le moment.</p>';
+        return;
+      }
+
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+      const items = [];
+
+      reservations.forEach(r => {
+        if (!r.start || !r.end) return;
+
+        const startStr = r.start.slice(0, 10);
+        const endStr = r.end.slice(0, 10);
+
+        const start = new Date(r.start);
+        const end = new Date(r.end);
+
+        const propertyName = r.propertyName || r.property || 'Logement';
+        const guestName = r.guestName || r.name || '';
+
+        // Arrivées aujourd’hui / demain
+        if (startStr === todayStr || startStr === tomorrowStr) {
+          items.push({
+            type: 'arrival',
+            title: `Arrivée – ${propertyName}`,
+            message: guestName ? `Client : ${guestName}` : '',
+            when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
+            time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          });
+        }
+
+        // Séjours en cours
+        if (start <= now && end >= now) {
+          items.push({
+            type: 'stay',
+            title: `Séjour en cours – ${propertyName}`,
+            message: guestName ? `Client : ${guestName}` : '',
+            when: 'En cours',
+            time: ''
+          });
+        }
+
+        // Départs aujourd’hui / demain
+        if (endStr === todayStr || endStr === tomorrowStr) {
+          items.push({
+            type: 'departure',
+            title: `Départ – ${propertyName}`,
+            message: guestName ? `Client : ${guestName}` : '',
+            when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
+            time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          });
+        }
+      });
+
+      const limited = items.slice(0, 15);
+
+      if (limited.length === 0) {
+        notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
+        return;
+      }
+
+      notificationsList.innerHTML = '';
+      limited.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'notification-item';
+
+        let badgeColor = '#22c55e';
+        if (n.type === 'stay') badgeColor = '#3b82f6';
+        if (n.type === 'departure') badgeColor = '#f97316';
+
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <span style="
+              width:8px;
+              height:8px;
+              border-radius:999px;
+              background:${badgeColor};
+              flex-shrink:0;
+            "></span>
+            <div class="notification-item-title">${n.title}</div>
+          </div>
+          <div class="notification-item-body">
+            ${n.message ? `<div>${n.message}</div>` : ''}
+          </div>
+          <div class="notification-item-meta">
+            ${n.when}${n.time ? ' • ' + n.time : ''}
+          </div>
+        `;
+        notificationsList.appendChild(item);
+      });
+    }
+
+    function openNotifications() {
+      if (notificationsPanel) {
+        notificationsPanel.classList.add('open');
+        buildNotificationsFromReservations();
+      }
+    }
+
+    function closeNotifications() {
+      if (notificationsPanel) {
+        notificationsPanel.classList.remove('open');
+      }
+    }
+
+    if (notificationsBtn) {
+      notificationsBtn.addEventListener('click', function () {
+        if (!notificationsPanel) return;
+        if (notificationsPanel.classList.contains('open')) {
+          closeNotifications();
+        } else {
+          openNotifications();
+        }
+      });
+    }
+
+    if (notificationsCloseBtn) {
+      notificationsCloseBtn.addEventListener('click', closeNotifications);
+    }
+
+    /* ------------------------- SCROLL VERS CALENDRIER ------------------------- */
+
+    const navCalendarLink = document.getElementById('navCalendarLink');
+    const calendarSection = document.getElementById('calendarSection');
+
+    if (navCalendarLink && calendarSection) {
+      navCalendarLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  });
 </script>
+
 
 </body>
 </html>
