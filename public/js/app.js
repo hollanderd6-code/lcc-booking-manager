@@ -172,6 +172,127 @@ function updateCalendarEvents() {
 // ========================================
 // DATA LOADING
 // ========================================
+function updateOverviewFromReservations(reservations) {
+  if (!Array.isArray(reservations)) return;
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10); // yyyy-mm-dd
+
+  let upcomingCount = 0;
+  let currentCount = 0;
+
+  const todayArrivals = [];
+  const todayDepartures = [];
+  const currentStays = [];
+
+  reservations.forEach(r => {
+    if (!r.start || !r.end) return;
+
+    const start = new Date(r.start);
+    const end = new Date(r.end);
+
+    // Normalisation des dates en yyyy-mm-dd
+    const startStr = r.start.slice(0, 10);
+    const endStr = r.end.slice(0, 10);
+
+    // Réservations à venir = qui n'ont pas encore fini
+    if (end >= now) {
+      upcomingCount++;
+    }
+
+    // Séjour en cours
+    if (start <= now && end >= now) {
+      currentCount++;
+      currentStays.push({ res: r, start, end });
+    }
+
+    // Arrivées aujourd'hui
+    if (startStr === todayStr) {
+      todayArrivals.push({ res: r, start, end });
+    }
+
+    // Départs aujourd'hui
+    if (endStr === todayStr) {
+      todayDepartures.push({ res: r, start, end });
+    }
+  });
+
+  // Mettre à jour les chiffres en haut de la carte
+  const ovUpcomingEl = document.getElementById('ovUpcoming');
+  const ovCurrentEl = document.getElementById('ovCurrent');
+  const ovOccEl = document.getElementById('ovOccupancy');
+
+  if (ovUpcomingEl) ovUpcomingEl.textContent = upcomingCount;
+  if (ovCurrentEl) ovCurrentEl.textContent = currentCount;
+
+  // Si tu as déjà un taux calculé ailleurs, tu peux le réutiliser ici.
+  // Pour l'instant on laisse la valeur HTML (78%) si rien n'est calculé.
+
+  // Construire la timeline (3 lignes max)
+  const container = document.getElementById('overviewTimeline');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const items = [];
+
+  todayArrivals.forEach(({ res, start }) => {
+    items.push({
+      type: 'arrival',
+      label: `Arrivée – ${res.propertyName || res.property || 'Logement'}`,
+      time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    });
+  });
+
+  currentStays.forEach(({ res }) => {
+    items.push({
+      type: 'stay',
+      label: `Séjour en cours – ${res.propertyName || res.property || 'Logement'}`,
+      time: '',
+    });
+  });
+
+  todayDepartures.forEach(({ res, end }) => {
+    items.push({
+      type: 'departure',
+      label: `Départ – ${res.propertyName || res.property || 'Logement'}`,
+      time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    });
+  });
+
+  if (items.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'overview-empty';
+    p.textContent = 'Aucun check-in ou check-out aujourd’hui.';
+    container.appendChild(p);
+  } else {
+    items.slice(0, 4).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'overview-timeline-item';
+
+      const dot = document.createElement('span');
+      dot.className = `overview-dot ${item.type}`;
+
+      const main = document.createElement('div');
+      main.className = 'overview-line-main';
+      main.textContent = item.label;
+
+      const time = document.createElement('div');
+      time.className = 'overview-line-time';
+      time.textContent = item.time || '';
+
+      row.appendChild(dot);
+      row.appendChild(main);
+      row.appendChild(time);
+
+      container.appendChild(row);
+    });
+
+    const footer = document.createElement('div');
+    footer.className = 'overview-timeline-footer';
+    footer.textContent = 'Calendrier synchronisé avec vos annonces Airbnb / Booking.';
+    container.appendChild(footer);
+  }
+}
 
 async function loadReservations() {
   showLoading();
@@ -181,6 +302,8 @@ async function loadReservations() {
     const data = await response.json();
     
     allReservations = data.reservations;
+    updateOverviewFromReservations(allReservations);
+
     
     // Update stats
     updateStats(data);
