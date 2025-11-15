@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>LCC Booking Manager – Notifications</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="public/css/app.css" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f4f5f7;
+      color: #1f2933;
+    }
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .logo {
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    nav a {
+      color: #9ca3af;
+      margin-left: 16px;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    nav a.active,
+    nav a:hover {
+      color: #fff;
+    }
+    main {
+      padding: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .page-subtitle {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+    .section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .section-desc {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .row:last-child {
+      border-bottom: none;
+    }
+    .row-label {
+      font-size: 0.9rem;
+    }
+    .row-hint {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 22px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      transition: .2s;
+      border-radius: 999px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #2563eb;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+
+    .inline-input {
+      width: 100%;
+      max-width: 320px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 0.9rem;
+    }
+    .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.9rem;
+    }
+    .radio-group label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .roles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .roles label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .save-status {
+      font-size: 0.8rem;
+      color: #059669;
+      margin-top: 8px;
+      text-align: right;
+      min-height: 16px;
+    }
+    @media (max-width: 640px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">LCC Booking Manager</div>
+    <nav>
+      <a href="app.html">Tableau de bord</a>
+      <a href="cleaning.html">Ménage</a>
+      <a href="messages.html">Messages</a>
+      <a href="settings.html">Paramètres</a>
+      <a href="statistics.html">Statistiques</a>
+      <a href="notifications.html" class="active">Notifications</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Notifications</h1>
+    <p class="page-subtitle">
+      Configure comment et quand tu veux être prévenu des nouvelles réservations et des événements importants.
+    </p>
+
+    <!-- Bloc 1 : Nouvelle réservation -->
+    <section class="section">
+      <div class="section-title">Nouvelle réservation</div>
+      <div class="section-desc">
+        Choisis les canaux et les destinataires pour chaque nouvelle réservation créée dans le système.
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">Notifications internes (in-app)</div>
+          <div class="row-hint">Affiche une alerte dans le tableau de bord des utilisateurs concernés.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="newResInApp" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">E-mails internes</div>
+          <div class="row-hint">Envoie un e-mail à la création d’une réservation confirmée.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="newResEmailEnabled" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">Destinataires e-mail</div>
+          <div class="row-hint">Liste d’adresses séparées par des virgules.</div>
+        </div>
+        <input
+          type="text"
+          id="newResEmailRecipients"
+          class="inline-input"
+          placeholder="reservations@exemple.com, manager@exemple.com"
+        />
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">Rôles concernés</div>
+          <div class="row-hint">Les utilisateurs avec ces rôles recevront la notification in-app.</div>
+        </div>
+        <div class="roles">
+          <label><input type="checkbox" id="roleAdmin" /> Admin</label>
+          <label><input type="checkbox" id="roleManager" /> Manager</label>
+          <label><input type="checkbox" id="roleReception" /> Réception</label>
+          <label><input type="checkbox" id="roleHousekeeping" /> Housekeeping</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">Condition d’envoi</div>
+          <div class="row-hint">Quand doit-on envoyer la notification ?</div>
+        </div>
+        <div class="radio-group">
+          <label><input type="radio" name="newResCondition" value="all" /> Toute nouvelle réservation</label>
+          <label><input type="radio" name="newResCondition" value="confirmed" /> Uniquement les confirmées</label>
+          <label><input type="radio" name="newResCondition" value="pending" /> Réservations en attente</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bloc 2 : SMS -->
+    <section class="section">
+      <div class="section-title">Notifications SMS (optionnel)</div>
+      <div class="section-desc">
+        Utile pour les arrivées de dernière minute ou pour prévenir un responsable.
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">SMS activés</div>
+          <div class="row-hint">Active l’envoi de SMS pour les nouvelles réservations.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="smsEnabled" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">Numéros à notifier</div>
+          <div class="row-hint">Liste de numéros séparés par des virgules, au format international.</div>
+        </div>
+        <input
+          type="text"
+          id="smsNumbers"
+          class="inline-input"
+          placeholder="+33612345678, +33698765432"
+        />
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="btn-secondary" type="button" id="resetBtn">Réinitialiser</button>
+      <button class="btn-primary" type="button" id="saveBtn">Enregistrer</button>
+    </div>
+    <div class="save-status" id="saveStatus"></div>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'lcc_notifications_settings';
+
+    function defaultSettings() {
+      return {
+        newResInApp: true,
+        newResEmailEnabled: true,
+        newResEmailRecipients: 'reservations@exemple.com',
+        roles: {
+          admin: true,
+          manager: true,
+          reception: true,
+          housekeeping: false,
+        },
+        newResCondition: 'confirmed',
+        smsEnabled: false,
+        smsNumbers: ''
+      };
+    }
+
+    function loadSettings() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultSettings();
+      try {
+        return { ...defaultSettings(), ...JSON.parse(raw) };
+      } catch (e) {
+        return defaultSettings();
+      }
+    }
+
+    function saveSettings(settings) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    }
+
+    function applyToForm(settings) {
+      document.getElementById('newResInApp').checked = settings.newResInApp;
+      document.getElementById('newResEmailEnabled').checked = settings.newResEmailEnabled;
+      document.getElementById('newResEmailRecipients').value = settings.newResEmailRecipients || '';
+
+      document.getElementById('roleAdmin').checked = !!settings.roles.admin;
+      document.getElementById('roleManager').checked = !!settings.roles.manager;
+      document.getElementById('roleReception').checked = !!settings.roles.reception;
+      document.getElementById('roleHousekeeping').checked = !!settings.roles.housekeeping;
+
+      const radios = document.querySelectorAll('input[name="newResCondition"]');
+      radios.forEach(r => {
+        r.checked = (r.value === settings.newResCondition);
+      });
+
+      document.getElementById('smsEnabled').checked = settings.smsEnabled;
+      document.getElementById('smsNumbers').value = settings.smsNumbers || '';
+    }
+
+    function readFromForm() {
+      const radios = document.querySelectorAll('input[name="newResCondition"]');
+      let condition = 'confirmed';
+      radios.forEach(r => {
+        if (r.checked) condition = r.value;
+      });
+
+      return {
+        newResInApp: document.getElementById('newResInApp').checked,
+        newResEmailEnabled: document.getElementById('newResEmailEnabled').checked,
+        newResEmailRecipients: document.getElementById('newResEmailRecipients').value.trim(),
+        roles: {
+          admin: document.getElementById('roleAdmin').checked,
+          manager: document.getElementById('roleManager').checked,
+          reception: document.getElementById('roleReception').checked,
+          housekeeping: document.getElementById('roleHousekeeping').checked
+        },
+        newResCondition: condition,
+        smsEnabled: document.getElementById('smsEnabled').checked,
+        smsNumbers: document.getElementById('smsNumbers').value.trim()
+      };
+    }
+
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const saveStatus = document.getElementById('saveStatus');
+
+    const currentSettings = loadSettings();
+    applyToForm(currentSettings);
+
+    saveBtn.addEventListener('click', () => {
+      const settings = readFromForm();
+      saveSettings(settings);
+      saveStatus.textContent = 'Préférences enregistrées.';
+      setTimeout(() => (saveStatus.textContent = ''), 2500);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      const settings = defaultSettings();
+      applyToForm(settings);
+      saveSettings(settings);
+      saveStatus.textContent = 'Préférences réinitialisées.';
+      setTimeout(() => (saveStatus.textContent = ''), 2500);
+    });
+  </script>
+</body>
+</html>
