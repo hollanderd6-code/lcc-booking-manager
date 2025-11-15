@@ -63,11 +63,12 @@
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
-          <a href="#" class="nav-item">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-            <span class="nav-badge" id="navTotalReservations">0</span>
-          </a>
+          <a href="#" class="nav-item" id="navCalendarLink">
+  <i class="fas fa-calendar"></i>
+  <span>Calendrier</span>
+  <span class="nav-badge" id="navTotalReservations">0</span>
+</a>
+
           <a href="/messages.html" class="nav-item">
             <i class="fas fa-comment-dots"></i>
             <span>Messages</span>
@@ -293,10 +294,11 @@
         </section>
         
       </div>
-            <!-- Calendar Card -->
-      <section class="card">
-        ...
-      </section>
+<!-- Calendar Card -->
+<section class="card" id="calendarSection">
+  ...
+</section>
+
 
       <!-- Notifications Panel -->
       <aside class="notifications-panel" id="notificationsPanel">
@@ -790,6 +792,9 @@
   font-size: 11px;
   opacity: 0.7;
 }
+    html {
+  scroll-behavior: smooth;
+}
   </style>
 
   <!-- Script auth + user + logout -->
@@ -915,7 +920,19 @@
         notificationsCloseBtn.addEventListener('click', closeNotifications);
       }
     });
-  </script>
+ <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const calendarLink = document.getElementById("navCalendarLink");
+  const calendarSection = document.getElementById("calendarSection");
+
+  if (calendarLink && calendarSection) {
+    calendarLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      calendarSection.scrollIntoView({ behavior: "smooth" });
+    });
+  }
+});
+</script>
 
 </body>
 </html>
