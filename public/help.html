@@ -13,6 +13,57 @@
   
   <!-- CSS plateforme -->
   <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Styles spécifiques FAQ -->
+  <style>
+    .faq-item {
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: var(--bg-secondary);
+    }
+
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      padding: 0 12px;
+      transition: max-height 0.2s ease, padding 0.2s ease;
+      font-size: 14px;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+      padding: 8px 12px 12px;
+    }
+
+    .faq-toggle-icon {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-left: 8px;
+    }
+
+    #faqSearch {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <div class="app-container">
@@ -113,7 +164,7 @@
       <!-- Page Content -->
       <div class="page-content">
         
-        <!-- Bloc FAQ -->
+        <!-- Bloc FAQ (dépliable + recherche) -->
         <section class="card mb-lg">
           <div class="card-header">
             <div class="card-title">
@@ -122,29 +173,65 @@
             </div>
           </div>
           <div class="card-body">
-            <div class="faq-item">
-              <h3>📅 Comment synchroniser mes calendriers iCal ?</h3>
-              <p>
-                Allez dans <strong>Mes logements &gt; Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal
-                fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de
-                <strong>synchronisation</strong> dans le Dashboard.
-              </p>
+            <div class="form-row" style="margin-bottom: 16px;">
+              <input
+                type="text"
+                id="faqSearch"
+                placeholder="Rechercher une question..."
+              >
             </div>
 
             <div class="faq-item">
-              <h3>➕ Comment ajouter une réservation manuelle ?</h3>
-              <p>
-                Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations
-                du séjour (logement, dates, nom du client) puis enregistrez. La réservation apparaîtra dans le calendrier.
-              </p>
+              <button class="faq-question">
+                <span>📅 Comment synchroniser mes calendriers iCal ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Allez dans <strong>Mes logements &gt; Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal
+                  fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de
+                  <strong>synchronisation</strong> dans le Dashboard.
+                </p>
+              </div>
             </div>
 
             <div class="faq-item">
-              <h3>🔔 Comment fonctionnent les notifications ?</h3>
-              <p>
-                Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez accéder au détail
-                depuis le panneau Notifications et ajuster vos préférences dans la page <strong>Paramètres</strong>.
-              </p>
+              <button class="faq-question">
+                <span>➕ Comment ajouter une réservation manuelle ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations
+                  du séjour (logement, dates, nom du client) puis enregistrez. La réservation apparaîtra dans le calendrier.
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>🔔 Comment fonctionnent les notifications ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez accéder au détail
+                  depuis le panneau Notifications et ajuster vos préférences dans la page <strong>Paramètres</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>👤 Comment modifier mes informations de compte ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Rendez-vous dans la page <strong>Paramètres</strong>, puis mettez à jour votre nom, email ou
+                  nom de conciergerie. Les informations seront prises en compte sur l’ensemble de la plateforme.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -244,6 +331,40 @@
         });
       }
     })();
+  </script>
+
+  <!-- Script FAQ (dépliable + recherche) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const faqItems = Array.from(document.querySelectorAll('.faq-item'));
+      const searchInput = document.getElementById('faqSearch');
+
+      // Toggle FAQ
+      faqItems.forEach(item => {
+        const btn = item.querySelector('.faq-question');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          const isOpen = item.classList.contains('open');
+          // Fermer tous les autres
+          faqItems.forEach(i => i.classList.remove('open'));
+          // Ouvrir celui cliqué (si fermé)
+          if (!isOpen) {
+            item.classList.add('open');
+          }
+        });
+      });
+
+      // Recherche dans les FAQ
+      if (searchInput) {
+        searchInput.addEventListener('input', function () {
+          const q = searchInput.value.toLowerCase().trim();
+          faqItems.forEach(item => {
+            const text = item.innerText.toLowerCase();
+            item.style.display = text.includes(q) ? '' : 'none';
+          });
+        });
+      }
+    });
   </script>
 </body>
 </html>
