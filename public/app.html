@@ -158,11 +158,44 @@
         </div>
       </header>
       
-      <!-- Page Content -->
+            <!-- Page Content -->
       <div class="page-content">
         
+        <!-- Vue d’ensemble arrivées / séjours / départs -->
+        <section class="overview-card">
+          <div class="overview-header">
+            <div>
+              <div class="overview-kicker">Vue d’ensemble</div>
+              <div class="overview-title">Aujourd’hui & à venir</div>
+            </div>
+            <button class="overview-chip">
+              Dashboard temps réel
+            </button>
+          </div>
+
+          <div class="overview-metrics">
+            <div class="overview-metric">
+              <div class="overview-metric-label">Réservations à venir</div>
+              <div class="overview-metric-value" id="ovUpcoming">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Séjours en cours</div>
+              <div class="overview-metric-value" id="ovCurrent">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Taux d’occupation</div>
+              <div class="overview-metric-value" id="ovOccupancy">78%</div>
+            </div>
+          </div>
+
+          <div class="overview-timeline" id="overviewTimeline">
+            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
+          </div>
+        </section>
+
         <!-- Stats Grid -->
         <section class="stats-grid">
+
           <div class="stat-card">
             <div class="stat-header">
               <span class="stat-label">Total réservations</span>
