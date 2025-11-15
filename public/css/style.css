@@ -613,3 +613,133 @@ body {
 .p-md { padding: var(--spacing-md); }
 .p-lg { padding: var(--spacing-lg); }
 .p-xl { padding: var(--spacing-xl); }
+/* ============================================
+   SECTION - GESTION DU MÉNAGE
+   ============================================ */
+
+.cleaning-block {
+  margin-top: var(--spacing-xl);
+}
+
+.cleaning-card-wrapper {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--spacing-xl);
+  align-items: stretch;
+}
+
+.cleaning-intro {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cleaning-intro-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary-color);
+}
+
+.cleaning-intro-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cleaning-intro-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.cleaning-intro-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.cleaning-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Cartes fonctionnalités ménage */
+
+.cleaning-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.cleaning-feature-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.cleaning-feature-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.cleaning-feature-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.cleaning-feature-title i {
+  font-size: 16px;
+  color: var(--primary-color);
+}
+
+.cleaning-feature-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* CTA */
+
+.cleaning-cta {
+  margin-top: var(--spacing-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.cleaning-cta:hover {
+  color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+
+@media (max-width: 1024px) {
+  .cleaning-card-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
