@@ -156,39 +156,113 @@
       </header>
       
       <!-- Page Content -->
-      <div class="page-content">
+<div class="page-content">
         
-        <!-- Vue d’ensemble arrivées / séjours / départs -->
-        <section class="overview-card">
-          <div class="overview-header">
-            <div>
-              <div class="overview-kicker">Vue d’ensemble</div>
-              <div class="overview-title">Aujourd’hui & à venir</div>
-            </div>
-            <button class="overview-chip">
-              Dashboard temps réel
-            </button>
-          </div>
+  <!-- Vue d’ensemble arrivées / séjours / départs -->
+  <section class="overview-card">
+    <div class="overview-header">
+      <div>
+        <div class="overview-kicker">Vue d’ensemble</div>
+        <div class="overview-title">Aujourd’hui & à venir</div>
+      </div>
+      <button class="overview-chip">
+        Dashboard temps réel
+      </button>
+    </div>
 
-          <div class="overview-metrics">
-            <div class="overview-metric">
-              <div class="overview-metric-label">Réservations à venir</div>
-              <div class="overview-metric-value" id="ovUpcoming">-</div>
-            </div>
-            <div class="overview-metric">
-              <div class="overview-metric-label">Séjours en cours</div>
-              <div class="overview-metric-value" id="ovCurrent">-</div>
-            </div>
-            <div class="overview-metric">
-              <div class="overview-metric-label">Taux d’occupation</div>
-              <div class="overview-metric-value" id="ovOccupancy">78%</div>
-            </div>
-          </div>
+    <div class="overview-metrics">
+      <div class="overview-metric">
+        <div class="overview-metric-label">Réservations à venir</div>
+        <div class="overview-metric-value" id="ovUpcoming">-</div>
+      </div>
+      <div class="overview-metric">
+        <div class="overview-metric-label">Séjours en cours</div>
+        <div class="overview-metric-value" id="ovCurrent">-</div>
+      </div>
+      <div class="overview-metric">
+        <div class="overview-metric-label">Taux d’occupation</div>
+        <div class="overview-metric-value" id="ovOccupancy">78%</div>
+      </div>
+    </div>
 
-          <div class="overview-timeline" id="overviewTimeline">
-            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
-          </div>
-        </section>
+    <div class="overview-timeline" id="overviewTimeline">
+      <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
+    </div>
+  </section>
+
+
+  <!-- 🔥 BLOC GESTION DU MÉNAGE -->
+  <section class="cleaning-block">
+    <div class="cleaning-card-wrapper">
+      
+      <!-- Bloc de gauche : Intro ménage -->
+      <div class="cleaning-intro">
+        <span class="cleaning-intro-label">Module intégré</span>
+        <h2 class="cleaning-intro-title">Gestion du ménage entre deux séjours</h2>
+        <p class="cleaning-intro-text">
+          Planifiez les interventions de ménage, assignez vos équipes et suivez l’état des logements
+          directement depuis votre LCC Booking Manager. Synchronisé avec le planning des réservations.
+        </p>
+        <div class="cleaning-intro-badges">
+          <span class="cleaning-badge">Planning auto</span>
+          <span class="cleaning-badge">Check-lists</span>
+          <span class="cleaning-badge">Suivi temps réel</span>
+        </div>
+        <a href="#" class="cleaning-cta">
+          Configurer la gestion du ménage
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Cartes fonctionnalités ménage -->
+      <div class="cleaning-features">
+        <div class="cleaning-feature-card">
+          <h3 class="cleaning-feature-title">
+            <i class="fa-solid fa-calendar-check"></i>
+            Planning automatique
+          </h3>
+          <p class="cleaning-feature-text">
+            Les départs et arrivées génèrent automatiquement les créneaux de ménage pour chaque logement.
+          </p>
+        </div>
+
+        <div class="cleaning-feature-card">
+          <h3 class="cleaning-feature-title">
+            <i class="fa-solid fa-list-check"></i>
+            Tâches & check-lists
+          </h3>
+          <p class="cleaning-feature-text">
+            Définissez vos scénarios : ménage complet, changement du linge, inventaire, relevé d’anomalies…
+          </p>
+        </div>
+
+        <div class="cleaning-feature-card">
+          <h3 class="cleaning-feature-title">
+            <i class="fa-solid fa-users-gear"></i>
+            Assignation des équipes
+          </h3>
+          <p class="cleaning-feature-text">
+            Assignez chaque tâche à vos équipes ou prestataires, en un clic.
+          </p>
+        </div>
+
+        <div class="cleaning-feature-card">
+          <h3 class="cleaning-feature-title">
+            <i class="fa-solid fa-circle-check"></i>
+            Suivi & traçabilité
+          </h3>
+          <p class="cleaning-feature-text">
+            Statuts, historique complet et exports des plannings disponibles.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+  <!-- 🔥 FIN BLOC GESTION DU MÉNAGE -->
+
+</div>
+
 
         <!-- Stats Grid -->
         <section class="stats-grid">
