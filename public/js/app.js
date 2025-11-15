@@ -191,7 +191,6 @@ function updateOverviewFromReservations(reservations) {
     const start = new Date(r.start);
     const end = new Date(r.end);
 
-    // Normalisation des dates en yyyy-mm-dd
     const startStr = r.start.slice(0, 10);
     const endStr = r.end.slice(0, 10);
 
@@ -224,11 +223,9 @@ function updateOverviewFromReservations(reservations) {
 
   if (ovUpcomingEl) ovUpcomingEl.textContent = upcomingCount;
   if (ovCurrentEl) ovCurrentEl.textContent = currentCount;
+  // ovOccEl : on laisse la valeur HTML pour l'instant (78%)
 
-  // Si tu as déjà un taux calculé ailleurs, tu peux le réutiliser ici.
-  // Pour l'instant on laisse la valeur HTML (78%) si rien n'est calculé.
-
-  // Construire la timeline (3 lignes max)
+  // Construire la timeline
   const container = document.getElementById('overviewTimeline');
   if (!container) return;
   container.innerHTML = '';
