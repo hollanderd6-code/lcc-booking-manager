@@ -38,7 +38,7 @@
       color: var(--primary-color);
     }
 
-    /* ===== Ancien style réadapté en mode "cards" ===== */
+    /* ===== Cards & timelines ===== */
 
     .timeline-section {
       background: var(--bg-primary);
@@ -245,6 +245,81 @@
     }
 
     /* ============================================
+       MODÈLES INTELLIGENTS – MESSAGES VOYAGEURS
+       ============================================ */
+
+    .templates-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: var(--spacing-lg);
+    }
+
+    @media (max-width: 900px) {
+      .templates-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .template-form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .template-field {
+      flex: 1;
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .template-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .template-input,
+    .template-select {
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+
+    .template-input:focus,
+    .template-select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 1px var(--primary-light);
+    }
+
+    .template-help-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .template-result {
+      width: 100%;
+      min-height: 200px;
+      resize: vertical;
+      padding: var(--spacing-md);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+
+    /* ============================================
        MESSAGES ÉQUIPE MÉNAGE
        ============================================ */
 
@@ -437,13 +512,110 @@
       <!-- Page Content -->
       <div class="page-content">
 
-        <!-- Assistant IA voyageurs -->
+        <!-- 1️⃣ Modèles intelligents voyageurs -->
+        <section class="timeline-section">
+          <div class="timeline-header">
+            <div class="timeline-icon" style="background:#3b82f6;">
+              <i class="fas fa-bolt"></i>
+            </div>
+            <div class="timeline-title">Modèles intelligents – messages voyageurs</div>
+          </div>
+
+          <div class="templates-grid">
+            <!-- Colonne : paramètres -->
+            <div>
+              <p class="template-help-text">
+                Choisissez un type de message, remplissez les infos du séjour, puis générez un texte prêt à être collé dans Airbnb / Booking.
+              </p>
+
+              <div class="template-form-row">
+                <div class="template-field">
+                  <label class="template-label" for="tplType">Type de message</label>
+                  <select id="tplType" class="template-select">
+                    <option value="prearrival">Avant l’arrivée (instructions + accueil)</option>
+                    <option value="arrivalday">Jour d’arrivée (rappel check-in)</option>
+                    <option value="duringstay">Pendant le séjour (prise de nouvelles)</option>
+                    <option value="checkout">Rappel départ / check-out</option>
+                    <option value="thankyou">Remerciement + demande d’avis</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="template-form-row">
+                <div class="template-field">
+                  <label class="template-label" for="tplGuestName">Prénom du voyageur</label>
+                  <input type="text" id="tplGuestName" class="template-input" placeholder="Ex : Marie" />
+                </div>
+                <div class="template-field">
+                  <label class="template-label" for="tplPropertyName">Nom du logement</label>
+                  <input type="text" id="tplPropertyName" class="template-input" placeholder="Ex : Appartement Victor Hugo" />
+                </div>
+              </div>
+
+              <div class="template-form-row">
+                <div class="template-field">
+                  <label class="template-label" for="tplCheckinDate">Date d’arrivée</label>
+                  <input type="date" id="tplCheckinDate" class="template-input" />
+                </div>
+                <div class="template-field">
+                  <label class="template-label" for="tplCheckoutDate">Date de départ</label>
+                  <input type="date" id="tplCheckoutDate" class="template-input" />
+                </div>
+              </div>
+
+              <div class="template-form-row">
+                <div class="template-field">
+                  <label class="template-label" for="tplArrivalTime">Heure d’arrivée prévue (optionnel)</label>
+                  <input type="text" id="tplArrivalTime" class="template-input" placeholder="Ex : entre 18h et 19h" />
+                </div>
+              </div>
+
+              <div class="template-form-row">
+                <div class="template-field">
+                  <label class="template-label" for="tplExtraInfo">
+                    Infos complémentaires (optionnel)
+                  </label>
+                  <input type="text" id="tplExtraInfo" class="template-input" placeholder="Ex : parking, lit bébé, animaux, etc." />
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:var(--spacing-sm); flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary" id="tplGenerateBtn">
+                  <i class="fas fa-magic"></i>
+                  Générer le message
+                </button>
+                <button type="button" class="btn btn-ghost" id="tplResetBtn">
+                  Réinitialiser
+                </button>
+              </div>
+            </div>
+
+            <!-- Colonne : résultat -->
+            <div>
+              <label class="template-label" for="tplResult">Message généré</label>
+              <textarea
+                id="tplResult"
+                class="template-result"
+                placeholder="Le message généré apparaîtra ici. Vous pouvez le modifier avant de le copier."
+              ></textarea>
+
+              <div style="margin-top:var(--spacing-sm); display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="copy-btn" id="tplCopyBtn">
+                  <i class="fas fa-copy"></i>
+                  Copier le message
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2️⃣ Assistant IA voyageurs (brouillon libre) -->
         <section class="timeline-section ai-section">
           <div class="timeline-header">
             <div class="timeline-icon" style="background: #8b5cf6;">
               <i class="fas fa-wand-magic-sparkles"></i>
             </div>
-            <div class="timeline-title">Assistant de rédaction – voyageurs</div>
+            <div class="timeline-title">Assistant de rédaction – voyageurs (brouillon libre)</div>
           </div>
 
           <div class="message-reply-body">
@@ -493,11 +665,11 @@
           </div>
         </section>
 
-        <!-- Messages rapides pour arrivées / départs (timeline) -->
+        <!-- 3️⃣ Messages rapides – timeline réservations -->
         <section class="timeline-section">
           <div class="timeline-header">
             <div class="timeline-icon" style="background:#10b981;">
-              <i class="fas fa-bolt"></i>
+              <i class="fas fa-calendar-check"></i>
             </div>
             <div class="timeline-title">Messages rapides – arrivées & séjours</div>
           </div>
@@ -563,7 +735,7 @@
           </div>
         </section>
 
-        <!-- Messages équipe ménage (à partir du planning) -->
+        <!-- 4️⃣ Messages équipe ménage -->
         <section class="timeline-section cleaning-messages-section">
           <div class="timeline-header">
             <div class="timeline-icon" style="background:#0f766e;">
@@ -600,7 +772,6 @@
     </main>
   </div>
 
-  <!-- Toast / loading (réutilisés depuis ton style global) -->
   <div class="toast-container" id="toastContainer"></div>
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner">
@@ -609,7 +780,7 @@
     </div>
   </div>
 
-  <!-- Script logique messages rapides (existant) -->
+  <!-- Ton JS existant pour les listes -->
   <script src="/js/messages.js"></script>
 
   <!-- Script auth + user + logout -->
@@ -662,10 +833,157 @@
     })();
   </script>
 
-  <!-- Script Assistant IA voyageurs + SMS ménage -->
+  <!-- Script assistant IA + modèles + messages ménage -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      /* ===== Assistant IA voyageurs ===== */
+      /* ========= 1) MODÈLES INTELLIGENTS ========= */
+      const tplType = document.getElementById('tplType');
+      const tplGuestName = document.getElementById('tplGuestName');
+      const tplPropertyName = document.getElementById('tplPropertyName');
+      const tplCheckinDate = document.getElementById('tplCheckinDate');
+      const tplCheckoutDate = document.getElementById('tplCheckoutDate');
+      const tplArrivalTime = document.getElementById('tplArrivalTime');
+      const tplExtraInfo = document.getElementById('tplExtraInfo');
+      const tplResult = document.getElementById('tplResult');
+      const tplGenerateBtn = document.getElementById('tplGenerateBtn');
+      const tplResetBtn = document.getElementById('tplResetBtn');
+      const tplCopyBtn = document.getElementById('tplCopyBtn');
+
+      function formatDateFr(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d)) return iso;
+        return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+      }
+
+      function buildSmartTemplate() {
+        const type = tplType.value;
+        const guest = tplGuestName.value.trim() || 'Bonjour';
+        const firstLine = guest.toLowerCase().startsWith('bonjour') ? guest : `Bonjour ${guest},`;
+
+        const property = tplPropertyName.value.trim() || 'votre logement';
+        const ci = tplCheckinDate.value ? formatDateFr(tplCheckinDate.value) : null;
+        const co = tplCheckoutDate.value ? formatDateFr(tplCheckoutDate.value) : null;
+        const arrTime = tplArrivalTime.value.trim();
+        const extra = tplExtraInfo.value.trim();
+
+        const stayLine = (ci && co)
+          ? `Votre séjour est prévu du ${ci} au ${co}.`
+          : ci
+            ? `Votre arrivée est prévue le ${ci}.`
+            : '';
+
+        let body = '';
+
+        if (type === 'prearrival') {
+          body += (stayLine ? stayLine + '\n\n' : '');
+          body += `Je vous confirme la réservation de ${property}. `;
+          body += `Vous recevrez, avant votre arrivée, toutes les informations détaillées concernant l'accès au logement, le code ou la remise des clés, ainsi que le fonctionnement du check-in.`;
+          if (arrTime) {
+            body += `\n\nSi possible, merci de me confirmer votre heure d’arrivée approximative (${arrTime}) afin que je puisse m’organiser au mieux.`;
+          } else {
+            body += `\n\nSi possible, merci de me communiquer votre heure d’arrivée approximative afin que je puisse m’organiser au mieux.`;
+          }
+          if (extra) {
+            body += `\n\nÀ noter : ${extra}.`;
+          }
+        }
+
+        if (type === 'arrivalday') {
+          body += (stayLine ? stayLine + '\n\n' : '');
+          body += `Petit rappel pour votre arrivée à ${property} aujourd’hui. `;
+          body += `Les instructions de check-in (adresse exacte, accès à l’immeuble, codes ou clés) sont disponibles dans vos messages et dans le livret d’accueil.`;
+          if (arrTime) {
+            body += `\n\nComme indiqué, votre arrivée est prévue ${arrTime}. Si votre horaire change, n’hésitez pas à me prévenir.`;
+          } else {
+            body += `\n\nSi votre horaire d’arrivée change, n’hésitez pas à me prévenir.`;
+          }
+          if (extra) {
+            body += `\n\nRappel utile : ${extra}.`;
+          }
+        }
+
+        if (type === 'duringstay') {
+          body += (stayLine ? stayLine + '\n\n' : '');
+          body += `J’espère que tout se passe bien pour vous à ${property}. `;
+          body += `N’hésitez surtout pas à me signaler si quelque chose manque, si vous avez une question sur le logement ou besoin d’une recommandation (restaurants, activités, transports…).`;
+          if (extra) {
+            body += `\n\nInformations utiles pour votre séjour : ${extra}.`;
+          }
+        }
+
+        if (type === 'checkout') {
+          body += co
+            ? `Comme prévu, votre départ est prévu le ${co}.\n\n`
+            : 'Petit rappel concernant votre départ.\n\n';
+          body += `Le check-out se fait généralement avant 11h (sauf accord différent). `;
+          body += `Merci de laisser le logement dans un état correct, de vérifier que vous n’avez rien oublié et de vous assurer que la porte est bien fermée en partant.`;
+          if (extra) {
+            body += `\n\nDernier rappel important : ${extra}.`;
+          }
+        }
+
+        if (type === 'thankyou') {
+          body += co
+            ? `Merci encore pour votre séjour du ${ci || ''}${ci && co ? ' au ' : ''}${co || ''} à ${property}.\n\n`
+            : `Merci encore pour votre séjour à ${property}.\n\n`;
+          body += `J’espère que tout s’est bien passé et que vous avez passé un agréable moment. `;
+          body += `Si vous avez quelques minutes, je serais ravi(e) que vous laissiez un avis sur la plateforme, cela m’aide beaucoup pour la suite.`;
+          if (extra) {
+            body += `\n\nVous pouvez également me faire un retour direct si vous voyez un point à améliorer : ${extra}.`;
+          }
+        }
+
+        let msg = firstLine + '\n\n' + body + '\n\n' + 'Bien cordialement,\nLa Conciergerie de Charles';
+        return msg.trim();
+      }
+
+      if (tplGenerateBtn && tplResult) {
+        tplGenerateBtn.addEventListener('click', () => {
+          tplResult.value = buildSmartTemplate();
+        });
+      }
+
+      if (tplResetBtn) {
+        tplResetBtn.addEventListener('click', () => {
+          tplGuestName.value = '';
+          tplPropertyName.value = '';
+          tplCheckinDate.value = '';
+          tplCheckoutDate.value = '';
+          tplArrivalTime.value = '';
+          tplExtraInfo.value = '';
+          tplResult.value = '';
+        });
+      }
+
+      if (tplCopyBtn) {
+        tplCopyBtn.addEventListener('click', async () => {
+          const text = tplResult.value.trim();
+          if (!text) return;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(text);
+              tplCopyBtn.classList.add('copied');
+              tplCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+              setTimeout(() => {
+                tplCopyBtn.classList.remove('copied');
+                tplCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le message';
+              }, 1500);
+            } else {
+              const t = document.createElement('textarea');
+              t.value = text;
+              document.body.appendChild(t);
+              t.select();
+              document.execCommand('copy');
+              document.body.removeChild(t);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      }
+
+      /* ========= 2) Assistant IA voyageurs (brouillon) ========= */
       const aiContext = document.getElementById('aiContext');
       const aiReply = document.getElementById('aiReply');
       const aiSuggestBtn = document.getElementById('aiSuggestBtn');
@@ -757,7 +1075,7 @@
         }
       }
 
-      /* ===== Messages équipe ménage à partir du planning ===== */
+      /* ========= 3) Messages équipe ménage ========= */
 
       const STORAGE_CLEANERS = 'lcc_cleaners';
       const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
@@ -794,7 +1112,6 @@
         return cleaners.find(c => c.id === id) || null;
       }
 
-      // Génère la liste de tâches ménage (départs / arrivées) pour une date donnée
       function generateCleaningTasks(dateStr) {
         if (!dateStr) return [];
 
@@ -897,7 +1214,6 @@
       const cleaningMsgHint = document.getElementById('cleaningMsgHint');
 
       if (cleaningMsgDate && generateCleaningMessagesBtn && cleaningMessagesContainer) {
-        // valeur par défaut = aujourd’hui
         const today = new Date();
         const isoToday = today.toISOString().slice(0,10);
         cleaningMsgDate.value = isoToday;
@@ -992,7 +1308,6 @@
 
           cleaningMsgHint.textContent = "Messages générés. Tu peux les ajuster avant de les coller dans SMS / WhatsApp / email.";
 
-          // Gestion du copy pour tous les boutons
           cleaningMessagesContainer.querySelectorAll('.cleaning-copy-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
               const card = btn.closest('.cleaning-message-card');
