@@ -525,7 +525,7 @@
             <!-- Colonne : paramètres -->
             <div>
               <p class="template-help-text">
-                Choisissez un type de message, remplissez les infos du séjour, puis générez un texte prêt à être collé dans Airbnb / Booking.
+                Choisissez un type de message, sélectionnez le logement et les dates de séjour, puis générez un texte prêt à être collé dans Airbnb / Booking.
               </p>
 
               <div class="template-form-row">
@@ -548,7 +548,10 @@
                 </div>
                 <div class="template-field">
                   <label class="template-label" for="tplPropertyName">Nom du logement</label>
-                  <input type="text" id="tplPropertyName" class="template-input" placeholder="Ex : Appartement Victor Hugo" />
+                  <!-- 🔽 Select auto-rempli avec LCC_PROPERTIES -->
+                  <select id="tplPropertyName" class="template-select">
+                    <option value="">Sélectionner un logement</option>
+                  </select>
                 </div>
               </div>
 
@@ -836,6 +839,12 @@
   <!-- Script assistant IA + modèles + messages ménage -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      /* ========= Données logements (partagées) ========= */
+      const PROPERTIES = window.LCC_PROPERTIES || [
+        { id: 'apt-demo-1', name: 'Appartement démo 1' },
+        { id: 'apt-demo-2', name: 'Appartement démo 2' }
+      ];
+
       /* ========= 1) MODÈLES INTELLIGENTS ========= */
       const tplType = document.getElementById('tplType');
       const tplGuestName = document.getElementById('tplGuestName');
@@ -849,6 +858,16 @@
       const tplResetBtn = document.getElementById('tplResetBtn');
       const tplCopyBtn = document.getElementById('tplCopyBtn');
 
+      // 🔽 On remplit le select des logements avec LCC_PROPERTIES
+      if (tplPropertyName && PROPERTIES && PROPERTIES.length) {
+        PROPERTIES.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = (p.name || p.title || p.label || p.id || '').toString();
+          opt.textContent = p.name || p.title || p.label || p.id;
+          tplPropertyName.appendChild(opt);
+        });
+      }
+
       function formatDateFr(iso) {
         if (!iso) return '';
         const d = new Date(iso);
@@ -861,7 +880,7 @@
         const guest = tplGuestName.value.trim() || 'Bonjour';
         const firstLine = guest.toLowerCase().startsWith('bonjour') ? guest : `Bonjour ${guest},`;
 
-        const property = tplPropertyName.value.trim() || 'votre logement';
+        const property = (tplPropertyName.value || '').trim() || 'votre logement';
         const ci = tplCheckinDate.value ? formatDateFr(tplCheckinDate.value) : null;
         const co = tplCheckoutDate.value ? formatDateFr(tplCheckoutDate.value) : null;
         const arrTime = tplArrivalTime.value.trim();
@@ -1080,10 +1099,6 @@
       const STORAGE_CLEANERS = 'lcc_cleaners';
       const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
 
-      const PROPERTIES = window.LCC_PROPERTIES || [
-        { id: 'apt-demo-1', name: 'Appartement démo 1' },
-        { id: 'apt-demo-2', name: 'Appartement démo 2' }
-      ];
       const RESERVATIONS = window.LCC_RESERVATIONS || [];
 
       let cleaners = [];
