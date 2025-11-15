@@ -16,35 +16,34 @@
   
   <!-- Platform CSS -->
   <link rel="stylesheet" href="/css/style.css">
-   <style>
-  html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
 
-  .app-container {
-    margin-top: 0 !important;
-  }
+    .app-container {
+      margin-top: 0 !important;
+    }
 
-  .main-header {
-    margin-top: 0 !important;
-  }
+    .main-header {
+      margin-top: 0 !important;
+    }
 
-  .main-content {
-    margin-top: 0 !important;
-    padding-top: 24px !important;
-  }
+    .main-content {
+      margin-top: 0 !important;
+      padding-top: 24px !important;
+    }
 
-  .page-content {
-    margin-top: 0 !important;
-  }
+    .page-content {
+      margin-top: 0 !important;
+    }
   </style>
-
 </head>
 <body>
   <div class="app-container">
     
-     <!-- Sidebar -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="/" class="sidebar-logo">
@@ -63,20 +62,18 @@
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
-        <a href="#" class="nav-item" id="navCalendarLink">
-  <i class="fas fa-calendar"></i>
-  <span>Calendrier</span>
-  <span class="nav-badge" id="navTotalReservations">0</span>
-</a>
-
-
+          <a href="#" class="nav-item" id="navCalendarLink">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
           <a href="/messages.html" class="nav-item">
             <i class="fas fa-comment-dots"></i>
             <span>Messages</span>
           </a>
         </div>
         
-               <div class="nav-section">
+        <div class="nav-section">
           <div class="nav-section-title">Gestion</div>
           <a href="/settings.html" class="nav-item">
             <i class="fas fa-home"></i>
@@ -96,19 +93,17 @@
           </a>
         </div>
 
-        
         <div class="nav-section">
-  <div class="nav-section-title">Paramètres</div>
-  <a href="/settings-account.html" class="nav-item">
-    <i class="fas fa-cog"></i>
-    <span>Paramètres</span>
-  </a>
-  <a href="/help.html" class="nav-item">
-    <i class="fas fa-question-circle"></i>
-    <span>Aide</span>
-  </a>
-</div>
-
+          <div class="nav-section-title">Paramètres</div>
+          <a href="/settings-account.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
+          <a href="/help.html" class="nav-item">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
       </nav>
       
       <div class="sidebar-footer">
@@ -142,17 +137,17 @@
         
         <div class="header-actions">
           <button class="btn btn-ghost hide-on-mobile" id="newReservationBtn">
-  <i class="fas fa-plus"></i>
-  Nouvelle réservation
-</button>
+            <i class="fas fa-plus"></i>
+            Nouvelle réservation
+          </button>
 
           <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
             <i class="fas fa-sync-alt"></i>
           </button>
           <button class="btn-icon" id="notificationsBtn" title="Notifications">
-  <i class="fas fa-bell"></i>
-  <span class="notification-badge"></span>
-</button>
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge"></span>
+          </button>
 
           <button class="theme-toggle" id="themeToggle" title="Changer le thème">
             <i class="fas fa-moon"></i>
@@ -160,7 +155,7 @@
         </div>
       </header>
       
-            <!-- Page Content -->
+      <!-- Page Content -->
       <div class="page-content">
         
         <!-- Vue d’ensemble arrivées / séjours / départs -->
@@ -197,7 +192,6 @@
 
         <!-- Stats Grid -->
         <section class="stats-grid">
-
           <div class="stat-card">
             <div class="stat-header">
               <span class="stat-label">Total réservations</span>
@@ -272,8 +266,8 @@
           </div>
         </section>
         
-        <!-- Calendar Card -->
-        <section class="card">
+        <!-- Calendar Card (c'est ici qu'on ajoute l'id) -->
+        <section class="card" id="calendarSection">
           <div class="card-header">
             <div class="card-title">
               <i class="fas fa-calendar-alt"></i>
@@ -295,11 +289,6 @@
         </section>
         
       </div>
-<!-- Calendar Card -->
-<section class="card" id="calendarSection">
-  ...
-</section>
-
 
       <!-- Notifications Panel -->
       <aside class="notifications-panel" id="notificationsPanel">
@@ -331,7 +320,8 @@
       </div>
     </div>
   </div>
-    <!-- New Manual Reservation Modal -->
+
+  <!-- New Manual Reservation Modal -->
   <div class="modal" id="newReservationModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -393,7 +383,7 @@
   <!-- Toast Notifications -->
   <div class="toast-container" id="toastContainer"></div>
   
-    <!-- Scripts -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
   <script src="/js/app.js"></script>
@@ -662,140 +652,141 @@
       font-size: 14px;
       color: var(--text-secondary);
     }
+
     /* === Carte Vue d'ensemble (arrivées / séjours / départs) === */
+    .overview-card {
+      background: linear-gradient(135deg, #f3f4ff, #eef9ff);
+      border-radius: 24px;
+      padding: 18px 20px 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
 
-.overview-card {
-  background: linear-gradient(135deg, #f3f4ff, #eef9ff);
-  border-radius: 24px;
-  padding: 18px 20px 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-}
+    [data-theme="dark"] .overview-card {
+      background: radial-gradient(circle at top left, #1e293b, #020617);
+    }
 
-[data-theme="dark"] .overview-card {
-  background: radial-gradient(circle at top left, #1e293b, #020617);
-}
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
 
-.overview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
+    .overview-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
 
-.overview-kicker {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-  font-weight: 600;
-}
+    .overview-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
 
-.overview-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
+    .overview-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(37, 99, 235, 0.06);
+      color: #2563eb;
+      font-size: 12px;
+      padding: 6px 12px;
+      font-weight: 600;
+    }
 
-.overview-chip {
-  border-radius: 999px;
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  background: rgba(37, 99, 235, 0.06);
-  color: #2563eb;
-  font-size: 12px;
-  padding: 6px 12px;
-  font-weight: 600;
-}
+    [data-theme="dark"] .overview-chip {
+      background: rgba(37, 99, 235, 0.18);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
 
-[data-theme="dark"] .overview-chip {
-  background: rgba(37, 99, 235, 0.18);
-  border-color: rgba(59, 130, 246, 0.4);
-}
+    .overview-metrics {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
 
-.overview-metrics {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
+    .overview-metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
 
-.overview-metric-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+    .overview-metric-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
 
-.overview-metric-value {
-  font-size: 20px;
-  font-weight: 700;
-}
+    .overview-timeline {
+      margin-top: 4px;
+      background: #020617;
+      color: #e5e7eb;
+      border-radius: 18px;
+      padding: 10px 14px;
+      font-size: 13px;
+    }
 
-.overview-timeline {
-  margin-top: 4px;
-  background: #020617;
-  color: #e5e7eb;
-  border-radius: 18px;
-  padding: 10px 14px;
-  font-size: 13px;
-}
+    [data-theme="dark"] .overview-timeline {
+      background: #020617;
+    }
 
-[data-theme="dark"] .overview-timeline {
-  background: #020617;
-}
+    .overview-timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
 
-.overview-timeline-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
+    .overview-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
 
-.overview-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
+    .overview-dot.arrival {
+      background: #22c55e; /* vert */
+    }
 
-.overview-dot.arrival {
-  background: #22c55e; /* vert */
-}
+    .overview-dot.stay {
+      background: #3b82f6; /* bleu */
+    }
 
-.overview-dot.stay {
-  background: #3b82f6; /* bleu */
-}
+    .overview-dot.departure {
+      background: #f97316; /* orange */
+    }
 
-.overview-dot.departure {
-  background: #f97316; /* orange */
-}
+    .overview-line-main {
+      flex: 1;
+    }
 
-.overview-line-main {
-  flex: 1;
-}
+    .overview-line-time {
+      font-size: 11px;
+      opacity: 0.8;
+      white-space: nowrap;
+    }
 
-.overview-line-time {
-  font-size: 11px;
-  opacity: 0.8;
-  white-space: nowrap;
-}
+    .overview-empty {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.8;
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
 
-.overview-empty {
-  margin: 0;
-  font-size: 13px;
-  opacity: 0.8;
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
+    .overview-timeline-footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      margin-top: 6px;
+      padding-top: 6px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
 
-.overview-timeline-footer {
-  border-top: 1px solid rgba(148, 163, 184, 0.35);
-  margin-top: 6px;
-  padding-top: 6px;
-  font-size: 11px;
-  opacity: 0.7;
-}
     html {
-  scroll-behavior: smooth;
-}
+      scroll-behavior: smooth;
+    }
   </style>
 
   <!-- Script auth + user + logout -->
@@ -848,10 +839,11 @@
     })();
   </script>
 
-  <!-- Script pour Nouvelle réservation + Notifications -->
+  <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      // --- NOUVELLE RÉSERVATION ---
+      /* ------------------- NOUVELLE RÉSERVATION ------------------- */
+
       const newReservationBtn = document.getElementById('newReservationBtn');
       const newReservationModal = document.getElementById('newReservationModal');
       const newReservationClose = document.getElementById('newReservationClose');
@@ -889,14 +881,121 @@
         });
       }
 
-      // --- NOTIFICATIONS ---
+      /* ------------------------- NOTIFICATIONS ------------------------- */
+
       const notificationsBtn = document.getElementById('notificationsBtn');
       const notificationsPanel = document.getElementById('notificationsPanel');
       const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+      const notificationsList = document.getElementById('notificationsList');
+
+      function buildNotificationsFromReservations() {
+        if (!notificationsList) return;
+
+        notificationsList.innerHTML = '<p class="empty-state">Chargement...</p>';
+
+        const reservations = window.LCC_RESERVATIONS;
+        if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
+          notificationsList.innerHTML = '<p class="empty-state">Aucune notification pour le moment.</p>';
+          return;
+        }
+
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+        const items = [];
+
+        reservations.forEach(r => {
+          if (!r.start || !r.end) return;
+
+          const startStr = r.start.slice(0, 10);
+          const endStr = r.end.slice(0, 10);
+
+          const start = new Date(r.start);
+          const end = new Date(r.end);
+
+          const propertyName = r.propertyName || r.property || 'Logement';
+          const guestName = r.guestName || r.name || '';
+
+          // Arrivées aujourd’hui / demain
+          if (startStr === todayStr || startStr === tomorrowStr) {
+            items.push({
+              type: 'arrival',
+              title: `Arrivée – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
+              time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+
+          // Séjours en cours
+          if (start <= now && end >= now) {
+            items.push({
+              type: 'stay',
+              title: `Séjour en cours – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: 'En cours',
+              time: ''
+            });
+          }
+
+          // Départs aujourd’hui / demain
+          if (endStr === todayStr || endStr === tomorrowStr) {
+            items.push({
+              type: 'departure',
+              title: `Départ – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
+              time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+        });
+
+        const limited = items.slice(0, 15);
+
+        if (limited.length === 0) {
+          notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
+          return;
+        }
+
+        notificationsList.innerHTML = '';
+        limited.forEach(n => {
+          const item = document.createElement('div');
+          item.className = 'notification-item';
+
+          let badgeColor = '#22c55e';
+          if (n.type === 'stay') badgeColor = '#3b82f6';
+          if (n.type === 'departure') badgeColor = '#f97316';
+
+          item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="
+                width:8px;
+                height:8px;
+                border-radius:999px;
+                background:${badgeColor};
+                flex-shrink:0;
+              "></span>
+              <div class="notification-item-title">${n.title}</div>
+            </div>
+            <div class="notification-item-body">
+              ${n.message ? `<div>${n.message}</div>` : ''}
+            </div>
+            <div class="notification-item-meta">
+              ${n.when}${n.time ? ' • ' + n.time : ''}
+            </div>
+          `;
+          notificationsList.appendChild(item);
+        });
+      }
 
       function openNotifications() {
         if (notificationsPanel) {
           notificationsPanel.classList.add('open');
+          buildNotificationsFromReservations();
         }
       }
 
@@ -920,202 +1019,20 @@
       if (notificationsCloseBtn) {
         notificationsCloseBtn.addEventListener('click', closeNotifications);
       }
+
+      /* ------------------------- SCROLL VERS CALENDRIER ------------------------- */
+
+      const navCalendarLink = document.getElementById('navCalendarLink');
+      const calendarSection = document.getElementById('calendarSection');
+
+      if (navCalendarLink && calendarSection) {
+        navCalendarLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
     });
- <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    /* ------------------- NOUVELLE RÉSERVATION ------------------- */
-
-    const newReservationBtn = document.getElementById('newReservationBtn');
-    const newReservationModal = document.getElementById('newReservationModal');
-    const newReservationClose = document.getElementById('newReservationClose');
-    const newReservationCancel = document.getElementById('newReservationCancel');
-    const newReservationForm = document.getElementById('newReservationForm');
-
-    function openNewReservationModal() {
-      if (newReservationModal) {
-        newReservationModal.classList.add('active');
-      }
-    }
-
-    function closeNewReservationModal() {
-      if (newReservationModal) {
-        newReservationModal.classList.remove('active');
-        if (newReservationForm) newReservationForm.reset();
-      }
-    }
-
-    if (newReservationBtn) {
-      newReservationBtn.addEventListener('click', openNewReservationModal);
-    }
-    if (newReservationClose) {
-      newReservationClose.addEventListener('click', closeNewReservationModal);
-    }
-    if (newReservationCancel) {
-      newReservationCancel.addEventListener('click', closeNewReservationModal);
-    }
-
-    if (newReservationForm) {
-      newReservationForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        alert('Réservation enregistrée (démo)');
-        closeNewReservationModal();
-      });
-    }
-
-    /* ------------------------- NOTIFICATIONS ------------------------- */
-
-    const notificationsBtn = document.getElementById('notificationsBtn');
-    const notificationsPanel = document.getElementById('notificationsPanel');
-    const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
-    const notificationsList = document.getElementById('notificationsList');
-
-    function buildNotificationsFromReservations() {
-      if (!notificationsList) return;
-
-      notificationsList.innerHTML = '<p class="empty-state">Chargement...</p>';
-
-      const reservations = window.LCC_RESERVATIONS;
-      if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
-        notificationsList.innerHTML = '<p class="empty-state">Aucune notification pour le moment.</p>';
-        return;
-      }
-
-      const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-
-      const items = [];
-
-      reservations.forEach(r => {
-        if (!r.start || !r.end) return;
-
-        const startStr = r.start.slice(0, 10);
-        const endStr = r.end.slice(0, 10);
-
-        const start = new Date(r.start);
-        const end = new Date(r.end);
-
-        const propertyName = r.propertyName || r.property || 'Logement';
-        const guestName = r.guestName || r.name || '';
-
-        // Arrivées aujourd’hui / demain
-        if (startStr === todayStr || startStr === tomorrowStr) {
-          items.push({
-            type: 'arrival',
-            title: `Arrivée – ${propertyName}`,
-            message: guestName ? `Client : ${guestName}` : '',
-            when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
-            time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-          });
-        }
-
-        // Séjours en cours
-        if (start <= now && end >= now) {
-          items.push({
-            type: 'stay',
-            title: `Séjour en cours – ${propertyName}`,
-            message: guestName ? `Client : ${guestName}` : '',
-            when: 'En cours',
-            time: ''
-          });
-        }
-
-        // Départs aujourd’hui / demain
-        if (endStr === todayStr || endStr === tomorrowStr) {
-          items.push({
-            type: 'departure',
-            title: `Départ – ${propertyName}`,
-            message: guestName ? `Client : ${guestName}` : '',
-            when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
-            time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-          });
-        }
-      });
-
-      const limited = items.slice(0, 15);
-
-      if (limited.length === 0) {
-        notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
-        return;
-      }
-
-      notificationsList.innerHTML = '';
-      limited.forEach(n => {
-        const item = document.createElement('div');
-        item.className = 'notification-item';
-
-        let badgeColor = '#22c55e';
-        if (n.type === 'stay') badgeColor = '#3b82f6';
-        if (n.type === 'departure') badgeColor = '#f97316';
-
-        item.innerHTML = `
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <span style="
-              width:8px;
-              height:8px;
-              border-radius:999px;
-              background:${badgeColor};
-              flex-shrink:0;
-            "></span>
-            <div class="notification-item-title">${n.title}</div>
-          </div>
-          <div class="notification-item-body">
-            ${n.message ? `<div>${n.message}</div>` : ''}
-          </div>
-          <div class="notification-item-meta">
-            ${n.when}${n.time ? ' • ' + n.time : ''}
-          </div>
-        `;
-        notificationsList.appendChild(item);
-      });
-    }
-
-    function openNotifications() {
-      if (notificationsPanel) {
-        notificationsPanel.classList.add('open');
-        buildNotificationsFromReservations();
-      }
-    }
-
-    function closeNotifications() {
-      if (notificationsPanel) {
-        notificationsPanel.classList.remove('open');
-      }
-    }
-
-    if (notificationsBtn) {
-      notificationsBtn.addEventListener('click', function () {
-        if (!notificationsPanel) return;
-        if (notificationsPanel.classList.contains('open')) {
-          closeNotifications();
-        } else {
-          openNotifications();
-        }
-      });
-    }
-
-    if (notificationsCloseBtn) {
-      notificationsCloseBtn.addEventListener('click', closeNotifications);
-    }
-
-    /* ------------------------- SCROLL VERS CALENDRIER ------------------------- */
-
-    const navCalendarLink = document.getElementById('navCalendarLink');
-    const calendarSection = document.getElementById('calendarSection');
-
-    if (navCalendarLink && calendarSection) {
-      navCalendarLink.addEventListener('click', function (e) {
-        e.preventDefault();
-        calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    }
-  });
-</script>
-
+  </script>
 
 </body>
 </html>
-
