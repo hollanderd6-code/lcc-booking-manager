@@ -298,20 +298,25 @@ async function loadReservations() {
     const response = await fetch(`${API_URL}/api/reservations`);
     const data = await response.json();
     
-    allReservations = data.reservations;
-    updateOverviewFromReservations(allReservations);
+    // Tableau global utilisé par le calendrier & co.
+    allReservations = data.reservations || [];
 
+    // ✅ Rendre les réservations accessibles au panneau de notifications
+    window.LCC_RESERVATIONS = allReservations;
+
+    // ✅ Mettre à jour la carte "Vue d’ensemble"
+    updateOverviewFromReservations(allReservations);
     
     // Update stats
     updateStats(data);
     
     // Render property filters
-    renderPropertyFilters(data.properties);
+    renderPropertyFilters(data.properties || []);
     
     // Update calendar
     updateCalendarEvents();
     
-    console.log(`📦 ${allReservations.length} reservations loaded`);
+    console.log(`📦 ${allReservations.length} réservations chargées`);
   } catch (error) {
     console.error('Error loading reservations:', error);
     showToast('Erreur lors du chargement des réservations', 'error');
@@ -320,27 +325,32 @@ async function loadReservations() {
   }
 }
 
+
 async function syncReservations() {
   const syncBtn = document.getElementById('syncBtn');
-  const icon = syncBtn.querySelector('i');
+  const icon = syncBtn ? syncBtn.querySelector('i') : null;
   
-  icon.classList.add('fa-spin');
-  syncBtn.disabled = true;
+  if (icon) icon.classList.add('fa-spin');
+  if (syncBtn) syncBtn.disabled = true;
   
   try {
     const response = await fetch(`${API_URL}/api/sync`, { method: 'POST' });
     const data = await response.json();
     
+    console.log('Sync result:', data);
     showToast('Synchronisation réussie', 'success');
+    
+    // Recharger toutes les réservations après la sync
     await loadReservations();
   } catch (error) {
     console.error('Error syncing:', error);
     showToast('Erreur lors de la synchronisation', 'error');
   } finally {
-    icon.classList.remove('fa-spin');
-    syncBtn.disabled = false;
+    if (icon) icon.classList.remove('fa-spin');
+    if (syncBtn) syncBtn.disabled = false;
   }
 }
+
 
 // ========================================
 // UI UPDATES
