@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCC Booking Manager – Aide</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- CSS plateforme -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar identique -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <i class="fas fa-home"></i>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">LCC Booking</span>
+            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+          </div>
+        </a>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
+          <a href="/app.html" class="nav-item">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
+          <a href="/messages.html" class="nav-item">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
+          <a href="/settings.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Mes logements</span>
+          </a>
+          <a href="/welcome.html" class="nav-item">
+            <i class="fas fa-book-open"></i>
+            <span>Livret d'accueil</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i class="fas fa-chart-bar"></i>
+            <span>Statistiques</span>
+          </a>
+          <a href="#" class="nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
+          <a href="/settings-account.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
+          <a href="/help.html" class="nav-item active">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="sidebarUserAvatar">C</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarUserName">Utilisateur</div>
+            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+          </div>
+
+          <button class="btn btn-ghost" id="logoutBtn" style="padding: 4px 10px; font-size: 12px; margin-left: auto;">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Quitter</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="page-kicker">Support</div>
+          <h1 class="page-title">Centre d’aide</h1>
+          <p class="page-subtitle">
+            Retrouvez les réponses aux questions fréquentes et comment contacter le support.
+          </p>
+        </div>
+      </header>
+      
+      <!-- Page Content -->
+      <div class="page-content">
+        
+        <!-- Bloc FAQ -->
+        <section class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-circle-question"></i>
+              Questions fréquentes
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="faq-item">
+              <h3>📅 Comment synchroniser mes calendriers iCal ?</h3>
+              <p>
+                Allez dans <strong>Mes logements &gt; Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal
+                fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de
+                <strong>synchronisation</strong> dans le Dashboard.
+              </p>
+            </div>
+
+            <div class="faq-item">
+              <h3>➕ Comment ajouter une réservation manuelle ?</h3>
+              <p>
+                Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations
+                du séjour (logement, dates, nom du client) puis enregistrez. La réservation apparaîtra dans le calendrier.
+              </p>
+            </div>
+
+            <div class="faq-item">
+              <h3>🔔 Comment fonctionnent les notifications ?</h3>
+              <p>
+                Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez accéder au détail
+                depuis le panneau Notifications et ajuster vos préférences dans la page <strong>Paramètres</strong>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bloc Contact -->
+        <section class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-envelope"></i>
+              Contacter le support
+            </div>
+          </div>
+          <div class="card-body">
+            <p>
+              Vous ne trouvez pas la réponse à votre question ou vous avez détecté un bug ?
+            </p>
+            <p>
+              Vous pouvez envoyer un email à :
+              <a href="mailto:support@lcc-booking.fr">support@lcc-booking.fr</a>
+            </p>
+            <p style="margin-top: 12px;">
+              Pensez à préciser :
+            </p>
+            <ul>
+              <li>l’adresse email de votre compte,</li>
+              <li>le logement ou la réservation concernée,</li>
+              <li>une capture d’écran si possible.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Bloc Ressources -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-book-open"></i>
+              Ressources & guide
+            </div>
+          </div>
+          <div class="card-body">
+            <p>
+              Prochainement : un guide utilisateur détaillé et des vidéos tutoriels pour tirer le maximum
+              de LCC Booking Manager.
+            </p>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Script auth + user + logout -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
+
+      if (user) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const companyEl = document.getElementById('sidebarUserCompany');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+
+        if (nameEl) {
+          nameEl.textContent = user.firstName
+            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+            : (user.email || 'Mon compte');
+        }
+
+        if (companyEl) {
+          companyEl.textContent = user.company || 'Mon espace';
+        }
+
+        if (avatarEl) {
+          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+          avatarEl.textContent = initial.toUpperCase();
+        }
+      }
+
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          localStorage.removeItem('lcc_token');
+          localStorage.removeItem('lcc_user');
+          window.location.href = '/login.html';
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
