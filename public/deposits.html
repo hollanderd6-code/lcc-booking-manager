@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCC Booking Manager – Cautions</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- CSS plateforme -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .app-container {
+      margin-top: 0 !important;
+    }
+    .main-content {
+      margin-top: 0 !important;
+      padding-top: 24px !important;
+    }
+    .page-content {
+      margin-top: 0 !important;
+      max-width: 1100px;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
+
+    .card {
+      background: var(--bg-primary);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+    .card-title i {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-color-subtle);
+      text-align: left;
+    }
+    th {
+      font-weight: 600;
+      background: var(--bg-secondary);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+    .badge-empty {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+    }
+    .badge-pending {
+      background: rgba(234, 179, 8, .12);
+      color: #92400e;
+    }
+    .badge-paid {
+      background: rgba(22, 163, 74, .12);
+      color: #166534;
+    }
+    .badge-refunded {
+      background: rgba(37, 99, 235, .12);
+      color: #1d4ed8;
+    }
+
+    .btn-xs {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .empty-state {
+      padding: 12px 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: 18px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      font-size: 16px;
+      margin: 0;
+    }
+    .modal-body {
+      padding: 16px 18px 18px;
+    }
+    .modal-footer {
+      padding: 10px 18px 14px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .modal-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .form-row {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+    }
+    .form-row label {
+      font-weight: 500;
+    }
+    .form-row input {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color-subtle);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+    .small-hint {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .link-cell {
+      max-width: 260px;
+      word-break: break-all;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+  </style>
+
+  <!-- Script auth + user + logout (copié du dashboard) -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        if (user) {
+          const nameEl = document.getElementById('sidebarUserName');
+          const companyEl = document.getElementById('sidebarUserCompany');
+          const avatarEl = document.getElementById('sidebarUserAvatar');
+
+          if (nameEl) {
+            nameEl.textContent = user.firstName
+              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+              : (user.email || 'Mon compte');
+          }
+
+          if (companyEl) {
+            companyEl.textContent = user.company || 'Mon espace';
+          }
+
+          if (avatarEl) {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
+        }
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function () {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = 'login.html';
+          });
+        }
+      });
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="index.html" class="sidebar-logo">
+          <i class="fas fa-home"></i>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">LCC Booking</span>
+            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
+
+          <a href="app.html" class="nav-item">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
+
+          <a href="app.html#calendarSection" class="nav-item">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
+
+          <a href="messages.html" class="nav-item">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
+
+          <a href="settings.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Mes logements</span>
+          </a>
+
+          <a href="welcome.html" class="nav-item">
+            <i class="fas fa-book-open"></i>
+            <span>Livret d'accueil</span>
+          </a>
+
+          <a href="cleaning.html" class="nav-item">
+            <i class="fas fa-broom"></i>
+            <span>Gestion du ménage</span>
+            <span class="nav-badge">Nouveau</span>
+          </a>
+
+          <a href="statistics.html" class="nav-item">
+            <i class="fas fa-chart-bar"></i>
+            <span>Statistiques</span>
+          </a>
+
+          <a href="deposits.html" class="nav-item active">
+            <i class="fas fa-shield-alt"></i>
+            <span>Cautions</span>
+          </a>
+
+          <a href="notifications.html" class="nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
+          <a href="settings-account.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
+          <a href="help.html" class="nav-item">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="sidebarUserAvatar">C</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarUserName">Utilisateur</div>
+            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+          </div>
+
+          <button class="btn btn-ghost" id="logoutBtn" style="padding:4px 10px;font-size:12px;margin-left:auto;">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Quitter</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <div class="page-kicker">Paiements</div>
+          <h1 class="page-title">Cautions</h1>
+          <p class="page-subtitle">
+            Générez des liens de paiement de caution pour vos voyageurs, réservation par réservation.
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-ghost hide-on-mobile" onclick="window.location.href='app.html'">
+            <i class="fas fa-th-large"></i>
+            Retour au dashboard
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-list"></i>
+              <span>Réservations & cautions</span>
+            </div>
+            <button class="btn btn-ghost btn-xs" id="refreshBtn">
+              <i class="fas fa-sync-alt"></i>
+              Actualiser
+            </button>
+          </div>
+          <p class="card-subtitle">
+            Pour chaque réservation, vous pouvez créer un lien Stripe de caution avec un montant libre.
+          </p>
+
+          <div id="depositsContainer">
+            <p class="empty-state">Chargement des réservations…</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: nouvelle caution -->
+  <div class="modal" id="depositModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Nouvelle caution</h2>
+        <button class="modal-close" id="depositModalClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>Réservation</label>
+          <div id="depositModalReservationLabel" class="small-hint"></div>
+        </div>
+        <div class="form-row">
+          <label for="depositAmount">Montant de la caution (€)</label>
+          <input type="number" id="depositAmount" min="1" step="1" required>
+          <div class="small-hint">
+            Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.
+          </div>
+        </div>
+        <div id="depositError" class="small-hint" style="color:#b91c1c;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
+        <button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // config API : adapte l’URL de base si besoin
+    const API_BASE = '/api';
+
+    let currentReservationForDeposit = null;
+
+    function openDepositModal(reservation) {
+      currentReservationForDeposit = reservation;
+      document.getElementById('depositAmount').value = '';
+      document.getElementById('depositError').textContent = '';
+      document.getElementById('depositModalReservationLabel').textContent =
+        `${reservation.propertyName || 'Logement'} – ${reservation.startDate} → ${reservation.endDate}`;
+      document.getElementById('depositModal').classList.add('active');
+    }
+    function closeDepositModal() {
+      document.getElementById('depositModal').classList.remove('active');
+      currentReservationForDeposit = null;
+    }
+
+    async function loadReservationsWithDeposits() {
+      const container = document.getElementById('depositsContainer');
+      container.innerHTML = '<p class="empty-state">Chargement des réservations…</p>';
+
+      try {
+        const res = await fetch(API_BASE + '/reservations-with-deposits', {
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+          }
+        });
+        if (!res.ok) throw new Error('Erreur API');
+        const data = await res.json(); // attendu: [{ id, propertyName, startDate, endDate, guestName, deposit: {...} }]
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = '<p class="empty-state">Aucune réservation trouvée pour le moment.</p>';
+          return;
+        }
+
+        let html = '<table><thead><tr>' +
+          '<th>Logement</th>' +
+          '<th>Dates</th>' +
+          '<th>Voyageur</th>' +
+          '<th>Caution</th>' +
+          '<th>Statut</th>' +
+          '<th>Lien</th>' +
+          '<th>Actions</th>' +
+          '</tr></thead><tbody>';
+
+        data.forEach(r => {
+          const d = r.deposit || null;
+          let amountText = '<span class="badge badge-empty">Aucune</span>';
+          let statusBadge = '<span class="badge badge-empty">Aucune</span>';
+          let linkHtml = '';
+
+          if (d) {
+            if (d.amount_cents) {
+              amountText = (d.amount_cents / 100).toFixed(2).replace('.', ',') + ' €';
+            }
+            if (d.status === 'pending') {
+              statusBadge = '<span class="badge badge-pending">En attente de paiement</span>';
+            } else if (d.status === 'paid') {
+              statusBadge = '<span class="badge badge-paid">Payée</span>';
+            } else if (d.status === 'refunded') {
+              statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
+            } else {
+              statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
+            }
+
+            if (d.checkout_url) {
+              linkHtml = `
+                <div class="link-cell">
+                  ${d.checkout_url}
+                  <button class="btn btn-ghost btn-xs" onclick="copyText('${encodeURIComponent(d.checkout_url)}')">
+                    Copier
+                  </button>
+                </div>`;
+            }
+          }
+
+          html += `
+            <tr>
+              <td>${r.propertyName || 'Logement'}</td>
+              <td>${r.startDate} → ${r.endDate}</td>
+              <td>${r.guestName || '-'}</td>
+              <td>${amountText}</td>
+              <td>${statusBadge}</td>
+              <td>${linkHtml || '-'}</td>
+              <td>
+                <button class="btn btn-primary btn-xs" onclick='openDepositModal(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
+                  ${d ? 'Nouveau lien' : 'Créer un lien'}
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = '<p class="empty-state">Impossible de charger les réservations.</p>';
+      }
+    }
+
+    function copyText(encodedText) {
+      const text = decodeURIComponent(encodedText);
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Lien copié dans le presse-papier.');
+      }).catch(() => alert('Impossible de copier le lien.'));
+    }
+
+    async function createDeposit() {
+      const errorEl = document.getElementById('depositError');
+      errorEl.textContent = '';
+      if (!currentReservationForDeposit) return;
+
+      const amountValue = parseFloat(document.getElementById('depositAmount').value);
+      if (!amountValue || amountValue <= 0) {
+        errorEl.textContent = 'Merci de saisir un montant valide.';
+        return;
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/deposits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+          },
+          body: JSON.stringify({
+            reservationId: currentReservationForDeposit.id,
+            amount: amountValue
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur lors de la création de la caution');
+        }
+
+        closeDepositModal();
+        await loadReservationsWithDeposits();
+
+        if (data.checkoutUrl) {
+          alert('Lien de caution généré. Tu peux le copier depuis le tableau et l’envoyer au voyageur.');
+          console.log('Lien de caution :', data.checkoutUrl);
+        }
+      } catch (e) {
+        console.error(e);
+        errorEl.textContent = e.message || 'Erreur inattendue.';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('refreshBtn').addEventListener('click', loadReservationsWithDeposits);
+
+      document.getElementById('depositModalClose').addEventListener('click', closeDepositModal);
+      document.getElementById('depositCancelBtn').addEventListener('click', closeDepositModal);
+      document.getElementById('depositCreateBtn').addEventListener('click', createDeposit);
+
+      loadReservationsWithDeposits();
+
+      // Active auto dans la sidebar
+      const path = window.location.pathname.split('/').pop() || 'index.html';
+      document.querySelectorAll('.sidebar-nav .nav-item').forEach(link => {
+        const href = (link.getAttribute('href') || '').split('#')[0];
+        if (href === path) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
