@@ -425,6 +425,11 @@
   </div>
 
   <script>
+        const API_BASE = '/api';
+
+    let currentReservationForDeposit = null;
+    let allReservationsWithDeposits = []; // 👈 liste complète
+
     // config API : adapte l’URL de base si besoin
     const API_BASE = '/api';
 
@@ -442,8 +447,33 @@
       document.getElementById('depositModal').classList.remove('active');
       currentReservationForDeposit = null;
     }
+    async function loadPropertiesForFilter() {
+      const select = document.getElementById('propertyFilter');
+      if (!select) return;
 
-        async function loadReservationsWithDeposits() {
+      try {
+        const res = await fetch(API_BASE + '/properties', {
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+          }
+        });
+        if (!res.ok) throw new Error('Erreur API propriétés');
+        const data = await res.json(); // { properties: [...] }
+
+        (data.properties || []).forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          select.appendChild(opt);
+        });
+
+        select.addEventListener('change', renderDepositsTable);
+      } catch (e) {
+        console.error('Erreur chargement propriétés:', e);
+      }
+    }
+
+            async function loadReservationsWithDeposits() {
       const container = document.getElementById('depositsContainer');
       container.innerHTML = '<p class="empty-state">Chargement des réservations…</p>';
 
@@ -454,80 +484,93 @@
           }
         });
         if (!res.ok) throw new Error('Erreur API');
-        const data = await res.json(); // [{ reservationUid, propertyName, startDate, endDate, guestName, deposit }]
-
-        if (!Array.isArray(data) || data.length === 0) {
-          container.innerHTML = '<p class="empty-state">Aucune réservation trouvée pour le moment.</p>';
-          return;
-        }
-
-        let html = '<table><thead><tr>' +
-          '<th>Logement</th>' +
-          '<th>Dates</th>' +
-          '<th>Voyageur</th>' +
-          '<th>Caution</th>' +
-          '<th>Statut</th>' +
-          '<th>Lien</th>' +
-          '<th>Actions</th>' +
-          '</tr></thead><tbody>';
-
-        data.forEach(r => {
-          const d = r.deposit || null;
-          let amountText = '<span class="badge badge-empty">Aucune</span>';
-          let statusBadge = '<span class="badge badge-empty">Aucune</span>';
-          let linkHtml = '';
-
-          if (d) {
-            if (d.amountCents) {
-              amountText = (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €';
-            }
-            if (d.status === 'pending') {
-              statusBadge = '<span class="badge badge-pending">En attente de paiement</span>';
-            } else if (d.status === 'paid') {
-              statusBadge = '<span class="badge badge-paid">Payée</span>';
-            } else if (d.status === 'refunded') {
-              statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
-            } else {
-              statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
-            }
-
-            if (d.checkoutUrl) {
-              linkHtml = `
-                <div class="link-cell">
-                  ${d.checkoutUrl}
-                  <button class="btn btn-ghost btn-xs" onclick="copyText('${encodeURIComponent(d.checkoutUrl)}')">
-                    Copier
-                  </button>
-                </div>`;
-            }
-          }
-
-          const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
-
-          html += `
-            <tr>
-              <td>${r.propertyName || 'Logement'}</td>
-              <td>${r.startDate} → ${r.endDate}</td>
-              <td>${r.guestName || '-'}</td>
-              <td>${amountText}</td>
-              <td>${statusBadge}</td>
-              <td>${linkHtml || '-'}</td>
-              <td>
-                <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
-                  ${d ? 'Nouveau lien' : 'Créer un lien'}
-                </button>
-              </td>
-            </tr>
-          `;
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
+        const data = await res.json(); // [{ reservationUid, propertyId, propertyName, startDate, endDate, guestName, deposit }]
+        allReservationsWithDeposits = Array.isArray(data) ? data : [];
+        renderDepositsTable();
       } catch (e) {
         console.error(e);
         container.innerHTML = '<p class="empty-state">Impossible de charger les réservations.</p>';
       }
     }
+
+    function renderDepositsTable() {
+      const container = document.getElementById('depositsContainer');
+      const select = document.getElementById('propertyFilter');
+      const selectedPropertyId = select ? select.value : '';
+
+      const data = allReservationsWithDeposits.filter(r =>
+        !selectedPropertyId || r.propertyId === selectedPropertyId
+      );
+
+      if (!data.length) {
+        container.innerHTML = '<p class="empty-state">Aucune réservation pour ce filtre.</p>';
+        return;
+      }
+
+      let html = '<table><thead><tr>' +
+        '<th>Logement</th>' +
+        '<th>Dates</th>' +
+        '<th>Voyageur</th>' +
+        '<th>Caution</th>' +
+        '<th>Statut</th>' +
+        '<th>Lien</th>' +
+        '<th>Actions</th>' +
+        '</tr></thead><tbody>';
+
+      data.forEach(r => {
+        const d = r.deposit || null;
+        let amountText = '<span class="badge badge-empty">Aucune</span>';
+        let statusBadge = '<span class="badge badge-empty">Aucune</span>';
+        let linkHtml = '';
+
+        if (d) {
+          if (d.amountCents) {
+            amountText = (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €';
+          }
+          if (d.status === 'pending') {
+            statusBadge = '<span class="badge badge-pending">En attente de paiement</span>';
+          } else if (d.status === 'paid') {
+            statusBadge = '<span class="badge badge-paid">Payée</span>';
+          } else if (d.status === 'refunded') {
+            statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
+          } else {
+            statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
+          }
+
+          if (d.checkoutUrl) {
+            linkHtml = `
+              <div class="link-cell">
+                ${d.checkoutUrl}
+                <button class="btn btn-ghost btn-xs" onclick="copyText('${encodeURIComponent(d.checkoutUrl)}')">
+                  Copier
+                </button>
+              </div>`;
+          }
+        }
+
+        const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
+
+        html += `
+          <tr>
+            <td>${r.propertyName || 'Logement'}</td>
+            <td>${r.startDate} → ${r.endDate}</td>
+            <td>${r.guestName || '-'}</td>
+            <td>${amountText}</td>
+            <td>${statusBadge}</td>
+            <td>${linkHtml || '-'}</td>
+            <td>
+              <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
+                ${d ? 'Nouveau lien' : 'Créer un lien'}
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
 
 
     async function createDeposit() {
@@ -580,6 +623,7 @@
       document.getElementById('depositCreateBtn').addEventListener('click', createDeposit);
 
       loadReservationsWithDeposits();
+      loadPropertiesForFilter();  
 
       // Active auto dans la sidebar
       const path = window.location.pathname.split('/').pop() || 'index.html';
