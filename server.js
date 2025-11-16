@@ -773,6 +773,7 @@ app.post('/api/auth/register', async (req, res) => {
       email,
       passwordHash,
       createdAt: new Date().toISOString()
+      stripeAccountId: null
     };
 
     USERS.push(user);
