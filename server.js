@@ -803,7 +803,7 @@ app.post('/api/auth/register', async (req, res) => {
       lastName,
       email,
       passwordHash,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
       stripeAccountId: null
     };
 
