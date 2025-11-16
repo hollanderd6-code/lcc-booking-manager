@@ -29,4 +29,11 @@
   "devDependencies": {
     "nodemon": "^3.0.2"
   }
+  "dependencies": {
+  "express": "^4.19.0",
+  "stripe": "^16.0.0",
+  "dotenv": "^16.0.0",
+  ...
+}
+
 }
