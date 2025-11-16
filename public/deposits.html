@@ -437,7 +437,7 @@
       currentReservationForDeposit = null;
     }
 
-    async function loadReservationsWithDeposits() {
+        async function loadReservationsWithDeposits() {
       const container = document.getElementById('depositsContainer');
       container.innerHTML = '<p class="empty-state">Chargement des réservations…</p>';
 
@@ -448,7 +448,8 @@
           }
         });
         if (!res.ok) throw new Error('Erreur API');
-        const data = await res.json(); // attendu: [{ id, propertyName, startDate, endDate, guestName, deposit: {...} }]
+        const data = await res.json(); // [{ reservationUid, propertyName, startDate, endDate, guestName, deposit }]
+
         if (!Array.isArray(data) || data.length === 0) {
           container.innerHTML = '<p class="empty-state">Aucune réservation trouvée pour le moment.</p>';
           return;
@@ -471,8 +472,8 @@
           let linkHtml = '';
 
           if (d) {
-            if (d.amount_cents) {
-              amountText = (d.amount_cents / 100).toFixed(2).replace('.', ',') + ' €';
+            if (d.amountCents) {
+              amountText = (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €';
             }
             if (d.status === 'pending') {
               statusBadge = '<span class="badge badge-pending">En attente de paiement</span>';
@@ -484,16 +485,18 @@
               statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
             }
 
-            if (d.checkout_url) {
+            if (d.checkoutUrl) {
               linkHtml = `
                 <div class="link-cell">
-                  ${d.checkout_url}
-                  <button class="btn btn-ghost btn-xs" onclick="copyText('${encodeURIComponent(d.checkout_url)}')">
+                  ${d.checkoutUrl}
+                  <button class="btn btn-ghost btn-xs" onclick="copyText('${encodeURIComponent(d.checkoutUrl)}')">
                     Copier
                   </button>
                 </div>`;
             }
           }
+
+          const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
 
           html += `
             <tr>
@@ -504,7 +507,7 @@
               <td>${statusBadge}</td>
               <td>${linkHtml || '-'}</td>
               <td>
-                <button class="btn btn-primary btn-xs" onclick='openDepositModal(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
+                <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
                   ${d ? 'Nouveau lien' : 'Créer un lien'}
                 </button>
               </td>
@@ -520,12 +523,6 @@
       }
     }
 
-    function copyText(encodedText) {
-      const text = decodeURIComponent(encodedText);
-      navigator.clipboard.writeText(text).then(() => {
-        alert('Lien copié dans le presse-papier.');
-      }).catch(() => alert('Impossible de copier le lien.'));
-    }
 
     async function createDeposit() {
       const errorEl = document.getElementById('depositError');
