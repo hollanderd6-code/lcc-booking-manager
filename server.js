@@ -502,6 +502,37 @@ app.get('/api/availability/:propertyId', (req, res) => {
     available: overlappingReservations.length === 0,
     overlappingReservations
   });
+  // GET - Réservations avec infos de caution
+app.get('/api/reservations-with-deposits', (req, res) => {
+  const result = [];
+
+  PROPERTIES.forEach(property => {
+    const reservations = reservationsStore.properties[property.id] || [];
+
+    reservations.forEach(r => {
+      const deposit = DEPOSITS.find(d => d.reservationUid === r.uid) || null;
+
+      result.push({
+        reservationUid: r.uid,
+        propertyId: property.id,
+        propertyName: property.name,
+        startDate: r.start,
+        endDate: r.end,
+        guestName: r.guestName || '',
+        deposit: deposit
+          ? {
+              id: deposit.id,
+              amountCents: deposit.amountCents,
+              status: deposit.status,
+              checkoutUrl: deposit.checkoutUrl
+            }
+          : null
+      });
+    });
+  });
+
+  res.json(result);
+});
 });
 
 // ============================================
