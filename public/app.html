@@ -4,334 +4,887 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LCC Booking Manager – Dashboard</title>
-
+  
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- CSS plateforme -->
+  
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+  
+  <!-- Platform CSS -->
   <link rel="stylesheet" href="/css/style.css">
 
   <style>
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
-    .stat-card {
-      background: var(--bg-primary);
-      border-radius: 18px;
-      padding: 14px 16px;
-      box-shadow: var(--shadow-sm);
+    .app-container {
+      margin-top: 0 !important;
+    }
+
+    .main-header {
+      margin-top: 0 !important;
+    }
+
+    .main-content {
+      margin-top: 0 !important;
+      padding-top: 24px !important;
+    }
+
+    .page-content {
+      margin-top: 0 !important;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <i class="fas fa-home"></i>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">LCC Booking</span>
+            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+          </div>
+        </a>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <!-- PRINCIPAL -->
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
+
+          <a href="/app.html" class="nav-item active">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
+
+          <a href="#" class="nav-item" id="navCalendarLink">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
+
+          <a href="/messages.html" class="nav-item">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
+        
+        <!-- GESTION -->
+       <div class="nav-section">
+  <div class="nav-section-title">Gestion</div>
+
+  <a href="settings.html" class="nav-item">
+    <i class="fas fa-home"></i>
+    <span>Mes logements</span>
+  </a>
+
+  <a href="welcome.html" class="nav-item">
+    <i class="fas fa-book-open"></i>
+    <span>Livret d'accueil</span>
+  </a>
+
+  <a href="cleaning.html" class="nav-item">
+    <i class="fas fa-broom"></i>
+    <span>Gestion du ménage</span>
+    <span class="nav-badge">Nouveau</span>
+  </a>
+
+  <a href="statistics.html" class="nav-item">
+    <i class="fas fa-chart-bar"></i>
+    <span>Statistiques</span>
+  </a>
+
+  <a href="deposits.html" class="nav-item">
+    <i class="fas fa-shield-alt"></i>
+    <span>Cautions</span>
+  </a>
+
+  <a href="notifications.html" class="nav-item">
+    <i class="fas fa-bell"></i>
+    <span>Notifications</span>
+  </a>
+</div>
+
+
+        <!-- PARAMÈTRES -->
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
+
+          <a href="/settings-account.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
+
+          <a href="/help.html" class="nav-item">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="sidebarUserAvatar">C</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarUserName">Utilisateur</div>
+            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+          </div>
+
+          <button class="btn btn-ghost" id="logoutBtn" style="padding: 4px 10px; font-size: 12px; margin-left: auto;">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Quitter</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="page-kicker">Vue d’ensemble</div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">
+            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
+          </p>
+        </div>
+        
+        <div class="header-actions">
+          <button class="btn btn-ghost hide-on-mobile" id="newReservationBtn">
+            <i class="fas fa-plus"></i>
+            Nouvelle réservation
+          </button>
+
+          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+
+          <button class="btn-icon" id="notificationsBtn" title="Notifications">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge"></span>
+          </button>
+
+          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+      </header>
+      
+      <!-- Page Content -->
+      <div class="page-content">
+        
+        <!-- Vue d’ensemble arrivées / séjours / départs -->
+        <section class="overview-card">
+          <div class="overview-header">
+            <div>
+              <div class="overview-kicker">Vue d’ensemble</div>
+              <div class="overview-title">Aujourd’hui &amp; à venir</div>
+            </div>
+            <button class="overview-chip">
+              Dashboard temps réel
+            </button>
+          </div>
+
+          <div class="overview-metrics">
+            <div class="overview-metric">
+              <div class="overview-metric-label">Réservations à venir</div>
+              <div class="overview-metric-value" id="ovUpcoming">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Séjours en cours</div>
+              <div class="overview-metric-value" id="ovCurrent">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Taux d’occupation</div>
+              <div class="overview-metric-value" id="ovOccupancy">78%</div>
+            </div>
+          </div>
+
+          <div class="overview-timeline" id="overviewTimeline">
+            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
+          </div>
+        </section>
+
+        <!-- Bloc Gestion du ménage -->
+        <section id="cleaning-module" class="cleaning-block">
+          <div class="cleaning-card-wrapper">
+            
+            <!-- Intro ménage -->
+            <div class="cleaning-intro">
+              <span class="cleaning-intro-label">Module intégré</span>
+              <h2 class="cleaning-intro-title">Gestion du ménage entre deux séjours</h2>
+              <p class="cleaning-intro-text">
+                Planifiez les interventions de ménage, assignez vos équipes et suivez l’état des logements
+                directement depuis votre LCC Booking Manager. Synchronisé avec le planning des réservations.
+              </p>
+              <div class="cleaning-intro-badges">
+                <span class="cleaning-badge">Planning auto</span>
+                <span class="cleaning-badge">Check-lists</span>
+                <span class="cleaning-badge">Suivi temps réel</span>
+              </div>
+              <a href="/cleaning.html" class="cleaning-cta">
+                Configurer la gestion du ménage
+                <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+
+            <!-- Cartes fonctionnalités ménage -->
+            <div class="cleaning-features">
+              <div class="cleaning-feature-card">
+                <h3 class="cleaning-feature-title">
+                  <i class="fa-solid fa-calendar-check"></i>
+                  Planning automatique
+                </h3>
+                <p class="cleaning-feature-text">
+                  Les départs et arrivées génèrent automatiquement les créneaux de ménage pour chaque logement.
+                </p>
+              </div>
+
+              <div class="cleaning-feature-card">
+                <h3 class="cleaning-feature-title">
+                  <i class="fa-solid fa-list-check"></i>
+                  Tâches &amp; check-lists
+                </h3>
+                <p class="cleaning-feature-text">
+                  Définissez vos scénarios : ménage complet, changement du linge, inventaire, relevé d’anomalies…
+                </p>
+              </div>
+
+              <div class="cleaning-feature-card">
+                <h3 class="cleaning-feature-title">
+                  <i class="fa-solid fa-users-gear"></i>
+                  Assignation des équipes
+                </h3>
+                <p class="cleaning-feature-text">
+                  Assignez chaque tâche à vos équipes ou prestataires, en un clic.
+                </p>
+              </div>
+
+              <div class="cleaning-feature-card">
+                <h3 class="cleaning-feature-title">
+                  <i class="fa-solid fa-circle-check"></i>
+                  Suivi &amp; traçabilité
+                </h3>
+                <p class="cleaning-feature-text">
+                  Statuts, historique complet et exports des plannings disponibles.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Stats Grid -->
+        <section class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total réservations</span>
+              <div class="stat-icon green">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+            </div>
+            <div class="stat-value" id="statTotal">-</div>
+            <div class="stat-trend up">
+              <i class="fas fa-arrow-up"></i>
+              <span>12 % ce mois</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">À venir</span>
+              <div class="stat-icon blue">
+                <i class="fas fa-clock"></i>
+              </div>
+            </div>
+            <div class="stat-value" id="statUpcoming">-</div>
+            <div class="stat-trend up">
+              <i class="fas fa-arrow-up"></i>
+              <span>+8 % vs mois dernier</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Séjours en cours</span>
+              <div class="stat-icon purple">
+                <i class="fas fa-door-open"></i>
+              </div>
+            </div>
+            <div class="stat-value" id="statCurrent">-</div>
+            <div class="stat-trend">
+              <i class="fas fa-minus"></i>
+              <span>Stable</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Taux d’occupation</span>
+              <div class="stat-icon orange">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+            </div>
+            <div class="stat-value">78%</div>
+            <div class="stat-trend up">
+              <i class="fas fa-arrow-up"></i>
+              <span>+5 % vs mois dernier</span>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Property Filters -->
+        <section class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-filter"></i>
+              Filtrer par logement
+            </div>
+            <button class="btn btn-ghost" onclick="clearFilters()">
+              <i class="fas fa-times"></i>
+              Réinitialiser
+            </button>
+          </div>
+          <div class="property-filters" id="propertyFilters">
+            <!-- Généré dynamiquement par app.js -->
+          </div>
+        </section>
+        
+        <!-- Calendar Card -->
+        <section class="card" id="calendarSection">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-calendar-alt"></i>
+              Calendrier des réservations
+            </div>
+            <div class="flex gap-sm">
+              <button class="btn btn-ghost view-btn active" data-view="month">
+                <i class="fas fa-calendar"></i> Mois
+              </button>
+              <button class="btn btn-ghost view-btn" data-view="week">
+                <i class="fas fa-calendar-week"></i> Semaine
+              </button>
+              <button class="btn btn-ghost view-btn" data-view="list">
+                <i class="fas fa-list"></i> Liste
+              </button>
+            </div>
+          </div>
+          <div id="calendar"></div>
+        </section>
+        
+      </div>
+
+      <!-- Notifications Panel -->
+      <aside class="notifications-panel" id="notificationsPanel">
+        <div class="notifications-header">
+          <h2>Notifications</h2>
+          <button class="btn-icon" id="notificationsCloseBtn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="notifications-body" id="notificationsList">
+          <p class="empty-state">Aucune notification pour le moment.</p>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+  
+  <!-- Reservation Modal -->
+  <div class="modal" id="reservationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Détails de la réservation</h2>
+        <button class="modal-close" id="modalClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Contenu généré dynamiquement -->
+      </div>
+    </div>
+  </div>
+
+  <!-- New Manual Reservation Modal -->
+  <div class="modal" id="newReservationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Nouvelle réservation</h2>
+        <button class="modal-close" id="newReservationClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="newReservationForm" class="form-grid">
+          <div class="form-row">
+            <label for="nrProperty">Logement</label>
+            <select id="nrProperty" name="propertyId" required>
+              <!-- On remplira en JS suivant PROPERTIES -->
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="nrGuestName">Nom du client</label>
+            <input type="text" id="nrGuestName" name="guestName" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrStartDate">Arrivée</label>
+            <input type="date" id="nrStartDate" name="startDate" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrEndDate">Départ</label>
+            <input type="date" id="nrEndDate" name="endDate" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrNotes">Notes</label>
+            <textarea id="nrNotes" name="notes" rows="3"></textarea>
+          </div>
+
+          <div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+            <button type="button" class="btn btn-ghost" id="newReservationCancel">
+              Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Synchronisation en cours...</p>
+    </div>
+  </div>
+  
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
+  <script src="/js/app.js"></script>
+  
+  <style>
+    /* Styles spécifiques calendrier & UI complémentaire */
+    #calendar {
+      margin-top: 24px;
+    }
+    
+    .fc {
+      --fc-border-color: var(--border-color);
+      --fc-button-bg-color: var(--primary-color);
+      --fc-button-border-color: var(--primary-color);
+      --fc-button-hover-bg-color: var(--primary-hover);
+      --fc-button-hover-border-color: var(--primary-hover);
+      --fc-button-active-bg-color: var(--primary-dark);
+      --fc-today-bg-color: var(--primary-light);
+    }
+    
+    [data-theme="dark"] .fc {
+      --fc-page-bg-color: var(--bg-primary);
+      --fc-neutral-bg-color: var(--bg-secondary);
+      --fc-today-bg-color: rgba(16, 185, 129, 0.1);
+    }
+    
+    .fc .fc-button {
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      text-transform: none;
+      padding: 8px 16px;
+    }
+    
+    .fc-event {
+      border-radius: var(--radius-sm);
+      border: none;
+      padding: 4px 8px;
+    }
+    
+    .property-filters {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-
-    .stat-label {
-      font-size: 12px;
-      color: var(--text-secondary);
+    
+    .property-badge {
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      border: 2px solid;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-weight: 600;
+      font-size: 14px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
-
-    .stat-label i {
+    
+    .property-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .property-badge.active {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+    }
+    
+    .property-count {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
       font-size: 12px;
-      color: var(--text-tertiary, #9ca3af);
+    }
+    
+    .page-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .hide-on-mobile {
+      display: inline-flex;
+    }
+    
+    @media (max-width: 768px) {
+      .hide-on-mobile {
+        display: none;
+      }
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: var(--radius-xl);
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
+    
+    .modal-header {
+      padding: var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+    
+    .modal-close:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    
+    .modal-body {
+      padding: var(--spacing-lg);
+      overflow-y: auto;
+      max-height: calc(90vh - 80px);
+    }
+    
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .loading-spinner {
+      background: var(--bg-primary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-xl);
+      text-align: center;
+    }
+    
+    .loading-spinner i {
+      font-size: 48px;
+      color: var(--primary-color);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .toast-container {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      right: var(--spacing-lg);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    
+    .toast {
+      background: var(--bg-primary);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      min-width: 300px;
+      animation: slideInRight 0.3s ease;
+    }
+    
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--error); }
+    .toast.info { border-color: var(--info); }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
-    .stat-value {
+    /* Notifications panel */
+    .notifications-panel {
+      position: fixed;
+      top: 0;
+      right: -360px;
+      width: 360px;
+      height: 100vh;
+      background: var(--bg-primary);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s ease;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .notifications-panel.open {
+      right: 0;
+    }
+
+    .notifications-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notifications-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .notifications-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .empty-state {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Carte Vue d'ensemble (arrivées / séjours / départs) */
+    .overview-card {
+      background: linear-gradient(135deg, #f3f4ff, #eef9ff);
+      border-radius: 24px;
+      padding: 18px 20px 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    [data-theme="dark"] .overview-card {
+      background: radial-gradient(circle at top left, #1e293b, #020617);
+    }
+
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .overview-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
+
+    .overview-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .overview-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(37, 99, 235, 0.06);
+      color: #2563eb;
+      font-size: 12px;
+      padding: 6px 12px;
+      font-weight: 600;
+    }
+
+    [data-theme="dark"] .overview-chip {
+      background: rgba(37, 99, 235, 0.18);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .overview-metrics {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .overview-metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .overview-metric-value {
       font-size: 20px;
       font-weight: 700;
     }
 
-    .stat-trend {
-      font-size: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .stat-trend.positive {
-      color: #16a34a;
-    }
-    .stat-trend.negative {
-      color: #dc2626;
-    }
-    .stat-trend.neutral {
-      color: var(--text-secondary);
-    }
-
-    .layout-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr);
-      gap: 16px;
-      align-items: flex-start;
-    }
-
-    @media (max-width: 1100px) {
-      .cards-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .layout-grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-
-    @media (max-width: 700px) {
-      .cards-grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-
-    .card {
-      background: var(--bg-primary);
+    .overview-timeline {
+      margin-top: 4px;
+      background: #020617;
+      color: #e5e7eb;
       border-radius: 18px;
-      padding: 14px 16px;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      gap: 8px;
-    }
-
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .card-title i {
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-
-    .card-subtitle {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .tag {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--bg-secondary);
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .filter-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-
-    .filter-row select {
-      border-radius: 999px;
-      border: 1px solid var(--border-color);
-      padding: 6px 10px;
-      font-size: 12px;
-      background: var(--bg-secondary);
-    }
-
-    .btn-sm {
-      padding: 6px 10px;
-      font-size: 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-    }
-
-    .btn-sm i {
-      font-size: 12px;
-    }
-
-    .btn-sm-primary {
-      border-color: transparent;
-      background: var(--primary-color, #059669);
-      color: #fff;
-    }
-
-    .btn-sm-primary:hover {
-      filter: brightness(0.97);
-    }
-
-    .task-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      padding: 10px 14px;
       font-size: 13px;
     }
 
-    .task-item {
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: var(--bg-secondary);
+    [data-theme="dark"] .overview-timeline {
+      background: #020617;
+    }
+
+    .overview-timeline-item {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .task-label {
-      font-weight: 500;
-    }
-
-    .task-meta {
-      font-size: 12px;
-      color: var(--text-secondary);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 7px;
-      border-radius: 999px;
-      font-size: 11px;
-    }
-
-    .badge-date {
-      background: rgba(37, 99, 235, .08);
-      color: #1d4ed8;
-    }
-
-    .badge-type {
-      background: rgba(5, 150, 105, .08);
-      color: #047857;
-    }
-
-    .badge-property {
-      background: rgba(15, 23, 42, .04);
-      color: #0f172a;
-    }
-
-    .empty-state {
-      font-size: 12px;
-      color: var(--text-secondary);
-      padding: 10px 0;
-    }
-
-    .reservations-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 13px;
-      max-height: 420px;
-      overflow: auto;
-    }
-
-    .reservation-item {
-      padding: 8px 10px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color-subtle, #e5e7eb);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      background: var(--bg-secondary);
-    }
-
-    .reservation-top {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 8px;
+      margin-bottom: 4px;
     }
 
-    .reservation-guest {
-      font-weight: 500;
-    }
-
-    .reservation-property {
-      font-size: 12px;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .property-dot {
-      width: 10px;
-      height: 10px;
+    .overview-dot {
+      width: 8px;
+      height: 8px;
       border-radius: 999px;
       flex-shrink: 0;
     }
 
-    .reservation-dates {
-      font-size: 12px;
-      color: var(--text-secondary);
+    .overview-dot.arrival {
+      background: #22c55e;
     }
 
-    .reservation-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+    .overview-dot.stay {
+      background: #3b82f6;
+    }
+
+    .overview-dot.departure {
+      background: #f97316;
+    }
+
+    .overview-line-main {
+      flex: 1;
+    }
+
+    .overview-line-time {
       font-size: 11px;
-      color: var(--text-secondary);
+      opacity: 0.8;
+      white-space: nowrap;
     }
 
-    .reservation-meta span {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+    .overview-empty {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.8;
+      padding-top: 2px;
+      padding-bottom: 2px;
     }
 
-    .status-pill {
+    .overview-timeline-footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      margin-top: 6px;
+      padding-top: 6px;
       font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: rgba(234, 179, 8, .12);
-      color: #92400e;
-    }
-
-    .status-pill.current {
-      background: rgba(22, 163, 74, .12);
-      color: #166534;
-    }
-
-    .status-pill.past {
-      background: rgba(148, 163, 184, .18);
-      color: #475569;
-    }
-
-    .sync-indicator {
-      font-size: 11px;
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .sync-indicator i {
-      font-size: 11px;
-    }
-
-    .sync-indicator.running {
-      color: #2563eb;
+      opacity: 0.7;
     }
   </style>
 
-  <!-- Auth + user sidebar -->
+  <!-- Script auth + user + logout -->
   <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
@@ -349,8 +902,8 @@
         console.error('Impossible de lire lcc_user', e);
       }
 
-      window.addEventListener('DOMContentLoaded', () => {
-        if (user) {
+      if (user) {
+        window.addEventListener('DOMContentLoaded', () => {
           const nameEl = document.getElementById('sidebarUserName');
           const companyEl = document.getElementById('sidebarUserCompany');
           const avatarEl = document.getElementById('sidebarUserAvatar');
@@ -369,517 +922,210 @@
             const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
             avatarEl.textContent = initial.toUpperCase();
           }
-        }
 
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', function () {
-            localStorage.removeItem('lcc_token');
-            localStorage.removeItem('lcc_user');
-            window.location.href = '/login.html';
-          });
-        }
-      });
+          const logoutBtn = document.getElementById('logoutBtn');
+          if (logoutBtn) {
+            logoutBtn.addEventListener('click', function () {
+              localStorage.removeItem('lcc_token');
+              localStorage.removeItem('lcc_user');
+              window.location.href = '/login.html';
+            });
+          }
+        });
+      }
     })();
   </script>
-</head>
-<body>
-  <div class="app-container">
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="index.html" class="sidebar-logo">
-          <i class="fas fa-home"></i>
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">LCC Booking</span>
-            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
-          </div>
-        </a>
-      </div>
-
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-
-          <a href="app.html" class="nav-item active">
-            <i class="fas fa-th-large"></i>
-            <span>Dashboard</span>
-          </a>
-
-          <a href="#calendarSection" class="nav-item">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-            <span class="nav-badge" id="navTotalReservations">0</span>
-          </a>
-
-          <a href="messages.html" class="nav-item">
-            <i class="fas fa-comment-dots"></i>
-            <span>Messages</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-
-          <a href="settings.html" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Mes logements</span>
-          </a>
-
-          <a href="welcome.html" class="nav-item">
-            <i class="fas fa-book-open"></i>
-            <span>Livret d'accueil</span>
-          </a>
-
-          <a href="cleaning.html" class="nav-item">
-            <i class="fas fa-broom"></i>
-            <span>Gestion du ménage</span>
-            <span class="nav-badge">Nouveau</span>
-          </a>
-
-          <a href="statistics.html" class="nav-item">
-            <i class="fas fa-chart-bar"></i>
-            <span>Statistiques</span>
-          </a>
-
-          <a href="deposits.html" class="nav-item">
-            <i class="fas fa-shield-alt"></i>
-            <span>Cautions</span>
-          </a>
-
-          <a href="notifications.html" class="nav-item">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-          <a href="settings-account.html" class="nav-item">
-            <i class="fas fa-cog"></i>
-            <span>Paramètres</span>
-          </a>
-          <a href="help.html" class="nav-item">
-            <i class="fas fa-question-circle"></i>
-            <span>Aide</span>
-          </a>
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar" id="sidebarUserAvatar">C</div>
-          <div class="user-info">
-            <div class="user-name" id="sidebarUserName">Utilisateur</div>
-            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-          </div>
-
-          <button class="btn btn-ghost" id="logoutBtn" style="padding:4px 10px;font-size:12px;margin-left:auto;">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>Quitter</span>
-          </button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="main-content">
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Vue d’ensemble</div>
-          <h1 class="page-title">Dashboard</h1>
-          <p class="page-subtitle">
-            Suivez vos réservations, vos arrivées à venir et les actions à traiter pour votre conciergerie.
-          </p>
-        </div>
-      </header>
-
-      <div class="page-content">
-
-        <!-- Stat Cards -->
-        <div class="cards-grid">
-          <div class="stat-card">
-            <div class="stat-label">
-              <i class="fas fa-calendar-check"></i>
-              Total réservations
-            </div>
-            <div class="stat-value" id="statTotalReservations">-</div>
-            <div class="stat-trend neutral" id="statTotalTrend">
-              <i class="fas fa-minus"></i>
-              <span>Ce mois</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-label">
-              <i class="fas fa-plane-arrival"></i>
-              À venir
-            </div>
-            <div class="stat-value" id="statUpcoming">-</div>
-            <div class="stat-trend neutral" id="statUpcomingTrend">
-              <i class="fas fa-arrow-right"></i>
-              <span>7 prochains jours</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-label">
-              <i class="fas fa-door-open"></i>
-              Séjours en cours
-            </div>
-            <div class="stat-value" id="statCurrent">-</div>
-            <div class="stat-trend neutral" id="statCurrentTrend">
-              <i class="fas fa-equals"></i>
-              <span>Aujourd’hui</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-label">
-              <i class="fas fa-chart-line"></i>
-              Taux d’occupation
-            </div>
-            <div class="stat-value" id="statOccupancy">-</div>
-            <div class="stat-trend positive" id="statOccupancyTrend">
-              <i class="fas fa-arrow-up"></i>
-              <span>vs mois dernier</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="layout-grid">
-          <!-- Calendrier / Liste réservations -->
-          <section class="card" id="calendarSection">
-            <div class="card-header">
-              <div class="card-title">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Calendrier des réservations</span>
-              </div>
-              <div class="sync-indicator" id="syncIndicator">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <span>Synchronisation en cours…</span>
-              </div>
-            </div>
-            <p class="card-subtitle">
-              Visualisez vos réservations à venir par logement et gérez vos séjours au quotidien.
-            </p>
-
-            <div class="filter-row">
-              <label style="font-size:12px;color:var(--text-secondary);">
-                Logement :
-                <select id="filterProperty">
-                  <option value="">Tous les logements</option>
-                </select>
-              </label>
-
-              <button class="btn-sm" id="btnResetFilters">
-                <i class="fas fa-undo"></i>
-                Réinitialiser
-              </button>
-
-              <button class="btn-sm" id="btnForceSync">
-                <i class="fas fa-sync-alt"></i>
-                Forcer une synchro iCal
-              </button>
-            </div>
-
-            <div class="reservations-list" id="reservationsList">
-              <div class="empty-state">Chargement des réservations…</div>
-            </div>
-          </section>
-
-          <!-- À faire -->
-          <section class="card">
-            <div class="card-header">
-              <div class="card-title">
-                <i class="fas fa-clipboard-list"></i>
-                <span>À faire</span>
-              </div>
-              <span class="tag" id="tasksSummaryTag">
-                Aujourd’hui & à venir
-              </span>
-            </div>
-            <p class="card-subtitle">
-              Arrivées, départs et séjours en cours pour organiser votre ménage, vos cautions et vos messages.
-            </p>
-
-            <div class="task-list" id="tasksList">
-              <div class="empty-state">Chargement des actions à venir…</div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- JS Dashboard -->
+  <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
   <script>
-    const API_BASE = '/api';
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Nouvelle réservation */
 
-    async function fetchJSON(url, options = {}) {
-      const res = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + (localStorage.getItem('lcc_token') || ''),
-          ...(options.headers || {})
+      const newReservationBtn = document.getElementById('newReservationBtn');
+      const newReservationModal = document.getElementById('newReservationModal');
+      const newReservationClose = document.getElementById('newReservationClose');
+      const newReservationCancel = document.getElementById('newReservationCancel');
+      const newReservationForm = document.getElementById('newReservationForm');
+
+      function openNewReservationModal() {
+        if (newReservationModal) {
+          newReservationModal.classList.add('active');
         }
-      });
-      if (!res.ok) {
-        throw new Error('Erreur API ' + url);
-      }
-      return res.json();
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return '';
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-    }
-
-    function getStatusFromDates(start, end) {
-      const now = new Date();
-      const s = new Date(start);
-      const e = new Date(end);
-      if (e < now) return 'past';
-      if (s <= now && e >= now) return 'current';
-      return 'upcoming';
-    }
-
-    function statusLabel(status) {
-      if (status === 'current') return 'En cours';
-      if (status === 'past') return 'Terminé';
-      return 'À venir';
-    }
-
-    async function loadStats() {
-      try {
-        const stats = await fetchJSON(API_BASE + '/stats');
-        document.getElementById('statTotalReservations').textContent = stats.totalReservations ?? '-';
-        document.getElementById('statUpcoming').textContent = stats.upcomingReservations ?? '-';
-        document.getElementById('statCurrent').textContent = stats.currentReservations ?? '-';
-
-        // Taux d’occupation approximatif basé sur le mois courant
-        const byMonth = stats.byMonth || {};
-        const now = new Date();
-        const monthKey = now.toISOString().slice(0, 7);
-        const monthCount = byMonth[monthKey] || 0;
-        const occupancy = Math.min(100, Math.round((monthCount / 31) * 100));
-        document.getElementById('statOccupancy').textContent = occupancy + ' %';
-
-        // Badge dans la nav
-        const navBadge = document.getElementById('navTotalReservations');
-        if (navBadge) {
-          navBadge.textContent = stats.totalReservations ?? 0;
-        }
-      } catch (e) {
-        console.error('Erreur stats:', e);
-      }
-    }
-
-    let allReservations = [];
-    let propertiesMap = {};
-
-    async function loadConfigAndReservations() {
-      const syncIndicator = document.getElementById('syncIndicator');
-      if (syncIndicator) {
-        syncIndicator.classList.add('running');
-        syncIndicator.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Synchronisation en cours…</span>';
       }
 
-      try {
-        const [config, reservationsData] = await Promise.all([
-          fetchJSON(API_BASE + '/config'),
-          fetchJSON(API_BASE + '/reservations')
-        ]);
-
-        // Propriétés
-        const propSelect = document.getElementById('filterProperty');
-        if (config && Array.isArray(config.properties)) {
-          propertiesMap = {};
-          config.properties.forEach(p => {
-            propertiesMap[p.id] = p;
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = p.name;
-            propSelect.appendChild(opt);
-          });
+      function closeNewReservationModal() {
+        if (newReservationModal) {
+          newReservationModal.classList.remove('active');
+          if (newReservationForm) newReservationForm.reset();
         }
+      }
 
-        // Réservations
-        const reservations = reservationsData.reservations || [];
-        allReservations = reservations.map(r => {
-          const property = r.property || {};
-          return {
-            uid: r.uid,
-            start: r.start,
-            end: r.end,
-            guestName: r.guestName || (r.summary || 'Réservation'),
-            platform: r.platform || r.source || '-',
-            propertyId: property.id || null,
-            propertyName: property.name || 'Logement',
-            propertyColor: property.color || '#0f172a'
-          };
+      if (newReservationBtn) {
+        newReservationBtn.addEventListener('click', openNewReservationModal);
+      }
+      if (newReservationClose) {
+        newReservationClose.addEventListener('click', closeNewReservationModal);
+      }
+      if (newReservationCancel) {
+        newReservationCancel.addEventListener('click', closeNewReservationModal);
+      }
+
+      if (newReservationForm) {
+        newReservationForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          alert('Réservation enregistrée (démo)');
+          closeNewReservationModal();
         });
-
-        renderReservations();
-
-        if (syncIndicator) {
-          syncIndicator.classList.remove('running');
-          const lastSync = reservationsData.lastSync ? formatDate(reservationsData.lastSync) : '—';
-          syncIndicator.innerHTML = '<i class="fas fa-check-circle"></i><span>Synchro OK • Dernière synchro : ' + lastSync + '</span>';
-        }
-      } catch (e) {
-        console.error('Erreur chargement config/réservations:', e);
-        if (syncIndicator) {
-          syncIndicator.classList.remove('running');
-          syncIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Erreur lors de la synchro</span>';
-        }
-        const list = document.getElementById('reservationsList');
-        list.innerHTML = '<div class="empty-state">Impossible de charger les réservations.</div>';
-      }
-    }
-
-    function renderReservations() {
-      const container = document.getElementById('reservationsList');
-      const filterProperty = document.getElementById('filterProperty').value;
-
-      let data = allReservations.slice();
-      if (filterProperty) {
-        data = data.filter(r => r.propertyId === filterProperty);
       }
 
-      // Tri par date de début
-      data.sort((a, b) => new Date(a.start) - new Date(b.start));
+      /* Notifications */
 
-      if (!data.length) {
-        container.innerHTML = '<div class="empty-state">Aucune réservation pour ce filtre.</div>';
-        return;
-      }
+      const notificationsBtn = document.getElementById('notificationsBtn');
+      const notificationsPanel = document.getElementById('notificationsPanel');
+      const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+      const notificationsList = document.getElementById('notificationsList');
 
-      const now = new Date();
-      const html = data.map(r => {
-        const status = getStatusFromDates(r.start, r.end);
-        const statusClass = 'status-pill ' + (status === 'current' ? 'current' : status === 'past' ? 'past' : '');
-        const startLabel = formatDate(r.start);
-        const endLabel = formatDate(r.end);
-        const nights = Math.max(1, Math.round((new Date(r.end) - new Date(r.start)) / (1000 * 60 * 60 * 24)));
+      function buildNotificationsFromReservations() {
+        if (!notificationsList) return;
 
-        return `
-          <div class="reservation-item">
-            <div class="reservation-top">
-              <div>
-                <div class="reservation-guest">${r.guestName || 'Réservation'}</div>
-                <div class="reservation-property">
-                  <span class="property-dot" style="background:${r.propertyColor};"></span>
-                  <span>${r.propertyName}</span>
-                </div>
-              </div>
-              <span class="${statusClass}">${statusLabel(status)}</span>
-            </div>
-            <div class="reservation-dates">
-              ${startLabel} → ${endLabel} • ${nights} nuit${nights > 1 ? 's' : ''}
-            </div>
-            <div class="reservation-meta">
-              <span><i class="fas fa-globe"></i> ${r.platform}</span>
-              <span><i class="far fa-id-badge"></i> UID: ${r.uid}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
+        notificationsList.innerHTML = '<p class="empty-state">Chargement...</p>';
 
-      container.innerHTML = html;
-    }
-
-    async function forceSync() {
-      const syncIndicator = document.getElementById('syncIndicator');
-      if (syncIndicator) {
-        syncIndicator.classList.add('running');
-        syncIndicator.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Synchronisation forcée…</span>';
-      }
-      try {
-        await fetchJSON(API_BASE + '/sync', { method: 'POST' });
-        await loadConfigAndReservations();
-      } catch (e) {
-        console.error('Erreur synchro forcée:', e);
-        if (syncIndicator) {
-          syncIndicator.classList.remove('running');
-          syncIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Erreur synchro forcée</span>';
-        }
-      }
-    }
-
-    async function loadTasks() {
-      const container = document.getElementById('tasksList');
-      container.innerHTML = '<div class="empty-state">Chargement des actions à venir…</div>';
-
-      try {
-        const data = await fetchJSON(API_BASE + '/messages/upcoming');
-        const tasks = [];
-
-        function pushGroup(label, items, typeLabel) {
-          if (!items || !items.length) return;
-          items.forEach(r => {
-            tasks.push({
-              label,
-              guestName: r.guestName || 'Voyageur',
-              propertyName: r.property?.name || 'Logement',
-              start: r.start,
-              end: r.end,
-              type: typeLabel
-            });
-          });
-        }
-
-        pushGroup('Arrivées aujourd’hui', data.checkinsToday, 'Arrivée');
-        pushGroup('Arrivées demain', data.checkinsTomorrow, 'Arrivée');
-        pushGroup('Arrivées dans 3 jours', data.checkinsIn3Days, 'Arrivée');
-        pushGroup('Arrivées dans 7 jours', data.checkinsIn7Days, 'Arrivée');
-        pushGroup('Séjours en cours', data.currentStays, 'Séjour en cours');
-        pushGroup('Départs aujourd’hui', data.checkoutsToday, 'Départ');
-
-        if (!tasks.length) {
-          container.innerHTML = '<div class="empty-state">Aucune action particulière dans les prochains jours.</div>';
+        const reservations = window.LCC_RESERVATIONS;
+        if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
+          notificationsList.innerHTML = '<p class="empty-state">Aucune notification pour le moment.</p>';
           return;
         }
 
-        const html = tasks.slice(0, 10).map(t => {
-          return `
-            <div class="task-item">
-              <div class="task-label">${t.label}</div>
-              <div class="task-meta">
-                <span class="badge badge-type">${t.type}</span>
-                <span class="badge badge-property">${t.propertyName}</span>
-                <span class="badge badge-date">
-                  <i class="far fa-calendar"></i>
-                  ${formatDate(t.start)}${t.end ? ' → ' + formatDate(t.end) : ''}
-                </span>
-                <span><i class="fas fa-user"></i> ${t.guestName}</span>
-              </div>
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+        const items = [];
+
+        reservations.forEach(r => {
+          if (!r.start || !r.end) return;
+
+          const startStr = r.start.slice(0, 10);
+          const endStr = r.end.slice(0, 10);
+
+          const start = new Date(r.start);
+          const end = new Date(r.end);
+
+          const propertyName = r.propertyName || r.property || 'Logement';
+          const guestName = r.guestName || r.name || '';
+
+          if (startStr === todayStr || startStr === tomorrowStr) {
+            items.push({
+              type: 'arrival',
+              title: `Arrivée – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
+              time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+
+          if (start <= now && end >= now) {
+            items.push({
+              type: 'stay',
+              title: `Séjour en cours – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: 'En cours',
+              time: ''
+            });
+          }
+
+          if (endStr === todayStr || endStr === tomorrowStr) {
+            items.push({
+              type: 'departure',
+              title: `Départ – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
+              time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+        });
+
+        const limited = items.slice(0, 15);
+
+        if (limited.length === 0) {
+          notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
+          return;
+        }
+
+        notificationsList.innerHTML = '';
+        limited.forEach(n => {
+          const item = document.createElement('div');
+          item.className = 'notification-item';
+
+          let badgeColor = '#22c55e';
+          if (n.type === 'stay') badgeColor = '#3b82f6';
+          if (n.type === 'departure') badgeColor = '#f97316';
+
+          item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="
+                width:8px;
+                height:8px;
+                border-radius:999px;
+                background:${badgeColor};
+                flex-shrink:0;
+              "></span>
+              <div class="notification-item-title">${n.title}</div>
+            </div>
+            <div class="notification-item-body">
+              ${n.message ? `<div>${n.message}</div>` : ''}
+            </div>
+            <div class="notification-item-meta">
+              ${n.when}${n.time ? ' • ' + n.time : ''}
             </div>
           `;
-        }).join('');
-
-        container.innerHTML = html;
-      } catch (e) {
-        console.error('Erreur chargement tâches:', e);
-        container.innerHTML = '<div class="empty-state">Impossible de charger les actions à venir.</div>';
+          notificationsList.appendChild(item);
+        });
       }
-    }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('filterProperty').addEventListener('change', renderReservations);
-      document.getElementById('btnResetFilters').addEventListener('click', () => {
-        document.getElementById('filterProperty').value = '';
-        renderReservations();
-      });
-      document.getElementById('btnForceSync').addEventListener('click', forceSync);
+      function openNotifications() {
+        if (notificationsPanel) {
+          notificationsPanel.classList.add('open');
+          buildNotificationsFromReservations();
+        }
+      }
 
-      loadStats();
-      loadConfigAndReservations();
-      loadTasks();
+      function closeNotifications() {
+        if (notificationsPanel) {
+          notificationsPanel.classList.remove('open');
+        }
+      }
+
+      if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', function () {
+          if (!notificationsPanel) return;
+          if (notificationsPanel.classList.contains('open')) {
+            closeNotifications();
+          } else {
+            openNotifications();
+          }
+        });
+      }
+
+      if (notificationsCloseBtn) {
+        notificationsCloseBtn.addEventListener('click', closeNotifications);
+      }
+
+      /* Scroll vers calendrier depuis le menu */
+      const navCalendarLink = document.getElementById('navCalendarLink');
+      const calendarSection = document.getElementById('calendarSection');
+
+      if (navCalendarLink && calendarSection) {
+        navCalendarLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
     });
   </script>
+
 </body>
 </html>
