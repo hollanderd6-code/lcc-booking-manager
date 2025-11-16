@@ -427,6 +427,119 @@
           alert('Préférences de notifications enregistrées');
         });
       }
+            /* -------- STRIPE CONNECT -------- */
+
+      const stripeStatusEl = document.getElementById('stripeStatus');
+      const connectStripeBtn = document.getElementById('connectStripeBtn');
+      const manageStripeBtn = document.getElementById('manageStripeBtn');
+
+      async function refreshStripeStatus() {
+        if (!stripeStatusEl) return;
+
+        const token = localStorage.getItem('lcc_token');
+        if (!token) {
+          stripeStatusEl.textContent = 'Non connecté (session expirée)';
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/stripe/status', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+
+          if (!res.ok) {
+            throw new Error('Erreur statut Stripe');
+          }
+
+          const data = await res.json();
+
+          if (data.connected) {
+            stripeStatusEl.textContent = 'Compte Stripe connecté';
+            stripeStatusEl.style.backgroundColor = '#16a34a';
+            stripeStatusEl.style.color = '#ffffff';
+
+            if (manageStripeBtn) {
+              manageStripeBtn.style.display = 'inline-flex';
+            }
+            if (connectStripeBtn) {
+              connectStripeBtn.querySelector('span').textContent =
+                'Reconnecter / compléter mon compte Stripe';
+            }
+          } else {
+            stripeStatusEl.textContent = 'Aucun compte Stripe connecté';
+            stripeStatusEl.style.backgroundColor = '#f97316';
+            stripeStatusEl.style.color = '#111827';
+
+            if (manageStripeBtn) {
+              manageStripeBtn.style.display = 'none';
+            }
+            if (connectStripeBtn) {
+              connectStripeBtn.querySelector('span').textContent =
+                'Connecter mon compte Stripe';
+            }
+          }
+        } catch (e) {
+          console.error(e);
+          stripeStatusEl.textContent = 'Erreur lors du chargement de Stripe';
+          stripeStatusEl.style.backgroundColor = '#facc15';
+          stripeStatusEl.style.color = '#111827';
+        }
+      }
+
+      if (connectStripeBtn) {
+        connectStripeBtn.addEventListener('click', async () => {
+          const token = localStorage.getItem('lcc_token');
+          if (!token) {
+            alert("Votre session a expiré, veuillez vous reconnecter.");
+            window.location.href = '/login.html';
+            return;
+          }
+
+          try {
+            connectStripeBtn.disabled = true;
+            connectStripeBtn.querySelector('span').textContent = 'Redirection vers Stripe...';
+
+            const res = await fetch('/api/stripe/create-onboarding-link', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              }
+            });
+
+            const data = await res.json();
+
+            if (data.url) {
+              // Redirection vers Stripe
+              window.location.href = data.url;
+            } else {
+              alert(data.error || "Impossible de générer le lien Stripe.");
+            }
+          } catch (e) {
+            console.error(e);
+            alert("Erreur lors de la communication avec Stripe.");
+          } finally {
+            connectStripeBtn.disabled = false;
+            connectStripeBtn.querySelector('span').textContent =
+              connectStripeBtn.textContent.includes('Reconnecter')
+                ? 'Reconnecter / compléter mon compte Stripe'
+                : 'Connecter mon compte Stripe';
+          }
+        });
+      }
+
+      if (manageStripeBtn) {
+        manageStripeBtn.addEventListener('click', () => {
+          // On réutilise la même route pour rouvrir la page de gestion Stripe
+          if (connectStripeBtn) {
+            connectStripeBtn.click();
+          }
+        });
+      }
+
+      refreshStripeStatus();
     });
   </script>
 </body>
