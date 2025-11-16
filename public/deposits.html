@@ -591,10 +591,10 @@
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
           },
-          body: JSON.stringify({
-            reservationId: currentReservationForDeposit.id,
-            amount: amountValue
-          })
+         body: JSON.stringify({
+  reservationUid: currentReservationForDeposit.reservationUid,
+  amount: amountValue
+})
         });
 
         const data = await res.json();
@@ -603,17 +603,31 @@
         }
 
         closeDepositModal();
-        await loadReservationsWithDeposits();
+await loadReservationsWithDeposits();
 
-        if (data.checkoutUrl) {
-          alert('Lien de caution généré. Tu peux le copier depuis le tableau et l’envoyer au voyageur.');
-          console.log('Lien de caution :', data.checkoutUrl);
-        }
-      } catch (e) {
-        console.error(e);
-        errorEl.textContent = e.message || 'Erreur inattendue.';
-      }
-    }
+if (data.checkoutUrl) {
+  const r = currentReservationForDeposit;
+
+  const message = `
+Bonjour ${r.guestName || ''},
+
+Votre séjour au logement "${r.propertyName || 'le logement'}"
+du ${r.startDate} au ${r.endDate} nécessite une caution.
+Voici le lien sécurisé pour procéder au paiement :
+
+${data.checkoutUrl}
+
+Merci, et à très bientôt !
+`.trim();
+
+  try {
+    await navigator.clipboard.writeText(message);
+    alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, WhatsApp, email…");
+  } catch {
+    alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
+  }
+}
+
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('refreshBtn').addEventListener('click', loadReservationsWithDeposits);
