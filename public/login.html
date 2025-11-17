@@ -11,6 +11,7 @@
 </head>
 <body class="auth-body">
   <div class="auth-container">
+    <!-- Colonne formulaire -->
     <div class="auth-card">
       <div class="auth-logo">
         <div class="auth-logo-icon">
@@ -52,7 +53,9 @@
           <a href="#" class="auth-link">Mot de passe oublié ?</a>
         </div>
 
-        <button type="submit" class="btn btn-primary auth-submit">
+        <div id="loginError" class="auth-error" style="display:none;"></div>
+
+        <button type="submit" class="btn btn-primary auth-submit" id="loginSubmit">
           Se connecter
         </button>
       </form>
@@ -63,7 +66,12 @@
       </div>
     </div>
 
+    <!-- Colonne droite "marketing" -->
     <div class="auth-side">
+      <div class="auth-side-badge">
+        <i class="fas fa-calendar-check"></i>
+        Synchronisation Airbnb & Booking en temps réel
+      </div>
       <h2>Gérez vos logements en quelques clics</h2>
       <p>
         Synchronisation automatique Airbnb / Booking, vision claire de vos séjours,
@@ -74,51 +82,70 @@
         <li><i class="fas fa-check"></i> Gestion multi-logements</li>
         <li><i class="fas fa-check"></i> Rappels arrivées / départs</li>
       </ul>
+      <div class="auth-side-footnote">
+        <i class="fas fa-shield-alt"></i>
+        Accès sécurisé • Données hébergées en Europe
+      </div>
     </div>
   </div>
 
   <script>
-      // Si déjà connecté, inutile de revenir ici
-  (function () {
-    const token = localStorage.getItem('lcc_token');
-    if (token) {
-      window.location.href = '/app.html';
-    }
-  })();
-
-  document.getElementById('loginForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Impossible de se connecter.");
-        return;
+    // Si déjà connecté, inutile de revenir ici
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (token) {
+        window.location.href = '/app.html';
       }
+    })();
 
-      // Stocker le token + user
-      localStorage.setItem('lcc_token', data.token);
-      localStorage.setItem('lcc_user', JSON.stringify(data.user));
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const loginSubmit = document.getElementById('loginSubmit');
 
-      // Redirection vers le dashboard
-      window.location.href = '/app.html';
-    } catch (err) {
-      console.error(err);
-      alert("Erreur réseau lors de la connexion.");
-    }
-  });
-</script>
+    loginForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
 
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      loginError.style.display = 'none';
+      loginError.textContent = '';
+
+      loginSubmit.disabled = true;
+      loginSubmit.textContent = 'Connexion...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          loginError.style.display = 'block';
+          loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
+          loginSubmit.disabled = false;
+          loginSubmit.textContent = 'Se connecter';
+          return;
+        }
+
+        // Stocker le token + user
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+        // Redirection vers le dashboard
+        window.location.href = '/app.html';
+      } catch (err) {
+        console.error(err);
+        loginError.style.display = 'block';
+        loginError.textContent = "Erreur réseau lors de la connexion.";
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = 'Se connecter';
+      }
+    });
+  </script>
 
   <style>
     .auth-body {
@@ -128,22 +155,24 @@
       justify-content: center;
       background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 16px;
     }
 
     .auth-container {
       max-width: 980px;
       width: 100%;
-      margin: 32px;
       background: var(--bg-primary, #ffffff);
-      border-radius: 24px;
-      box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.18));
+      border-radius: 26px;
+      box-shadow: 0 28px 80px rgba(15,23,42,.25);
       display: grid;
       grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
       overflow: hidden;
+      border: 1px solid rgba(226, 232, 240, 0.9);
     }
 
     .auth-card {
       padding: 32px 32px 28px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9));
     }
 
     .auth-logo {
@@ -156,12 +185,13 @@
     .auth-logo-icon {
       width: 40px;
       height: 40px;
-      border-radius: 16px;
+      border-radius: 999px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #fff;
+      background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+      color: #ecfdf5;
+      box-shadow: 0 16px 40px rgba(22, 163, 74, 0.55);
     }
 
     .auth-logo-title {
@@ -178,6 +208,8 @@
       font-size: 24px;
       font-weight: 700;
       margin-bottom: 4px;
+      letter-spacing: -0.02em;
+      color: #020617;
     }
 
     .auth-subtitle {
@@ -215,18 +247,19 @@
     .input-with-icon input {
       width: 100%;
       padding: 10px 12px 10px 32px;
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid var(--border-color, #e5e7eb);
       background: var(--bg-secondary, #f9fafb);
       font-size: 14px;
-      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .05s ease;
     }
 
     .input-with-icon input:focus {
       outline: none;
-      border-color: var(--primary-color, #059669);
-      box-shadow: 0 0 0 1px var(--primary-color, #05966910);
+      border-color: var(--primary-color, #22c55e);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12);
       background: #fff;
+      transform: translateY(-0.5px);
     }
 
     .form-row-between {
@@ -249,7 +282,17 @@
     .checkbox-label input {
       width: 14px;
       height: 14px;
-      accent-color: var(--primary-color, #059669);
+      accent-color: var(--primary-color, #22c55e);
+    }
+
+    .auth-error {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #b91c1c;
+      background: #fef2f2;
+      border-radius: 10px;
+      padding: 6px 10px;
+      border: 1px solid #fecaca;
     }
 
     .auth-submit {
@@ -266,7 +309,7 @@
     }
 
     .auth-link {
-      color: var(--primary-color, #059669);
+      color: var(--primary-color, #22c55e);
       font-weight: 500;
       text-decoration: none;
     }
@@ -283,6 +326,42 @@
       flex-direction: column;
       justify-content: center;
       gap: 16px;
+      border-left: 1px solid rgba(30, 64, 175, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-side::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 60%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .auth-side > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-side-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: #e5e7eb;
+      font-size: 12px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    .auth-side-badge i {
+      font-size: 12px;
+      color: #22c55e;
     }
 
     .auth-side h2 {
@@ -311,6 +390,49 @@
       color: #22c55e;
     }
 
+    .auth-side-footnote {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .auth-side-footnote i {
+      font-size: 11px;
+    }
+
+    /* Bouton primaire réutilisé (cohérent avec le reste du produit) */
+    .btn.btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-color, #22c55e);
+      border-radius: 999px;
+      padding: 10px 18px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(22, 163, 74, 0.35);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, opacity 0.1s ease;
+    }
+
+    .btn.btn-primary:hover {
+      background: var(--primary-dark, #16a34a);
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(22, 163, 74, 0.5);
+    }
+
+    .btn.btn-primary:disabled {
+      opacity: 0.7;
+      cursor: default;
+      transform: none;
+      box-shadow: 0 6px 16px rgba(22, 163, 74, 0.25);
+    }
+
     @media (max-width: 900px) {
       .auth-container {
         grid-template-columns: minmax(0, 1fr);
@@ -320,6 +442,16 @@
       }
       .auth-card {
         padding: 24px 20px 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .auth-container {
+        margin: 0;
+        border-radius: 20px;
+      }
+      .auth-title {
+        font-size: 22px;
       }
     }
   </style>
