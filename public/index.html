@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Livret d'accueil – BookingManag</title>
+  <title>BookingManag – Gérez vos réservations simplement</title>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- Platform CSS -->
+  
+  <!-- Style global de la plateforme -->
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body data-page="welcome">
+<body class="landing-body" data-page="index-3">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
@@ -27,545 +27,752 @@
   </div>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">
-          <i class="fas fa-calendar-check"></i>
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">BookingManag</span>
-            <span class="sidebar-logo-subtitle">Property Manager</span>
+  <!-- HEADER -->
+  <header class="landing-header">
+    <div class="landing-container header-inner">
+      <div class="header-left">
+        <a href="/" class="logo-link">
+          <div class="logo-icon">
+            <i class="fas fa-home"></i>
+          </div>
+          <div class="logo-text">
+            <span class="logo-title">BookingManag</span>
+            <span class="logo-subtitle">La Conciergerie de Charles</span>
           </div>
         </a>
       </div>
-      
-      <nav class="sidebar-nav">
-        <!-- PRINCIPAL -->
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-
-          <a href="/app.html" class="nav-item" data-page="app">
-            <i class="fas fa-th-large"></i>
-            <span>Dashboard</span>
-          </a>
-
-          <a href="/app.html#calendarSection" class="nav-item">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-            <span class="nav-badge" id="navTotalReservations">0</span>
-          </a>
-
-          <a href="/messages.html" class="nav-item" data-page="messages">
-            <i class="fas fa-comment-dots"></i>
-            <span>Messages</span>
-          </a>
-        </div>
-        
-        <!-- GESTION -->
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-
-          <a href="/settings.html" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Mes logements</span>
-          </a>
-
-          <a href="/welcome.html" class="nav-item active">
-            <i class="fas fa-book-open"></i>
-            <span>Livret d'accueil</span>
-          </a>
-
-          <a href="/cleaning.html" class="nav-item">
-            <i class="fas fa-broom"></i>
-            <span>Gestion du ménage</span>
-            <span class="nav-badge">Nouveau</span>
-          </a>
-
-          <a href="/statistics.html" class="nav-item">
-            <i class="fas fa-chart-bar"></i>
-            <span>Statistiques</span>
-          </a>
-
-          <a href="/deposits.html" class="nav-item">
-            <i class="fas fa-shield-alt"></i>
-            <span>Cautions</span>
-          </a>
-
-          <a href="/notifications.html" class="nav-item">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-          </a>
-        </div>
-        
-        <!-- PARAMÈTRES -->
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-            <i class="fas fa-cog"></i>
-            <span>Paramètres</span>
-          </a>
-          <a href="/help.html" class="nav-item" data-page="help">
-            <i class="fas fa-question-circle"></i>
-            <span>Aide</span>
-          </a>
-        </div>
+      <nav class="header-nav">
+        <a href="#features" class="nav-link">Fonctionnalités</a>
+        <a href="#how" class="nav-link">Comment ça marche</a>
+        <a href="#pour-qui" class="nav-link">Pour qui ?</a>
       </nav>
-      
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar" id="sidebarUserAvatar">C</div>
-          <div class="user-info">
-            <div class="user-name" id="sidebarUserName">Utilisateur</div>
-            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-          </div>
-          <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;"><i class="fas fa-sign-out-alt"></i></button>
-        </div>
+      <div class="header-actions">
+        <a href="/login.html" class="btn btn-ghost small">Se connecter</a>
+        <a href="/register.html" class="btn btn-primary small">Créer un compte</a>
       </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Livret d'accueil</div>
-          <h1 class="page-title">Préparez votre livret d'accueil</h1>
-          <p class="page-subtitle">
-            Renseignez toutes les informations utiles pour vos voyageurs. Nous utiliserons ces données pour générer un livret d'accueil prêt à l'emploi.
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <!-- HERO -->
+    <section class="landing-hero">
+      <div class="landing-container hero-inner">
+        <div class="hero-text">
+          <div class="hero-badge">
+            <i class="fas fa-calendar-check"></i>
+            Synchronisation Airbnb & Booking en temps réel
+          </div>
+          <h1>Centralisez toutes vos réservations en un seul endroit.</h1>
+          <p class="hero-subtitle">
+            BookingManag vous donne une vue claire de vos séjours, arrivées, départs et disponibilités.
+            Pensé pour les conciergeries, multi-logements et hôtes exigeants.
           </p>
-        </div>
-        
-        <div class="header-actions">
-          <button class="btn btn-ghost" id="saveBtn">
-            <i class="fas fa-save"></i>
-            Enregistrer
-          </button>
-        </div>
-      </header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-        
-        <!-- Infos logement -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-house-user"></i>
-              Informations du logement
-            </div>
+          <div class="hero-actions">
+            <a href="/register.html" class="btn btn-primary hero-btn">
+              <i class="fas fa-rocket"></i>
+              Créer mon espace gratuitement
+            </a>
+            <a href="/login.html" class="btn btn-ghost hero-btn">
+              <i class="fas fa-sign-in-alt"></i>
+              J’ai déjà un compte
+            </a>
           </div>
-          <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="propertyName">Nom du logement</label>
-                <input type="text" id="propertyName" class="input" placeholder="Ex : Villa Deuil, Studio Montmorency">
-              </div>
-              <div class="form-group">
-                <label for="address">Adresse complète</label>
-                <textarea id="address" class="textarea" rows="2" placeholder="Adresse, code postal, ville"></textarea>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="accessCode">Code boîte à clés / digicode</label>
-                <input type="text" id="accessCode" class="input" placeholder="Ex : 2580A">
-              </div>
-              <div class="form-group">
-                <label for="accessInstructions">Instructions d'accès</label>
-                <textarea id="accessInstructions" class="textarea" rows="3" placeholder="Étapes pour trouver la boîte à clés, étage, porte, etc."></textarea>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="emergencyPhone">Téléphone d'urgence (conciergerie)</label>
-                <input type="text" id="emergencyPhone" class="input" placeholder="Ex : +33 6 12 34 56 78">
-              </div>
-              <div class="form-group">
-                <label for="generalNotes">Infos importantes / rappel règlement intérieur</label>
-                <textarea id="generalNotes" class="textarea" rows="3" placeholder="Ex : Non-fumeur, pas de soirées, tri des poubelles, etc."></textarea>
-              </div>
-            </div>
+          <div class="hero-footnote">
+            <i class="fas fa-shield-alt"></i>
+            Aucune carte bancaire demandée • Annulable à tout moment
           </div>
         </div>
 
-        <!-- Wi-Fi -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-wifi"></i>
-              Wi-Fi
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="hero-card-header">
+              <span class="hero-card-title">Vue d’ensemble</span>
+              <span class="hero-card-tag">Dashboard temps réel</span>
             </div>
-          </div>
-          <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="wifiName">Nom du réseau (SSID)</label>
-                <input type="text" id="wifiName" class="input" placeholder="Ex : Livebox-1234">
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <span class="hero-stat-label">Réservations à venir</span>
+                <span class="hero-stat-value">12</span>
               </div>
-              <div class="form-group">
-                <label for="wifiPassword">Mot de passe Wi-Fi</label>
-                <input type="text" id="wifiPassword" class="input" placeholder="Ex : 4FQ9-ABCD-2025">
+              <div class="hero-stat">
+                <span class="hero-stat-label">Séjours en cours</span>
+                <span class="hero-stat-value">3</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Taux d’occupation</span>
+                <span class="hero-stat-value">78%</span>
               </div>
             </div>
-            <div class="form-group">
-              <label for="wifiNote">Infos complémentaires</label>
-              <textarea id="wifiNote" class="textarea" rows="2" placeholder="Ex : Merci de ne pas modifier le mot de passe, redémarrer la box en cas de souci, etc."></textarea>
+            <div class="hero-calendar-placeholder">
+              <div class="hero-calendar-row">
+                <span class="hero-dot dot-green"></span>
+                <span class="hero-line">Arrivée – Villa Deuil • 16:00</span>
+              </div>
+              <div class="hero-calendar-row">
+                <span class="hero-dot dot-blue"></span>
+                <span class="hero-line">Séjour en cours – Studio Gare</span>
+              </div>
+              <div class="hero-calendar-row">
+                <span class="hero-dot dot-orange"></span>
+                <span class="hero-line">Départ – Montmorency • 11:00</span>
+              </div>
+              <div class="hero-calendar-footer">
+                Calendrier synchronisé avec vos annonces Airbnb / Booking.
+              </div>
             </div>
           </div>
         </div>
-
-        <!-- Restaurants -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-utensils"></i>
-              Restaurants à proximité
-            </div>
-            <button class="btn btn-ghost" id="addRestaurantBtn">
-              <i class="fas fa-plus"></i>
-              Ajouter un restaurant
-            </button>
-          </div>
-          <div class="card-body" id="restaurantsContainer">
-            <!-- Lignes restaurants générées en JS -->
-          </div>
-        </div>
-
-        <!-- Commerces -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-store"></i>
-              Commerces utiles (boulangerie, supermarché, pharmacie...)
-            </div>
-            <button class="btn btn-ghost" id="addShopBtn">
-              <i class="fas fa-plus"></i>
-              Ajouter un commerce
-            </button>
-          </div>
-          <div class="card-body" id="shopsContainer">
-            <!-- Lignes commerces générées en JS -->
-          </div>
-        </div>
-
-        <!-- Photos -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-image"></i>
-              Photos pour le livret
-            </div>
-          </div>
-          <div class="card-body">
-            <p class="text-muted" style="margin-bottom: 12px;">
-              Ajoutez quelques photos clés (façade, entrée, boîte à clés, salon, plan d'accès…). Elles seront intégrées au livret.
-            </p>
-            <div id="photosContainer"></div>
-            <button class="btn btn-ghost" id="addPhotoBtn" style="margin-top: 8px;">
-              <i class="fas fa-plus"></i>
-              Ajouter une photo
-            </button>
-          </div>
-        </div>
-
       </div>
-    </main>
-  </div>
+    </section>
 
-  <!-- Script logique livret -->
+    <!-- FEATURES -->
+    <section id="features" class="landing-section">
+      <div class="landing-container">
+        <h2 class="section-title">Pensé pour la réalité du terrain</h2>
+        <p class="section-subtitle">
+          BookingManag a été conçu par une conciergerie, pour des conciergeries.
+        </p>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-layer-group"></i>
+            </div>
+            <h3>Calendrier unifié</h3>
+            <p>
+              Visualisez toutes vos réservations (Airbnb, Booking, direct) dans un seul calendrier clair et
+              coloré par logement.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-house-user"></i>
+            </div>
+            <h3>Multi-logements</h3>
+            <p>
+              Ajoutez autant de logements que nécessaire, avec leurs couleurs, leurs calendriers et leurs stats.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-envelope-open-text"></i>
+            </div>
+            <h3>Messages rapides</h3>
+            <p>
+              Préparez des templates de messages pour les arrivées, départs, remerciements et infos pratiques.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-bell"></i>
+            </div>
+            <h3>Rappels intelligents</h3>
+            <p>
+              Identifiez en un coup d’œil les arrivées et départs du jour, les séjours en cours et les ménages à prévoir.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="landing-section alt">
+      <div class="landing-container">
+        <h2 class="section-title">Comment ça marche ?</h2>
+        <p class="section-subtitle">
+          Quelques minutes suffisent pour connecter vos annonces et commencer à piloter vos séjours.
+        </p>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <span class="step-number">1</span>
+            <h3>Créez votre compte</h3>
+            <p>
+              Renseignez votre conciergerie, vos coordonnées, et accédez à votre espace sécurisé.
+            </p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">2</span>
+            <h3>Ajoutez vos logements</h3>
+            <p>
+              Pour chaque logement, enregistrez les URLs iCal Airbnb / Booking. La synchro se fait automatiquement.
+            </p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">3</span>
+            <h3>Gérez vos séjours</h3>
+            <p>
+              Consultez votre calendrier, vos stats, préparez vos ménages et communiquez avec vos voyageurs.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POUR QUI -->
+    <section id="pour-qui" class="landing-section">
+      <div class="landing-container">
+        <h2 class="section-title">Pour qui est fait BookingManag ?</h2>
+        <div class="audience-grid">
+          <div class="audience-card">
+            <h3>Conciergeries locales</h3>
+            <p>
+              Vous gérez plusieurs appartements ou maisons pour vos clients ? Centralisez tout dans un seul outil.
+            </p>
+          </div>
+          <div class="audience-card">
+            <h3>Propriétaires multi-biens</h3>
+            <p>
+              Plusieurs logements sur Airbnb / Booking ? Visualisez tout d’un coup, évitez les doublons.
+            </p>
+          </div>
+          <div class="audience-card">
+            <h3>Hôtes indépendants</h3>
+            <p>
+              Même avec 1 ou 2 logements, un bon calendrier change tout : moins de stress, moins d’oubli.
+            </p>
+          </div>
+        </div>
+
+        <div class="landing-cta">
+          <h2>Prêt à simplifier votre gestion de réservations ?</h2>
+          <p>
+            Créez votre espace en quelques clics et commencez à connecter vos logements dès aujourd’hui.
+          </p>
+          <div class="landing-cta-actions">
+            <a href="/register.html" class="btn btn-primary hero-btn">
+              <i class="fas fa-user-plus"></i>
+              Créer mon compte
+            </a>
+            <a href="/login.html" class="btn btn-ghost hero-btn">
+              Se connecter
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="landing-footer">
+    <div class="landing-container footer-inner">
+      <span>© <span id="year"></span> BookingManag</span>
+      <span class="footer-note">Outil créé par une conciergerie, pour des conciergeries.</span>
+      <a href="/login.html" class="footer-link">Accéder à mon espace</a>
+    </div>
+  </footer>
+
   <script>
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
-        return;
-      }
-
-      // Remplir l'info utilisateur dans la sidebar
-      const rawUser = localStorage.getItem('lcc_user');
-      let user = null;
-      try {
-        user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {}
-      if (user) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const companyEl = document.getElementById('sidebarUserCompany');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) {
-          nameEl.textContent = user.firstName
-            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-            : (user.email || 'Mon compte');
-        }
-        if (companyEl) {
-          companyEl.textContent = user.company || 'Mon espace';
-        }
-        if (avatarEl) {
-          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-          avatarEl.textContent = initial.toUpperCase();
-        }
-      }
-
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', function () {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        });
-      }
-
-      const restaurantsContainer = document.getElementById('restaurantsContainer');
-      const shopsContainer = document.getElementById('shopsContainer');
-      const photosContainer = document.getElementById('photosContainer');
-
-      function createRestaurantRow(data = {}) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-grid restaurant-row';
-        wrapper.style.marginBottom = '12px';
-        wrapper.innerHTML = `
-          <div class="form-group">
-            <label>Nom</label>
-            <input type="text" class="input rest-name" placeholder="Ex : Le Bistrot du Coin" value="${data.name || ''}">
-          </div>
-          <div class="form-group">
-            <label>Type</label>
-            <input type="text" class="input rest-type" placeholder="Ex : Bistrot, Pizzeria..." value="${data.type || ''}">
-          </div>
-          <div class="form-group">
-            <label>Adresse / distance</label>
-            <input type="text" class="input rest-address" placeholder="Ex : 5 min à pied, 12 rue de Paris" value="${data.address || ''}">
-          </div>
-          <div class="form-group">
-            <label>Infos</label>
-            <div style="display:flex; gap:8px; align-items:flex-start;">
-              <textarea class="textarea rest-notes" rows="2" placeholder="Plat conseillé, jours d'ouverture…">${data.notes || ''}</textarea>
-              <button type="button" class="btn btn-ghost remove-row-btn">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
-          wrapper.remove();
-        });
-        restaurantsContainer.appendChild(wrapper);
-      }
-
-      function createShopRow(data = {}) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-grid shop-row';
-        wrapper.style.marginBottom = '12px';
-        wrapper.innerHTML = `
-          <div class="form-group">
-            <label>Nom</label>
-            <input type="text" class="input shop-name" placeholder="Ex : Boulangerie du Marché" value="${data.name || ''}">
-          </div>
-          <div class="form-group">
-            <label>Type</label>
-            <input type="text" class="input shop-type" placeholder="Ex : Boulangerie, Supermarché..." value="${data.type || ''}">
-          </div>
-          <div class="form-group">
-            <label>Adresse / distance</label>
-            <input type="text" class="input shop-address" placeholder="Ex : 3 min à pied, 8 avenue Victor Hugo" value="${data.address || ''}">
-          </div>
-          <div class="form-group">
-            <label>Infos</label>
-            <div style="display:flex; gap:8px; align-items:flex-start;">
-              <textarea class="textarea shop-notes" rows="2" placeholder="Horaires, particularités…">${data.notes || ''}</textarea>
-              <button type="button" class="btn btn-ghost remove-row-btn">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
-          wrapper.remove();
-        });
-        shopsContainer.appendChild(wrapper);
-      }
-
-      let photosState = [];
-
-      function renderPhotos() {
-        photosContainer.innerHTML = '';
-        photosState.forEach((photo, index) => {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'photo-row';
-          wrapper.style.marginBottom = '10px';
-          wrapper.innerHTML = `
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Légende de la photo</label>
-                <input type="text" class="input photo-label" data-index="${index}" placeholder="Ex : Façade, Boîte à clés, Salon" value="${photo.label || ''}">
-              </div>
-              <div class="form-group">
-                <label>Fichier</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="file" class="photo-file-input" data-index="${index}" accept="image/*">
-                  <button type="button" class="btn btn-ghost remove-photo-btn" data-index="${index}">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-                ${photo.dataUrl ? `<div style="margin-top:6px;"><img src="${photo.dataUrl}" alt="" style="max-width:140px;border-radius:8px;border:1px solid #e5e7eb;"></div>` : ''}
-              </div>
-            </div>
-          `;
-          photosContainer.appendChild(wrapper);
-        });
-
-        photosContainer.querySelectorAll('.photo-label').forEach(input => {
-          input.addEventListener('input', (e) => {
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (!isNaN(idx) && photosState[idx]) {
-              photosState[idx].label = e.target.value;
-            }
-          });
-        });
-
-        photosContainer.querySelectorAll('.photo-file-input').forEach(input => {
-          input.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (file && !isNaN(idx)) {
-              const reader = new FileReader();
-              reader.onload = function (ev) {
-                photosState[idx].dataUrl = ev.target.result;
-                renderPhotos();
-              };
-              reader.readAsDataURL(file);
-            }
-          });
-        });
-
-        photosContainer.querySelectorAll('.remove-photo-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (!isNaN(idx)) {
-              photosState.splice(idx, 1);
-              renderPhotos();
-            }
-          });
-        });
-      }
-
-      document.getElementById('addRestaurantBtn').addEventListener('click', () => {
-        createRestaurantRow();
-      });
-
-      document.getElementById('addShopBtn').addEventListener('click', () => {
-        createShopRow();
-      });
-
-      document.getElementById('addPhotoBtn').addEventListener('click', () => {
-        photosState.push({ id: 'p_' + Date.now(), label: '', dataUrl: '' });
-        renderPhotos();
-      });
-
-      // Charger les données existantes
-      async function loadWelcomeData() {
-        try {
-          const res = await fetch('/api/welcome', {
-            headers: {
-              'Authorization': 'Bearer ' + token
-            }
-          });
-          if (!res.ok) return;
-          const data = await res.json();
-
-          document.getElementById('propertyName').value = data.propertyName || '';
-          document.getElementById('address').value = data.address || '';
-          document.getElementById('accessCode').value = data.accessCode || '';
-          document.getElementById('accessInstructions').value = data.accessInstructions || '';
-          document.getElementById('emergencyPhone').value = data.emergencyPhone || '';
-          document.getElementById('wifiName').value = data.wifiName || '';
-          document.getElementById('wifiPassword').value = data.wifiPassword || '';
-          document.getElementById('wifiNote').value = data.wifiNote || '';
-          document.getElementById('generalNotes').value = data.generalNotes || '';
-
-          restaurantsContainer.innerHTML = '';
-          (data.restaurants || []).forEach(r => createRestaurantRow(r));
-          shopsContainer.innerHTML = '';
-          (data.shops || []).forEach(s => createShopRow(s));
-
-          photosState = Array.isArray(data.photos) ? data.photos : [];
-          renderPhotos();
-        } catch (err) {
-          console.error('Erreur chargement livret', err);
-        }
-      }
-
-      async function saveWelcomeData() {
-        const restaurants = [];
-        document.querySelectorAll('.restaurant-row').forEach(row => {
-          const r = {
-            name: row.querySelector('.rest-name').value.trim(),
-            type: row.querySelector('.rest-type').value.trim(),
-            address: row.querySelector('.rest-address').value.trim(),
-            notes: row.querySelector('.rest-notes').value.trim()
-          };
-          if (r.name || r.address || r.notes) {
-            restaurants.push(r);
-          }
-        });
-
-        const shops = [];
-        document.querySelectorAll('.shop-row').forEach(row => {
-          const s = {
-            name: row.querySelector('.shop-name').value.trim(),
-            type: row.querySelector('.shop-type').value.trim(),
-            address: row.querySelector('.shop-address').value.trim(),
-            notes: row.querySelector('.shop-notes').value.trim()
-          };
-          if (s.name || s.address || s.notes) {
-            shops.push(s);
-          }
-        });
-
-        const payload = {
-          propertyName: document.getElementById('propertyName').value.trim(),
-          address: document.getElementById('address').value.trim(),
-          accessCode: document.getElementById('accessCode').value.trim(),
-          accessInstructions: document.getElementById('accessInstructions').value.trim(),
-          emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
-          wifiName: document.getElementById('wifiName').value.trim(),
-          wifiPassword: document.getElementById('wifiPassword').value.trim(),
-          wifiNote: document.getElementById('wifiNote').value.trim(),
-          generalNotes: document.getElementById('generalNotes').value.trim(),
-          restaurants,
-          shops,
-          photos: photosState
-        };
-
-        try {
-          const res = await fetch('/api/welcome', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            alert(data.error || 'Erreur lors de la sauvegarde du livret');
-            return;
-          }
-          alert('Livret sauvegardé 👍');
-        } catch (err) {
-          console.error('Erreur sauvegarde livret', err);
-          alert('Erreur réseau lors de la sauvegarde');
-        }
-      }
-
-      document.getElementById('saveBtn').addEventListener('click', saveWelcomeData);
-
-      loadWelcomeData();
-    })();
+    // Année dynamique
+    document.getElementById('year').textContent = new Date().getFullYear();
   </script>
+
+  <style>
+    .landing-body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
+      color: var(--text-primary, #0f172a);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .landing-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .landing-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+      background: rgba(248, 250, 252, 0.9);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      gap: 16px;
+    }
+
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+      color: #ecfdf5;
+      font-size: 16px;
+      box-shadow: 0 14px 40px rgba(22, 163, 74, 0.45);
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .logo-subtitle {
+      font-size: 11px;
+      color: var(--text-tertiary, #6b7280);
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      text-decoration: none;
+      color: var(--text-secondary, #4b5563);
+      font-weight: 500;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary, #111827);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn.small {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-color, #22c55e);
+      border-radius: 999px;
+      padding: 10px 18px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(22, 163, 74, 0.35);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark, #16a34a);
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(22, 163, 74, 0.5);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 9px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      text-decoration: none;
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      background: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(148, 163, 184, 0.9);
+    }
+
+    .landing-hero {
+      padding: 32px 0 40px;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      gap: 32px;
+      align-items: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.08);
+      color: #047857;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .hero-badge i {
+      font-size: 12px;
+    }
+
+    .hero-text h1 {
+      font-size: 30px;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #020617;
+    }
+
+    .hero-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      max-width: 480px;
+      margin-bottom: 18px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .hero-btn {
+      font-size: 14px;
+    }
+
+    .hero-footnote {
+      font-size: 12px;
+      color: var(--text-tertiary, #6b7280);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-footnote i {
+      font-size: 11px;
+    }
+
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero-card {
+      background: radial-gradient(circle at top left, #0f172a, #020617);
+      border-radius: 24px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(30, 64, 175, 0.5);
+      width: 100%;
+      max-width: 360px;
+      color: #e5e7eb;
+    }
+
+    .hero-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .hero-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .hero-card-tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.16);
+      color: #bfdbfe;
+      font-weight: 500;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .hero-stat-label {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .hero-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f9fafb;
+    }
+
+    .hero-calendar-placeholder {
+      padding: 10px 10px 8px;
+      border-radius: 16px;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .hero-calendar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .dot-green { background: #22c55e; }
+    .dot-blue { background: #3b82f6; }
+    .dot-orange { background: #fb923c; }
+
+    .hero-line {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-calendar-footer {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .landing-section {
+      padding: 32px 0;
+    }
+
+    .landing-section.alt {
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      text-align: center;
+      color: var(--text-secondary, #4b5563);
+      max-width: 520px;
+      margin: 0 auto 20px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      font-size: 13px;
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .feature-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      background: rgba(34, 197, 94, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #16a34a;
+      margin-bottom: 8px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      position: relative;
+      font-size: 13px;
+    }
+
+    .step-number {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .step-card h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+      margin-bottom: 24px;
+    }
+
+    .audience-card {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      font-size: 13px;
+    }
+
+    .landing-cta {
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .landing-cta h2 {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .landing-cta p {
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      max-width: 480px;
+      margin: 0 auto 16px;
+    }
+
+    .landing-cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .landing-footer {
+      margin-top: auto;
+      padding: 16px 0;
+      background: rgba(15, 23, 42, 0.96);
+      color: #e5e7eb;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .footer-note {
+      color: #9ca3af;
+    }
+
+    .footer-link {
+      color: #a5b4fc;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 960px) {
+      .hero-inner {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .hero-visual {
+        order: -1;
+      }
+      .features-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .steps-grid,
+      .audience-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .header-nav {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .features-grid,
+      .steps-grid,
+      .audience-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .hero-text h1 {
+        font-size: 24px;
+      }
+      .hero-card {
+        max-width: 100%;
+      }
+      .header-actions .btn.small {
+        padding-inline: 10px;
+      }
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
