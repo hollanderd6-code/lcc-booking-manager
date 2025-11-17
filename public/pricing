@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookingManag – Choisissez votre plan</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="pricing-body">
+  <div class="pricing-container">
+    <!-- Header -->
+    <div class="pricing-header">
+      <div class="pricing-logo">
+        <i class="fas fa-calendar-check"></i>
+        <span>BookingManag</span>
+      </div>
+      <h1>Choisissez votre plan</h1>
+      <p>14 jours d'essai gratuit • Sans engagement • Annulez à tout moment</p>
+    </div>
+
+    <!-- Plans -->
+    <div class="pricing-plans">
+      <!-- Plan Basic -->
+      <div class="pricing-card">
+        <div class="plan-badge">Idéal pour démarrer</div>
+        <h2 class="plan-name">Basic</h2>
+        <div class="plan-price">
+          <span class="price-amount">5,99€</span>
+          <span class="price-period">/mois</span>
+        </div>
+        <p class="plan-description">
+          Pour gérer vos logements et réservations de manière simple et efficace.
+        </p>
+
+        <ul class="plan-features">
+          <li><i class="fas fa-check"></i> Calendrier unifié</li>
+          <li><i class="fas fa-check"></i> Multi-logements illimités</li>
+          <li><i class="fas fa-check"></i> Synchronisation iCal (Airbnb, Booking)</li>
+          <li><i class="fas fa-check"></i> Gestion des messages</li>
+          <li><i class="fas fa-check"></i> Livret d'accueil personnalisé</li>
+          <li><i class="fas fa-check"></i> Gestion du ménage</li>
+          <li><i class="fas fa-check"></i> Statistiques & rapports</li>
+          <li><i class="fas fa-times text-muted"></i> Gestion des cautions Stripe</li>
+          <li><i class="fas fa-times text-muted"></i> Commission sur cautions</li>
+        </ul>
+
+        <button class="btn btn-ghost btn-large" onclick="selectPlan('basic')">
+          Essayer gratuitement
+        </button>
+      </div>
+
+      <!-- Plan Pro -->
+      <div class="pricing-card featured">
+        <div class="plan-badge badge-pro">Le plus populaire</div>
+        <h2 class="plan-name">Pro</h2>
+        <div class="plan-price">
+          <span class="price-amount">8,99€</span>
+          <span class="price-period">/mois</span>
+        </div>
+        <p class="plan-description">
+          Toutes les fonctionnalités Basic + gestion avancée des cautions.
+        </p>
+
+        <ul class="plan-features">
+          <li><i class="fas fa-check"></i> <strong>Tout du plan Basic</strong></li>
+          <li><i class="fas fa-check"></i> Gestion des cautions Stripe</li>
+          <li><i class="fas fa-check"></i> Génération de liens de paiement</li>
+          <li><i class="fas fa-check"></i> Historique des transactions</li>
+          <li><i class="fas fa-check"></i> Paiements sécurisés</li>
+          <li><i class="fas fa-check"></i> Remboursements automatiques</li>
+          <li class="feature-highlight">
+            <i class="fas fa-star"></i> 
+            Commission BookingManag : <strong>2%</strong> sur cautions encaissées uniquement
+          </li>
+        </ul>
+
+        <button class="btn btn-primary btn-large" onclick="selectPlan('pro')">
+          Essayer gratuitement
+        </button>
+      </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="pricing-faq">
+      <h3>Questions fréquentes</h3>
+      <div class="faq-grid">
+        <div class="faq-item">
+          <div class="faq-icon"><i class="fas fa-question-circle"></i></div>
+          <div>
+            <h4>Comment fonctionne l'essai gratuit ?</h4>
+            <p>Vous bénéficiez de 14 jours d'accès complet sans aucune carte bancaire requise. Vous pourrez ensuite choisir de continuer avec un abonnement.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon"><i class="fas fa-credit-card"></i></div>
+          <div>
+            <h4>Comment fonctionne la commission de 2% ?</h4>
+            <p>La commission ne s'applique que sur les cautions effectivement encaissées. Si vous remboursez une caution, la commission est également remboursée. Stripe prélève ses propres frais séparément.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon"><i class="fas fa-sync-alt"></i></div>
+          <div>
+            <h4>Puis-je changer de plan ?</h4>
+            <p>Oui, vous pouvez passer de Basic à Pro (ou inversement) à tout moment. Le changement prend effet immédiatement.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon"><i class="fas fa-times-circle"></i></div>
+          <div>
+            <h4>Puis-je annuler mon abonnement ?</h4>
+            <p>Oui, sans engagement. Vous pouvez annuler à tout moment depuis vos paramètres. Aucun remboursement sur le mois en cours.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="pricing-footer">
+      <p>Déjà un compte ? <a href="/login.html">Se connecter</a></p>
+    </div>
+  </div>
+
+  <script>
+    function selectPlan(plan) {
+      // Stocker le plan choisi
+      localStorage.setItem('selected_plan', plan);
+      
+      // Vérifier si l'utilisateur est déjà connecté
+      const token = localStorage.getItem('lcc_token');
+      
+      if (token) {
+        // Rediriger vers la page de paiement/activation
+        window.location.href = '/settings-account.html?tab=subscription';
+      } else {
+        // Rediriger vers l'inscription
+        window.location.href = '/register.html';
+      }
+    }
+
+    // Si l'utilisateur vient de s'inscrire, afficher un message
+    window.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('welcome') === 'true') {
+        // Afficher un message de bienvenue
+        const header = document.querySelector('.pricing-header p');
+        header.innerHTML = '<strong>Bienvenue ! 🎉</strong> Choisissez votre plan pour commencer.';
+        header.style.color = '#10B981';
+      }
+    });
+  </script>
+
+  <style>
+    .pricing-body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #e0f2fe, #f8fafc);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 40px 20px;
+    }
+
+    .pricing-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .pricing-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .pricing-logo i {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+    }
+
+    .pricing-header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .pricing-header p {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+
+    .pricing-plans {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 30px;
+      margin-bottom: 60px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .pricing-card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .pricing-card.featured {
+      border-color: #10B981;
+      box-shadow: 0 8px 30px rgba(16, 185, 129, 0.2);
+    }
+
+    .pricing-card.featured:hover {
+      box-shadow: 0 12px 50px rgba(16, 185, 129, 0.3);
+    }
+
+    .plan-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .plan-badge.badge-pro {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+    }
+
+    .plan-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .plan-price {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .price-amount {
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .price-period {
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .plan-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      min-height: 42px;
+    }
+
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 28px 0;
+    }
+
+    .plan-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      font-size: 14px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color-subtle);
+    }
+
+    .plan-features li:last-child {
+      border-bottom: none;
+    }
+
+    .plan-features li i {
+      margin-top: 2px;
+      font-size: 14px;
+      color: #10B981;
+      flex-shrink: 0;
+    }
+
+    .plan-features li i.fa-times {
+      color: var(--text-tertiary);
+    }
+
+    .text-muted {
+      color: var(--text-tertiary) !important;
+    }
+
+    .feature-highlight {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.04));
+      padding: 12px !important;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(16, 185, 129, 0.2) !important;
+      margin-top: 8px;
+    }
+
+    .feature-highlight i {
+      color: #F59E0B !important;
+    }
+
+    .btn-large {
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 15px;
+    }
+
+    .pricing-faq {
+      max-width: 900px;
+      margin: 0 auto 50px;
+      background: white;
+      border-radius: 20px;
+      padding: 40px 36px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .pricing-faq h3 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    .faq-grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .faq-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .faq-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .faq-item h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .faq-item p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .pricing-footer {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .pricing-footer a {
+      color: var(--primary-color);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .pricing-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .pricing-body {
+        padding: 24px 16px;
+      }
+
+      .pricing-header h1 {
+        font-size: 28px;
+      }
+
+      .pricing-plans {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .pricing-card {
+        padding: 28px 24px;
+      }
+
+      .price-amount {
+        font-size: 36px;
+      }
+
+      .pricing-faq {
+        padding: 32px 24px;
+      }
+
+      .faq-item {
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .pricing-header h1 {
+        font-size: 24px;
+      }
+
+      .pricing-header p {
+        font-size: 14px;
+      }
+
+      .plan-name {
+        font-size: 20px;
+      }
+
+      .price-amount {
+        font-size: 32px;
+      }
+    }
+  </style>
+</body>
+</html>
