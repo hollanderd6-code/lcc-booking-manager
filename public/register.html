@@ -109,61 +109,61 @@
   </div>
 
   <script>
-      // Si déjà connecté, inutile de revenir ici
-  (function () {
-    const token = localStorage.getItem('lcc_token');
-    if (token) {
-      window.location.href = '/app.html';
-    }
-  })();
+    // Si déjà connecté, inutile de revenir ici
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (token) {
+        window.location.href = '/app.html';
+      }
+    })();
 
-  document.getElementById('registerForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
+    document.getElementById('registerForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
 
-    const company = document.getElementById('company').value.trim();
-    const firstName = document.getElementById('firstName').value.trim();
-    const lastName = document.getElementById('lastName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const confirm = document.getElementById('regPasswordConfirm').value;
-    const terms = document.getElementById('terms').checked;
+      const company = document.getElementById('company').value.trim();
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const confirm = document.getElementById('regPasswordConfirm').value;
+      const terms = document.getElementById('terms').checked;
 
-    if (!terms) {
-      alert("Vous devez accepter les conditions générales d’utilisation.");
-      return;
-    }
-
-    if (password !== confirm) {
-      alert("Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company, firstName, lastName, email, password })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Impossible de créer le compte.");
+      if (!terms) {
+        alert("Vous devez accepter les conditions générales d’utilisation.");
         return;
       }
 
-      localStorage.setItem('lcc_token', data.token);
-      localStorage.setItem('lcc_user', JSON.stringify(data.user));
+      if (password !== confirm) {
+        alert("Les mots de passe ne correspondent pas.");
+        return;
+      }
 
-      // Redirection vers le dashboard
-      window.location.href = '/app.html';
-    } catch (err) {
-      console.error(err);
-      alert("Erreur réseau lors de la création du compte.");
-    }
-  });
-</script>
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company, firstName, lastName, email, password })
+        });
 
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || "Impossible de créer le compte.");
+          return;
+        }
+
+        // Stocker le token + user
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+        // Redirection vers le dashboard
+        window.location.href = '/app.html';
+      } catch (err) {
+        console.error(err);
+        alert("Erreur réseau lors de la création du compte.");
+      }
+    });
+  </script>
 
   <style>
     /* mêmes styles de base que login.html */
