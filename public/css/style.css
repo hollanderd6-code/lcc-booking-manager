@@ -69,6 +69,14 @@
   /* Layout */
   --sidebar-width: 260px;
   --header-height: 64px;
+  
+  /* SIDEBAR FORCÉE EN LIGHT - VARIABLES SPÉCIALES */
+  --sidebar-bg: #FFFFFF;
+  --sidebar-text: #111827;
+  --sidebar-text-secondary: #6B7280;
+  --sidebar-text-tertiary: #9CA3AF;
+  --sidebar-border: #E5E7EB;
+  --sidebar-hover: #F3F4F6;
 }
 
 /* Dark Theme Variables */
@@ -89,6 +97,14 @@
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+  
+  /* SIDEBAR RESTE EN LIGHT MÊME EN MODE DARK ! */
+  --sidebar-bg: #FFFFFF !important;
+  --sidebar-text: #111827 !important;
+  --sidebar-text-secondary: #6B7280 !important;
+  --sidebar-text-tertiary: #9CA3AF !important;
+  --sidebar-border: #E5E7EB !important;
+  --sidebar-hover: #F3F4F6 !important;
 }
 
 /* ============================================
@@ -954,3 +970,78 @@ textarea {
     justify-content: flex-start;
   }
 }
+
+/* ============================================
+   FORCE SIDEBAR EN MODE CLAIR
+   ============================================ */
+
+/* Forcer la sidebar en mode clair TOUJOURS */
+.sidebar {
+  background: var(--sidebar-bg) !important;
+  border-right: 1px solid var(--sidebar-border) !important;
+}
+
+.sidebar-header {
+  border-bottom: 1px solid var(--sidebar-border) !important;
+}
+
+.sidebar-logo-title {
+  color: var(--sidebar-text) !important;
+}
+
+.sidebar-logo-subtitle {
+  color: var(--sidebar-text-tertiary) !important;
+}
+
+.sidebar-nav-label {
+  color: var(--sidebar-text-tertiary) !important;
+}
+
+.nav-item {
+  color: var(--sidebar-text-secondary) !important;
+}
+
+.nav-item:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+}
+
+.nav-item.active {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+.nav-item.active i {
+  color: white !important;
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--sidebar-border) !important;
+}
+
+.user-profile {
+  background: var(--bg-secondary) !important;
+}
+
+.user-name {
+  color: var(--sidebar-text) !important;
+}
+
+.user-email {
+  color: var(--sidebar-text-tertiary) !important;
+}
+
+/* FORCER les icônes de la sidebar en couleur foncée */
+.sidebar .nav-item i {
+  color: var(--sidebar-text-secondary) !important;
+}
+
+.sidebar .nav-item:hover i {
+  color: var(--sidebar-text) !important;
+}
+
+/* Logo icon */
+.sidebar-logo i {
+  color: var(--primary-color) !important;
+}
+
