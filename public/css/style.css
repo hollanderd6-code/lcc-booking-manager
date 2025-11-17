@@ -1045,3 +1045,45 @@ textarea {
   color: var(--primary-color) !important;
 }
 
+
+/* ============================================
+   FIX HEADER SIDEBAR - FORCER EN CLAIR
+   ============================================ */
+
+/* Forcer le header de la sidebar en clair */
+.sidebar-header,
+.sidebar .sidebar-header {
+  background: var(--sidebar-bg) !important;
+  border-bottom: 1px solid var(--sidebar-border) !important;
+}
+
+/* Logo wrapper */
+.sidebar-logo,
+.sidebar .sidebar-logo {
+  background: transparent !important;
+  color: var(--sidebar-text) !important;
+}
+
+/* Titre et sous-titre du logo */
+.sidebar-logo-title,
+.sidebar .sidebar-logo-title {
+  color: var(--sidebar-text) !important;
+}
+
+.sidebar-logo-subtitle,
+.sidebar .sidebar-logo-subtitle {
+  color: var(--sidebar-text-secondary) !important;
+}
+
+/* Icon du logo */
+.sidebar-logo i,
+.sidebar .sidebar-logo i {
+  color: var(--primary-color) !important;
+}
+
+/* Texte wrapper */
+.sidebar-logo-text,
+.sidebar .sidebar-logo-text {
+  color: inherit !important;
+}
+
