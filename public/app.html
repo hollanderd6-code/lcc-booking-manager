@@ -165,7 +165,7 @@
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
-          <div class="page-kicker">Vue d’ensemble</div>
+          <div class="page-kicker">Vue d'ensemble</div>
           <h1 class="page-title">Dashboard</h1>
           <p class="page-subtitle">
             Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
@@ -1458,7 +1458,82 @@
           calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
       }
+<script>
+    // Mobile menu toggle
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+        
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+        
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+    
+    // Active nav-item based on data-page
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector(`.nav-item[data-page="${currentPage}"]`);
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+    
+    // Logout handler
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
     });
+    
+    // User profile from localStorage
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        document.getElementById('sidebarUserName').textContent = user.firstName + ' ' + (user.lastName || '');
+        document.getElementById('sidebarUserAvatar').textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        document.getElementById('sidebarUserCompany').textContent = user.company;
+      }
+    })();
   </script>
 
 </body>
