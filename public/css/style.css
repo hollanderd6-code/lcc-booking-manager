@@ -69,14 +69,6 @@
   /* Layout */
   --sidebar-width: 260px;
   --header-height: 64px;
-  
-  /* SIDEBAR FORCÉE EN LIGHT - VARIABLES SPÉCIALES */
-  --sidebar-bg: #FFFFFF;
-  --sidebar-text: #111827;
-  --sidebar-text-secondary: #6B7280;
-  --sidebar-text-tertiary: #9CA3AF;
-  --sidebar-border: #E5E7EB;
-  --sidebar-hover: #F3F4F6;
 }
 
 /* Dark Theme Variables */
@@ -97,14 +89,6 @@
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
-  
-  /* SIDEBAR RESTE EN LIGHT MÊME EN MODE DARK ! */
-  --sidebar-bg: #FFFFFF !important;
-  --sidebar-text: #111827 !important;
-  --sidebar-text-secondary: #6B7280 !important;
-  --sidebar-text-tertiary: #9CA3AF !important;
-  --sidebar-border: #E5E7EB !important;
-  --sidebar-hover: #F3F4F6 !important;
 }
 
 /* ============================================
@@ -972,17 +956,49 @@ textarea {
 }
 
 /* ============================================
-   FORCE SIDEBAR EN MODE CLAIR
+   BOOKINGMANAG - SIDEBAR TOUJOURS CLAIRE
+   Version propre et définitive
    ============================================ */
 
-/* Forcer la sidebar en mode clair TOUJOURS */
+/* Variables spéciales pour la sidebar */
+:root {
+  --sidebar-bg: #FFFFFF;
+  --sidebar-text: #111827;
+  --sidebar-text-secondary: #6B7280;
+  --sidebar-text-tertiary: #9CA3AF;
+  --sidebar-border: #E5E7EB;
+  --sidebar-hover: #F3F4F6;
+}
+
+/* Même en mode dark, la sidebar reste claire */
+[data-theme="dark"] {
+  --sidebar-bg: #FFFFFF;
+  --sidebar-text: #111827;
+  --sidebar-text-secondary: #6B7280;
+  --sidebar-text-tertiary: #9CA3AF;
+  --sidebar-border: #E5E7EB;
+  --sidebar-hover: #F3F4F6;
+}
+
+/* Appliquer les couleurs claires à la sidebar */
 .sidebar {
   background: var(--sidebar-bg) !important;
   border-right: 1px solid var(--sidebar-border) !important;
 }
 
+/* Header de la sidebar */
 .sidebar-header {
+  background: var(--sidebar-bg) !important;
   border-bottom: 1px solid var(--sidebar-border) !important;
+}
+
+/* Logo */
+.sidebar-logo {
+  background: transparent !important;
+}
+
+.sidebar-logo i {
+  color: var(--primary-color) !important;
 }
 
 .sidebar-logo-title {
@@ -990,14 +1006,20 @@ textarea {
 }
 
 .sidebar-logo-subtitle {
-  color: var(--sidebar-text-tertiary) !important;
+  color: var(--sidebar-text-secondary) !important;
 }
 
+/* Labels de navigation */
 .sidebar-nav-label {
   color: var(--sidebar-text-tertiary) !important;
 }
 
+/* Items du menu */
 .nav-item {
+  color: var(--sidebar-text-secondary) !important;
+}
+
+.nav-item i {
   color: var(--sidebar-text-secondary) !important;
 }
 
@@ -1006,6 +1028,11 @@ textarea {
   color: var(--sidebar-text) !important;
 }
 
+.nav-item:hover i {
+  color: var(--sidebar-text) !important;
+}
+
+/* Item actif (reste vert) */
 .nav-item.active {
   background: var(--primary-color) !important;
   color: white !important;
@@ -1015,8 +1042,21 @@ textarea {
   color: white !important;
 }
 
+/* Badge */
+.nav-badge {
+  background: var(--primary-light) !important;
+  color: var(--primary-dark) !important;
+}
+
+.nav-item.active .nav-badge {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+/* Footer de la sidebar */
 .sidebar-footer {
   border-top: 1px solid var(--sidebar-border) !important;
+  background: var(--sidebar-bg) !important;
 }
 
 .user-profile {
@@ -1029,61 +1069,5 @@ textarea {
 
 .user-email {
   color: var(--sidebar-text-tertiary) !important;
-}
-
-/* FORCER les icônes de la sidebar en couleur foncée */
-.sidebar .nav-item i {
-  color: var(--sidebar-text-secondary) !important;
-}
-
-.sidebar .nav-item:hover i {
-  color: var(--sidebar-text) !important;
-}
-
-/* Logo icon */
-.sidebar-logo i {
-  color: var(--primary-color) !important;
-}
-
-
-/* ============================================
-   FIX HEADER SIDEBAR - FORCER EN CLAIR
-   ============================================ */
-
-/* Forcer le header de la sidebar en clair */
-.sidebar-header,
-.sidebar .sidebar-header {
-  background: var(--sidebar-bg) !important;
-  border-bottom: 1px solid var(--sidebar-border) !important;
-}
-
-/* Logo wrapper */
-.sidebar-logo,
-.sidebar .sidebar-logo {
-  background: transparent !important;
-  color: var(--sidebar-text) !important;
-}
-
-/* Titre et sous-titre du logo */
-.sidebar-logo-title,
-.sidebar .sidebar-logo-title {
-  color: var(--sidebar-text) !important;
-}
-
-.sidebar-logo-subtitle,
-.sidebar .sidebar-logo-subtitle {
-  color: var(--sidebar-text-secondary) !important;
-}
-
-/* Icon du logo */
-.sidebar-logo i,
-.sidebar .sidebar-logo i {
-  color: var(--primary-color) !important;
-}
-
-/* Texte wrapper */
-.sidebar-logo-text,
-.sidebar .sidebar-logo-text {
-  color: inherit !important;
 }
 
