@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LCC Booking Manager – Aide</title>
+  <title>BookingManag – Aide</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -318,17 +318,29 @@
     }
   </style>
 </head>
-<body>
+<body data-page="help">
+  <!-- MOBILE HEADER -->
+  <div class="mobile-header">
+    <a href="/app.html" class="mobile-logo">
+      <i class="fas fa-calendar-check"></i>
+      <span class="mobile-logo-text">BookingManag</span>
+    </a>
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <div class="app-container">
     
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="/" class="sidebar-logo">
-          <i class="fas fa-home"></i>
+          <i class="fas fa-calendar-check"></i>
           <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">LCC Booking</span>
-            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+            <span class="sidebar-logo-title">BookingManag</span>
+            <span class="sidebar-logo-subtitle">Property Manager</span>
           </div>
         </a>
       </div>
@@ -338,7 +350,7 @@
         <div class="nav-section">
           <div class="nav-section-title">Principal</div>
 
-          <a href="/app.html" class="nav-item">
+          <a href="/app.html" class="nav-item" data-page="app">
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
@@ -349,7 +361,7 @@
             <span class="nav-badge" id="navTotalReservations">0</span>
           </a>
 
-          <a href="/messages.html" class="nav-item">
+          <a href="/messages.html" class="nav-item" data-page="messages">
             <i class="fas fa-comment-dots"></i>
             <span>Messages</span>
           </a>
@@ -380,7 +392,7 @@
         <!-- Paramètres -->
         <div class="nav-section">
           <div class="nav-section-title">Paramètres</div>
-          <a href="/settings-account.html" class="nav-item">
+          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>
           </a>
@@ -399,10 +411,7 @@
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
 
-          <button class="btn btn-ghost" id="logoutBtn" style="padding: 4px 10px; font-size: 12px; margin-left: auto;">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>Quitter</span>
-          </button>
+          <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
     </aside>
@@ -510,7 +519,7 @@
             </p>
             <p>
               Vous pouvez envoyer un email à :
-              <a href="mailto:support@lcc-booking.fr">support@lcc-booking.fr</a>
+              <a href="/cdn-cgi/l/email-protection#8bf8fefbfbe4f9ffcbe7e8e8a6e9e4e4e0e2e5eca5edf9"><span class="__cf_email__" data-cfemail="93e0e6e3e3fce1e7d3fff0f0bef1fcfcf8fafdf4bdf5e1">[email&#160;protected]</span></a>
             </p>
             <p style="margin-top: 12px;">
               Pensez à préciser :
@@ -534,7 +543,7 @@
           <div class="card-body">
             <p>
               Prochainement : un guide utilisateur détaillé et des vidéos tutoriels pour tirer le maximum
-              de LCC Booking Manager.
+              de BookingManag.
             </p>
           </div>
         </section>
@@ -544,7 +553,7 @@
   </div>
 
   <!-- Script auth + user + logout -->
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
@@ -615,14 +624,4 @@
       // Recherche
       if (searchInput) {
         searchInput.addEventListener('input', function () {
-          const q = searchInput.value.toLowerCase().trim();
-          faqItems.forEach(item => {
-            const text = item.innerText.toLowerCase();
-            item.style.display = text.includes(q) ? '' : 'none';
-          });
-        });
-      }
-    });
-  </script>
-</body>
-</html>
+          const q = searchInput.value.
