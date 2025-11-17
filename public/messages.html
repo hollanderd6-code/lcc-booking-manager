@@ -3,474 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messages – BookingManag</title>
-  
+  <title>Livret d'accueil – BookingManag</title>
+
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
+
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- CSS plateforme -->
-  <link rel="stylesheet" href="/css/style.css">
 
-  <style>
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    .main-content {
-      padding-top: 24px !important;
-    }
-
-    .page-content {
-      margin-top: 0 !important;
-    }
-
-    .messages-page-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .messages-page-title i {
-      color: var(--primary-color);
-    }
-
-    /* ===== Cards & timelines ===== */
-
-    .timeline-section {
-      background: var(--bg-primary);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      padding: 24px;
-      margin-bottom: 24px;
-      border: 1px solid var(--border-color);
-    }
-    
-    .timeline-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .timeline-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      color: white;
-    }
-    
-    .timeline-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-    
-    .timeline-count {
-      background: var(--primary-light);
-      color: var(--primary-color);
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 600;
-      margin-left: auto;
-    }
-    
-    .reservation-list {
-      display: grid;
-      gap: 16px;
-    }
-    
-    .reservation-item {
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      border-left: 4px solid var(--primary-color);
-      transition: var(--transition);
-    }
-    
-    .reservation-item:hover {
-      box-shadow: var(--shadow-sm);
-      transform: translateX(4px);
-    }
-    
-    .reservation-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-    
-    .reservation-info h3 {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-    
-    .reservation-meta {
-      color: var(--text-secondary);
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
-    
-    .empty-state i {
-      font-size: 40px;
-      opacity: 0.3;
-      margin-bottom: 12px;
-    }
-
-    /* ============================================
-       ASSISTANT IA - RÉDACTION VOYAGEURS
-       ============================================ */
-
-    .ai-section {
-      border-left: 4px solid var(--accent-color);
-    }
-
-    .message-reply-body {
-      margin-top: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .message-reply-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    .message-reply-input {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
-      padding: var(--spacing-md);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--text-primary);
-    }
-
-    .message-reply-input:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 1px var(--primary-light);
-    }
-
-    .message-reply-footer {
-      margin-top: var(--spacing-md);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: var(--spacing-md);
-      flex-wrap: wrap;
-    }
-
-    .message-reply-ai {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      flex: 1;
-      min-width: 260px;
-    }
-
-    .btn-ai {
-      white-space: nowrap;
-    }
-
-    .message-reply-hint {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .message-reply-actions {
-      display: flex;
-      gap: var(--spacing-sm);
-      flex-wrap: wrap;
-    }
-
-    @media (max-width: 768px) {
-      .message-reply-footer {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-
-    .copy-btn {
-      background: var(--primary-color);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition-fast);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-    }
-    
-    .copy-btn:hover {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
-    }
-    
-    .copy-btn.copied {
-      background: #16a34a;
-    }
-
-    /* ============================================
-       MODÈLES INTELLIGENTS – MESSAGES VOYAGEURS
-       ============================================ */
-
-    .templates-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      gap: var(--spacing-lg);
-    }
-
-    @media (max-width: 900px) {
-      .templates-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .template-form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .template-field {
-      flex: 1;
-      min-width: 160px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .template-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    .template-input,
-    .template-select {
-      padding: 8px 10px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-size: 14px;
-      font-family: inherit;
-      color: var(--text-primary);
-    }
-
-    .template-input:focus,
-    .template-select:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 1px var(--primary-light);
-    }
-
-    .template-help-text {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .template-result {
-      width: 100%;
-      min-height: 200px;
-      resize: vertical;
-      padding: var(--spacing-md);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text-primary);
-    }
-
-    /* ============================================
-       MESSAGES ÉQUIPE MÉNAGE
-       ============================================ */
-
-    .cleaning-messages-section {
-      margin-top: var(--spacing-xl);
-    }
-
-    .cleaning-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-      align-items: center;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .cleaning-controls input[type="date"] {
-      padding: 8px 10px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-size: 14px;
-    }
-
-    .cleaning-hint {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .cleaning-messages-container {
-      display: grid;
-      gap: var(--spacing-md);
-    }
-
-    .cleaning-message-card {
-      padding: var(--spacing-md);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-    }
-
-    .cleaning-message-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: 8px;
-    }
-
-    .cleaning-message-title {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .cleaning-message-meta {
-      font-size: 12px;
-      color: var(--text-secondary);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .cleaning-message-textarea {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
-      padding: var(--spacing-sm);
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-size: 13px;
-      font-family: inherit;
-      line-height: 1.5;
-      margin-top: 8px;
-    }
-
-    .badge-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      color: var(--text-secondary);
-    }
-  </style>
-</head>
-<body data-page="messages">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">BookingManag</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <div class="app-container">
-    
-       <!DOCTYPE html>
-<html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BookingManag – Dashboard</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
-  
   <!-- Platform CSS -->
   <link rel="stylesheet" href="/css/style.css">
-
-  <style>
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    .app-container {
-      margin-top: 0 !important;
-    }
-
-    .main-header {
-      margin-top: 0 !important;
-    }
-
-    .main-content {
-      margin-top: 0 !important;
-      padding-top: 24px !important;
-    }
-
-    .page-content {
-      margin-top: 0 !important;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-  </style>
 </head>
-<body data-page="messages">
+<body data-page="welcome">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
@@ -502,18 +46,18 @@
         <div class="nav-section">
           <div class="nav-section-title">Principal</div>
 
-          <a href="/app.html" class="nav-item active" data-page="app">
+          <a href="/app.html" class="nav-item" data-page="app">
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
 
-          <a href="#" class="nav-item" id="navCalendarLink">
+          <a href="/app.html#calendarSection" class="nav-item">
             <i class="fas fa-calendar"></i>
             <span>Calendrier</span>
             <span class="nav-badge" id="navTotalReservations">0</span>
           </a>
 
-          <a href="/messages.html" class="nav-item active">
+          <a href="/messages.html" class="nav-item" data-page="messages">
             <i class="fas fa-comment-dots"></i>
             <span>Messages</span>
           </a>
@@ -523,47 +67,45 @@
         <div class="nav-section">
           <div class="nav-section-title">Gestion</div>
 
-          <a href="settings.html" class="nav-item" data-page="settings">
+          <a href="/settings.html" class="nav-item">
             <i class="fas fa-home"></i>
             <span>Mes logements</span>
           </a>
 
-          <a href="welcome.html" class="nav-item" data-page="welcome">
+          <a href="/welcome.html" class="nav-item active">
             <i class="fas fa-book-open"></i>
             <span>Livret d'accueil</span>
           </a>
 
-          <a href="cleaning.html" class="nav-item" data-page="cleaning">
+          <a href="/cleaning.html" class="nav-item">
             <i class="fas fa-broom"></i>
             <span>Gestion du ménage</span>
             <span class="nav-badge">Nouveau</span>
           </a>
 
-          <a href="statistics.html" class="nav-item" data-page="statistics">
+          <a href="/statistics.html" class="nav-item">
             <i class="fas fa-chart-bar"></i>
             <span>Statistiques</span>
           </a>
 
-          <a href="deposits.html" class="nav-item" data-page="deposits">
+          <a href="/deposits.html" class="nav-item">
             <i class="fas fa-shield-alt"></i>
             <span>Cautions</span>
           </a>
 
-          <a href="notifications.html" class="nav-item" data-page="notifications">
+          <a href="/notifications.html" class="nav-item">
             <i class="fas fa-bell"></i>
             <span>Notifications</span>
           </a>
         </div>
-
+        
         <!-- PARAMÈTRES -->
         <div class="nav-section">
           <div class="nav-section-title">Paramètres</div>
-
           <a href="/settings-account.html" class="nav-item" data-page="settings-account">
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>
           </a>
-
           <a href="/help.html" class="nav-item" data-page="help">
             <i class="fas fa-question-circle"></i>
             <span>Aide</span>
@@ -578,306 +120,163 @@
             <div class="user-name" id="sidebarUserName">Utilisateur</div>
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
-
           <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
     </aside>
-
-    <!-- Main -->
+    
+    <!-- Main Content -->
     <main class="main-content">
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
-          <div class="page-kicker">Communication</div>
-          <h1 class="page-title messages-page-title">
-            <i class="fas fa-comment-dots"></i>
-            Messages
-          </h1>
+          <div class="page-kicker">Livret d'accueil</div>
+          <h1 class="page-title">Préparez votre livret d'accueil</h1>
           <p class="page-subtitle">
-            Préparez vos messages pour les voyageurs et vos équipes en quelques clics.
+            Renseignez toutes les informations utiles pour vos voyageurs. Nous utiliserons ces données pour générer un livret d'accueil prêt à l'emploi.
           </p>
         </div>
+        
+        <div class="header-actions">
+          <button class="btn btn-ghost" id="saveBtn">
+            <i class="fas fa-save"></i>
+            Enregistrer
+          </button>
+        </div>
       </header>
-
+      
       <!-- Page Content -->
       <div class="page-content">
-
-        <!-- 1️⃣ Modèles intelligents voyageurs -->
-        <section class="timeline-section">
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background:#3b82f6;">
-              <i class="fas fa-bolt"></i>
+        
+        <!-- Infos logement -->
+        <div class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-house-user"></i>
+              Informations du logement
             </div>
-            <div class="timeline-title">Modèles intelligents – messages voyageurs</div>
           </div>
-
-          <div class="templates-grid">
-            <!-- Colonne : paramètres -->
-            <div>
-              <p class="template-help-text">
-                Choisissez un type de message, sélectionnez le logement et les dates de séjour, puis générez un texte prêt à être collé dans Airbnb / Booking.
-              </p>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplType">Type de message</label>
-                  <select id="tplType" class="template-select">
-                    <option value="prearrival">Avant l’arrivée (instructions + accueil)</option>
-                    <option value="arrivalday">Jour d’arrivée (rappel check-in)</option>
-                    <option value="duringstay">Pendant le séjour (prise de nouvelles)</option>
-                    <option value="checkout">Rappel départ / check-out</option>
-                    <option value="thankyou">Remerciement + demande d’avis</option>
-                  </select>
-                </div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="propertyName">Nom du logement</label>
+                <input type="text" id="propertyName" class="input" placeholder="Ex : Villa Deuil, Studio Montmorency">
               </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplGuestName">Prénom du voyageur</label>
-                  <input type="text" id="tplGuestName" class="template-input" placeholder="Ex : Marie" />
-                </div>
-                <div class="template-field">
-                  <label class="template-label" for="tplPropertyName">Nom du logement</label>
-                  <!-- 🔽 Select auto-rempli avec LCC_PROPERTIES -->
-                  <select id="tplPropertyName" class="template-select">
-                    <option value="">Sélectionner un logement</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplCheckinDate">Date d’arrivée</label>
-                  <input type="date" id="tplCheckinDate" class="template-input" />
-                </div>
-                <div class="template-field">
-                  <label class="template-label" for="tplCheckoutDate">Date de départ</label>
-                  <input type="date" id="tplCheckoutDate" class="template-input" />
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplArrivalTime">Heure d’arrivée prévue (optionnel)</label>
-                  <input type="text" id="tplArrivalTime" class="template-input" placeholder="Ex : entre 18h et 19h" />
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplExtraInfo">
-                    Infos complémentaires (optionnel)
-                  </label>
-                  <input type="text" id="tplExtraInfo" class="template-input" placeholder="Ex : parking, lit bébé, animaux, etc." />
-                </div>
-              </div>
-
-              <div style="display:flex; gap:8px; margin-top:var(--spacing-sm); flex-wrap:wrap;">
-                <button type="button" class="btn btn-secondary" id="tplGenerateBtn">
-                  <i class="fas fa-magic"></i>
-                  Générer le message
-                </button>
-                <button type="button" class="btn btn-ghost" id="tplResetBtn">
-                  Réinitialiser
-                </button>
+              <div class="form-group">
+                <label for="address">Adresse complète</label>
+                <textarea id="address" class="textarea" rows="2" placeholder="Adresse, code postal, ville"></textarea>
               </div>
             </div>
 
-            <!-- Colonne : résultat -->
-            <div>
-              <label class="template-label" for="tplResult">Message généré</label>
-              <textarea
-                id="tplResult"
-                class="template-result"
-                placeholder="Le message généré apparaîtra ici. Vous pouvez le modifier avant de le copier."
-              ></textarea>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="accessCode">Code boîte à clés / digicode</label>
+                <input type="text" id="accessCode" class="input" placeholder="Ex : 2580A">
+              </div>
+              <div class="form-group">
+                <label for="accessInstructions">Instructions d'accès</label>
+                <textarea id="accessInstructions" class="textarea" rows="3" placeholder="Étapes pour trouver la boîte à clés, étage, porte, etc."></textarea>
+              </div>
+            </div>
 
-              <div style="margin-top:var(--spacing-sm); display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="copy-btn" id="tplCopyBtn">
-                  <i class="fas fa-copy"></i>
-                  Copier le message
-                </button>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="emergencyPhone">Téléphone d'urgence (conciergerie)</label>
+                <input type="text" id="emergencyPhone" class="input" placeholder="Ex : +33 6 12 34 56 78">
+              </div>
+              <div class="form-group">
+                <label for="generalNotes">Infos importantes / rappel règlement intérieur</label>
+                <textarea id="generalNotes" class="textarea" rows="3" placeholder="Ex : Non-fumeur, pas de soirées, tri des poubelles, etc."></textarea>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- 2️⃣ Assistant IA voyageurs (brouillon libre) -->
-        <section class="timeline-section ai-section">
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background: #8b5cf6;">
-              <i class="fas fa-wand-magic-sparkles"></i>
-            </div>
-            <div class="timeline-title">Assistant de rédaction – voyageurs (brouillon libre)</div>
-          </div>
-
-          <div class="message-reply-body">
-            <label for="aiContext" class="message-reply-label">
-              Contexte du message (collez ici le message du voyageur ou décrivez la situation)
-            </label>
-            <textarea
-              id="aiContext"
-              class="message-reply-input"
-              rows="4"
-              placeholder="Exemples :&#10;- Demande d’arrivée tardive vers 23h&#10;- Le client demande si les draps sont fournis&#10;- Réponse à une réclamation sur le ménage"
-            ></textarea>
-          </div>
-
-          <div class="message-reply-body">
-            <label for="aiReply" class="message-reply-label">
-              Proposition de réponse
-            </label>
-            <textarea
-              id="aiReply"
-              class="message-reply-input"
-              rows="5"
-              placeholder="La réponse proposée par l’IA apparaîtra ici. Vous pourrez la modifier avant de la copier."
-            ></textarea>
-          </div>
-
-          <div class="message-reply-footer">
-            <div class="message-reply-ai">
-              <button type="button" class="btn btn-secondary btn-ai" id="aiSuggestBtn">
-                <i class="fas fa-magic"></i>
-                Proposer une réponse avec l’IA
-              </button>
-              <span class="message-reply-hint" id="aiHint">
-                L’IA rédigera un brouillon poli et professionnel à partir du contexte.
-              </span>
-            </div>
-
-            <div class="message-reply-actions">
-              <button type="button" class="btn btn-ghost" id="aiClearBtn">
-                Effacer
-              </button>
-              <button type="button" class="btn btn-primary copy-btn" id="aiCopyBtn">
-                <i class="fas fa-copy"></i>
-                Copier la réponse
-              </button>
+        <!-- Wi-Fi -->
+        <div class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-wifi"></i>
+              Wi-Fi
             </div>
           </div>
-        </section>
-
-        <!-- 3️⃣ Messages rapides – timeline réservations -->
-        <section class="timeline-section">
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background:#10b981;">
-              <i class="fas fa-calendar-check"></i>
-            </div>
-            <div class="timeline-title">Messages rapides – arrivées & séjours</div>
-          </div>
-
-          <!-- Arrivées aujourd'hui -->
-          <div class="timeline-section" id="checkinsToday">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #e74c3c;">
-                <i class="fas fa-door-open"></i>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="wifiName">Nom du réseau (SSID)</label>
+                <input type="text" id="wifiName" class="input" placeholder="Ex : Livebox-1234">
               </div>
-              <div class="timeline-title">Arrivées aujourd'hui</div>
-              <div class="timeline-count" id="countToday">0</div>
-            </div>
-            <div class="reservation-list" id="listToday"></div>
-          </div>
-
-          <!-- Arrivées demain -->
-          <div class="timeline-section" id="checkinsTomorrow">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #f39c12;">
-                <i class="fas fa-calendar-day"></i>
+              <div class="form-group">
+                <label for="wifiPassword">Mot de passe Wi-Fi</label>
+                <input type="text" id="wifiPassword" class="input" placeholder="Ex : 4FQ9-ABCD-2025">
               </div>
-              <div class="timeline-title">Arrivées demain</div>
-              <div class="timeline-count" id="countTomorrow">0</div>
             </div>
-            <div class="reservation-list" id="listTomorrow"></div>
+            <div class="form-group">
+              <label for="wifiNote">Infos complémentaires</label>
+              <textarea id="wifiNote" class="textarea" rows="2" placeholder="Ex : Merci de ne pas modifier le mot de passe, redémarrer la box en cas de souci, etc."></textarea>
+            </div>
           </div>
+        </div>
 
-          <!-- Prochains 7 jours -->
-          <div class="timeline-section" id="checkinsNext7">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #3498db;">
-                <i class="fas fa-calendar-week"></i>
-              </div>
-              <div class="timeline-title">Prochains 7 jours</div>
-              <div class="timeline-count" id="countNext7">0</div>
+        <!-- Restaurants -->
+        <div class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-utensils"></i>
+              Restaurants à proximité
             </div>
-            <div class="reservation-list" id="listNext7"></div>
-          </div>
-
-          <!-- Séjours en cours -->
-          <div class="timeline-section" id="currentStays">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #2ecc71;">
-                <i class="fas fa-home"></i>
-              </div>
-              <div class="timeline-title">Séjours en cours</div>
-              <div class="timeline-count" id="countCurrent">0</div>
-            </div>
-            <div class="reservation-list" id="listCurrent"></div>
-          </div>
-
-          <!-- Départs aujourd'hui -->
-          <div class="timeline-section" id="checkoutsToday">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #95a5a6;">
-                <i class="fas fa-sign-out-alt"></i>
-              </div>
-              <div class="timeline-title">Départs aujourd'hui</div>
-              <div class="timeline-count" id="countCheckouts">0</div>
-            </div>
-            <div class="reservation-list" id="listCheckouts"></div>
-          </div>
-        </section>
-
-        <!-- 4️⃣ Messages équipe ménage -->
-        <section class="timeline-section cleaning-messages-section">
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background:#0f766e;">
-              <i class="fas fa-broom"></i>
-            </div>
-            <div class="timeline-title">Messages à envoyer à l’équipe ménage</div>
-          </div>
-
-          <div class="cleaning-controls">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="cleaningMsgDate" style="font-size:13px; font-weight:600; color:var(--text-secondary);">
-                Date des interventions
-              </label>
-              <input type="date" id="cleaningMsgDate">
-            </div>
-            <button type="button" class="btn btn-secondary" id="generateCleaningMessagesBtn">
-              <i class="fas fa-wand-magic-sparkles"></i>
-              Générer les messages ménage
+            <button class="btn btn-ghost" id="addRestaurantBtn">
+              <i class="fas fa-plus"></i>
+              Ajouter un restaurant
             </button>
-            <span class="cleaning-hint" id="cleaningMsgHint">
-              Les messages sont construits à partir de vos réservations, logements et assignations ménage.
-            </span>
           </div>
+          <div class="card-body" id="restaurantsContainer">
+            <!-- Lignes restaurants générées en JS -->
+          </div>
+        </div>
 
-          <div id="cleaningMessagesContainer" class="cleaning-messages-container">
-            <p class="empty-state">
-              <i class="fas fa-comment-slash"></i><br>
-              Choisissez une date puis générez les messages pour vos intervenants ménage.
-            </p>
+        <!-- Commerces -->
+        <div class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-store"></i>
+              Commerces utiles (boulangerie, supermarché, pharmacie...)
+            </div>
+            <button class="btn btn-ghost" id="addShopBtn">
+              <i class="fas fa-plus"></i>
+              Ajouter un commerce
+            </button>
           </div>
-        </section>
+          <div class="card-body" id="shopsContainer">
+            <!-- Lignes commerces générées en JS -->
+          </div>
+        </div>
+
+        <!-- Photos -->
+        <div class="card mb-lg">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-image"></i>
+              Photos pour le livret
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 12px;">
+              Ajoutez quelques photos clés (façade, entrée, boîte à clés, salon, plan d'accès…). Elles seront intégrées au livret.
+            </p>
+            <div id="photosContainer"></div>
+            <button class="btn btn-ghost" id="addPhotoBtn" style="margin-top: 8px;">
+              <i class="fas fa-plus"></i>
+              Ajouter une photo
+            </button>
+          </div>
+        </div>
 
       </div>
     </main>
   </div>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Chargement...</p>
-    </div>
-  </div>
-
-  <!-- JS spécifique messages (listes, etc.) -->
-  <script src="/js/messages.js"></script>
-
-  <!-- Script auth + user + logout -->
+  <!-- Script logique livret -->
   <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
@@ -886,30 +285,24 @@
         return;
       }
 
+      // Remplir l'info utilisateur dans la sidebar
       const rawUser = localStorage.getItem('lcc_user');
       let user = null;
-
       try {
         user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {
-        console.error('Impossible de lire lcc_user', e);
-      }
-
+      } catch (e) {}
       if (user) {
         const nameEl = document.getElementById('sidebarUserName');
         const companyEl = document.getElementById('sidebarUserCompany');
         const avatarEl = document.getElementById('sidebarUserAvatar');
-
         if (nameEl) {
           nameEl.textContent = user.firstName
             ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
             : (user.email || 'Mon compte');
         }
-
         if (companyEl) {
           companyEl.textContent = user.company || 'Mon espace';
         }
-
         if (avatarEl) {
           const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
           avatarEl.textContent = initial.toUpperCase();
@@ -924,530 +317,254 @@
           window.location.href = '/login.html';
         });
       }
-    })();
-  </script>
 
-  <!-- Script assistant IA + modèles + messages ménage -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      /* ========= Données logements (partagées) ========= */
-      const PROPERTIES = window.LCC_PROPERTIES || [
-        { id: 'apt-demo-1', name: 'Appartement démo 1' },
-        { id: 'apt-demo-2', name: 'Appartement démo 2' }
-      ];
+      const restaurantsContainer = document.getElementById('restaurantsContainer');
+      const shopsContainer = document.getElementById('shopsContainer');
+      const photosContainer = document.getElementById('photosContainer');
 
-      /* ========= 1) MODÈLES INTELLIGENTS ========= */
-      const tplType = document.getElementById('tplType');
-      const tplGuestName = document.getElementById('tplGuestName');
-      const tplPropertyName = document.getElementById('tplPropertyName');
-      const tplCheckinDate = document.getElementById('tplCheckinDate');
-      const tplCheckoutDate = document.getElementById('tplCheckoutDate');
-      const tplArrivalTime = document.getElementById('tplArrivalTime');
-      const tplExtraInfo = document.getElementById('tplExtraInfo');
-      const tplResult = document.getElementById('tplResult');
-      const tplGenerateBtn = document.getElementById('tplGenerateBtn');
-      const tplResetBtn = document.getElementById('tplResetBtn');
-      const tplCopyBtn = document.getElementById('tplCopyBtn');
-
-      // 🔽 On remplit le select des logements avec LCC_PROPERTIES
-      if (tplPropertyName && PROPERTIES && PROPERTIES.length) {
-        PROPERTIES.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = (p.name || p.title || p.label || p.id || '').toString();
-          opt.textContent = p.name || p.title || p.label || p.id;
-          tplPropertyName.appendChild(opt);
+      function createRestaurantRow(data = {}) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'form-grid restaurant-row';
+        wrapper.style.marginBottom = '12px';
+        wrapper.innerHTML = `
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" class="input rest-name" placeholder="Ex : Le Bistrot du Coin" value="${data.name || ''}">
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <input type="text" class="input rest-type" placeholder="Ex : Bistrot, Pizzeria..." value="${data.type || ''}">
+          </div>
+          <div class="form-group">
+            <label>Adresse / distance</label>
+            <input type="text" class="input rest-address" placeholder="Ex : 5 min à pied, 12 rue de Paris" value="${data.address || ''}">
+          </div>
+          <div class="form-group">
+            <label>Infos</label>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <textarea class="textarea rest-notes" rows="2" placeholder="Plat conseillé, jours d'ouverture…">${data.notes || ''}</textarea>
+              <button type="button" class="btn btn-ghost remove-row-btn">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
+          wrapper.remove();
         });
+        restaurantsContainer.appendChild(wrapper);
       }
 
-      function formatDateFr(iso) {
-        if (!iso) return '';
-        const d = new Date(iso);
-        if (isNaN(d)) return iso;
-        return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
-      }
-
-      function buildSmartTemplate() {
-        const type = tplType.value;
-        const guest = tplGuestName.value.trim() || 'Bonjour';
-        const firstLine = guest.toLowerCase().startsWith('bonjour') ? guest : `Bonjour ${guest},`;
-
-        const property = (tplPropertyName.value || '').trim() || 'votre logement';
-        const ci = tplCheckinDate.value ? formatDateFr(tplCheckinDate.value) : null;
-        const co = tplCheckoutDate.value ? formatDateFr(tplCheckoutDate.value) : null;
-        const arrTime = tplArrivalTime.value.trim();
-        const extra = tplExtraInfo.value.trim();
-
-        const stayLine = (ci && co)
-          ? `Votre séjour est prévu du ${ci} au ${co}.`
-          : ci
-            ? `Votre arrivée est prévue le ${ci}.`
-            : '';
-
-        let body = '';
-
-        if (type === 'prearrival') {
-          body += (stayLine ? stayLine + '\n\n' : '');
-          body += `Je vous confirme la réservation de ${property}. `;
-          body += `Vous recevrez, avant votre arrivée, toutes les informations détaillées concernant l'accès au logement, le code ou la remise des clés, ainsi que le fonctionnement du check-in.`;
-          if (arrTime) {
-            body += `\n\nSi possible, merci de me confirmer votre heure d’arrivée approximative (${arrTime}) afin que je puisse m’organiser au mieux.`;
-          } else {
-            body += `\n\nSi possible, merci de me communiquer votre heure d’arrivée approximative afin que je puisse m’organiser au mieux.`;
-          }
-          if (extra) {
-            body += `\n\nÀ noter : ${extra}.`;
-          }
-        }
-
-        if (type === 'arrivalday') {
-          body += (stayLine ? stayLine + '\n\n' : '');
-          body += `Petit rappel pour votre arrivée à ${property} aujourd’hui. `;
-          body += `Les instructions de check-in (adresse exacte, accès à l’immeuble, codes ou clés) sont disponibles dans vos messages et dans le livret d’accueil.`;
-          if (arrTime) {
-            body += `\n\nComme indiqué, votre arrivée est prévue ${arrTime}. Si votre horaire change, n’hésitez pas à me prévenir.`;
-          } else {
-            body += `\n\nSi votre horaire d’arrivée change, n’hésitez pas à me prévenir.`;
-          }
-          if (extra) {
-            body += `\n\nRappel utile : ${extra}.`;
-          }
-        }
-
-        if (type === 'duringstay') {
-          body += (stayLine ? stayLine + '\n\n' : '');
-          body += `J’espère que tout se passe bien pour vous à ${property}. `;
-          body += `N’hésitez surtout pas à me signaler si quelque chose manque, si vous avez une question sur le logement ou besoin d’une recommandation (restaurants, activités, transports…).`;
-          if (extra) {
-            body += `\n\nInformations utiles pour votre séjour : ${extra}.`;
-          }
-        }
-
-        if (type === 'checkout') {
-          body += co
-            ? `Comme prévu, votre départ est prévu le ${co}.\n\n`
-            : 'Petit rappel concernant votre départ.\n\n';
-          body += `Le check-out se fait généralement avant 11h (sauf accord différent). `;
-          body += `Merci de laisser le logement dans un état correct, de vérifier que vous n’avez rien oublié et de vous assurer que la porte est bien fermée en partant.`;
-          if (extra) {
-            body += `\n\nDernier rappel important : ${extra}.`;
-          }
-        }
-
-        if (type === 'thankyou') {
-          body += co
-            ? `Merci encore pour votre séjour du ${ci || ''}${ci && co ? ' au ' : ''}${co || ''} à ${property}.\n\n`
-            : `Merci encore pour votre séjour à ${property}.\n\n`;
-          body += `J’espère que tout s’est bien passé et que vous avez passé un agréable moment. `;
-          body += `Si vous avez quelques minutes, je serais ravi(e) que vous laissiez un avis sur la plateforme, cela m’aide beaucoup pour la suite.`;
-          if (extra) {
-            body += `\n\nVous pouvez également me faire un retour direct si vous voyez un point à améliorer : ${extra}.`;
-          }
-        }
-
-        let msg = firstLine + '\n\n' + body + '\n\n' + 'Bien cordialement,\nLa Conciergerie de Charles';
-        return msg.trim();
-      }
-
-      if (tplGenerateBtn && tplResult) {
-        tplGenerateBtn.addEventListener('click', () => {
-          tplResult.value = buildSmartTemplate();
+      function createShopRow(data = {}) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'form-grid shop-row';
+        wrapper.style.marginBottom = '12px';
+        wrapper.innerHTML = `
+          <div class="form-group">
+            <label>Nom</label>
+            <input type="text" class="input shop-name" placeholder="Ex : Boulangerie du Marché" value="${data.name || ''}">
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <input type="text" class="input shop-type" placeholder="Ex : Boulangerie, Supermarché..." value="${data.type || ''}">
+          </div>
+          <div class="form-group">
+            <label>Adresse / distance</label>
+            <input type="text" class="input shop-address" placeholder="Ex : 3 min à pied, 8 avenue Victor Hugo" value="${data.address || ''}">
+          </div>
+          <div class="form-group">
+            <label>Infos</label>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <textarea class="textarea shop-notes" rows="2" placeholder="Horaires, particularités…">${data.notes || ''}</textarea>
+              <button type="button" class="btn btn-ghost remove-row-btn">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
+          wrapper.remove();
         });
+        shopsContainer.appendChild(wrapper);
       }
 
-      if (tplResetBtn) {
-        tplResetBtn.addEventListener('click', () => {
-          tplGuestName.value = '';
-          tplPropertyName.value = '';
-          tplCheckinDate.value = '';
-          tplCheckoutDate.value = '';
-          tplArrivalTime.value = '';
-          tplExtraInfo.value = '';
-          tplResult.value = '';
-        });
-      }
+      let photosState = [];
 
-      if (tplCopyBtn) {
-        tplCopyBtn.addEventListener('click', async () => {
-          const text = tplResult.value.trim();
-          if (!text) return;
-          try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              await navigator.clipboard.writeText(text);
-              tplCopyBtn.classList.add('copied');
-              tplCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-              setTimeout(() => {
-                tplCopyBtn.classList.remove('copied');
-                tplCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le message';
-              }, 1500);
-            } else {
-              const t = document.createElement('textarea');
-              t.value = text;
-              document.body.appendChild(t);
-              t.select();
-              document.execCommand('copy');
-              document.body.removeChild(t);
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        });
-      }
-
-      /* ========= 2) Assistant IA voyageurs (brouillon) ========= */
-      const aiContext = document.getElementById('aiContext');
-      const aiReply = document.getElementById('aiReply');
-      const aiSuggestBtn = document.getElementById('aiSuggestBtn');
-      const aiHint = document.getElementById('aiHint');
-      const aiClearBtn = document.getElementById('aiClearBtn');
-      const aiCopyBtn = document.getElementById('aiCopyBtn');
-
-      if (aiContext && aiReply && aiSuggestBtn) {
-        async function fetchAiSuggestion(contextText) {
-          const intro = "Bonjour,";
-          let core;
-
-          if (contextText && contextText.length > 10) {
-            core = "Merci pour votre message. " +
-              "Je vous confirme avoir bien pris en compte votre demande. " +
-              "Je reste bien entendu disponible si vous avez la moindre question ou besoin supplémentaire pendant votre séjour.";
-          } else {
-            core = "Merci pour votre message. " +
-              "Je reste à votre disposition pour toute question ou précision concernant votre arrivée ou votre séjour.";
-          }
-
-          return (
-            intro + "\n\n" +
-            core + "\n\n" +
-            "Bien cordialement,\nLa Conciergerie de Charles"
-          );
-        }
-
-        aiSuggestBtn.addEventListener('click', async () => {
-          const contextText = aiContext.value.trim();
-
-          aiSuggestBtn.disabled = true;
-          aiSuggestBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération…';
-          aiHint.textContent = "Génération d’un brouillon de réponse…";
-
-          try {
-            const suggestion = await fetchAiSuggestion(contextText);
-
-            if (!aiReply.value.trim()) {
-              aiReply.value = suggestion;
-            } else {
-              aiReply.value = aiReply.value.trim() + "\n\n" + suggestion;
-            }
-
-            aiHint.textContent = "Brouillon généré. Tu peux le modifier avant de le copier dans Airbnb/Booking.";
-          } catch (e) {
-            console.error(e);
-            aiHint.textContent = "Impossible de générer une réponse pour le moment.";
-          } finally {
-            aiSuggestBtn.disabled = false;
-            aiSuggestBtn.innerHTML = '<i class="fas fa-magic"></i> Proposer une réponse avec l’IA';
-          }
+      function renderPhotos() {
+        photosContainer.innerHTML = '';
+        photosState.forEach((photo, index) => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'photo-row';
+          wrapper.style.marginBottom = '10px';
+          wrapper.innerHTML = `
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Légende de la photo</label>
+                <input type="text" class="input photo-label" data-index="${index}" placeholder="Ex : Façade, Boîte à clés, Salon" value="${photo.label || ''}">
+              </div>
+              <div class="form-group">
+                <label>Fichier</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="file" class="photo-file-input" data-index="${index}" accept="image/*">
+                  <button type="button" class="btn btn-ghost remove-photo-btn" data-index="${index}">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+                ${photo.dataUrl ? `<div style="margin-top:6px;"><img src="${photo.dataUrl}" alt="" style="max-width:140px;border-radius:8px;border:1px solid #e5e7eb;"></div>` : ''}
+              </div>
+            </div>
+          `;
+          photosContainer.appendChild(wrapper);
         });
 
-        if (aiClearBtn) {
-          aiClearBtn.addEventListener('click', () => {
-            aiContext.value = '';
-            aiReply.value = '';
-            aiHint.textContent = "L’IA rédigera un brouillon poli et professionnel à partir du contexte.";
-          });
-        }
-
-        if (aiCopyBtn) {
-          aiCopyBtn.addEventListener('click', async () => {
-            const text = aiReply.value.trim();
-            if (!text) return;
-
-            try {
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(text);
-                aiCopyBtn.classList.add('copied');
-                aiCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                setTimeout(() => {
-                  aiCopyBtn.classList.remove('copied');
-                  aiCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier la réponse';
-                }, 1500);
-              } else {
-                const temp = document.createElement('textarea');
-                temp.value = text;
-                document.body.appendChild(temp);
-                temp.select();
-                document.execCommand('copy');
-                document.body.removeChild(temp);
-              }
-            } catch (e) {
-              console.error(e);
+        photosContainer.querySelectorAll('.photo-label').forEach(input => {
+          input.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.index, 10);
+            if (!isNaN(idx) && photosState[idx]) {
+              photosState[idx].label = e.target.value;
             }
           });
-        }
+        });
+
+        photosContainer.querySelectorAll('.photo-file-input').forEach(input => {
+          input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const idx = parseInt(e.target.dataset.index, 10);
+            if (file && !isNaN(idx)) {
+              const reader = new FileReader();
+              reader.onload = function (ev) {
+                photosState[idx].dataUrl = ev.target.result;
+                renderPhotos();
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        });
+
+        photosContainer.querySelectorAll('.remove-photo-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.target.dataset.index, 10);
+            if (!isNaN(idx)) {
+              photosState.splice(idx, 1);
+              renderPhotos();
+            }
+          });
+        });
       }
 
-      /* ========= 3) Messages équipe ménage ========= */
+      document.getElementById('addRestaurantBtn').addEventListener('click', () => {
+        createRestaurantRow();
+      });
 
-      const STORAGE_CLEANERS = 'lcc_cleaners';
-      const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
+      document.getElementById('addShopBtn').addEventListener('click', () => {
+        createShopRow();
+      });
 
-      const RESERVATIONS = window.LCC_RESERVATIONS || [];
+      document.getElementById('addPhotoBtn').addEventListener('click', () => {
+        photosState.push({ id: 'p_' + Date.now(), label: '', dataUrl: '' });
+        renderPhotos();
+      });
 
-      let cleaners = [];
-      let assignments = {};
-
-      function loadCleaningData() {
+      // Charger les données existantes
+      async function loadWelcomeData() {
         try {
-          cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
-          assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
-        } catch (e) {
-          cleaners = [];
-          assignments = {};
+          const res = await fetch('/api/welcome', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+
+          document.getElementById('propertyName').value = data.propertyName || '';
+          document.getElementById('address').value = data.address || '';
+          document.getElementById('accessCode').value = data.accessCode || '';
+          document.getElementById('accessInstructions').value = data.accessInstructions || '';
+          document.getElementById('emergencyPhone').value = data.emergencyPhone || '';
+          document.getElementById('wifiName').value = data.wifiName || '';
+          document.getElementById('wifiPassword').value = data.wifiPassword || '';
+          document.getElementById('wifiNote').value = data.wifiNote || '';
+          document.getElementById('generalNotes').value = data.generalNotes || '';
+
+          restaurantsContainer.innerHTML = '';
+          (data.restaurants || []).forEach(r => createRestaurantRow(r));
+          shopsContainer.innerHTML = '';
+          (data.shops || []).forEach(s => createShopRow(s));
+
+          photosState = Array.isArray(data.photos) ? data.photos : [];
+          renderPhotos();
+        } catch (err) {
+          console.error('Erreur chargement livret', err);
         }
       }
 
-      function normalizeDateString(dateStr) {
-        return dateStr ? dateStr.slice(0, 10) : null;
-      }
-
-      function getPropertyName(propertyId) {
-        const p = PROPERTIES.find(x => x.id === propertyId || x.propertyId === propertyId);
-        return p ? (p.name || p.title || p.label || propertyId) : (propertyId || 'Logement');
-      }
-
-      function getCleanerById(id) {
-        return cleaners.find(c => c.id === id) || null;
-      }
-
-      function generateCleaningTasks(dateStr) {
-        if (!dateStr) return [];
-
-        const tasks = [];
-
-        RESERVATIONS.forEach(r => {
-          if (!r.start || !r.end || !r.propertyId) return;
-
-          const startStr = normalizeDateString(r.start);
-          const endStr = normalizeDateString(r.end);
-          const propertyId = r.propertyId;
-          const propertyName = getPropertyName(propertyId);
-          const cleanerId = assignments[propertyId];
-          const cleaner = cleanerId ? getCleanerById(cleanerId) : null;
-
-          if (endStr === dateStr) {
-            tasks.push({
-              type: 'departure',
-              propertyId,
-              propertyName,
-              cleaner,
-              reservation: r
-            });
-          }
-
-          if (startStr === dateStr) {
-            tasks.push({
-              type: 'arrival',
-              propertyId,
-              propertyName,
-              cleaner,
-              reservation: r
-            });
+      async function saveWelcomeData() {
+        const restaurants = [];
+        document.querySelectorAll('.restaurant-row').forEach(row => {
+          const r = {
+            name: row.querySelector('.rest-name').value.trim(),
+            type: row.querySelector('.rest-type').value.trim(),
+            address: row.querySelector('.rest-address').value.trim(),
+            notes: row.querySelector('.rest-notes').value.trim()
+          };
+          if (r.name || r.address || r.notes) {
+            restaurants.push(r);
           }
         });
 
-        return tasks;
-      }
-
-      function buildMessageForCleaner(cleaner, tasksForCleaner, dateStr) {
-        const date = new Date(dateStr);
-        const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' });
-
-        const firstName = cleaner.name?.split(' ')[0] || cleaner.name || '';
-        let lines = [];
-
-        lines.push(`Bonjour ${firstName},`);
-        lines.push('');
-        lines.push(`Voici vos interventions ménage prévues pour ${formattedDate} :`);
-        lines.push('');
-
-        tasksForCleaner.forEach(t => {
-          const res = t.reservation;
-          const guest = res.guestName || res.name || 'client';
-          const stayInfo = `${normalizeDateString(res.start)} → ${normalizeDateString(res.end)}`;
-
-          if (t.type === 'departure') {
-            lines.push(`- ${t.propertyName} – après un départ (${guest}, séjour ${stayInfo})`);
-          } else {
-            lines.push(`- ${t.propertyName} – vérification avant une arrivée (${guest}, séjour ${stayInfo})`);
+        const shops = [];
+        document.querySelectorAll('.shop-row').forEach(row => {
+          const s = {
+            name: row.querySelector('.shop-name').value.trim(),
+            type: row.querySelector('.shop-type').value.trim(),
+            address: row.querySelector('.shop-address').value.trim(),
+            notes: row.querySelector('.shop-notes').value.trim()
+          };
+          if (s.name || s.address || s.notes) {
+            shops.push(s);
           }
         });
 
-        lines.push('');
-        lines.push(`Merci beaucoup, et n’hésite pas à me signaler tout problème ou anomalie.`);
-        lines.push('');
-        lines.push('La Conciergerie de Charles');
+        const payload = {
+          propertyName: document.getElementById('propertyName').value.trim(),
+          address: document.getElementById('address').value.trim(),
+          accessCode: document.getElementById('accessCode').value.trim(),
+          accessInstructions: document.getElementById('accessInstructions').value.trim(),
+          emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
+          wifiName: document.getElementById('wifiName').value.trim(),
+          wifiPassword: document.getElementById('wifiPassword').value.trim(),
+          wifiNote: document.getElementById('wifiNote').value.trim(),
+          generalNotes: document.getElementById('generalNotes').value.trim(),
+          restaurants,
+          shops,
+          photos: photosState
+        };
 
-        return lines.join('\n');
-      }
-
-      function buildMessageForUnassigned(tasks, dateStr) {
-        const date = new Date(dateStr);
-        const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' });
-
-        let lines = [];
-        lines.push(`Tâches ménage sans personne assignée – ${formattedDate}`);
-        lines.push('');
-
-        tasks.forEach(t => {
-          const res = t.reservation;
-          const guest = res.guestName || res.name || 'client';
-          const stayInfo = `${normalizeDateString(res.start)} → ${normalizeDateString(res.end)}`;
-
-          if (t.type === 'departure') {
-            lines.push(`- ${t.propertyName} – après un départ (${guest}, séjour ${stayInfo})`);
-          } else {
-            lines.push(`- ${t.propertyName} – avant une arrivée (${guest}, séjour ${stayInfo})`);
-          }
-        });
-
-        lines.push('');
-        lines.push('Pensez à assigner ces logements à une personne de ménage dans le module dédié.');
-        return lines.join('\n');
-      }
-
-      const cleaningMsgDate = document.getElementById('cleaningMsgDate');
-      const generateCleaningMessagesBtn = document.getElementById('generateCleaningMessagesBtn');
-      const cleaningMessagesContainer = document.getElementById('cleaningMessagesContainer');
-      const cleaningMsgHint = document.getElementById('cleaningMsgHint');
-
-      if (cleaningMsgDate && generateCleaningMessagesBtn && cleaningMessagesContainer) {
-        const today = new Date();
-        const isoToday = today.toISOString().slice(0,10);
-        cleaningMsgDate.value = isoToday;
-
-        generateCleaningMessagesBtn.addEventListener('click', () => {
-          const dateStr = cleaningMsgDate.value;
-          if (!dateStr) return;
-
-          loadCleaningData();
-          const tasks = generateCleaningTasks(dateStr);
-
-          if (!tasks.length) {
-            cleaningMessagesContainer.innerHTML = `
-              <p class="empty-state">
-                <i class="fas fa-calendar-times"></i><br>
-                Aucun départ ou arrivée trouvé pour cette date. Aucun message ménage généré.
-              </p>`;
+        try {
+          const res = await fetch('/api/welcome', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error || 'Erreur lors de la sauvegarde du livret');
             return;
           }
-
-          const byCleaner = {};
-          const unassigned = [];
-
-          tasks.forEach(t => {
-            if (t.cleaner) {
-              const id = t.cleaner.id;
-              if (!byCleaner[id]) byCleaner[id] = [];
-              byCleaner[id].push(t);
-            } else {
-              unassigned.push(t);
-            }
-          });
-
-          cleaningMessagesContainer.innerHTML = '';
-
-          Object.keys(byCleaner).forEach(cleanerId => {
-            const cleaner = getCleanerById(cleanerId);
-            if (!cleaner) return;
-            const tasksForCleaner = byCleaner[cleanerId];
-            const messageText = buildMessageForCleaner(cleaner, tasksForCleaner, dateStr);
-
-            const card = document.createElement('div');
-            card.className = 'cleaning-message-card';
-
-            const phone = cleaner.phone || '';
-            const email = cleaner.email || '';
-
-            card.innerHTML = `
-              <div class="cleaning-message-header">
-                <div>
-                  <div class="cleaning-message-title">
-                    ${cleaner.name}
-                  </div>
-                  <div class="cleaning-message-meta">
-                    ${phone ? `<span class="badge-pill"><i class="fas fa-phone"></i>${phone}</span>` : ''}
-                    ${email ? `<span class="badge-pill"><i class="fas fa-envelope"></i>${email}</span>` : ''}
-                    <span class="badge-pill"><i class="fas fa-list-check"></i>${tasksForCleaner.length} intervention(s)</span>
-                  </div>
-                </div>
-                <button type="button" class="copy-btn cleaning-copy-btn">
-                  <i class="fas fa-copy"></i> Copier le message
-                </button>
-              </div>
-              <textarea class="cleaning-message-textarea">${messageText}</textarea>
-            `;
-
-            cleaningMessagesContainer.appendChild(card);
-          });
-
-          if (unassigned.length) {
-            const text = buildMessageForUnassigned(unassigned, dateStr);
-            const card = document.createElement('div');
-            card.className = 'cleaning-message-card';
-            card.innerHTML = `
-              <div class="cleaning-message-header">
-                <div>
-                  <div class="cleaning-message-title">
-                    Logements sans personne assignée
-                  </div>
-                  <div class="cleaning-message-meta">
-                    <span class="badge-pill"><i class="fas fa-triangle-exclamation"></i>${unassigned.length} tâche(s)</span>
-                  </div>
-                </div>
-                <button type="button" class="copy-btn cleaning-copy-btn">
-                  <i class="fas fa-copy"></i> Copier le message
-                </button>
-              </div>
-              <textarea class="cleaning-message-textarea">${text}</textarea>
-            `;
-            cleaningMessagesContainer.appendChild(card);
-          }
-
-          cleaningMsgHint.textContent = "Messages générés. Tu peux les ajuster avant de les coller dans SMS / WhatsApp / email.";
-
-          cleaningMessagesContainer.querySelectorAll('.cleaning-copy-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-              const card = btn.closest('.cleaning-message-card');
-              if (!card) return;
-              const ta = card.querySelector('.cleaning-message-textarea');
-              if (!ta) return;
-              const text = ta.value.trim();
-              if (!text) return;
-
-              try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  await navigator.clipboard.writeText(text);
-                  btn.classList.add('copied');
-                  btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                  setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.innerHTML = '<i class="fas fa-copy"></i> Copier le message';
-                  }, 1500);
-                } else {
-                  const temp = document.createElement('textarea');
-                  temp.value = text;
-                  document.body.appendChild(temp);
-                  temp.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(temp);
-                }
-              } catch (e) {
-                console.error(e);
-              }
-            });
-          });
-        });
+          alert('Livret sauvegardé 👍');
+        } catch (err) {
+          console.error('Erreur sauvegarde livret', err);
+          alert('Erreur réseau lors de la sauvegarde');
+        }
       }
-    });
+
+      document.getElementById('saveBtn').addEventListener('click', saveWelcomeData);
+
+      loadWelcomeData();
+    })();
   </script>
 
   <!-- MOBILE MENU SCRIPT -->
@@ -1500,7 +617,7 @@
         document.querySelectorAll('.nav-item').forEach(item => {
           item.classList.remove('active');
         });
-        const activeLink = document.querySelector(\`.nav-item[data-page="\${currentPage}"]\`);
+        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
         if (activeLink) {
           activeLink.classList.add('active');
         }
