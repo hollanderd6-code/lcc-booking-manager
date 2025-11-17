@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LCC Booking Manager – Dashboard</title>
+  <title>BookingManag – Dashboard</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -45,7 +45,8 @@
     }
   </style>
 </head>
-<body>
+<body data-page="app">
+  <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
       <i class="fas fa-calendar-check"></i>
@@ -56,12 +57,13 @@
     </button>
   </div>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <div class="app-container">
     
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-         <a href="/app.html" class="sidebar-logo">
+        <a href="/" class="sidebar-logo">
           <i class="fas fa-calendar-check"></i>
           <div class="sidebar-logo-text">
             <span class="sidebar-logo-title">BookingManag</span>
@@ -72,15 +74,15 @@
       
       <nav class="sidebar-nav">
         <!-- PRINCIPAL -->
-       <div class="nav-section">
+        <div class="nav-section">
           <div class="nav-section-title">Principal</div>
 
-          <a href="/app.html" class="nav-item active" data-page="app">
+          <a href="/app.html" class="nav-item active">
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
 
-          <a href="#" class="nav-item" id="navCalendarLink" data-page="calendar">
+          <a href="#" class="nav-item" id="navCalendarLink">
             <i class="fas fa-calendar"></i>
             <span>Calendrier</span>
             <span class="nav-badge" id="navTotalReservations">0</span>
@@ -96,33 +98,33 @@
         <div class="nav-section">
           <div class="nav-section-title">Gestion</div>
 
-          <a href="/settings.html" class="nav-item" data-page="settings">
+          <a href="settings.html" class="nav-item" data-page="settings">
             <i class="fas fa-home"></i>
             <span>Mes logements</span>
           </a>
 
-          <a href="/welcome.html" class="nav-item" data-page="welcome">
+          <a href="welcome.html" class="nav-item" data-page="welcome">
             <i class="fas fa-book-open"></i>
             <span>Livret d'accueil</span>
           </a>
 
-          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+          <a href="cleaning.html" class="nav-item" data-page="cleaning">
             <i class="fas fa-broom"></i>
             <span>Gestion du ménage</span>
             <span class="nav-badge">Nouveau</span>
           </a>
 
-          <a href="/statistics.html" class="nav-item" data-page="statistics">
+          <a href="statistics.html" class="nav-item" data-page="statistics">
             <i class="fas fa-chart-bar"></i>
             <span>Statistiques</span>
           </a>
 
-          <a href="/deposits.html" class="nav-item" data-page="deposits">
+          <a href="deposits.html" class="nav-item" data-page="deposits">
             <i class="fas fa-shield-alt"></i>
             <span>Cautions</span>
           </a>
 
-          <a href="/notifications.html" class="nav-item" data-page="notifications">
+          <a href="notifications.html" class="nav-item" data-page="notifications">
             <i class="fas fa-bell"></i>
             <span>Notifications</span>
           </a>
@@ -152,9 +154,7 @@
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
 
-          <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;">
-            <i class="fas fa-sign-out-alt"></i>
-          </button>
+          <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
     </aside>
@@ -165,7 +165,7 @@
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
-          <div class="page-kicker">Vue d'ensemble</div>
+          <div class="page-kicker">Vue d’ensemble</div>
           <h1 class="page-title">Dashboard</h1>
           <p class="page-subtitle">
             Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
@@ -238,7 +238,7 @@
               <h2 class="cleaning-intro-title">Gestion du ménage entre deux séjours</h2>
               <p class="cleaning-intro-text">
                 Planifiez les interventions de ménage, assignez vos équipes et suivez l’état des logements
-                directement depuis votre LCC Booking Manager. Synchronisé avec le planning des réservations.
+                directement depuis votre BookingManag. Synchronisé avec le planning des réservations.
               </p>
               <div class="cleaning-intro-badges">
                 <span class="cleaning-badge">Planning auto</span>
@@ -1458,8 +1458,12 @@
           calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
       }
-<script>
-    // Mobile menu toggle
+    });
+  </script>
+
+
+  <!-- MOBILE MENU SCRIPT -->
+  <script>
     (function() {
       const menuBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
@@ -1502,39 +1506,38 @@
       }
     })();
     
-    // Active nav-item based on data-page
     (function() {
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
         document.querySelectorAll('.nav-item').forEach(item => {
           item.classList.remove('active');
         });
-        const activeLink = document.querySelector(`.nav-item[data-page="${currentPage}"]`);
+        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
         if (activeLink) {
           activeLink.classList.add('active');
         }
       }
     })();
     
-    // Logout handler
     document.getElementById('logoutBtn')?.addEventListener('click', function() {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
       window.location.href = '/login.html';
     });
     
-    // User profile from localStorage
     (function() {
       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
       if (user.firstName) {
-        document.getElementById('sidebarUserName').textContent = user.firstName + ' ' + (user.lastName || '');
-        document.getElementById('sidebarUserAvatar').textContent = user.firstName.charAt(0).toUpperCase();
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
       }
       if (user.company) {
-        document.getElementById('sidebarUserCompany').textContent = user.company;
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
       }
     })();
   </script>
-
 </body>
 </html>
