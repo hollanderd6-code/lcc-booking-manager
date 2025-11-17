@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LCC Booking – Création de compte</title>
+  <title>BookingManag – Créer un compte</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -14,17 +14,17 @@
     <div class="auth-card">
       <div class="auth-logo">
         <div class="auth-logo-icon">
-          <i class="fas fa-home"></i>
+          <i class="fas fa-calendar-check"></i>
         </div>
         <div>
-          <div class="auth-logo-title">LCC Booking Manager</div>
-          <div class="auth-logo-subtitle">Créer un espace conciergerie</div>
+          <div class="auth-logo-title">BookingManag</div>
+          <div class="auth-logo-subtitle">Property Manager</div>
         </div>
       </div>
 
       <h1 class="auth-title">Créer un compte</h1>
       <p class="auth-subtitle">
-        Configurez votre espace pour gérer vos logements et vos réservations.
+        Configurez votre espace pour gérer vos logements et réservations.
       </p>
 
       <form class="auth-form" id="registerForm">
@@ -32,7 +32,7 @@
           <label for="company">Nom de la conciergerie / structure</label>
           <div class="input-with-icon">
             <i class="fas fa-building"></i>
-            <input type="text" id="company" name="company" placeholder="La Conciergerie de Charles" required>
+            <input type="text" id="company" name="company" placeholder="Ma Conciergerie" required>
           </div>
         </div>
 
@@ -78,10 +78,15 @@
           </div>
         </div>
 
-        <label class="checkbox-label" style="margin-top: 4px;">
+        <label class="checkbox-label" style="margin-top: 6px;">
           <input type="checkbox" id="terms" required>
-          <span>J’accepte les conditions générales d’utilisation.</span>
+          <span>J'accepte les conditions générales d'utilisation.</span>
         </label>
+
+        <div class="trial-notice">
+          <i class="fas fa-gift"></i>
+          <span><strong>14 jours d'essai gratuit</strong> – Sans engagement, sans carte bancaire</span>
+        </div>
 
         <button type="submit" class="btn btn-primary auth-submit">
           Créer mon compte
@@ -95,6 +100,10 @@
     </div>
 
     <div class="auth-side">
+      <div class="auth-side-badge">
+        <i class="fas fa-rocket"></i>
+        Démarrez en moins de 2 minutes
+      </div>
       <h2>Prêt à centraliser vos réservations ?</h2>
       <p>
         En quelques minutes, créez votre espace, ajoutez vos logements et
@@ -103,8 +112,13 @@
       <ul>
         <li><i class="fas fa-check"></i> Multi-logements & multi-plateformes</li>
         <li><i class="fas fa-check"></i> Synchronisation iCal automatique</li>
-        <li><i class="fas fa-check"></i> Vue d’ensemble claire des séjours</li>
+        <li><i class="fas fa-check"></i> Vue d'ensemble claire des séjours</li>
+        <li><i class="fas fa-check"></i> Gestion des cautions via Stripe</li>
       </ul>
+      <div class="auth-side-footnote">
+        <i class="fas fa-shield-alt"></i>
+        Paiement sécurisé • Annulation à tout moment
+      </div>
     </div>
   </div>
 
@@ -129,12 +143,17 @@
       const terms = document.getElementById('terms').checked;
 
       if (!terms) {
-        alert("Vous devez accepter les conditions générales d’utilisation.");
+        alert("Vous devez accepter les conditions générales d'utilisation.");
         return;
       }
 
       if (password !== confirm) {
         alert("Les mots de passe ne correspondent pas.");
+        return;
+      }
+
+      if (password.length < 6) {
+        alert("Le mot de passe doit contenir au moins 6 caractères.");
         return;
       }
 
@@ -156,8 +175,8 @@
         localStorage.setItem('lcc_token', data.token);
         localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
-        // Redirection vers le dashboard
-        window.location.href = '/app.html';
+        // Redirection vers la page de choix d'abonnement
+        window.location.href = '/pricing.html';
       } catch (err) {
         console.error(err);
         alert("Erreur réseau lors de la création du compte.");
@@ -166,8 +185,6 @@
   </script>
 
   <style>
-    /* mêmes styles de base que login.html */
-
     .auth-body {
       min-height: 100vh;
       display: flex;
@@ -175,75 +192,87 @@
       justify-content: center;
       background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 16px;
     }
 
     .auth-container {
-      max-width: 980px;
+      max-width: 1000px;
       width: 100%;
-      margin: 32px;
       background: var(--bg-primary, #ffffff);
       border-radius: 24px;
-      box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.18));
+      box-shadow: 0 24px 60px rgba(15,23,42,.18);
       display: grid;
       grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
       overflow: hidden;
+      border: 1px solid rgba(226, 232, 240, 0.9);
     }
 
     .auth-card {
-      padding: 32px 32px 28px;
+      padding: 40px 36px 32px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9));
     }
 
     .auth-logo {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 14px;
+      margin-bottom: 20px;
     }
 
     .auth-logo-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-lg);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #fff;
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+      font-size: 20px;
     }
 
     .auth-logo-title {
       font-weight: 700;
-      font-size: 16px;
+      font-size: 18px;
+      letter-spacing: -0.01em;
     }
 
     .auth-logo-subtitle {
       font-size: 12px;
       color: var(--text-tertiary, #6b7280);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .auth-title {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+      color: #020617;
     }
 
     .auth-subtitle {
       font-size: 14px;
       color: var(--text-secondary, #6b7280);
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      line-height: 1.5;
     }
 
     .auth-form {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 18px;
     }
 
     .form-group label {
       font-size: 13px;
       font-weight: 500;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       display: block;
+      color: var(--text-primary);
     }
 
     .input-with-icon {
@@ -254,58 +283,85 @@
 
     .input-with-icon i {
       position: absolute;
-      left: 12px;
+      left: 14px;
       color: var(--text-tertiary, #9ca3af);
-      font-size: 13px;
+      font-size: 14px;
     }
 
     .input-with-icon input {
       width: 100%;
-      padding: 10px 12px 10px 32px;
-      border-radius: 10px;
+      padding: 11px 14px 11px 42px;
+      border-radius: var(--radius-lg);
       border: 1px solid var(--border-color, #e5e7eb);
-      background: var(--bg-secondary, #f9fafb);
+      background: var(--bg-primary, #ffffff);
       font-size: 14px;
-      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .1s ease;
     }
 
     .input-with-icon input:focus {
       outline: none;
-      border-color: var(--primary-color, #059669);
-      box-shadow: 0 0 0 1px var(--primary-color, #05966910);
-      background: #fff;
+      border-color: var(--primary-color, #10B981);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .form-row-two {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
     }
 
     .checkbox-label {
       display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      align-items: flex-start;
+      gap: 7px;
       font-size: 13px;
       color: var(--text-secondary, #6b7280);
       cursor: pointer;
+      line-height: 1.4;
     }
 
     .checkbox-label input {
-      width: 14px;
-      height: 14px;
-      accent-color: var(--primary-color, #059669);
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      accent-color: var(--primary-color, #10B981);
+      flex-shrink: 0;
+    }
+
+    .trial-notice {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.04));
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-top: 4px;
+    }
+
+    .trial-notice i {
+      color: var(--primary-color);
+      font-size: 16px;
     }
 
     .auth-submit {
-      margin-top: 8px;
+      margin-top: 10px;
       width: 100%;
       justify-content: center;
     }
 
     .auth-footer-text {
-      margin-top: 16px;
+      margin-top: 20px;
       font-size: 13px;
       color: var(--text-secondary, #6b7280);
       text-align: center;
     }
 
     .auth-link {
-      color: var(--primary-color, #059669);
+      color: var(--primary-color, #10B981);
       font-weight: 500;
       text-decoration: none;
     }
@@ -315,62 +371,133 @@
     }
 
     .auth-side {
-      padding: 32px 28px;
+      padding: 40px 32px;
       background: radial-gradient(circle at top, #0f172a, #020617);
       color: #e5e7eb;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 16px;
+      gap: 18px;
+      border-left: 1px solid rgba(30, 64, 175, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-side::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 60%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .auth-side > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-side-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius-full);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: #e5e7eb;
+      font-size: 12px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    .auth-side-badge i {
+      font-size: 13px;
+      color: #10B981;
     }
 
     .auth-side h2 {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 700;
       margin-bottom: 4px;
+      letter-spacing: -0.01em;
     }
 
     .auth-side p {
       font-size: 14px;
-      color: #cbd5f5;
+      color: #cbd5e1;
+      line-height: 1.6;
     }
 
     .auth-side ul {
       list-style: none;
       padding: 0;
-      margin: 8px 0 0;
+      margin: 10px 0 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      font-size: 13px;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .auth-side li {
+      display: flex;
+      align-items: center;
     }
 
     .auth-side li i {
-      margin-right: 8px;
-      color: #22c55e;
+      margin-right: 10px;
+      color: #10B981;
+      font-size: 14px;
     }
 
-    .form-row-two {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+    .auth-side-footnote {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 7px;
     }
 
-    @media (max-width: 900px) {
+    .auth-side-footnote i {
+      font-size: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
       .auth-container {
         grid-template-columns: minmax(0, 1fr);
+        margin: 20px;
       }
       .auth-side {
         display: none;
       }
       .auth-card {
-        padding: 24px 20px 20px;
+        padding: 32px 28px 28px;
       }
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 640px) {
+      .auth-container {
+        margin: 12px;
+        border-radius: 20px;
+      }
+      .auth-card {
+        padding: 28px 20px 24px;
+      }
+      .auth-title {
+        font-size: 22px;
+      }
+      .auth-logo {
+        gap: 12px;
+      }
+      .auth-logo-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
       .form-row-two {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: 1fr;
       }
     }
   </style>
