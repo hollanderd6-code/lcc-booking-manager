@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Livret d'accueil – LCC Booking Manager</title>
+  <title>Livret d'accueil – BookingManag</title>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,17 +14,29 @@
   <!-- Platform CSS -->
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body data-page="welcome">
+  <!-- MOBILE HEADER -->
+  <div class="mobile-header">
+    <a href="/app.html" class="mobile-logo">
+      <i class="fas fa-calendar-check"></i>
+      <span class="mobile-logo-text">BookingManag</span>
+    </a>
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <div class="app-container">
     
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="/" class="sidebar-logo">
-          <i class="fas fa-home"></i>
+          <i class="fas fa-calendar-check"></i>
           <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">LCC Booking</span>
-            <span class="sidebar-logo-subtitle">La Conciergerie de Charles</span>
+            <span class="sidebar-logo-title">BookingManag</span>
+            <span class="sidebar-logo-subtitle">Property Manager</span>
           </div>
         </a>
       </div>
@@ -34,7 +46,7 @@
         <div class="nav-section">
           <div class="nav-section-title">Principal</div>
 
-          <a href="/app.html" class="nav-item">
+          <a href="/app.html" class="nav-item" data-page="app">
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
@@ -45,7 +57,7 @@
             <span class="nav-badge" id="navTotalReservations">0</span>
           </a>
 
-          <a href="/messages.html" class="nav-item">
+          <a href="/messages.html" class="nav-item" data-page="messages">
             <i class="fas fa-comment-dots"></i>
             <span>Messages</span>
           </a>
@@ -90,11 +102,11 @@
         <!-- PARAMÈTRES -->
         <div class="nav-section">
           <div class="nav-section-title">Paramètres</div>
-          <a href="/settings-account.html" class="nav-item">
+          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>
           </a>
-          <a href="/help.html" class="nav-item">
+          <a href="/help.html" class="nav-item" data-page="help">
             <i class="fas fa-question-circle"></i>
             <span>Aide</span>
           </a>
@@ -108,10 +120,7 @@
             <div class="user-name" id="sidebarUserName">Utilisateur</div>
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
-          <button class="btn btn-ghost" id="logoutBtn" style="padding: 4px 10px; font-size: 12px; margin-left: auto;">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>Quitter</span>
-          </button>
+          <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
     </aside>
@@ -555,6 +564,84 @@
       document.getElementById('saveBtn').addEventListener('click', saveWelcomeData);
 
       loadWelcomeData();
+    })();
+  </script>
+
+  <!-- MOBILE MENU SCRIPT -->
+  <script>
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+        
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+        
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+    
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector(\`.nav-item[data-page="\${currentPage}"]\`);
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+    
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
+    });
+    
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
     })();
   </script>
 </body>
