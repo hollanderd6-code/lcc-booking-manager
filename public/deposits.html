@@ -10,7 +10,7 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- CSS plateforme -->
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 
   <style>
     html, body {
@@ -114,6 +114,13 @@
       color: var(--text-secondary);
     }
 
+    .link-cell {
+      max-width: 260px;
+      word-break: break-all;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
     /* Modal */
     .modal {
       display: none;
@@ -172,7 +179,8 @@
     .form-row label {
       font-weight: 500;
     }
-    .form-row input {
+    .form-row input,
+    .form-row select {
       padding: 6px 8px;
       border-radius: 8px;
       border: 1px solid var(--border-color-subtle);
@@ -184,20 +192,270 @@
       font-size: 11px;
       color: var(--text-secondary);
     }
-    .link-cell {
-      max-width: 260px;
-      word-break: break-all;
-      font-size: 11px;
+
+    .text-secondary {
       color: var(--text-secondary);
+    }
+
+    /* ========== SIDEBAR ULTRA MODERNE (comme app.html) ========== */
+
+    .sidebar {
+      background: radial-gradient(circle at top, #020617, #020617);
+      border-right: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 18px 0 60px rgba(15, 23, 42, 0.7);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-header {
+      padding: 4px 4px 10px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0f172a, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.8);
+    }
+
+    .sidebar-logo i {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+      color: #ecfdf5;
+      font-size: 16px;
+    }
+
+    .sidebar-logo-title {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      color: #e5e7eb;
+    }
+
+    .sidebar-logo-subtitle {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .nav-section {
+      margin-top: 8px;
+    }
+
+    .nav-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #6b7280;
+      margin: 10px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #9ca3af;
+      font-size: 13px;
+      text-decoration: none;
+      position: relative;
+      transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .nav-item i {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .nav-item:hover {
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #ecfdf5;
+      box-shadow: 0 16px 40px rgba(34, 197, 94, 0.45);
+    }
+
+    .nav-item.active i {
+      color: #ecfdf5;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px;
+      border-radius: 16px;
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #ecfdf5;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .user-email {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    #logoutBtn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    #logoutBtn:hover {
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    /* ========== HEADER DASHBOARD MODERNE (comme app.html) ========== */
+
+    .main-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      border-radius: 20px;
+      background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.98),
+        rgba(15, 23, 42, 0.92)
+      );
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.7);
+    }
+
+    [data-theme="light"] .main-header {
+      background: linear-gradient(135deg, #f9fafb, #eff6ff);
+      border-color: rgba(148, 163, 184, 0.4);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .header-left {
+      max-width: 60%;
+    }
+
+    .page-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #9ca3af;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .page-subtitle {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    [data-theme="light"] .page-subtitle {
+      color: #6b7280;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-ghost {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: transparent;
+      padding-inline: 14px;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15, 23, 42, 0.06);
+    }
+
+    [data-theme="dark"] .btn-ghost:hover {
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .hide-on-mobile {
+      display: inline-flex;
+    }
+
+    @media (max-width: 768px) {
+      .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-left {
+        max-width: 100%;
+      }
+      .hide-on-mobile {
+        display: none;
+      }
     }
   </style>
 
-  <!-- Script auth + user + logout (copié du dashboard) -->
+  <!-- Script auth + user + logout -->
   <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
-        window.location.href = 'login.html';
+        window.location.href = '/login.html';
         return;
       }
 
@@ -237,7 +495,7 @@
           logoutBtn.addEventListener('click', function () {
             localStorage.removeItem('lcc_token');
             localStorage.removeItem('lcc_user');
-            window.location.href = 'login.html';
+            window.location.href = '/login.html';
           });
         }
       });
@@ -250,7 +508,7 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <a href="index.html" class="sidebar-logo">
+        <a href="/" class="sidebar-logo">
           <i class="fas fa-home"></i>
           <div class="sidebar-logo-text">
             <span class="sidebar-logo-title">LCC Booking</span>
@@ -260,26 +518,28 @@
       </div>
 
       <nav class="sidebar-nav">
+        <!-- Principal -->
         <div class="nav-section">
           <div class="nav-section-title">Principal</div>
 
-          <a href="app.html" class="nav-item">
+          <a href="/app.html" class="nav-item">
             <i class="fas fa-th-large"></i>
             <span>Dashboard</span>
           </a>
 
-          <a href="app.html#calendarSection" class="nav-item">
+          <a href="/app.html#calendarSection" class="nav-item">
             <i class="fas fa-calendar"></i>
             <span>Calendrier</span>
             <span class="nav-badge" id="navTotalReservations">0</span>
           </a>
 
-          <a href="messages.html" class="nav-item">
+          <a href="/messages.html" class="nav-item">
             <i class="fas fa-comment-dots"></i>
             <span>Messages</span>
           </a>
         </div>
 
+        <!-- Gestion -->
         <div class="nav-section">
           <div class="nav-section-title">Gestion</div>
 
@@ -315,13 +575,14 @@
           </a>
         </div>
 
+        <!-- Paramètres -->
         <div class="nav-section">
           <div class="nav-section-title">Paramètres</div>
-          <a href="settings-account.html" class="nav-item">
+          <a href="/settings-account.html" class="nav-item">
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>
           </a>
-          <a href="help.html" class="nav-item">
+          <a href="/help.html" class="nav-item">
             <i class="fas fa-question-circle"></i>
             <span>Aide</span>
           </a>
@@ -356,7 +617,7 @@
         </div>
 
         <div class="header-actions">
-          <button class="btn btn-ghost hide-on-mobile" onclick="window.location.href='app.html'">
+          <button class="btn btn-ghost hide-on-mobile" onclick="window.location.href='/app.html'">
             <i class="fas fa-th-large"></i>
             Retour au dashboard
           </button>
@@ -379,12 +640,13 @@
           <p class="card-subtitle">
             Pour chaque réservation, vous pouvez créer un lien Stripe de caution avec un montant libre.
           </p>
-  <div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
-    <label for="propertyFilter" style="font-size:13px; font-weight:500;">Logement :</label>
-    <select id="propertyFilter" style="padding:6px 8px; border-radius:8px; border:1px solid var(--border-color-subtle); font-size:13px;">
-      <option value="">Tous les logements</option>
-    </select>
-  </div>
+
+          <div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
+            <label for="propertyFilter" style="font-size:13px; font-weight:500;">Logement :</label>
+            <select id="propertyFilter">
+              <option value="">Tous les logements</option>
+            </select>
+          </div>
 
           <div id="depositsContainer">
             <p class="empty-state">Chargement des réservations…</p>
@@ -425,15 +687,10 @@
   </div>
 
   <script>
-        const API_BASE = '/api';
-
-    let currentReservationForDeposit = null;
-    let allReservationsWithDeposits = []; // 👈 liste complète
-
-    // config API : adapte l’URL de base si besoin
     const API_BASE = '/api';
 
     let currentReservationForDeposit = null;
+    let allReservationsWithDeposits = [];
 
     function openDepositModal(reservation) {
       currentReservationForDeposit = reservation;
@@ -443,10 +700,23 @@
         `${reservation.propertyName || 'Logement'} – ${reservation.startDate} → ${reservation.endDate}`;
       document.getElementById('depositModal').classList.add('active');
     }
+
     function closeDepositModal() {
       document.getElementById('depositModal').classList.remove('active');
       currentReservationForDeposit = null;
     }
+
+    function copyText(encoded) {
+      const text = decodeURIComponent(encoded);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => alert('Lien copié dans le presse-papiers.'))
+          .catch(() => alert('Impossible de copier automatiquement, copiez-le manuellement.'));
+      } else {
+        alert('Votre navigateur ne supporte pas la copie automatique, copiez le lien manuellement.');
+      }
+    }
+
     async function loadPropertiesForFilter() {
       const select = document.getElementById('propertyFilter');
       if (!select) return;
@@ -473,7 +743,7 @@
       }
     }
 
-            async function loadReservationsWithDeposits() {
+    async function loadReservationsWithDeposits() {
       const container = document.getElementById('depositsContainer');
       container.innerHTML = '<p class="empty-state">Chargement des réservations…</p>';
 
@@ -484,7 +754,7 @@
           }
         });
         if (!res.ok) throw new Error('Erreur API');
-        const data = await res.json(); // [{ reservationUid, propertyId, propertyName, startDate, endDate, guestName, deposit }]
+        const data = await res.json();
         allReservationsWithDeposits = Array.isArray(data) ? data : [];
         renderDepositsTable();
       } catch (e) {
@@ -507,15 +777,21 @@
         return;
       }
 
-      let html = '<table><thead><tr>' +
-        '<th>Logement</th>' +
-        '<th>Dates</th>' +
-        '<th>Voyageur</th>' +
-        '<th>Caution</th>' +
-        '<th>Statut</th>' +
-        '<th>Lien</th>' +
-        '<th>Actions</th>' +
-        '</tr></thead><tbody>';
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Logement</th>
+              <th>Dates</th>
+              <th>Voyageur</th>
+              <th>Caution</th>
+              <th>Statut</th>
+              <th>Lien</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
 
       data.forEach(r => {
         const d = r.deposit || null;
@@ -538,13 +814,15 @@
           }
 
           if (d.checkoutUrl) {
+            const encodedUrl = encodeURIComponent(d.checkoutUrl);
             linkHtml = `
               <div class="link-cell">
                 ${d.checkoutUrl}
-                <button class="btn btn-ghost btn-xs" onclick="copyText('${encodeURIComponent(d.checkoutUrl)}')">
+                <button class="btn btn-ghost btn-xs" onclick="copyText('${encodedUrl}')">
                   Copier
                 </button>
-              </div>`;
+              </div>
+            `;
           }
         }
 
@@ -571,8 +849,6 @@
       container.innerHTML = html;
     }
 
-
-
     async function createDeposit() {
       const errorEl = document.getElementById('depositError');
       errorEl.textContent = '';
@@ -591,10 +867,10 @@
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
           },
-         body: JSON.stringify({
-  reservationUid: currentReservationForDeposit.reservationUid,
-  amount: amountValue
-})
+          body: JSON.stringify({
+            reservationUid: currentReservationForDeposit.reservationUid,
+            amount: amountValue
+          })
         });
 
         const data = await res.json();
@@ -603,12 +879,11 @@
         }
 
         closeDepositModal();
-await loadReservationsWithDeposits();
+        await loadReservationsWithDeposits();
 
-if (data.checkoutUrl) {
-  const r = currentReservationForDeposit;
-
-  const message = `
+        if (data.checkoutUrl) {
+          const r = currentReservationForDeposit;
+          const message = `
 Bonjour ${r.guestName || ''},
 
 Votre séjour au logement "${r.propertyName || 'le logement'}"
@@ -618,35 +893,33 @@ Voici le lien sécurisé pour procéder au paiement :
 ${data.checkoutUrl}
 
 Merci, et à très bientôt !
-`.trim();
+          `.trim();
 
-  try {
-    await navigator.clipboard.writeText(message);
-    alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, WhatsApp, email…");
-  } catch {
-    alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
-  }
-}
-
+          try {
+            await navigator.clipboard.writeText(message);
+            alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, WhatsApp, email…");
+          } catch {
+            alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
+      }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('refreshBtn').addEventListener('click', loadReservationsWithDeposits);
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadReservationsWithDeposits);
+      }
 
       document.getElementById('depositModalClose').addEventListener('click', closeDepositModal);
       document.getElementById('depositCancelBtn').addEventListener('click', closeDepositModal);
       document.getElementById('depositCreateBtn').addEventListener('click', createDeposit);
 
       loadReservationsWithDeposits();
-      loadPropertiesForFilter();  
-
-      // Active auto dans la sidebar
-      const path = window.location.pathname.split('/').pop() || 'index.html';
-      document.querySelectorAll('.sidebar-nav .nav-item').forEach(link => {
-        const href = (link.getAttribute('href') || '').split('#')[0];
-        if (href === path) {
-          link.classList.add('active');
-        }
-      });
+      loadPropertiesForFilter();
     });
   </script>
 </body>
