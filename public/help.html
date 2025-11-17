@@ -1,20 +1,324 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Livret d'accueil – BookingManag</title>
-
+  <title>BookingManag – Aide</title>
+  
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- Platform CSS -->
+  
+  <!-- CSS plateforme -->
   <link rel="stylesheet" href="/css/style.css">
+
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .app-container {
+      margin-top: 0 !important;
+    }
+
+    .main-content {
+      margin-top: 0 !important;
+      padding-top: 24px !important;
+    }
+
+    .page-content {
+      margin-top: 0 !important;
+      max-width: 960px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* ====== SIDEBAR ULTRA MODERNE (comme app.html) ====== */
+
+    .sidebar {
+      background: radial-gradient(circle at top, #020617, #020617);
+      border-right: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 18px 0 60px rgba(15, 23, 42, 0.7);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-header {
+      padding: 4px 4px 10px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0f172a, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.8);
+    }
+
+    .sidebar-logo i {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+      color: #ecfdf5;
+      font-size: 16px;
+    }
+
+    .sidebar-logo-title {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      color: #e5e7eb;
+    }
+
+    .sidebar-logo-subtitle {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .nav-section {
+      margin-top: 8px;
+    }
+
+    .nav-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #6b7280;
+      margin: 10px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #9ca3af;
+      font-size: 13px;
+      text-decoration: none;
+      position: relative;
+      transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .nav-item i {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .nav-item:hover {
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #ecfdf5;
+      box-shadow: 0 16px 40px rgba(34, 197, 94, 0.45);
+    }
+
+    .nav-item.active i {
+      color: #ecfdf5;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px;
+      border-radius: 16px;
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #ecfdf5;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .user-email {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    #logoutBtn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    #logoutBtn:hover {
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    /* ====== HEADER MODERNE ====== */
+
+    .main-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      border-radius: 20px;
+      background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.98),
+        rgba(15, 23, 42, 0.92)
+      );
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.7);
+    }
+
+    [data-theme="light"] .main-header {
+      background: linear-gradient(135deg, #f9fafb, #eff6ff);
+      border-color: rgba(148, 163, 184, 0.4);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .header-left {
+      max-width: 70%;
+    }
+
+    .page-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #9ca3af;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .page-subtitle {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    [data-theme="light"] .page-subtitle {
+      color: #6b7280;
+    }
+
+    @media (max-width: 768px) {
+      .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-left {
+        max-width: 100%;
+      }
+    }
+
+    /* ====== FAQ ====== */
+
+    .faq-item {
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: var(--bg-secondary);
+    }
+
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      padding: 0 12px;
+      transition: max-height 0.2s ease, padding 0.2s ease;
+      font-size: 14px;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+      padding: 8px 12px 12px;
+    }
+
+    .faq-toggle-icon {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-left: 8px;
+    }
+
+    #faqSearch {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    .card.mb-lg {
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
-<body data-page="welcome">
+<body data-page="help">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
@@ -42,7 +346,7 @@
       </div>
       
       <nav class="sidebar-nav">
-        <!-- PRINCIPAL -->
+        <!-- Principal -->
         <div class="nav-section">
           <div class="nav-section-title">Principal</div>
 
@@ -63,7 +367,7 @@
           </a>
         </div>
         
-        <!-- GESTION -->
+        <!-- Gestion -->
         <div class="nav-section">
           <div class="nav-section-title">Gestion</div>
 
@@ -71,42 +375,28 @@
             <i class="fas fa-home"></i>
             <span>Mes logements</span>
           </a>
-
-          <a href="/welcome.html" class="nav-item active">
+          <a href="/welcome.html" class="nav-item">
             <i class="fas fa-book-open"></i>
             <span>Livret d'accueil</span>
           </a>
-
-          <a href="/cleaning.html" class="nav-item">
-            <i class="fas fa-broom"></i>
-            <span>Gestion du ménage</span>
-            <span class="nav-badge">Nouveau</span>
-          </a>
-
           <a href="/statistics.html" class="nav-item">
             <i class="fas fa-chart-bar"></i>
             <span>Statistiques</span>
           </a>
-
-          <a href="/deposits.html" class="nav-item">
-            <i class="fas fa-shield-alt"></i>
-            <span>Cautions</span>
-          </a>
-
           <a href="/notifications.html" class="nav-item">
             <i class="fas fa-bell"></i>
             <span>Notifications</span>
           </a>
         </div>
-        
-        <!-- PARAMÈTRES -->
+
+        <!-- Paramètres -->
         <div class="nav-section">
           <div class="nav-section-title">Paramètres</div>
           <a href="/settings-account.html" class="nav-item" data-page="settings-account">
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>
           </a>
-          <a href="/help.html" class="nav-item" data-page="help">
+          <a href="/help.html" class="nav-item active">
             <i class="fas fa-question-circle"></i>
             <span>Aide</span>
           </a>
@@ -120,6 +410,7 @@
             <div class="user-name" id="sidebarUserName">Utilisateur</div>
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
+
           <button class="btn btn-ghost btn-xs" id="logoutBtn" style="padding: 6px 10px; margin-left: auto;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
@@ -127,157 +418,142 @@
     
     <!-- Main Content -->
     <main class="main-content">
+      
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
-          <div class="page-kicker">Livret d'accueil</div>
-          <h1 class="page-title">Préparez votre livret d'accueil</h1>
+          <div class="page-kicker">Support</div>
+          <h1 class="page-title">Centre d’aide</h1>
           <p class="page-subtitle">
-            Renseignez toutes les informations utiles pour vos voyageurs. Nous utiliserons ces données pour générer un livret d'accueil prêt à l'emploi.
+            Retrouvez les réponses aux questions fréquentes et comment contacter le support.
           </p>
-        </div>
-        
-        <div class="header-actions">
-          <button class="btn btn-ghost" id="saveBtn">
-            <i class="fas fa-save"></i>
-            Enregistrer
-          </button>
         </div>
       </header>
       
       <!-- Page Content -->
       <div class="page-content">
         
-        <!-- Infos logement -->
-        <div class="card mb-lg">
+        <!-- Bloc FAQ -->
+        <section class="card mb-lg">
           <div class="card-header">
             <div class="card-title">
-              <i class="fas fa-house-user"></i>
-              Informations du logement
+              <i class="fas fa-circle-question"></i>
+              Questions fréquentes
             </div>
           </div>
           <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="propertyName">Nom du logement</label>
-                <input type="text" id="propertyName" class="input" placeholder="Ex : Villa Deuil, Studio Montmorency">
-              </div>
-              <div class="form-group">
-                <label for="address">Adresse complète</label>
-                <textarea id="address" class="textarea" rows="2" placeholder="Adresse, code postal, ville"></textarea>
+            <div class="form-row" style="margin-bottom: 16px;">
+              <input
+                type="text"
+                id="faqSearch"
+                placeholder="Rechercher une question..."
+              >
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>📅 Comment synchroniser mes calendriers iCal ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Allez dans <strong>Mes logements &gt; Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal
+                  fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de
+                  <strong>synchronisation</strong> dans le Dashboard.
+                </p>
               </div>
             </div>
 
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="accessCode">Code boîte à clés / digicode</label>
-                <input type="text" id="accessCode" class="input" placeholder="Ex : 2580A">
-              </div>
-              <div class="form-group">
-                <label for="accessInstructions">Instructions d'accès</label>
-                <textarea id="accessInstructions" class="textarea" rows="3" placeholder="Étapes pour trouver la boîte à clés, étage, porte, etc."></textarea>
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>➕ Comment ajouter une réservation manuelle ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations
+                  du séjour (logement, dates, nom du client) puis enregistrez. La réservation apparaîtra dans le calendrier.
+                </p>
               </div>
             </div>
 
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="emergencyPhone">Téléphone d'urgence (conciergerie)</label>
-                <input type="text" id="emergencyPhone" class="input" placeholder="Ex : +33 6 12 34 56 78">
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>🔔 Comment fonctionnent les notifications ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez accéder au détail
+                  depuis le panneau Notifications et ajuster vos préférences dans la page <strong>Paramètres</strong>.
+                </p>
               </div>
-              <div class="form-group">
-                <label for="generalNotes">Infos importantes / rappel règlement intérieur</label>
-                <textarea id="generalNotes" class="textarea" rows="3" placeholder="Ex : Non-fumeur, pas de soirées, tri des poubelles, etc."></textarea>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>👤 Comment modifier mes informations de compte ?</span>
+                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  Rendez-vous dans la page <strong>Paramètres</strong>, puis mettez à jour votre nom, email ou
+                  nom de conciergerie. Les informations seront prises en compte sur l’ensemble de la plateforme.
+                </p>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Wi-Fi -->
-        <div class="card mb-lg">
+        <!-- Bloc Contact -->
+        <section class="card mb-lg">
           <div class="card-header">
             <div class="card-title">
-              <i class="fas fa-wifi"></i>
-              Wi-Fi
+              <i class="fas fa-envelope"></i>
+              Contacter le support
             </div>
           </div>
           <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="wifiName">Nom du réseau (SSID)</label>
-                <input type="text" id="wifiName" class="input" placeholder="Ex : Livebox-1234">
-              </div>
-              <div class="form-group">
-                <label for="wifiPassword">Mot de passe Wi-Fi</label>
-                <input type="text" id="wifiPassword" class="input" placeholder="Ex : 4FQ9-ABCD-2025">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="wifiNote">Infos complémentaires</label>
-              <textarea id="wifiNote" class="textarea" rows="2" placeholder="Ex : Merci de ne pas modifier le mot de passe, redémarrer la box en cas de souci, etc."></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- Restaurants -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-utensils"></i>
-              Restaurants à proximité
-            </div>
-            <button class="btn btn-ghost" id="addRestaurantBtn">
-              <i class="fas fa-plus"></i>
-              Ajouter un restaurant
-            </button>
-          </div>
-          <div class="card-body" id="restaurantsContainer">
-            <!-- Lignes restaurants générées en JS -->
-          </div>
-        </div>
-
-        <!-- Commerces -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-store"></i>
-              Commerces utiles (boulangerie, supermarché, pharmacie...)
-            </div>
-            <button class="btn btn-ghost" id="addShopBtn">
-              <i class="fas fa-plus"></i>
-              Ajouter un commerce
-            </button>
-          </div>
-          <div class="card-body" id="shopsContainer">
-            <!-- Lignes commerces générées en JS -->
-          </div>
-        </div>
-
-        <!-- Photos -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-image"></i>
-              Photos pour le livret
-            </div>
-          </div>
-          <div class="card-body">
-            <p class="text-muted" style="margin-bottom: 12px;">
-              Ajoutez quelques photos clés (façade, entrée, boîte à clés, salon, plan d'accès…). Elles seront intégrées au livret.
+            <p>
+              Vous ne trouvez pas la réponse à votre question ou vous avez détecté un bug ?
             </p>
-            <div id="photosContainer"></div>
-            <button class="btn btn-ghost" id="addPhotoBtn" style="margin-top: 8px;">
-              <i class="fas fa-plus"></i>
-              Ajouter une photo
-            </button>
+            <p>
+              Vous pouvez envoyer un email à :
+              <a href="/cdn-cgi/l/email-protection#86f5f3f6f6e9f4f2c6eae5e5abe4e9e9edefe8e1a8e0f4"><span class="__cf_email__" data-cfemail="c0b3b5b0b0afb2b480aca3a3eda2afafaba9aea7eea6b2">[email&#160;protected]</span></a>
+            </p>
+            <p style="margin-top: 12px;">
+              Pensez à préciser :
+            </p>
+            <ul>
+              <li>l’adresse email de votre compte,</li>
+              <li>le logement ou la réservation concernée,</li>
+              <li>une capture d’écran si possible.</li>
+            </ul>
           </div>
-        </div>
+        </section>
+
+        <!-- Bloc Ressources -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-book-open"></i>
+              Ressources & guide
+            </div>
+          </div>
+          <div class="card-body">
+            <p>
+              Prochainement : un guide utilisateur détaillé et des vidéos tutoriels pour tirer le maximum
+              de BookingManag.
+            </p>
+          </div>
+        </section>
 
       </div>
     </main>
   </div>
 
-  <!-- Script logique livret -->
-  <script>
+  <!-- Script auth + user + logout -->
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
@@ -285,24 +561,30 @@
         return;
       }
 
-      // Remplir l'info utilisateur dans la sidebar
       const rawUser = localStorage.getItem('lcc_user');
       let user = null;
+
       try {
         user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {}
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
+
       if (user) {
         const nameEl = document.getElementById('sidebarUserName');
         const companyEl = document.getElementById('sidebarUserCompany');
         const avatarEl = document.getElementById('sidebarUserAvatar');
+
         if (nameEl) {
           nameEl.textContent = user.firstName
             ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
             : (user.email || 'Mon compte');
         }
+
         if (companyEl) {
           companyEl.textContent = user.company || 'Mon espace';
         }
+
         if (avatarEl) {
           const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
           avatarEl.textContent = initial.toUpperCase();
@@ -317,332 +599,29 @@
           window.location.href = '/login.html';
         });
       }
-
-      const restaurantsContainer = document.getElementById('restaurantsContainer');
-      const shopsContainer = document.getElementById('shopsContainer');
-      const photosContainer = document.getElementById('photosContainer');
-
-      function createRestaurantRow(data = {}) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-grid restaurant-row';
-        wrapper.style.marginBottom = '12px';
-        wrapper.innerHTML = `
-          <div class="form-group">
-            <label>Nom</label>
-            <input type="text" class="input rest-name" placeholder="Ex : Le Bistrot du Coin" value="${data.name || ''}">
-          </div>
-          <div class="form-group">
-            <label>Type</label>
-            <input type="text" class="input rest-type" placeholder="Ex : Bistrot, Pizzeria..." value="${data.type || ''}">
-          </div>
-          <div class="form-group">
-            <label>Adresse / distance</label>
-            <input type="text" class="input rest-address" placeholder="Ex : 5 min à pied, 12 rue de Paris" value="${data.address || ''}">
-          </div>
-          <div class="form-group">
-            <label>Infos</label>
-            <div style="display:flex; gap:8px; align-items:flex-start;">
-              <textarea class="textarea rest-notes" rows="2" placeholder="Plat conseillé, jours d'ouverture…">${data.notes || ''}</textarea>
-              <button type="button" class="btn btn-ghost remove-row-btn">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
-          wrapper.remove();
-        });
-        restaurantsContainer.appendChild(wrapper);
-      }
-
-      function createShopRow(data = {}) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-grid shop-row';
-        wrapper.style.marginBottom = '12px';
-        wrapper.innerHTML = `
-          <div class="form-group">
-            <label>Nom</label>
-            <input type="text" class="input shop-name" placeholder="Ex : Boulangerie du Marché" value="${data.name || ''}">
-          </div>
-          <div class="form-group">
-            <label>Type</label>
-            <input type="text" class="input shop-type" placeholder="Ex : Boulangerie, Supermarché..." value="${data.type || ''}">
-          </div>
-          <div class="form-group">
-            <label>Adresse / distance</label>
-            <input type="text" class="input shop-address" placeholder="Ex : 3 min à pied, 8 avenue Victor Hugo" value="${data.address || ''}">
-          </div>
-          <div class="form-group">
-            <label>Infos</label>
-            <div style="display:flex; gap:8px; align-items:flex-start;">
-              <textarea class="textarea shop-notes" rows="2" placeholder="Horaires, particularités…">${data.notes || ''}</textarea>
-              <button type="button" class="btn btn-ghost remove-row-btn">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
-          wrapper.remove();
-        });
-        shopsContainer.appendChild(wrapper);
-      }
-
-      let photosState = [];
-
-      function renderPhotos() {
-        photosContainer.innerHTML = '';
-        photosState.forEach((photo, index) => {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'photo-row';
-          wrapper.style.marginBottom = '10px';
-          wrapper.innerHTML = `
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Légende de la photo</label>
-                <input type="text" class="input photo-label" data-index="${index}" placeholder="Ex : Façade, Boîte à clés, Salon" value="${photo.label || ''}">
-              </div>
-              <div class="form-group">
-                <label>Fichier</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="file" class="photo-file-input" data-index="${index}" accept="image/*">
-                  <button type="button" class="btn btn-ghost remove-photo-btn" data-index="${index}">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-                ${photo.dataUrl ? `<div style="margin-top:6px;"><img src="${photo.dataUrl}" alt="" style="max-width:140px;border-radius:8px;border:1px solid #e5e7eb;"></div>` : ''}
-              </div>
-            </div>
-          `;
-          photosContainer.appendChild(wrapper);
-        });
-
-        photosContainer.querySelectorAll('.photo-label').forEach(input => {
-          input.addEventListener('input', (e) => {
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (!isNaN(idx) && photosState[idx]) {
-              photosState[idx].label = e.target.value;
-            }
-          });
-        });
-
-        photosContainer.querySelectorAll('.photo-file-input').forEach(input => {
-          input.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (file && !isNaN(idx)) {
-              const reader = new FileReader();
-              reader.onload = function (ev) {
-                photosState[idx].dataUrl = ev.target.result;
-                renderPhotos();
-              };
-              reader.readAsDataURL(file);
-            }
-          });
-        });
-
-        photosContainer.querySelectorAll('.remove-photo-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (!isNaN(idx)) {
-              photosState.splice(idx, 1);
-              renderPhotos();
-            }
-          });
-        });
-      }
-
-      document.getElementById('addRestaurantBtn').addEventListener('click', () => {
-        createRestaurantRow();
-      });
-
-      document.getElementById('addShopBtn').addEventListener('click', () => {
-        createShopRow();
-      });
-
-      document.getElementById('addPhotoBtn').addEventListener('click', () => {
-        photosState.push({ id: 'p_' + Date.now(), label: '', dataUrl: '' });
-        renderPhotos();
-      });
-
-      // Charger les données existantes
-      async function loadWelcomeData() {
-        try {
-          const res = await fetch('/api/welcome', {
-            headers: {
-              'Authorization': 'Bearer ' + token
-            }
-          });
-          if (!res.ok) return;
-          const data = await res.json();
-
-          document.getElementById('propertyName').value = data.propertyName || '';
-          document.getElementById('address').value = data.address || '';
-          document.getElementById('accessCode').value = data.accessCode || '';
-          document.getElementById('accessInstructions').value = data.accessInstructions || '';
-          document.getElementById('emergencyPhone').value = data.emergencyPhone || '';
-          document.getElementById('wifiName').value = data.wifiName || '';
-          document.getElementById('wifiPassword').value = data.wifiPassword || '';
-          document.getElementById('wifiNote').value = data.wifiNote || '';
-          document.getElementById('generalNotes').value = data.generalNotes || '';
-
-          restaurantsContainer.innerHTML = '';
-          (data.restaurants || []).forEach(r => createRestaurantRow(r));
-          shopsContainer.innerHTML = '';
-          (data.shops || []).forEach(s => createShopRow(s));
-
-          photosState = Array.isArray(data.photos) ? data.photos : [];
-          renderPhotos();
-        } catch (err) {
-          console.error('Erreur chargement livret', err);
-        }
-      }
-
-      async function saveWelcomeData() {
-        const restaurants = [];
-        document.querySelectorAll('.restaurant-row').forEach(row => {
-          const r = {
-            name: row.querySelector('.rest-name').value.trim(),
-            type: row.querySelector('.rest-type').value.trim(),
-            address: row.querySelector('.rest-address').value.trim(),
-            notes: row.querySelector('.rest-notes').value.trim()
-          };
-          if (r.name || r.address || r.notes) {
-            restaurants.push(r);
-          }
-        });
-
-        const shops = [];
-        document.querySelectorAll('.shop-row').forEach(row => {
-          const s = {
-            name: row.querySelector('.shop-name').value.trim(),
-            type: row.querySelector('.shop-type').value.trim(),
-            address: row.querySelector('.shop-address').value.trim(),
-            notes: row.querySelector('.shop-notes').value.trim()
-          };
-          if (s.name || s.address || s.notes) {
-            shops.push(s);
-          }
-        });
-
-        const payload = {
-          propertyName: document.getElementById('propertyName').value.trim(),
-          address: document.getElementById('address').value.trim(),
-          accessCode: document.getElementById('accessCode').value.trim(),
-          accessInstructions: document.getElementById('accessInstructions').value.trim(),
-          emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
-          wifiName: document.getElementById('wifiName').value.trim(),
-          wifiPassword: document.getElementById('wifiPassword').value.trim(),
-          wifiNote: document.getElementById('wifiNote').value.trim(),
-          generalNotes: document.getElementById('generalNotes').value.trim(),
-          restaurants,
-          shops,
-          photos: photosState
-        };
-
-        try {
-          const res = await fetch('/api/welcome', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            alert(data.error || 'Erreur lors de la sauvegarde du livret');
-            return;
-          }
-          alert('Livret sauvegardé 👍');
-        } catch (err) {
-          console.error('Erreur sauvegarde livret', err);
-          alert('Erreur réseau lors de la sauvegarde');
-        }
-      }
-
-      document.getElementById('saveBtn').addEventListener('click', saveWelcomeData);
-
-      loadWelcomeData();
     })();
   </script>
 
-  <!-- MOBILE MENU SCRIPT -->
+  <!-- Script FAQ (dépliable + recherche) -->
   <script>
-    (function() {
-      const menuBtn = document.getElementById('mobileMenuBtn');
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
-      
-      if (menuBtn && sidebar && overlay) {
-        menuBtn.addEventListener('click', function() {
-          sidebar.classList.toggle('active');
-          overlay.classList.toggle('active');
-          
-          const icon = menuBtn.querySelector('i');
-          if (sidebar.classList.contains('active')) {
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
-          } else {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
+    document.addEventListener('DOMContentLoaded', function () {
+      const faqItems = Array.from(document.querySelectorAll('.faq-item'));
+      const searchInput = document.getElementById('faqSearch');
+
+      // Toggle FAQ
+      faqItems.forEach(item => {
+        const btn = item.querySelector('.faq-question');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          const isOpen = item.classList.contains('open');
+          faqItems.forEach(i => i.classList.remove('open'));
+          if (!isOpen) {
+            item.classList.add('open');
           }
         });
-        
-        overlay.addEventListener('click', function() {
-          sidebar.classList.remove('active');
-          overlay.classList.remove('active');
-          const icon = menuBtn.querySelector('i');
-          icon.classList.remove('fa-times');
-          icon.classList.add('fa-bars');
-        });
-        
-        if (window.innerWidth <= 1024) {
-          document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-              sidebar.classList.remove('active');
-              overlay.classList.remove('active');
-              const icon = menuBtn.querySelector('i');
-              icon.classList.remove('fa-times');
-              icon.classList.add('fa-bars');
-            });
-          });
-        }
-      }
-    })();
-    
-    (function() {
-      const currentPage = document.body.getAttribute('data-page');
-      if (currentPage) {
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.classList.remove('active');
-        });
-        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
-        if (activeLink) {
-          activeLink.classList.add('active');
-        }
-      }
-    })();
-    
-    document.getElementById('logoutBtn')?.addEventListener('click', function() {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
-    });
-    
-    (function() {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) {
-        const companyEl = document.getElementById('sidebarUserCompany');
-        if (companyEl) companyEl.textContent = user.company;
-      }
-    })();
-  </script>
-</body>
-</html>
+      });
+
+      // Recherche
+      if (searchInput) {
+        searchInput.addEventListener('input', function () {
+          const q = searchInput.value.
