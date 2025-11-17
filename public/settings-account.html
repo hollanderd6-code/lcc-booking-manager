@@ -825,7 +825,7 @@
         document.querySelectorAll('.nav-item').forEach(item => {
           item.classList.remove('active');
         });
-        const activeLink = document.querySelector(\`.nav-item[data-page="\${currentPage}"]\`);
+        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
         if (activeLink) {
           activeLink.classList.add('active');
         }
