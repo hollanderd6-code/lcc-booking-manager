@@ -1,5 +1,5 @@
 /* ============================================
-   BOOKINGMANAGE - DESIGN SYSTEM V2.0
+   BOOKINGMANAG - DESIGN SYSTEM V2.0
    Modern, Clean, Professional
    ============================================ */
 
@@ -634,185 +634,104 @@ body {
 }
 
 
-/* =====================================================
-   DASHBOARD SIDEBAR RELOOKÉE (appli complète)
-   ===================================================== */
 
-.app-container .sidebar {
-  background: radial-gradient(circle at top, #020617, #020617);
-  border-right: 1px solid rgba(148, 163, 184, 0.45);
-  box-shadow: 18px 0 60px rgba(15, 23, 42, 0.7);
-  padding: 18px 16px;
-  display: flex;
-  flex-direction: column;
+/* DASHBOARD - ÉTAT DES CONNEXIONS */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
+  margin-bottom: 24px;
 }
 
-/* Logo dans la sidebar */
-.app-container .sidebar-header {
-  padding: 4px 4px 10px;
+.status-card {
+  background: var(--bg-primary);
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
 }
 
-.app-container .sidebar-logo {
+.status-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #0f172a, #020617);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.8);
+  justify-content: space-between;
+  margin-bottom: 6px;
 }
 
-.app-container .sidebar-logo i {
-  width: 34px;
-  height: 34px;
+.status-card h3 {
+  font-size: 14px;
+  margin-bottom: 2px;
+  color: var(--text-primary);
+}
+
+.status-card p {
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.status-icon {
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
-  color: #ecfdf5;
-  font-size: 16px;
-}
-
-.app-container .sidebar-logo-title {
-  font-weight: 700;
   font-size: 15px;
-  letter-spacing: 0.02em;
-  color: #e5e7eb;
 }
 
-.app-container .sidebar-logo-subtitle {
-  font-size: 12px;
-  color: #9ca3af;
+.status-icon-airbnb {
+  background: radial-gradient(circle at 30% 0%, #FF385C, #BE123C);
+  color: #fff;
 }
 
-/* Sections du menu */
-.app-container .nav-section {
-  margin-top: 8px;
+.status-icon-booking {
+  background: radial-gradient(circle at 30% 0%, #2563EB, #1D4ED8);
+  color: #E0F2FE;
 }
 
-.app-container .nav-section-title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: #6b7280;
-  margin: 10px 10px 6px;
+.status-icon-stripe {
+  background: radial-gradient(circle at 30% 0%, #6366F1, #4F46E5);
+  color: #EEF2FF;
 }
 
-/* Liens du menu */
-.app-container .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  color: #9ca3af;
-  font-size: 13px;
-  text-decoration: none;
-  position: relative;
-  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+.status-icon-ai {
+  background: radial-gradient(circle at 30% 0%, #22C55E, #16A34A);
+  color: #ECFDF5;
 }
 
-.app-container .nav-item i {
-  font-size: 14px;
-  width: 18px;
-  text-align: center;
-}
-
-.app-container .nav-item:hover {
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5e7eb;
-  transform: translateX(2px);
-}
-
-.app-container .nav-item:hover i {
-  color: #e5e7eb;
-}
-
-.app-container .nav-item.active {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #ecfdf5;
-  box-shadow: 0 16px 40px rgba(34, 197, 94, 0.45);
-}
-
-.app-container .nav-item.active i {
-  color: #ecfdf5;
-}
-
-/* Badge dans le menu */
-.app-container .nav-badge {
-  margin-left: auto;
+.status-label {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.85);
-  color: #e5e7eb;
   border: 1px solid rgba(148, 163, 184, 0.6);
 }
 
-/* Footer de la sidebar */
-.app-container .sidebar-footer {
-  margin-top: auto;
-  padding-top: 8px;
-  border-top: 1px solid rgba(31, 41, 55, 0.9);
+.status-ok {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
 }
 
-/* Profil utilisateur */
-.app-container .user-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 8px;
-  border-radius: 16px;
-  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
-  border: 1px solid rgba(148, 163, 184, 0.35);
+.status-warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #fbbf24;
 }
 
-.app-container .user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  color: #ecfdf5;
-}
-
-.app-container .user-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e5e7eb;
-}
-
-.app-container .user-email {
+.btn-xs {
+  padding: 4px 10px;
   font-size: 11px;
-  color: #9ca3af;
 }
 
-.app-container #logoutBtn {
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(15, 23, 42, 0.9);
-}
 
-.app-container #logoutBtn:hover {
-  background: rgba(15, 23, 42, 0.98);
-}
+
 /* DASHBOARD - ONBOARDING */
-
 .onboarding-section {
   margin-bottom: 24px;
-  background: rgba(15, 23, 42, 0.96);
+  background: var(--bg-primary);
   border-radius: 20px;
   padding: 16px 16px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.92);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
 }
 
 .onboarding-header {
@@ -854,16 +773,16 @@ body {
   gap: 10px;
   padding: 9px 10px;
   border-radius: 14px;
-  border: 1px solid rgba(51, 65, 85, 0.85);
-  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.98));
+  border: 1px solid var(--border-color-subtle);
+  background: var(--bg-primary);
   cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  transition: var(--transition-fast);
 }
 
 .onboarding-step:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.9);
-  border-color: rgba(148, 163, 184, 0.7);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 .onboarding-step-icon {
@@ -882,8 +801,8 @@ body {
 }
 
 .onboarding-step-icon.todo {
-  background: rgba(15, 23, 42, 0.9);
-  color: #9ca3af;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
 }
 
 .onboarding-step-content h3 {
@@ -894,6 +813,7 @@ body {
 .onboarding-step-content p {
   font-size: 11px;
   margin: 0;
+  color: var(--text-secondary);
 }
 
 .onboarding-step-status {
@@ -913,72 +833,10 @@ body {
   background: rgba(30, 64, 175, 0.1);
   color: #bfdbfe;
 }
-.deposits-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
-}
 
-.input-inline {
-  max-width: 200px;
-  font-size: 12px;
-  padding: 6px 10px 6px 10px;
-  border-radius: 999px;
-}
 
-.table-wrapper {
-  overflow-x: auto;
-}
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.table th,
-.table td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid rgba(30, 41, 59, 0.9);
-}
-
-.table th {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9ca3af;
-}
-
-.badge-status {
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-}
-
-.badge-pending {
-  background: rgba(234, 179, 8, 0.12);
-  color: #facc15;
-}
-
-.badge-paid {
-  background: rgba(22, 163, 74, 0.15);
-  color: #4ade80;
-}
-
-.badge-refunded {
-  background: rgba(56, 189, 248, 0.16);
-  color: #7dd3fc;
-}
-
-.badge-expired {
-  background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
-}
-/* TOASTS / NOTIFICATIONS */
-
+/* TOASTS / NOTIFICATIONS GLOBAL */
 .toast-container {
   position: fixed;
   bottom: 16px;
@@ -994,9 +852,9 @@ body {
   max-width: 320px;
   padding: 8px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.98);
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-lg);
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -1010,13 +868,13 @@ body {
 
 .toast-message {
   flex: 1;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .toast-close {
   border: none;
   background: transparent;
-  color: #9ca3af;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
 }
@@ -1032,4 +890,3 @@ body {
 .toast-error .toast-icon {
   color: #f97373;
 }
-
