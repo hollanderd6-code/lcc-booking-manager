@@ -871,6 +871,7 @@
         return list;
       }
 
+
       function renderPlanning(dateStr) {
         if (!planningContainer) return;
 
@@ -889,7 +890,28 @@
           return;
         }
 
+        // On enrichit chaque tâche avec un statut initial "pending"
+        const enriched = tasks.map(t => Object.assign({ status: 'pending' }, t));
+
+        // Sauvegarde dans le localStorage pour l'historique
+        try {
+          const key = 'LCC_CLEANING_PLANS';
+          let all = {};
+          const raw = localStorage.getItem(key);
+          if (raw) all = JSON.parse(raw);
+          all[dateStr] = enriched;
+          localStorage.setItem(key, JSON.stringify(all));
+        } catch (e) {
+          console.warn('Impossible de sauvegarder le planning ménage', e);
+        }
+
         let html = `
+          <div class="planning-actions">
+            <button type="button" class="btn btn-ghost btn-xs" id="exportPlanningPdfBtn">
+              <i class="fas fa-file-pdf"></i>
+              Exporter en PDF
+            </button>
+          </div>
           <table class="planning-table">
             <thead>
               <tr>
@@ -897,12 +919,13 @@
                 <th>Type d’intervention</th>
                 <th>Personne recommandée</th>
                 <th>Détails</th>
+                <th>Statut</th>
               </tr>
             </thead>
             <tbody>
         `;
 
-        tasks.forEach(t => {
+        enriched.forEach((t, index) => {
           const cleanerLabel = t.cleaner
             ? `<span class="badge-cleaner"><i class="fas fa-user"></i>${t.cleaner.name}</span>`
             : `<span class="planning-tag"><i class="fas fa-exclamation-triangle"></i>Personne non assignée</span>`;
@@ -911,7 +934,7 @@
           const stayInfo = `${t.reservation.start?.slice(0,10)} → ${t.reservation.end?.slice(0,10)}`;
 
           html += `
-            <tr>
+            <tr data-idx="${index}">
               <td>
                 ${t.propertyName}
                 <span class="badge-type">${t.type === 'departure' ? 'Après départ' : 'Avant arrivée'}</span>
@@ -923,22 +946,76 @@
                 ${guest ? `<div style="font-size:12px; color:var(--text-secondary);">Voyageur : ${guest}</div>` : ''}
                 <div style="font-size:12px; color:var(--text-tertiary);">Séjour : ${stayInfo}</div>
               </td>
+              <td>
+                <button type="button" class="status-pill status-pending">
+                  <span class="status-dot"></span>
+                  À faire
+                </button>
+              </td>
             </tr>
           `;
         });
 
         html += '</tbody></table>';
         planningContainer.innerHTML = html;
+
+        const tableBody = planningContainer.querySelector('tbody');
+        if (tableBody) {
+          tableBody.addEventListener('click', function(e) {
+            const btn = e.target.closest('.status-pill');
+            if (!btn) return;
+            const row = btn.closest('tr[data-idx]');
+            if (!row) return;
+            const idx = parseInt(row.getAttribute('data-idx'), 10);
+            const dot = btn.querySelector('.status-dot');
+
+            // cycle pending -> in-progress -> done
+            if (btn.classList.contains('status-pending')) {
+              btn.classList.remove('status-pending');
+              btn.classList.add('status-inprogress');
+              btn.innerHTML = '<span class="status-dot"></span>En cours';
+            } else if (btn.classList.contains('status-inprogress')) {
+              btn.classList.remove('status-inprogress');
+              btn.classList.add('status-done');
+              btn.innerHTML = '<span class="status-dot"></span>Terminé';
+            } else {
+              btn.classList.remove('status-done');
+              btn.classList.add('status-pending');
+              btn.innerHTML = '<span class="status-dot"></span>À faire';
+            }
+
+            // Sauvegarde du statut dans le localStorage
+            try {
+              const key = 'LCC_CLEANING_PLANS';
+              const raw = localStorage.getItem(key);
+              if (!raw) return;
+              const all = JSON.parse(raw);
+              const dayTasks = all[dateStr] || [];
+              if (dayTasks[idx]) {
+                if (btn.classList.contains('status-pending')) {
+                  dayTasks[idx].status = 'pending';
+                } else if (btn.classList.contains('status-inprogress')) {
+                  dayTasks[idx].status = 'inprogress';
+                } else if (btn.classList.contains('status-done')) {
+                  dayTasks[idx].status = 'done';
+                }
+                all[dateStr] = dayTasks;
+                localStorage.setItem(key, JSON.stringify(all));
+              }
+            } catch (e) {
+              console.warn('Impossible de mettre à jour le statut ménage', e);
+            }
+          });
+        }
+
+        const exportBtn = document.getElementById('exportPlanningPdfBtn');
+        if (exportBtn) {
+          exportBtn.addEventListener('click', function() {
+            window.print();
+          });
+        }
       }
-
-      if (generatePlanningBtn && planningDateInput) {
-        const today = new Date();
-        const isoToday = today.toISOString().slice(0,10);
-        planningDateInput.value = isoToday;
-
-        generatePlanningBtn.addEventListener('click', () => {
-          const dateStr = planningDateInput.value;
-          planningHint.textContent = "Brouillon généré à partir de vos réservations et des assignations ménage.";
+vos réservations et des assignations ménage.";
           renderPlanning(dateStr);
         });
       }
