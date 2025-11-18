@@ -1057,5 +1057,113 @@ Merci, et à très bientôt !
       }
     })();
   </script>
+  <script>
+  const mockDeposits = [
+    {
+      id: 1,
+      guest: "Paul Martin",
+      property: "Loft centre-ville",
+      channel: "airbnb",
+      amount: 400,
+      currency: "€",
+      arrival: "2025-07-12",
+      status: "paid"
+    },
+    {
+      id: 2,
+      guest: "Anna Dupont",
+      property: "Villa piscine",
+      channel: "booking",
+      amount: 800,
+      currency: "€",
+      arrival: "2025-08-03",
+      status: "pending"
+    },
+    {
+      id: 3,
+      guest: "Famille Leroy",
+      property: "Chalet montagne",
+      channel: "direct",
+      amount: 600,
+      currency: "€",
+      arrival: "2025-06-22",
+      status: "refunded"
+    }
+  ];
+
+  function renderDeposits() {
+    const statusFilter = document.getElementById('depositStatusFilter').value;
+    const channelFilter = document.getElementById('depositChannelFilter').value;
+    const tbody = document.getElementById('depositsTableBody');
+    tbody.innerHTML = "";
+
+    const filtered = mockDeposits.filter(d => {
+      const statusOk = statusFilter === 'all' || d.status === statusFilter;
+      const channelOk = channelFilter === 'all' || d.channel === channelFilter;
+      return statusOk && channelOk;
+    });
+
+    filtered.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.guest}</td>
+        <td>${d.property}</td>
+        <td>${formatChannel(d.channel)}</td>
+        <td>${d.amount} ${d.currency}</td>
+        <td>${formatDate(d.arrival)}</td>
+        <td>${renderStatusBadge(d.status)}</td>
+        <td>
+          <button class="btn btn-ghost btn-xs" onclick="showDepositActions(${d.id})">
+            <i class="fas fa-ellipsis-h"></i>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function formatChannel(channel) {
+    if (channel === 'airbnb') return 'Airbnb';
+    if (channel === 'booking') return 'Booking.com';
+    if (channel === 'direct') return 'Direct';
+    return channel;
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    });
+  }
+
+  function renderStatusBadge(status) {
+    const map = {
+      pending: { label: 'En attente', cls: 'badge-pending' },
+      paid: { label: 'Payée', cls: 'badge-paid' },
+      refunded: { label: 'Remboursée', cls: 'badge-refunded' },
+      expired: { label: 'Expirée', cls: 'badge-expired' }
+    };
+    const s = map[status] || { label: status, cls: '' };
+    return `<span class="badge-status ${s.cls}">${s.label}</span>`;
+  }
+
+  function createDepositLink() {
+    showToast('success', "Lien de caution créé (simulation).");
+  }
+
+  function showDepositActions(id) {
+    const deposit = mockDeposits.find(d => d.id === id);
+    if (!deposit) return;
+    showToast('info', `Actions sur la caution de ${deposit.guest} (simulation).`);
+  }
+
+  document.getElementById('depositStatusFilter').addEventListener('change', renderDeposits);
+  document.getElementById('depositChannelFilter').addEventListener('change', renderDeposits);
+
+  document.addEventListener('DOMContentLoaded', renderDeposits);
+</script>
+
 </body>
 </html>
