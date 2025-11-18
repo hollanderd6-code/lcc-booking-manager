@@ -196,7 +196,57 @@
       
       <!-- Page Content -->
       <div class="page-content">
-        
+        <!-- ÉTAT DES CONNEXIONS -->
+<section class="status-grid">
+  <article class="status-card">
+    <div class="status-card-header">
+      <div class="status-icon status-icon-airbnb">
+        <i class="fab fa-airbnb"></i>
+      </div>
+      <span class="status-label status-ok">Connecté</span>
+    </div>
+    <h3>Airbnb</h3>
+    <p>Synchronisation iCal active.</p>
+    <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
+  </article>
+
+  <article class="status-card">
+    <div class="status-card-header">
+      <div class="status-icon status-icon-booking">
+        <i class="fas fa-bed"></i>
+      </div>
+      <span class="status-label status-warning">À connecter</span>
+    </div>
+    <h3>Booking.com</h3>
+    <p>Ajoutez votre lien iCal Booking.com.</p>
+    <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
+  </article>
+
+  <article class="status-card">
+    <div class="status-card-header">
+      <div class="status-icon status-icon-stripe">
+        <i class="fab fa-stripe-s"></i>
+      </div>
+      <span class="status-label status-ok">Connecté</span>
+    </div>
+    <h3>Stripe</h3>
+    <p>Cautions et paiements sécurisés.</p>
+    <button class="btn btn-ghost btn-xs" onclick="openDepositsPage()">Voir les cautions</button>
+  </article>
+
+  <article class="status-card">
+    <div class="status-card-header">
+      <div class="status-icon status-icon-ai">
+        <i class="fas fa-wand-magic-sparkles"></i>
+      </div>
+      <span class="status-label status-ok">Actif</span>
+    </div>
+    <h3>Messages automatiques</h3>
+    <p>Scénarios IA prêts pour vos voyageurs.</p>
+    <button class="btn btn-ghost btn-xs" onclick="goToMessages()">Configurer</button>
+  </article>
+</section>
+
         <!-- Vue d’ensemble arrivées / séjours / départs -->
         <section class="overview-card">
           <div class="overview-header">
