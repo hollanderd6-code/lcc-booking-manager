@@ -913,4 +913,68 @@ body {
   background: rgba(30, 64, 175, 0.1);
   color: #bfdbfe;
 }
+.deposits-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.input-inline {
+  max-width: 200px;
+  font-size: 12px;
+  padding: 6px 10px 6px 10px;
+  border-radius: 999px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.9);
+}
+
+.table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+.badge-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.badge-pending {
+  background: rgba(234, 179, 8, 0.12);
+  color: #facc15;
+}
+
+.badge-paid {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+}
+
+.badge-refunded {
+  background: rgba(56, 189, 248, 0.16);
+  color: #7dd3fc;
+}
+
+.badge-expired {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+}
 
