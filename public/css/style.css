@@ -1132,3 +1132,39 @@ body {
   width: auto;
   display: block;
 }
+
+
+/* LIVRET D'ACCUEIL - APERÇU */
+
+.guide-preview {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-subtle);
+  padding: 16px 18px;
+  background: var(--bg-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.guide-preview h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.guide-preview h3 {
+  font-size: 15px;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+.guide-preview p {
+  margin: 0 0 6px;
+}
+
+.guide-preview .guide-highlight {
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  border: 1px dashed var(--border-color-subtle);
+  margin-bottom: 8px;
+}
