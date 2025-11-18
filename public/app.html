@@ -941,6 +941,94 @@
       font-size: 11px;
       opacity: 0.7;
     }
+    /* DASHBOARD - ÉTAT DES CONNEXIONS */
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.status-card {
+  background: rgba(15, 23, 42, 0.96);
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+}
+
+.status-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.status-card h3 {
+  font-size: 14px;
+  margin-bottom: 2px;
+  color: #e5e7eb;
+}
+
+.status-card p {
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: #9ca3af;
+}
+
+.status-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.status-icon-airbnb {
+  background: radial-gradient(circle at 30% 0%, #FF385C, #BE123C);
+  color: #fff;
+}
+
+.status-icon-booking {
+  background: radial-gradient(circle at 30% 0%, #2563EB, #1D4ED8);
+  color: #E0F2FE;
+}
+
+.status-icon-stripe {
+  background: radial-gradient(circle at 30% 0%, #6366F1, #4F46E5);
+  color: #EEF2FF;
+}
+
+.status-icon-ai {
+  background: radial-gradient(circle at 30% 0%, #22C55E, #16A34A);
+  color: #ECFDF5;
+}
+
+.status-label {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.status-ok {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+}
+
+.status-warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #fbbf24;
+}
+
+/* Boutons XS (si pas déjà définis) */
+.btn-xs {
+  padding: 4px 10px;
+  font-size: 11px;
+}
   </style>
 
   <!-- Script auth + user + logout -->
