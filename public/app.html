@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookingmanage – Dashboard</title>
+  <title>Bookingmanage Manager – Dashboard</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -196,116 +196,118 @@
       
       <!-- Page Content -->
       <div class="page-content">
+        
         <!-- ÉTAT DES CONNEXIONS -->
-<section class="status-grid">
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-airbnb">
-        <i class="fab fa-airbnb"></i>
-      </div>
-      <span class="status-label status-ok">Connecté</span>
-    </div>
-    <h3>Airbnb</h3>
-    <p>Synchronisation iCal active.</p>
-    <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
-  </article>
+        <section class="status-grid">
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-airbnb">
+                <i class="fab fa-airbnb"></i>
+              </div>
+              <span class="status-label status-ok">Connecté</span>
+            </div>
+            <h3>Airbnb</h3>
+            <p>Synchronisation iCal active.</p>
+            <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
+          </article>
 
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-booking">
-        <i class="fas fa-bed"></i>
-      </div>
-      <span class="status-label status-warning">À connecter</span>
-    </div>
-    <h3>Booking.com</h3>
-    <p>Ajoutez votre lien iCal Booking.com.</p>
-    <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
-  </article>
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-booking">
+                <i class="fas fa-bed"></i>
+              </div>
+              <span class="status-label status-warning">À connecter</span>
+            </div>
+            <h3>Booking.com</h3>
+            <p>Ajoutez votre lien iCal Booking.com.</p>
+            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
+          </article>
 
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-stripe">
-        <i class="fab fa-stripe-s"></i>
-      </div>
-      <span class="status-label status-ok">Connecté</span>
-    </div>
-    <h3>Stripe</h3>
-    <p>Cautions et paiements sécurisés.</p>
-    <button class="btn btn-ghost btn-xs" onclick="openDepositsPage()">Voir les cautions</button>
-  </article>
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-stripe">
+                <i class="fab fa-stripe-s"></i>
+              </div>
+              <span class="status-label status-ok">Connecté</span>
+            </div>
+            <h3>Stripe</h3>
+            <p>Cautions et paiements sécurisés.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
+          </article>
 
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-ai">
-        <i class="fas fa-wand-magic-sparkles"></i>
-      </div>
-      <span class="status-label status-ok">Actif</span>
-    </div>
-    <h3>Messages automatiques</h3>
-    <p>Scénarios IA prêts pour vos voyageurs.</p>
-    <button class="btn btn-ghost btn-xs" onclick="goToMessages()">Configurer</button>
-  </article>
-</section>
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-ai">
+                <i class="fas fa-wand-magic-sparkles"></i>
+              </div>
+              <span class="status-label status-ok">Actif</span>
+            </div>
+            <h3>Messages automatiques</h3>
+            <p>Scénarios IA prêts pour vos voyageurs.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
+          </article>
+        </section>
+
         <!-- ONBOARDING -->
-<section class="onboarding-section">
-  <header class="onboarding-header">
-    <div>
-      <h2>Bien démarrer avec Bookingmanage</h2>
-      <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
-    </div>
-    <span class="onboarding-progress-badge">
-      <span id="onboardingProgressValue">2</span>/4 complétées
-    </span>
-  </header>
+        <section class="onboarding-section">
+          <header class="onboarding-header">
+            <div>
+              <h2>Bien démarrer avec Bookingmanage</h2>
+              <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
+            </div>
+            <span class="onboarding-progress-badge">
+              <span id="onboardingProgressValue">2</span>/4 complétées
+            </span>
+          </header>
 
-  <div class="onboarding-steps">
-    <button class="onboarding-step" data-step="property" onclick="goToSettings()">
-      <div class="onboarding-step-icon done">
-        <i class="fas fa-home"></i>
-      </div>
-      <div class="onboarding-step-content">
-        <h3>Ajouter votre premier logement</h3>
-        <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
-      </div>
-      <span class="onboarding-step-status done">Terminé</span>
-    </button>
+          <div class="onboarding-steps">
+            <button class="onboarding-step" data-step="property" onclick="window.location.href='/settings.html'">
+              <div class="onboarding-step-icon done">
+                <i class="fas fa-home"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Ajouter votre premier logement</h3>
+                <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
+              </div>
+              <span class="onboarding-step-status done">Terminé</span>
+            </button>
 
-    <button class="onboarding-step" data-step="ical" onclick="goToSettings()">
-      <div class="onboarding-step-icon todo">
-        <i class="fas fa-link"></i>
-      </div>
-      <div class="onboarding-step-content">
-        <h3>Connecter vos liens iCal</h3>
-        <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
-      </div>
-      <span class="onboarding-step-status todo">À faire</span>
-    </button>
+            <button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
+              <div class="onboarding-step-icon todo">
+                <i class="fas fa-link"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Connecter vos liens iCal</h3>
+                <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
+              </div>
+              <span class="onboarding-step-status todo">À faire</span>
+            </button>
 
-    <button class="onboarding-step" data-step="stripe" onclick="goToAccountSettings()">
-      <div class="onboarding-step-icon todo">
-        <i class="fab fa-stripe-s"></i>
-      </div>
-      <div class="onboarding-step-content">
-        <h3>Connecter Stripe</h3>
-        <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
-      </div>
-      <span class="onboarding-step-status todo">À faire</span>
-    </button>
+            <button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
+              <div class="onboarding-step-icon todo">
+                <i class="fab fa-stripe-s"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Connecter Stripe</h3>
+                <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
+              </div>
+              <span class="onboarding-step-status todo">À faire</span>
+            </button>
 
-    <button class="onboarding-step" data-step="messages" onclick="goToMessages()">
-      <div class="onboarding-step-icon done">
-        <i class="fas fa-comment-dots"></i>
-      </div>
-      <div class="onboarding-step-content">
-        <h3>Configurer les messages automatiques</h3>
-        <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
-      </div>
-      <span class="onboarding-step-status done">Terminé</span>
-    </button>
-  </div>
-</section>
-
-
+            <button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
+              <div class="onboarding-step-icon done">
+                <i class="fas fa-comment-dots"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Configurer les messages automatiques</h3>
+                <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
+              </div>
+              <span class="onboarding-step-status done">Terminé</span>
+            </button>
+          </div>
+        </section>
+        
+        
         <!-- Vue d’ensemble arrivées / séjours / départs -->
         <section class="overview-card">
           <div class="overview-header">
@@ -1000,94 +1002,6 @@
       font-size: 11px;
       opacity: 0.7;
     }
-    /* DASHBOARD - ÉTAT DES CONNEXIONS */
-
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.status-card {
-  background: rgba(15, 23, 42, 0.96);
-  border-radius: 18px;
-  padding: 14px 14px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
-}
-
-.status-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.status-card h3 {
-  font-size: 14px;
-  margin-bottom: 2px;
-  color: #e5e7eb;
-}
-
-.status-card p {
-  font-size: 12px;
-  margin-bottom: 8px;
-  color: #9ca3af;
-}
-
-.status-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-}
-
-.status-icon-airbnb {
-  background: radial-gradient(circle at 30% 0%, #FF385C, #BE123C);
-  color: #fff;
-}
-
-.status-icon-booking {
-  background: radial-gradient(circle at 30% 0%, #2563EB, #1D4ED8);
-  color: #E0F2FE;
-}
-
-.status-icon-stripe {
-  background: radial-gradient(circle at 30% 0%, #6366F1, #4F46E5);
-  color: #EEF2FF;
-}
-
-.status-icon-ai {
-  background: radial-gradient(circle at 30% 0%, #22C55E, #16A34A);
-  color: #ECFDF5;
-}
-
-.status-label {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-}
-
-.status-ok {
-  background: rgba(22, 163, 74, 0.15);
-  color: #4ade80;
-}
-
-.status-warning {
-  background: rgba(234, 179, 8, 0.15);
-  color: #fbbf24;
-}
-
-/* Boutons XS (si pas déjà définis) */
-.btn-xs {
-  padding: 4px 10px;
-  font-size: 11px;
-}
   </style>
 
   <!-- Script auth + user + logout -->
@@ -1411,6 +1325,5 @@
       }
     })();
   </script>
-  <div id="toastContainer" class="toast-container"></div>
 </body>
 </html>
