@@ -528,7 +528,15 @@ function hideLoading() {
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
-  
+}  
+function openDepositsPage() {
+  window.location.href = '/deposits.html';
+}v
+
+function goToMessages() {
+  window.location.href = '/messages.html';
+}
+
   const icons = {
     success: 'fa-check-circle',
     error: 'fa-exclamation-circle',
