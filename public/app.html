@@ -358,13 +358,17 @@
   <div class="card-header">
     <div class="card-title">
       <i class="fas fa-door-open"></i>
+      <!-- PROCHAINES ARRIVÉES & DÉPARTS -->
+<section class="card" id="upcomingStays">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-door-open"></i>
       Prochaines arrivées & départs
     </div>
     <span class="upcoming-badge">7 prochains jours</span>
   </div>
 
   <div class="upcoming-list">
-
     <!-- En-têtes -->
     <div class="upcoming-row upcoming-row-header">
       <span class="upcoming-col-date">Date</span>
@@ -373,6 +377,12 @@
       <span class="upcoming-col-type">Type</span>
       <span class="upcoming-col-status">Statut</span>
     </div>
+    
+    <!-- Les lignes seront injectées ici par JavaScript -->
+    <div id="upcomingBody"></div>
+  </div>
+</section>
+
 
     <!-- Exemples de lignes (à remplacer plus tard par tes vraies données) -->
     <div class="upcoming-row">
@@ -1436,7 +1446,9 @@
   </script>
   <script>
 (function () {
-  // --- Petite simulation de réservations "fictives" ---
+  <script>
+(function () {
+  // --- Utilitaires dates ---
   const today = new Date();
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -1446,7 +1458,7 @@
     return d;
   }
 
-  // Dataset fictif : à remplacer plus tard par des vraies données API
+  // --- Dataset fictif : à brancher plus tard sur ton backend ---
   const demoReservations = [
     {
       id: 1,
@@ -1510,11 +1522,13 @@
     return diff > 0 ? diff : 0;
   }
 
-  // --- Calcul du nombre de logements actifs ---
-  const propertyIds = new Set(demoReservations.map(r => r.propertyId));
-  const activeProperties = propertyIds.size || 1; // éviter division par 0
+  // --- Calcul des KPI ---
 
-  // --- Calcul des nuits réservées sur la fenêtre ---
+  // Logements actifs
+  const propertyIds = new Set(demoReservations.map(r => r.propertyId));
+  const activeProperties = propertyIds.size || 1;
+
+  // Nuits réservées dans la fenêtre
   let bookedNights = 0;
   demoReservations.forEach(r => {
     const nights = overlapNights(r.checkIn, r.checkOut, windowStart, windowEnd);
@@ -1524,7 +1538,7 @@
   const possibleNights = activeProperties * 30;
   const occupancyRate = possibleNights > 0 ? (bookedNights / possibleNights) * 100 : 0;
 
-  // --- Calcul des revenus confirmés sur 30 jours ---
+  // Revenus confirmés sur 30 jours
   let revenue = 0;
   demoReservations.forEach(r => {
     if (r.status === 'confirmed' && r.checkIn >= windowStart && r.checkIn < windowEnd) {
@@ -1545,7 +1559,27 @@
     }).format(value);
   }
 
-  // --- Injection dans le DOM ---
+  function formatDateTimeShort(date) {
+    const diffDays = Math.round((date.setHours(0,0,0,0) - today.setHours(0,0,0,0)) / MS_PER_DAY);
+    const timeStr = new Date(date).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    if (diffDays === 0) {
+      return 'Aujourd’hui • ' + timeStr;
+    } else if (diffDays === 1) {
+      return 'Demain • ' + timeStr;
+    }
+
+    return new Date(date).toLocaleDateString('fr-FR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short'
+    }) + ' • ' + timeStr;
+  }
+
+  // --- Injection des KPI dans le DOM ---
   const occupancyEl = document.getElementById('kpiOccupancyValue');
   const revenueEl = document.getElementById('kpiRevenueValue');
   const propertiesEl = document.getElementById('kpiPropertiesValue');
@@ -1562,13 +1596,88 @@
     propertiesEl.textContent = activeProperties.toString();
   }
 
-  // (Optionnel) : tu peux aussi rendre le delta dynamique plus tard
-  // const deltaEl = document.getElementById('kpiOccupancyDelta');
-  // if (deltaEl) {
-  //   const fakeDelta = (Math.random() * 10 - 5).toFixed(1); // entre -5 % et +5 %
-  //   const sign = fakeDelta >= 0 ? '+' : '';
-  //   deltaEl.textContent = sign + fakeDelta + '% vs mois dernier';
-  // }
+  // --- Prochaines arrivées & départs (7 jours) ---
+  const upcomingContainer = document.getElementById('upcomingBody');
+  if (upcomingContainer) {
+    const sevenDays = addDays(today, 7);
+
+    // On génère des "événements" à partir des réservations : ARRIVÉE + DÉPART
+    const events = [];
+    demoReservations.forEach(r => {
+      events.push({
+        type: 'checkin',
+        date: r.checkIn,
+        guestName: r.guestName,
+        propertyName: r.propertyName,
+        status: r.status
+      });
+      events.push({
+        type: 'checkout',
+        date: r.checkOut,
+        guestName: r.guestName,
+        propertyName: r.propertyName,
+        status: r.status
+      });
+    });
+
+    const upcomingEvents = events
+      .filter(e => e.date >= today && e.date < sevenDays)
+      .sort((a, b) => a.date - b.date);
+
+    if (upcomingEvents.length === 0) {
+      upcomingContainer.innerHTML = `
+        <div class="upcoming-row">
+          <span class="upcoming-col-date">Aucun séjour prévu</span>
+          <span class="upcoming-col-guest"></span>
+          <span class="upcoming-col-property"></span>
+          <span class="upcoming-col-type"></span>
+          <span class="upcoming-col-status"></span>
+        </div>
+      `;
+    } else {
+      let html = '';
+
+      upcomingEvents.forEach(e => {
+        const isCheckin = e.type === 'checkin';
+        const chipClass = isCheckin
+          ? 'upcoming-chip upcoming-chip-checkin'
+          : 'upcoming-chip upcoming-chip-checkout';
+        const chipLabel = isCheckin ? 'Arrivée' : 'Départ';
+
+        let statusText = '';
+        let statusClass = '';
+
+        if (isCheckin) {
+          if (e.status === 'confirmed') {
+            statusText = 'Prêt';
+            statusClass = 'upcoming-status upcoming-status-ok';
+          } else {
+            statusText = 'En attente de confirmation';
+            statusClass = 'upcoming-status upcoming-status-info';
+          }
+        } else {
+          statusText = 'Ménage à planifier';
+          statusClass = 'upcoming-status upcoming-status-warning';
+        }
+
+        html += `
+          <div class="upcoming-row">
+            <span class="upcoming-col-date">${formatDateTimeShort(new Date(e.date))}</span>
+            <span class="upcoming-col-guest">${e.guestName}</span>
+            <span class="upcoming-col-property">${e.propertyName}</span>
+            <span class="upcoming-col-type">
+              <span class="${chipClass}">${chipLabel}</span>
+            </span>
+            <span class="upcoming-col-status">
+              <span class="${statusClass}">${statusText}</span>
+            </span>
+          </div>
+        `;
+      });
+
+      upcomingContainer.innerHTML = html;
+    }
+  }
 })();
 </script>
 </body>
