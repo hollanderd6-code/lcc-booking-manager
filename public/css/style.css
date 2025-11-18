@@ -537,6 +537,83 @@ body {
     display: none;
   }
 }
+/* FIX LAYOUT - PROCHAINES ARRIVÉES & DÉPARTS */
+
+/* On force la liste à prendre 100% de la largeur de la carte, sans déborder */
+#upcomingStays .upcoming-list {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* On remplace la grille par un flex qui s’adapte mieux en largeur */
+#upcomingStays .upcoming-row,
+#upcomingStays .upcoming-row-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+}
+
+/* Les colonnes prennent chacune une part flexible, sans forcer la carte à s’élargir */
+#upcomingStays .upcoming-col-date {
+  flex: 1.4;
+  min-width: 120px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+#upcomingStays .upcoming-col-guest {
+  flex: 1.1;
+  min-width: 110px;
+  font-weight: 500;
+}
+
+#upcomingStays .upcoming-col-property {
+  flex: 1.2;
+  min-width: 120px;
+  color: var(--text-secondary);
+}
+
+#upcomingStays .upcoming-col-type {
+  flex: 0.9;
+  min-width: 90px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+#upcomingStays .upcoming-col-status {
+  flex: 0.9;
+  min-width: 110px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Ligne d’en-têtes un peu plus compacte */
+#upcomingStays .upcoming-row-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+/* Sur petits écrans, on laisse les lignes passer sur 2 lignes pour éviter tout débordement */
+@media (max-width: 900px) {
+  #upcomingStays .upcoming-row,
+  #upcomingStays .upcoming-row-header {
+    flex-wrap: wrap;
+  }
+
+  #upcomingStays .upcoming-col-property {
+    order: 4;
+  }
+}
+
+@media (max-width: 600px) {
+  #upcomingStays .upcoming-col-property {
+    display: none;
+  }
+}
 .card-title {
   font-size: 16px;
   font-weight: 700;
