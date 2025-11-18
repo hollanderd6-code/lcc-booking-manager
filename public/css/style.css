@@ -402,7 +402,141 @@ body {
   align-items: center;
   margin-bottom: 16px;
 }
+/* DASHBOARD - PROCHAINES ARRIVÉES & DÉPARTS */
 
+.upcoming-list {
+  margin-top: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-subtle);
+  overflow: hidden;
+}
+
+.upcoming-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.2fr 0.8fr 0.9fr;
+  gap: 8px;
+  padding: 8px 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.upcoming-row:nth-child(odd) {
+  background: var(--bg-secondary);
+}
+
+.upcoming-row:nth-child(even) {
+  background: var(--bg-primary);
+}
+
+.upcoming-row-header {
+  background: var(--bg-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.upcoming-row-header span {
+  white-space: nowrap;
+}
+
+.upcoming-col-date {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.upcoming-col-guest {
+  font-weight: 500;
+}
+
+.upcoming-col-property {
+  color: var(--text-secondary);
+}
+
+.upcoming-col-type,
+.upcoming-col-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.upcoming-badge {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color-subtle);
+}
+
+/* Petites pastilles type Arrivée / Départ */
+.upcoming-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.upcoming-chip-checkin {
+  background: var(--secondary-light);
+  color: var(--secondary-hover);
+}
+
+.upcoming-chip-checkout {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+/* Statuts à droite */
+.upcoming-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.upcoming-status-ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--success);
+}
+
+.upcoming-status-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.upcoming-status-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--info);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .upcoming-row,
+  .upcoming-row-header {
+    grid-template-columns: 1.4fr 1.2fr 0.9fr;
+  }
+  .upcoming-col-property {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .upcoming-row,
+  .upcoming-row-header {
+    grid-template-columns: 1.5fr 1fr;
+  }
+  .upcoming-col-property,
+  .upcoming-col-type {
+    display: none;
+  }
+}
 .card-title {
   font-size: 16px;
   font-weight: 700;
