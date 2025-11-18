@@ -1434,5 +1434,55 @@
       }
     })();
   </script>
+
+  <script>
+    (function() {
+      function updateKpisFromLocal() {
+        try {
+          var reservationsRaw = localStorage.getItem('LCC_RESERVATIONS');
+          var propertiesRaw = localStorage.getItem('LCC_PROPERTIES');
+          var reservations = reservationsRaw ? JSON.parse(reservationsRaw) : [];
+          var properties = propertiesRaw ? JSON.parse(propertiesRaw) : [];
+
+          // Occupation approximative : ratio de nuits réservées / (logements * 30 jours)
+          var today = new Date();
+          var horizon = new Date();
+          horizon.setDate(today.getDate() + 30);
+          var totalNightsPossible = (properties.length || 1) * 30;
+          var nightsBooked = 0;
+          var futureRevenue = 0;
+
+          (reservations || []).forEach(function(r) {
+            if (!r.start || !r.end) return;
+            var start = new Date(r.start);
+            var end = new Date(r.end);
+            if (end < today || start > horizon) return;
+            var d = (end - start) / (1000*60*60*24);
+            nightsBooked += d;
+            futureRevenue += r.amount || 0;
+          });
+
+          var occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+          if (occupancy < 0 || !isFinite(occupancy)) occupancy = 0;
+          if (occupancy > 100) occupancy = 100;
+
+          var occEl = document.getElementById('kpiOccupancyValue');
+          var revEl = document.getElementById('kpiRevenueValue');
+          var propEl = document.getElementById('kpiPropertiesValue');
+
+          if (occEl) occEl.textContent = occupancy + '%';
+          if (revEl) {
+            var formatted = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(futureRevenue);
+            revEl.textContent = formatted;
+          }
+          if (propEl && properties.length) propEl.textContent = properties.length;
+        } catch (e) {
+          console.warn('Impossible de recalculer les KPI', e);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', updateKpisFromLocal);
+    })();
+  </script>
 </body>
 </html>
