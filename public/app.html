@@ -246,6 +246,65 @@
     <button class="btn btn-ghost btn-xs" onclick="goToMessages()">Configurer</button>
   </article>
 </section>
+        <!-- ONBOARDING -->
+<section class="onboarding-section">
+  <header class="onboarding-header">
+    <div>
+      <h2>Bien démarrer avec Bookingmanage</h2>
+      <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
+    </div>
+    <span class="onboarding-progress-badge">
+      <span id="onboardingProgressValue">2</span>/4 complétées
+    </span>
+  </header>
+
+  <div class="onboarding-steps">
+    <button class="onboarding-step" data-step="property" onclick="goToSettings()">
+      <div class="onboarding-step-icon done">
+        <i class="fas fa-home"></i>
+      </div>
+      <div class="onboarding-step-content">
+        <h3>Ajouter votre premier logement</h3>
+        <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
+      </div>
+      <span class="onboarding-step-status done">Terminé</span>
+    </button>
+
+    <button class="onboarding-step" data-step="ical" onclick="goToSettings()">
+      <div class="onboarding-step-icon todo">
+        <i class="fas fa-link"></i>
+      </div>
+      <div class="onboarding-step-content">
+        <h3>Connecter vos liens iCal</h3>
+        <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
+      </div>
+      <span class="onboarding-step-status todo">À faire</span>
+    </button>
+
+    <button class="onboarding-step" data-step="stripe" onclick="goToAccountSettings()">
+      <div class="onboarding-step-icon todo">
+        <i class="fab fa-stripe-s"></i>
+      </div>
+      <div class="onboarding-step-content">
+        <h3>Connecter Stripe</h3>
+        <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
+      </div>
+      <span class="onboarding-step-status todo">À faire</span>
+    </button>
+
+    <button class="onboarding-step" data-step="messages" onclick="goToMessages()">
+      <div class="onboarding-step-icon done">
+        <i class="fas fa-comment-dots"></i>
+      </div>
+      <div class="onboarding-step-content">
+        <h3>Configurer les messages automatiques</h3>
+        <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
+      </div>
+      <span class="onboarding-step-status done">Terminé</span>
+    </button>
+  </div>
+</section>
+
 
         <!-- Vue d’ensemble arrivées / séjours / départs -->
         <section class="overview-card">
