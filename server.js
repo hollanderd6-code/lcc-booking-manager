@@ -355,9 +355,12 @@ app.get('/api/test-db', async (req, res) => {
       error: 'Erreur de connexion à la base'
     });
   }
-  // ============================================
+});
+
+// ============================================
 // DEBUG - LISTER LES UTILISATEURS
 // ============================================
+
 app.get('/api/debug-users', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -377,6 +380,7 @@ app.get('/api/debug-users', async (req, res) => {
     });
   }
 });
+
 
 // ============================================
 // ROUTES API - RESERVATIONS
