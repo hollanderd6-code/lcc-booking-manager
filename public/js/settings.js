@@ -1,12 +1,12 @@
 // ========================================
-// CONFIGURATION & STATE
+// CONFIGURATION
 // ========================================
-const API_URL = "";
+const API_URL = "https://lcc-booking-manager.onrender.com";
 let properties = [];
 let currentEditingProperty = null;
 
 // ========================================
-// INITIALIZATION
+// INITIALISATION
 // ========================================
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🔧 Paramètres - Initialisation...");
@@ -14,13 +14,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupColorPicker();
   await loadProperties();
 
-  console.log("✅ Paramètres initialisés");
+  console.log("✅ Paramètres chargés");
 });
 
 // ========================================
-// API CALLS
+// CHARGEMENT DES LOGEMENTS
 // ========================================
-
 async function loadProperties() {
   showLoading();
 
@@ -34,57 +33,59 @@ async function loadProperties() {
     });
 
     const data = await response.json();
+
     properties = data.properties || [];
     renderProperties();
-
-    console.log(`📦 ${properties.length} logement(s) chargé(s)`);
-  } catch (error) {
-    console.error("Erreur chargement logements:", error);
+  } catch (err) {
+    console.error("Erreur chargement propriétés:", err);
     showToast("Erreur lors du chargement des logements", "error");
   } finally {
     hideLoading();
   }
 }
 
+// ========================================
+// ENREGISTRER LOGEMENT
+// ========================================
 async function saveProperty(event) {
   event.preventDefault();
   showLoading();
+
+  const token = localStorage.getItem("lcc_token");
 
   const propertyId = document.getElementById("propertyId").value;
   const name = document.getElementById("propertyName").value;
   const color = document.getElementById("propertyColor").value;
 
+  // Récupérer les URLs
   const urlInputs = document.querySelectorAll(".url-input");
   const icalUrls = Array.from(urlInputs)
-    .map((input) => ({
-      url: input.value.trim(),
-      source: "URL",
-    }))
-    .filter((item) => item.url.length > 0);
+    .map((i) => i.value.trim())
+    .filter((u) => u.length > 0)
+    .map((url) => ({ url })); // 🔥 NORMALISATION FIX
 
   const propertyData = { name, color, icalUrls };
 
   try {
-    const token = localStorage.getItem("lcc_token");
     let response;
 
     if (propertyId) {
-      // Modification
+      // UPDATE
       response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(propertyData),
       });
     } else {
-      // Création
+      // CREATE
       response = await fetch(`${API_URL}/api/properties`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(propertyData),
       });
@@ -92,36 +93,34 @@ async function saveProperty(event) {
 
     const result = await response.json();
 
-    if (response.ok) {
-      showToast(result.message || "Logement enregistré", "success");
-      closeEditModal();
-      await loadProperties();
-    } else {
+    if (!response.ok) {
       showToast(result.error || "Erreur lors de l'enregistrement", "error");
+      return;
     }
-  } catch (error) {
-    console.error("Erreur sauvegarde:", error);
+
+    showToast("Logement enregistré", "success");
+    closeEditModal();
+    await loadProperties();
+  } catch (err) {
+    console.error("Erreur sauvegarde propriété:", err);
     showToast("Erreur lors de l'enregistrement", "error");
   } finally {
     hideLoading();
   }
 }
 
-async function deleteProperty(propertyId, propertyName) {
-  if (
-    !confirm(
-      `Êtes-vous sûr de vouloir supprimer "${propertyName}" ?\n\nToutes les réservations associées seront également supprimées.`
-    )
-  ) {
-    return;
-  }
+// ========================================
+// DELETE LOGEMENT
+// ========================================
+async function deleteProperty(id, name) {
+  if (!confirm(`Supprimer le logement "${name}" ?`)) return;
 
   showLoading();
 
   try {
     const token = localStorage.getItem("lcc_token");
 
-    const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
+    const response = await fetch(`${API_URL}/api/properties/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: "Bearer " + token,
@@ -130,157 +129,145 @@ async function deleteProperty(propertyId, propertyName) {
 
     const result = await response.json();
 
-    if (response.ok) {
-      showToast(result.message || "Logement supprimé", "success");
-      await loadProperties();
-    } else {
+    if (!response.ok) {
       showToast(result.error || "Erreur lors de la suppression", "error");
+      return;
     }
-  } catch (error) {
-    console.error("Erreur suppression:", error);
+
+    showToast("Logement supprimé", "success");
+    loadProperties();
+  } catch (err) {
+    console.error("Erreur suppression logement:", err);
     showToast("Erreur lors de la suppression", "error");
   } finally {
     hideLoading();
   }
 }
 
-async function testIcalUrl(url, buttonElement) {
-  if (!url || url.trim().length === 0) {
+// ========================================
+// TEST ICAL
+// ========================================
+async function testIcalUrl(url, button) {
+  if (!url || url.length === 0) {
     showToast("Veuillez entrer une URL", "error");
     return;
   }
 
-  const originalText = buttonElement.innerHTML;
-  buttonElement.innerHTML =
-    '<i class="fas fa-spinner fa-spin"></i> Test...';
-  buttonElement.disabled = true;
+  const token = localStorage.getItem("lcc_token");
+
+  const original = button.innerHTML;
+  button.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+  button.disabled = true;
 
   try {
-    const token = localStorage.getItem("lcc_token");
-
     const response = await fetch(`${API_URL}/api/properties/test-ical`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Authorization: "Bearer " + token,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url: url.trim() }),
+      body: JSON.stringify({ url }),
     });
 
     const result = await response.json();
 
-    const resultDiv = document.createElement("div");
-    resultDiv.className = `test-result ${
-      result.success ? "success" : "error"
-    }`;
+    const div = document.createElement("div");
+    div.className = `test-result ${result.success ? "success" : "error"}`;
 
     if (result.success) {
-      resultDiv.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        URL valide ! ${result.reservationCount} réservation(s) trouvée(s)
-      `;
+      div.innerHTML = `<i class="fas fa-check-circle"></i> ${result.reservationCount} réservation(s) trouvée(s)`;
     } else {
-      resultDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i>
-        ${result.error || "URL invalide"}
-      `;
+      div.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${result.error}`;
     }
 
-    const parent = buttonElement.parentElement;
-    const existingResult = parent.querySelector(".test-result");
-    if (existingResult) existingResult.remove();
-    parent.appendChild(resultDiv);
-
-    setTimeout(() => resultDiv.remove(), 5000);
-  } catch (error) {
-    console.error("Erreur test URL:", error);
+    button.parentElement.appendChild(div);
+    setTimeout(() => div.remove(), 5000);
+  } catch (err) {
     showToast("Erreur lors du test de l'URL", "error");
   } finally {
-    buttonElement.innerHTML = originalText;
-    buttonElement.disabled = false;
+    button.innerHTML = original;
+    button.disabled = false;
   }
 }
 
 // ========================================
-// RENDERING
+// UI RENDERING
 // ========================================
 function renderProperties() {
   const grid = document.getElementById("propertiesGrid");
 
-  if (!properties || properties.length === 0) {
+  if (!properties.length) {
     grid.innerHTML = `
       <div class="empty-state">
         <i class="fas fa-home"></i>
-        <p>Aucun logement configuré</p>
-      </div>
-    `;
+        Aucun logement configuré
+      </div>`;
     return;
   }
 
   grid.innerHTML = properties
     .map(
-      (property) => `
-    <div class="property-card" style="border-left-color: ${
-      property.color
-    }">
+      (p) => `
+    <div class="property-card" style="border-left-color:${p.color}">
       <div class="property-header">
-        <div class="property-info">
+        <div>
           <div class="property-name">
-            <div class="color-badge" style="background-color: ${
-              property.color
-            }"></div>
-            ${property.name}
+            <span class="color-badge" style="background:${p.color}"></span>
+            ${p.name}
           </div>
           <div class="property-meta">
-            ${property.reservationCount || 0} réservation(s) • 
-            ${(property.icalUrls || []).length} source(s) iCal
+            ${p.icalUrls.length} URL iCal
           </div>
         </div>
+
         <div class="property-actions">
-          <button class="btn-icon-action btn-edit" 
-                  onclick="openEditPropertyModal('${property.id}')"
-                  title="Modifier">
+          <button onclick="openEditPropertyModal('${p.id}')" class="btn-icon-action">
             <i class="fas fa-edit"></i>
           </button>
-          <button class="btn-icon-action btn-delete" 
-                  onclick="deleteProperty('${property.id}', '${property.name.replace(
-        /'/g,
-        "\\'"
-      )}')"
-                  title="Supprimer">
+
+          <button onclick="deleteProperty('${p.id}','${p.name.replace(/'/g, "\\'")}')" class="btn-icon-action btn-delete">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       </div>
-    </div>
-  `
+
+      <div class="ical-urls">
+        ${p.icalUrls
+          .map(
+            (u) => `
+          <div class="ical-url-item">
+            <i class="fas fa-link"></i>
+            ${u.url}
+          </div>`
+          )
+          .join("")}
+      </div>
+    </div>`
     )
     .join("");
 }
 
 // ========================================
-// MODAL MANAGEMENT
+// MODALS
 // ========================================
 function openAddPropertyModal() {
   currentEditingProperty = null;
 
-  document.getElementById("modalTitle").textContent =
-    "Ajouter un logement";
+  document.getElementById("modalTitle").textContent = "Ajouter un logement";
   document.getElementById("propertyId").value = "";
   document.getElementById("propertyName").value = "";
   document.getElementById("propertyColor").value = "#E67E50";
   document.getElementById("colorPreview").textContent = "#E67E50";
 
-  document.getElementById("urlList").innerHTML = "";
+  const list = document.getElementById("urlList");
+  list.innerHTML = "";
   addUrlField();
 
-  document
-    .getElementById("editPropertyModal")
-    .classList.add("active");
+  document.getElementById("editPropertyModal").classList.add("active");
 }
 
-function openEditPropertyModal(propertyId) {
-  const property = properties.find((p) => p.id === propertyId);
+function openEditPropertyModal(id) {
+  const property = properties.find((p) => p.id === id);
   if (!property) return;
 
   currentEditingProperty = property;
@@ -290,32 +277,54 @@ function openEditPropertyModal(propertyId) {
   document.getElementById("propertyId").value = property.id;
   document.getElementById("propertyName").value = property.name;
   document.getElementById("propertyColor").value = property.color;
-  document.getElementById("colorPreview").textContent =
-    property.color;
+  document.getElementById("colorPreview").textContent = property.color;
 
-  const urlList = document.getElementById("urlList");
-  urlList.innerHTML = "";
+  const list = document.getElementById("urlList");
+  list.innerHTML = "";
 
-  (property.icalUrls || []).forEach((urlData) => {
-    addUrlField(urlData.url);
-  });
+  property.icalUrls.forEach((u) => addUrlField(u.url || u));
 
-  if (property.icalUrls.length === 0) addUrlField();
-
-  document
-    .getElementById("editPropertyModal")
-    .classList.add("active");
+  document.getElementById("editPropertyModal").classList.add("active");
 }
 
 function closeEditModal() {
-  document
-    .getElementById("editPropertyModal")
-    .classList.remove("active");
-  currentEditingProperty = null;
+  document.getElementById("editPropertyModal").classList.remove("active");
 }
 
 // ========================================
-// UTILITIES
+// URL FIELD MANAGEMENT
+// ========================================
+function addUrlField(value = "") {
+  const list = document.getElementById("urlList");
+
+  const div = document.createElement("div");
+  div.className = "url-input-group";
+  div.innerHTML = `
+    <input class="url-input" type="url" placeholder="https://www.airbnb.fr/calendar/ical/..." value="${value}">
+    <button type="button" class="btn-test-url" onclick="testIcalUrl(this.previousElementSibling.value, this)">
+      <i class="fas fa-check"></i>
+    </button>
+    <button type="button" class="btn-remove-url" onclick="removeUrlField(this)">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+
+  list.appendChild(div);
+}
+
+function removeUrlField(btn) {
+  const list = document.getElementById("urlList");
+
+  if (list.children.length <= 1) {
+    showToast("Vous devez garder au moins une URL", "error");
+    return;
+  }
+
+  btn.parentElement.remove();
+}
+
+// ========================================
+// COLOR PICKER
 // ========================================
 function setupColorPicker() {
   const picker = document.getElementById("propertyColor");
@@ -327,60 +336,22 @@ function setupColorPicker() {
   });
 }
 
-function addUrlField(value = "") {
-  const urlList = document.getElementById("urlList");
-
-  const urlGroup = document.createElement("div");
-  urlGroup.className = "url-input-group";
-
-  urlGroup.innerHTML = `
-    <input type="url"
-           class="url-input"
-           placeholder="https://www.airbnb.fr/calendar/ical/..."
-           value="${value}">
-    <button type="button"
-            class="btn-test-url"
-            onclick="testIcalUrl(this.previousElementSibling.value, this)">
-      Tester
-    </button>
-    <button type="button" 
-            class="btn-remove-url" 
-            onclick="removeUrlField(this)">
-      <i class="fas fa-times"></i>
-    </button>
-  `;
-
-  urlList.appendChild(urlGroup);
-}
-
-function removeUrlField(button) {
-  const urlGroup = button.parentElement;
-  const urlList = document.getElementById("urlList");
-
-  if (urlList.children.length > 1) {
-    urlGroup.remove();
-  } else {
-    showToast(
-      "Vous devez avoir au moins une URL iCal",
-      "error"
-    );
-  }
-}
-
+// ========================================
+// LOADING & TOASTS
+// ========================================
 function showLoading() {
-  document
-    .getElementById("loadingOverlay")
-    .classList.add("active");
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) overlay.classList.add("active");
 }
 
 function hideLoading() {
-  document
-    .getElementById("loadingOverlay")
-    .classList.remove("active");
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) overlay.classList.remove("active");
 }
 
 function showToast(message, type = "info") {
   const container = document.getElementById("toastContainer");
+  if (!container) return;
 
   const icons = {
     success: "fa-check-circle",
@@ -391,33 +362,31 @@ function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
   toast.innerHTML = `
-    <i class="fas ${icons[type]}"></i>
-    <span>${message}</span>
+      <i class="fas ${icons[type]}"></i>
+      <span>${message}</span>
   `;
 
   container.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.animation =
-      "slideInRight 0.3s ease reverse";
+    toast.style.animation = "slideInRight 0.3s ease reverse";
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }
 
-// Close modal when clicking on backdrop
+// ========================================
+// CLOSE MODAL (BACKDROP + ESC)
+// ========================================
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal")) {
     e.target.classList.remove("active");
   }
 });
 
-// ESC to close modals
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     document
       .querySelectorAll(".modal.active")
-      .forEach((modal) =>
-        modal.classList.remove("active")
-      );
+      .forEach((m) => m.classList.remove("active"));
   }
 });
