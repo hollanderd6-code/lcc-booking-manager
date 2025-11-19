@@ -518,45 +518,43 @@ function showReservationModal(reservation) {
 // UTILITIES
 // ========================================
 
-function showLoading() {
-  document.getElementById('loadingOverlay').classList.add('active');
-}
-
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.remove('active');
-}
+// ========================================
+// UTILITIES
+// ========================================
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
-}  
-function openDepositsPage() {
-  window.location.href = '/deposits.html';
-}v
-
-function goToMessages() {
-  window.location.href = '/messages.html';
-}
+  if (!container) return;
 
   const icons = {
     success: 'fa-check-circle',
     error: 'fa-exclamation-circle',
     info: 'fa-info-circle'
   };
-  
+
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.innerHTML = `
-    <i class="fas ${icons[type]}"></i>
+    <i class="fas ${icons[type] || icons.info}"></i>
     <span class="toast-message">${message}</span>
   `;
-  
+
   container.appendChild(toast);
-  
+
   setTimeout(() => {
     toast.style.animation = 'slideInRight 0.3s ease reverse';
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }
+
+function openDepositsPage() {
+  window.location.href = '/deposits.html';
+}
+
+function goToMessages() {
+  window.location.href = '/messages.html';
+}
+
 
 // ========================================
 // MOBILE MENU (TODO)
