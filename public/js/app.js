@@ -1,6 +1,7 @@
 // ========================================
 // PLATFORM APP - MODERN BOOKING MANAGER
 // ========================================
+const API_URL = 'https://lcc-booking-manager.onrender.com';
 
 const API_URL = '';
 let calendar = null;
@@ -553,6 +554,44 @@ function openDepositsPage() {
 
 function goToMessages() {
   window.location.href = '/messages.html';
+}
+// ========================================
+// UTILITIES
+// ========================================
+
+function showLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const icons = {
+    success: 'fa-check-circle',
+    error: 'fa-exclamation-circle',
+    info: 'fa-info-circle'
+  };
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <i class="fas ${icons[type]}"></i>
+    <span class="toast-message">${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'slideInRight 0.3s ease reverse';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 
