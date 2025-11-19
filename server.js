@@ -14,13 +14,39 @@ const cookieParser = require('cookie-parser');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 
-// Pool de connexion PostgreSQL
+// ============================================
+// CONNEXION POSTGRES
+// ============================================
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }  
+    ? { rejectUnauthorized: false }
     : false
 });
+
+// Init DB : création table users
+async function initDb() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        company TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        stripe_account_id TEXT
+      )
+    `);
+
+    console.log('✅ Table users OK dans Postgres');
+  } catch (err) {
+    console.error('❌ Erreur initDb (Postgres):', err);
+    process.exit(1);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,15 +70,11 @@ let reservationsStore = {
 
 // Paths de configuration
 const CONFIG_FILE = path.join(__dirname, 'properties-config.json');
-const USERS_FILE = path.join(__dirname, 'users-config.json');
 const WELCOME_FILE = path.join(__dirname, 'welcome-config.json');
 const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
-
-// 🔐 Nouveau : fichier de cautions
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
 
 // Data en mémoire
-let USERS = [];
 let WELCOME_DATA = [];           // { userId, data: {...} }
 let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations] }
 let DEPOSITS = [];               // { id, reservationUid, amountCents, currency, status, stripeSessionId, checkoutUrl, createdAt }
@@ -60,26 +82,6 @@ let DEPOSITS = [];               // { id, reservationUid, amountCents, currency,
 // ============================================
 // FONCTIONS UTILITAIRES FICHIERS
 // ============================================
-
-async function loadUsers() {
-  try {
-    const data = await fs.readFile(USERS_FILE, 'utf8');
-    USERS = JSON.parse(data);
-    console.log('✅ Utilisateurs chargés depuis users-config.json');
-  } catch (error) {
-    USERS = [];
-    console.log('⚠️  Aucun fichier users-config.json, démarrage avec 0 utilisateur');
-  }
-}
-
-async function saveUsers() {
-  try {
-    await fs.writeFile(USERS_FILE, JSON.stringify(USERS, null, 2));
-    console.log('✅ Utilisateurs sauvegardés');
-  } catch (error) {
-    console.error('❌ Erreur lors de la sauvegarde des utilisateurs:', error.message);
-  }
-}
 
 async function loadWelcomeData() {
   try {
@@ -142,7 +144,7 @@ async function saveDeposits() {
 }
 
 // ============================================
-// JWT & UTILISATEURS
+// JWT & UTILISATEURS (Postgres)
 // ============================================
 
 function generateToken(user) {
@@ -159,7 +161,8 @@ function publicUser(user) {
   return safe;
 }
 
-function getUserFromRequest(req) {
+// Cherche l'utilisateur en base à partir du token dans Authorization: Bearer
+async function getUserFromRequest(req) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) return null;
@@ -167,8 +170,29 @@ function getUserFromRequest(req) {
   try {
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
     const payload = jwt.verify(token, secret);
-    const user = USERS.find(u => u.id === payload.id);
-    return user || null;
+
+    const result = await pool.query(
+      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id
+       FROM users
+       WHERE id = $1`,
+      [payload.id]
+    );
+
+    if (result.rows.length === 0) return null;
+
+    const row = result.rows[0];
+    const user = {
+      id: row.id,
+      company: row.company,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      email: row.email,
+      passwordHash: row.password_hash,
+      createdAt: row.created_at,
+      stripeAccountId: row.stripe_account_id
+    };
+
+    return user;
   } catch (err) {
     return null;
   }
@@ -312,9 +336,11 @@ async function syncAllCalendars() {
   console.log('✅ Synchronisation terminée');
   return reservationsStore;
 }
+
 // ============================================
 // TEST CONNEXION BASE DE DONNÉES
 // ============================================
+
 app.get('/api/test-db', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() AS now');
@@ -529,7 +555,9 @@ app.get('/api/availability/:propertyId', (req, res) => {
     available: overlappingReservations.length === 0,
     overlappingReservations
   });
-  // GET - Réservations avec infos de caution
+});
+
+// GET - Réservations avec infos de caution
 app.get('/api/reservations-with-deposits', (req, res) => {
   const result = [];
 
@@ -560,7 +588,6 @@ app.get('/api/reservations-with-deposits', (req, res) => {
 
   res.json(result);
 });
-});
 
 // ============================================
 // ROUTES API - LIVRET D'ACCUEIL
@@ -584,8 +611,8 @@ function defaultWelcomeData(user) {
 }
 
 // GET - Livret de l'utilisateur courant
-app.get('/api/welcome', (req, res) => {
-  const user = getUserFromRequest(req);
+app.get('/api/welcome', async (req, res) => {
+  const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
   }
@@ -601,7 +628,7 @@ app.get('/api/welcome', (req, res) => {
 
 // POST - Sauvegarder le livret
 app.post('/api/welcome', async (req, res) => {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
   }
@@ -804,7 +831,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // ============================================
-// ROUTES API - AUTH
+// ROUTES API - AUTH (Postgres)
 // ============================================
 
 app.post('/api/auth/register', async (req, res) => {
@@ -815,13 +842,24 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
     }
 
-    const existing = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
+    // Vérifier si l'utilisateur existe déjà en base
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+
+    if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const id = `u_${Date.now().toString(36)}`;
+
+    await pool.query(
+      `INSERT INTO users (id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL)`,
+      [id, company, firstName, lastName, email, passwordHash]
+    );
 
     const user = {
       id,
@@ -833,9 +871,6 @@ app.post('/api/auth/register', async (req, res) => {
       createdAt: new Date().toISOString(),
       stripeAccountId: null
     };
-
-    USERS.push(user);
-    await saveUsers();
 
     const token = generateToken(user);
 
@@ -857,15 +892,33 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email et mot de passe requis' });
     }
 
-    const user = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!user) {
+    const result = await pool.query(
+      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id
+       FROM users
+       WHERE LOWER(email) = LOWER($1)`,
+      [email]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    const row = result.rows[0];
+    const ok = await bcrypt.compare(password, row.password_hash);
     if (!ok) {
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
+
+    const user = {
+      id: row.id,
+      company: row.company,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      email: row.email,
+      passwordHash: row.password_hash,
+      createdAt: row.created_at,
+      stripeAccountId: row.stripe_account_id
+    };
 
     const token = generateToken(user);
 
@@ -879,7 +932,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
 
@@ -890,14 +943,32 @@ app.get('/api/auth/me', (req, res) => {
   try {
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
     const payload = jwt.verify(token, secret);
-    const user = USERS.find(u => u.id === payload.id);
 
-    if (!user) {
+    const result = await pool.query(
+      `SELECT id, company, first_name, last_name, email, created_at, stripe_account_id
+       FROM users
+       WHERE id = $1`,
+      [payload.id]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur introuvable' });
     }
 
-    res.json({ user: publicUser(user) });
+    const row = result.rows[0];
+    const user = {
+      id: row.id,
+      company: row.company,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      email: row.email,
+      createdAt: row.created_at,
+      stripeAccountId: row.stripe_account_id
+    };
+
+    res.json({ user });
   } catch (err) {
+    console.error('Erreur /api/auth/me:', err);
     return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
 });
@@ -1003,7 +1074,7 @@ app.get('/api/deposits/:reservationUid', (req, res) => {
 // POST - Créer une caution Stripe pour une réservation
 app.post('/api/deposits', async (req, res) => {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
@@ -1092,8 +1163,10 @@ app.listen(PORT, async () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
   console.log('');
 
+  // Init DB (table users)
+  await initDb();
+
   await loadProperties();
-  await loadUsers();
   await loadWelcomeData();
   await loadManualReservations();
   await loadDeposits();
