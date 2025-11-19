@@ -118,7 +118,7 @@ async function deleteProperty(propertyId, propertyName) {
 
   showLoading();
 
-  try:
+  try {
     const token = localStorage.getItem("lcc_token");
 
     const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
