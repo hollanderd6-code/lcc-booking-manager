@@ -312,6 +312,24 @@ async function syncAllCalendars() {
   console.log('✅ Synchronisation terminée');
   return reservationsStore;
 }
+// ============================================
+// TEST CONNEXION BASE DE DONNÉES
+// ============================================
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() AS now');
+    res.json({
+      ok: true,
+      now: result.rows[0].now
+    });
+  } catch (err) {
+    console.error('Erreur DB :', err);
+    res.status(500).json({
+      ok: false,
+      error: 'Erreur de connexion à la base'
+    });
+  }
+});
 
 // ============================================
 // ROUTES API - RESERVATIONS
