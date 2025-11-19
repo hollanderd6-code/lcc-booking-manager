@@ -355,6 +355,27 @@ app.get('/api/test-db', async (req, res) => {
       error: 'Erreur de connexion à la base'
     });
   }
+  // ============================================
+// DEBUG - LISTER LES UTILISATEURS
+// ============================================
+app.get('/api/debug-users', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, company, first_name, last_name, email, created_at
+      FROM users
+      ORDER BY created_at DESC
+    `);
+
+    res.json({
+      count: result.rows.length,
+      users: result.rows
+    });
+  } catch (err) {
+    console.error('Erreur debug users :', err);
+    res.status(500).json({
+      error: 'Erreur lors de la récupération des utilisateurs'
+    });
+  }
 });
 
 // ============================================
