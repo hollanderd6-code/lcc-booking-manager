@@ -46,17 +46,19 @@ async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
-      CREATE TABLE IF NOT EXISTS properties (
+      CREATE TABLE IF NOT EXISTS cleaners (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
-        color TEXT NOT NULL,
-        ical_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+        phone TEXT,
+        email TEXT,
+        notes TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
-    console.log('✅ Tables users, welcome_books & properties OK dans Postgres');
+    console.log('✅ Tables users, welcome_books & cleaners OK dans Postgres');
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
