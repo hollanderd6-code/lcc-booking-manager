@@ -24,7 +24,14 @@ async function loadProperties() {
   showLoading();
   
   try {
-    const response = await fetch(`${API_URL}/api/properties`);
+    const token = localStorage.getItem("lcc_token");
+
+const response = await fetch(`${API_URL}/api/properties`, {
+  headers: {
+    "Authorization": "Bearer " + token
+  }
+});
+
     const data = await response.json();
     
     properties = data.properties;
@@ -104,8 +111,12 @@ async function deleteProperty(propertyId, propertyName) {
   
   try {
     const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
-      method: 'DELETE'
-    });
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+  }
+});
+
     
     const result = await response.json();
     
@@ -136,7 +147,11 @@ async function testIcalUrl(url, buttonElement) {
   try {
     const response = await fetch(`${API_URL}/api/properties/test-ical`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+  'Content-Type': 'application/json',
+  'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+}
+
       body: JSON.stringify({ url: url.trim() })
     });
     
