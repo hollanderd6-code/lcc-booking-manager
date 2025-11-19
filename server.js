@@ -698,7 +698,7 @@ app.post('/api/welcome', async (req, res) => {
     console.error('Erreur /api/welcome POST :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
-
++ });
   // ============================================
 // ROUTES API - GESTION DU MENAGE / CLEANERS
 // ============================================
