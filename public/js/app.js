@@ -3,7 +3,6 @@
 // ========================================
 const API_URL = 'https://lcc-booking-manager.onrender.com';
 
-const API_URL = '';
 let calendar = null;
 let allReservations = [];
 let activeFilters = new Set();
