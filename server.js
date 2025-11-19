@@ -698,6 +698,130 @@ app.post('/api/welcome', async (req, res) => {
     console.error('Erreur /api/welcome POST :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
+  // ============================================
+// ROUTES API - GESTION DU MENAGE / CLEANERS
+// ============================================
+
+// GET - Liste des personnes de ménage de l'utilisateur
+app.get('/api/cleaners', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const result = await pool.query(
+      `SELECT id, name, phone, email, notes, is_active, created_at
+       FROM cleaners
+       WHERE user_id = $1
+       ORDER BY name ASC`,
+      [user.id]
+    );
+
+    res.json({
+      cleaners: result.rows
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaners :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer une nouvelle personne de ménage
+app.post('/api/cleaners', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { name, phone, email, notes, isActive } = req.body || {};
+    if (!name) {
+      return res.status(400).json({ error: 'Nom requis' });
+    }
+
+    const id = 'c_' + Date.now().toString(36);
+
+    const result = await pool.query(
+      `INSERT INTO cleaners (id, user_id, name, phone, email, notes, is_active, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, TRUE), NOW())
+       RETURNING id, name, phone, email, notes, is_active, created_at`,
+      [id, user.id, name, phone || null, email || null, notes || null, isActive]
+    );
+
+    res.status(201).json({
+      message: 'Membre du ménage créé',
+      cleaner: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Erreur POST /api/cleaners :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT - Modifier une personne de ménage
+app.put('/api/cleaners/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { id } = req.params;
+    const { name, phone, email, notes, isActive } = req.body || {};
+
+    const result = await pool.query(
+      `UPDATE cleaners
+       SET
+         name = COALESCE($3, name),
+         phone = COALESCE($4, phone),
+         email = COALESCE($5, email),
+         notes = COALESCE($6, notes),
+         is_active = COALESCE($7, is_active)
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, name, phone, email, notes, is_active, created_at`,
+      [id, user.id, name, phone, email, notes, isActive]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Membre du ménage introuvable' });
+    }
+
+    res.json({
+      message: 'Membre du ménage mis à jour',
+      cleaner: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Erreur PUT /api/cleaners/:id :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE - Supprimer une personne de ménage
+app.delete('/api/cleaners/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM cleaners
+       WHERE id = $1 AND user_id = $2`,
+      [id, user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Membre du ménage introuvable' });
+    }
+
+    res.json({ message: 'Membre du ménage supprimé' });
+  } catch (err) {
+    console.error('Erreur DELETE /api/cleaners/:id :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // ============================================
