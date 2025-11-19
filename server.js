@@ -25,7 +25,7 @@ const pool = new Pool({
     : false
 });
 
-// Init DB : création table users
+// Init DB : création table users + welcome_books
 async function initDb() {
   try {
     await pool.query(`
@@ -38,10 +38,16 @@ async function initDb() {
         password_hash TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         stripe_account_id TEXT
-      )
+      );
+
+      CREATE TABLE IF NOT EXISTS welcome_books (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `);
 
-    console.log('✅ Table users OK dans Postgres');
+    console.log('✅ Tables users & welcome_books OK dans Postgres');
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -635,22 +641,6 @@ function defaultWelcomeData(user) {
   };
 }
 
-// GET - Livret de l'utilisateur courant
-app.get('/api/welcome', async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-
-  let entry = WELCOME_DATA.find(w => w.userId === user.id);
-  if (!entry) {
-    entry = { userId: user.id, data: defaultWelcomeData(user) };
-    WELCOME_DATA.push(entry);
-  }
-
-  res.json(entry.data);
-});
-
 // POST - Sauvegarder le livret
 app.post('/api/welcome', async (req, res) => {
   const user = await getUserFromRequest(req);
@@ -658,24 +648,31 @@ app.post('/api/welcome', async (req, res) => {
     return res.status(401).json({ error: 'Non autorisé' });
   }
 
-  const payload = req.body || {};
-  let entry = WELCOME_DATA.find(w => w.userId === user.id);
-  if (!entry) {
-    entry = { userId: user.id, data: defaultWelcomeData(user) };
-    WELCOME_DATA.push(entry);
+  try {
+    const payload = req.body || {};
+
+    const newData = {
+      ...defaultWelcomeData(user),
+      ...payload
+    };
+
+    await pool.query(
+      `INSERT INTO welcome_books (user_id, data, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE
+       SET data = EXCLUDED.data,
+           updated_at = NOW()`,
+      [user.id, newData]
+    );
+
+    res.json({
+      message: 'Livret sauvegardé',
+      data: newData
+    });
+  } catch (err) {
+    console.error('Erreur /api/welcome POST :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-
-  entry.data = {
-    ...defaultWelcomeData(user),
-    ...payload
-  };
-
-  await saveWelcomeData();
-
-  res.json({
-    message: 'Livret sauvegardé',
-    data: entry.data
-  });
 });
 
 // ============================================
@@ -1192,7 +1189,6 @@ app.listen(PORT, async () => {
   await initDb();
 
   await loadProperties();
-  await loadWelcomeData();
   await loadManualReservations();
   await loadDeposits();
 
