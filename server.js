@@ -1362,6 +1362,105 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     res.status(500).json({ error: 'Impossible de créer la session de paiement' });
   }
 });
+// ============================================
+// 💳 ROUTES API - STRIPE CONNECT (compte hôte)
+// ============================================
+
+app.get('/api/stripe/status', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    if (!stripe) {
+      // Stripe pas configuré → on indique juste "pas connecté"
+      return res.json({
+        connected: false,
+        error: 'Stripe non configuré côté serveur'
+      });
+    }
+
+    if (!user.stripeAccountId) {
+      // L’utilisateur n’a encore jamais connecté de compte Stripe
+      return res.json({ connected: false });
+    }
+
+    try {
+      const account = await stripe.accounts.retrieve(user.stripeAccountId);
+
+      const connected = !!(account.charges_enabled && account.details_submitted);
+
+      return res.json({
+        connected,
+        accountId: user.stripeAccountId,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        detailsSubmitted: account.details_submitted
+      });
+    } catch (err) {
+      console.error('Erreur retrieve Stripe account:', err);
+      // Si on n’arrive pas à récupérer le compte, on considère "non connecté"
+      return res.json({
+        connected: false,
+        error: 'Impossible de récupérer le compte Stripe'
+      });
+    }
+  } catch (err) {
+    console.error('Erreur /api/stripe/status :', err);
+    res.status(500).json({ error: 'Erreur serveur Stripe' });
+  }
+});
+
+app.post('/api/stripe/create-onboarding-link', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
+    }
+
+    let accountId = user.stripeAccountId;
+
+    // 1) Si l’utilisateur n’a pas encore de compte Stripe, on en crée un
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: user.email,
+        metadata: {
+          userId: user.id,
+          company: user.company || ''
+        }
+      });
+
+      accountId = account.id;
+
+      // On sauvegarde l’ID du compte Stripe en base
+      await pool.query(
+        'UPDATE users SET stripe_account_id = $1 WHERE id = $2',
+        [accountId, user.id]
+      );
+    }
+
+    // 2) On crée le lien d’onboarding pour que l’utilisateur complète ses infos chez Stripe
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/settings-account-4.html?stripe=refresh`,
+      return_url: `${appUrl}/settings-account-4.html?stripe=return`,
+      type: 'account_onboarding'
+    });
+
+    return res.json({ url: accountLink.url });
+  } catch (err) {
+    console.error('Erreur /api/stripe/create-onboarding-link :', err);
+    res.status(500).json({ error: 'Impossible de générer le lien Stripe' });
+  }
+});
 
 // ============================================
 // 🚀 ROUTES API - CAUTIONS (Stripe)
