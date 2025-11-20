@@ -196,8 +196,6 @@ async function getUserFromRequest(req) {
 // PROPERTIES (logements) - stockées en base
 // ============================================
 
-let PROPERTIES = [];
-
 // Charge tous les logements (tous users) en mémoire
 async function loadProperties() {
   try {
@@ -207,15 +205,35 @@ async function loadProperties() {
       ORDER BY created_at ASC
     `);
 
-    PROPERTIES = result.rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      name: row.name,
-      color: row.color,
-      icalUrls: Array.isArray(row.ical_urls) || typeof row.ical_urls === 'object'
-        ? row.ical_urls
-        : []
-    }));
+    PROPERTIES = result.rows.map(row => {
+      const raw = row.ical_urls || [];
+      let icalUrls = [];
+
+      if (Array.isArray(raw)) {
+        icalUrls = raw
+          .map(item => {
+            // Cas ancien : tableau de chaînes
+            if (typeof item === 'string') {
+              return item;
+            }
+            // Cas nouveau : tableau d'objets { url, source }
+            if (item && typeof item === 'object' && item.url) {
+              return item.url;
+            }
+            return null;
+          })
+          .filter(url => typeof url === 'string' && url.trim().length > 0);
+      }
+
+      return {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        color: row.color,
+        // Toujours un tableau de STRING en interne
+        icalUrls
+      };
+    });
 
     console.log(`✅ ${PROPERTIES.length} logements chargés depuis Postgres`);
   } catch (error) {
