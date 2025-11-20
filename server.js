@@ -25,7 +25,7 @@ const pool = new Pool({
     : false
 });
 
-// Init DB : création tables users + welcome_books + properties
+// Init DB : création tables users + welcome_books + cleaners
 async function initDb() {
   try {
     await pool.query(`
@@ -716,8 +716,9 @@ app.post('/api/welcome', async (req, res) => {
     console.error('Erreur /api/welcome POST :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
- });
-  // ============================================
+});
+
+// ============================================
 // ROUTES API - GESTION DU MENAGE / CLEANERS
 // ============================================
 
@@ -1300,6 +1301,69 @@ app.get('/api/messages/upcoming', async (req, res) => {
 });
 
 // ============================================
+// 💳 ROUTES API - ABONNEMENTS (Stripe Billing)
+// ============================================
+
+function getPriceIdForPlan(plan) {
+  if (plan === 'pro') {
+    return process.env.STRIPE_PRICE_PRO || null;
+  }
+  // Par défaut : basic
+  return process.env.STRIPE_PRICE_BASIC || null;
+}
+
+app.post('/api/billing/create-checkout-session', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
+    }
+
+    const { plan } = req.body || {};
+    if (!plan) {
+      return res.status(400).json({ error: 'Plan requis (basic ou pro)' });
+    }
+
+    const priceId = getPriceIdForPlan(plan);
+    if (!priceId) {
+      return res.status(400).json({ error: 'Plan inconnu ou non configuré' });
+    }
+
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1
+        }
+      ],
+      subscription_data: {
+        trial_period_days: 14,
+        metadata: {
+          userId: user.id,
+          plan
+        }
+      },
+      customer_email: user.email,
+      success_url: `${appUrl}/pricing-success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/pricing-cancel.html`
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Erreur /api/billing/create-checkout-session :', err);
+    res.status(500).json({ error: 'Impossible de créer la session de paiement' });
+  }
+});
+
+// ============================================
 // 🚀 ROUTES API - CAUTIONS (Stripe)
 // ============================================
 
@@ -1414,7 +1478,7 @@ app.post('/api/deposits', async (req, res) => {
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║   🏠 LCC Booking Manager - Système de Réservations    ║');
+  console.log('║   🏠 Boostinghost - Système de Réservations    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
