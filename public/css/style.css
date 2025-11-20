@@ -1198,3 +1198,105 @@ body {
   visibility: visible;
   pointer-events: auto;
 }
+/* En-tête du calendrier façon "channel manager" */
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 12px;
+}
+
+.fc .fc-toolbar-title {
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+/* Jours en haut : jour + date bien visibles */
+.fc .fc-col-header-cell-cushion {
+  padding: 6px 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Cells du mois */
+.fc-daygrid-day-frame {
+  padding: 2px;
+}
+
+/* Évènements style barres rouges comme ton screen */
+.bh-event {
+  border-radius: 6px;
+  border: none;
+  padding: 0;
+}
+
+/* Couleur par source */
+.bh-event-airbnb {
+  background: #d4202b;
+  color: #fff;
+}
+
+.bh-event-booking {
+  background: #003580;
+  color: #fff;
+}
+
+.bh-event-direct {
+  background: #4b5563;
+  color: #fff;
+}
+
+/* Contenu interne des événements */
+.bh-event-inner {
+  padding: 4px 6px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bh-event-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.bh-event-property {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bh-event-guest {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pastilles source (A / B / D) */
+.bh-event-source {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.bh-source-airbnb {
+  background: #fff;
+  color: #d4202b;
+}
+
+.bh-source-booking {
+  background: #fff;
+  color: #003580;
+}
+
+.bh-source-direct {
+  background: rgba(255, 255, 255, 0.2);
+}
