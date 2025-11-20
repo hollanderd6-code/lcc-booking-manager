@@ -1555,6 +1555,7 @@ app.post('/api/deposits', async (req, res) => {
     };
     DEPOSITS.push(deposit);
 
+    // URL publique de ton app (à adapter si besoin)
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
     const sessionParams = {
@@ -1619,7 +1620,6 @@ app.post('/api/deposits', async (req, res) => {
     });
   }
 });
-
 
 // ============================================
 // DÉMARRAGE
