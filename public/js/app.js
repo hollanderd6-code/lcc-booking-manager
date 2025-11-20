@@ -156,20 +156,27 @@ function updateCalendarEvents() {
 
   const events = allReservations
     .filter(r => activeFilters.size === 0 || activeFilters.has(r.property.id))
-    .map(r => ({
-      title: `${r.property.name} - ${r.guestName || ''}`,
-      start: r.start,
-      end: r.end,
-      backgroundColor: r.property.color,
-      borderColor: r.property.color,
-      extendedProps: {
-        reservation: r
-      }
-    }));
+    .map(r => {
+      const guestLabel = r.guestName || 'Voyageur';
+      const sourceLabel = r.source ? ` – ${r.source}` : '';
+      const title = `${guestLabel}${sourceLabel} | ${r.property.name}`;
+
+      return {
+        title,
+        start: r.start,
+        end: r.end,
+        backgroundColor: r.property.color,
+        borderColor: r.property.color,
+        extendedProps: {
+          reservation: r
+        }
+      };
+    });
 
   calendar.removeAllEvents();
   calendar.addEventSource(events);
 }
+
 
 // ========================================
 // OVERVIEW CARD (Aujourd’hui & à venir)
