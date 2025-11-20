@@ -1178,3 +1178,23 @@ body {
   justify-content: flex-end;
   margin-bottom: 8px;
 }
+/* ===== Correction clics bloqués sur mobile ===== */
+
+/* Overlay : invisible et non cliquable par défaut */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45); /* ou ce que tu veux */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* Quand on ouvre le menu (classe .active ajoutée en JS),
+   l’overlay devient visible et cliquable */
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
