@@ -1512,14 +1512,16 @@ app.post('/api/deposits', async (req, res) => {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
     }
 
+    // Retrouver la réservation dans les réservations du user
     const result = findReservationByUidForUser(reservationUid, user.id);
     if (!result) {
-      return res.status(404).json({ error: 'Réservation non trouvée' });
+      return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
     }
 
     const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
 
+    // Créer l’objet "caution" en mémoire + fichier JSON
     const depositId = 'dep_' + Date.now().toString(36);
     const deposit = {
       id: depositId,
@@ -1533,7 +1535,9 @@ app.post('/api/deposits', async (req, res) => {
     };
     DEPOSITS.push(deposit);
 
-    const session = await stripe.checkout.sessions.create({
+    const appUrl = process.env.APP_URL || '';
+
+    const sessionParams = {
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{
@@ -1552,9 +1556,23 @@ app.post('/api/deposits', async (req, res) => {
         reservation_uid: reservationUid,
         user_id: user.id
       },
-      success_url: `${process.env.APP_URL || ''}/caution-success.html?depositId=${deposit.id}`,
-      cancel_url: `${process.env.APP_URL || ''}/caution-cancel.html?depositId=${deposit.id}`
-    });
+      success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
+    };
+
+    let session;
+
+    // 👉 Si tu as un compte Stripe Connect lié, on crée la session sur CE compte
+    if (user.stripeAccountId) {
+      console.log('Création session de caution sur compte connecté :', user.stripeAccountId);
+      session = await stripe.checkout.sessions.create(
+        sessionParams,
+        { stripeAccount: user.stripeAccountId }
+      );
+    } else {
+      console.log('Création session de caution sur le compte plateforme (pas de stripeAccountId)');
+      session = await stripe.checkout.sessions.create(sessionParams);
+    }
 
     deposit.stripeSessionId = session.id;
     deposit.checkoutUrl = session.url;
@@ -1566,9 +1584,12 @@ app.post('/api/deposits', async (req, res) => {
     });
   } catch (err) {
     console.error('Erreur création caution:', err);
-    res.status(500).json({ error: 'Erreur lors de la création de la caution' });
+    res.status(500).json({
+      error: 'Erreur lors de la création de la caution : ' + (err.message || 'Erreur interne Stripe')
+    });
   }
 });
+
 
 // ============================================
 // DÉMARRAGE
