@@ -1448,19 +1448,39 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
     // 2) On crée le lien d’onboarding pour que l’utilisateur complète ses infos chez Stripe
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${appUrl}/settings-account.html?stripe=refresh`,
-      return_url: `${appUrl}/settings-account.html?stripe=return`,
-      type: 'account_onboarding'
-    });
+const sessionParams = {
+  mode: 'payment',
+  payment_method_types: ['card'],
+  line_items: [{
+    price_data: {
+      currency: 'eur',
+      product_data: {
+        name: `Caution séjour – ${property ? property.name : 'Logement'}`,
+        description: `Du ${reservation.start} au ${reservation.end}`
+      },
+      unit_amount: amountCents
+    },
+    quantity: 1
+  }],
+  // 🔹 ICI : on dit à Stripe de faire une empreinte bancaire (autorisation non capturée)
+  payment_intent_data: {
+    capture_method: 'manual',
+    metadata: {
+      deposit_id: deposit.id,
+      reservation_uid: reservationUid,
+      user_id: user.id
+    }
+  },
+  // (metadata sur la Session aussi, si tu veux)
+  metadata: {
+    deposit_id: deposit.id,
+    reservation_uid: reservationUid,
+    user_id: user.id
+  },
+  success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
+  cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
+};
 
-    return res.json({ url: accountLink.url });
-  } catch (err) {
-    console.error('Erreur /api/stripe/create-onboarding-link :', err);
-    res.status(500).json({ error: 'Impossible de générer le lien Stripe' });
-  }
-});
 
 // ============================================
 // 🚀 ROUTES API - CAUTIONS (Stripe)
