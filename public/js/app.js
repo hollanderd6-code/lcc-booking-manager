@@ -120,19 +120,74 @@ function initializeCalendar() {
 
   calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
-    locale: 'fr',
+    locale: 'fr',            // calendrier en français
+    firstDay: 1,             // lundi
+    height: 'auto',
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
-      right: ''
+      right: ''              // les boutons vue sont en dehors (view-btn)
     },
     buttonText: {
-      today: "today"
+      today: "Aujourd'hui",
+      month: 'Mois',
+      week: 'Semaine',
+      list: 'Liste'
     },
-    height: 'auto',
+    titleFormat: { month: 'long', year: 'numeric' },          // "Novembre 2025"
+    dayHeaderFormat: { weekday: 'short', day: '2-digit' },    // "L 03", "M 04"...
+
+    eventDisplay: 'block',
+    dayMaxEvents: 4,
+
     eventClick: function (info) {
-      showReservationModal(info.event.extendedProps.reservation);
+      if (info.event.extendedProps && info.event.extendedProps.reservation) {
+        showReservationModal(info.event.extendedProps.reservation);
+      }
     },
+
+    // classes CSS selon la source (Airbnb / Booking / Direct)
+    eventClassNames: function(info) {
+      const classes = ['bh-event'];
+      const source = info.event.extendedProps.source;
+
+      if (source === 'airbnb') classes.push('bh-event-airbnb');
+      else if (source === 'booking') classes.push('bh-event-booking');
+      else classes.push('bh-event-direct');
+
+      return classes;
+    },
+
+    // contenu HTML de l’event : logement + badge + voyageur
+    eventContent: function(arg) {
+      const props = arg.event.extendedProps || {};
+      const property = props.propertyName || 'Logement';
+      const source = props.source || '';
+      const guest = arg.event.title || '';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'bh-event-inner';
+
+      let sourceBadge = '';
+      if (source) {
+        const letter =
+          source === 'airbnb' ? 'A' :
+          source === 'booking' ? 'B' :
+          'D';
+        sourceBadge = `<span class="bh-event-source bh-source-${source}">${letter}</span>`;
+      }
+
+      wrapper.innerHTML = `
+        <div class="bh-event-top">
+          <span class="bh-event-property">${property}</span>
+          ${sourceBadge}
+        </div>
+        <div class="bh-event-guest">${guest}</div>
+      `;
+
+      return { domNodes: [wrapper] };
+    },
+
     events: []
   });
 
@@ -151,6 +206,7 @@ function changeCalendarView(view) {
   calendar.changeView(viewMap[view] || 'dayGridMonth');
 }
 
+// 👉 nouvelle version : on fournit title = voyageur + extendedProps utilisés pour l’affichage
 function updateCalendarEvents() {
   if (!calendar) return;
 
@@ -158,17 +214,18 @@ function updateCalendarEvents() {
     .filter(r => activeFilters.size === 0 || activeFilters.has(r.property.id))
     .map(r => {
       const guestLabel = r.guestName || 'Voyageur';
-      const sourceLabel = r.source ? ` – ${r.source}` : '';
-      const title = `${guestLabel}${sourceLabel} | ${r.property.name}`;
+      const propertyName = (r.property && r.property.name) || 'Logement';
 
       return {
-        title,
+        title: guestLabel,
         start: r.start,
         end: r.end,
         backgroundColor: r.property.color,
         borderColor: r.property.color,
         extendedProps: {
-          reservation: r
+          reservation: r,
+          propertyName: propertyName,
+          source: r.source || null
         }
       };
     });
