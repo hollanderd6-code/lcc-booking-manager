@@ -1446,7 +1446,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
     }
 
     // 2) On crée le lien d’onboarding pour que l’utilisateur complète ses infos chez Stripe
-    const appUrl = process.env.APP_URL; || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
