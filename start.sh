@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Script de démarrage rapide pour LCC Booking Manager
+# Script de démarrage rapide pour Boostinghost
 # Usage: ./start.sh
 
 clear
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║   🏠 LCC Booking Manager - Installation & Démarrage   ║"
+echo "║   🏠 Boostinghost - Installation & Démarrage   ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
