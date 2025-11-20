@@ -1450,8 +1450,8 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
 
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${appUrl}/settings-account-4.html?stripe=refresh`,
-      return_url: `${appUrl}/settings-account-4.html?stripe=return`,
+      refresh_url: `${appUrl}/settings-account.html?stripe=refresh`,
+      return_url: `${appUrl}/settings-account.html?stripe=return`,
       type: 'account_onboarding'
     });
 
