@@ -471,49 +471,48 @@
       }
     }
   </style>
+
   <script>
-  const API_URL = 'https://lcc-booking-manager.onrender.com'; // même URL que dans app-3.js
+    const API_URL = 'https://lcc-booking-manager.onrender.com';
 
-  async function selectPlan(plan) {
-    try {
-      const token = localStorage.getItem('lcc_token');
+    async function selectPlan(plan) {
+      try {
+        const token = localStorage.getItem('lcc_token');
 
-      // Optionnel : bloquer si pas connecté
-      if (!token) {
-        if (confirm("Vous devez être connecté pour choisir un abonnement. Aller à la page de connexion ?")) {
-          window.location.href = '/login.html';
+        if (!token) {
+          if (confirm("Vous devez être connecté pour choisir un abonnement. Aller à la page de connexion ?")) {
+            window.location.href = '/login-3.html';
+          }
+          return;
         }
-        return;
+
+        const res = await fetch(`${API_URL}/api/billing/create-checkout-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ plan })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || "Impossible de démarrer le paiement. Réessayez plus tard.");
+          return;
+        }
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert("Réponse inattendue de l'API (pas d'URL de paiement).");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erreur réseau lors du démarrage du paiement.");
       }
-
-      // Appel API backend -> création session Stripe Checkout
-      const res = await fetch(`${API_URL}/api/billing/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ plan }) // "basic" ou "pro"
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Impossible de démarrer le paiement. Réessayez plus tard.");
-        return;
-      }
-
-      if (data.url) {
-        // Redirection vers Stripe
-        window.location.href = data.url;
-      } else {
-        alert("Réponse inattendue de l'API (pas d'URL de paiement).");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Erreur réseau lors du démarrage du paiement.");
     }
-  }
-</script>
+  </script>
+
 </body>
 </html>
