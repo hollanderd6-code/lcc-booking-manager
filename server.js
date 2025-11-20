@@ -1514,7 +1514,7 @@ app.get('/api/deposits/:reservationUid', async (req, res) => {
   res.json({ deposit });
 });
 
-// POST - Créer une caution Stripe pour une réservation
+// POST - Créer une caution Stripe pour une réservation (empreinte bancaire)
 app.post('/api/deposits', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -1541,7 +1541,7 @@ app.post('/api/deposits', async (req, res) => {
     const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
 
-    // Créer l’objet "caution" en mémoire + fichier JSON
+    // Créer l'objet "caution" en mémoire + fichier JSON
     const depositId = 'dep_' + Date.now().toString(36);
     const deposit = {
       id: depositId,
@@ -1555,13 +1555,7 @@ app.post('/api/deposits', async (req, res) => {
     };
     DEPOSITS.push(deposit);
 
-const appUrl = process.env.APP_URL;
-
-if (!appUrl || !/^https?:\/\//.test(appUrl)) {
-  return res.status(500).json({
-    error: "APP_URL n'est pas configurée ou n'est pas une URL valide (doit commencer par http:// ou https://)"
-  });
-}
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
     const sessionParams = {
       mode: 'payment',
@@ -1577,6 +1571,16 @@ if (!appUrl || !/^https?:\/\//.test(appUrl)) {
         },
         quantity: 1
       }],
+      // 🔹 Empreinte bancaire : autorisation non capturée
+      payment_intent_data: {
+        capture_method: 'manual',
+        metadata: {
+          deposit_id: deposit.id,
+          reservation_uid: reservationUid,
+          user_id: user.id
+        }
+      },
+      // (on garde aussi des metadata sur la Session)
       metadata: {
         deposit_id: deposit.id,
         reservation_uid: reservationUid,
@@ -1588,7 +1592,7 @@ if (!appUrl || !/^https?:\/\//.test(appUrl)) {
 
     let session;
 
-    // 👉 Si tu as un compte Stripe Connect lié, on crée la session sur CE compte
+    // Si tu as un compte Stripe Connect lié, on crée la session sur CE compte
     if (user.stripeAccountId) {
       console.log('Création session de caution sur compte connecté :', user.stripeAccountId);
       session = await stripe.checkout.sessions.create(
@@ -1604,13 +1608,13 @@ if (!appUrl || !/^https?:\/\//.test(appUrl)) {
     deposit.checkoutUrl = session.url;
     await saveDeposits();
 
-    res.json({
+    return res.json({
       deposit,
       checkoutUrl: session.url
     });
   } catch (err) {
     console.error('Erreur création caution:', err);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Erreur lors de la création de la caution : ' + (err.message || 'Erreur interne Stripe')
     });
   }
