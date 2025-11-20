@@ -1471,6 +1471,10 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
 // 🚀 ROUTES API - CAUTIONS (Stripe)
 // ============================================
 
+// ============================================
+// 🚀 ROUTES API - CAUTIONS (Stripe)
+// ============================================
+
 function findReservationByUidForUser(reservationUid, userId) {
   for (const property of PROPERTIES) {
     if (property.userId !== userId) continue;
@@ -1540,7 +1544,6 @@ app.post('/api/deposits', async (req, res) => {
     };
     DEPOSITS.push(deposit);
 
-    // URL publique de ton app (à adapter éventuellement)
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
     const sessionParams = {
@@ -1566,7 +1569,7 @@ app.post('/api/deposits', async (req, res) => {
           user_id: user.id
         }
       },
-      // (on garde aussi des metadata sur la Session)
+      // (metadata aussi sur la Session)
       metadata: {
         deposit_id: deposit.id,
         reservation_uid: reservationUid,
@@ -1605,6 +1608,7 @@ app.post('/api/deposits', async (req, res) => {
     });
   }
 });
+
 
 // ============================================
 // DÉMARRAGE
