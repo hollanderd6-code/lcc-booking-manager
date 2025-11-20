@@ -1555,7 +1555,7 @@ app.post('/api/deposits', async (req, res) => {
     };
     DEPOSITS.push(deposit);
 
-    // URL publique de ton app (à adapter si besoin)
+    // URL publique de ton app (à adapter éventuellement)
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
     const sessionParams = {
@@ -1628,7 +1628,7 @@ app.post('/api/deposits', async (req, res) => {
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║   🏠 Boostinghost - Système de Réservations    ║');
+  console.log('║   🏠 LCC Booking Manager - Système de Réservations    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
