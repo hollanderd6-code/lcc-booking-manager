@@ -84,11 +84,35 @@
     }
 
     .calendar-wrapper {
-  background: white;
-  border-radius: var(--radius-2xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-color);
+      background: white;
+      border-radius: var(--radius-2xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      max-width: 100%;           /* ajout */
+      box-sizing: border-box;    /* ajout */
+}
+
+.calendar-wrapper {
+      background: white;
+      border-radius: var(--radius-2xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      max-width: 100%;           /* ajout */
+      box-sizing: border-box;    /* ajout */
+}
+
+.calendar-container {
+      display: flex;
+      background: white;
+      min-height: 500px;
+      max-width: 100%;           /* ajout */
+      overflow-x: auto;          /* au lieu de overflow: hidden */
+      overflow-y: hidden;
+}
+
+
 
   /* important pour ne jamais dépasser la largeur de la page */
   max-width: 100%;
@@ -341,7 +365,7 @@
     }
 
     .day-header {
-      min-width: 50px;
+      min-width: 30px;
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -401,7 +425,7 @@
     }
 
     .calendar-cell {
-      min-width: 50px;
+      min-width: 30px;
       height: var(--calendar-cell-height);
       flex: 1;
       border-right: 1px solid var(--calendar-border);
