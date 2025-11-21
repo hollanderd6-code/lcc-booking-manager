@@ -7,6 +7,14 @@ let calendar = null;
 let allReservations = [];
 let activeFilters = new Set();
 
+
+// Small helper to avoid errors if stat elements are missing on some pages
+function safeSetText(id, value) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = value;
+  }
+}
 // ========================================
 // INITIALIZATION
 // ========================================
@@ -388,18 +396,6 @@ async function loadReservations() {
     // Calendrier
     updateCalendarEvents();
 
-    // Nouveau calendrier moderne (vue tableau par logement)
-    if (window.renderModernCalendar) {
-      try {
-        window.LCC_PROPERTIES = data.properties || [];
-        window.allReservations = allReservations;
-        window.renderModernCalendar(allReservations, data.properties || []);
-      } catch (e) {
-        console.warn('Erreur rendu calendrier moderne', e);
-      }
-    }
-
-
     console.log(`📦 ${allReservations.length} réservations chargées`);
   } catch (error) {
     console.error('Error loading reservations:', error);
@@ -451,7 +447,7 @@ async function syncReservations() {
 
 function updateStats(data) {
   const reservations = data.reservations || [];
-  document.getElementById('statTotal').textContent = reservations.length;
+  safeSetText('statTotal', reservations.length;
 
   const now = new Date();
   const upcoming = reservations.filter(r => new Date(r.start) > now).length;
@@ -459,7 +455,7 @@ function updateStats(data) {
     r => new Date(r.start) <= now && new Date(r.end) >= now
   ).length;
 
-  document.getElementById('statUpcoming').textContent = upcoming;
+  safeSetText('statUpcoming', upcoming;
   document.getElementById('statCurrent').textContent = current;
 
   const navBadge = document.getElementById('navTotalReservations');
