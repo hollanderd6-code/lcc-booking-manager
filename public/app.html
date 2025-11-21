@@ -466,24 +466,102 @@
         
         <!-- Calendar Card -->
         <section class="card" id="calendarSection">
-          <div class="card-header">
-            <div class="card-title">
+          <div class="section-header">
+            <h2 class="section-title">
               <i class="fas fa-calendar-alt"></i>
               Calendrier des réservations
+            </h2>
+            <button class="btn btn-primary" id="newReservationBtn">
+              <i class="fas fa-plus"></i>
+              Nouvelle réservation
+            </button>
+          </div>
+          
+          <!-- NOUVEAU CALENDRIER MODERNE -->
+          <div class="calendar-wrapper">
+            <!-- Calendar Header -->
+            <div class="calendar-modern-header">
+              <div class="calendar-header-top">
+                <h3 class="calendar-title-modern">
+                  <i class="fas fa-calendar"></i>
+                  <span>Calendrier</span>
+                </h3>
+                <div class="calendar-actions-top">
+                  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
+                    <i class="fas fa-search"></i>
+                  </button>
+                  <button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
+                    <i class="fas fa-filter"></i>
+                  </button>
+                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
+                    <i class="fas fa-cog"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- View Selector -->
+              <div class="view-selector">
+                <div class="view-tabs">
+                  <button class="view-tab" data-view="day">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Jour</span>
+                  </button>
+                  <button class="view-tab" data-view="week">
+                    <i class="fas fa-calendar-week"></i>
+                    <span>Semaine</span>
+                  </button>
+                  <button class="view-tab active" data-view="month">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Mois</span>
+                  </button>
+                  <button class="view-tab" data-view="year">
+                    <i class="fas fa-calendar"></i>
+                    <span>Année</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="flex gap-sm">
-              <button class="btn btn-ghost view-btn active" data-view="month">
-                <i class="fas fa-calendar"></i> Mois
+            
+            <!-- Period Navigation -->
+            <div class="period-navigation">
+              <button class="period-nav-btn" id="prevPeriod">
+                <i class="fas fa-chevron-left"></i>
               </button>
-              <button class="btn btn-ghost view-btn" data-view="week">
-                <i class="fas fa-calendar-week"></i> Semaine
+              <div class="period-display">
+                <span class="month-name" id="currentMonth">Novembre</span>
+                <span class="year" id="currentYear">2025</span>
+              </div>
+              <button class="period-nav-btn" id="nextPeriod">
+                <i class="fas fa-chevron-right"></i>
               </button>
-              <button class="btn btn-ghost view-btn" data-view="list">
-                <i class="fas fa-list"></i> Liste
-              </button>
+            </div>
+            
+            <!-- Calendar Container -->
+            <div class="calendar-container">
+              <!-- Property List Column -->
+              <div class="property-list-column">
+                <div class="property-list-header">
+                  <span>Logements</span>
+                </div>
+                <div class="property-list-items" id="propertyList">
+                  <!-- Les logements seront ajoutés dynamiquement -->
+                </div>
+              </div>
+              
+              <!-- Calendar Grid Wrapper -->
+              <div class="calendar-grid-wrapper">
+                <!-- Days Header -->
+                <div class="days-header" id="daysHeader">
+                  <!-- Les jours seront ajoutés dynamiquement -->
+                </div>
+                
+                <!-- Calendar Grid -->
+                <div class="calendar-grid" id="calendarGrid">
+                  <!-- Les cellules seront ajoutées dynamiquement -->
+                </div>
+              </div>
             </div>
           </div>
-          <div id="calendar"></div>
         </section>
         
       </div>
@@ -582,404 +660,673 @@
   <div class="toast-container" id="toastContainer"></div>
   
   <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
   <script src="/js/app.js"></script>
   
   <style>
-    /* Styles spécifiques calendrier & UI complémentaire */
-    #calendar {
-      margin-top: 24px;
-    }
+/* ============================================
+       NOUVEAU CALENDRIER MODERNE
+       ============================================ */
     
-    .fc {
-      --fc-border-color: var(--border-color);
-      --fc-button-bg-color: var(--primary-color);
-      --fc-button-border-color: var(--primary-color);
-      --fc-button-hover-bg-color: var(--primary-hover);
-      --fc-button-hover-border-color: var(--primary-hover);
-      --fc-button-active-bg-color: var(--primary-dark);
-      --fc-today-bg-color: var(--primary-light);
+    /* Variables du calendrier */
+    :root {
+      --calendar-header-bg: #10B981; /* Vert de votre thème */
+      --calendar-header-hover: #059669;
+      --calendar-cell-height: 42px;
+      --property-column-width: 200px;
+      --day-header-height: 60px;
+      --calendar-border: #e5e7eb;
+      
+      /* Couleurs officielles des plateformes */
+      --booking-color-airbnb: #FF5A5F;
+      --booking-color-booking: #003580;
+      --booking-color-expedia: #FFC72C;
+      --booking-color-direct: #10B981;
+      --booking-color-vrbo: #1569C7;
+      --booking-color-hotels: #D32F2F;
+      
+      --cell-hover-bg: rgba(16, 185, 129, 0.08);
     }
-    
-    [data-theme="dark"] .fc {
-      --fc-page-bg-color: var(--bg-primary);
-      --fc-neutral-bg-color: var(--bg-secondary);
-      --fc-today-bg-color: rgba(16, 185, 129, 0.1);
+
+    /* Dark theme */
+    [data-theme="dark"] {
+      --calendar-header-bg: #047857;
+      --calendar-border: #374151;
+      --cell-hover-bg: rgba(16, 185, 129, 0.15);
     }
-    
-    .fc .fc-button {
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      text-transform: none;
-      padding: 8px 16px;
+
+    /* Section Calendrier */
+    #calendarSection {
+      margin-top: 32px;
+      scroll-margin-top: 20px;
     }
-    
-    .fc-event {
-      border-radius: var(--radius-sm);
-      border: none;
-      padding: 4px 8px;
-    }
-    
-    .property-filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    
-    .property-badge {
-      padding: 8px 16px;
-      border-radius: var(--radius-full);
-      border: 2px solid;
-      cursor: pointer;
-      transition: var(--transition-fast);
-      font-weight: 600;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .property-badge:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
-    }
-    
-    .property-badge.active {
-      background: var(--primary-color);
-      color: #fff;
-      border-color: var(--primary-color);
-    }
-    
-    .property-count {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      font-size: 12px;
-    }
-    
-    .page-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-tertiary);
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
-    
-    .page-subtitle {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-    
-    .hide-on-mobile {
-      display: inline-flex;
-    }
-    
-    @media (max-width: 768px) {
-      .hide-on-mobile {
-        display: none;
-      }
-    }
-    
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .modal.active {
-      display: flex;
-    }
-    
-    .modal-content {
-      background: var(--bg-primary);
-      border-radius: var(--radius-xl);
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
+
+    .calendar-wrapper {
+      background: white;
+      border-radius: var(--radius-2xl);
       overflow: hidden;
-      box-shadow: var(--shadow-xl);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
     }
-    
-    .modal-header {
-      padding: var(--spacing-lg);
-      border-bottom: 1px solid var(--border-color);
+
+    /* Header du calendrier */
+    .calendar-modern-header {
+      background: linear-gradient(135deg, var(--calendar-header-bg), var(--calendar-header-hover));
+      color: white;
+      padding: 0;
+    }
+
+    .calendar-header-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     }
-    
-    .modal-header h2 {
+
+    .calendar-title-modern {
       font-size: 20px;
-      font-weight: 700;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    
-    .modal-close {
+
+    .calendar-title-modern i {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .calendar-actions-top {
+      display: flex;
+      gap: 8px;
+    }
+
+    .calendar-action-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: white;
       width: 36px;
       height: 36px;
       border-radius: var(--radius-md);
-      border: none;
-      background: var(--bg-hover);
-      color: var(--text-secondary);
       cursor: pointer;
       transition: var(--transition-fast);
-    }
-    
-    .modal-close:hover {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-    }
-    
-    .modal-body {
-      padding: var(--spacing-lg);
-      overflow-y: auto;
-      max-height: calc(90vh - 80px);
-    }
-    
-    .loading-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 9999;
+      display: flex;
       align-items: center;
       justify-content: center;
     }
-    
-    .loading-overlay.active {
-      display: flex;
+
+    .calendar-action-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
     }
-    
-    .loading-spinner {
-      background: var(--bg-primary);
-      padding: var(--spacing-xl);
-      border-radius: var(--radius-xl);
-      text-align: center;
-    }
-    
-    .loading-spinner i {
-      font-size: 48px;
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-md);
-    }
-    
-    .toast-container {
-      position: fixed;
-      bottom: var(--spacing-lg);
-      right: var(--spacing-lg);
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-sm);
-    }
-    
-    .toast {
-      background: var(--bg-primary);
-      padding: var(--spacing-md) var(--spacing-lg);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      border-left: 4px solid;
+
+    /* View Selector */
+    .view-selector {
       display: flex;
       align-items: center;
-      gap: var(--spacing-md);
-      min-width: 300px;
-      animation: slideInRight 0.3s ease;
-    }
-    
-    .toast.success { border-color: var(--success); }
-    .toast.error { border-color: var(--error); }
-    .toast.info { border-color: var(--info); }
-    
-    @keyframes slideInRight {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      padding: 12px 20px;
+      gap: 16px;
+      background: var(--calendar-header-bg);
     }
 
-    /* Notifications panel */
-    .notifications-panel {
-      position: fixed;
-      top: 0;
-      right: -360px;
-      width: 360px;
-      height: 100vh;
-      background: var(--bg-primary);
-      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-      z-index: 1100;
+    .view-tabs {
       display: flex;
-      flex-direction: column;
-      transition: right 0.25s ease;
-      border-left: 1px solid var(--border-color);
-    }
-
-    .notifications-panel.open {
-      right: 0;
-    }
-
-    .notifications-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .notifications-header h2 {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .notifications-body {
-      padding: 16px 20px;
-      overflow-y: auto;
+      gap: 8px;
       flex: 1;
     }
 
-    .empty-state {
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-
-    /* Carte Vue d'ensemble (arrivées / séjours / départs) */
-    .overview-card {
-      background: linear-gradient(135deg, #f3f4ff, #eef9ff);
-      border-radius: 24px;
-      padding: 18px 20px 16px;
-      margin-bottom: 24px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-    }
-
-    [data-theme="dark"] .overview-card {
-      background: radial-gradient(circle at top left, #1e293b, #020617);
-    }
-
-    .overview-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .overview-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-tertiary);
-      font-weight: 600;
-    }
-
-    .overview-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .overview-chip {
-      border-radius: 999px;
-      border: 1px solid rgba(59, 130, 246, 0.25);
-      background: rgba(37, 99, 235, 0.06);
-      color: #2563eb;
-      font-size: 12px;
-      padding: 6px 12px;
-      font-weight: 600;
-    }
-
-    [data-theme="dark"] .overview-chip {
-      background: rgba(37, 99, 235, 0.18);
-      border-color: rgba(59, 130, 246, 0.4);
-    }
-
-    .overview-metrics {
-      display: flex;
-      gap: 24px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .overview-metric-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .overview-metric-value {
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .overview-timeline {
-      margin-top: 4px;
-      background: #020617;
-      color: #e5e7eb;
-      border-radius: 18px;
-      padding: 10px 14px;
-      font-size: 13px;
-    }
-
-    [data-theme="dark"] .overview-timeline {
-      background: #020617;
-    }
-
-    .overview-timeline-item {
+    .view-tab {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .overview-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      flex-shrink: 0;
-    }
-
-    .overview-dot.arrival {
-      background: #22c55e;
-    }
-
-    .overview-dot.stay {
-      background: #3b82f6;
-    }
-
-    .overview-dot.departure {
-      background: #f97316;
-    }
-
-    .overview-line-main {
-      flex: 1;
-    }
-
-    .overview-line-time {
-      font-size: 11px;
-      opacity: 0.8;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      transition: var(--transition-fast);
       white-space: nowrap;
     }
 
-    .overview-empty {
-      margin: 0;
-      font-size: 13px;
-      opacity: 0.8;
-      padding-top: 2px;
-      padding-bottom: 2px;
+    .view-tab:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
     }
 
-    .overview-timeline-footer {
-      border-top: 1px solid rgba(148, 163, 184, 0.35);
-      margin-top: 6px;
-      padding-top: 6px;
+    .view-tab.active {
+      background: white;
+      color: var(--calendar-header-bg);
+      border-color: white;
+    }
+
+    .view-tab i {
+      font-size: 16px;
+    }
+
+    /* Period Navigation */
+    .period-navigation {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-secondary);
+      border-bottom: 2px solid var(--calendar-border);
+    }
+
+    .period-nav-btn {
+      background: white;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .period-nav-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .period-display {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .period-display .month-name {
+      color: var(--primary-color);
+    }
+
+    /* Calendar Container */
+    .calendar-container {
+      display: flex;
+      overflow: hidden;
+      background: white;
+      min-height: 360px;
+    }
+
+    /* Property List Column */
+    .property-list-column {
+      width: var(--property-column-width);
+      border-right: 2px solid var(--calendar-border);
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .property-list-header {
+      height: var(--day-header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 2px solid var(--calendar-border);
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .property-list-items {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .property-item {
+      height: var(--calendar-cell-height);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--calendar-border);
+      font-size: 13px;
+      color: var(--text-primary);
+      background: white;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .property-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .property-item.selected {
+      background: var(--primary-light);
+      font-weight: 500;
+    }
+
+    .property-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .property-count {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
       font-size: 11px;
-      opacity: 0.7;
+      font-weight: 600;
+    }
+
+    /* Calendar Grid Wrapper */
+    .calendar-grid-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Days Header */
+    .days-header {
+      height: var(--day-header-height);
+      display: flex;
+      background: var(--bg-tertiary);
+      border-bottom: 2px solid var(--calendar-border);
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .day-header {
+      min-width: 50px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--calendar-border);
+      position: relative;
+    }
+
+    .day-header.weekend {
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .day-header.today {
+      background: var(--primary-light);
+    }
+
+    .day-header.today::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--primary-color);
+    }
+
+    .day-header .day-name {
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .day-header .day-number {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 18px;
+      margin-top: 4px;
+    }
+
+    .day-header.today .day-number {
+      color: var(--primary-color);
+    }
+
+    /* Calendar Grid */
+    .calendar-grid {
+      flex: 1;
+      overflow: auto;
+      background: white;
+    }
+
+    .calendar-row {
+      display: flex;
+      border-bottom: 1px solid var(--calendar-border);
+    }
+
+    .calendar-cell {
+      min-width: 50px;
+      height: var(--calendar-cell-height);
+      flex: 1;
+      border-right: 1px solid var(--calendar-border);
+      padding: 2px;
+      position: relative;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .calendar-cell:hover {
+      background: var(--cell-hover-bg);
+    }
+
+    .calendar-cell.weekend {
+      background: rgba(239, 68, 68, 0.02);
+    }
+
+    .calendar-cell.today {
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .calendar-cell.selected {
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    /* Booking Blocks avec couleurs par plateforme */
+    .booking-block {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      right: 3px;
+      bottom: 3px;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Couleurs par plateforme */
+    .booking-block.airbnb {
+      background: linear-gradient(135deg, var(--booking-color-airbnb), #E84C50);
+    }
+
+    .booking-block.booking {
+      background: linear-gradient(135deg, var(--booking-color-booking), #00224F);
+    }
+
+    .booking-block.expedia {
+      background: linear-gradient(135deg, var(--booking-color-expedia), #FFB000);
+    }
+
+    .booking-block.vrbo {
+      background: linear-gradient(135deg, var(--booking-color-vrbo), #0E4C99);
+    }
+
+    .booking-block.hotels {
+      background: linear-gradient(135deg, var(--booking-color-hotels), #B71C1C);
+    }
+
+    .booking-block.direct {
+      background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
+    }
+
+    .booking-block.start {
+      border-top-left-radius: 10px;
+      border-bottom-left-radius: 10px;
+      padding-left: 8px;
+    }
+
+    .booking-block.end {
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+      padding-right: 8px;
+    }
+
+    .booking-block.single {
+      border-radius: 10px;
+    }
+
+    .booking-block:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Platform Icons */
+    .booking-block .platform-icon {
+      margin-right: 4px;
+      font-size: 10px;
+    }
+
+    /* Price Display */
+    .cell-price {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 1px 3px;
+      border-radius: 3px;
+    }
+
+    /* Month View Specific */
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: var(--border-color);
+      padding: 1px;
+    }
+
+    .month-cell {
+      background: white;
+      padding: 8px;
+      min-height: 80px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .month-cell:hover {
+      background: var(--bg-hover);
+    }
+
+    .month-cell-date {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .month-cell.today .month-cell-date {
+      color: var(--primary-color);
+      font-weight: 700;
+    }
+
+    .month-cell.other-month {
+      background: var(--bg-tertiary);
+      opacity: 0.5;
+    }
+
+    /* Week View */
+    .week-view-header {
+      display: grid;
+      grid-template-columns: var(--property-column-width) repeat(7, 1fr);
+      background: var(--bg-tertiary);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    /* Year View */
+    .year-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      padding: 24px;
+      background: var(--bg-secondary);
+    }
+
+    .year-month-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .year-month-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary-color);
+    }
+
+    .year-month-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .year-month-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .year-month-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .year-month-stat i {
+      font-size: 12px;
+      color: var(--primary-color);
+    }
+
+    /* Loading State */
+    .calendar-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 400px;
+      color: var(--text-secondary);
+    }
+
+    .calendar-loading i {
+      font-size: 48px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Empty State */
+    .calendar-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 400px;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 40px;
+    }
+
+    .calendar-empty i {
+      font-size: 64px;
+      margin-bottom: 16px;
+      color: var(--text-tertiary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .property-list-column {
+        width: 140px;
+      }
+      
+      .day-header,
+      .calendar-cell {
+        min-width: 45px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .view-tab span {
+        display: none;
+      }
+      
+      .property-list-column {
+        width: 100px;
+      }
+      
+      .property-item {
+        font-size: 11px;
+        padding: 0 8px;
+      }
+      
+      .day-header,
+      .calendar-cell {
+        min-width: 40px;
+      }
+      
+      .booking-block {
+        font-size: 10px;
+        padding: 1px 4px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .property-list-column {
+        display: none;
+      }
+      
+      .calendar-title-modern span {
+        display: none;
+      }
+      
+      .period-display {
+        font-size: 16px;
+      }
+    }
+
+    /* ScrollBar Styling */
+    .calendar-grid::-webkit-scrollbar,
+    .property-list-items::-webkit-scrollbar,
+    .days-header::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+
+    .calendar-grid::-webkit-scrollbar-track,
+    .property-list-items::-webkit-scrollbar-track,
+    .days-header::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+    }
+
+    .calendar-grid::-webkit-scrollbar-thumb,
+    .property-list-items::-webkit-scrollbar-thumb,
+    .days-header::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .calendar-grid::-webkit-scrollbar-thumb:hover,
+    .property-list-items::-webkit-scrollbar-thumb:hover,
+    .days-header::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
     }
   </style>
 
@@ -1354,5 +1701,391 @@
       document.addEventListener('DOMContentLoaded', updateKpisFromLocal);
     })();
   </script>
+
+  <script>
+    // ============================================
+    // CALENDRIER MODERNE - VUE SEULE (intégré dans app-7)
+    // ============================================
+    (function() {
+      'use strict';
+
+      const CONFIG = {
+        MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+        DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+        PLATFORMS: {
+          airbnb: { icon: 'fa-home' },
+          booking: { icon: 'fa-bed' },
+          expedia: { icon: 'fa-plane' },
+          vrbo: { icon: 'fa-house-user' },
+          hotels: { icon: 'fa-hotel' },
+          direct: { icon: 'fa-user' }
+        }
+      };
+
+      const state = {
+        currentView: 'month',
+        currentDate: new Date(),
+        properties: [],
+        bookings: [],
+        selectedPropertyKey: null
+      };
+
+      document.addEventListener('DOMContentLoaded', function () {
+        // Si le nouveau calendrier n'est pas présent sur la page, ne rien faire
+        if (!document.getElementById('calendarGrid')) return;
+
+        initializeCalendar();
+        attachCalendarEventListeners();
+        loadFromLocalStorage();
+      });
+
+      function initializeCalendar() {
+        updatePeriodDisplay();
+        renderCalendar();
+      }
+
+      function attachCalendarEventListeners() {
+        // Onglets de vue
+        document.querySelectorAll('.view-tab').forEach(function(tab) {
+          tab.addEventListener('click', function() {
+            changeView(tab.dataset.view);
+          });
+        });
+
+        // Navigation mois précédent / suivant
+        var prev = document.getElementById('prevPeriod');
+        var next = document.getElementById('nextPeriod');
+
+        if (prev) prev.addEventListener('click', navigatePrevious);
+        if (next) next.addEventListener('click', navigateNext);
+      }
+
+      function changeView(view) {
+        state.currentView = view;
+
+        document.querySelectorAll('.view-tab').forEach(function(tab) {
+          tab.classList.toggle('active', tab.dataset.view === view);
+        });
+
+        renderCalendar();
+      }
+
+      function navigatePrevious() {
+        switch (state.currentView) {
+          case 'day':
+            state.currentDate.setDate(state.currentDate.getDate() - 1);
+            break;
+          case 'week':
+            state.currentDate.setDate(state.currentDate.getDate() - 7);
+            break;
+          case 'month':
+          default:
+            state.currentDate.setMonth(state.currentDate.getMonth() - 1);
+            break;
+        }
+        updatePeriodDisplay();
+        renderCalendar();
+      }
+
+      function navigateNext() {
+        switch (state.currentView) {
+          case 'day':
+            state.currentDate.setDate(state.currentDate.getDate() + 1);
+            break;
+          case 'week':
+            state.currentDate.setDate(state.currentDate.getDate() + 7);
+            break;
+          case 'month':
+          default:
+            state.currentDate.setMonth(state.currentDate.getMonth() + 1);
+            break;
+        }
+        updatePeriodDisplay();
+        renderCalendar();
+      }
+
+      function updatePeriodDisplay() {
+        var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
+        var year = state.currentDate.getFullYear();
+        var monthEl = document.getElementById('currentMonth');
+        var yearEl = document.getElementById('currentYear');
+        if (monthEl) monthEl.textContent = monthName;
+        if (yearEl) yearEl.textContent = year;
+      }
+
+      // ============================================
+      // CHARGEMENT DES DONNÉES DEPUIS localStorage
+      // ============================================
+      function loadFromLocalStorage() {
+        try {
+          var propsRaw = localStorage.getItem('LCC_PROPERTIES');
+          var resRaw = localStorage.getItem('LCC_RESERVATIONS');
+          var props = propsRaw ? JSON.parse(propsRaw) : [];
+          var res = resRaw ? JSON.parse(resRaw) : [];
+
+          // Normalisation propriétés
+          state.properties = (props || []).map(function(p, index) {
+            var key = p.id || p._id || p.uuid || p.slug || p.name || p.title || String(index);
+            var name = p.name || p.title || p.propertyName || p.property || ('Logement ' + (index + 1));
+            return {
+              key: String(key),
+              name: name,
+              raw: p
+            };
+          });
+
+          // Normalisation réservations
+          state.bookings = (res || []).map(function(r, index) {
+            var propKey = r.propertyId || r.property_id || r.propertyKey || r.propertySlug || r.propertyName || r.property;
+            var start = r.startDate || r.start || r.checkIn;
+            var end = r.endDate || r.end || r.checkOut;
+            return {
+              id: String(r.id || r._id || index),
+              propertyKey: propKey ? String(propKey) : null,
+              startDate: start,
+              endDate: end,
+              guestName: r.guestName || r.name || '',
+              platform: r.platform || r.source || 'direct',
+              price: r.price || r.amount || 0,
+              summary: r.summary || ''
+            };
+          });
+        } catch (e) {
+          console.error('Erreur lecture LCC_PROPERTIES / LCC_RESERVATIONS', e);
+          state.properties = [];
+          state.bookings = [];
+        }
+
+        renderPropertyList();
+        renderCalendar();
+      }
+
+      // ============================================
+      // RENDU DU CALENDRIER
+      // ============================================
+      function renderCalendar() {
+        switch (state.currentView) {
+          case 'day':
+          case 'week':
+          case 'month':
+          default:
+            renderMonthView();
+            break;
+          case 'year':
+            renderYearView();
+            break;
+        }
+      }
+
+      function renderPropertyList() {
+        var wrapper = document.getElementById('propertyList');
+        if (!wrapper) return;
+        wrapper.innerHTML = '';
+
+        if (!state.properties.length) {
+          wrapper.innerHTML = '<div class="property-item"><span style="color: var(--text-secondary);">Aucun logement</span></div>';
+          return;
+        }
+
+        state.properties.forEach(function(p) {
+          var bookingCount = state.bookings.filter(function(b) {
+            return !b.propertyKey || !p.key
+              ? false
+              : String(b.propertyKey) === String(p.key) ||
+                String(b.propertyKey) === String(p.name);
+          }).length;
+
+          var div = document.createElement('div');
+          div.className = 'property-item';
+          div.dataset.propertyKey = p.key;
+          div.innerHTML =
+            '<span class="property-name">' + p.name + '</span>' +
+            (bookingCount > 0 ? '<span class="property-count">' + bookingCount + '</span>' : '');
+
+          div.addEventListener('click', function() {
+            selectProperty(p.key);
+          });
+
+          wrapper.appendChild(div);
+        });
+      }
+
+      function renderMonthView() {
+        var year = state.currentDate.getFullYear();
+        var month = state.currentDate.getMonth();
+        var lastDay = new Date(year, month + 1, 0);
+        var daysInMonth = lastDay.getDate();
+
+        renderDaysHeader(1, daysInMonth);
+
+        var grid = document.getElementById('calendarGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        state.properties.forEach(function(p) {
+          var row = document.createElement('div');
+          row.className = 'calendar-row';
+          row.dataset.propertyKey = p.key;
+
+          for (var day = 1; day <= daysInMonth; day++) {
+            var cell = createCalendarCell(p, year, month, day);
+            row.appendChild(cell);
+          }
+
+          grid.appendChild(row);
+        });
+
+        renderBookingsInCells();
+      }
+
+      function renderDaysHeader(startDay, endDay) {
+        var header = document.getElementById('daysHeader');
+        if (!header) return;
+        header.innerHTML = '';
+
+        var year = state.currentDate.getFullYear();
+        var month = state.currentDate.getMonth();
+
+        for (var day = startDay; day <= endDay; day++) {
+          var date = new Date(year, month, day);
+          var dow = date.getDay();
+
+          var div = document.createElement('div');
+          div.className = 'day-header';
+
+          if (dow === 0 || dow === 6) div.classList.add('weekend');
+          if (isToday(date)) div.classList.add('today');
+
+          div.innerHTML =
+            '<span class="day-name">' + CONFIG.DAYS_SHORT[dow] + '</span>' +
+            '<span class="day-number">' + day + '</span>';
+
+          header.appendChild(div);
+        }
+      }
+
+      function createCalendarCell(property, year, month, day) {
+        var cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        cell.dataset.propertyKey = property.key;
+
+        var monthStr = String(month + 1).padStart(2, '0');
+        var dayStr = String(day).padStart(2, '0');
+        cell.dataset.date = year + '-' + monthStr + '-' + dayStr;
+
+        var date = new Date(year, month, day);
+        var dow = date.getDay();
+
+        if (dow === 0 || dow === 6) cell.classList.add('weekend');
+        if (isToday(date)) cell.classList.add('today');
+
+        cell.addEventListener('click', function(ev) {
+          if (!ev.target.classList.contains('booking-block')) {
+            // Ici on pourrait ouvrir le modal existant (newReservationModal) si souhaité
+          }
+        });
+
+        return cell;
+      }
+
+      function renderBookingsInCells() {
+        state.bookings.forEach(function(b) {
+          if (!b.startDate || !b.endDate) return;
+
+          var startDate = new Date(b.startDate);
+          var endDate = new Date(b.endDate);
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return;
+
+          var cells = [];
+          var current = new Date(startDate.getTime());
+
+          while (current <= endDate) {
+            var dateStr = formatDateForCell(current);
+            var selector =
+              '.calendar-cell[data-date="' + dateStr + '"]' +
+              (b.propertyKey
+                ? '[data-property-key="' + String(b.propertyKey).replace(/"/g, '&quot;') + '"]'
+                : '');
+            var cell = document.querySelector(selector);
+
+            if (!cell && b.propertyKey) {
+              // Fallback: essayer avec le nom de propriété
+              selector =
+                '.calendar-cell[data-property-key="' + String(b.propertyKey).replace(/"/g, '&quot;') + '"]' +
+                '[data-date="' + dateStr + '"]';
+              cell = document.querySelector(selector);
+            }
+
+            if (cell) cells.push(cell);
+
+            current.setDate(current.getDate() + 1);
+          }
+
+          if (!cells.length) return;
+
+          cells.forEach(function(cell, index) {
+            var block = document.createElement('div');
+            var platform = b.platform || 'direct';
+            block.className = 'booking-block ' + platform;
+            block.dataset.bookingId = b.id;
+
+            if (cells.length === 1) {
+              block.classList.add('single');
+            } else if (index === 0) {
+              block.classList.add('start');
+            } else if (index === cells.length - 1) {
+              block.classList.add('end');
+            }
+
+            if (index === 0 || cells.length === 1) {
+              var iconClass = (CONFIG.PLATFORMS[platform] && CONFIG.PLATFORMS[platform].icon) || 'fa-user';
+              var label = b.guestName || b.summary || 'Réservation';
+              block.innerHTML = '<i class="fas ' + iconClass + ' platform-icon"></i>' + label;
+            }
+
+            cell.appendChild(block);
+          });
+        });
+      }
+
+      // Vue année simplifiée : réutilise juste le mois actuel
+      function renderYearView() {
+        // Pour l'instant, on réutilise la vue mois
+        renderMonthView();
+      }
+
+      // ============================================
+      // UTILITAIRES
+      // ============================================
+      function isToday(date) {
+        var today = new Date();
+        return date.getDate() === today.getDate() &&
+               date.getMonth() === today.getMonth() &&
+               date.getFullYear() === today.getFullYear();
+      }
+
+      function formatDateForCell(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth() + 1).padStart(2, '0');
+        var d = String(date.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+      }
+
+      function selectProperty(propertyKey) {
+        state.selectedPropertyKey = propertyKey;
+
+        document.querySelectorAll('.property-item').forEach(function(item) {
+          item.classList.toggle('selected', item.dataset.propertyKey === String(propertyKey));
+        });
+
+        document.querySelectorAll('.calendar-row').forEach(function(row) {
+          row.style.opacity = (!propertyKey || row.dataset.propertyKey === String(propertyKey)) ? '1' : '0.3';
+        });
+      }
+
+    })();
+  </script>
+
 </body>
 </html>
