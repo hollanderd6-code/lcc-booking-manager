@@ -388,6 +388,18 @@ async function loadReservations() {
     // Calendrier
     updateCalendarEvents();
 
+    // Nouveau calendrier moderne (vue tableau par logement)
+    if (window.renderModernCalendar) {
+      try {
+        window.LCC_PROPERTIES = data.properties || [];
+        window.allReservations = allReservations;
+        window.renderModernCalendar(allReservations, data.properties || []);
+      } catch (e) {
+        console.warn('Erreur rendu calendrier moderne', e);
+      }
+    }
+
+
     console.log(`📦 ${allReservations.length} réservations chargées`);
   } catch (error) {
     console.error('Error loading reservations:', error);
