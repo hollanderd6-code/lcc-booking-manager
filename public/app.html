@@ -84,12 +84,16 @@
     }
 
     .calendar-wrapper {
-      background: white;
-      border-radius: var(--radius-2xl);
-      overflow: hidden;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-    }
+  background: white;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+
+  /* important pour ne jamais dépasser la largeur de la page */
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
     /* Header du calendrier */
     .calendar-modern-header {
@@ -233,13 +237,22 @@
       color: var(--primary-color);
     }
 
-    /* Calendar Container */
     .calendar-container {
-      display: flex;
-      overflow: hidden;
-      background: white;
-      min-height: 500px;
-    }
+  display: flex;
+  background: white;
+  min-height: 500px;
+
+  /* clé : le calendrier ne dépasse plus la page,
+     et s’il est trop large, il a son propre scroll horizontal */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+    #calendarSection {
+  max-width: 100%;
+  overflow-x: hidden;
+}
 
     /* Property List Column */
     .property-list-column {
