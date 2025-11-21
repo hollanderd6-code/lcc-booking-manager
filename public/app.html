@@ -855,7 +855,7 @@
       display: flex;
       overflow: hidden;
       background: white;
-      min-height: 260px;
+      min-height: 0;
     }
 
     /* Property List Column */
@@ -1824,7 +1824,7 @@
           var props = propsRaw ? JSON.parse(propsRaw) : [];
           var res = resRaw ? JSON.parse(resRaw) : [];
 
-          // Normalisation propriétés
+          // Normalisation propriétés depuis LCC_PROPERTIES
           var normalizedProps = [];
           if (Array.isArray(props)) {
             normalizedProps = props.map(function(p, index) {
@@ -1849,6 +1849,61 @@
             });
           }
           state.properties = normalizedProps;
+
+          // Si toujours aucun logement, on essaie de DÉTECTER automatiquement dans tout le localStorage
+          if (!state.properties.length) {
+            try {
+              var autoProps = [];
+              for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (!k) continue;
+                var raw = localStorage.getItem(k);
+                if (!raw) continue;
+                try {
+                  var val = JSON.parse(raw);
+                } catch (e) {
+                  continue;
+                }
+                if (!Array.isArray(val) || !val.length) continue;
+                var sample = val[0] || {};
+                if (typeof sample !== 'object') continue;
+                var keys = Object.keys(sample);
+                var joined = keys.join(',').toLowerCase();
+
+                // On ignore les tableaux qui ressemblent à des réservations (start/end/checkIn/checkOut)
+                if (joined.indexOf('start') !== -1 || joined.indexOf('checkin') !== -1 ||
+                    joined.indexOf('checkout') !== -1 || joined.indexOf('end') !== -1) {
+                  continue;
+                }
+
+                // On considère ce tableau comme une liste de logements potentielle
+                val.forEach(function(p, index) {
+                  if (!p || typeof p !== 'object') return;
+                  var key = p.id || p._id || p.uuid || p.slug || p.name || p.title ||
+                            p.propertyName || p.property || p.logementName || p.label ||
+                            (k + '_' + index);
+                  var name = p.name || p.title || p.propertyName || p.property ||
+                             p.logementName || p.label || ('Logement ' + (index + 1));
+                  autoProps.push({
+                    key: String(key),
+                    name: String(name),
+                    raw: p
+                  });
+                });
+              }
+              if (autoProps.length) {
+                console.info('Calendrier: logements détectés automatiquement dans localStorage', autoProps);
+                state.properties = autoProps;
+              } else {
+                console.info('Calendrier: aucun logement trouvé dans localStorage (LCC_PROPERTIES ni autre clé détectable).');
+              }
+            } catch (e) {
+              console.warn('Calendrier: erreur lors de la détection automatique des logements', e);
+            }
+          }
+
+          // Réservations : on garde la logique actuelle mais on tolère aussi d'autres formats
+
 
           // Normalisation réservations
           state.bookings = (res || []).map(function(r, index) {
