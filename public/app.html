@@ -44,624 +44,7 @@
       scroll-behavior: smooth;
     }
   </style>
-</head>
-<body data-page="app">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Boostinghost</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">
-          <img src="/assets/logo-bookingmanage.svg" alt="Logo Boostinghost" class="sidebar-logo-img">
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">Boostinghost</span>
-            <span class="sidebar-logo-subtitle">Smart Property Manager</span>
-          </div>
-        </a>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <!-- PRINCIPAL -->
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-
-          <a href="/app.html" class="nav-item active" data-page="app">
-            <i class="fas fa-th-large"></i>
-            <span>Dashboard</span>
-          </a>
-
-          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-            <span class="nav-badge" id="navTotalReservations">0</span>
-          </a>
-
-          <a href="/messages.html" class="nav-item" data-page="messages">
-            <i class="fas fa-comment-dots"></i>
-            <span>Messages</span>
-          </a>
-        </div>
-
-        <!-- GESTION -->
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-
-          <a href="/settings.html" class="nav-item" data-page="settings">
-            <i class="fas fa-home"></i>
-            <span>Mes logements</span>
-          </a>
-
-          <a href="/welcome.html" class="nav-item" data-page="welcome">
-            <i class="fas fa-book-open"></i>
-            <span>Livret d'accueil</span>
-          </a>
-
-          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-            <i class="fas fa-broom"></i>
-            <span>Gestion du ménage</span>
-            <span class="nav-badge">Nouveau</span>
-          </a>
-
-          <a href="/statistics.html" class="nav-item" data-page="statistics">
-            <i class="fas fa-chart-bar"></i>
-            <span>Statistiques</span>
-          </a>
-
-          <a href="/deposits.html" class="nav-item" data-page="deposits">
-            <i class="fas fa-shield-alt"></i>
-            <span>Cautions</span>
-          </a>
-
-          <a href="/notifications.html" class="nav-item" data-page="notifications">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-          </a>
-        </div>
-
-        <!-- PARAMÈTRES -->
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-
-          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-            <i class="fas fa-cog"></i>
-            <span>Paramètres</span>
-          </a>
-
-          <a href="/help.html" class="nav-item" data-page="help">
-            <i class="fas fa-question-circle"></i>
-            <span>Aide</span>
-          </a>
-        </div>
-      </nav>
-      
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar" id="sidebarUserAvatar">C</div>
-          <div class="user-info">
-            <div class="user-name" id="sidebarUserName">Utilisateur</div>
-            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-          </div>
-
-          <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
-        </div>
-      </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Vue d’ensemble</div>
-          <h1 class="page-title">Dashboard</h1>
-          <p class="page-subtitle">
-            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
-          </p>
-        </div>
-        
-        <div class="header-actions">
-          <button class="btn btn-ghost hide-on-mobile" id="newReservationBtn">
-            <i class="fas fa-plus"></i>
-            Nouvelle réservation
-          </button>
-
-          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-
-          <button class="btn-icon" id="notificationsBtn" title="Notifications">
-            <i class="fas fa-bell"></i>
-            <span class="notification-badge"></span>
-          </button>
-
-          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
-            <i class="fas fa-moon"></i>
-          </button>
-        </div>
-      </header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-        
-        <!-- ÉTAT DES CONNEXIONS -->
-        <section class="status-grid">
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-airbnb">
-                <i class="fab fa-airbnb"></i>
-              </div>
-              <span class="status-label status-ok">Connecté</span>
-            </div>
-            <h3>Airbnb</h3>
-            <p>Synchronisation iCal active.</p>
-            <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
-          </article>
-
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-booking">
-                <i class="fas fa-bed"></i>
-              </div>
-              <span class="status-label status-warning">À connecter</span>
-            </div>
-            <h3>Booking.com</h3>
-            <p>Ajoutez votre lien iCal Booking.com.</p>
-            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
-          </article>
-
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-stripe">
-                <i class="fab fa-stripe-s"></i>
-              </div>
-              <span class="status-label status-ok">Connecté</span>
-            </div>
-            <h3>Stripe</h3>
-            <p>Cautions et paiements sécurisés.</p>
-            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
-          </article>
-
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-ai">
-                <i class="fas fa-wand-magic-sparkles"></i>
-              </div>
-              <span class="status-label status-ok">Actif</span>
-            </div>
-            <h3>Messages automatiques</h3>
-            <p>Scénarios IA prêts pour vos voyageurs.</p>
-            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
-          </article>
-        </section>
-
-        <!-- KPI PRINCIPAUX -->
-        <section class="kpi-grid">
-          <!-- KPI 1 : Taux d'occupation -->
-          <article class="kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Taux d'occupation</span>
-              <span class="kpi-pill kpi-pill-success">
-                <i class="fas fa-arrow-up"></i>
-                <span id="kpiOccupancyDelta">+8% vs mois dernier</span>
-              </span>
-            </div>
-            <div class="kpi-main">
-              <span class="kpi-value" id="kpiOccupancyValue">82%</span>
-              <span class="kpi-sub">sur les 30 prochains jours</span>
-            </div>
-          </article>
-
-          <!-- KPI 2 : Revenus à venir -->
-          <article class="kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Revenus à venir</span>
-              <span class="kpi-pill kpi-pill-info">
-                <i class="fas fa-calendar-week"></i>
-                30 prochains jours
-              </span>
-            </div>
-            <div class="kpi-main">
-              <span class="kpi-value" id="kpiRevenueValue">4 250 €</span>
-              <span class="kpi-sub">confirmés et payés</span>
-            </div>
-          </article>
-
-          <!-- KPI 3 : Logements actifs -->
-          <article class="kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Logements actifs</span>
-              <span class="kpi-pill kpi-pill-neutral">
-                <i class="fas fa-home"></i>
-                synchronisés
-              </span>
-            </div>
-            <div class="kpi-main">
-              <span class="kpi-value" id="kpiPropertiesValue">12</span>
-              <span class="kpi-sub">connectés à au moins un OTA</span>
-            </div>
-          </article>
-        </section>
-
-        <!-- ONBOARDING -->
-        <section class="onboarding-section">
-          <header class="onboarding-header">
-            <div>
-              <h2>Bien démarrer avec Boostinghost</h2>
-              <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
-            </div>
-            <span class="onboarding-progress-badge">
-              <span id="onboardingProgressValue">2</span>/4 complétées
-            </span>
-          </header>
-
-          <div class="onboarding-steps">
-            <button class="onboarding-step" data-step="property" onclick="window.location.href='/settings.html'">
-              <div class="onboarding-step-icon done">
-                <i class="fas fa-home"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Ajouter votre premier logement</h3>
-                <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
-              </div>
-              <span class="onboarding-step-status done">Terminé</span>
-            </button>
-
-            <button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
-              <div class="onboarding-step-icon todo">
-                <i class="fas fa-link"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Connecter vos liens iCal</h3>
-                <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
-              </div>
-              <span class="onboarding-step-status todo">À faire</span>
-            </button>
-
-            <button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
-              <div class="onboarding-step-icon todo">
-                <i class="fab fa-stripe-s"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Connecter Stripe</h3>
-                <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
-              </div>
-              <span class="onboarding-step-status todo">À faire</span>
-            </button>
-
-            <button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
-              <div class="onboarding-step-icon done">
-                <i class="fas fa-comment-dots"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Configurer les messages automatiques</h3>
-                <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
-              </div>
-              <span class="onboarding-step-status done">Terminé</span>
-            </button>
-          </div>
-        </section>
-
-        <!-- PROCHAINES ARRIVÉES & DÉPARTS -->
-        <section class="card" id="upcomingStays">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-door-open"></i>
-              Prochaines arrivées & départs
-            </div>
-            <span class="upcoming-badge">7 prochains jours</span>
-          </div>
-
-          <div class="upcoming-list">
-
-            <!-- En-têtes -->
-            <div class="upcoming-row upcoming-row-header">
-              <span class="upcoming-col-date">Date</span>
-              <span class="upcoming-col-guest">Voyageur</span>
-              <span class="upcoming-col-property">Logement</span>
-              <span class="upcoming-col-type">Type</span>
-              <span class="upcoming-col-status">Statut</span>
-            </div>
-
-            <!-- Exemples de lignes (à remplacer plus tard par tes vraies données) -->
-            <div class="upcoming-row">
-              <span class="upcoming-col-date">Aujourd’hui • 16:00</span>
-              <span class="upcoming-col-guest">Julie Martin</span>
-              <span class="upcoming-col-property">T2 Centre-ville</span>
-              <span class="upcoming-col-type">
-                <span class="upcoming-chip upcoming-chip-checkin">Arrivée</span>
-              </span>
-              <span class="upcoming-col-status">
-                <span class="upcoming-status upcoming-status-ok">Prêt</span>
-              </span>
-            </div>
-
-            <div class="upcoming-row">
-              <span class="upcoming-col-date">Demain • 10:00</span>
-              <span class="upcoming-col-guest">Famille Dupont</span>
-              <span class="upcoming-col-property">Maison plage</span>
-              <span class="upcoming-col-type">
-                <span class="upcoming-chip upcoming-chip-checkout">Départ</span>
-              </span>
-              <span class="upcoming-col-status">
-                <span class="upcoming-status upcoming-status-warning">Ménage à planifier</span>
-              </span>
-            </div>
-
-            <div class="upcoming-row">
-              <span class="upcoming-col-date">Dans 2 jours • 18:30</span>
-              <span class="upcoming-col-guest">Luca Rossi</span>
-              <span class="upcoming-col-property">Studio gare</span>
-              <span class="upcoming-col-type">
-                <span class="upcoming-chip upcoming-chip-checkin">Arrivée</span>
-              </span>
-              <span class="upcoming-col-status">
-                <span class="upcoming-status upcoming-status-info">En attente check-in en ligne</span>
-              </span>
-            </div>
-
-          </div>
-        </section>
-
-        <!-- Vue d’ensemble arrivées / séjours / départs -->
-        <section class="overview-card">
-          <div class="overview-header">
-            <div>
-              <div class="overview-kicker">Vue d’ensemble</div>
-              <div class="overview-title">Aujourd’hui &amp; à venir</div>
-            </div>
-            <button class="overview-chip">
-              Dashboard temps réel
-            </button>
-          </div>
-
-          <div class="overview-metrics">
-            <div class="overview-metric">
-              <div class="overview-metric-label">Réservations à venir</div>
-              <div class="overview-metric-value" id="ovUpcoming">-</div>
-            </div>
-            <div class="overview-metric">
-              <div class="overview-metric-label">Séjours en cours</div>
-              <div class="overview-metric-value" id="ovCurrent">-</div>
-            </div>
-            <div class="overview-metric">
-              <div class="overview-metric-label">Taux d’occupation</div>
-              <div class="overview-metric-value" id="ovOccupancy">78%</div>
-            </div>
-          </div>
-
-          <div class="overview-timeline" id="overviewTimeline">
-            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
-          </div>
-        </section>
-
-        <!-- Property Filters -->
-        <section class="card mb-lg" id="calendarFiltersSection">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-filter"></i>
-              Filtrer par logement
-            </div>
-            <button class="btn btn-ghost" onclick="clearFilters()">
-              <i class="fas fa-times"></i>
-              Réinitialiser
-            </button>
-          </div>
-          <div class="property-filters" id="propertyFilters">
-            <!-- Généré dynamiquement par app.js -->
-          </div>
-        </section>
-        
-        <!-- Calendar Card -->
-        <section class="card" id="calendarSection">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-calendar-alt"></i>
-              Calendrier des réservations
-            </h2>
-            <button class="btn btn-primary" id="newReservationBtn">
-              <i class="fas fa-plus"></i>
-              Nouvelle réservation
-            </button>
-          </div>
-          
-          <!-- NOUVEAU CALENDRIER MODERNE -->
-          <div class="calendar-wrapper">
-            <!-- Calendar Header -->
-            <div class="calendar-modern-header">
-              <div class="calendar-header-top">
-                <h3 class="calendar-title-modern">
-                  <i class="fas fa-calendar"></i>
-                  <span>Calendrier</span>
-                </h3>
-                <div class="calendar-actions-top">
-                  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
-                    <i class="fas fa-search"></i>
-                  </button>
-                  <button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
-                    <i class="fas fa-filter"></i>
-                  </button>
-                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
-                    <i class="fas fa-cog"></i>
-                  </button>
-                </div>
-              </div>
-              
-              <!-- View Selector -->
-              <div class="view-selector">
-                <div class="view-tabs">
-                  <button class="view-tab" data-view="day">
-                    <i class="fas fa-calendar-day"></i>
-                    <span>Jour</span>
-                  </button>
-                  <button class="view-tab" data-view="week">
-                    <i class="fas fa-calendar-week"></i>
-                    <span>Semaine</span>
-                  </button>
-                  <button class="view-tab active" data-view="month">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Mois</span>
-                  </button>
-                  <button class="view-tab" data-view="year">
-                    <i class="fas fa-calendar"></i>
-                    <span>Année</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Period Navigation -->
-            <div class="period-navigation">
-              <button class="period-nav-btn" id="prevPeriod">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              <div class="period-display">
-                <span class="month-name" id="currentMonth">Novembre</span>
-                <span class="year" id="currentYear">2025</span>
-              </div>
-              <button class="period-nav-btn" id="nextPeriod">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-            </div>
-            
-            <!-- Calendar Container -->
-            <div class="calendar-container">
-              <!-- Property List Column -->
-              <div class="property-list-column">
-                <div class="property-list-header">
-                  <span>Logements</span>
-                </div>
-                <div class="property-list-items" id="propertyList">
-                  <!-- Les logements seront ajoutés dynamiquement -->
-                </div>
-              </div>
-              
-              <!-- Calendar Grid Wrapper -->
-              <div class="calendar-grid-wrapper">
-                <!-- Days Header -->
-                <div class="days-header" id="daysHeader">
-                  <!-- Les jours seront ajoutés dynamiquement -->
-                </div>
-                
-                <!-- Calendar Grid -->
-                <div class="calendar-grid" id="calendarGrid">
-                  <!-- Les cellules seront ajoutées dynamiquement -->
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        
-      </div>
-
-      <!-- Notifications Panel -->
-      <aside class="notifications-panel" id="notificationsPanel">
-        <div class="notifications-header">
-          <h2>Notifications</h2>
-          <button class="btn-icon" id="notificationsCloseBtn">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="notifications-body" id="notificationsList">
-          <p class="empty-state">Aucune notification pour le moment.</p>
-        </div>
-      </aside>
-
-    </main>
-  </div>
-  
-  <!-- Reservation Modal -->
-  <div class="modal" id="reservationModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modalTitle">Détails de la réservation</h2>
-        <button class="modal-close" id="modalClose">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Contenu généré dynamiquement -->
-      </div>
-    </div>
-  </div>
-
-  <!-- New Manual Reservation Modal -->
-  <div class="modal" id="newReservationModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Nouvelle réservation</h2>
-        <button class="modal-close" id="newReservationClose">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="newReservationForm" class="form-grid">
-          <div class="form-row">
-            <label for="nrProperty">Logement</label>
-            <select id="nrProperty" name="propertyId" required>
-              <!-- On remplira en JS suivant PROPERTIES -->
-            </select>
-          </div>
-
-          <div class="form-row">
-            <label for="nrGuestName">Nom du client</label>
-            <input type="text" id="nrGuestName" name="guestName" required />
-          </div>
-
-          <div class="form-row">
-            <label for="nrStartDate">Arrivée</label>
-            <input type="date" id="nrStartDate" name="startDate" required />
-          </div>
-
-          <div class="form-row">
-            <label for="nrEndDate">Départ</label>
-            <input type="date" id="nrEndDate" name="endDate" required />
-          </div>
-
-          <div class="form-row">
-            <label for="nrNotes">Notes</label>
-            <textarea id="nrNotes" name="notes" rows="3"></textarea>
-          </div>
-
-          <div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-            <button type="button" class="btn btn-ghost" id="newReservationCancel">
-              Annuler
-            </button>
-            <button type="submit" class="btn btn-primary">
-              Enregistrer
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Synchronisation en cours...</p>
-    </div>
-  </div>
-  
-  <!-- Toast Notifications -->
-  <div class="toast-container" id="toastContainer"></div>
-  
-  <!-- Scripts -->
-  <script src="/js/app.js"></script>
-  
   <style>
 /* ============================================
        NOUVEAU CALENDRIER MODERNE
@@ -719,7 +102,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 16px;
+      padding: 16px 20px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     }
 
@@ -765,8 +148,8 @@
     .view-selector {
       display: flex;
       align-items: center;
-      padding: 8px 16px;
-      gap: 12px;
+      padding: 12px 20px;
+      gap: 16px;
       background: var(--calendar-header-bg);
     }
 
@@ -855,7 +238,7 @@
       display: flex;
       overflow: hidden;
       background: white;
-      min-height: 0;
+      min-height: 500px;
     }
 
     /* Property List Column */
@@ -1330,6 +713,1020 @@
     }
   </style>
 
+</head>
+<body data-page="app">
+  <!-- MOBILE HEADER -->
+  <div class="mobile-header">
+    <a href="/app.html" class="mobile-logo">
+      <i class="fas fa-calendar-check"></i>
+      <span class="mobile-logo-text">Boostinghost</span>
+    </a>
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <img src="/assets/logo-bookingmanage.svg" alt="Logo Boostinghost" class="sidebar-logo-img">
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Boostinghost</span>
+            <span class="sidebar-logo-subtitle">Smart Property Manager</span>
+          </div>
+        </a>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <!-- PRINCIPAL -->
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
+
+          <a href="/app.html" class="nav-item active" data-page="app">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
+
+          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
+
+          <a href="/messages.html" class="nav-item" data-page="messages">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
+
+        <!-- GESTION -->
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
+
+          <a href="/settings.html" class="nav-item" data-page="settings">
+            <i class="fas fa-home"></i>
+            <span>Mes logements</span>
+          </a>
+
+          <a href="/welcome.html" class="nav-item" data-page="welcome">
+            <i class="fas fa-book-open"></i>
+            <span>Livret d'accueil</span>
+          </a>
+
+          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+            <i class="fas fa-broom"></i>
+            <span>Gestion du ménage</span>
+            <span class="nav-badge">Nouveau</span>
+          </a>
+
+          <a href="/statistics.html" class="nav-item" data-page="statistics">
+            <i class="fas fa-chart-bar"></i>
+            <span>Statistiques</span>
+          </a>
+
+          <a href="/deposits.html" class="nav-item" data-page="deposits">
+            <i class="fas fa-shield-alt"></i>
+            <span>Cautions</span>
+          </a>
+
+          <a href="/notifications.html" class="nav-item" data-page="notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+        </div>
+
+        <!-- PARAMÈTRES -->
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
+
+          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
+
+          <a href="/help.html" class="nav-item" data-page="help">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="sidebarUserAvatar">C</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarUserName">Utilisateur</div>
+            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+          </div>
+
+          <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="page-kicker">Vue d’ensemble</div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">
+            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
+          </p>
+        </div>
+        
+        <div class="header-actions">
+          <button class="btn btn-ghost hide-on-mobile" id="newReservationBtn">
+            <i class="fas fa-plus"></i>
+            Nouvelle réservation
+          </button>
+
+          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+
+          <button class="btn-icon" id="notificationsBtn" title="Notifications">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge"></span>
+          </button>
+
+          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+      </header>
+      
+      <!-- Page Content -->
+      <div class="page-content">
+        
+        <!-- ÉTAT DES CONNEXIONS -->
+        <section class="status-grid">
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-airbnb">
+                <i class="fab fa-airbnb"></i>
+              </div>
+              <span class="status-label status-ok">Connecté</span>
+            </div>
+            <h3>Airbnb</h3>
+            <p>Synchronisation iCal active.</p>
+            <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
+          </article>
+
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-booking">
+                <i class="fas fa-bed"></i>
+              </div>
+              <span class="status-label status-warning">À connecter</span>
+            </div>
+            <h3>Booking.com</h3>
+            <p>Ajoutez votre lien iCal Booking.com.</p>
+            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
+          </article>
+
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-stripe">
+                <i class="fab fa-stripe-s"></i>
+              </div>
+              <span class="status-label status-ok">Connecté</span>
+            </div>
+            <h3>Stripe</h3>
+            <p>Cautions et paiements sécurisés.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
+          </article>
+
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-ai">
+                <i class="fas fa-wand-magic-sparkles"></i>
+              </div>
+              <span class="status-label status-ok">Actif</span>
+            </div>
+            <h3>Messages automatiques</h3>
+            <p>Scénarios IA prêts pour vos voyageurs.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
+          </article>
+        </section>
+
+        <!-- KPI PRINCIPAUX -->
+        <section class="kpi-grid">
+          <!-- KPI 1 : Taux d'occupation -->
+          <article class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Taux d'occupation</span>
+              <span class="kpi-pill kpi-pill-success">
+                <i class="fas fa-arrow-up"></i>
+                <span id="kpiOccupancyDelta">+8% vs mois dernier</span>
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value" id="kpiOccupancyValue">82%</span>
+              <span class="kpi-sub">sur les 30 prochains jours</span>
+            </div>
+          </article>
+
+          <!-- KPI 2 : Revenus à venir -->
+          <article class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Revenus à venir</span>
+              <span class="kpi-pill kpi-pill-info">
+                <i class="fas fa-calendar-week"></i>
+                30 prochains jours
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value" id="kpiRevenueValue">4 250 €</span>
+              <span class="kpi-sub">confirmés et payés</span>
+            </div>
+          </article>
+
+          <!-- KPI 3 : Logements actifs -->
+          <article class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Logements actifs</span>
+              <span class="kpi-pill kpi-pill-neutral">
+                <i class="fas fa-home"></i>
+                synchronisés
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value" id="kpiPropertiesValue">12</span>
+              <span class="kpi-sub">connectés à au moins un OTA</span>
+            </div>
+          </article>
+        </section>
+
+        <!-- ONBOARDING -->
+        <section class="onboarding-section">
+          <header class="onboarding-header">
+            <div>
+              <h2>Bien démarrer avec Boostinghost</h2>
+              <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
+            </div>
+            <span class="onboarding-progress-badge">
+              <span id="onboardingProgressValue">2</span>/4 complétées
+            </span>
+          </header>
+
+          <div class="onboarding-steps">
+            <button class="onboarding-step" data-step="property" onclick="window.location.href='/settings.html'">
+              <div class="onboarding-step-icon done">
+                <i class="fas fa-home"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Ajouter votre premier logement</h3>
+                <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
+              </div>
+              <span class="onboarding-step-status done">Terminé</span>
+            </button>
+
+            <button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
+              <div class="onboarding-step-icon todo">
+                <i class="fas fa-link"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Connecter vos liens iCal</h3>
+                <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
+              </div>
+              <span class="onboarding-step-status todo">À faire</span>
+            </button>
+
+            <button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
+              <div class="onboarding-step-icon todo">
+                <i class="fab fa-stripe-s"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Connecter Stripe</h3>
+                <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
+              </div>
+              <span class="onboarding-step-status todo">À faire</span>
+            </button>
+
+            <button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
+              <div class="onboarding-step-icon done">
+                <i class="fas fa-comment-dots"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Configurer les messages automatiques</h3>
+                <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
+              </div>
+              <span class="onboarding-step-status done">Terminé</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- PROCHAINES ARRIVÉES & DÉPARTS -->
+        <section class="card" id="upcomingStays">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-door-open"></i>
+              Prochaines arrivées & départs
+            </div>
+            <span class="upcoming-badge">7 prochains jours</span>
+          </div>
+
+          <div class="upcoming-list">
+
+            <!-- En-têtes -->
+            <div class="upcoming-row upcoming-row-header">
+              <span class="upcoming-col-date">Date</span>
+              <span class="upcoming-col-guest">Voyageur</span>
+              <span class="upcoming-col-property">Logement</span>
+              <span class="upcoming-col-type">Type</span>
+              <span class="upcoming-col-status">Statut</span>
+            </div>
+
+            <!-- Exemples de lignes (à remplacer plus tard par tes vraies données) -->
+            <div class="upcoming-row">
+              <span class="upcoming-col-date">Aujourd’hui • 16:00</span>
+              <span class="upcoming-col-guest">Julie Martin</span>
+              <span class="upcoming-col-property">T2 Centre-ville</span>
+              <span class="upcoming-col-type">
+                <span class="upcoming-chip upcoming-chip-checkin">Arrivée</span>
+              </span>
+              <span class="upcoming-col-status">
+                <span class="upcoming-status upcoming-status-ok">Prêt</span>
+              </span>
+            </div>
+
+            <div class="upcoming-row">
+              <span class="upcoming-col-date">Demain • 10:00</span>
+              <span class="upcoming-col-guest">Famille Dupont</span>
+              <span class="upcoming-col-property">Maison plage</span>
+              <span class="upcoming-col-type">
+                <span class="upcoming-chip upcoming-chip-checkout">Départ</span>
+              </span>
+              <span class="upcoming-col-status">
+                <span class="upcoming-status upcoming-status-warning">Ménage à planifier</span>
+              </span>
+            </div>
+
+            <div class="upcoming-row">
+              <span class="upcoming-col-date">Dans 2 jours • 18:30</span>
+              <span class="upcoming-col-guest">Luca Rossi</span>
+              <span class="upcoming-col-property">Studio gare</span>
+              <span class="upcoming-col-type">
+                <span class="upcoming-chip upcoming-chip-checkin">Arrivée</span>
+              </span>
+              <span class="upcoming-col-status">
+                <span class="upcoming-status upcoming-status-info">En attente check-in en ligne</span>
+              </span>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Vue d’ensemble arrivées / séjours / départs -->
+        <section class="overview-card">
+          <div class="overview-header">
+            <div>
+              <div class="overview-kicker">Vue d’ensemble</div>
+              <div class="overview-title">Aujourd’hui &amp; à venir</div>
+            </div>
+            <button class="overview-chip">
+              Dashboard temps réel
+            </button>
+          </div>
+
+          <div class="overview-metrics">
+            <div class="overview-metric">
+              <div class="overview-metric-label">Réservations à venir</div>
+              <div class="overview-metric-value" id="ovUpcoming">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Séjours en cours</div>
+              <div class="overview-metric-value" id="ovCurrent">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Taux d’occupation</div>
+              <div class="overview-metric-value" id="ovOccupancy">78%</div>
+            </div>
+          </div>
+
+          <div class="overview-timeline" id="overviewTimeline">
+            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
+          </div>
+        </section>
+
+        <!-- Property Filters -->
+        <section class="card mb-lg" id="calendarFiltersSection">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-filter"></i>
+              Filtrer par logement
+            </div>
+            <button class="btn btn-ghost" onclick="clearFilters()">
+              <i class="fas fa-times"></i>
+              Réinitialiser
+            </button>
+          </div>
+          <div class="property-filters" id="propertyFilters">
+            <!-- Généré dynamiquement par app.js -->
+          </div>
+        </section>
+        
+        <!-- Calendar Card -->
+        <section class="card" id="calendarSection">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i class="fas fa-calendar-alt"></i>
+              Calendrier des réservations
+            </h2>
+            
+          </div>
+          
+          <!-- NOUVEAU CALENDRIER MODERNE -->
+          <div class="calendar-wrapper">
+            <!-- Calendar Header -->
+            <div class="calendar-modern-header">
+              <div class="calendar-header-top">
+                <h3 class="calendar-title-modern">
+                  <i class="fas fa-calendar"></i>
+                  <span>Calendrier</span>
+                </h3>
+                <div class="calendar-actions-top">
+                  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
+                    <i class="fas fa-search"></i>
+                  </button>
+                  <button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
+                    <i class="fas fa-filter"></i>
+                  </button>
+                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
+                    <i class="fas fa-cog"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- View Selector -->
+              <div class="view-selector">
+                <div class="view-tabs">
+                  <button class="view-tab" data-view="day">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Jour</span>
+                  </button>
+                  <button class="view-tab" data-view="week">
+                    <i class="fas fa-calendar-week"></i>
+                    <span>Semaine</span>
+                  </button>
+                  <button class="view-tab active" data-view="month">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Mois</span>
+                  </button>
+                  <button class="view-tab" data-view="year">
+                    <i class="fas fa-calendar"></i>
+                    <span>Année</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Period Navigation -->
+            <div class="period-navigation">
+              <button class="period-nav-btn" id="prevPeriod">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <div class="period-display">
+                <span class="month-name" id="currentMonth">Novembre</span>
+                <span class="year" id="currentYear">2025</span>
+              </div>
+              <button class="period-nav-btn" id="nextPeriod">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+            
+            <!-- Calendar Container -->
+            <div class="calendar-container">
+              <!-- Property List Column -->
+              <div class="property-list-column">
+                <div class="property-list-header">
+                  <span>Logements</span>
+                </div>
+                <div class="property-list-items" id="propertyList">
+                  <!-- Les logements seront ajoutés dynamiquement -->
+                </div>
+              </div>
+              
+              <!-- Calendar Grid Wrapper -->
+              <div class="calendar-grid-wrapper">
+                <!-- Days Header -->
+                <div class="days-header" id="daysHeader">
+                  <!-- Les jours seront ajoutés dynamiquement -->
+                </div>
+                
+                <!-- Calendar Grid -->
+                <div class="calendar-grid" id="calendarGrid">
+                  <!-- Les cellules seront ajoutées dynamiquement -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+      </div>
+
+      <!-- Notifications Panel -->
+      <aside class="notifications-panel" id="notificationsPanel">
+        <div class="notifications-header">
+          <h2>Notifications</h2>
+          <button class="btn-icon" id="notificationsCloseBtn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="notifications-body" id="notificationsList">
+          <p class="empty-state">Aucune notification pour le moment.</p>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+  
+  <!-- Reservation Modal -->
+  <div class="modal" id="reservationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Détails de la réservation</h2>
+        <button class="modal-close" id="modalClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Contenu généré dynamiquement -->
+      </div>
+    </div>
+  </div>
+
+  <!-- New Manual Reservation Modal -->
+  <div class="modal" id="newReservationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Nouvelle réservation</h2>
+        <button class="modal-close" id="newReservationClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="newReservationForm" class="form-grid">
+          <div class="form-row">
+            <label for="nrProperty">Logement</label>
+            <select id="nrProperty" name="propertyId" required>
+              <!-- On remplira en JS suivant PROPERTIES -->
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="nrGuestName">Nom du client</label>
+            <input type="text" id="nrGuestName" name="guestName" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrStartDate">Arrivée</label>
+            <input type="date" id="nrStartDate" name="startDate" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrEndDate">Départ</label>
+            <input type="date" id="nrEndDate" name="endDate" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrNotes">Notes</label>
+            <textarea id="nrNotes" name="notes" rows="3"></textarea>
+          </div>
+
+          <div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+            <button type="button" class="btn btn-ghost" id="newReservationCancel">
+              Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Synchronisation en cours...</p>
+    </div>
+  </div>
+  
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
+  <script src="/js/app.js"></script>
+  
+  <style>
+    /* Styles spécifiques calendrier & UI complémentaire */
+    #calendar {
+      margin-top: 24px;
+    }
+    
+    .fc {
+      --fc-border-color: var(--border-color);
+      --fc-button-bg-color: var(--primary-color);
+      --fc-button-border-color: var(--primary-color);
+      --fc-button-hover-bg-color: var(--primary-hover);
+      --fc-button-hover-border-color: var(--primary-hover);
+      --fc-button-active-bg-color: var(--primary-dark);
+      --fc-today-bg-color: var(--primary-light);
+    }
+    
+    [data-theme="dark"] .fc {
+      --fc-page-bg-color: var(--bg-primary);
+      --fc-neutral-bg-color: var(--bg-secondary);
+      --fc-today-bg-color: rgba(16, 185, 129, 0.1);
+    }
+    
+    .fc .fc-button {
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      text-transform: none;
+      padding: 8px 16px;
+    }
+    
+    .fc-event {
+      border-radius: var(--radius-sm);
+      border: none;
+      padding: 4px 8px;
+    }
+    
+    .property-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .property-badge {
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      border: 2px solid;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .property-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .property-badge.active {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+    }
+    
+    .property-count {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+    }
+    
+    .page-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .hide-on-mobile {
+      display: inline-flex;
+    }
+    
+    @media (max-width: 768px) {
+      .hide-on-mobile {
+        display: none;
+      }
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: var(--radius-xl);
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
+    
+    .modal-header {
+      padding: var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+    
+    .modal-close:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    
+    .modal-body {
+      padding: var(--spacing-lg);
+      overflow-y: auto;
+      max-height: calc(90vh - 80px);
+    }
+    
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .loading-spinner {
+      background: var(--bg-primary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-xl);
+      text-align: center;
+    }
+    
+    .loading-spinner i {
+      font-size: 48px;
+      color: var(--primary-color);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .toast-container {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      right: var(--spacing-lg);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    
+    .toast {
+      background: var(--bg-primary);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      min-width: 300px;
+      animation: slideInRight 0.3s ease;
+    }
+    
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--error); }
+    .toast.info { border-color: var(--info); }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Notifications panel */
+    .notifications-panel {
+      position: fixed;
+      top: 0;
+      right: -360px;
+      width: 360px;
+      height: 100vh;
+      background: var(--bg-primary);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s ease;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .notifications-panel.open {
+      right: 0;
+    }
+
+    .notifications-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notifications-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .notifications-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .empty-state {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Carte Vue d'ensemble (arrivées / séjours / départs) */
+    .overview-card {
+      background: linear-gradient(135deg, #f3f4ff, #eef9ff);
+      border-radius: 24px;
+      padding: 18px 20px 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    [data-theme="dark"] .overview-card {
+      background: radial-gradient(circle at top left, #1e293b, #020617);
+    }
+
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .overview-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
+
+    .overview-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .overview-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(37, 99, 235, 0.06);
+      color: #2563eb;
+      font-size: 12px;
+      padding: 6px 12px;
+      font-weight: 600;
+    }
+
+    [data-theme="dark"] .overview-chip {
+      background: rgba(37, 99, 235, 0.18);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .overview-metrics {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .overview-metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .overview-metric-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .overview-timeline {
+      margin-top: 4px;
+      background: #020617;
+      color: #e5e7eb;
+      border-radius: 18px;
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+
+    [data-theme="dark"] .overview-timeline {
+      background: #020617;
+    }
+
+    .overview-timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .overview-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .overview-dot.arrival {
+      background: #22c55e;
+    }
+
+    .overview-dot.stay {
+      background: #3b82f6;
+    }
+
+    .overview-dot.departure {
+      background: #f97316;
+    }
+
+    .overview-line-main {
+      flex: 1;
+    }
+
+    .overview-line-time {
+      font-size: 11px;
+      opacity: 0.8;
+      white-space: nowrap;
+    }
+
+    .overview-empty {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.8;
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
+
+    .overview-timeline-footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      margin-top: 6px;
+      padding-top: 6px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+  </style>
+
   <!-- Script auth + user + logout -->
   <script>
     (function () {
@@ -1704,22 +2101,23 @@
 
   <script>
     // ============================================
-    // CALENDRIER MODERNE - VUE SEULE (intégré dans app-7)
+    // CALENDRIER MODERNE - VUE TABLEAU PAR LOGEMENT
+    // Branché sur allReservations + data.properties de app.js
     // ============================================
     (function() {
       'use strict';
 
       const CONFIG = {
-        MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+        MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
         DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
         PLATFORMS: {
-          airbnb: { icon: 'fa-home' },
+          airbnb:  { icon: 'fa-home' },
           booking: { icon: 'fa-bed' },
           expedia: { icon: 'fa-plane' },
-          vrbo: { icon: 'fa-house-user' },
-          hotels: { icon: 'fa-hotel' },
-          direct: { icon: 'fa-user' }
+          vrbo:    { icon: 'fa-house-user' },
+          hotels:  { icon: 'fa-hotel' },
+          direct:  { icon: 'fa-user' }
         }
       };
 
@@ -1728,19 +2126,27 @@
         currentDate: new Date(),
         properties: [],
         bookings: [],
-        selectedPropertyKey: null
+        selectedPropertyId: null
       };
 
       document.addEventListener('DOMContentLoaded', function () {
-        // Si le nouveau calendrier n'est pas présent sur la page, ne rien faire
         if (!document.getElementById('calendarGrid')) return;
 
-        initializeCalendar();
+        initializeCalendarUI();
         attachCalendarEventListeners();
-        loadFromLocalStorage();
+
+        // Si les réservations sont déjà chargées au moment du DOMContentLoaded
+        if (Array.isArray(window.allReservations) && window.allReservations.length) {
+          updateFromReservations(window.allReservations, window.LCC_PROPERTIES || []);
+        }
       });
 
-      function initializeCalendar() {
+      // Exposé pour app.js (loadReservations)
+      window.renderModernCalendar = function(reservations, properties) {
+        updateFromReservations(reservations || [], properties || []);
+      };
+
+      function initializeCalendarUI() {
         updatePeriodDisplay();
         renderCalendar();
       }
@@ -1753,7 +2159,7 @@
           });
         });
 
-        // Navigation mois précédent / suivant
+        // Navigation période
         var prev = document.getElementById('prevPeriod');
         var next = document.getElementById('nextPeriod');
 
@@ -1762,10 +2168,10 @@
       }
 
       function changeView(view) {
-        state.currentView = view;
+        state.currentView = view || 'month';
 
         document.querySelectorAll('.view-tab').forEach(function(tab) {
-          tab.classList.toggle('active', tab.dataset.view === view);
+          tab.classList.toggle('active', tab.dataset.view === state.currentView);
         });
 
         renderCalendar();
@@ -1815,117 +2221,51 @@
       }
 
       // ============================================
-      // CHARGEMENT DES DONNÉES DEPUIS localStorage
+      // MISE À JOUR DES DONNÉES
       // ============================================
-      function loadFromLocalStorage() {
-        try {
-          var propsRaw = localStorage.getItem('LCC_PROPERTIES');
-          var resRaw = localStorage.getItem('LCC_RESERVATIONS');
-          var props = propsRaw ? JSON.parse(propsRaw) : [];
-          var res = resRaw ? JSON.parse(resRaw) : [];
-
-          // Normalisation propriétés depuis LCC_PROPERTIES
-          var normalizedProps = [];
-          if (Array.isArray(props)) {
-            normalizedProps = props.map(function(p, index) {
-              var key = p.id || p._id || p.uuid || p.slug || p.name || p.title || String(index);
-              var name = p.name || p.title || p.propertyName || p.property || p.logementName || p.label || ('Logement ' + (index + 1));
-              return {
-                key: String(key),
-                name: name,
-                raw: p
-              };
-            });
-          } else if (props && typeof props === 'object') {
-            Object.keys(props).forEach(function(k, index) {
-              var p = props[k] || {};
-              var key = p.id || p._id || p.uuid || p.slug || p.name || p.title || k || String(index);
-              var name = p.name || p.title || p.propertyName || p.property || p.logementName || p.label || ('Logement ' + (index + 1));
-              normalizedProps.push({
-                key: String(key),
-                name: name,
-                raw: p
-              });
-            });
-          }
-          state.properties = normalizedProps;
-
-          // Si toujours aucun logement, on essaie de DÉTECTER automatiquement dans tout le localStorage
-          if (!state.properties.length) {
-            try {
-              var autoProps = [];
-              for (var i = 0; i < localStorage.length; i++) {
-                var k = localStorage.key(i);
-                if (!k) continue;
-                var raw = localStorage.getItem(k);
-                if (!raw) continue;
-                try {
-                  var val = JSON.parse(raw);
-                } catch (e) {
-                  continue;
-                }
-                if (!Array.isArray(val) || !val.length) continue;
-                var sample = val[0] || {};
-                if (typeof sample !== 'object') continue;
-                var keys = Object.keys(sample);
-                var joined = keys.join(',').toLowerCase();
-
-                // On ignore les tableaux qui ressemblent à des réservations (start/end/checkIn/checkOut)
-                if (joined.indexOf('start') !== -1 || joined.indexOf('checkin') !== -1 ||
-                    joined.indexOf('checkout') !== -1 || joined.indexOf('end') !== -1) {
-                  continue;
-                }
-
-                // On considère ce tableau comme une liste de logements potentielle
-                val.forEach(function(p, index) {
-                  if (!p || typeof p !== 'object') return;
-                  var key = p.id || p._id || p.uuid || p.slug || p.name || p.title ||
-                            p.propertyName || p.property || p.logementName || p.label ||
-                            (k + '_' + index);
-                  var name = p.name || p.title || p.propertyName || p.property ||
-                             p.logementName || p.label || ('Logement ' + (index + 1));
-                  autoProps.push({
-                    key: String(key),
-                    name: String(name),
-                    raw: p
-                  });
-                });
-              }
-              if (autoProps.length) {
-                console.info('Calendrier: logements détectés automatiquement dans localStorage', autoProps);
-                state.properties = autoProps;
-              } else {
-                console.info('Calendrier: aucun logement trouvé dans localStorage (LCC_PROPERTIES ni autre clé détectable).');
-              }
-            } catch (e) {
-              console.warn('Calendrier: erreur lors de la détection automatique des logements', e);
-            }
-          }
-
-          // Réservations : on garde la logique actuelle mais on tolère aussi d'autres formats
-
-
-          // Normalisation réservations
-          state.bookings = (res || []).map(function(r, index) {
-            var propKey = r.propertyId || r.property_id || r.propertyKey || r.propertySlug || r.propertyName || r.property;
-            var start = r.startDate || r.start || r.checkIn;
-            var end = r.endDate || r.end || r.checkOut;
+      function updateFromReservations(reservations, properties) {
+        // 1) Propriétés
+        var props = [];
+        if (Array.isArray(properties) && properties.length) {
+          props = properties.map(function(p, index) {
             return {
-              id: String(r.id || r._id || index),
-              propertyKey: propKey ? String(propKey) : null,
-              startDate: start,
-              endDate: end,
-              guestName: r.guestName || r.name || '',
-              platform: r.platform || r.source || 'direct',
-              price: r.price || r.amount || 0,
-              summary: r.summary || ''
+              id: String(p.id || index),
+              name: p.name || ('Logement ' + (index + 1)),
+              color: p.color || '#10B981',
+              raw: p
             };
           });
-        } catch (e) {
-          console.error('Erreur lecture LCC_PROPERTIES / LCC_RESERVATIONS', e);
-          state.properties = [];
-          state.bookings = [];
+        } else if (Array.isArray(reservations)) {
+          // Si pas de liste dédiée, on déduit depuis les réservations
+          var map = {};
+          reservations.forEach(function(r) {
+            if (!r.property || !r.property.id) return;
+            var id = String(r.property.id);
+            if (!map[id]) {
+              map[id] = {
+                id: id,
+                name: (r.property && r.property.name) || 'Logement',
+                color: (r.property && r.property.color) || '#10B981',
+                raw: r.property
+              };
+            }
+          });
+          props = Object.values(map);
         }
+        state.properties = props;
+
+        // 2) Réservations -> bookings pour le calendrier moderne
+        state.bookings = (reservations || []).map(function(r, index) {
+          var propId = r.property && r.property.id ? String(r.property.id) : null;
+          return {
+            id: String(r.id || index),
+            propertyId: propId,
+            startDate: r.start || r.checkIn || r.startDate,
+            endDate: r.end || r.checkOut || r.endDate,
+            guestName: r.guestName || r.customerName || '',
+            platform: r.source || 'direct'
+          };
+        });
 
         renderPropertyList();
         renderCalendar();
@@ -1936,14 +2276,14 @@
       // ============================================
       function renderCalendar() {
         switch (state.currentView) {
+          case 'year':
+            renderMonthView(); // simplification : pour l'instant, on garde la vue mois
+            break;
           case 'day':
           case 'week':
           case 'month':
           default:
             renderMonthView();
-            break;
-          case 'year':
-            renderYearView();
             break;
         }
       }
@@ -1960,21 +2300,18 @@
 
         state.properties.forEach(function(p) {
           var bookingCount = state.bookings.filter(function(b) {
-            return !b.propertyKey || !p.key
-              ? false
-              : String(b.propertyKey) === String(p.key) ||
-                String(b.propertyKey) === String(p.name);
+            return b.propertyId && String(b.propertyId) === String(p.id);
           }).length;
 
           var div = document.createElement('div');
           div.className = 'property-item';
-          div.dataset.propertyKey = p.key;
+          div.dataset.propertyId = p.id;
           div.innerHTML =
             '<span class="property-name">' + p.name + '</span>' +
             (bookingCount > 0 ? '<span class="property-count">' + bookingCount + '</span>' : '');
 
           div.addEventListener('click', function() {
-            selectProperty(p.key);
+            selectProperty(p.id);
           });
 
           wrapper.appendChild(div);
@@ -1996,7 +2333,7 @@
         state.properties.forEach(function(p) {
           var row = document.createElement('div');
           row.className = 'calendar-row';
-          row.dataset.propertyKey = p.key;
+          row.dataset.propertyId = p.id;
 
           for (var day = 1; day <= daysInMonth; day++) {
             var cell = createCalendarCell(p, year, month, day);
@@ -2038,7 +2375,7 @@
       function createCalendarCell(property, year, month, day) {
         var cell = document.createElement('div');
         cell.className = 'calendar-cell';
-        cell.dataset.propertyKey = property.key;
+        cell.dataset.propertyId = property.id;
 
         var monthStr = String(month + 1).padStart(2, '0');
         var dayStr = String(day).padStart(2, '0');
@@ -2052,7 +2389,7 @@
 
         cell.addEventListener('click', function(ev) {
           if (!ev.target.classList.contains('booking-block')) {
-            // Ici on pourrait ouvrir le modal existant (newReservationModal) si souhaité
+            // Ici on pourrait ouvrir le modal existant si besoin
           }
         });
 
@@ -2060,8 +2397,14 @@
       }
 
       function renderBookingsInCells() {
+        // On s'aligne sur les filtres de app.js si présents
+        var activeFilters = window.activeFilters instanceof Set ? window.activeFilters : null;
+
         state.bookings.forEach(function(b) {
           if (!b.startDate || !b.endDate) return;
+          if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
+            return; // filtré dans app.js => on masque aussi ici
+          }
 
           var startDate = new Date(b.startDate);
           var endDate = new Date(b.endDate);
@@ -2073,22 +2416,9 @@
           while (current <= endDate) {
             var dateStr = formatDateForCell(current);
             var selector =
-              '.calendar-cell[data-date="' + dateStr + '"]' +
-              (b.propertyKey
-                ? '[data-property-key="' + String(b.propertyKey).replace(/"/g, '&quot;') + '"]'
-                : '');
+              '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + (b.propertyId ? String(b.propertyId).replace(/\"/g, '&quot;') : '') + '"]';
             var cell = document.querySelector(selector);
-
-            if (!cell && b.propertyKey) {
-              // Fallback: essayer avec le nom de propriété
-              selector =
-                '.calendar-cell[data-property-key="' + String(b.propertyKey).replace(/"/g, '&quot;') + '"]' +
-                '[data-date="' + dateStr + '"]';
-              cell = document.querySelector(selector);
-            }
-
             if (cell) cells.push(cell);
-
             current.setDate(current.getDate() + 1);
           }
 
@@ -2096,7 +2426,7 @@
 
           cells.forEach(function(cell, index) {
             var block = document.createElement('div');
-            var platform = b.platform || 'direct';
+            var platform = (b.platform || 'direct').toLowerCase();
             block.className = 'booking-block ' + platform;
             block.dataset.bookingId = b.id;
 
@@ -2110,19 +2440,13 @@
 
             if (index === 0 || cells.length === 1) {
               var iconClass = (CONFIG.PLATFORMS[platform] && CONFIG.PLATFORMS[platform].icon) || 'fa-user';
-              var label = b.guestName || b.summary || 'Réservation';
+              var label = b.guestName || 'Réservation';
               block.innerHTML = '<i class="fas ' + iconClass + ' platform-icon"></i>' + label;
             }
 
             cell.appendChild(block);
           });
         });
-      }
-
-      // Vue année simplifiée : réutilise juste le mois actuel
-      function renderYearView() {
-        // Pour l'instant, on réutilise la vue mois
-        renderMonthView();
       }
 
       // ============================================
@@ -2142,15 +2466,15 @@
         return y + '-' + m + '-' + d;
       }
 
-      function selectProperty(propertyKey) {
-        state.selectedPropertyKey = propertyKey;
+      function selectProperty(propertyId) {
+        state.selectedPropertyId = propertyId;
 
         document.querySelectorAll('.property-item').forEach(function(item) {
-          item.classList.toggle('selected', item.dataset.propertyKey === String(propertyKey));
+          item.classList.toggle('selected', item.dataset.propertyId === String(propertyId));
         });
 
         document.querySelectorAll('.calendar-row').forEach(function(row) {
-          row.style.opacity = (!propertyKey || row.dataset.propertyKey === String(propertyKey)) ? '1' : '0.3';
+          row.style.opacity = (!propertyId || row.dataset.propertyId === String(propertyId)) ? '1' : '0.25';
         });
       }
 
