@@ -671,9 +671,9 @@
     :root {
       --calendar-header-bg: #10B981; /* Vert de votre thème */
       --calendar-header-hover: #059669;
-      --calendar-cell-height: 42px;
+      --calendar-cell-height: 34px;
       --property-column-width: 200px;
-      --day-header-height: 60px;
+      --day-header-height: 48px;
       --calendar-border: #e5e7eb;
       
       /* Couleurs officielles des plateformes */
@@ -719,7 +719,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
+      padding: 10px 16px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     }
 
@@ -765,8 +765,8 @@
     .view-selector {
       display: flex;
       align-items: center;
-      padding: 12px 20px;
-      gap: 16px;
+      padding: 8px 16px;
+      gap: 12px;
       background: var(--calendar-header-bg);
     }
 
@@ -855,7 +855,7 @@
       display: flex;
       overflow: hidden;
       background: white;
-      min-height: 360px;
+      min-height: 260px;
     }
 
     /* Property List Column */
@@ -1825,15 +1825,30 @@
           var res = resRaw ? JSON.parse(resRaw) : [];
 
           // Normalisation propriétés
-          state.properties = (props || []).map(function(p, index) {
-            var key = p.id || p._id || p.uuid || p.slug || p.name || p.title || String(index);
-            var name = p.name || p.title || p.propertyName || p.property || ('Logement ' + (index + 1));
-            return {
-              key: String(key),
-              name: name,
-              raw: p
-            };
-          });
+          var normalizedProps = [];
+          if (Array.isArray(props)) {
+            normalizedProps = props.map(function(p, index) {
+              var key = p.id || p._id || p.uuid || p.slug || p.name || p.title || String(index);
+              var name = p.name || p.title || p.propertyName || p.property || p.logementName || p.label || ('Logement ' + (index + 1));
+              return {
+                key: String(key),
+                name: name,
+                raw: p
+              };
+            });
+          } else if (props && typeof props === 'object') {
+            Object.keys(props).forEach(function(k, index) {
+              var p = props[k] || {};
+              var key = p.id || p._id || p.uuid || p.slug || p.name || p.title || k || String(index);
+              var name = p.name || p.title || p.propertyName || p.property || p.logementName || p.label || ('Logement ' + (index + 1));
+              normalizedProps.push({
+                key: String(key),
+                name: name,
+                raw: p
+              });
+            });
+          }
+          state.properties = normalizedProps;
 
           // Normalisation réservations
           state.bookings = (res || []).map(function(r, index) {
