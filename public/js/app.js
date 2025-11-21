@@ -388,14 +388,14 @@ async function loadReservations() {
     // Calendrier FullCalendar
     updateCalendarEvents();
 
-    // Calendrier moderne (vue tableau par logement)
-    if (window.renderModernCalendar) {
-      try {
-        window.renderModernCalendar(allReservations, data.properties || []);
-      } catch (e) {
-        console.warn('Erreur calendrier moderne', e);
-      }
-    }
+// Calendrier moderne (vue tableau par logement)
+if (window.renderModernCalendar) {
+  try {
+    window.renderModernCalendar(allReservations, data.properties || []);
+  } catch (e) {
+    console.warn('Erreur calendrier moderne', e);
+  }
+}
 
     console.log(`📦 ${allReservations.length} réservations chargées`);
   } catch (error) {
@@ -445,10 +445,19 @@ async function syncReservations() {
 // ========================================
 // UI UPDATES (stats + filtres)
 // ========================================
+// Petit helper pour ne pas planter si les éléments de stats n'existent pas sur cette page
+function safeSetText(id, value) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = value;
+  }
+}
 
 function updateStats(data) {
   const reservations = data.reservations || [];
-  document.getElementById('statTotal').textContent = reservations.length;
+
+  // on utilise le helper pour éviter les erreurs
+  safeSetText('statTotal', reservations.length);
 
   const now = new Date();
   const upcoming = reservations.filter(r => new Date(r.start) > now).length;
@@ -456,14 +465,18 @@ function updateStats(data) {
     r => new Date(r.start) <= now && new Date(r.end) >= now
   ).length;
 
-  document.getElementById('statUpcoming').textContent = upcoming;
-  document.getElementById('statCurrent').textContent = current;
+  safeSetText('statUpcoming', upcoming);
+  safeSetText('statCurrent', current);
 
   const navBadge = document.getElementById('navTotalReservations');
   if (navBadge) {
     navBadge.textContent = reservations.length;
   }
+
+  // Si tu avais d'autres stats (CA, taux d'occupation, etc.),
+  // applique la même logique safeSetText('id', valeur)
 }
+
 
 function renderPropertyFilters(properties) {
   const container = document.getElementById('propertyFilters');
