@@ -54,9 +54,9 @@
     :root {
       --calendar-header-bg: #10B981; /* Vert de votre thème */
       --calendar-header-hover: #059669;
-      --calendar-cell-height: 34px;
+      --calendar-cell-height: 42px;
       --property-column-width: 200px;
-      --day-header-height: 48px;
+      --day-header-height: 60px;
       --calendar-border: #e5e7eb;
       
       /* Couleurs officielles des plateformes */
@@ -2101,11 +2101,12 @@
 
   <script>
     // ============================================
-    // CALENDRIER MODERNE - VUE TABLEAU PAR LOGEMENT
-    // Branché sur allReservations + data.properties de app.js
+    // CALENDRIER MODERNE – intégré au dashboard
     // ============================================
     (function() {
       'use strict';
+
+      const API_URL = 'https://lcc-booking-manager.onrender.com';
 
       const CONFIG = {
         MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -2126,85 +2127,132 @@
         currentDate: new Date(),
         properties: [],
         bookings: [],
-        selectedPropertyId: null
+        selectedPropertyId: null,
+        loading: false
       };
 
       document.addEventListener('DOMContentLoaded', function () {
         if (!document.getElementById('calendarGrid')) return;
 
-        initializeCalendarUI();
         attachCalendarEventListeners();
-
-        // Si les réservations sont déjà chargées au moment du DOMContentLoaded
-        if (Array.isArray(window.allReservations) && window.allReservations.length) {
-          updateFromReservations(window.allReservations, window.LCC_PROPERTIES || []);
-        }
+        updatePeriodDisplay();
+        loadCalendarData();
       });
 
-      // Exposé pour app.js (loadReservations)
-      window.renderModernCalendar = function(reservations, properties) {
-        updateFromReservations(reservations || [], properties || []);
-      };
+      async function loadCalendarData() {
+        const token = localStorage.getItem('lcc_token');
+        if (!token) {
+          console.warn('Aucun token trouvé, redirection login probable…');
+        }
 
-      function initializeCalendarUI() {
-        updatePeriodDisplay();
-        renderCalendar();
+        try {
+          setLoading(true);
+
+          const response = await fetch(API_URL + '/api/reservations', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+
+          if (!response.ok) {
+            console.error('Erreur API /api/reservations', response.status);
+            return;
+          }
+
+          const data = await response.json();
+
+          const reservations = data.reservations || [];
+          const properties = data.properties || [];
+
+          // Propriétés
+          if (Array.isArray(properties) && properties.length) {
+            state.properties = properties.map((p, index) => ({
+              id: String(p.id || index),
+              name: p.name || ('Logement ' + (index + 1)),
+              color: p.color || '#10B981',
+              raw: p
+            }));
+          } else {
+            // fallback : déduction depuis les réservations
+            const map = {};
+            reservations.forEach(r => {
+              if (!r.property || !r.property.id) return;
+              const id = String(r.property.id);
+              if (!map[id]) {
+                map[id] = {
+                  id,
+                  name: (r.property && r.property.name) || 'Logement',
+                  color: (r.property && r.property.color) || '#10B981',
+                  raw: r.property
+                };
+              }
+            });
+            state.properties = Object.values(map);
+          }
+
+          // Réservations
+          state.bookings = reservations.map((r, index) => ({
+            id: String(r.id || index),
+            propertyId: r.property && r.property.id ? String(r.property.id) : null,
+            startDate: r.start || r.checkIn || r.startDate,
+            endDate: r.end || r.checkOut || r.endDate,
+            guestName: r.guestName || r.customerName || '',
+            platform: (r.source || 'direct').toLowerCase()
+          }));
+
+          renderPropertyList();
+          renderCalendar();
+        } catch (e) {
+          console.error('Erreur lors du chargement du calendrier moderne', e);
+        } finally {
+          setLoading(false);
+        }
       }
 
+      function setLoading(isLoading) {
+        state.loading = !!isLoading;
+        const grid = document.getElementById('calendarGrid');
+        if (!grid) return;
+        if (isLoading) {
+          grid.innerHTML = '<div style="padding: 24px; text-align:center; color: var(--text-secondary);">Chargement du calendrier...</div>';
+        }
+      }
+
+      // =======================
+      // Navigation + vues
+      // =======================
       function attachCalendarEventListeners() {
-        // Onglets de vue
-        document.querySelectorAll('.view-tab').forEach(function(tab) {
+        document.querySelectorAll('.view-tab').forEach(tab => {
           tab.addEventListener('click', function() {
-            changeView(tab.dataset.view);
+            const view = tab.dataset.view;
+            state.currentView = view || 'month';
+
+            document.querySelectorAll('.view-tab').forEach(t => {
+              t.classList.toggle('active', t.dataset.view === state.currentView);
+            });
+
+            renderCalendar();
           });
         });
 
-        // Navigation période
-        var prev = document.getElementById('prevPeriod');
-        var next = document.getElementById('nextPeriod');
+        const prev = document.getElementById('prevPeriod');
+        const next = document.getElementById('nextPeriod');
 
-        if (prev) prev.addEventListener('click', navigatePrevious);
-        if (next) next.addEventListener('click', navigateNext);
+        if (prev) prev.addEventListener('click', () => navigatePeriod(-1));
+        if (next) next.addEventListener('click', () => navigatePeriod(1));
       }
 
-      function changeView(view) {
-        state.currentView = view || 'month';
-
-        document.querySelectorAll('.view-tab').forEach(function(tab) {
-          tab.classList.toggle('active', tab.dataset.view === state.currentView);
-        });
-
-        renderCalendar();
-      }
-
-      function navigatePrevious() {
+      function navigatePeriod(direction) {
+        const dir = direction < 0 ? -1 : 1;
         switch (state.currentView) {
           case 'day':
-            state.currentDate.setDate(state.currentDate.getDate() - 1);
+            state.currentDate.setDate(state.currentDate.getDate() + dir);
             break;
           case 'week':
-            state.currentDate.setDate(state.currentDate.getDate() - 7);
+            state.currentDate.setDate(state.currentDate.getDate() + dir * 7);
             break;
           case 'month':
+          case 'year': // pour l’instant même logique
           default:
-            state.currentDate.setMonth(state.currentDate.getMonth() - 1);
-            break;
-        }
-        updatePeriodDisplay();
-        renderCalendar();
-      }
-
-      function navigateNext() {
-        switch (state.currentView) {
-          case 'day':
-            state.currentDate.setDate(state.currentDate.getDate() + 1);
-            break;
-          case 'week':
-            state.currentDate.setDate(state.currentDate.getDate() + 7);
-            break;
-          case 'month':
-          default:
-            state.currentDate.setMonth(state.currentDate.getMonth() + 1);
+            state.currentDate.setMonth(state.currentDate.getMonth() + dir);
             break;
         }
         updatePeriodDisplay();
@@ -2212,98 +2260,204 @@
       }
 
       function updatePeriodDisplay() {
-        var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
-        var year = state.currentDate.getFullYear();
-        var monthEl = document.getElementById('currentMonth');
-        var yearEl = document.getElementById('currentYear');
+        const monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
+        const year = state.currentDate.getFullYear();
+        const monthEl = document.getElementById('currentMonth');
+        const yearEl = document.getElementById('currentYear');
         if (monthEl) monthEl.textContent = monthName;
         if (yearEl) yearEl.textContent = year;
       }
 
-      // ============================================
-      // MISE À JOUR DES DONNÉES
-      // ============================================
-      function updateFromReservations(reservations, properties) {
-        // 1) Propriétés
-        var props = [];
-        if (Array.isArray(properties) && properties.length) {
-          props = properties.map(function(p, index) {
-            return {
-              id: String(p.id || index),
-              name: p.name || ('Logement ' + (index + 1)),
-              color: p.color || '#10B981',
-              raw: p
-            };
-          });
-        } else if (Array.isArray(reservations)) {
-          // Si pas de liste dédiée, on déduit depuis les réservations
-          var map = {};
-          reservations.forEach(function(r) {
-            if (!r.property || !r.property.id) return;
-            var id = String(r.property.id);
-            if (!map[id]) {
-              map[id] = {
-                id: id,
-                name: (r.property && r.property.name) || 'Logement',
-                color: (r.property && r.property.color) || '#10B981',
-                raw: r.property
-              };
-            }
-          });
-          props = Object.values(map);
-        }
-        state.properties = props;
+      function getCurrentRange() {
+        const d = new Date(state.currentDate.getTime());
+        let start, end;
 
-        // 2) Réservations -> bookings pour le calendrier moderne
-        state.bookings = (reservations || []).map(function(r, index) {
-          var propId = r.property && r.property.id ? String(r.property.id) : null;
-          return {
-            id: String(r.id || index),
-            propertyId: propId,
-            startDate: r.start || r.checkIn || r.startDate,
-            endDate: r.end || r.checkOut || r.endDate,
-            guestName: r.guestName || r.customerName || '',
-            platform: r.source || 'direct'
-          };
+        if (state.currentView === 'day') {
+          start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          end   = new Date(start.getTime());
+        } else if (state.currentView === 'week') {
+          const day = d.getDay();        // 0 = dim, 1 = lun...
+          const delta = (day + 6) % 7;   // nombre de jours à retirer pour arriver au lundi
+          start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - delta);
+          end   = new Date(start.getTime());
+          end.setDate(start.getDate() + 6);
+        } else {
+          // mois (et année simplifiée)
+          start = new Date(d.getFullYear(), d.getMonth(), 1);
+          end   = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        }
+
+        // normalisation à minuit
+        start.setHours(0,0,0,0);
+        end.setHours(0,0,0,0);
+
+        return { start, end };
+      }
+
+      // =======================
+      // Rendu calendrier
+      // =======================
+      function renderCalendar() {
+        const range = getCurrentRange();
+        renderDaysHeader(range);
+        renderGrid(range);
+      }
+
+      function renderDaysHeader(range) {
+        const header = document.getElementById('daysHeader');
+        if (!header) return;
+        header.innerHTML = '';
+
+        let d = new Date(range.start.getTime());
+        while (d <= range.end) {
+          const dow = d.getDay();
+          const div = document.createElement('div');
+          div.className = 'day-header';
+
+          if (dow === 0 || dow === 6) div.classList.add('weekend');
+          if (isToday(d)) div.classList.add('today');
+
+          div.innerHTML =
+            '<span class="day-name">' + CONFIG.DAYS_SHORT[dow] + '</span>' +
+            '<span class="day-number">' + d.getDate() + '</span>';
+
+          header.appendChild(div);
+          d.setDate(d.getDate() + 1);
+        }
+      }
+
+      function renderGrid(range) {
+        const grid = document.getElementById('calendarGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        if (!state.properties.length) {
+          const emptyRow = document.createElement('div');
+          emptyRow.className = 'calendar-row';
+          const cell = document.createElement('div');
+          cell.className = 'calendar-cell';
+          cell.style.justifyContent = 'center';
+          cell.style.alignItems = 'center';
+          cell.style.color = 'var(--text-secondary)';
+          cell.textContent = 'Aucun logement configuré';
+          emptyRow.appendChild(cell);
+          grid.appendChild(emptyRow);
+          return;
+        }
+
+        state.properties.forEach(p => {
+          const row = document.createElement('div');
+          row.className = 'calendar-row';
+          row.dataset.propertyId = p.id;
+
+          let d = new Date(range.start.getTime());
+          while (d <= range.end) {
+            row.appendChild(createCalendarCell(p, d));
+            d.setDate(d.getDate() + 1);
+          }
+
+          grid.appendChild(row);
         });
 
-        renderPropertyList();
-        renderCalendar();
+        renderBookingsInCells(range);
       }
 
-      // ============================================
-      // RENDU DU CALENDRIER
-      // ============================================
-      function renderCalendar() {
-        switch (state.currentView) {
-          case 'year':
-            renderMonthView(); // simplification : pour l'instant, on garde la vue mois
-            break;
-          case 'day':
-          case 'week':
-          case 'month':
-          default:
-            renderMonthView();
-            break;
-        }
+      function createCalendarCell(property, dateObj) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        cell.dataset.propertyId = property.id;
+
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        cell.dataset.date = y + '-' + m + '-' + d;
+
+        const dow = dateObj.getDay();
+        if (dow === 0 || dow === 6) cell.classList.add('weekend');
+        if (isToday(dateObj)) cell.classList.add('today');
+
+        cell.addEventListener('click', function(ev) {
+          if (!ev.target.classList.contains('booking-block')) {
+            // Ici, on pourrait ouvrir le modal de nouvelle résa en préremplissant la date
+          }
+        });
+
+        return cell;
       }
 
+      function renderBookingsInCells(range) {
+        const activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
+
+        state.bookings.forEach(b => {
+          if (!b.startDate || !b.endDate) return;
+          if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
+            return;
+          }
+
+          const startDate = new Date(b.startDate);
+          const endDate   = new Date(b.endDate);
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return;
+
+          // On ignore les réservations complètement hors de la plage
+          if (endDate < range.start || startDate > range.end) return;
+
+          const cells = [];
+          let current = new Date(startDate.getTime());
+          current.setHours(0,0,0,0);
+
+          while (current <= endDate) {
+            const dateStr = formatDateForCell(current);
+            const selector = '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + b.propertyId + '"]';
+            const cell = document.querySelector(selector);
+            if (cell) cells.push(cell);
+            current.setDate(current.getDate() + 1);
+          }
+
+          if (!cells.length) return;
+
+          cells.forEach((cell, index) => {
+            const block = document.createElement('div');
+            const platform = b.platform || 'direct';
+            block.className = 'booking-block ' + platform;
+            block.dataset.bookingId = b.id;
+
+            if (cells.length === 1) {
+              block.classList.add('single');
+            } else if (index === 0) {
+              block.classList.add('start');
+            } else if (index === cells.length - 1) {
+              block.classList.add('end');
+            }
+
+            if (index === 0 || cells.length === 1) {
+              const iconClass = (CONFIG.PLATFORMS[platform] && CONFIG.PLATFORMS[platform].icon) || 'fa-user';
+              const label = b.guestName || 'Réservation';
+              block.innerHTML = '<i class="fas ' + iconClass + ' platform-icon"></i>' + label;
+            }
+
+            cell.appendChild(block);
+          });
+        });
+      }
+
+      // =======================
+      // Propriétés (colonne de gauche)
+      // =======================
       function renderPropertyList() {
-        var wrapper = document.getElementById('propertyList');
+        const wrapper = document.getElementById('propertyList');
         if (!wrapper) return;
         wrapper.innerHTML = '';
 
         if (!state.properties.length) {
-          wrapper.innerHTML = '<div class="property-item"><span style="color: var(--text-secondary);">Aucun logement</span></div>';
+          wrapper.innerHTML =
+            '<div class="property-item"><span style="color: var(--text-secondary);">Aucun logement</span></div>';
           return;
         }
 
-        state.properties.forEach(function(p) {
-          var bookingCount = state.bookings.filter(function(b) {
-            return b.propertyId && String(b.propertyId) === String(p.id);
-          }).length;
+        state.properties.forEach(p => {
+          const bookingCount = state.bookings.filter(b => b.propertyId && String(b.propertyId) === String(p.id)).length;
 
-          var div = document.createElement('div');
+          const div = document.createElement('div');
           div.className = 'property-item';
           div.dataset.propertyId = p.id;
           div.innerHTML =
@@ -2318,164 +2472,33 @@
         });
       }
 
-      function renderMonthView() {
-        var year = state.currentDate.getFullYear();
-        var month = state.currentDate.getMonth();
-        var lastDay = new Date(year, month + 1, 0);
-        var daysInMonth = lastDay.getDate();
+      function selectProperty(propertyId) {
+        state.selectedPropertyId = propertyId;
 
-        renderDaysHeader(1, daysInMonth);
-
-        var grid = document.getElementById('calendarGrid');
-        if (!grid) return;
-        grid.innerHTML = '';
-
-        state.properties.forEach(function(p) {
-          var row = document.createElement('div');
-          row.className = 'calendar-row';
-          row.dataset.propertyId = p.id;
-
-          for (var day = 1; day <= daysInMonth; day++) {
-            var cell = createCalendarCell(p, year, month, day);
-            row.appendChild(cell);
-          }
-
-          grid.appendChild(row);
+        document.querySelectorAll('.property-item').forEach(item => {
+          item.classList.toggle('selected', item.dataset.propertyId === String(propertyId));
         });
 
-        renderBookingsInCells();
-      }
-
-      function renderDaysHeader(startDay, endDay) {
-        var header = document.getElementById('daysHeader');
-        if (!header) return;
-        header.innerHTML = '';
-
-        var year = state.currentDate.getFullYear();
-        var month = state.currentDate.getMonth();
-
-        for (var day = startDay; day <= endDay; day++) {
-          var date = new Date(year, month, day);
-          var dow = date.getDay();
-
-          var div = document.createElement('div');
-          div.className = 'day-header';
-
-          if (dow === 0 || dow === 6) div.classList.add('weekend');
-          if (isToday(date)) div.classList.add('today');
-
-          div.innerHTML =
-            '<span class="day-name">' + CONFIG.DAYS_SHORT[dow] + '</span>' +
-            '<span class="day-number">' + day + '</span>';
-
-          header.appendChild(div);
-        }
-      }
-
-      function createCalendarCell(property, year, month, day) {
-        var cell = document.createElement('div');
-        cell.className = 'calendar-cell';
-        cell.dataset.propertyId = property.id;
-
-        var monthStr = String(month + 1).padStart(2, '0');
-        var dayStr = String(day).padStart(2, '0');
-        cell.dataset.date = year + '-' + monthStr + '-' + dayStr;
-
-        var date = new Date(year, month, day);
-        var dow = date.getDay();
-
-        if (dow === 0 || dow === 6) cell.classList.add('weekend');
-        if (isToday(date)) cell.classList.add('today');
-
-        cell.addEventListener('click', function(ev) {
-          if (!ev.target.classList.contains('booking-block')) {
-            // Ici on pourrait ouvrir le modal existant si besoin
-          }
-        });
-
-        return cell;
-      }
-
-      function renderBookingsInCells() {
-        // On s'aligne sur les filtres de app.js si présents
-        var activeFilters = window.activeFilters instanceof Set ? window.activeFilters : null;
-
-        state.bookings.forEach(function(b) {
-          if (!b.startDate || !b.endDate) return;
-          if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
-            return; // filtré dans app.js => on masque aussi ici
-          }
-
-          var startDate = new Date(b.startDate);
-          var endDate = new Date(b.endDate);
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return;
-
-          var cells = [];
-          var current = new Date(startDate.getTime());
-
-          while (current <= endDate) {
-            var dateStr = formatDateForCell(current);
-            var selector =
-              '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + (b.propertyId ? String(b.propertyId).replace(/\"/g, '&quot;') : '') + '"]';
-            var cell = document.querySelector(selector);
-            if (cell) cells.push(cell);
-            current.setDate(current.getDate() + 1);
-          }
-
-          if (!cells.length) return;
-
-          cells.forEach(function(cell, index) {
-            var block = document.createElement('div');
-            var platform = (b.platform || 'direct').toLowerCase();
-            block.className = 'booking-block ' + platform;
-            block.dataset.bookingId = b.id;
-
-            if (cells.length === 1) {
-              block.classList.add('single');
-            } else if (index === 0) {
-              block.classList.add('start');
-            } else if (index === cells.length - 1) {
-              block.classList.add('end');
-            }
-
-            if (index === 0 || cells.length === 1) {
-              var iconClass = (CONFIG.PLATFORMS[platform] && CONFIG.PLATFORMS[platform].icon) || 'fa-user';
-              var label = b.guestName || 'Réservation';
-              block.innerHTML = '<i class="fas ' + iconClass + ' platform-icon"></i>' + label;
-            }
-
-            cell.appendChild(block);
-          });
+        document.querySelectorAll('.calendar-row').forEach(row => {
+          row.style.opacity = (!propertyId || row.dataset.propertyId === String(propertyId)) ? '1' : '0.25';
         });
       }
 
-      // ============================================
-      // UTILITAIRES
-      // ============================================
+      // =======================
+      // Utilitaires
+      // =======================
       function isToday(date) {
-        var today = new Date();
+        const today = new Date();
         return date.getDate() === today.getDate() &&
                date.getMonth() === today.getMonth() &&
                date.getFullYear() === today.getFullYear();
       }
 
       function formatDateForCell(date) {
-        var y = date.getFullYear();
-        var m = String(date.getMonth() + 1).padStart(2, '0');
-        var d = String(date.getDate()).padStart(2, '0');
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
         return y + '-' + m + '-' + d;
-      }
-
-      function selectProperty(propertyId) {
-        state.selectedPropertyId = propertyId;
-
-        document.querySelectorAll('.property-item').forEach(function(item) {
-          item.classList.toggle('selected', item.dataset.propertyId === String(propertyId));
-        });
-
-        document.querySelectorAll('.calendar-row').forEach(function(row) {
-          row.style.opacity = (!propertyId || row.dataset.propertyId === String(propertyId)) ? '1' : '0.25';
-        });
       }
 
     })();
