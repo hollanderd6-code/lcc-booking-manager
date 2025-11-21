@@ -11,6 +11,9 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+  
   <!-- Platform CSS -->
   <link rel="stylesheet" href="/css/style.css">
 
@@ -40,672 +43,6 @@
     html {
       scroll-behavior: smooth;
     }
-
-    /* ============================================
-       NOUVEAU CALENDRIER MODERNE
-       ============================================ */
-    
-    /* Variables du calendrier */
-    :root {
-      --calendar-header-bg: #10B981; /* Vert de votre thème */
-      --calendar-header-hover: #059669;
-      --calendar-cell-height: 42px;
-      --property-column-width: 200px;
-      --day-header-height: 60px;
-      --calendar-border: #e5e7eb;
-      
-      /* Couleurs officielles des plateformes */
-      --booking-color-airbnb: #FF5A5F;
-      --booking-color-booking: #003580;
-      --booking-color-expedia: #FFC72C;
-      --booking-color-direct: #10B981;
-      --booking-color-vrbo: #1569C7;
-      --booking-color-hotels: #D32F2F;
-      
-      --cell-hover-bg: rgba(16, 185, 129, 0.08);
-    }
-
-    /* Dark theme */
-    [data-theme="dark"] {
-      --calendar-header-bg: #047857;
-      --calendar-border: #374151;
-      --cell-hover-bg: rgba(16, 185, 129, 0.15);
-    }
-
-    /* Section Calendrier */
-    #calendarSection {
-      margin-top: 32px;
-      scroll-margin-top: 20px;
-    }
-
-    .calendar-wrapper {
-      background: white;
-      border-radius: var(--radius-2xl);
-      overflow: hidden;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-    }
-
-    /* Header du calendrier */
-    .calendar-modern-header {
-      background: linear-gradient(135deg, var(--calendar-header-bg), var(--calendar-header-hover));
-      color: white;
-      padding: 0;
-    }
-
-    .calendar-header-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .calendar-title-modern {
-      font-size: 20px;
-      font-weight: 600;
-      margin: 0;
-      letter-spacing: -0.01em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .calendar-title-modern i {
-      font-size: 18px;
-      opacity: 0.9;
-    }
-
-    .calendar-actions-top {
-      display: flex;
-      gap: 8px;
-    }
-
-    .calendar-action-btn {
-      background: rgba(255, 255, 255, 0.15);
-      border: none;
-      color: white;
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: var(--transition-fast);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .calendar-action-btn:hover {
-      background: rgba(255, 255, 255, 0.25);
-    }
-
-    /* View Selector */
-    .view-selector {
-      display: flex;
-      align-items: center;
-      padding: 12px 20px;
-      gap: 16px;
-      background: var(--calendar-header-bg);
-    }
-
-    .view-tabs {
-      display: flex;
-      gap: 8px;
-      flex: 1;
-    }
-
-    .view-tab {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      border-radius: var(--radius-md);
-      transition: var(--transition-fast);
-      white-space: nowrap;
-    }
-
-    .view-tab:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-    }
-
-    .view-tab.active {
-      background: white;
-      color: var(--calendar-header-bg);
-      border-color: white;
-    }
-
-    .view-tab i {
-      font-size: 16px;
-    }
-
-    /* Period Navigation */
-    .period-navigation {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      background: var(--bg-secondary);
-      border-bottom: 2px solid var(--calendar-border);
-    }
-
-    .period-nav-btn {
-      background: white;
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: var(--transition-fast);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .period-nav-btn:hover {
-      background: var(--bg-hover);
-      border-color: var(--primary-color);
-      color: var(--primary-color);
-    }
-
-    .period-display {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .period-display .month-name {
-      color: var(--primary-color);
-    }
-
-    /* Calendar Container */
-    .calendar-container {
-      display: flex;
-      overflow: hidden;
-      background: white;
-      min-height: 500px;
-    }
-
-    /* Property List Column */
-    .property-list-column {
-      width: var(--property-column-width);
-      border-right: 2px solid var(--calendar-border);
-      background: var(--bg-secondary);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
-
-    .property-list-header {
-      height: var(--day-header-height);
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      background: var(--bg-tertiary);
-      border-bottom: 2px solid var(--calendar-border);
-      font-weight: 600;
-      color: var(--text-primary);
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .property-list-items {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .property-item {
-      height: var(--calendar-cell-height);
-      padding: 0 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--calendar-border);
-      font-size: 13px;
-      color: var(--text-primary);
-      background: white;
-      cursor: pointer;
-      transition: var(--transition-fast);
-    }
-
-    .property-item:hover {
-      background: var(--bg-hover);
-    }
-
-    .property-item.selected {
-      background: var(--primary-light);
-      font-weight: 500;
-    }
-
-    .property-name {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-    }
-
-    .property-count {
-      background: var(--bg-tertiary);
-      color: var(--text-secondary);
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    /* Calendar Grid Wrapper */
-    .calendar-grid-wrapper {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* Days Header */
-    .days-header {
-      height: var(--day-header-height);
-      display: flex;
-      background: var(--bg-tertiary);
-      border-bottom: 2px solid var(--calendar-border);
-      overflow-x: auto;
-      scrollbar-width: thin;
-    }
-
-    .day-header {
-      min-width: 50px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border-right: 1px solid var(--calendar-border);
-      position: relative;
-    }
-
-    .day-header.weekend {
-      background: rgba(239, 68, 68, 0.05);
-    }
-
-    .day-header.today {
-      background: var(--primary-light);
-    }
-
-    .day-header.today::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--primary-color);
-    }
-
-    .day-header .day-name {
-      font-weight: 500;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 0.05em;
-    }
-
-    .day-header .day-number {
-      font-weight: 600;
-      color: var(--text-primary);
-      font-size: 18px;
-      margin-top: 4px;
-    }
-
-    .day-header.today .day-number {
-      color: var(--primary-color);
-    }
-
-    /* Calendar Grid */
-    .calendar-grid {
-      flex: 1;
-      overflow: auto;
-      background: white;
-    }
-
-    .calendar-row {
-      display: flex;
-      border-bottom: 1px solid var(--calendar-border);
-    }
-
-    .calendar-cell {
-      min-width: 50px;
-      height: var(--calendar-cell-height);
-      flex: 1;
-      border-right: 1px solid var(--calendar-border);
-      padding: 2px;
-      position: relative;
-      cursor: pointer;
-      transition: var(--transition-fast);
-    }
-
-    .calendar-cell:hover {
-      background: var(--cell-hover-bg);
-    }
-
-    .calendar-cell.weekend {
-      background: rgba(239, 68, 68, 0.02);
-    }
-
-    .calendar-cell.today {
-      background: rgba(16, 185, 129, 0.05);
-    }
-
-    .calendar-cell.selected {
-      background: rgba(16, 185, 129, 0.15);
-    }
-
-    /* Booking Blocks avec couleurs par plateforme */
-    .booking-block {
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      right: 3px;
-      bottom: 3px;
-      border-radius: 6px;
-      padding: 2px 6px;
-      font-size: 11px;
-      font-weight: 600;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 1;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Couleurs par plateforme */
-    .booking-block.airbnb {
-      background: linear-gradient(135deg, var(--booking-color-airbnb), #E84C50);
-    }
-
-    .booking-block.booking {
-      background: linear-gradient(135deg, var(--booking-color-booking), #00224F);
-    }
-
-    .booking-block.expedia {
-      background: linear-gradient(135deg, var(--booking-color-expedia), #FFB000);
-    }
-
-    .booking-block.vrbo {
-      background: linear-gradient(135deg, var(--booking-color-vrbo), #0E4C99);
-    }
-
-    .booking-block.hotels {
-      background: linear-gradient(135deg, var(--booking-color-hotels), #B71C1C);
-    }
-
-    .booking-block.direct {
-      background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
-    }
-
-    .booking-block.start {
-      border-top-left-radius: 10px;
-      border-bottom-left-radius: 10px;
-      padding-left: 8px;
-    }
-
-    .booking-block.end {
-      border-top-right-radius: 10px;
-      border-bottom-right-radius: 10px;
-      padding-right: 8px;
-    }
-
-    .booking-block.single {
-      border-radius: 10px;
-    }
-
-    .booking-block:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-    }
-
-    /* Platform Icons */
-    .booking-block .platform-icon {
-      margin-right: 4px;
-      font-size: 10px;
-    }
-
-    /* Price Display */
-    .cell-price {
-      position: absolute;
-      bottom: 1px;
-      right: 2px;
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--text-tertiary);
-      background: rgba(255, 255, 255, 0.9);
-      padding: 1px 3px;
-      border-radius: 3px;
-    }
-
-    /* Month View Specific */
-    .month-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 1px;
-      background: var(--border-color);
-      padding: 1px;
-    }
-
-    .month-cell {
-      background: white;
-      padding: 8px;
-      min-height: 80px;
-      position: relative;
-      cursor: pointer;
-    }
-
-    .month-cell:hover {
-      background: var(--bg-hover);
-    }
-
-    .month-cell-date {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 4px;
-    }
-
-    .month-cell.today .month-cell-date {
-      color: var(--primary-color);
-      font-weight: 700;
-    }
-
-    .month-cell.other-month {
-      background: var(--bg-tertiary);
-      opacity: 0.5;
-    }
-
-    /* Week View */
-    .week-view-header {
-      display: grid;
-      grid-template-columns: var(--property-column-width) repeat(7, 1fr);
-      background: var(--bg-tertiary);
-      border-bottom: 2px solid var(--border-color);
-    }
-
-    /* Year View */
-    .year-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-      padding: 24px;
-      background: var(--bg-secondary);
-    }
-
-    .year-month-card {
-      background: white;
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      border: 1px solid var(--border-color);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .year-month-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--primary-color);
-    }
-
-    .year-month-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--text-primary);
-    }
-
-    .year-month-stats {
-      display: flex;
-      gap: 16px;
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .year-month-stat {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .year-month-stat i {
-      font-size: 12px;
-      color: var(--primary-color);
-    }
-
-    /* Loading State */
-    .calendar-loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 400px;
-      color: var(--text-secondary);
-    }
-
-    .calendar-loading i {
-      font-size: 48px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    /* Empty State */
-    .calendar-empty {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 400px;
-      color: var(--text-secondary);
-      text-align: center;
-      padding: 40px;
-    }
-
-    .calendar-empty i {
-      font-size: 64px;
-      margin-bottom: 16px;
-      color: var(--text-tertiary);
-    }
-
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .property-list-column {
-        width: 140px;
-      }
-      
-      .day-header,
-      .calendar-cell {
-        min-width: 45px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .view-tab span {
-        display: none;
-      }
-      
-      .property-list-column {
-        width: 100px;
-      }
-      
-      .property-item {
-        font-size: 11px;
-        padding: 0 8px;
-      }
-      
-      .day-header,
-      .calendar-cell {
-        min-width: 40px;
-      }
-      
-      .booking-block {
-        font-size: 10px;
-        padding: 1px 4px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .property-list-column {
-        display: none;
-      }
-      
-      .calendar-title-modern span {
-        display: none;
-      }
-      
-      .period-display {
-        font-size: 16px;
-      }
-    }
-
-    /* ScrollBar Styling */
-    .calendar-grid::-webkit-scrollbar,
-    .property-list-items::-webkit-scrollbar,
-    .days-header::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-
-    .calendar-grid::-webkit-scrollbar-track,
-    .property-list-items::-webkit-scrollbar-track,
-    .days-header::-webkit-scrollbar-track {
-      background: var(--bg-tertiary);
-    }
-
-    .calendar-grid::-webkit-scrollbar-thumb,
-    .property-list-items::-webkit-scrollbar-thumb,
-    .days-header::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 3px;
-    }
-
-    .calendar-grid::-webkit-scrollbar-thumb:hover,
-    .property-list-items::-webkit-scrollbar-thumb:hover,
-    .days-header::-webkit-scrollbar-thumb:hover {
-      background: var(--text-tertiary);
-    }
   </style>
 </head>
 <body data-page="app">
@@ -727,7 +64,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="/" class="sidebar-logo">
-          <i class="fas fa-calendar-check"></i>
+          <img src="/assets/logo-bookingmanage.svg" alt="Logo Boostinghost" class="sidebar-logo-img">
           <div class="sidebar-logo-text">
             <span class="sidebar-logo-title">Boostinghost</span>
             <span class="sidebar-logo-subtitle">Smart Property Manager</span>
@@ -816,6 +153,7 @@
             <div class="user-name" id="sidebarUserName">Utilisateur</div>
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
+
           <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
@@ -824,16 +162,33 @@
     <!-- Main Content -->
     <main class="main-content">
       
-      <!-- Dashboard Header -->
+      <!-- Header -->
       <header class="main-header">
-        <div>
-          <h1 class="page-title">Tableau de bord</h1>
-          <p class="page-subtitle">Vue d'ensemble de vos réservations et logements</p>
+        <div class="header-left">
+          <div class="page-kicker">Vue d’ensemble</div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">
+            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
+          </p>
         </div>
+        
         <div class="header-actions">
-          <button class="btn btn-primary" id="syncButton">
+          <button class="btn btn-ghost hide-on-mobile" id="newReservationBtn">
+            <i class="fas fa-plus"></i>
+            Nouvelle réservation
+          </button>
+
+          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
             <i class="fas fa-sync-alt"></i>
-            <span>Synchroniser</span>
+          </button>
+
+          <button class="btn-icon" id="notificationsBtn" title="Notifications">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge"></span>
+          </button>
+
+          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
+            <i class="fas fa-moon"></i>
           </button>
         </div>
       </header>
@@ -841,900 +196,1163 @@
       <!-- Page Content -->
       <div class="page-content">
         
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-color);">
-              <i class="fas fa-calendar-check"></i>
+        <!-- ÉTAT DES CONNEXIONS -->
+        <section class="status-grid">
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-airbnb">
+                <i class="fab fa-airbnb"></i>
+              </div>
+              <span class="status-label status-ok">Connecté</span>
             </div>
-            <div class="stat-content">
-              <div class="stat-value" id="statTotalReservations">0</div>
-              <div class="stat-label">Réservations totales</div>
+            <h3>Airbnb</h3>
+            <p>Synchronisation iCal active.</p>
+            <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
+          </article>
+
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-booking">
+                <i class="fas fa-bed"></i>
+              </div>
+              <span class="status-label status-warning">À connecter</span>
             </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
-              <i class="fas fa-home"></i>
+            <h3>Booking.com</h3>
+            <p>Ajoutez votre lien iCal Booking.com.</p>
+            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
+          </article>
+
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-stripe">
+                <i class="fab fa-stripe-s"></i>
+              </div>
+              <span class="status-label status-ok">Connecté</span>
             </div>
-            <div class="stat-content">
-              <div class="stat-value" id="statActiveProperties">0</div>
-              <div class="stat-label">Logements actifs</div>
+            <h3>Stripe</h3>
+            <p>Cautions et paiements sécurisés.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
+          </article>
+
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-ai">
+                <i class="fas fa-wand-magic-sparkles"></i>
+              </div>
+              <span class="status-label status-ok">Actif</span>
             </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #E0E7FF; color: #3B82F6;">
-              <i class="fas fa-users"></i>
+            <h3>Messages automatiques</h3>
+            <p>Scénarios IA prêts pour vos voyageurs.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
+          </article>
+        </section>
+
+        <!-- KPI PRINCIPAUX -->
+        <section class="kpi-grid">
+          <!-- KPI 1 : Taux d'occupation -->
+          <article class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Taux d'occupation</span>
+              <span class="kpi-pill kpi-pill-success">
+                <i class="fas fa-arrow-up"></i>
+                <span id="kpiOccupancyDelta">+8% vs mois dernier</span>
+              </span>
             </div>
-            <div class="stat-content">
-              <div class="stat-value" id="statUpcomingArrivals">0</div>
-              <div class="stat-label">Arrivées cette semaine</div>
+            <div class="kpi-main">
+              <span class="kpi-value" id="kpiOccupancyValue">82%</span>
+              <span class="kpi-sub">sur les 30 prochains jours</span>
             </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #FECACA; color: #EF4444;">
-              <i class="fas fa-sign-out-alt"></i>
+          </article>
+
+          <!-- KPI 2 : Revenus à venir -->
+          <article class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Revenus à venir</span>
+              <span class="kpi-pill kpi-pill-info">
+                <i class="fas fa-calendar-week"></i>
+                30 prochains jours
+              </span>
             </div>
-            <div class="stat-content">
-              <div class="stat-value" id="statUpcomingDepartures">0</div>
-              <div class="stat-label">Départs cette semaine</div>
+            <div class="kpi-main">
+              <span class="kpi-value" id="kpiRevenueValue">4 250 €</span>
+              <span class="kpi-sub">confirmés et payés</span>
             </div>
-          </div>
-        </div>
-        
-        <!-- Calendar Section -->
-        <section id="calendarSection">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-calendar-alt"></i>
-              Calendrier des réservations
-            </h2>
-            <button class="btn btn-primary" id="newReservationBtn">
-              <i class="fas fa-plus"></i>
-              Nouvelle réservation
+          </article>
+
+          <!-- KPI 3 : Logements actifs -->
+          <article class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Logements actifs</span>
+              <span class="kpi-pill kpi-pill-neutral">
+                <i class="fas fa-home"></i>
+                synchronisés
+              </span>
+            </div>
+            <div class="kpi-main">
+              <span class="kpi-value" id="kpiPropertiesValue">12</span>
+              <span class="kpi-sub">connectés à au moins un OTA</span>
+            </div>
+          </article>
+        </section>
+
+        <!-- ONBOARDING -->
+        <section class="onboarding-section">
+          <header class="onboarding-header">
+            <div>
+              <h2>Bien démarrer avec Boostinghost</h2>
+              <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
+            </div>
+            <span class="onboarding-progress-badge">
+              <span id="onboardingProgressValue">2</span>/4 complétées
+            </span>
+          </header>
+
+          <div class="onboarding-steps">
+            <button class="onboarding-step" data-step="property" onclick="window.location.href='/settings.html'">
+              <div class="onboarding-step-icon done">
+                <i class="fas fa-home"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Ajouter votre premier logement</h3>
+                <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
+              </div>
+              <span class="onboarding-step-status done">Terminé</span>
+            </button>
+
+            <button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
+              <div class="onboarding-step-icon todo">
+                <i class="fas fa-link"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Connecter vos liens iCal</h3>
+                <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
+              </div>
+              <span class="onboarding-step-status todo">À faire</span>
+            </button>
+
+            <button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
+              <div class="onboarding-step-icon todo">
+                <i class="fab fa-stripe-s"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Connecter Stripe</h3>
+                <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
+              </div>
+              <span class="onboarding-step-status todo">À faire</span>
+            </button>
+
+            <button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
+              <div class="onboarding-step-icon done">
+                <i class="fas fa-comment-dots"></i>
+              </div>
+              <div class="onboarding-step-content">
+                <h3>Configurer les messages automatiques</h3>
+                <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
+              </div>
+              <span class="onboarding-step-status done">Terminé</span>
             </button>
           </div>
-          
-          <!-- NOUVEAU CALENDRIER MODERNE -->
-          <div class="calendar-wrapper">
-            <!-- Calendar Header -->
-            <div class="calendar-modern-header">
-              <div class="calendar-header-top">
-                <h3 class="calendar-title-modern">
-                  <i class="fas fa-calendar"></i>
-                  <span>Calendrier</span>
-                </h3>
-                <div class="calendar-actions-top">
-                  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
-                    <i class="fas fa-search"></i>
-                  </button>
-                  <button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
-                    <i class="fas fa-filter"></i>
-                  </button>
-                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
-                    <i class="fas fa-cog"></i>
-                  </button>
-                </div>
-              </div>
-              
-              <!-- View Selector -->
-              <div class="view-selector">
-                <div class="view-tabs">
-                  <button class="view-tab" data-view="day">
-                    <i class="fas fa-calendar-day"></i>
-                    <span>Jour</span>
-                  </button>
-                  <button class="view-tab" data-view="week">
-                    <i class="fas fa-calendar-week"></i>
-                    <span>Semaine</span>
-                  </button>
-                  <button class="view-tab active" data-view="month">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Mois</span>
-                  </button>
-                  <button class="view-tab" data-view="year">
-                    <i class="fas fa-calendar"></i>
-                    <span>Année</span>
-                  </button>
-                </div>
-              </div>
+        </section>
+
+        <!-- PROCHAINES ARRIVÉES & DÉPARTS -->
+        <section class="card" id="upcomingStays">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-door-open"></i>
+              Prochaines arrivées & départs
             </div>
-            
-            <!-- Period Navigation -->
-            <div class="period-navigation">
-              <button class="period-nav-btn" id="prevPeriod">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              <div class="period-display">
-                <span class="month-name" id="currentMonth">Novembre</span>
-                <span class="year" id="currentYear">2025</span>
-              </div>
-              <button class="period-nav-btn" id="nextPeriod">
-                <i class="fas fa-chevron-right"></i>
-              </button>
+            <span class="upcoming-badge">7 prochains jours</span>
+          </div>
+
+          <div class="upcoming-list">
+
+            <!-- En-têtes -->
+            <div class="upcoming-row upcoming-row-header">
+              <span class="upcoming-col-date">Date</span>
+              <span class="upcoming-col-guest">Voyageur</span>
+              <span class="upcoming-col-property">Logement</span>
+              <span class="upcoming-col-type">Type</span>
+              <span class="upcoming-col-status">Statut</span>
             </div>
-            
-            <!-- Calendar Container -->
-            <div class="calendar-container">
-              <!-- Property List Column -->
-              <div class="property-list-column">
-                <div class="property-list-header">
-                  <span>Logements</span>
-                </div>
-                <div class="property-list-items" id="propertyList">
-                  <!-- Les logements seront ajoutés dynamiquement -->
-                </div>
-              </div>
-              
-              <!-- Calendar Grid Wrapper -->
-              <div class="calendar-grid-wrapper">
-                <!-- Days Header -->
-                <div class="days-header" id="daysHeader">
-                  <!-- Les jours seront ajoutés dynamiquement -->
-                </div>
-                
-                <!-- Calendar Grid -->
-                <div class="calendar-grid" id="calendarGrid">
-                  <!-- Les cellules seront ajoutées dynamiquement -->
-                </div>
-              </div>
+
+            <!-- Exemples de lignes (à remplacer plus tard par tes vraies données) -->
+            <div class="upcoming-row">
+              <span class="upcoming-col-date">Aujourd’hui • 16:00</span>
+              <span class="upcoming-col-guest">Julie Martin</span>
+              <span class="upcoming-col-property">T2 Centre-ville</span>
+              <span class="upcoming-col-type">
+                <span class="upcoming-chip upcoming-chip-checkin">Arrivée</span>
+              </span>
+              <span class="upcoming-col-status">
+                <span class="upcoming-status upcoming-status-ok">Prêt</span>
+              </span>
             </div>
+
+            <div class="upcoming-row">
+              <span class="upcoming-col-date">Demain • 10:00</span>
+              <span class="upcoming-col-guest">Famille Dupont</span>
+              <span class="upcoming-col-property">Maison plage</span>
+              <span class="upcoming-col-type">
+                <span class="upcoming-chip upcoming-chip-checkout">Départ</span>
+              </span>
+              <span class="upcoming-col-status">
+                <span class="upcoming-status upcoming-status-warning">Ménage à planifier</span>
+              </span>
+            </div>
+
+            <div class="upcoming-row">
+              <span class="upcoming-col-date">Dans 2 jours • 18:30</span>
+              <span class="upcoming-col-guest">Luca Rossi</span>
+              <span class="upcoming-col-property">Studio gare</span>
+              <span class="upcoming-col-type">
+                <span class="upcoming-chip upcoming-chip-checkin">Arrivée</span>
+              </span>
+              <span class="upcoming-col-status">
+                <span class="upcoming-status upcoming-status-info">En attente check-in en ligne</span>
+              </span>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Vue d’ensemble arrivées / séjours / départs -->
+        <section class="overview-card">
+          <div class="overview-header">
+            <div>
+              <div class="overview-kicker">Vue d’ensemble</div>
+              <div class="overview-title">Aujourd’hui &amp; à venir</div>
+            </div>
+            <button class="overview-chip">
+              Dashboard temps réel
+            </button>
+          </div>
+
+          <div class="overview-metrics">
+            <div class="overview-metric">
+              <div class="overview-metric-label">Réservations à venir</div>
+              <div class="overview-metric-value" id="ovUpcoming">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Séjours en cours</div>
+              <div class="overview-metric-value" id="ovCurrent">-</div>
+            </div>
+            <div class="overview-metric">
+              <div class="overview-metric-label">Taux d’occupation</div>
+              <div class="overview-metric-value" id="ovOccupancy">78%</div>
+            </div>
+          </div>
+
+          <div class="overview-timeline" id="overviewTimeline">
+            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
+          </div>
+        </section>
+
+        <!-- Property Filters -->
+        <section class="card mb-lg" id="calendarFiltersSection">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-filter"></i>
+              Filtrer par logement
+            </div>
+            <button class="btn btn-ghost" onclick="clearFilters()">
+              <i class="fas fa-times"></i>
+              Réinitialiser
+            </button>
+          </div>
+          <div class="property-filters" id="propertyFilters">
+            <!-- Généré dynamiquement par app.js -->
           </div>
         </section>
         
+        <!-- Calendar Card -->
+        <section class="card" id="calendarSection">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-calendar-alt"></i>
+              Calendrier des réservations
+            </div>
+            <div class="flex gap-sm">
+              <button class="btn btn-ghost view-btn active" data-view="month">
+                <i class="fas fa-calendar"></i> Mois
+              </button>
+              <button class="btn btn-ghost view-btn" data-view="week">
+                <i class="fas fa-calendar-week"></i> Semaine
+              </button>
+              <button class="btn btn-ghost view-btn" data-view="list">
+                <i class="fas fa-list"></i> Liste
+              </button>
+            </div>
+          </div>
+          <div id="calendar"></div>
+        </section>
+        
       </div>
+
+      <!-- Notifications Panel -->
+      <aside class="notifications-panel" id="notificationsPanel">
+        <div class="notifications-header">
+          <h2>Notifications</h2>
+          <button class="btn-icon" id="notificationsCloseBtn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="notifications-body" id="notificationsList">
+          <p class="empty-state">Aucune notification pour le moment.</p>
+        </div>
+      </aside>
+
     </main>
   </div>
+  
+  <!-- Reservation Modal -->
+  <div class="modal" id="reservationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Détails de la réservation</h2>
+        <button class="modal-close" id="modalClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Contenu généré dynamiquement -->
+      </div>
+    </div>
+  </div>
 
-  <!-- Modal Nouvelle Réservation -->
+  <!-- New Manual Reservation Modal -->
   <div class="modal" id="newReservationModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Nouvelle Réservation</h2>
+        <h2>Nouvelle réservation</h2>
         <button class="modal-close" id="newReservationClose">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="modal-body">
-        <form id="newReservationForm">
-          <div class="form-group">
-            <label for="bookingProperty">Logement</label>
-            <select id="bookingProperty" class="form-control" required>
-              <option value="">Sélectionner un logement</option>
-            </select>
-          </div>
-          
+        <form id="newReservationForm" class="form-grid">
           <div class="form-row">
-            <div class="form-group">
-              <label for="checkIn">Arrivée</label>
-              <input type="date" id="checkIn" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="checkOut">Départ</label>
-              <input type="date" id="checkOut" class="form-control" required>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="guestName">Nom du client</label>
-            <input type="text" id="guestName" class="form-control" placeholder="Ex: Jean Dupont" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="platform">Plateforme</label>
-            <select id="platform" class="form-control">
-              <option value="direct">Direct</option>
-              <option value="booking">Booking.com</option>
-              <option value="airbnb">Airbnb</option>
-              <option value="expedia">Expedia</option>
-              <option value="vrbo">VRBO</option>
-              <option value="hotels">Hotels.com</option>
+            <label for="nrProperty">Logement</label>
+            <select id="nrProperty" name="propertyId" required>
+              <!-- On remplira en JS suivant PROPERTIES -->
             </select>
           </div>
-          
-          <div class="form-group">
-            <label for="price">Prix total (€)</label>
-            <input type="number" id="price" class="form-control" min="0" step="0.01" placeholder="350">
+
+          <div class="form-row">
+            <label for="nrGuestName">Nom du client</label>
+            <input type="text" id="nrGuestName" name="guestName" required />
           </div>
-          
-          <div class="form-actions">
-            <button type="button" class="btn btn-ghost" id="newReservationCancel">Annuler</button>
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
+
+          <div class="form-row">
+            <label for="nrStartDate">Arrivée</label>
+            <input type="date" id="nrStartDate" name="startDate" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrEndDate">Départ</label>
+            <input type="date" id="nrEndDate" name="endDate" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nrNotes">Notes</label>
+            <textarea id="nrNotes" name="notes" rows="3"></textarea>
+          </div>
+
+          <div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+            <button type="button" class="btn btn-ghost" id="newReservationCancel">
+              Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Enregistrer
+            </button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Toast Container -->
-  <div class="toast-container" id="toastContainer"></div>
-
   <!-- Loading Overlay -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner">
       <i class="fas fa-spinner fa-spin"></i>
-      <p>Chargement...</p>
+      <p>Synchronisation en cours...</p>
     </div>
   </div>
-
+  
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+  
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
+  <script src="/js/app.js"></script>
+  
+  <style>
+    /* Styles spécifiques calendrier & UI complémentaire */
+    #calendar {
+      margin-top: 24px;
+    }
+    
+    .fc {
+      --fc-border-color: var(--border-color);
+      --fc-button-bg-color: var(--primary-color);
+      --fc-button-border-color: var(--primary-color);
+      --fc-button-hover-bg-color: var(--primary-hover);
+      --fc-button-hover-border-color: var(--primary-hover);
+      --fc-button-active-bg-color: var(--primary-dark);
+      --fc-today-bg-color: var(--primary-light);
+    }
+    
+    [data-theme="dark"] .fc {
+      --fc-page-bg-color: var(--bg-primary);
+      --fc-neutral-bg-color: var(--bg-secondary);
+      --fc-today-bg-color: rgba(16, 185, 129, 0.1);
+    }
+    
+    .fc .fc-button {
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      text-transform: none;
+      padding: 8px 16px;
+    }
+    
+    .fc-event {
+      border-radius: var(--radius-sm);
+      border: none;
+      padding: 4px 8px;
+    }
+    
+    .property-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .property-badge {
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      border: 2px solid;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .property-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .property-badge.active {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+    }
+    
+    .property-count {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+    }
+    
+    .page-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .hide-on-mobile {
+      display: inline-flex;
+    }
+    
+    @media (max-width: 768px) {
+      .hide-on-mobile {
+        display: none;
+      }
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: var(--radius-xl);
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
+    
+    .modal-header {
+      padding: var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+    
+    .modal-close:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    
+    .modal-body {
+      padding: var(--spacing-lg);
+      overflow-y: auto;
+      max-height: calc(90vh - 80px);
+    }
+    
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .loading-spinner {
+      background: var(--bg-primary);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-xl);
+      text-align: center;
+    }
+    
+    .loading-spinner i {
+      font-size: 48px;
+      color: var(--primary-color);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .toast-container {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      right: var(--spacing-lg);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    
+    .toast {
+      background: var(--bg-primary);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      min-width: 300px;
+      animation: slideInRight 0.3s ease;
+    }
+    
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--error); }
+    .toast.info { border-color: var(--info); }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Notifications panel */
+    .notifications-panel {
+      position: fixed;
+      top: 0;
+      right: -360px;
+      width: 360px;
+      height: 100vh;
+      background: var(--bg-primary);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s ease;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .notifications-panel.open {
+      right: 0;
+    }
+
+    .notifications-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notifications-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .notifications-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .empty-state {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Carte Vue d'ensemble (arrivées / séjours / départs) */
+    .overview-card {
+      background: linear-gradient(135deg, #f3f4ff, #eef9ff);
+      border-radius: 24px;
+      padding: 18px 20px 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    [data-theme="dark"] .overview-card {
+      background: radial-gradient(circle at top left, #1e293b, #020617);
+    }
+
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .overview-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
+
+    .overview-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .overview-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(37, 99, 235, 0.06);
+      color: #2563eb;
+      font-size: 12px;
+      padding: 6px 12px;
+      font-weight: 600;
+    }
+
+    [data-theme="dark"] .overview-chip {
+      background: rgba(37, 99, 235, 0.18);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .overview-metrics {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .overview-metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .overview-metric-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .overview-timeline {
+      margin-top: 4px;
+      background: #020617;
+      color: #e5e7eb;
+      border-radius: 18px;
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+
+    [data-theme="dark"] .overview-timeline {
+      background: #020617;
+    }
+
+    .overview-timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .overview-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .overview-dot.arrival {
+      background: #22c55e;
+    }
+
+    .overview-dot.stay {
+      background: #3b82f6;
+    }
+
+    .overview-dot.departure {
+      background: #f97316;
+    }
+
+    .overview-line-main {
+      flex: 1;
+    }
+
+    .overview-line-time {
+      font-size: 11px;
+      opacity: 0.8;
+      white-space: nowrap;
+    }
+
+    .overview-empty {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.8;
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
+
+    .overview-timeline-footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      margin-top: 6px;
+      padding-top: 6px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- Script auth + user + logout -->
   <script>
-    // ============================================
-    // CALENDRIER MODERNE - JAVASCRIPT
-    // ============================================
-
-    (function() {
-      'use strict';
-
-      // Configuration
-      const CONFIG = {
-        API_URL: window.location.origin,
-        MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
-        MONTHS_SHORT: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jui', 
-                       'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
-        DAYS: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
-        DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-        PLATFORMS: {
-          airbnb: { name: 'Airbnb', color: '#FF5A5F', icon: 'fa-home' },
-          booking: { name: 'Booking.com', color: '#003580', icon: 'fa-bed' },
-          expedia: { name: 'Expedia', color: '#FFC72C', icon: 'fa-plane' },
-          vrbo: { name: 'VRBO', color: '#1569C7', icon: 'fa-house-user' },
-          hotels: { name: 'Hotels.com', color: '#D32F2F', icon: 'fa-hotel' },
-          direct: { name: 'Direct', color: '#10B981', icon: 'fa-user' }
-        }
-      };
-
-      // État de l'application
-      const state = {
-        currentView: 'month',
-        currentDate: new Date(),
-        selectedDate: null,
-        properties: [],
-        bookings: [],
-        loading: false,
-        selectedProperty: null
-      };
-
-      // Initialisation
-      document.addEventListener('DOMContentLoaded', init);
-
-      function init() {
-        checkAuth();
-        initializeCalendar();
-        attachEventListeners();
-        loadProperties();
-        loadBookings();
-      }
-
-      function checkAuth() {
-        const token = localStorage.getItem('lcc_token');
-        if (!token) {
-          window.location.href = '/login.html';
-          return false;
-        }
-        return true;
-      }
-
-      function initializeCalendar() {
-        updatePeriodDisplay();
-        renderCalendar();
-      }
-
-      function attachEventListeners() {
-        // View tabs
-        document.querySelectorAll('.view-tab').forEach(tab => {
-          tab.addEventListener('click', () => changeView(tab.dataset.view));
-        });
-
-        // Period navigation
-        document.getElementById('prevPeriod').addEventListener('click', navigatePrevious);
-        document.getElementById('nextPeriod').addEventListener('click', navigateNext);
-
-        // Modal
-        document.getElementById('newReservationBtn').addEventListener('click', openModal);
-        document.getElementById('newReservationClose').addEventListener('click', closeModal);
-        document.getElementById('newReservationCancel').addEventListener('click', closeModal);
-        document.getElementById('newReservationForm').addEventListener('submit', handleBookingSubmit);
-
-        // Sync button
-        document.getElementById('syncButton').addEventListener('click', syncCalendars);
-      }
-
-      // ============================================
-      // GESTION DES VUES
-      // ============================================
-
-      function changeView(view) {
-        state.currentView = view;
-        
-        // Update active tab
-        document.querySelectorAll('.view-tab').forEach(tab => {
-          tab.classList.toggle('active', tab.dataset.view === view);
-        });
-        
-        renderCalendar();
-      }
-
-      function navigatePrevious() {
-        switch (state.currentView) {
-          case 'day':
-            state.currentDate.setDate(state.currentDate.getDate() - 1);
-            break;
-          case 'week':
-            state.currentDate.setDate(state.currentDate.getDate() - 7);
-            break;
-          case 'month':
-            state.currentDate.setMonth(state.currentDate.getMonth() - 1);
-            break;
-          case 'year':
-            state.currentDate.setFullYear(state.currentDate.getFullYear() - 1);
-            break;
-        }
-        updatePeriodDisplay();
-        renderCalendar();
-      }
-
-      function navigateNext() {
-        switch (state.currentView) {
-          case 'day':
-            state.currentDate.setDate(state.currentDate.getDate() + 1);
-            break;
-          case 'week':
-            state.currentDate.setDate(state.currentDate.getDate() + 7);
-            break;
-          case 'month':
-            state.currentDate.setMonth(state.currentDate.getMonth() + 1);
-            break;
-          case 'year':
-            state.currentDate.setFullYear(state.currentDate.getFullYear() + 1);
-            break;
-        }
-        updatePeriodDisplay();
-        renderCalendar();
-      }
-
-      function updatePeriodDisplay() {
-        const month = CONFIG.MONTHS[state.currentDate.getMonth()];
-        const year = state.currentDate.getFullYear();
-        
-        document.getElementById('currentMonth').textContent = month;
-        document.getElementById('currentYear').textContent = year;
-      }
-
-      // ============================================
-      // CHARGEMENT DES DONNÉES
-      // ============================================
-
-      async function loadProperties() {
-        try {
-          const token = localStorage.getItem('lcc_token');
-          const response = await fetch('/api/properties', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            state.properties = await response.json();
-            renderPropertyList();
-            updateStats();
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement des logements:', error);
-        }
-      }
-
-      async function loadBookings() {
-        try {
-          showLoading();
-          const token = localStorage.getItem('lcc_token');
-          const response = await fetch('/api/reservations', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            state.bookings = data.reservations || data || [];
-            renderCalendar();
-            updateStats();
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement des réservations:', error);
-        } finally {
-          hideLoading();
-        }
-      }
-
-      async function syncCalendars() {
-        try {
-          showLoading();
-          const token = localStorage.getItem('lcc_token');
-          const response = await fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            await loadBookings();
-            showToast('Synchronisation réussie', 'success');
-          }
-        } catch (error) {
-          console.error('Erreur lors de la synchronisation:', error);
-          showToast('Erreur de synchronisation', 'error');
-        } finally {
-          hideLoading();
-        }
-      }
-
-      // ============================================
-      // RENDU DU CALENDRIER
-      // ============================================
-
-      function renderCalendar() {
-        switch (state.currentView) {
-          case 'day':
-            renderDayView();
-            break;
-          case 'week':
-            renderWeekView();
-            break;
-          case 'month':
-            renderMonthView();
-            break;
-          case 'year':
-            renderYearView();
-            break;
-        }
-      }
-
-      function renderPropertyList() {
-        const propertyList = document.getElementById('propertyList');
-        propertyList.innerHTML = '';
-        
-        if (state.properties.length === 0) {
-          propertyList.innerHTML = `
-            <div class="property-item">
-              <span style="color: var(--text-secondary);">Aucun logement</span>
-            </div>
-          `;
-          return;
-        }
-        
-        state.properties.forEach(property => {
-          const item = document.createElement('div');
-          item.className = 'property-item';
-          item.dataset.propertyId = property.id;
-          
-          const bookingCount = state.bookings.filter(b => b.propertyId === property.id).length;
-          
-          item.innerHTML = `
-            <span class="property-name">${property.name}</span>
-            ${bookingCount > 0 ? `<span class="property-count">${bookingCount}</span>` : ''}
-          `;
-          
-          item.addEventListener('click', () => selectProperty(property.id));
-          propertyList.appendChild(item);
-        });
-      }
-
-      function renderMonthView() {
-        const year = state.currentDate.getFullYear();
-        const month = state.currentDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const daysInMonth = lastDay.getDate();
-        
-        // Render days header
-        renderDaysHeader(1, daysInMonth);
-        
-        // Render grid
-        const calendarGrid = document.getElementById('calendarGrid');
-        calendarGrid.innerHTML = '';
-        
-        // Render property rows
-        state.properties.forEach(property => {
-          const row = document.createElement('div');
-          row.className = 'calendar-row';
-          row.dataset.propertyId = property.id;
-          
-          for (let day = 1; day <= daysInMonth; day++) {
-            const cell = createCalendarCell(property, year, month, day);
-            row.appendChild(cell);
-          }
-          
-          calendarGrid.appendChild(row);
-        });
-        
-        // Add bookings to cells
-        renderBookingsInCells();
-      }
-
-      function renderDaysHeader(startDay, endDay) {
-        const daysHeader = document.getElementById('daysHeader');
-        daysHeader.innerHTML = '';
-        
-        const year = state.currentDate.getFullYear();
-        const month = state.currentDate.getMonth();
-        
-        for (let day = startDay; day <= endDay; day++) {
-          const date = new Date(year, month, day);
-          const dayOfWeek = date.getDay();
-          
-          const header = document.createElement('div');
-          header.className = 'day-header';
-          
-          if (dayOfWeek === 0 || dayOfWeek === 6) {
-            header.classList.add('weekend');
-          }
-          
-          if (isToday(date)) {
-            header.classList.add('today');
-          }
-          
-          header.innerHTML = `
-            <span class="day-name">${CONFIG.DAYS_SHORT[dayOfWeek]}</span>
-            <span class="day-number">${day}</span>
-          `;
-          
-          daysHeader.appendChild(header);
-        }
-      }
-
-      function createCalendarCell(property, year, month, day) {
-        const cell = document.createElement('div');
-        cell.className = 'calendar-cell';
-        cell.dataset.propertyId = property.id;
-        cell.dataset.date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
-        const date = new Date(year, month, day);
-        const dayOfWeek = date.getDay();
-        
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          cell.classList.add('weekend');
-        }
-        
-        if (isToday(date)) {
-          cell.classList.add('today');
-        }
-        
-        cell.addEventListener('click', (e) => {
-          if (!e.target.classList.contains('booking-block')) {
-            openModalWithDate(property.id, cell.dataset.date);
-          }
-        });
-        
-        return cell;
-      }
-
-      function renderBookingsInCells() {
-        state.bookings.forEach(booking => {
-          const startDate = new Date(booking.startDate || booking.checkIn);
-          const endDate = new Date(booking.endDate || booking.checkOut);
-          
-          // Find all cells for this booking
-          const cells = [];
-          let currentDate = new Date(startDate);
-          
-          while (currentDate <= endDate) {
-            const dateStr = formatDateForCell(currentDate);
-            const cell = document.querySelector(
-              `.calendar-cell[data-property-id="${booking.propertyId}"][data-date="${dateStr}"]`
-            );
-            
-            if (cell) {
-              cells.push(cell);
-            }
-            
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-          
-          // Add booking blocks to cells
-          cells.forEach((cell, index) => {
-            const block = document.createElement('div');
-            const platform = booking.platform || 'direct';
-            block.className = `booking-block ${platform}`;
-            block.dataset.bookingId = booking.id;
-            
-            // Style for first, middle, and last cells
-            if (cells.length === 1) {
-              block.classList.add('single');
-            } else if (index === 0) {
-              block.classList.add('start');
-            } else if (index === cells.length - 1) {
-              block.classList.add('end');
-            }
-            
-            // Only show guest name on first cell
-            if (index === 0 || cells.length === 1) {
-              const icon = CONFIG.PLATFORMS[platform]?.icon || 'fa-user';
-              block.innerHTML = `
-                <i class="fas ${icon} platform-icon"></i>
-                ${booking.guestName || booking.summary || 'Réservation'}
-              `;
-            }
-            
-            block.addEventListener('click', (e) => {
-              e.stopPropagation();
-              showBookingDetails(booking);
-            });
-            
-            cell.appendChild(block);
-          });
-        });
-      }
-
-      function renderWeekView() {
-        // TODO: Implement week view
-        renderMonthView(); // Fallback to month view for now
-      }
-
-      function renderDayView() {
-        // TODO: Implement day view
-        renderMonthView(); // Fallback to month view for now
-      }
-
-      function renderYearView() {
-        const calendarGrid = document.getElementById('calendarGrid');
-        calendarGrid.innerHTML = '';
-        
-        const yearGrid = document.createElement('div');
-        yearGrid.className = 'year-grid';
-        
-        for (let month = 0; month < 12; month++) {
-          const monthCard = createMonthCard(month);
-          yearGrid.appendChild(monthCard);
-        }
-        
-        calendarGrid.appendChild(yearGrid);
-        
-        // Clear days header for year view
-        document.getElementById('daysHeader').innerHTML = '';
-      }
-
-      function createMonthCard(month) {
-        const card = document.createElement('div');
-        card.className = 'year-month-card';
-        
-        const bookingCount = getMonthBookingCount(month);
-        const propertyCount = state.properties.length;
-        
-        card.innerHTML = `
-          <h4 class="year-month-title">${CONFIG.MONTHS[month]}</h4>
-          <div class="year-month-stats">
-            <div class="year-month-stat">
-              <i class="fas fa-calendar-check"></i>
-              <span>${bookingCount} réserv.</span>
-            </div>
-            <div class="year-month-stat">
-              <i class="fas fa-home"></i>
-              <span>${propertyCount} logements</span>
-            </div>
-          </div>
-        `;
-        
-        card.addEventListener('click', () => {
-          state.currentDate.setMonth(month);
-          changeView('month');
-        });
-        
-        return card;
-      }
-
-      // ============================================
-      // MODAL & FORMULAIRES
-      // ============================================
-
-      function openModal() {
-        document.getElementById('newReservationModal').classList.add('active');
-        
-        // Populate property select
-        const propertySelect = document.getElementById('bookingProperty');
-        propertySelect.innerHTML = '<option value="">Sélectionner un logement</option>';
-        
-        state.properties.forEach(property => {
-          const option = document.createElement('option');
-          option.value = property.id;
-          option.textContent = property.name;
-          propertySelect.appendChild(option);
-        });
-      }
-
-      function openModalWithDate(propertyId, date) {
-        openModal();
-        document.getElementById('bookingProperty').value = propertyId;
-        document.getElementById('checkIn').value = date;
-        
-        // Set check-out to next day by default
-        const checkOut = new Date(date);
-        checkOut.setDate(checkOut.getDate() + 1);
-        document.getElementById('checkOut').value = formatDateForInput(checkOut);
-      }
-
-      function closeModal() {
-        document.getElementById('newReservationModal').classList.remove('active');
-        document.getElementById('newReservationForm').reset();
-      }
-
-      async function handleBookingSubmit(e) {
-        e.preventDefault();
-        
-        const formData = {
-          propertyId: document.getElementById('bookingProperty').value,
-          startDate: document.getElementById('checkIn').value,
-          endDate: document.getElementById('checkOut').value,
-          guestName: document.getElementById('guestName').value,
-          platform: document.getElementById('platform').value,
-          price: parseFloat(document.getElementById('price').value) || 0
-        };
-        
-        try {
-          const token = localStorage.getItem('lcc_token');
-          const response = await fetch('/api/reservations', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-          });
-          
-          if (response.ok) {
-            await loadBookings();
-            closeModal();
-            showToast('Réservation ajoutée avec succès', 'success');
-          } else {
-            throw new Error('Erreur lors de l\'ajout');
-          }
-        } catch (error) {
-          console.error('Erreur:', error);
-          showToast('Erreur lors de l\'ajout de la réservation', 'error');
-        }
-      }
-
-      function showBookingDetails(booking) {
-        console.log('Booking details:', booking);
-        // TODO: Implement booking details modal
-      }
-
-      // ============================================
-      // FONCTIONS UTILITAIRES
-      // ============================================
-
-      function isToday(date) {
-        const today = new Date();
-        return date.getDate() === today.getDate() &&
-               date.getMonth() === today.getMonth() &&
-               date.getFullYear() === today.getFullYear();
-      }
-
-      function formatDateForCell(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-
-      function formatDateForInput(date) {
-        return formatDateForCell(date);
-      }
-
-      function getMonthBookingCount(month) {
-        const year = state.currentDate.getFullYear();
-        return state.bookings.filter(booking => {
-          const date = new Date(booking.startDate || booking.checkIn);
-          return date.getMonth() === month && date.getFullYear() === year;
-        }).length;
-      }
-
-      function selectProperty(propertyId) {
-        document.querySelectorAll('.property-item').forEach(item => {
-          item.classList.toggle('selected', item.dataset.propertyId === propertyId);
-        });
-        
-        state.selectedProperty = propertyId;
-        
-        document.querySelectorAll('.calendar-row').forEach(row => {
-          row.style.opacity = row.dataset.propertyId === propertyId ? '1' : '0.5';
-        });
-      }
-
-      function updateStats() {
-        // Update stats cards
-        document.getElementById('statTotalReservations').textContent = state.bookings.length;
-        document.getElementById('statActiveProperties').textContent = state.properties.length;
-        
-        // Calculate upcoming arrivals and departures
-        const today = new Date();
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-        
-        const upcomingArrivals = state.bookings.filter(booking => {
-          const checkIn = new Date(booking.startDate || booking.checkIn);
-          return checkIn >= today && checkIn <= nextWeek;
-        }).length;
-        
-        const upcomingDepartures = state.bookings.filter(booking => {
-          const checkOut = new Date(booking.endDate || booking.checkOut);
-          return checkOut >= today && checkOut <= nextWeek;
-        }).length;
-        
-        document.getElementById('statUpcomingArrivals').textContent = upcomingArrivals;
-        document.getElementById('statUpcomingDepartures').textContent = upcomingDepartures;
-        document.getElementById('navTotalReservations').textContent = state.bookings.length;
-      }
-
-      function showLoading() {
-        document.getElementById('loadingOverlay').classList.add('active');
-      }
-
-      function hideLoading() {
-        document.getElementById('loadingOverlay').classList.remove('active');
-      }
-
-      function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        const icon = type === 'success' ? 'check-circle' : 
-                     type === 'error' ? 'exclamation-circle' : 'info-circle';
-        
-        toast.innerHTML = `
-          <i class="fas fa-${icon}"></i>
-          <span>${message}</span>
-        `;
-        
-        document.getElementById('toastContainer').appendChild(toast);
-        
-        setTimeout(() => {
-          toast.remove();
-        }, 3000);
-      }
-
-    })();
-
-    // User info & logout
-    (function() {
+    (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
         window.location.href = '/login.html';
         return;
       }
 
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user) {
-        document.getElementById('sidebarUserName').textContent = 
-          user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.email;
-        document.getElementById('sidebarUserCompany').textContent = 
-          user.company || 'Mon espace';
-        document.getElementById('sidebarUserAvatar').textContent = 
-          (user.firstName || user.email || '?')[0].toUpperCase();
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
       }
 
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('lcc_token');
-        localStorage.removeItem('lcc_user');
-        window.location.href = '/login.html';
-      });
+      if (user) {
+        window.addEventListener('DOMContentLoaded', () => {
+          const nameEl = document.getElementById('sidebarUserName');
+          const companyEl = document.getElementById('sidebarUserCompany');
+          const avatarEl = document.getElementById('sidebarUserAvatar');
 
-      // Mobile menu
-      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-      const sidebarOverlay = document.getElementById('sidebarOverlay');
-      const sidebar = document.querySelector('.sidebar');
-      
-      if (mobileMenuBtn && sidebarOverlay && sidebar) {
-        mobileMenuBtn.addEventListener('click', () => {
-          sidebar.classList.add('active');
-          sidebarOverlay.classList.add('active');
-        });
-        
-        sidebarOverlay.addEventListener('click', () => {
-          sidebar.classList.remove('active');
-          sidebarOverlay.classList.remove('active');
+          if (nameEl) {
+            nameEl.textContent = user.firstName
+              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+              : (user.email || 'Mon compte');
+          }
+
+          if (companyEl) {
+            companyEl.textContent = user.company || 'Mon espace';
+          }
+
+          if (avatarEl) {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
+
+          const logoutBtn = document.getElementById('logoutBtn');
+          if (logoutBtn) {
+            logoutBtn.addEventListener('click', function () {
+              localStorage.removeItem('lcc_token');
+              localStorage.removeItem('lcc_user');
+              window.location.href = '/login.html';
+            });
+          }
         });
       }
     })();
   </script>
 
+  <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Nouvelle réservation */
+
+      const newReservationBtn = document.getElementById('newReservationBtn');
+      const newReservationModal = document.getElementById('newReservationModal');
+      const newReservationClose = document.getElementById('newReservationClose');
+      const newReservationCancel = document.getElementById('newReservationCancel');
+      const newReservationForm = document.getElementById('newReservationForm');
+
+      function openNewReservationModal() {
+        if (newReservationModal) {
+          newReservationModal.classList.add('active');
+        }
+      }
+
+      function closeNewReservationModal() {
+        if (newReservationModal) {
+          newReservationModal.classList.remove('active');
+          if (newReservationForm) newReservationForm.reset();
+        }
+      }
+
+      if (newReservationBtn) {
+        newReservationBtn.addEventListener('click', openNewReservationModal);
+      }
+      if (newReservationClose) {
+        newReservationClose.addEventListener('click', closeNewReservationModal);
+      }
+      if (newReservationCancel) {
+        newReservationCancel.addEventListener('click', closeNewReservationModal);
+      }
+
+      if (newReservationForm) {
+        newReservationForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          alert('Réservation enregistrée (démo)');
+          closeNewReservationModal();
+        });
+      }
+
+      /* Notifications */
+
+      const notificationsBtn = document.getElementById('notificationsBtn');
+      const notificationsPanel = document.getElementById('notificationsPanel');
+      const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+      const notificationsList = document.getElementById('notificationsList');
+
+      function buildNotificationsFromReservations() {
+        if (!notificationsList) return;
+
+        notificationsList.innerHTML = '<p class="empty-state">Chargement...</p>';
+
+        const reservations = window.LCC_RESERVATIONS;
+        if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
+          notificationsList.innerHTML = '<p class="empty-state">Aucune notification pour le moment.</p>';
+          return;
+        }
+
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+        const items = [];
+
+        reservations.forEach(r => {
+          if (!r.start || !r.end) return;
+
+          const startStr = r.start.slice(0, 10);
+          const endStr = r.end.slice(0, 10);
+
+          const start = new Date(r.start);
+          const end = new Date(r.end);
+
+          const propertyName = r.propertyName || r.property || 'Logement';
+          const guestName = r.guestName || r.name || '';
+
+          if (startStr === todayStr || startStr === tomorrowStr) {
+            items.push({
+              type: 'arrival',
+              title: `Arrivée – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
+              time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+
+          if (start <= now && end >= now) {
+            items.push({
+              type: 'stay',
+              title: `Séjour en cours – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: 'En cours',
+              time: ''
+            });
+          }
+
+          if (endStr === todayStr || endStr === tomorrowStr) {
+            items.push({
+              type: 'departure',
+              title: `Départ – ${propertyName}`,
+              message: guestName ? `Client : ${guestName}` : '',
+              when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
+              time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+        });
+
+        const limited = items.slice(0, 15);
+
+        if (limited.length === 0) {
+          notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
+          return;
+        }
+
+        notificationsList.innerHTML = '';
+        limited.forEach(n => {
+          const item = document.createElement('div');
+          item.className = 'notification-item';
+
+          let badgeColor = '#22c55e';
+          if (n.type === 'stay') badgeColor = '#3b82f6';
+          if (n.type === 'departure') badgeColor = '#f97316';
+
+          item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="
+                width:8px;
+                height:8px;
+                border-radius:999px;
+                background:${badgeColor};
+                flex-shrink:0;
+              "></span>
+              <div class="notification-item-title">${n.title}</div>
+            </div>
+            <div class="notification-item-body">
+              ${n.message ? `<div>${n.message}</div>` : ''}
+            </div>
+            <div class="notification-item-meta">
+              ${n.when}${n.time ? ' • ' + n.time : ''}
+            </div>
+          `;
+          notificationsList.appendChild(item);
+        });
+      }
+
+      function openNotifications() {
+        if (notificationsPanel) {
+          notificationsPanel.classList.add('open');
+          buildNotificationsFromReservations();
+        }
+      }
+
+      function closeNotifications() {
+        if (notificationsPanel) {
+          notificationsPanel.classList.remove('open');
+        }
+      }
+
+      if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', function () {
+          if (!notificationsPanel) return;
+          if (notificationsPanel.classList.contains('open')) {
+            closeNotifications();
+          } else {
+            openNotifications();
+          }
+        });
+      }
+
+      if (notificationsCloseBtn) {
+        notificationsCloseBtn.addEventListener('click', closeNotifications);
+      }
+
+      /* Scroll vers calendrier depuis le menu */
+      const navCalendarLink = document.getElementById('navCalendarLink');
+      const calendarSection = document.getElementById('calendarSection');
+
+      if (navCalendarLink && calendarSection) {
+        navCalendarLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    });
+  </script>
+
+
+  <!-- MOBILE MENU SCRIPT -->
+  <script>
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+        
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+        
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+    
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
+        if (activeLink) {
+          activeLink.addClass('active');
+        }
+      }
+    })();
+    
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
+    });
+    
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
+    })();
+  </script>
+
+  <script>
+    (function() {
+      function updateKpisFromLocal() {
+        try {
+          var reservationsRaw = localStorage.getItem('LCC_RESERVATIONS');
+          var propertiesRaw = localStorage.getItem('LCC_PROPERTIES');
+          var reservations = reservationsRaw ? JSON.parse(reservationsRaw) : [];
+          var properties = propertiesRaw ? JSON.parse(propertiesRaw) : [];
+
+          // Occupation approximative : ratio de nuits réservées / (logements * 30 jours)
+          var today = new Date();
+          var horizon = new Date();
+          horizon.setDate(today.getDate() + 30);
+          var totalNightsPossible = (properties.length || 1) * 30;
+          var nightsBooked = 0;
+          var futureRevenue = 0;
+
+          (reservations || []).forEach(function(r) {
+            if (!r.start || !r.end) return;
+            var start = new Date(r.start);
+            var end = new Date(r.end);
+            if (end < today || start > horizon) return;
+            var d = (end - start) / (1000*60*60*24);
+            nightsBooked += d;
+            futureRevenue += r.amount || 0;
+          });
+
+          var occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+          if (occupancy < 0 || !isFinite(occupancy)) occupancy = 0;
+          if (occupancy > 100) occupancy = 100;
+
+          var occEl = document.getElementById('kpiOccupancyValue');
+          var revEl = document.getElementById('kpiRevenueValue');
+          var propEl = document.getElementById('kpiPropertiesValue');
+
+          if (occEl) occEl.textContent = occupancy + '%';
+          if (revEl) {
+            var formatted = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(futureRevenue);
+            revEl.textContent = formatted;
+          }
+          if (propEl && properties.length) propEl.textContent = properties.length;
+        } catch (e) {
+          console.warn('Impossible de recalculer les KPI', e);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', updateKpisFromLocal);
+    })();
+  </script>
 </body>
 </html>
