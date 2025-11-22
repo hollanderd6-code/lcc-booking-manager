@@ -2617,27 +2617,40 @@
     }
 
     function createCalendarCell(property, dateObj) {
-      var cell = document.createElement('div');
-      cell.className = 'calendar-cell';
-      cell.setAttribute('data-property-id', property.id);
+  var cell = document.createElement('div');
+  cell.className = 'calendar-cell';
+  cell.setAttribute('data-property-id', property.id);
 
-      var y = dateObj.getFullYear();
-      var m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      var d = String(dateObj.getDate()).padStart(2, '0');
-      cell.setAttribute('data-date', y + '-' + m + '-' + d);
+  var y = dateObj.getFullYear();
+  var m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  var d = String(dateObj.getDate()).padStart(2, '0');
+  var dateStr = y + '-' + m + '-' + d;
+  cell.setAttribute('data-date', dateStr);
 
-      var dow = dateObj.getDay();
-      if (dow === 0 || dow === 6) cell.classList.add('weekend');
-      if (isToday(dateObj)) cell.classList.add('today');
+  var dow = dateObj.getDay();
+  if (dow === 0 || dow === 6) cell.classList.add('weekend');
+  if (isToday(dateObj)) cell.classList.add('today');
 
-      cell.addEventListener('click', function(ev) {
-        if (!ev.target.classList.contains('booking-block')) {
-          // Ici on pourrait ouvrir le modal de nouvelle réservation si nécessaire
-        }
-      });
+  // 👉 ICI : nouveau comportement au clic
+  cell.addEventListener('click', function (ev) {
+    // On ignore le clic si on a cliqué sur un bloc de réservation existant
+    if (ev.target.classList.contains('booking-block')) return;
 
-      return cell;
+    // On utilise la logique existante de l’app pour ouvrir le modal de blocage
+    if (window.handleCalendarSelect) {
+      try {
+        window.handleCalendarSelect({
+          startStr: dateStr, // YYYY-MM-DD
+          endStr: dateStr    // même jour (tu peux ensuite élargir dans le modal)
+        });
+      } catch (e) {
+        console.warn('Erreur ouverture blocage depuis calendrier moderne', e);
+      }
     }
+  });
+
+  return cell;
+}
 
     function renderBookingsInCells(range) {
       var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
