@@ -427,15 +427,16 @@ async function loadReservations() {
       }
     }
 
-    // Onboarding (Bien démarrer)
+    // Onboarding (Bien démarrer) + cartes de statut (Airbnb, Booking, Stripe, Messages)
     try {
       const rawUser = localStorage.getItem('lcc_user');
       const user = rawUser ? JSON.parse(rawUser) : null;
       const detection = bhDetectOnboarding(user, data);
       console.log('DEBUG ONBOARDING', detection);
       bhApplyOnboardingDetection(detection);
+      bhUpdateStatusCards(detection, data);
     } catch (e) {
-      console.warn('Onboarding detection error', e);
+      console.warn('Onboarding / status detection error', e);
     }
 
     console.log(`📦 ${allReservations.length} réservations chargées`);
@@ -917,5 +918,233 @@ function bhApplyOnboardingDetection(detection) {
   const progressEl = document.getElementById('onboardingProgressValue');
   if (progressEl) {
     progressEl.textContent = String(completed);
+  }
+}
+
+// ========================================
+// STATUS CARDS (Airbnb / Booking / Stripe / Messages)
+// ========================================
+
+function bhDetectAirbnb(data) {
+  const res = data && Array.isArray(data.reservations) ? data.reservations : [];
+  for (const r of res) {
+    if (!r) continue;
+    const src = (r.source || r.channel || r.platform || '').toLowerCase();
+    if (src.includes('airbnb')) return true;
+  }
+
+  // scan très générique des propriétés au cas où il y ait des URL airbnb
+  if (data && Array.isArray(data.properties)) {
+    for (const p of data.properties) {
+      if (!p || typeof p !== 'object') continue;
+      for (const key in p) {
+        if (!Object.prototype.hasOwnProperty.call(p, key)) continue;
+        const v = p[key];
+        if (typeof v === 'string' && v.toLowerCase().includes('airbnb')) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function bhDetectBookingProvider(data) {
+  const res = data && Array.isArray(data.reservations) ? data.reservations : [];
+  for (const r of res) {
+    if (!r) continue;
+    const src = (r.source || r.channel || r.platform || '').toLowerCase();
+    if (src.includes('booking')) return true;
+  }
+
+  if (data && Array.isArray(data.properties)) {
+    for (const p of data.properties) {
+      if (!p || typeof p !== 'object') continue;
+      for (const key in p) {
+        if (!Object.prototype.hasOwnProperty.call(p, key)) continue;
+        const v = p[key];
+        if (typeof v === 'string' && v.toLowerCase().includes('booking.com')) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function bhUpdateStatusCards(detection, data) {
+  // Airbnb
+  try {
+    const airbnbConnected = bhDetectAirbnb(data);
+    const airbnbIcon = document.querySelector('.status-icon-airbnb');
+    const airbnbCard = airbnbIcon ? airbnbIcon.closest('.status-card') : null;
+
+    if (airbnbCard) {
+      const label = airbnbCard.querySelector('.status-label');
+      const text = airbnbCard.querySelector('p');
+      const btn = airbnbCard.querySelector('button');
+
+      if (airbnbConnected) {
+        if (label) {
+          label.textContent = 'Connecté';
+          label.classList.remove('status-warning');
+          label.classList.add('status-ok');
+        }
+        if (text) {
+          text.textContent = 'Synchronisation iCal active.';
+        }
+        if (btn) {
+          btn.textContent = 'Gérer les connexions';
+          btn.classList.remove('btn-secondary');
+          btn.classList.add('btn-ghost');
+        }
+      } else {
+        if (label) {
+          label.textContent = 'À connecter';
+          label.classList.remove('status-ok');
+          label.classList.add('status-warning');
+        }
+        if (text) {
+          text.textContent = 'Ajoutez vos liens iCal Airbnb.';
+        }
+        if (btn) {
+          btn.textContent = 'Ajouter un iCal';
+          btn.classList.remove('btn-ghost');
+          btn.classList.add('btn-secondary');
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('bhUpdateStatusCards Airbnb error', e);
+  }
+
+  // Booking.com
+  try {
+    const bookingConnected = bhDetectBookingProvider(data);
+    const bookingIcon = document.querySelector('.status-icon-booking');
+    const bookingCard = bookingIcon ? bookingIcon.closest('.status-card') : null;
+
+    if (bookingCard) {
+      const label = bookingCard.querySelector('.status-label');
+      const text = bookingCard.querySelector('p');
+      const btn = bookingCard.querySelector('button');
+
+      if (bookingConnected) {
+        if (label) {
+          label.textContent = 'Connecté';
+          label.classList.remove('status-warning');
+          label.classList.add('status-ok');
+        }
+        if (text) {
+          text.textContent = 'Synchronisation iCal active.';
+        }
+        if (btn) {
+          btn.textContent = 'Gérer les connexions';
+          btn.classList.remove('btn-secondary');
+          btn.classList.add('btn-ghost');
+        }
+      } else {
+        if (label) {
+          label.textContent = 'À connecter';
+          label.classList.remove('status-ok');
+          label.classList.add('status-warning');
+        }
+        if (text) {
+          text.textContent = 'Ajoutez votre lien iCal Booking.com.';
+        }
+        if (btn) {
+          btn.textContent = 'Ajouter un iCal';
+          btn.classList.remove('btn-ghost');
+          btn.classList.add('btn-secondary');
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('bhUpdateStatusCards Booking error', e);
+  }
+
+  // Stripe
+  try {
+    const stripeConnected = detection.stripe === true;
+    const stripeIcon = document.querySelector('.status-icon-stripe');
+    const stripeCard = stripeIcon ? stripeIcon.closest('.status-card') : null;
+
+    if (stripeCard) {
+      const label = stripeCard.querySelector('.status-label');
+      const text = stripeCard.querySelector('p');
+      const btn = stripeCard.querySelector('button');
+
+      if (stripeConnected) {
+        if (label) {
+          label.textContent = 'Connecté';
+          label.classList.remove('status-warning');
+          label.classList.add('status-ok');
+        }
+        if (text) {
+          text.textContent = 'Cautions et paiements sécurisés.';
+        }
+        if (btn) {
+          btn.textContent = 'Voir les cautions';
+          btn.classList.remove('btn-secondary');
+          btn.classList.add('btn-ghost');
+        }
+      } else {
+        if (label) {
+          label.textContent = 'À connecter';
+          label.classList.remove('status-ok');
+          label.classList.add('status-warning');
+        }
+        if (text) {
+          text.textContent = 'Connectez Stripe pour sécuriser vos paiements.';
+        }
+        if (btn) {
+          btn.textContent = 'Connecter Stripe';
+          btn.classList.remove('btn-ghost');
+          btn.classList.add('btn-secondary');
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('bhUpdateStatusCards Stripe error', e);
+  }
+
+  // Messages automatiques
+  try {
+    const messagesState = detection.messages; // true / false / undefined
+    const aiIcon = document.querySelector('.status-icon-ai');
+    const aiCard = aiIcon ? aiIcon.closest('.status-card') : null;
+
+    if (aiCard && typeof messagesState === 'boolean') {
+      const label = aiCard.querySelector('.status-label');
+      const text = aiCard.querySelector('p');
+      const btn = aiCard.querySelector('button');
+
+      if (messagesState) {
+        if (label) {
+          label.textContent = 'Actif';
+          label.classList.remove('status-warning');
+          label.classList.add('status-ok');
+        }
+        if (text) {
+          text.textContent = 'Scénarios IA prêts pour vos voyageurs.';
+        }
+        if (btn) {
+          btn.textContent = 'Configurer';
+          btn.classList.add('btn-ghost');
+        }
+      } else {
+        if (label) {
+          label.textContent = 'À configurer';
+          label.classList.remove('status-ok');
+          label.classList.add('status-warning');
+        }
+        if (text) {
+          text.textContent = 'Configurez vos scénarios de messages automatiques.';
+        }
+        if (btn) {
+          btn.textContent = 'Configurer';
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('bhUpdateStatusCards Messages error', e);
   }
 }
