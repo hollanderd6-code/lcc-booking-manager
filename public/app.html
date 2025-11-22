@@ -431,28 +431,57 @@
       background: rgba(16, 185, 129, 0.15);
     }
 
-    /* Booking Blocks avec couleurs par plateforme */
-    .booking-block {
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      right: 3px;
-      bottom: 3px;
-      border-radius: 6px;
-      padding: 2px 6px;
-      font-size: 11px;
-      font-weight: 600;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 1;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    }
+   /* Booking Blocks avec débordement visuel sur le jour suivant */
+.booking-block {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 4px;
+  right: 4px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 1 seule nuit (ex : 21 → 22) : on déborde légèrement sur la case du 22 */
+.booking-block.single {
+  left: 4px;
+  right: -10px; /* déborde un peu sur le jour de départ */
+}
+
+/* Premier jour d'un séjour (arrivée) */
+.booking-block.start {
+  left: 4px;
+  right: -10px; /* dépasse sur la case suivante et sur la ligne grise */
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+/* Dernier jour (dernière nuit, checkout le lendemain) */
+.booking-block.end {
+  left: -10px;  /* revient légèrement dans la case précédente */
+  right: 4px;
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+/* Jours intermédiaires : débord léger des deux côtés */
+.booking-block:not(.single):not(.start):not(.end) {
+  left: -10px;
+  right: -10px;
+}
+
 
     /* Couleurs par plateforme */
     .booking-block.airbnb {
