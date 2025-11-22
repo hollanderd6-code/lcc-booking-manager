@@ -81,6 +81,8 @@
     #calendarSection {
       margin-top: 32px;
       scroll-margin-top: 20px;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     .calendar-wrapper {
@@ -89,35 +91,9 @@
       overflow: hidden;
       box-shadow: var(--shadow-lg);
       border: 1px solid var(--border-color);
-      max-width: 100%;           /* ajout */
-      box-sizing: border-box;    /* ajout */
-}
-
-.calendar-wrapper {
-      background: white;
-      border-radius: var(--radius-2xl);
-      overflow: hidden;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-      max-width: 100%;           /* ajout */
-      box-sizing: border-box;    /* ajout */
-}
-
-.calendar-container {
-      display: flex;
-      background: white;
-      min-height: 500px;
-      max-width: 100%;           /* ajout */
-      overflow-x: auto;          /* au lieu de overflow: hidden */
-      overflow-y: hidden;
-}
-
-
-
-  /* important pour ne jamais dépasser la largeur de la page */
-  max-width: 100%;
-  box-sizing: border-box;
-}
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
     /* Header du calendrier */
     .calendar-modern-header {
@@ -261,22 +237,16 @@
       color: var(--primary-color);
     }
 
+    /* Calendar Container */
     .calendar-container {
-  display: flex;
-  background: white;
-  min-height: 500px;
-
-  /* clé : le calendrier ne dépasse plus la page,
-     et s’il est trop large, il a son propre scroll horizontal */
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-    #calendarSection {
-  max-width: 100%;
-  overflow-x: hidden;
-}
+      display: flex;
+      background: white;
+      min-height: 500px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
 
     /* Property List Column */
     .property-list-column {
@@ -365,18 +335,15 @@
     }
 
     .day-header {
-  /* plus de largeur minimale, les colonnes peuvent se compresser */
-  min-width: 0;
-  /* partage la largeur dispo entre tous les jours */
-  flex: 1 1 0;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid var(--calendar-border);
-  position: relative;
-}
+      min-width: 0;
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--calendar-border);
+      position: relative;
+    }
 
     .day-header.weekend {
       background: rgba(239, 68, 68, 0.05);
@@ -423,23 +390,20 @@
     }
 
     .calendar-row {
-  display: flex;
-  border-bottom: 1px solid var(--calendar-border);
-}
+      display: flex;
+      border-bottom: 1px solid var(--calendar-border);
+    }
 
-.calendar-cell {
-  /* plus de largeur minimale ici non plus */
-  min-width: 0;
-  /* même logique : on répartit la largeur disponible */
-  flex: 1 1 0;
-
-  height: var(--calendar-cell-height);
-  border-right: 1px solid var(--calendar-border);
-  padding: 2px;
-  position: relative;
-  cursor: pointer;
-  transition: var(--transition-fast);
-}
+    .calendar-cell {
+      min-width: 0;
+      height: var(--calendar-cell-height);
+      flex: 1 1 0;
+      border-right: 1px solid var(--calendar-border);
+      padding: 2px;
+      position: relative;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
 
     .calendar-cell:hover {
       background: var(--cell-hover-bg);
@@ -2261,70 +2225,100 @@
       // Navigation & vues
       // ============================================
       function attachCalendarEventListeners() {
-        var viewTabs = document.querySelectorAll('.view-tab');
-        for (var i = 0; i < viewTabs.length; i++) {
-          (function(tab) {
-            tab.addEventListener('click', function() {
-              var view = tab.getAttribute('data-view') || 'month';
-              state.currentView = view;
-              for (var j = 0; j < viewTabs.length; j++) {
-                var t = viewTabs[j];
-                t.classList.toggle('active', t.getAttribute('data-view') === view);
-              }
-              renderCalendar();
-            });
-          })(viewTabs[i]);
+  var viewTabs = document.querySelectorAll('.view-tab');
+  for (var i = 0; i < viewTabs.length; i++) {
+    (function(tab) {
+      tab.addEventListener('click', function() {
+        var view = tab.getAttribute('data-view') || 'month';
+        state.currentView = view;
+
+        // toggle active tab
+        for (var j = 0; j < viewTabs.length; j++) {
+          var t = viewTabs[j];
+          t.classList.toggle('active', t.getAttribute('data-view') === view);
         }
 
-        var prev = document.getElementById('prevPeriod');
-        var next = document.getElementById('nextPeriod');
-
-        if (prev) prev.addEventListener('click', function() { navigate(-1); });
-        if (next) next.addEventListener('click', function() { navigate(1); });
-      }
-
-      function navigate(direction) {
-        var dir = direction < 0 ? -1 : 1;
-        var d = state.currentDate;
-        if (state.currentView === 'day') {
-          d.setDate(d.getDate() + dir);
-        } else if (state.currentView === 'week') {
-          d.setDate(d.getDate() + dir * 7);
-        } else {
-          d.setMonth(d.getMonth() + dir);
-        }
         updatePeriodDisplay();
         renderCalendar();
-      }
+      });
+    })(viewTabs[i]);
+  }
+
+  var prev = document.getElementById('prevPeriod');
+  var next = document.getElementById('nextPeriod');
+
+  if (prev) prev.addEventListener('click', function() { navigate(-1); });
+  if (next) next.addEventListener('click', function() { navigate(1); });
+}
+
+
+      function navigate(direction) {
+  var dir = direction < 0 ? -1 : 1;
+  var d = state.currentDate;
+
+  if (state.currentView === 'day') {
+    d.setDate(d.getDate() + dir);
+  } else if (state.currentView === 'week') {
+    d.setDate(d.getDate() + dir * 7);
+  } else if (state.currentView === 'month') {
+    d.setMonth(d.getMonth() + dir);
+  } else if (state.currentView === 'year') {
+    d.setFullYear(d.getFullYear() + dir);
+  } else {
+    d.setMonth(d.getMonth() + dir);
+  }
+
+  updatePeriodDisplay();
+  renderCalendar();
+}
+
 
       function updatePeriodDisplay() {
-        var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
-        var year = state.currentDate.getFullYear();
-        var monthEl = document.getElementById('currentMonth');
-        var yearEl = document.getElementById('currentYear');
-        if (monthEl) monthEl.textContent = monthName;
-        if (yearEl) yearEl.textContent = String(year);
-      }
+  var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
+  var year = state.currentDate.getFullYear();
+  var monthEl = document.getElementById('currentMonth');
+  var yearEl = document.getElementById('currentYear');
+
+  if (!monthEl && !yearEl) return;
+
+  if (state.currentView === 'year') {
+    if (monthEl) monthEl.textContent = 'Année';
+    if (yearEl) yearEl.textContent = String(year);
+  } else {
+    if (monthEl) monthEl.textContent = monthName;
+    if (yearEl) yearEl.textContent = String(year);
+  }
+}
+
 
       function getCurrentRange() {
-        var base = new Date(state.currentDate.getTime());
-        var start, end;
-        if (state.currentView === 'day') {
-          start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-          end = new Date(start.getTime());
-        } else if (state.currentView === 'week') {
-          var day = base.getDay(); // 0=dim
-          var delta = (day + 6) % 7; // pour arriver au lundi
-          start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
-          end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-        } else {
-          start = new Date(base.getFullYear(), base.getMonth(), 1);
-          end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-        }
-        start.setHours(0,0,0,0);
-        end.setHours(0,0,0,0);
-        return { start: start, end: end };
-      }
+  var base = new Date(state.currentDate.getTime());
+  var start, end;
+
+  if (state.currentView === 'day') {
+    start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    end = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  } else if (state.currentView === 'week') {
+    var day = base.getDay(); // 0=dimanche
+    var delta = (day + 6) % 7; // pour arriver au lundi
+    start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
+    end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  } else if (state.currentView === 'month') {
+    start = new Date(base.getFullYear(), base.getMonth(), 1);
+    end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+  } else if (state.currentView === 'year') {
+    start = new Date(base.getFullYear(), 0, 1);
+    end = new Date(base.getFullYear(), 11, 31);
+  } else {
+    start = new Date(base.getFullYear(), base.getMonth(), 1);
+    end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+  }
+
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  return { start: start, end: end };
+}
+
 
       // ============================================
       // Rendu principal
