@@ -615,42 +615,37 @@ function hasIcalConfigured(properties, reservations) {
 
   return false;
 }
-
-// Étape 3 : Stripe (scan très large des données pour s'adapter à ton backend)
 function detectStripe(user, data) {
-  // 1) Override manuel possible
+  // 1) override manuel possible (on le garde au cas où, mais tu ne t'en serviras pas)
   try {
     if (localStorage.getItem('LCC_STRIPE_CONNECTED') === '1') return true;
   } catch (e) {}
 
-  // 2) Infos backend directes
+  // 2) flags explicites si un jour ton backend en renvoie
   if (data) {
     if (data.stripeConnected === true) return true;
     if (data.stripe && data.stripe.connected === true) return true;
     if (data.account && data.account.stripeConnected === true) return true;
-
-    // Scan générique des clés contenant "stripe"
-    for (const key in data) {
-      if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
-      if (!key) continue;
-      if (key.toLowerCase().includes('stripe')) {
-        const val = data[key];
-        if (val === true) return true;
-        if (typeof val === 'string' && val.trim() !== '') return true;
-        if (val && typeof val === 'object') {
-          for (const subKey in val) {
-            if (!Object.prototype.hasOwnProperty.call(val, subKey)) continue;
-            const subVal = val[subKey];
-            const lk = subKey.toLowerCase();
-            if ((lk.includes('connected') || lk.includes('enabled') || lk.includes('active')) && subVal === true) {
-              return true;
-            }
-            if (typeof subVal === 'string' && subVal.trim() !== '') return true;
-          }
-        }
-      }
-    }
   }
+
+  // 3) fallback ultra-simple :
+  //    si "stripe" apparaît quelque part dans les données user ou API,
+  //    on considère que Stripe est intégré.
+  try {
+    const sData = JSON.stringify(data || {});
+    const sUser = JSON.stringify(user || {});
+    const all = (sData + ' ' + sUser).toLowerCase();
+    if (all.includes('stripe')) {
+      return true;
+    }
+  } catch (e) {
+    console.warn('detectStripe JSON stringify error', e);
+  }
+
+  // si vraiment aucune trace de Stripe → À faire
+  return false;
+}
+
 
   // 3) Infos dans l'utilisateur stocké en localStorage
   if (user) {
