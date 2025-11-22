@@ -483,51 +483,77 @@
 }
 
 
-    /* Couleurs par plateforme */
-    .booking-block.airbnb {
-      background: linear-gradient(135deg, var(--booking-color-airbnb), #E84C50);
-    }
+    /* Booking Blocks avec couleurs par plateforme */
 
-    .booking-block.booking {
-      background: linear-gradient(135deg, var(--booking-color-booking), #00224F);
-    }
+/* On autorise les blocs à déborder sur la cellule suivante */
+.calendar-cell {
+  position: relative;
+  overflow: visible;
+}
 
-    .booking-block.expedia {
-      background: linear-gradient(135deg, var(--booking-color-expedia), #FFB000);
-    }
+.booking-block {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
 
-    .booking-block.vrbo {
-      background: linear-gradient(135deg, var(--booking-color-vrbo), #0E4C99);
-    }
+  /* base : rectangle, on gère les arrondis avec .start / .end / .single */
+  border-radius: 0;
 
-    .booking-block.hotels {
-      background: linear-gradient(135deg, var(--booking-color-hotels), #B71C1C);
-    }
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  z-index: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
 
-    .booking-block.direct {
-      background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
-    }
+/* Couleurs par plateforme (inchangé) */
+.booking-block.airbnb {
+  background: linear-gradient(135deg, var(--booking-color-airbnb), #E84C50);
+}
+.booking-block.booking {
+  background: linear-gradient(135deg, var(--booking-color-booking), #00224F);
+}
+.booking-block.expedia {
+  background: linear-gradient(135deg, var(--booking-color-expedia), #FFB000);
+}
+.booking-block.vrbo {
+  background: linear-gradient(135deg, var(--booking-color-vrbo), #0E4C99);
+}
+.booking-block.hotels {
+  background: linear-gradient(135deg, var(--booking-color-hotels), #B71C1C);
+}
+.booking-block.direct {
+  background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
+}
 
-    .booking-block.start {
-      border-top-left-radius: 10px;
-      border-bottom-left-radius: 10px;
-      padding-left: 8px;
-    }
+/* Premier jour de la réservation */
+.booking-block.start {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
 
-    .booking-block.end {
-      border-top-right-radius: 10px;
-      border-bottom-right-radius: 10px;
-      padding-right: 8px;
-    }
+/* Dernière nuit de la réservation : arrondi + petite queue qui déborde sur le jour de départ */
+.booking-block.end {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+  right: -10px; /* déborde légèrement sur la cellule suivante */
+}
 
-    .booking-block.single {
-      border-radius: 10px;
-    }
-
-    .booking-block:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-    }
+/* Réservation d’une seule nuit (start + end dans la même cellule) */
+.booking-block.single {
+  border-radius: 999px;
+  right: -10px; /* petite queue aussi */
+}
 
     /* Platform Icons */
     .booking-block .platform-icon {
