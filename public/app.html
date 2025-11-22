@@ -430,6 +430,50 @@
     .calendar-cell.selected {
       background: rgba(16, 185, 129, 0.15);
     }
+/* Barre de recherche du calendrier */
+.calendar-search-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--calendar-border);
+}
+
+.calendar-search-panel.hidden {
+  display: none;
+}
+
+.calendar-search-panel i {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.calendar-search-panel input {
+  flex: 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  padding: 6px 10px;
+  font-size: 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.calendar-search-panel input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.calendar-search-panel input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25);
+}
+
+/* Mise en avant de la carte filtres quand on clique sur l’icône filtre */
+.filters-highlight {
+  box-shadow: 0 0 0 2px var(--primary-color);
+  border-radius: var(--radius-2xl);
+}
 
    /* Booking Blocks avec débordement visuel sur le jour suivant */
 .booking-block {
@@ -2172,613 +2216,703 @@
   </script>
 
   <script>
-    // ============================================
-    // CALENDRIER MODERNE - Vue tableau par logement
-    // S'alimente via window.renderModernCalendar(reservations, properties)
-    // ============================================
-    (function() {
-      'use strict';
+  // ============================================
+  // CALENDRIER MODERNE - Vue tableau par logement
+  // S'alimente via window.renderModernCalendar(reservations, properties)
+  // ============================================
+  (function() {
+    'use strict';
 
-      var CONFIG = {
-        MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
-        DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-        PLATFORMS: {
-          airbnb:  { icon: 'fa-home' },
-          booking: { icon: 'fa-bed' },
-          expedia: { icon: 'fa-plane' },
-          vrbo:    { icon: 'fa-house-user' },
-          hotels:  { icon: 'fa-hotel' },
-          direct:  { icon: 'fa-user' }
-        }
-      };
-
-      var state = {
-        currentView: 'month',
-        currentDate: new Date(),
-        properties: [],
-        bookings: [],
-        selectedPropertyId: null
-      };
-
-      document.addEventListener('DOMContentLoaded', function () {
-        if (!document.getElementById('calendarGrid')) return;
-
-        attachCalendarEventListeners();
-        updatePeriodDisplay();
-        renderCalendar(); // affichage vide au début
-      });
-
-      // ============================================
-      // API PUBLIQUE - appelée par app.js
-      // ============================================
-      window.renderModernCalendar = function(reservations, properties) {
-        try {
-          reservations = Array.isArray(reservations) ? reservations : [];
-          properties = Array.isArray(properties) ? properties : [];
-
-          // Construire la liste des propriétés
-          var props = [];
-          if (properties.length) {
-            for (var i = 0; i < properties.length; i++) {
-              var p = properties[i] || {};
-              var pid = p.id != null ? String(p.id) : String(i);
-              var name = p.name || ('Logement ' + (i + 1));
-              var color = p.color || '#10B981';
-              props.push({
-                id: pid,
-                name: name,
-                color: color,
-                raw: p
-              });
-            }
-          } else {
-            // déduction depuis les réservations
-            var map = {};
-            for (var j = 0; j < reservations.length; j++) {
-              var r = reservations[j];
-              if (!r || !r.property || r.property.id == null) continue;
-              var rid = String(r.property.id);
-              if (!map[rid]) {
-                map[rid] = {
-                  id: rid,
-                  name: r.property.name || 'Logement',
-                  color: r.property.color || '#10B981',
-                  raw: r.property
-                };
-              }
-            }
-            for (var key in map) {
-              if (Object.prototype.hasOwnProperty.call(map, key)) {
-                props.push(map[key]);
-              }
-            }
-          }
-          state.properties = props;
-
-          // Réservations normalisées
-          var bookings = [];
-          for (var k = 0; k < reservations.length; k++) {
-            var r2 = reservations[k];
-            if (!r2) continue;
-            var bpropId = r2.property && r2.property.id != null ? String(r2.property.id) : null;
-            var start = r2.start || r2.checkIn || r2.startDate;
-            var end = r2.end || r2.checkOut || r2.endDate;
-            if (!start || !end) continue;
-            bookings.push({
-              id: String(r2.id || k),
-              propertyId: bpropId,
-              startDate: start,
-              endDate: end,
-              guestName: r2.guestName || r2.customerName || '',
-              platform: normalizePlatform(r2.source || r2.platform || 'direct')
-            });
-          }
-          state.bookings = bookings;
-
-          console.info('✅ Calendrier moderne: ' + state.properties.length +
-                       ' logements / ' + state.bookings.length + ' réservations');
-
-          renderPropertyList();
-          renderCalendar();
-        } catch (e) {
-          console.error('Erreur renderModernCalendar', e);
-        }
-      };
-
-      // ============================================
-      // Navigation & vues
-      // ============================================
-      function attachCalendarEventListeners() {
-        var viewTabs = document.querySelectorAll('.view-tab');
-
-        for (var i = 0; i < viewTabs.length; i++) {
-          (function(tab) {
-            tab.addEventListener('click', function() {
-              var view = tab.getAttribute('data-view') || 'month';
-              state.currentView = view;
-
-              for (var j = 0; j < viewTabs.length; j++) {
-                var t = viewTabs[j];
-                t.classList.toggle('active', t.getAttribute('data-view') === view);
-              }
-
-              updatePeriodDisplay();
-              renderCalendar();
-            });
-          })(viewTabs[i]);
-        }
-
-        var prev = document.getElementById('prevPeriod');
-        var next = document.getElementById('nextPeriod');
-
-        if (prev) {
-          prev.addEventListener('click', function() { navigate(-1); });
-        }
-        if (next) {
-          next.addEventListener('click', function() { navigate(1); });
-        }
+    var CONFIG = {
+      MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+      DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+      PLATFORMS: {
+        airbnb:  { icon: 'fa-home' },
+        booking: { icon: 'fa-bed' },
+        expedia: { icon: 'fa-plane' },
+        vrbo:    { icon: 'fa-house-user' },
+        hotels:  { icon: 'fa-hotel' },
+        direct:  { icon: 'fa-user' }
       }
+    };
 
-      function navigate(direction) {
-        var dir = direction < 0 ? -1 : 1;
-        var d = state.currentDate;
+    var state = {
+      currentView: 'month',
+      currentDate: new Date(),
+      properties: [],
+      bookings: [],
+      selectedPropertyId: null,
+      searchQuery: ''
+    };
 
-        if (state.currentView === 'day') {
-          d.setDate(d.getDate() + dir);
-        } else if (state.currentView === 'week') {
-          d.setDate(d.getDate() + dir * 7);
-        } else if (state.currentView === 'month') {
-          d.setMonth(d.getMonth() + dir);
-        } else if (state.currentView === 'year') {
-          d.setFullYear(d.getFullYear() + dir);
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!document.getElementById('calendarGrid')) return;
+
+      attachCalendarEventListeners();
+      updatePeriodDisplay();
+      renderCalendar(); // affichage vide au début
+    });
+
+    // ============================================
+    // API PUBLIQUE - appelée par app.js
+    // ============================================
+    window.renderModernCalendar = function(reservations, properties) {
+      try {
+        reservations = Array.isArray(reservations) ? reservations : [];
+        properties = Array.isArray(properties) ? properties : [];
+
+        // Construire la liste des propriétés
+        var props = [];
+        if (properties.length) {
+          for (var i = 0; i < properties.length; i++) {
+            var p = properties[i] || {};
+            var pid = p.id != null ? String(p.id) : String(i);
+            var name = p.name || ('Logement ' + (i + 1));
+            var color = p.color || '#10B981';
+            props.push({
+              id: pid,
+              name: name,
+              color: color,
+              raw: p
+            });
+          }
         } else {
-          d.setMonth(d.getMonth() + dir);
+          // déduction depuis les réservations
+          var map = {};
+          for (var j = 0; j < reservations.length; j++) {
+            var r = reservations[j];
+            if (!r || !r.property || r.property.id == null) continue;
+            var rid = String(r.property.id);
+            if (!map[rid]) {
+              map[rid] = {
+                id: rid,
+                name: r.property.name || 'Logement',
+                color: r.property.color || '#10B981',
+                raw: r.property
+              };
+            }
+          }
+          for (var key in map) {
+            if (Object.prototype.hasOwnProperty.call(map, key)) {
+              props.push(map[key]);
+            }
+          }
         }
+        state.properties = props;
 
-        updatePeriodDisplay();
+        // Réservations normalisées
+        var bookings = [];
+        for (var k = 0; k < reservations.length; k++) {
+          var r2 = reservations[k];
+          if (!r2) continue;
+          var bpropId = r2.property && r2.property.id != null ? String(r2.property.id) : null;
+          var start = r2.start || r2.checkIn || r2.startDate;
+          var end = r2.end || r2.checkOut || r2.endDate;
+          if (!start || !end) continue;
+          bookings.push({
+            id: String(r2.id || k),
+            propertyId: bpropId,
+            propertyName: r2.propertyName || (r2.property && r2.property.name) || '',
+            startDate: start,
+            endDate: end,
+            guestName: r2.guestName || r2.customerName || '',
+            platform: normalizePlatform(r2.source || r2.platform || 'direct')
+          });
+        }
+        state.bookings = bookings;
+
+        console.info('✅ Calendrier moderne: ' + state.properties.length +
+                     ' logements / ' + state.bookings.length + ' réservations');
+
+        renderPropertyList();
         renderCalendar();
+      } catch (e) {
+        console.error('Erreur renderModernCalendar', e);
+      }
+    };
+
+    // ============================================
+    // Navigation & vues
+    // ============================================
+    function attachCalendarEventListeners() {
+      // Onglets Jour / Semaine / Mois / Année
+      var viewTabs = document.querySelectorAll('.view-tab');
+
+      for (var i = 0; i < viewTabs.length; i++) {
+        (function(tab) {
+          tab.addEventListener('click', function() {
+            var view = tab.getAttribute('data-view') || 'month';
+            state.currentView = view;
+
+            for (var j = 0; j < viewTabs.length; j++) {
+              var t = viewTabs[j];
+              t.classList.toggle('active', t.getAttribute('data-view') === view);
+            }
+
+            updatePeriodDisplay();
+            renderCalendar();
+          });
+        })(viewTabs[i]);
       }
 
-      function updatePeriodDisplay() {
-        var monthEl = document.getElementById('currentMonth');
-        var yearEl = document.getElementById('currentYear');
+      // Flèches précédent / suivant
+      var prev = document.getElementById('prevPeriod');
+      var next = document.getElementById('nextPeriod');
 
-        if (!monthEl || !yearEl) return;
-
-        var year = state.currentDate.getFullYear();
-
-        if (state.currentView === 'year') {
-          monthEl.textContent = 'Année';
-        } else {
-          var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
-          monthEl.textContent = monthName;
-        }
-
-        yearEl.textContent = String(year);
+      if (prev) {
+        prev.addEventListener('click', function() { navigate(-1); });
+      }
+      if (next) {
+        next.addEventListener('click', function() { navigate(1); });
       }
 
-      function getCurrentRange() {
-        var base = new Date(state.currentDate.getTime());
-        var start, end;
-
-        if (state.currentView === 'day') {
-          start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-          end = new Date(start.getTime());
-        } else if (state.currentView === 'week') {
-          var day = base.getDay(); // 0=dim
-          var delta = (day + 6) % 7; // pour arriver au lundi
-          start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
-          end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-        } else if (state.currentView === 'month') {
-          start = new Date(base.getFullYear(), base.getMonth(), 1);
-          end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-        } else if (state.currentView === 'year') {
-          start = new Date(base.getFullYear(), 0, 1);
-          end = new Date(base.getFullYear(), 11, 31);
-        } else {
-          start = new Date(base.getFullYear(), base.getMonth(), 1);
-          end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-        }
-
-        start.setHours(0, 0, 0, 0);
-        end.setHours(0, 0, 0, 0);
-
-        return {
-          start: start,
-          end: end
-        };
+      // 🔍 Bouton recherche
+      var searchBtn = document.getElementById('calendarSearchBtn');
+      if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+          toggleSearchPanel();
+        });
       }
 
-      // ============================================
-      // Rendu principal
-      // ============================================
-      function renderCalendar() {
-        var container = document.querySelector('.calendar-container');
-        if (container) {
-          if (state.currentView === 'year') {
-            container.classList.add('year-view');
-          } else {
-            container.classList.remove('year-view');
+      // 🧹 Bouton filtre : scroll vers la carte "Filtrer par logement"
+      var filterBtn = document.getElementById('calendarFilterBtn');
+      if (filterBtn) {
+        filterBtn.addEventListener('click', function () {
+          var section = document.getElementById('calendarFiltersSection');
+          if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            section.classList.add('filters-highlight');
+            setTimeout(function () {
+              section.classList.remove('filters-highlight');
+            }, 1500);
           }
-        }
-
-        if (state.currentView === 'year') {
-          renderYearView();
-          return;
-        }
-
-        var range = getCurrentRange();
-        renderDaysHeader(range);
-        renderGrid(range);
+        });
       }
 
-      function renderDaysHeader(range) {
-        var header = document.getElementById('daysHeader');
-        if (!header) return;
-        header.innerHTML = '';
+      // ⚙️ Bouton paramètres : simple toast pour l’instant
+      var settingsBtn = document.getElementById('calendarSettingsBtn');
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', function () {
+          if (typeof showToast === 'function') {
+            showToast('Les paramètres avancés du calendrier arrivent bientôt.', 'info');
+          } else {
+            alert('Les paramètres avancés du calendrier arrivent bientôt.');
+          }
+        });
+      }
+    }
+
+    // Barre de recherche au-dessus du calendrier
+    function toggleSearchPanel() {
+      var panel = document.getElementById('calendarSearchPanel');
+
+      // Création la première fois
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'calendarSearchPanel';
+        panel.className = 'calendar-search-panel';
+
+        panel.innerHTML =
+          '<i class="fas fa-search"></i>' +
+          '<input id="calendarSearchInput" type="text" ' +
+          'placeholder="Rechercher un voyageur ou un logement..." />';
+
+        var nav = document.querySelector('.period-navigation');
+        if (nav && nav.parentNode) {
+          nav.parentNode.insertBefore(panel, nav.nextSibling);
+        } else {
+          var wrap = document.querySelector('.calendar-wrapper');
+          if (wrap) wrap.insertBefore(panel, wrap.firstChild);
+        }
+
+        var input = document.getElementById('calendarSearchInput');
+        if (input) {
+          input.addEventListener('input', function (e) {
+            state.searchQuery = (e.target.value || '').trim().toLowerCase();
+            renderCalendar();
+          });
+        }
+      }
+
+      panel.classList.toggle('hidden');
+
+      if (panel.classList.contains('hidden')) {
+        // On ferme : on réinitialise la recherche
+        state.searchQuery = '';
+        var inputEl = document.getElementById('calendarSearchInput');
+        if (inputEl) inputEl.value = '';
+        renderCalendar();
+      } else {
+        var inputFocus = document.getElementById('calendarSearchInput');
+        if (inputFocus) inputFocus.focus();
+      }
+    }
+
+    function navigate(direction) {
+      var dir = direction < 0 ? -1 : 1;
+      var d = state.currentDate;
+
+      if (state.currentView === 'day') {
+        d.setDate(d.getDate() + dir);
+      } else if (state.currentView === 'week') {
+        d.setDate(d.getDate() + dir * 7);
+      } else if (state.currentView === 'month') {
+        d.setMonth(d.getMonth() + dir);
+      } else if (state.currentView === 'year') {
+        d.setFullYear(d.getFullYear() + dir);
+      } else {
+        d.setMonth(d.getMonth() + dir);
+      }
+
+      updatePeriodDisplay();
+      renderCalendar();
+    }
+
+    function updatePeriodDisplay() {
+      var monthEl = document.getElementById('currentMonth');
+      var yearEl = document.getElementById('currentYear');
+
+      if (!monthEl || !yearEl) return;
+
+      var year = state.currentDate.getFullYear();
+
+      if (state.currentView === 'year') {
+        monthEl.textContent = 'Année';
+      } else {
+        var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
+        monthEl.textContent = monthName;
+      }
+
+      yearEl.textContent = String(year);
+    }
+
+    function getCurrentRange() {
+      var base = new Date(state.currentDate.getTime());
+      var start, end;
+
+      if (state.currentView === 'day') {
+        start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        end = new Date(start.getTime());
+      } else if (state.currentView === 'week') {
+        var day = base.getDay(); // 0=dim
+        var delta = (day + 6) % 7; // lundi
+        start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
+        end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      } else if (state.currentView === 'month') {
+        start = new Date(base.getFullYear(), base.getMonth(), 1);
+        end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+      } else if (state.currentView === 'year') {
+        start = new Date(base.getFullYear(), 0, 1);
+        end = new Date(base.getFullYear(), 11, 31);
+      } else {
+        start = new Date(base.getFullYear(), base.getMonth(), 1);
+        end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+      }
+
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+
+      return {
+        start: start,
+        end: end
+      };
+    }
+
+    // ============================================
+    // Rendu principal
+    // ============================================
+    function renderCalendar() {
+      var container = document.querySelector('.calendar-container');
+      if (container) {
+        if (state.currentView === 'year') {
+          container.classList.add('year-view');
+        } else {
+          container.classList.remove('year-view');
+        }
+      }
+
+      if (state.currentView === 'year') {
+        renderYearView();
+        return;
+      }
+
+      var range = getCurrentRange();
+      renderDaysHeader(range);
+      renderGrid(range);
+    }
+
+    function renderDaysHeader(range) {
+      var header = document.getElementById('daysHeader');
+      if (!header) return;
+      header.innerHTML = '';
+
+      var d = new Date(range.start.getTime());
+      while (d <= range.end) {
+        var dow = d.getDay();
+        var div = document.createElement('div');
+        div.className = 'day-header';
+        if (dow === 0 || dow === 6) div.classList.add('weekend');
+        if (isToday(d)) div.classList.add('today');
+
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'day-name';
+        nameSpan.textContent = CONFIG.DAYS_SHORT[dow];
+
+        var numSpan = document.createElement('span');
+        numSpan.className = 'day-number';
+        numSpan.textContent = String(d.getDate());
+
+        div.appendChild(nameSpan);
+        div.appendChild(numSpan);
+
+        header.appendChild(div);
+        d.setDate(d.getDate() + 1);
+      }
+    }
+
+    function renderGrid(range) {
+      var grid = document.getElementById('calendarGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      if (!state.properties.length) {
+        var emptyRow = document.createElement('div');
+        emptyRow.className = 'calendar-row';
+        var emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-cell';
+        emptyCell.style.justifyContent = 'center';
+        emptyCell.style.alignItems = 'center';
+        emptyCell.style.color = 'var(--text-secondary)';
+        emptyCell.textContent = 'Aucun logement configuré';
+        emptyRow.appendChild(emptyCell);
+        grid.appendChild(emptyRow);
+        return;
+      }
+
+      for (var i = 0; i < state.properties.length; i++) {
+        var p = state.properties[i];
+        var row = document.createElement('div');
+        row.className = 'calendar-row';
+        row.setAttribute('data-property-id', p.id);
 
         var d = new Date(range.start.getTime());
         while (d <= range.end) {
-          var dow = d.getDay();
-          var div = document.createElement('div');
-          div.className = 'day-header';
-          if (dow === 0 || dow === 6) div.classList.add('weekend');
-          if (isToday(d)) div.classList.add('today');
-
-          var nameSpan = document.createElement('span');
-          nameSpan.className = 'day-name';
-          nameSpan.textContent = CONFIG.DAYS_SHORT[dow];
-
-          var numSpan = document.createElement('span');
-          numSpan.className = 'day-number';
-          numSpan.textContent = String(d.getDate());
-
-          div.appendChild(nameSpan);
-          div.appendChild(numSpan);
-
-          header.appendChild(div);
+          row.appendChild(createCalendarCell(p, d));
           d.setDate(d.getDate() + 1);
         }
+
+        grid.appendChild(row);
       }
 
-      function renderGrid(range) {
-        var grid = document.getElementById('calendarGrid');
-        if (!grid) return;
-        grid.innerHTML = '';
+      renderBookingsInCells(range);
+    }
 
-        if (!state.properties.length) {
-          var emptyRow = document.createElement('div');
-          emptyRow.className = 'calendar-row';
-          var emptyCell = document.createElement('div');
-          emptyCell.className = 'calendar-cell';
-          emptyCell.style.justifyContent = 'center';
-          emptyCell.style.alignItems = 'center';
-          emptyCell.style.color = 'var(--text-secondary)';
-          emptyCell.textContent = 'Aucun logement configuré';
-          emptyRow.appendChild(emptyCell);
-          grid.appendChild(emptyRow);
-          return;
+    function createCalendarCell(property, dateObj) {
+      var cell = document.createElement('div');
+      cell.className = 'calendar-cell';
+      cell.setAttribute('data-property-id', property.id);
+
+      var y = dateObj.getFullYear();
+      var m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      var d = String(dateObj.getDate()).padStart(2, '0');
+      cell.setAttribute('data-date', y + '-' + m + '-' + d);
+
+      var dow = dateObj.getDay();
+      if (dow === 0 || dow === 6) cell.classList.add('weekend');
+      if (isToday(dateObj)) cell.classList.add('today');
+
+      cell.addEventListener('click', function(ev) {
+        if (!ev.target.classList.contains('booking-block')) {
+          // Ici on pourrait ouvrir le modal de nouvelle réservation si nécessaire
+        }
+      });
+
+      return cell;
+    }
+
+    function renderBookingsInCells(range) {
+      var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
+      var search = (state.searchQuery || '').toLowerCase();
+
+      for (var i = 0; i < state.bookings.length; i++) {
+        var b = state.bookings[i];
+        if (!b.startDate || !b.endDate) continue;
+
+        // Filtre par logements
+        if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
+          continue;
         }
 
-        for (var i = 0; i < state.properties.length; i++) {
-          var p = state.properties[i];
-          var row = document.createElement('div');
-          row.className = 'calendar-row';
-          row.setAttribute('data-property-id', p.id);
+        // Filtre texte (voyageur / logement)
+        if (search) {
+          var g = (b.guestName || '').toLowerCase();
+          var pn = (b.propertyName || '').toLowerCase();
+          if (g.indexOf(search) === -1 && pn.indexOf(search) === -1) {
+            continue;
+          }
+        }
 
-          var d = new Date(range.start.getTime());
-          while (d <= range.end) {
-            row.appendChild(createCalendarCell(p, d));
-            d.setDate(d.getDate() + 1);
+        var startDate = new Date(b.startDate);
+        var endDate = new Date(b.endDate);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
+
+        // Nuits : du jour d'arrivée au jour AVANT le checkout
+        var startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        var endDay   = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+        if (endDay <= startDay) {
+          endDay = new Date(startDay.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
+
+        if (lastNight < range.start || startDay > range.end) continue;
+
+        var cells = [];
+        var cur = new Date(startDay.getTime());
+        while (cur <= lastNight) {
+          var dateStr = formatDateForCell(cur);
+          var selector =
+            '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + (b.propertyId || '') + '"]';
+          var cell = document.querySelector(selector);
+          if (cell) cells.push(cell);
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        if (!cells.length) continue;
+
+        for (var j = 0; j < cells.length; j++) {
+          var cellEl = cells[j];
+          var block = document.createElement('div');
+          var platform = normalizePlatform(b.platform);
+
+          block.className = 'booking-block ' + platform;
+          block.setAttribute('data-booking-id', b.id);
+
+          if (cells.length === 1) {
+            block.classList.add('single');
+          } else if (j === 0) {
+            block.classList.add('start');
+          } else if (j === cells.length - 1) {
+            block.classList.add('end');
           }
 
-          grid.appendChild(row);
-        }
+          // Texte seulement sur le 1er jour
+          if (j === 0 || cells.length === 1) {
+            var icon = document.createElement('i');
+            icon.className =
+              'fas platform-icon ' +
+              (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
+            block.appendChild(icon);
 
-        renderBookingsInCells(range);
-      }
-
-      function createCalendarCell(property, dateObj) {
-        var cell = document.createElement('div');
-        cell.className = 'calendar-cell';
-        cell.setAttribute('data-property-id', property.id);
-
-        var y = dateObj.getFullYear();
-        var m = String(dateObj.getMonth() + 1).padStart(2, '0');
-        var d = String(dateObj.getDate()).padStart(2, '0');
-        cell.setAttribute('data-date', y + '-' + m + '-' + d);
-
-        var dow = dateObj.getDay();
-        if (dow === 0 || dow === 6) cell.classList.add('weekend');
-        if (isToday(dateObj)) cell.classList.add('today');
-
-        cell.addEventListener('click', function(ev) {
-          if (!ev.target.classList.contains('booking-block')) {
-            // Ici on pourrait ouvrir le modal de nouvelle réservation si nécessaire
+            var label = document.createTextNode(b.guestName || 'Réservation');
+            block.appendChild(label);
           }
-        });
 
-        return cell;
-      }
-
-      function renderBookingsInCells(range) {
-  var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
-
-  for (var i = 0; i < state.bookings.length; i++) {
-    var b = state.bookings[i];
-    if (!b.startDate || !b.endDate) continue;
-    if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
-      continue;
-    }
-
-    var startDate = new Date(b.startDate);
-    var endDate = new Date(b.endDate);
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
-
-    // 🔹 On travaille en "nuits" : du jour d'arrivée au jour AVANT le checkout
-    var startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-    var endDay   = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-
-    // sécurité : si l'ICS renvoie une fin <= début, on force au moins 1 nuit
-    if (endDay <= startDay) {
-      endDay = new Date(startDay.getTime() + 24 * 60 * 60 * 1000);
-    }
-
-    var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
-
-    // si toutes les nuits sont hors de la période affichée, on passe
-    if (lastNight < range.start || startDay > range.end) continue;
-
-    var cells = [];
-    var cur = new Date(startDay.getTime());
-    while (cur <= lastNight) {
-      var dateStr = formatDateForCell(cur);
-      var selector =
-        '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + (b.propertyId || '') + '"]';
-      var cell = document.querySelector(selector);
-      if (cell) cells.push(cell);
-      cur.setDate(cur.getDate() + 1);
-    }
-
-    if (!cells.length) continue;
-
-    for (var j = 0; j < cells.length; j++) {
-      var cellEl = cells[j];
-      var block = document.createElement('div');
-      var platform = normalizePlatform(b.platform);
-
-      block.className = 'booking-block ' + platform;
-      block.setAttribute('data-booking-id', b.id);
-
-      if (cells.length === 1) {
-        block.classList.add('single');
-      } else if (j === 0) {
-        block.classList.add('start');
-      } else if (j === cells.length - 1) {
-        block.classList.add('end');
-      }
-
-      // on n'affiche le texte que sur le 1er jour
-      if (j === 0 || cells.length === 1) {
-        var icon = document.createElement('i');
-        icon.className =
-          'fas platform-icon ' +
-          (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
-        block.appendChild(icon);
-
-        var label = document.createTextNode(b.guestName || 'Réservation');
-        block.appendChild(label);
-      }
-
-      cellEl.appendChild(block);
-    }
-  }
-}
-
-
-      function renderYearView() {
-        var grid = document.getElementById('calendarGrid');
-        var header = document.getElementById('daysHeader');
-
-        if (!grid || !header) return;
-
-        // En vue Année, on masque l'en-tête des jours
-        header.innerHTML = '';
-
-        var year = state.currentDate.getFullYear();
-
-        grid.innerHTML = '';
-
-        var yearGrid = document.createElement('div');
-        yearGrid.className = 'year-grid';
-
-        for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
-          var stats = computeMonthStats(year, monthIndex);
-
-          var card = document.createElement('div');
-          card.className = 'year-month-card';
-          card.setAttribute('data-month-index', String(monthIndex));
-
-          card.innerHTML =
-            '<div class="year-month-title">' + CONFIG.MONTHS[monthIndex] + '</div>' +
-            '<div class="year-month-stats">' +
-              '<div class="year-month-stat">' +
-                '<i class="fas fa-calendar-check"></i>' +
-                '<span>' + stats.bookings + ' réserv.</span>' +
-              '</div>' +
-              '<div class="year-month-stat">' +
-                '<i class="fas fa-moon"></i>' +
-                '<span>' + stats.nights + ' nuits</span>' +
-              '</div>' +
-            '</div>';
-
-          (function(mIndex) {
-            card.addEventListener('click', function() {
-              // En cliquant sur une carte, on bascule en vue Mois sur ce mois
-              state.currentView = 'month';
-              state.currentDate = new Date(year, mIndex, 1);
-
-              var viewTabs = document.querySelectorAll('.view-tab');
-              for (var i = 0; i < viewTabs.length; i++) {
-                var v = viewTabs[i].getAttribute('data-view');
-                viewTabs[i].classList.toggle('active', v === 'month');
-              }
-
-              updatePeriodDisplay();
-              renderCalendar();
-            });
-          })(monthIndex);
-
-          yearGrid.appendChild(card);
+          cellEl.appendChild(block);
         }
-
-        grid.appendChild(yearGrid);
       }
+    }
 
-      // ============================================
-      // Propriétés - colonne de gauche
-      // ============================================
-      function renderPropertyList() {
-        var wrapper = document.getElementById('propertyList');
-        if (!wrapper) return;
-        wrapper.innerHTML = '';
+    function renderYearView() {
+      var grid = document.getElementById('calendarGrid');
+      var header = document.getElementById('daysHeader');
 
-        if (!state.properties.length) {
-          var div = document.createElement('div');
-          div.className = 'property-item';
-          var span = document.createElement('span');
-          span.style.color = 'var(--text-secondary)';
-          span.textContent = 'Aucun logement';
-          div.appendChild(span);
-          wrapper.appendChild(div);
-          return;
-        }
+      if (!grid || !header) return;
 
-        for (var i = 0; i < state.properties.length; i++) {
-          var p = state.properties[i];
-          var count = 0;
-          for (var j = 0; j < state.bookings.length; j++) {
-            var b = state.bookings[j];
-            if (b.propertyId && String(b.propertyId) === String(p.id)) {
-              count++;
+      header.innerHTML = '';
+
+      var year = state.currentDate.getFullYear();
+
+      grid.innerHTML = '';
+
+      var yearGrid = document.createElement('div');
+      yearGrid.className = 'year-grid';
+
+      for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+        var stats = computeMonthStats(year, monthIndex);
+
+        var card = document.createElement('div');
+        card.className = 'year-month-card';
+        card.setAttribute('data-month-index', String(monthIndex));
+
+        card.innerHTML =
+          '<div class="year-month-title">' + CONFIG.MONTHS[monthIndex] + '</div>' +
+          '<div class="year-month-stats">' +
+            '<div class="year-month-stat">' +
+              '<i class="fas fa-calendar-check"></i>' +
+              '<span>' + stats.bookings + ' réserv.</span>' +
+            '</div>' +
+            '<div class="year-month-stat">' +
+              '<i class="fas fa-moon"></i>' +
+              '<span>' + stats.nights + ' nuits</span>' +
+            '</div>' +
+          '</div>';
+
+        (function(mIndex) {
+          card.addEventListener('click', function() {
+            state.currentView = 'month';
+            state.currentDate = new Date(year, mIndex, 1);
+
+            var viewTabs = document.querySelectorAll('.view-tab');
+            for (var i = 0; i < viewTabs.length; i++) {
+              var v = viewTabs[i].getAttribute('data-view');
+              viewTabs[i].classList.toggle('active', v === 'month');
             }
-          }
 
-          var item = document.createElement('div');
-          item.className = 'property-item';
-          item.setAttribute('data-property-id', p.id);
+            updatePeriodDisplay();
+            renderCalendar();
+          });
+        })(monthIndex);
 
-          var nameSpan = document.createElement('span');
-          nameSpan.className = 'property-name';
-          nameSpan.textContent = p.name;
-
-          item.appendChild(nameSpan);
-
-          if (count > 0) {
-            var badge = document.createElement('span');
-            badge.className = 'property-count';
-            badge.textContent = String(count);
-            item.appendChild(badge);
-          }
-
-          (function(propertyId) {
-            item.addEventListener('click', function() {
-              selectProperty(propertyId);
-            });
-          })(p.id);
-
-          wrapper.appendChild(item);
-        }
+        yearGrid.appendChild(card);
       }
 
-      function selectProperty(propertyId) {
-        state.selectedPropertyId = propertyId;
+      grid.appendChild(yearGrid);
+    }
 
-        var items = document.querySelectorAll('.property-item');
-        for (var i = 0; i < items.length; i++) {
-          var it = items[i];
-          it.classList.toggle('selected', it.getAttribute('data-property-id') === String(propertyId));
-        }
+    // ============================================
+    // Propriétés - colonne de gauche
+    // ============================================
+    function renderPropertyList() {
+      var wrapper = document.getElementById('propertyList');
+      if (!wrapper) return;
+      wrapper.innerHTML = '';
 
-        var rows = document.querySelectorAll('.calendar-row');
-        for (var j = 0; j < rows.length; j++) {
-          var row = rows[j];
-          row.style.opacity = (!propertyId || row.getAttribute('data-property-id') === String(propertyId)) ? '1' : '0.25';
-        }
+      if (!state.properties.length) {
+        var div = document.createElement('div');
+        div.className = 'property-item';
+        var span = document.createElement('span');
+        span.style.color = 'var(--text-secondary)';
+        span.textContent = 'Aucun logement';
+        div.appendChild(span);
+        wrapper.appendChild(div);
+        return;
       }
 
-      function computeMonthStats(year, monthIndex) {
-        var start = new Date(year, monthIndex, 1);
-        var end = new Date(year, monthIndex + 1, 0);
-
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-
-        var bookingsCount = 0;
-        var nightsCount = 0;
-
-        for (var i = 0; i < state.bookings.length; i++) {
-          var b = state.bookings[i];
-          if (!b.startDate || !b.endDate) continue;
-
-          var startDate = new Date(b.startDate);
-          var endDate = new Date(b.endDate);
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
-
-          // Pas de chevauchement avec le mois
-          if (endDate < start || startDate > end) continue;
-
-          bookingsCount++;
-
-          var effStart = startDate < start ? start : startDate;
-          var effEnd = endDate > end ? end : endDate;
-
-          var diffMs = effEnd - effStart;
-          if (diffMs > 0) {
-            nightsCount += Math.round(diffMs / (1000 * 60 * 60 * 24));
+      for (var i = 0; i < state.properties.length; i++) {
+        var p = state.properties[i];
+        var count = 0;
+        for (var j = 0; j < state.bookings.length; j++) {
+          var b = state.bookings[j];
+          if (b.propertyId && String(b.propertyId) === String(p.id)) {
+            count++;
           }
         }
 
-        return {
-          bookings: bookingsCount,
-          nights: nightsCount
-        };
+        var item = document.createElement('div');
+        item.className = 'property-item';
+        item.setAttribute('data-property-id', p.id);
+
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'property-name';
+        nameSpan.textContent = p.name;
+
+        item.appendChild(nameSpan);
+
+        if (count > 0) {
+          var badge = document.createElement('span');
+          badge.className = 'property-count';
+          badge.textContent = String(count);
+          item.appendChild(badge);
+        }
+
+        (function(propertyId) {
+          item.addEventListener('click', function() {
+            selectProperty(propertyId);
+          });
+        })(p.id);
+
+        wrapper.appendChild(item);
+      }
+    }
+
+    function selectProperty(propertyId) {
+      state.selectedPropertyId = propertyId;
+
+      var items = document.querySelectorAll('.property-item');
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        it.classList.toggle('selected', it.getAttribute('data-property-id') === String(propertyId));
       }
 
-      // ============================================
-      // Utils
-      // ============================================
+      var rows = document.querySelectorAll('.calendar-row');
+      for (var j = 0; j < rows.length; j++) {
+        var row = rows[j];
+        row.style.opacity = (!propertyId || row.getAttribute('data-property-id') === String(propertyId)) ? '1' : '0.25';
+      }
+    }
 
-function isToday(date) {
-        var today = new Date();
-        return date.getDate() === today.getDate() &&
-               date.getMonth() === today.getMonth() &&
-               date.getFullYear() === today.getFullYear();
+    function computeMonthStats(year, monthIndex) {
+      var start = new Date(year, monthIndex, 1);
+      var end = new Date(year, monthIndex + 1, 0);
+
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
+      var bookingsCount = 0;
+      var nightsCount = 0;
+
+      for (var i = 0; i < state.bookings.length; i++) {
+        var b = state.bookings[i];
+        if (!b.startDate || !b.endDate) continue;
+
+        var startDate = new Date(b.startDate);
+        var endDate = new Date(b.endDate);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
+
+        if (endDate < start || startDate > end) continue;
+
+        bookingsCount++;
+
+        var effStart = startDate < start ? start : startDate;
+        var effEnd = endDate > end ? end : endDate;
+
+        var diffMs = effEnd - effStart;
+        if (diffMs > 0) {
+          nightsCount += Math.round(diffMs / (1000 * 60 * 60 * 24));
+        }
       }
 
-      function formatDateForCell(date) {
-        var y = date.getFullYear();
-        var m = String(date.getMonth() + 1);
-        if (m.length < 2) m = '0' + m;
-        var d = String(date.getDate());
-        if (d.length < 2) d = '0' + d;
-        return y + '-' + m + '-' + d;
-      }
+      return {
+        bookings: bookingsCount,
+        nights: nightsCount
+      };
+    }
 
-      function normalizePlatform(raw) {
-        if (!raw) return 'direct';
-        var val = String(raw).toLowerCase();
-        if (val.indexOf('airbnb') !== -1) return 'airbnb';
-        if (val.indexOf('booking') !== -1) return 'booking';
-        if (val.indexOf('expedia') !== -1) return 'expedia';
-        if (val.indexOf('vrbo') !== -1 || val.indexOf('abritel') !== -1 || val.indexOf('homeaway') !== -1) return 'vrbo';
-        if (val.indexOf('hotel') !== -1) return 'hotels';
-        return 'direct';
-      }
+    // ============================================
+    // Utils
+    // ============================================
+    function isToday(date) {
+      var today = new Date();
+      return date.getDate() === today.getDate() &&
+             date.getMonth() === today.getMonth() &&
+             date.getFullYear() === today.getFullYear();
+    }
 
-    })();
-  </script>
+    function formatDateForCell(date) {
+      var y = date.getFullYear();
+      var m = String(date.getMonth() + 1);
+      if (m.length < 2) m = '0' + m;
+      var d = String(date.getDate());
+      if (d.length < 2) d = '0' + d;
+      return y + '-' + m + '-' + d;
+    }
+
+    function normalizePlatform(raw) {
+      if (!raw) return 'direct';
+      var val = String(raw).toLowerCase();
+      if (val.indexOf('airbnb') !== -1) return 'airbnb';
+      if (val.indexOf('booking') !== -1) return 'booking';
+      if (val.indexOf('expedia') !== -1) return 'expedia';
+      if (val.indexOf('vrbo') !== -1 || val.indexOf('abritel') !== -1 || val.indexOf('homeaway') !== -1) return 'vrbo';
+      if (val.indexOf('hotel') !== -1) return 'hotels';
+      return 'direct';
+    }
+
+  })();
+</script>
 
 </body>
 </html>
