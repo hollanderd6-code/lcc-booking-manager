@@ -713,13 +713,13 @@ function detectMessages(user) {
 
 function applyOnboardingDetection(detection) {
   const stepKeys = ['property', 'ical', 'stripe', 'messages'];
-  let completed = 0;
 
+  // 1) On applique les états uniquement pour les steps où on a un booléen
   stepKeys.forEach(stepKey => {
     const value = detection[stepKey];
 
-    // Si pas booléen (undefined), on ne touche pas au HTML de cette étape
     if (typeof value !== 'boolean') {
+      // pas d’info → on laisse le HTML tel quel
       return;
     }
 
@@ -741,7 +741,6 @@ function applyOnboardingDetection(detection) {
         statusEl.classList.add('done');
         statusEl.classList.remove('todo');
       }
-      completed++;
     } else {
       stepEl.classList.add('todo');
       stepEl.classList.remove('done');
@@ -754,6 +753,15 @@ function applyOnboardingDetection(detection) {
         statusEl.classList.add('todo');
         statusEl.classList.remove('done');
       }
+    }
+  });
+
+  // 2) On recalcule le X/4 en comptant les steps "Terminé" visibles dans le DOM
+  let completed = 0;
+  document.querySelectorAll('.onboarding-step-status').forEach(statusEl => {
+    const txt = (statusEl.textContent || '').toLowerCase();
+    if (txt.includes('terminé')) {
+      completed++;
     }
   });
 
