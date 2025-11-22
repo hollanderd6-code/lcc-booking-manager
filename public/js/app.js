@@ -2,7 +2,7 @@
 // PLATFORM APP - MODERN BOOKING MANAGER
 // ========================================
 const API_URL = 'https://lcc-booking-manager.onrender.com';
-
+let allProperties = [];
 let calendar = null;
 let allReservations = [];
 let activeFilters = new Set();
