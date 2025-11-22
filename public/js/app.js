@@ -387,6 +387,8 @@ async function loadReservations() {
 
     // Calendrier FullCalendar
     updateCalendarEvents();
+console.log('DEBUG PROPERTIES', JSON.stringify(data.properties, null, 2));
+console.log('DEBUG RESERVATIONS', JSON.stringify(allReservations, null, 2));
 
 // Calendrier moderne (vue tableau par logement)
 if (window.renderModernCalendar) {
