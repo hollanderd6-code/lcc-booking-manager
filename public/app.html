@@ -2913,6 +2913,49 @@
 
   })();
 </script>
+<!-- Modal blocage calendrier -->
+<div class="modal" id="blockModal">
+  <div class="modal-dialog">
+    <button class="modal-close" id="blockModalClose">
+      <i class="fas fa-times"></i>
+    </button>
 
+    <h2 class="modal-title">
+      <i class="fas fa-lock"></i>
+      Bloquer le calendrier
+    </h2>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="blockPropertySelect">Logement</label>
+        <select id="blockPropertySelect" class="form-control"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="blockStartDate">Du</label>
+        <input type="date" id="blockStartDate" class="form-control">
+      </div>
+
+      <div class="form-group">
+        <label for="blockEndDate">Au</label>
+        <input type="date" id="blockEndDate" class="form-control">
+      </div>
+
+      <div class="form-group">
+        <label for="blockReason">Motif (facultatif)</label>
+        <input type="text" id="blockReason" class="form-control" placeholder="Blocage perso, travaux, famille...">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="blockModalCancel">Annuler</button>
+      <button class="btn btn-primary" id="blockSaveBtn">
+        <i class="fas fa-lock"></i>
+        Bloquer ces dates
+      </button>
+    </div>
+  </div>
+</div>
+  
 </body>
 </html>
