@@ -7,15 +7,15 @@ let calendar = null;
 let allReservations = [];
 let activeFilters = new Set();
 
-// expose filters for the modern grid calendar (calendrier moderne)
+// expose filters for the modern grid calendar
 window.activeFilters = activeFilters;
 
 // Colors by source/platform (for both calendars)
 const SOURCE_COLORS = {
-  airbnb: { bg: '#FF5A5F', border: '#FF5A5F' },   // rose foncé
-  booking: { bg: '#003580', border: '#003580' },  // bleu foncé
-  direct: { bg: '#10B981', border: '#10B981' },   // vert
-  vrbo: { bg: '#1569C7', border: '#1569C7' },
+  airbnb:  { bg: '#FF5A5F', border: '#FF5A5F' },   // rose foncé
+  booking: { bg: '#003580', border: '#003580' },   // bleu foncé
+  direct:  { bg: '#10B981', border: '#10B981' },   // vert
+  vrbo:    { bg: '#1569C7', border: '#1569C7' },
   expedia: { bg: '#FFC72C', border: '#FFC72C' }
 };
 
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize theme
   initializeTheme();
 
-  // Initialize calendar (FullCalendar)
+  // Initialize calendar
   initializeCalendar();
 
   // Load data
@@ -99,7 +99,7 @@ function setupEventListeners() {
     syncBtn.addEventListener('click', syncReservations);
   }
 
-  // View buttons (mois / semaine / liste) pour le FullCalendar classique
+  // View buttons (mois / semaine / liste) – FullCalendar
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const view = e.currentTarget.dataset.view;
@@ -142,13 +142,13 @@ function initializeCalendar() {
 
   calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
-    locale: 'fr',            // calendrier en français
-    firstDay: 1,             // lundi
+    locale: 'fr',
+    firstDay: 1,
     height: 'auto',
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
-      right: ''              // les boutons vue sont en dehors (view-btn)
+      right: ''
     },
     buttonText: {
       today: "Aujourd'hui",
@@ -230,7 +230,7 @@ function changeCalendarView(view) {
   calendar.changeView(viewMap[view] || 'dayGridMonth');
 }
 
-// 👉 FullCalendar : couleurs basées sur la plateforme
+// 👉 FullCalendar : couleurs basées sur la plateforme de la réservation
 function updateCalendarEvents() {
   if (!calendar) return;
 
@@ -251,8 +251,8 @@ function updateCalendarEvents() {
         extendedProps: {
           reservation: r,
           propertyName: propertyName,
-          sourceRaw: r.source || null, // valeur brute "Airbnb", "Booking.com"...
-          source: sourceKey            // clé normalisée "airbnb", "booking"...
+          sourceRaw: r.source || null,
+          source: sourceKey
         }
       };
     });
@@ -260,6 +260,7 @@ function updateCalendarEvents() {
   calendar.removeAllEvents();
   calendar.addEventSource(events);
 }
+
 
 // ========================================
 // OVERVIEW CARD (Aujourd’hui & à venir)
@@ -301,7 +302,7 @@ function updateOverviewFromReservations(reservations) {
     }
 
     if (endStr === todayStr) {
-      todayDepartures.push({ res: r, start, end });
+      todayDepartures.push({ res: r, end });
     }
   });
 
@@ -404,18 +405,8 @@ async function loadReservations() {
     console.log('DEBUG PROPERTIES', JSON.stringify(data.properties, null, 2));
     console.log('DEBUG RESERVATIONS', JSON.stringify(allReservations, null, 2));
 
-    // Sauvegarde pour d'autres scripts (KPI, notifications, onboarding, etc.)
-    try {
-      localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(allReservations));
-      localStorage.setItem('LCC_PROPERTIES', JSON.stringify(data.properties || []));
-    } catch (e) {
-      console.warn("Impossible d'enregistrer les données en localStorage", e);
-    }
-
-    // pour les notifications & calendrier moderne
+    // pour les notifications
     window.LCC_RESERVATIONS = allReservations;
-    window.LCC_PROPERTIES = data.properties || [];
-    window.LCC_RAW_DATA = data;
 
     // Carte "Vue d’ensemble"
     updateOverviewFromReservations(allReservations);
@@ -436,8 +427,16 @@ async function loadReservations() {
       }
     }
 
-    // Onboarding (Bien démarrer avec Boostinghost)
-    updateOnboardingFromData(data);
+    // Onboarding (Bien démarrer)
+    try {
+      const rawUser = localStorage.getItem('lcc_user');
+      const user = rawUser ? JSON.parse(rawUser) : null;
+      const detection = bhDetectOnboarding(user, data);
+      console.log('DEBUG ONBOARDING', detection);
+      bhApplyOnboardingDetection(detection);
+    } catch (e) {
+      console.warn('Onboarding detection error', e);
+    }
 
     console.log(`📦 ${allReservations.length} réservations chargées`);
   } catch (error) {
@@ -487,7 +486,6 @@ async function syncReservations() {
 // ========================================
 // UI UPDATES (stats + filtres)
 // ========================================
-
 function safeSetText(id, value) {
   const el = document.getElementById(id);
   if (el) {
@@ -514,6 +512,7 @@ function updateStats(data) {
     navBadge.textContent = reservations.length;
   }
 }
+
 
 function renderPropertyFilters(properties) {
   const container = document.getElementById('propertyFilters');
@@ -549,7 +548,6 @@ function togglePropertyFilter(propertyId) {
   }
 
   updateCalendarEvents();
-  // le calendrier moderne lit window.activeFilters qui pointe vers le même Set
 }
 
 function clearFilters() {
@@ -560,210 +558,6 @@ function clearFilters() {
     .forEach(badge => badge.classList.remove('active'));
 
   updateCalendarEvents();
-}
-
-// ========================================
-// ONBOARDING ("Bien démarrer avec Boostinghost")
-// ========================================
-
-function updateOnboardingFromData(data) {
-  const properties = data && Array.isArray(data.properties) ? data.properties : [];
-  const reservations = data && Array.isArray(data.reservations) ? data.reservations : [];
-
-  let user = null;
-  try {
-    const rawUser = localStorage.getItem('lcc_user');
-    user = rawUser ? JSON.parse(rawUser) : null;
-  } catch (e) {
-    console.warn("Impossible de lire lcc_user pour l'onboarding", e);
-  }
-
-  const detection = {
-    // Étape 1 : au moins 1 logement créé
-    property: properties.length > 0,
-
-    // Étape 2 : liens iCal configurés (ou au moins une réservation déjà remontée)
-    ical: hasIcalConfigured(properties, reservations),
-
-    // Étape 3 : Stripe connecté (scan large de tout ce qui contient "stripe")
-    stripe: detectStripe(user, data),
-
-    // Étape 4 : messages auto (best effort, sinon on laisse comme dans le HTML)
-    messages: detectMessages(user)
-  };
-
-  applyOnboardingDetection(detection);
-}
-
-function hasIcalConfigured(properties, reservations) {
-  // Si on a déjà des réservations, on considère que des iCal sont branchés
-  if (reservations && reservations.length > 0) return true;
-  if (!properties) return false;
-
-  for (let i = 0; i < properties.length; i++) {
-    const p = properties[i] || {};
-
-    if (Array.isArray(p.icals) && p.icals.length) return true;
-    if (Array.isArray(p.icalUrls) && p.icalUrls.length) return true;
-    if (Array.isArray(p.icalLinks) && p.icalLinks.length) return true;
-    if (Array.isArray(p.ical_links) && p.ical_links.length) return true;
-
-    if (typeof p.ical === 'string' && p.ical.trim() !== '') return true;
-    if (typeof p.icalAirbnb === 'string' && p.icalAirbnb.trim() !== '') return true;
-    if (typeof p.icalBooking === 'string' && p.icalBooking.trim() !== '') return true;
-  }
-
-  return false;
-}
-function detectStripe(user, data) {
-  // 1) override manuel possible (on le garde au cas où, mais tu ne t'en serviras pas)
-  try {
-    if (localStorage.getItem('LCC_STRIPE_CONNECTED') === '1') return true;
-  } catch (e) {}
-
-  // 2) flags explicites si un jour ton backend en renvoie
-  if (data) {
-    if (data.stripeConnected === true) return true;
-    if (data.stripe && data.stripe.connected === true) return true;
-    if (data.account && data.account.stripeConnected === true) return true;
-  }
-
-  // 3) fallback ultra-simple :
-  //    si "stripe" apparaît quelque part dans les données user ou API,
-  //    on considère que Stripe est intégré.
-  try {
-    const sData = JSON.stringify(data || {});
-    const sUser = JSON.stringify(user || {});
-    const all = (sData + ' ' + sUser).toLowerCase();
-    if (all.includes('stripe')) {
-      return true;
-    }
-  } catch (e) {
-    console.warn('detectStripe JSON stringify error', e);
-  }
-
-  // si vraiment aucune trace de Stripe → À faire
-  return false;
-}
-
-
-  // 3) Infos dans l'utilisateur stocké en localStorage
-  if (user) {
-    for (const key in user) {
-      if (!Object.prototype.hasOwnProperty.call(user, key)) continue;
-      if (!key) continue;
-      if (key.toLowerCase().includes('stripe')) {
-        const val = user[key];
-        if (val === true) return true;
-        if (typeof val === 'string' && val.trim() !== '') return true;
-        if (val && typeof val === 'object') {
-          for (const subKey in val) {
-            if (!Object.prototype.hasOwnProperty.call(val, subKey)) continue;
-            const subVal = val[subKey];
-            const lk = subKey.toLowerCase();
-            if ((lk.includes('connected') || lk.includes('enabled') || lk.includes('active')) && subVal === true) {
-              return true;
-            }
-            if (typeof subVal === 'string' && subVal.trim() !== '') return true;
-          }
-        }
-      }
-    }
-  }
-
-  // 4) Si on ne trouve rien → "À faire"
-  return false;
-}
-
-function detectMessages(user) {
-  // Override manuel possible
-  try {
-    if (localStorage.getItem('LCC_MESSAGES_CONFIGURED') === '1') return true;
-  } catch (e) {}
-
-  if (!user) return undefined;
-
-  for (const key in user) {
-    if (!Object.prototype.hasOwnProperty.call(user, key)) continue;
-    const lk = key.toLowerCase();
-    if (lk.includes('message') || lk.includes('auto') || lk.includes('scenario')) {
-      const val = user[key];
-      if (val === true) return true;
-      if (typeof val === 'string' && val.trim() !== '') return true;
-      if (Array.isArray(val) && val.length) return true;
-      if (val && typeof val === 'object') {
-        for (const subKey in val) {
-          if (!Object.prototype.hasOwnProperty.call(val, subKey)) continue;
-          const subVal = val[subKey];
-          if (subVal === true) return true;
-          if (typeof subVal === 'string' && subVal.trim() !== '') return true;
-        }
-      }
-    }
-  }
-
-  // On ne sait pas → on laisse l'état du HTML (maquette)
-  return undefined;
-}
-
-function applyOnboardingDetection(detection) {
-  const stepKeys = ['property', 'ical', 'stripe', 'messages'];
-
-  // 1) On applique les états uniquement pour les steps où on a un booléen
-  stepKeys.forEach(stepKey => {
-    const value = detection[stepKey];
-
-    if (typeof value !== 'boolean') {
-      // pas d’info → on laisse le HTML tel quel
-      return;
-    }
-
-    const stepEl = document.querySelector(`.onboarding-step[data-step="${stepKey}"]`);
-    if (!stepEl) return;
-
-    const iconEl = stepEl.querySelector('.onboarding-step-icon');
-    const statusEl = stepEl.querySelector('.onboarding-step-status');
-
-    if (value) {
-      stepEl.classList.add('done');
-      stepEl.classList.remove('todo');
-      if (iconEl) {
-        iconEl.classList.add('done');
-        iconEl.classList.remove('todo');
-      }
-      if (statusEl) {
-        statusEl.textContent = 'Terminé';
-        statusEl.classList.add('done');
-        statusEl.classList.remove('todo');
-      }
-    } else {
-      stepEl.classList.add('todo');
-      stepEl.classList.remove('done');
-      if (iconEl) {
-        iconEl.classList.add('todo');
-        iconEl.classList.remove('done');
-      }
-      if (statusEl) {
-        statusEl.textContent = 'À faire';
-        statusEl.classList.add('todo');
-        statusEl.classList.remove('done');
-      }
-    }
-  });
-
-  // 2) On recalcule le X/4 en comptant les steps "Terminé" visibles dans le DOM
-  let completed = 0;
-  document.querySelectorAll('.onboarding-step-status').forEach(statusEl => {
-    const txt = (statusEl.textContent || '').toLowerCase();
-    if (txt.includes('terminé')) {
-      completed++;
-    }
-  });
-
-  const progressEl = document.getElementById('onboardingProgressValue');
-  if (progressEl) {
-    progressEl.textContent = String(completed);
-  }
 }
 
 // ========================================
@@ -917,3 +711,211 @@ function goToMessages() {
 // MOBILE MENU (TODO)
 // ========================================
 // (rien de spécial ici pour l’instant)
+
+
+// ========================================
+// ONBOARDING ("Bien démarrer avec Boostinghost")
+// ========================================
+
+function bhDetectOnboarding(user, data) {
+  return {
+    property: bhDetectProperty(user, data),
+    ical: bhDetectIcal(user, data),
+    stripe: bhDetectStripe(user, data),
+    messages: bhDetectMessages(user, data)
+  };
+}
+
+// Étape 1 : au moins un logement
+function bhDetectProperty(user, data) {
+  if (data && Array.isArray(data.properties) && data.properties.length > 0) {
+    return true;
+  }
+
+  if (data && Array.isArray(data.reservations)) {
+    const hasProp = data.reservations.some(r =>
+      r.property || r.propertyId || r.propertyName
+    );
+    if (hasProp) return true;
+  }
+
+  try {
+    const stored = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+    if (Array.isArray(stored) && stored.length > 0) return true;
+  } catch (e) {}
+
+  return false;
+}
+
+// Étape 2 : liens iCal
+function bhDetectIcal(user, data) {
+  // 1) chercher des champs iCal dans les propriétés
+  if (data && Array.isArray(data.properties)) {
+    for (const p of data.properties) {
+      if (!p || typeof p !== 'object') continue;
+      for (const key in p) {
+        if (!Object.prototype.hasOwnProperty.call(p, key)) continue;
+        if (!key) continue;
+        if (key.toLowerCase().includes('ical')) {
+          const val = p[key];
+          if (typeof val === 'string' && val.trim() !== '') return true;
+          if (Array.isArray(val) && val.length > 0) return true;
+          if (val && typeof val === 'object') {
+            for (const subKey in val) {
+              if (!Object.prototype.hasOwnProperty.call(val, subKey)) continue;
+              const subVal = val[subKey];
+              if (typeof subVal === 'string' && subVal.trim() !== '') return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 2) fallback : au moins une réservation provenant d’un OTA (Airbnb, Booking, etc.)
+  const res = data && Array.isArray(data.reservations) ? data.reservations : [];
+  for (const r of res) {
+    if (!r) continue;
+    const src = (
+      r.source ||
+      r.channel ||
+      r.platform ||
+      ''
+    ).toLowerCase();
+    if (
+      src.includes('airbnb') ||
+      src.includes('booking') ||
+      src.includes('vrbo') ||
+      src.includes('abritel') ||
+      src.includes('homeaway') ||
+      src.includes('expedia')
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Étape 3 : Stripe
+function bhDetectStripe(user, data) {
+  // 1) override manuel possible (au cas où)
+  try {
+    if (localStorage.getItem('LCC_STRIPE_CONNECTED') === '1') return true;
+  } catch (e) {}
+
+  // 2) flags explicites possibles dans data (backend)
+  if (data) {
+    if (data.stripeConnected === true) return true;
+    if (data.hasStripe === true) return true;
+
+    if (data.stripe && data.stripe.connected === true) return true;
+    if (data.account && data.account.stripeConnected === true) return true;
+    if (data.payments && data.payments.stripeConnected === true) return true;
+  }
+
+  // 3) flags explicites possibles dans user (localStorage lcc_user)
+  if (user) {
+    if (user.stripeConnected === true) return true;
+    if (user.hasStripe === true) return true;
+
+    if (user.stripe && user.stripe.connected === true) return true;
+    if (user.account && user.account.stripeConnected === true) return true;
+    if (user.payments && user.payments.stripeConnected === true) return true;
+  }
+
+  // 4) Scan générique : si "stripe" apparaît quelque part, on considère que c’est connecté
+  try {
+    const sData = JSON.stringify(data || {});
+    const sUser = JSON.stringify(user || {});
+    const all = (sData + ' ' + sUser).toLowerCase();
+    if (all.includes('stripe')) {
+      return true;
+    }
+  } catch (e) {
+    console.warn('bhDetectStripe stringify error', e);
+  }
+
+  // Aucune trace → on considère "À faire"
+  return false;
+}
+
+// Étape 4 : messages automatiques
+function bhDetectMessages(user, data) {
+  // On ne met "À faire" que si on a un signal clair de "pas activé".
+  // Sinon, on laisse le HTML par défaut (souvent "Terminé" dans ta maquette).
+
+  if (data) {
+    if (data.messagesConfigured === true) return true;
+    if (data.autoMessages && data.autoMessages.enabled === true) return true;
+  }
+
+  if (user) {
+    if (user.messagesConfigured === true) return true;
+    if (user.autoMessages && user.autoMessages.enabled === true) return true;
+  }
+
+  // pas d’info → on ne force rien
+  return undefined;
+}
+
+// Appliquer la détection sur le bloc "Bien démarrer"
+function bhApplyOnboardingDetection(detection) {
+  const stepKeys = ['property', 'ical', 'stripe', 'messages'];
+
+  // 1) Appliquer les états seulement quand on a un booléen
+  stepKeys.forEach(stepKey => {
+    const value = detection[stepKey];
+
+    if (typeof value !== 'boolean') {
+      // pas d’info → on laisse le HTML tel quel
+      return;
+    }
+
+    const stepEl = document.querySelector(`.onboarding-step[data-step="${stepKey}"]`);
+    if (!stepEl) return;
+
+    const iconEl = stepEl.querySelector('.onboarding-step-icon');
+    const statusEl = stepEl.querySelector('.onboarding-step-status');
+
+    if (value) {
+      stepEl.classList.add('done');
+      stepEl.classList.remove('todo');
+      if (iconEl) {
+        iconEl.classList.add('done');
+        iconEl.classList.remove('todo');
+      }
+      if (statusEl) {
+        statusEl.textContent = 'Terminé';
+        statusEl.classList.add('done');
+        statusEl.classList.remove('todo');
+      }
+    } else {
+      stepEl.classList.add('todo');
+      stepEl.classList.remove('done');
+      if (iconEl) {
+        iconEl.classList.add('todo');
+        iconEl.classList.remove('done');
+      }
+      if (statusEl) {
+        statusEl.textContent = 'À faire';
+        statusEl.classList.add('todo');
+        statusEl.classList.remove('done');
+      }
+    }
+  });
+
+  // 2) Recalculer X/4 complétées en lisant le DOM
+  let completed = 0;
+  document.querySelectorAll('.onboarding-step-status').forEach(statusEl => {
+    const txt = (statusEl.textContent || '').toLowerCase();
+    if (txt.includes('terminé')) {
+      completed++;
+    }
+  });
+
+  const progressEl = document.getElementById('onboardingProgressValue');
+  if (progressEl) {
+    progressEl.textContent = String(completed);
+  }
+}
