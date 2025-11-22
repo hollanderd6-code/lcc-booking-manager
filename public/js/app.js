@@ -2,6 +2,7 @@
 // PLATFORM APP - MODERN BOOKING MANAGER
 // ========================================
 const API_URL = 'https://lcc-booking-manager.onrender.com';
+
 let allProperties = [];
 let calendar = null;
 let allReservations = [];
@@ -16,7 +17,8 @@ const SOURCE_COLORS = {
   booking: { bg: '#003580', border: '#003580' },   // bleu foncé
   direct:  { bg: '#10B981', border: '#10B981' },   // vert
   vrbo:    { bg: '#1569C7', border: '#1569C7' },
-  expedia: { bg: '#FFC72C', border: '#FFC72C' }
+  expedia: { bg: '#FFC72C', border: '#FFC72C' },
+  block:   { bg: '#6B7280', border: '#6B7280' }    // gris pour blocages
 };
 
 function normalizeSourceToKey(raw) {
@@ -26,6 +28,7 @@ function normalizeSourceToKey(raw) {
   if (v.includes('booking')) return 'booking';
   if (v.includes('vrbo') || v.includes('abritel') || v.includes('homeaway')) return 'vrbo';
   if (v.includes('expedia')) return 'expedia';
+  if (v.includes('block')) return 'block';
   return 'direct';
 }
 
@@ -113,7 +116,7 @@ function setupEventListeners() {
     });
   });
 
-  // Modal close
+  // Reservation modal close
   const modalClose = document.getElementById('modalClose');
   if (modalClose) {
     modalClose.addEventListener('click', () => {
@@ -121,12 +124,37 @@ function setupEventListeners() {
     });
   }
 
-  // Close modal on backdrop click
+  // Close reservation modal on backdrop click
   const modal = document.getElementById('reservationModal');
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.remove('active');
+      }
+    });
+  }
+
+  // ===== Modal blocage calendrier =====
+  const blockModalClose = document.getElementById('blockModalClose');
+  if (blockModalClose) {
+    blockModalClose.addEventListener('click', closeBlockModal);
+  }
+
+  const blockModalCancel = document.getElementById('blockModalCancel');
+  if (blockModalCancel) {
+    blockModalCancel.addEventListener('click', closeBlockModal);
+  }
+
+  const blockSaveBtn = document.getElementById('blockSaveBtn');
+  if (blockSaveBtn) {
+    blockSaveBtn.addEventListener('click', submitBlockForm);
+  }
+
+  const blockModal = document.getElementById('blockModal');
+  if (blockModal) {
+    blockModal.addEventListener('click', (e) => {
+      if (e.target === blockModal) {
+        closeBlockModal();
       }
     });
   }
@@ -159,6 +187,10 @@ function initializeCalendar() {
     titleFormat: { month: 'long', year: 'numeric' },
     dayHeaderFormat: { weekday: 'short', day: '2-digit' },
 
+    selectable: true,
+    selectMirror: true,
+    select: handleCalendarSelect,
+
     eventDisplay: 'block',
     dayMaxEvents: 4,
 
@@ -168,7 +200,7 @@ function initializeCalendar() {
       }
     },
 
-    // classes CSS selon la source (Airbnb / Booking / Direct)
+    // classes CSS selon la source (Airbnb / Booking / Direct / Block)
     eventClassNames: function(info) {
       const classes = ['bh-event'];
       const sourceKey = normalizeSourceToKey(
@@ -177,12 +209,13 @@ function initializeCalendar() {
 
       if (sourceKey === 'airbnb') classes.push('bh-event-airbnb');
       else if (sourceKey === 'booking') classes.push('bh-event-booking');
+      else if (sourceKey === 'block') classes.push('bh-event-block');
       else classes.push('bh-event-direct');
 
       return classes;
     },
 
-    // contenu HTML de l’event : logement + badge + voyageur
+    // contenu HTML de l’event : logement + badge + voyageur / blocage
     eventContent: function(arg) {
       const props = arg.event.extendedProps || {};
       const property = props.propertyName || 'Logement';
@@ -197,6 +230,7 @@ function initializeCalendar() {
         const letter =
           sourceKey === 'airbnb' ? 'A' :
           sourceKey === 'booking' ? 'B' :
+          sourceKey === 'block'   ? 'X' :
           'D';
         sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${letter}</span>`;
       }
@@ -230,6 +264,54 @@ function changeCalendarView(view) {
   calendar.changeView(viewMap[view] || 'dayGridMonth');
 }
 
+// Gestion de la sélection pour créer un blocage
+function handleCalendarSelect(info) {
+  // on nettoie la sélection visuelle de FullCalendar
+  if (calendar) {
+    calendar.unselect();
+  }
+
+  const modal = document.getElementById('blockModal');
+  if (!modal) return;
+
+  // Pré-remplir les dates
+  const startInput = document.getElementById('blockStartDate');
+  const endInput = document.getElementById('blockEndDate');
+
+  const startStr = info.startStr.slice(0, 10); // YYYY-MM-DD
+  const endStr = info.endStr ? info.endStr.slice(0, 10) : startStr;
+
+  if (startInput) startInput.value = startStr;
+  if (endInput) endInput.value = endStr;
+
+  // Remplir la liste des logements
+  const select = document.getElementById('blockPropertySelect');
+  if (select) {
+    select.innerHTML = '';
+    (allProperties || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+  }
+
+  // Motif vide par défaut
+  const reasonInput = document.getElementById('blockReason');
+  if (reasonInput) {
+    reasonInput.value = '';
+  }
+
+  modal.classList.add('active');
+}
+
+function closeBlockModal() {
+  const modal = document.getElementById('blockModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
 // 👉 FullCalendar : couleurs basées sur la plateforme de la réservation
 function updateCalendarEvents() {
   if (!calendar) return;
@@ -237,13 +319,20 @@ function updateCalendarEvents() {
   const events = allReservations
     .filter(r => activeFilters.size === 0 || (r.property && activeFilters.has(r.property.id)))
     .map(r => {
-      const guestLabel = r.guestName || 'Voyageur';
-      const propertyName = (r.property && r.property.name) || 'Logement';
       const sourceKey = normalizeSourceToKey(r.source);
       const colors = SOURCE_COLORS[sourceKey] || SOURCE_COLORS.direct;
 
+      let title;
+      if (sourceKey === 'block') {
+        title = r.notes || 'Blocage';
+      } else {
+        title = r.guestName || 'Voyageur';
+      }
+
+      const propertyName = (r.property && r.property.name) || 'Logement';
+
       return {
-        title: guestLabel,
+        title,
         start: r.start,
         end: r.end,
         backgroundColor: colors.bg,
@@ -260,7 +349,6 @@ function updateCalendarEvents() {
   calendar.removeAllEvents();
   calendar.addEventSource(events);
 }
-
 
 // ========================================
 // OVERVIEW CARD (Aujourd’hui & à venir)
@@ -401,6 +489,7 @@ async function loadReservations() {
     const data = await response.json();
 
     allReservations = data.reservations || [];
+    allProperties = data.properties || [];
 
     console.log('DEBUG PROPERTIES', JSON.stringify(data.properties, null, 2));
     console.log('DEBUG RESERVATIONS', JSON.stringify(allReservations, null, 2));
@@ -514,7 +603,6 @@ function updateStats(data) {
   }
 }
 
-
 function renderPropertyFilters(properties) {
   const container = document.getElementById('propertyFilters');
   if (!container) return;
@@ -562,7 +650,7 @@ function clearFilters() {
 }
 
 // ========================================
-// MODAL
+// MODALS
 // ========================================
 
 function showReservationModal(reservation) {
@@ -661,6 +749,60 @@ function showReservationModal(reservation) {
   modal.classList.add('active');
 }
 
+// Création d’un blocage depuis le modal
+async function submitBlockForm() {
+  const propertySelect = document.getElementById('blockPropertySelect');
+  const startInput = document.getElementById('blockStartDate');
+  const endInput = document.getElementById('blockEndDate');
+  const reasonInput = document.getElementById('blockReason');
+
+  const propertyId = propertySelect ? propertySelect.value : '';
+  const startDate = startInput ? startInput.value : '';
+  const endDate = endInput ? endInput.value : '';
+  const reason = reasonInput ? reasonInput.value : '';
+
+  if (!propertyId || !startDate || !endDate) {
+    showToast('Merci de choisir un logement et des dates', 'error');
+    return;
+  }
+
+  try {
+    showLoading();
+    const token = localStorage.getItem('lcc_token');
+
+    const response = await fetch(`${API_URL}/api/blocks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        propertyId,
+        start: startDate,
+        end: endDate,
+        reason
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Erreur lors de la création du blocage');
+    }
+
+    showToast('Blocage créé', 'success');
+    closeBlockModal();
+
+    // Recharge les réservations pour voir le blocage dans le calendrier
+    await loadReservations();
+  } catch (err) {
+    console.error('Erreur création blocage:', err);
+    showToast(err.message || 'Erreur lors de la création du blocage', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
 // ========================================
 // UTILITIES
 // ========================================
@@ -707,12 +849,6 @@ function openDepositsPage() {
 function goToMessages() {
   window.location.href = '/messages.html';
 }
-
-// ========================================
-// MOBILE MENU (TODO)
-// ========================================
-// (rien de spécial ici pour l’instant)
-
 
 // ========================================
 // ONBOARDING ("Bien démarrer avec Boostinghost")
