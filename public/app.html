@@ -81,8 +81,6 @@
     #calendarSection {
       margin-top: 32px;
       scroll-margin-top: 20px;
-      max-width: 100%;
-      overflow-x: hidden;
     }
 
     .calendar-wrapper {
@@ -91,8 +89,6 @@
       overflow: hidden;
       box-shadow: var(--shadow-lg);
       border: 1px solid var(--border-color);
-      max-width: 100%;
-      box-sizing: border-box;
     }
 
     /* Header du calendrier */
@@ -247,6 +243,20 @@
       overflow-x: auto;
       overflow-y: hidden;
     }
+
+/* Mode année : on cache la colonne des logements et l'en-tête des jours */
+    .calendar-container.year-view .property-list-column {
+      display: none;
+    }
+
+    .calendar-container.year-view .calendar-grid-wrapper {
+      width: 100%;
+    }
+
+    .calendar-container.year-view .days-header {
+      display: none;
+    }
+
 
     /* Property List Column */
     .property-list-column {
@@ -649,7 +659,7 @@
       
       .day-header,
       .calendar-cell {
-        min-width: 45px;
+        min-width: 0;
       }
     }
 
@@ -669,7 +679,7 @@
       
       .day-header,
       .calendar-cell {
-        min-width: 40px;
+        min-width: 0;
       }
       
       .booking-block {
@@ -2225,105 +2235,124 @@
       // Navigation & vues
       // ============================================
       function attachCalendarEventListeners() {
-  var viewTabs = document.querySelectorAll('.view-tab');
-  for (var i = 0; i < viewTabs.length; i++) {
-    (function(tab) {
-      tab.addEventListener('click', function() {
-        var view = tab.getAttribute('data-view') || 'month';
-        state.currentView = view;
+        var viewTabs = document.querySelectorAll('.view-tab');
 
-        // toggle active tab
-        for (var j = 0; j < viewTabs.length; j++) {
-          var t = viewTabs[j];
-          t.classList.toggle('active', t.getAttribute('data-view') === view);
+        for (var i = 0; i < viewTabs.length; i++) {
+          (function(tab) {
+            tab.addEventListener('click', function() {
+              var view = tab.getAttribute('data-view') || 'month';
+              state.currentView = view;
+
+              for (var j = 0; j < viewTabs.length; j++) {
+                var t = viewTabs[j];
+                t.classList.toggle('active', t.getAttribute('data-view') === view);
+              }
+
+              updatePeriodDisplay();
+              renderCalendar();
+            });
+          })(viewTabs[i]);
+        }
+
+        var prev = document.getElementById('prevPeriod');
+        var next = document.getElementById('nextPeriod');
+
+        if (prev) {
+          prev.addEventListener('click', function() { navigate(-1); });
+        }
+        if (next) {
+          next.addEventListener('click', function() { navigate(1); });
+        }
+      }
+
+      function navigate(direction) {
+        var dir = direction < 0 ? -1 : 1;
+        var d = state.currentDate;
+
+        if (state.currentView === 'day') {
+          d.setDate(d.getDate() + dir);
+        } else if (state.currentView === 'week') {
+          d.setDate(d.getDate() + dir * 7);
+        } else if (state.currentView === 'month') {
+          d.setMonth(d.getMonth() + dir);
+        } else if (state.currentView === 'year') {
+          d.setFullYear(d.getFullYear() + dir);
+        } else {
+          d.setMonth(d.getMonth() + dir);
         }
 
         updatePeriodDisplay();
         renderCalendar();
-      });
-    })(viewTabs[i]);
-  }
-
-  var prev = document.getElementById('prevPeriod');
-  var next = document.getElementById('nextPeriod');
-
-  if (prev) prev.addEventListener('click', function() { navigate(-1); });
-  if (next) next.addEventListener('click', function() { navigate(1); });
-}
-
-
-      function navigate(direction) {
-  var dir = direction < 0 ? -1 : 1;
-  var d = state.currentDate;
-
-  if (state.currentView === 'day') {
-    d.setDate(d.getDate() + dir);
-  } else if (state.currentView === 'week') {
-    d.setDate(d.getDate() + dir * 7);
-  } else if (state.currentView === 'month') {
-    d.setMonth(d.getMonth() + dir);
-  } else if (state.currentView === 'year') {
-    d.setFullYear(d.getFullYear() + dir);
-  } else {
-    d.setMonth(d.getMonth() + dir);
-  }
-
-  updatePeriodDisplay();
-  renderCalendar();
-}
-
+      }
 
       function updatePeriodDisplay() {
-  var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
-  var year = state.currentDate.getFullYear();
-  var monthEl = document.getElementById('currentMonth');
-  var yearEl = document.getElementById('currentYear');
+        var monthEl = document.getElementById('currentMonth');
+        var yearEl = document.getElementById('currentYear');
 
-  if (!monthEl && !yearEl) return;
+        if (!monthEl || !yearEl) return;
 
-  if (state.currentView === 'year') {
-    if (monthEl) monthEl.textContent = 'Année';
-    if (yearEl) yearEl.textContent = String(year);
-  } else {
-    if (monthEl) monthEl.textContent = monthName;
-    if (yearEl) yearEl.textContent = String(year);
-  }
-}
+        var year = state.currentDate.getFullYear();
 
+        if (state.currentView === 'year') {
+          monthEl.textContent = 'Année';
+        } else {
+          var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
+          monthEl.textContent = monthName;
+        }
+
+        yearEl.textContent = String(year);
+      }
 
       function getCurrentRange() {
-  var base = new Date(state.currentDate.getTime());
-  var start, end;
+        var base = new Date(state.currentDate.getTime());
+        var start, end;
 
-  if (state.currentView === 'day') {
-    start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-    end = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  } else if (state.currentView === 'week') {
-    var day = base.getDay(); // 0=dimanche
-    var delta = (day + 6) % 7; // pour arriver au lundi
-    start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
-    end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-  } else if (state.currentView === 'month') {
-    start = new Date(base.getFullYear(), base.getMonth(), 1);
-    end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-  } else if (state.currentView === 'year') {
-    start = new Date(base.getFullYear(), 0, 1);
-    end = new Date(base.getFullYear(), 11, 31);
-  } else {
-    start = new Date(base.getFullYear(), base.getMonth(), 1);
-    end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-  }
+        if (state.currentView === 'day') {
+          start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+          end = new Date(start.getTime());
+        } else if (state.currentView === 'week') {
+          var day = base.getDay(); // 0=dim
+          var delta = (day + 6) % 7; // pour arriver au lundi
+          start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
+          end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+        } else if (state.currentView === 'month') {
+          start = new Date(base.getFullYear(), base.getMonth(), 1);
+          end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+        } else if (state.currentView === 'year') {
+          start = new Date(base.getFullYear(), 0, 1);
+          end = new Date(base.getFullYear(), 11, 31);
+        } else {
+          start = new Date(base.getFullYear(), base.getMonth(), 1);
+          end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+        }
 
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  return { start: start, end: end };
-}
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
 
+        return {
+          start: start,
+          end: end
+        };
+      }
 
       // ============================================
       // Rendu principal
       // ============================================
       function renderCalendar() {
+        var container = document.querySelector('.calendar-container');
+        if (container) {
+          if (state.currentView === 'year') {
+            container.classList.add('year-view');
+          } else {
+            container.classList.remove('year-view');
+          }
+        }
+
+        if (state.currentView === 'year') {
+          renderYearView();
+          return;
+        }
+
         var range = getCurrentRange();
         renderDaysHeader(range);
         renderGrid(range);
@@ -2478,6 +2507,65 @@
         }
       }
 
+      function renderYearView() {
+        var grid = document.getElementById('calendarGrid');
+        var header = document.getElementById('daysHeader');
+
+        if (!grid || !header) return;
+
+        // En vue Année, on masque l'en-tête des jours
+        header.innerHTML = '';
+
+        var year = state.currentDate.getFullYear();
+
+        grid.innerHTML = '';
+
+        var yearGrid = document.createElement('div');
+        yearGrid.className = 'year-grid';
+
+        for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+          var stats = computeMonthStats(year, monthIndex);
+
+          var card = document.createElement('div');
+          card.className = 'year-month-card';
+          card.setAttribute('data-month-index', String(monthIndex));
+
+          card.innerHTML =
+            '<div class="year-month-title">' + CONFIG.MONTHS[monthIndex] + '</div>' +
+            '<div class="year-month-stats">' +
+              '<div class="year-month-stat">' +
+                '<i class="fas fa-calendar-check"></i>' +
+                '<span>' + stats.bookings + ' réserv.</span>' +
+              '</div>' +
+              '<div class="year-month-stat">' +
+                '<i class="fas fa-moon"></i>' +
+                '<span>' + stats.nights + ' nuits</span>' +
+              '</div>' +
+            '</div>';
+
+          (function(mIndex) {
+            card.addEventListener('click', function() {
+              // En cliquant sur une carte, on bascule en vue Mois sur ce mois
+              state.currentView = 'month';
+              state.currentDate = new Date(year, mIndex, 1);
+
+              var viewTabs = document.querySelectorAll('.view-tab');
+              for (var i = 0; i < viewTabs.length; i++) {
+                var v = viewTabs[i].getAttribute('data-view');
+                viewTabs[i].classList.toggle('active', v === 'month');
+              }
+
+              updatePeriodDisplay();
+              renderCalendar();
+            });
+          })(monthIndex);
+
+          yearGrid.appendChild(card);
+        }
+
+        grid.appendChild(yearGrid);
+      }
+
       // ============================================
       // Propriétés - colonne de gauche
       // ============================================
@@ -2550,10 +2638,49 @@
         }
       }
 
+      function computeMonthStats(year, monthIndex) {
+        var start = new Date(year, monthIndex, 1);
+        var end = new Date(year, monthIndex + 1, 0);
+
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+
+        var bookingsCount = 0;
+        var nightsCount = 0;
+
+        for (var i = 0; i < state.bookings.length; i++) {
+          var b = state.bookings[i];
+          if (!b.startDate || !b.endDate) continue;
+
+          var startDate = new Date(b.startDate);
+          var endDate = new Date(b.endDate);
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
+
+          // Pas de chevauchement avec le mois
+          if (endDate < start || startDate > end) continue;
+
+          bookingsCount++;
+
+          var effStart = startDate < start ? start : startDate;
+          var effEnd = endDate > end ? end : endDate;
+
+          var diffMs = effEnd - effStart;
+          if (diffMs > 0) {
+            nightsCount += Math.round(diffMs / (1000 * 60 * 60 * 24));
+          }
+        }
+
+        return {
+          bookings: bookingsCount,
+          nights: nightsCount
+        };
+      }
+
       // ============================================
       // Utils
       // ============================================
-      function isToday(date) {
+
+function isToday(date) {
         var today = new Date();
         return date.getDate() === today.getDate() &&
                date.getMonth() === today.getMonth() &&
