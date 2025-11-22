@@ -5,10 +5,29 @@ const API_URL = 'https://lcc-booking-manager.onrender.com';
 
 let calendar = null;
 let allReservations = [];
-
-// Set global activeFilters so the modern calendar (in app.html) can read it
 let activeFilters = new Set();
+
+// expose filters for the modern grid calendar
 window.activeFilters = activeFilters;
+
+// Colors by source/platform (for both calendars)
+const SOURCE_COLORS = {
+  airbnb: { bg: '#FF5A5F', border: '#FF5A5F' },   // rose foncé
+  booking: { bg: '#003580', border: '#003580' },  // bleu foncé
+  direct: { bg: '#10B981', border: '#10B981' },   // vert
+  vrbo: { bg: '#1569C7', border: '#1569C7' },
+  expedia: { bg: '#FFC72C', border: '#FFC72C' }
+};
+
+function normalizeSourceToKey(raw) {
+  if (!raw) return 'direct';
+  const v = String(raw).toLowerCase();
+  if (v.includes('airbnb')) return 'airbnb';
+  if (v.includes('booking')) return 'booking';
+  if (v.includes('vrbo') || v.includes('abritel') || v.includes('homeaway')) return 'vrbo';
+  if (v.includes('expedia')) return 'expedia';
+  return 'direct';
+}
 
 // ========================================
 // INITIALIZATION
@@ -114,7 +133,7 @@ function setupEventListeners() {
 }
 
 // ========================================
-// CALENDAR (FULLCALENDAR)
+// CALENDAR
 // ========================================
 
 function initializeCalendar() {
@@ -152,11 +171,12 @@ function initializeCalendar() {
     // classes CSS selon la source (Airbnb / Booking / Direct)
     eventClassNames: function(info) {
       const classes = ['bh-event'];
-      const source = info.event.extendedProps.source;
+      const sourceKey = normalizeSourceToKey(
+        info.event.extendedProps.source || info.event.extendedProps.sourceRaw
+      );
 
-      if (source === 'airbnb') classes.push('bh-event-airbnb');
-      else if (source === 'booking') classes.push('bh-event-booking');
-      else if (source === 'vrbo') classes.push('bh-event-vrbo');
+      if (sourceKey === 'airbnb') classes.push('bh-event-airbnb');
+      else if (sourceKey === 'booking') classes.push('bh-event-booking');
       else classes.push('bh-event-direct');
 
       return classes;
@@ -166,20 +186,19 @@ function initializeCalendar() {
     eventContent: function(arg) {
       const props = arg.event.extendedProps || {};
       const property = props.propertyName || 'Logement';
-      const source = props.source || '';
+      const sourceKey = props.source || normalizeSourceToKey(props.sourceRaw);
       const guest = arg.event.title || '';
 
       const wrapper = document.createElement('div');
       wrapper.className = 'bh-event-inner';
 
       let sourceBadge = '';
-      if (source) {
+      if (sourceKey) {
         const letter =
-          source === 'airbnb' ? 'A' :
-          source === 'booking' ? 'B' :
-          source === 'vrbo' ? 'V' :
+          sourceKey === 'airbnb' ? 'A' :
+          sourceKey === 'booking' ? 'B' :
           'D';
-        sourceBadge = `<span class="bh-event-source bh-source-${source}">${letter}</span>`;
+        sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${letter}</span>`;
       }
 
       wrapper.innerHTML = `
@@ -211,43 +230,29 @@ function changeCalendarView(view) {
   calendar.changeView(viewMap[view] || 'dayGridMonth');
 }
 
-// Normalise le nom de plateforme pour l’UI (airbnb / booking / vrbo / expedia / direct)
-function normalizeSource(raw) {
-  if (!raw) return 'direct';
-  const val = String(raw).toLowerCase();
-  if (val.includes('airbnb')) return 'airbnb';
-  if (val.includes('booking')) return 'booking';
-  if (val.includes('expedia')) return 'expedia';
-  if (val.includes('vrbo') || val.includes('abritel') || val.includes('homeaway')) return 'vrbo';
-  return 'direct';
-}
-
-// Met à jour les events du FullCalendar à partir de allReservations
+// 👉 nouvelle version : couleurs basées sur la plateforme de la réservation
 function updateCalendarEvents() {
   if (!calendar) return;
 
   const events = allReservations
-    .filter(r => {
-      const propId = (r.property && r.property.id) || r.propertyId;
-      if (!propId) return false;
-      return activeFilters.size === 0 || activeFilters.has(propId);
-    })
+    .filter(r => activeFilters.size === 0 || (r.property && activeFilters.has(r.property.id)))
     .map(r => {
       const guestLabel = r.guestName || 'Voyageur';
-      const propertyName = (r.property && r.property.name) || r.propertyName || 'Logement';
-      const propColor = (r.property && r.property.color) || r.propertyColor || '#10B981';
-      const normalizedSource = normalizeSource(r.source);
+      const propertyName = (r.property && r.property.name) || 'Logement';
+      const sourceKey = normalizeSourceToKey(r.source);
+      const colors = SOURCE_COLORS[sourceKey] || SOURCE_COLORS.direct;
 
       return {
         title: guestLabel,
         start: r.start,
         end: r.end,
-        backgroundColor: propColor,
-        borderColor: propColor,
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
         extendedProps: {
           reservation: r,
           propertyName: propertyName,
-          source: normalizedSource
+          sourceRaw: r.source || null, // valeur brute "Airbnb", "Booking.com"...
+          source: sourceKey            // clé normalisée "airbnb", "booking"...
         }
       };
     });
@@ -255,6 +260,7 @@ function updateCalendarEvents() {
   calendar.removeAllEvents();
   calendar.addEventSource(events);
 }
+
 
 // ========================================
 // OVERVIEW CARD (Aujourd’hui & à venir)
@@ -394,85 +400,20 @@ async function loadReservations() {
 
     const data = await response.json();
 
-    const rawReservations = Array.isArray(data.reservations) ? data.reservations : [];
-    const rawProperties = Array.isArray(data.properties) ? data.properties : [];
+    allReservations = data.reservations || [];
 
-    // --- Normalisation des propriétés ---
-    const propertiesById = {};
+    console.log('DEBUG PROPERTIES', JSON.stringify(data.properties, null, 2));
+    console.log('DEBUG RESERVATIONS', JSON.stringify(allReservations, null, 2));
 
-    rawProperties.forEach(p => {
-      if (!p || p.id == null) return;
-      const id = String(p.id);
-      propertiesById[id] = {
-        id,
-        name: p.name || 'Logement',
-        color: p.color || '#10B981',
-        count: 0
-      };
-    });
-
-    // --- Normalisation des réservations + comptage par logement ---
-    const normalizedReservations = rawReservations.map((r, index) => {
-      const propId =
-        (r.property && r.property.id != null) ? String(r.property.id) :
-        (r.propertyId != null ? String(r.propertyId) : null);
-
-      const propName =
-        r.propertyName ||
-        (r.property && r.property.name) ||
-        'Logement';
-
-      const propColor =
-        r.propertyColor ||
-        (r.property && r.property.color) ||
-        '#10B981';
-
-      if (propId) {
-        if (!propertiesById[propId]) {
-          propertiesById[propId] = {
-            id: propId,
-            name: propName,
-            color: propColor,
-            count: 0
-          };
-        }
-        propertiesById[propId].count += 1;
-      }
-
-      return {
-        ...r,
-        propertyId: propId,
-        propertyName: propName,
-        propertyColor: propColor,
-        property: {
-          id: propId,
-          name: propName,
-          color: propColor
-        }
-      };
-    });
-
-    const propertiesForUI = Object.values(propertiesById);
-
-    allReservations = normalizedReservations;
-
-    // Expose pour d'autres scripts si besoin
+    // pour les notifications
     window.LCC_RESERVATIONS = allReservations;
-    window.LCC_PROPERTIES = propertiesForUI;
-
-    console.log('DEBUG PROPERTIES NORMALIZED', JSON.stringify(propertiesForUI, null, 2));
-    console.log('DEBUG RESERVATIONS NORMALIZED', JSON.stringify(allReservations, null, 2));
 
     // Carte "Vue d’ensemble"
     updateOverviewFromReservations(allReservations);
 
     // Stats + filtres
-    updateStats({
-      ...data,
-      reservations: allReservations,
-      properties: propertiesForUI
-    });
-    renderPropertyFilters(propertiesForUI);
+    updateStats(data);
+    renderPropertyFilters(data.properties || []);
 
     // Calendrier FullCalendar
     updateCalendarEvents();
@@ -480,7 +421,7 @@ async function loadReservations() {
     // Calendrier moderne (vue tableau par logement)
     if (window.renderModernCalendar) {
       try {
-        window.renderModernCalendar(allReservations, propertiesForUI);
+        window.renderModernCalendar(allReservations, data.properties || []);
       } catch (e) {
         console.warn('Erreur calendrier moderne', e);
       }
@@ -534,7 +475,6 @@ async function syncReservations() {
 // ========================================
 // UI UPDATES (stats + filtres)
 // ========================================
-
 // Petit helper pour ne pas planter si les éléments de stats n'existent pas sur cette page
 function safeSetText(id, value) {
   const el = document.getElementById(id);
@@ -562,7 +502,11 @@ function updateStats(data) {
   if (navBadge) {
     navBadge.textContent = reservations.length;
   }
+
+  // Si tu avais d'autres stats (CA, taux d'occupation, etc.),
+  // applique la même logique safeSetText('id', valeur)
 }
+
 
 function renderPropertyFilters(properties) {
   const container = document.getElementById('propertyFilters');
@@ -599,13 +543,7 @@ function togglePropertyFilter(propertyId) {
 
   updateCalendarEvents();
 
-  // le calendrier moderne lit directement window.activeFilters (déjà synchronisé)
-  if (window.renderModernCalendar && typeof window.renderModernCalendar === 'function') {
-    // on relance le rendu en envoyant les mêmes données
-    if (window.LCC_RESERVATIONS && window.LCC_PROPERTIES) {
-      window.renderModernCalendar(window.LCC_RESERVATIONS, window.LCC_PROPERTIES);
-    }
-  }
+  // Le calendrier moderne lit window.activeFilters, que l'on met à jour par référence
 }
 
 function clearFilters() {
@@ -616,10 +554,6 @@ function clearFilters() {
     .forEach(badge => badge.classList.remove('active'));
 
   updateCalendarEvents();
-
-  if (window.renderModernCalendar && window.LCC_RESERVATIONS && window.LCC_PROPERTIES) {
-    window.renderModernCalendar(window.LCC_RESERVATIONS, window.LCC_PROPERTIES);
-  }
 }
 
 // ========================================
@@ -633,20 +567,16 @@ function showReservationModal(reservation) {
   const checkin = new Date(reservation.start);
   const checkout = new Date(reservation.end);
 
-  const prop = reservation.property || {};
-  const propColor = prop.color || reservation.propertyColor || '#10B981';
-  const propName = prop.name || reservation.propertyName || 'Logement';
-
   modalBody.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 20px;">
 
       <div style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-md);">
-        <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: ${propColor}; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+        <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: ${reservation.property.color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
           <i class="fas fa-home"></i>
         </div>
         <div>
-          <div style="font-weight: 700; font-size: 18px; color: var(--text-primary);">${propName}</div>
-          <div style="color: var(--text-secondary); font-size: 14px;">${reservation.source || ''}</div>
+          <div style="font-weight: 700; font-size: 18px; color: var(--text-primary);">${reservation.property.name}</div>
+          <div style="color: var(--text-secondary); font-size: 14px;">${reservation.source}</div>
         </div>
       </div>
 
