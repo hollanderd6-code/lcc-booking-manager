@@ -415,6 +415,9 @@ async function loadReservations() {
     updateStats(data);
     renderPropertyFilters(data.properties || []);
 
+    // Onboarding "Bien démarrer"
+    updateOnboardingFromData(data);
+
     // Calendrier FullCalendar
     updateCalendarEvents();
 
@@ -505,6 +508,131 @@ function updateStats(data) {
 
   // Si tu avais d'autres stats (CA, taux d'occupation, etc.),
   // applique la même logique safeSetText('id', valeur)
+}
+
+// ========================================
+// ONBOARDING ("Bien démarrer avec Boostinghost")
+// ========================================
+
+function updateOnboardingFromData(data) {
+  if (!data) data = {};
+  const properties = Array.isArray(data.properties) ? data.properties : [];
+  const reservations = Array.isArray(data.reservations) ? data.reservations : [];
+
+  // User depuis le localStorage (pour Stripe / messages)
+  let user = null;
+  try {
+    const rawUser = localStorage.getItem('lcc_user');
+    user = rawUser ? JSON.parse(rawUser) : null;
+  } catch (e) {
+    console.warn('Impossible de lire lcc_user pour l’onboarding', e);
+  }
+
+  const detection = {
+    // Étape 1 : au moins 1 logement créé
+    property: properties.length > 0,
+
+    // Étape 2 : au moins un iCal actif
+    // (simplifié : s’il y a déjà des réservations OU des propriétés avec count > 0)
+    ical: hasIcalConfigured(properties, reservations),
+
+    // Étape 3 : Stripe connecté
+    stripe: detectStripe(user),
+
+    // Étape 4 : messages auto configurés
+    messages: detectMessages(user)
+  };
+
+  let doneCount = 0;
+  let totalCount = 0;
+
+  ['property', 'ical', 'stripe', 'messages'].forEach(stepKey => {
+    const stepEl = document.querySelector('.onboarding-step[data-step="' + stepKey + '"]');
+    if (!stepEl) return;
+
+    totalCount++;
+
+    let isDone = detection[stepKey];
+
+    // Si on ne sait pas détecter (undefined), on lit l’état actuel dans le DOM
+    if (typeof isDone === 'undefined') {
+      const statusEl = stepEl.querySelector('.onboarding-step-status');
+      if (statusEl) {
+        const txt = (statusEl.textContent || '').toLowerCase();
+        isDone = txt.indexOf('termin') !== -1; // "Terminé"
+      } else {
+        isDone = false;
+      }
+    } else {
+      // Sinon on force l’état dans le DOM
+      applyOnboardingStepStatus(stepKey, isDone);
+    }
+
+    if (isDone) doneCount++;
+  });
+
+  const progressEl = document.getElementById('onboardingProgressValue');
+  if (progressEl) {
+    progressEl.textContent = String(doneCount);
+  }
+}
+
+// Étape 2 : on considère qu’un iCal est connecté
+// dès qu’il y a au moins une réservation ou un "count" > 0 sur un logement
+function hasIcalConfigured(properties, reservations) {
+  if (Array.isArray(reservations) && reservations.length > 0) return true;
+  if (Array.isArray(properties) && properties.some(p => p.count && p.count > 0)) return true;
+  return false;
+}
+
+// Étape 3 : détection Stripe (best effort)
+// - user.stripeConnected === true
+// - ou user.stripeAccountId défini
+// - ou flag LCC_STRIPE_CONNECTED dans le localStorage
+function detectStripe(user) {
+  if (localStorage.getItem('LCC_STRIPE_CONNECTED')) return true;
+  if (!user) return undefined;
+
+  if (typeof user.stripeConnected === 'boolean') return user.stripeConnected;
+  if (user.stripeAccountId) return true;
+
+  // on ne sait pas → on laisse l’état HTML
+  return undefined;
+}
+
+// Étape 4 : détection messages automatiques
+// - user.autoMessagesConfigured === true
+// - ou flag LCC_MESSAGES_CONFIGURED dans le localStorage
+function detectMessages(user) {
+  if (localStorage.getItem('LCC_MESSAGES_CONFIGURED')) return true;
+  if (!user) return undefined;
+
+  if (typeof user.autoMessagesConfigured === 'boolean') {
+    return user.autoMessagesConfigured;
+  }
+
+  // on ne sait pas → on laisse l’état HTML
+  return undefined;
+}
+
+// Applique l’état "Terminé / À faire" visuellement pour un step
+function applyOnboardingStepStatus(stepKey, isDone) {
+  const stepEl = document.querySelector('.onboarding-step[data-step="' + stepKey + '"]');
+  if (!stepEl) return;
+
+  const iconEl = stepEl.querySelector('.onboarding-step-icon');
+  const statusEl = stepEl.querySelector('.onboarding-step-status');
+
+  if (iconEl) {
+    iconEl.classList.remove('done', 'todo');
+    iconEl.classList.add(isDone ? 'done' : 'todo');
+  }
+
+  if (statusEl) {
+    statusEl.classList.remove('done', 'todo');
+    statusEl.classList.add(isDone ? 'done' : 'todo');
+    statusEl.textContent = isDone ? 'Terminé' : 'À faire';
+  }
 }
 
 
