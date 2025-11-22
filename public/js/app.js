@@ -528,7 +528,7 @@ function updateOnboardingFromData(data) {
     console.warn('Impossible de lire lcc_user pour l’onboarding', e);
   }
 
-  const detection = {
+    const detection = {
     // Étape 1 : au moins 1 logement créé
     property: properties.length > 0,
 
@@ -536,12 +536,13 @@ function updateOnboardingFromData(data) {
     // (simplifié : s’il y a déjà des réservations OU des propriétés avec count > 0)
     ical: hasIcalConfigured(properties, reservations),
 
-    // Étape 3 : Stripe connecté
-    stripe: detectStripe(user),
+    // Étape 3 : Stripe connecté (on regarde user + data backend)
+    stripe: detectStripe(user, data),
 
     // Étape 4 : messages auto configurés
     messages: detectMessages(user)
   };
+
 
   let doneCount = 0;
   let totalCount = 0;
@@ -589,16 +590,40 @@ function hasIcalConfigured(properties, reservations) {
 // - user.stripeConnected === true
 // - ou user.stripeAccountId défini
 // - ou flag LCC_STRIPE_CONNECTED dans le localStorage
-function detectStripe(user) {
+// Étape 3 : détection Stripe (best effort)
+// - flag localStorage LCC_STRIPE_CONNECTED
+// - ou infos renvoyées par l'API dans "data"
+// - ou champs dans lcc_user (stripeConnected / stripeAccountId / stripeAccount)
+function detectStripe(user, data) {
+  // 1) Override manuel possible
   if (localStorage.getItem('LCC_STRIPE_CONNECTED')) return true;
-  if (!user) return undefined;
 
-  if (typeof user.stripeConnected === 'boolean') return user.stripeConnected;
-  if (user.stripeAccountId) return true;
+  // 2) Infos venant du backend (data = réponse /api/reservations)
+  if (data) {
+    // exemple : { stripeConnected: true }
+    if (data.stripeConnected === true) return true;
 
-  // on ne sait pas → on laisse l’état HTML
+    // exemple : { stripe: { connected: true } }
+    if (data.stripe && data.stripe.connected === true) return true;
+
+    // exemple : { account: { stripeConnected: true } }
+    if (data.account && data.account.stripeConnected === true) return true;
+  }
+
+  // 3) Infos côté user (localStorage lcc_user)
+  if (user) {
+    if (typeof user.stripeConnected === 'boolean') {
+      return user.stripeConnected;
+    }
+    if (user.stripeAccountId || user.stripeAccount) {
+      return true;
+    }
+  }
+
+  // 4) On ne sait pas → on laisse l’état HTML (maquette)
   return undefined;
 }
+
 
 // Étape 4 : détection messages automatiques
 // - user.autoMessagesConfigured === true
