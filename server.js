@@ -90,7 +90,7 @@ const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
 
 // Data en mémoire
-let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations] }
+let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations ou blocages] }
 let DEPOSITS = [];               // { id, reservationUid, amountCents, ... }
 
 // ============================================
@@ -196,7 +196,7 @@ async function getUserFromRequest(req) {
 // PROPERTIES (logements) - stockées en base
 // ============================================
 
-// Charge tous les logements (tous users) en mémoire
+// PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
   try {
     const result = await pool.query(`
@@ -283,7 +283,7 @@ async function syncAllCalendars() {
       // Base = iCal
       reservationsStore.properties[property.id] = reservations;
 
-      // Ajouter les réservations manuelles
+      // Ajouter les réservations manuelles (y compris blocages)
       const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
       if (manualForProperty.length > 0) {
         reservationsStore.properties[property.id] = [
@@ -421,6 +421,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       end,
       source: 'MANUEL',
       platform: 'MANUEL',
+      type: 'manual',
       guestName: guestName || 'Réservation manuelle',
       notes: notes || '',
       createdAt: new Date().toISOString()
@@ -443,6 +444,58 @@ app.post('/api/reservations/manual', async (req, res) => {
     });
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer un blocage manuel (dates bloquées)
+app.post('/api/blocks', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, start, end, reason } = req.body || {};
+
+    if (!propertyId || !start || !end) {
+      return res.status(400).json({ error: 'propertyId, start et end sont requis' });
+    }
+
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    const block = {
+      uid: 'block_' + Date.now(),
+      start,
+      end,
+      source: 'BLOCK',
+      platform: 'BLOCK',
+      type: 'block',
+      guestName: reason || 'Blocage calendrier',
+      notes: reason || '',
+      createdAt: new Date().toISOString()
+    };
+
+    if (!MANUAL_RESERVATIONS[propertyId]) {
+      MANUAL_RESERVATIONS[propertyId] = [];
+    }
+    MANUAL_RESERVATIONS[propertyId].push(block);
+    await saveManualReservations();
+
+    if (!reservationsStore.properties[propertyId]) {
+      reservationsStore.properties[propertyId] = [];
+    }
+    reservationsStore.properties[propertyId].push(block);
+
+    res.status(201).json({
+      message: 'Blocage créé',
+      block
+    });
+  } catch (err) {
+    console.error('Erreur création blocage:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -625,6 +678,81 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
   });
 
   res.json(result);
+});
+
+// ============================================
+// ROUTE ICS EXPORT - Calendrier Boostinghost
+// ============================================
+
+function formatDateToICS(date) {
+  const d = (date instanceof Date) ? date : new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
+
+function formatDateTimeToICS(date) {
+  const d = (date instanceof Date) ? date : new Date(date);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const hours = String(d.getUTCHours()).padStart(2, '0');
+  const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(d.getUTCSeconds()).padStart(2, '0');
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+}
+
+// ICS d'un logement : contient les réservations manuelles + blocages
+app.get('/ical/property/:propertyId.ics', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+
+    const property = PROPERTIES.find(p => p.id === propertyId);
+    if (!property) {
+      return res.status(404).send('Property not found');
+    }
+
+    // On exporte uniquement ce qui est dans MANUAL_RESERVATIONS :
+    // - réservations manuelles (type: 'manual')
+    // - blocages (type: 'block')
+    const manual = MANUAL_RESERVATIONS[propertyId] || [];
+
+    const lines = [];
+    lines.push('BEGIN:VCALENDAR');
+    lines.push('VERSION:2.0');
+    lines.push('PRODID:-//Boostinghost//BookingManager//FR');
+
+    const nowICS = formatDateTimeToICS(new Date());
+
+    manual.forEach((r, idx) => {
+      if (!r.start || !r.end) return;
+      const dtStart = formatDateToICS(r.start);
+      const dtEnd = formatDateToICS(r.end);
+
+      const uid = (r.uid || `block_${propertyId}_${idx}`) + '@boostinghost-manager';
+      const summary =
+        r.type === 'block' || r.source === 'BLOCK'
+          ? 'Blocage Boostinghost'
+          : (r.guestName ? `Réservation – ${r.guestName}` : 'Réservation Boostinghost');
+
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${uid}`);
+      lines.push(`DTSTAMP:${nowICS}`);
+      lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
+      lines.push(`DTEND;VALUE=DATE:${dtEnd}`);
+      lines.push(`SUMMARY:${summary}`);
+      lines.push('END:VEVENT');
+    });
+
+    lines.push('END:VCALENDAR');
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.send(lines.join('\r\n'));
+  } catch (err) {
+    console.error('Erreur /ical/property/:propertyId.ics :', err);
+    res.status(500).send('Internal server error');
+  }
 });
 
 // ============================================
@@ -1362,6 +1490,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     res.status(500).json({ error: 'Impossible de créer la session de paiement' });
   }
 });
+
 // ============================================
 // 💳 ROUTES API - STRIPE CONNECT (compte hôte)
 // ============================================
@@ -1465,11 +1594,6 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
     });
   }
 });
-
-
-// ============================================
-// 🚀 ROUTES API - CAUTIONS (Stripe)
-// ============================================
 
 // ============================================
 // 🚀 ROUTES API - CAUTIONS (Stripe)
@@ -1608,7 +1732,6 @@ app.post('/api/deposits', async (req, res) => {
     });
   }
 });
-
 
 // ============================================
 // DÉMARRAGE
