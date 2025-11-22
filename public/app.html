@@ -2448,64 +2448,79 @@
       }
 
       function renderBookingsInCells(range) {
-        var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
+  var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
 
-        for (var i = 0; i < state.bookings.length; i++) {
-          var b = state.bookings[i];
-          if (!b.startDate || !b.endDate) continue;
+  for (var i = 0; i < state.bookings.length; i++) {
+    var b = state.bookings[i];
+    if (!b.startDate || !b.endDate) continue;
+    if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
+      continue;
+    }
 
-          if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
-            continue;
-          }
+    var startDate = new Date(b.startDate);
+    var endDate = new Date(b.endDate);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
 
-          var startDate = new Date(b.startDate);
-          var endDate = new Date(b.endDate);
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
+    // 🔹 On travaille en "nuits" : du jour d'arrivée au jour AVANT le checkout
+    var startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    var endDay   = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-          if (endDate < range.start || startDate > range.end) continue;
+    // sécurité : si l'ICS renvoie une fin <= début, on force au moins 1 nuit
+    if (endDay <= startDay) {
+      endDay = new Date(startDay.getTime() + 24 * 60 * 60 * 1000);
+    }
 
-          var cells = [];
-          var cur = new Date(startDate.getTime());
-          cur.setHours(0,0,0,0);
+    var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
 
-          while (cur <= endDate) {
-            var dateStr = formatDateForCell(cur);
-            var selector = '.calendar-cell[data-date=\"' + dateStr + '\"][data-property-id=\"' + (b.propertyId || '') + '\"]';
-            var cell = document.querySelector(selector);
-            if (cell) cells.push(cell);
-            cur.setDate(cur.getDate() + 1);
-          }
+    // si toutes les nuits sont hors de la période affichée, on passe
+    if (lastNight < range.start || startDay > range.end) continue;
 
-          if (!cells.length) continue;
+    var cells = [];
+    var cur = new Date(startDay.getTime());
+    while (cur <= lastNight) {
+      var dateStr = formatDateForCell(cur);
+      var selector =
+        '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + (b.propertyId || '') + '"]';
+      var cell = document.querySelector(selector);
+      if (cell) cells.push(cell);
+      cur.setDate(cur.getDate() + 1);
+    }
 
-          for (var j = 0; j < cells.length; j++) {
-            var cellEl = cells[j];
-            var block = document.createElement('div');
-            var platform = normalizePlatform(b.platform);
-            block.className = 'booking-block ' + platform;
-            block.setAttribute('data-booking-id', b.id);
+    if (!cells.length) continue;
 
-            if (cells.length === 1) {
-              block.classList.add('single');
-            } else if (j === 0) {
-              block.classList.add('start');
-            } else if (j === cells.length - 1) {
-              block.classList.add('end');
-            }
+    for (var j = 0; j < cells.length; j++) {
+      var cellEl = cells[j];
+      var block = document.createElement('div');
+      var platform = normalizePlatform(b.platform);
 
-            if (j === 0 || cells.length === 1) {
-              var icon = document.createElement('i');
-              icon.className = 'fas platform-icon ' + (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
-              block.appendChild(icon);
+      block.className = 'booking-block ' + platform;
+      block.setAttribute('data-booking-id', b.id);
 
-              var label = document.createTextNode(b.guestName || 'Réservation');
-              block.appendChild(label);
-            }
-
-            cellEl.appendChild(block);
-          }
-        }
+      if (cells.length === 1) {
+        block.classList.add('single');
+      } else if (j === 0) {
+        block.classList.add('start');
+      } else if (j === cells.length - 1) {
+        block.classList.add('end');
       }
+
+      // on n'affiche le texte que sur le 1er jour
+      if (j === 0 || cells.length === 1) {
+        var icon = document.createElement('i');
+        icon.className =
+          'fas platform-icon ' +
+          (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
+        block.appendChild(icon);
+
+        var label = document.createTextNode(b.guestName || 'Réservation');
+        block.appendChild(label);
+      }
+
+      cellEl.appendChild(block);
+    }
+  }
+}
+
 
       function renderYearView() {
         var grid = document.getElementById('calendarGrid');
