@@ -641,6 +641,17 @@
       }
     }
 
+    function normalizeSourceToKey(raw) {
+      if (!raw) return 'direct';
+      const v = String(raw).toLowerCase();
+      if (v.includes('airbnb')) return 'airbnb';
+      if (v.includes('booking')) return 'booking';
+      if (v.includes('vrbo') || v.includes('abritel') || v.includes('homeaway')) return 'vrbo';
+      if (v.includes('expedia')) return 'expedia';
+      if (v.includes('block') || v.includes('blocage') || v.includes('indispo')) return 'block';
+      return 'direct';
+    }
+
     function renderDepositsTable() {
       const container = document.getElementById('depositsContainer');
       const select = document.getElementById('propertyFilter');
@@ -699,12 +710,13 @@
               <th>Logement</th>
               <th>Dates</th>
               <th>Voyageur</th>
+              <th>Source</th>
               <th>Caution</th>
               <th>Statut</th>
               <th>Lien</th>
               <th>Actions</th>
             </tr>
-          </thead>
+</thead>
           <tbody>
       `;
 
@@ -741,9 +753,20 @@
           }
         }
 
-        // Détection de la plateforme (principalement pour exclure Airbnb)
-        const rawSource = (r.source || r.sourceRaw || r.channel || '').toString().toLowerCase();
-        const isAirbnb = rawSource.includes('airbnb');
+        // Détection de la plateforme (Airbnb / Booking / etc.)
+        const rawSource = r.source || r.sourceRaw || r.channel || '';
+        const sourceKey = normalizeSourceToKey(rawSource);
+        const isAirbnb = sourceKey === 'airbnb';
+        const isBooking = sourceKey === 'booking';
+
+        let sourceLabel = '-';
+        if (sourceKey === 'airbnb') sourceLabel = 'Airbnb';
+        else if (sourceKey === 'booking') sourceLabel = 'Booking.com';
+        else if (sourceKey === 'direct') sourceLabel = 'Direct';
+        else if (sourceKey === 'vrbo') sourceLabel = 'Vrbo';
+        else if (sourceKey === 'expedia') sourceLabel = 'Expedia';
+        else if (sourceKey === 'block') sourceLabel = 'Blocage';
+        else if (rawSource) sourceLabel = rawSource;
 
         const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
 
@@ -751,12 +774,14 @@
 
         if (isAirbnb) {
           actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
-        } else {
+        } else if (isBooking) {
           actionsHtml = `
             <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
               ${d ? 'Nouveau lien' : 'Créer un lien'}
             </button>
           `;
+        } else {
+          actionsHtml = '<span class="small-hint text-secondary">Caution non disponible pour cette source</span>';
         }
 
         html += `
@@ -764,6 +789,7 @@
             <td>${r.propertyName || 'Logement'}</td>
             <td>${r.startDate} → ${r.endDate}</td>
             <td>${r.guestName || '-'}</td>
+            <td>${sourceLabel}</td>
             <td>${amountText}</td>
             <td>${statusBadge}</td>
             <td>${linkHtml || '-'}</td>
