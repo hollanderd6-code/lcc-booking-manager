@@ -402,12 +402,12 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 }
 /**
  * Notifications ménage : pour chaque nouvelle réservation, si un logement a un cleaner assigné,
- * on envoie un email à ce cleaner.
+ * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
  */
 async function notifyCleanersAboutNewBookings(newReservations) {
   const transporter = getEmailTransporter();
-  if (!transporter) {
-    console.log('⚠️  Transport email non configuré, aucune notification ménage envoyée');
+  if (!transporter && !whatsappService.isConfigured()) {
+    console.log('⚠️  Ni email ni WhatsApp configurés, aucune notification ménage envoyée');
     return;
   }
 
@@ -447,15 +447,10 @@ async function notifyCleanersAboutNewBookings(newReservations) {
         // Aucun cleaner assigné à ce logement → rien à envoyer
         continue;
       }
-      if (!assignment.email) {
-        console.log(
-          `ℹ️ Cleaner ${assignment.cleanerId} pour logement ${res.propertyId} n'a pas d'email, notification ménage ignorée.`
-        );
-        continue;
-      }
 
       const cleanerEmail = assignment.email;
-      const cleanerName = assignment.name || 'partenaire ménage';
+      const cleanerPhone = assignment.phone;
+      const cleanerName  = assignment.name || 'partenaire ménage';
 
       const propertyName =
         res.propertyName ||
@@ -478,8 +473,10 @@ async function notifyCleanersAboutNewBookings(newReservations) {
 
       const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
 
-      const subject = `🧹 Nouveau ménage à prévoir – ${propertyName}`;
-      const textBody = `${hello}
+      // Email
+      if (transporter && cleanerEmail) {
+        const subject = `🧹 Nouveau ménage à prévoir – ${propertyName}`;
+        const textBody = `${hello}
 
 Un nouveau séjour vient d’être réservé pour le logement ${propertyName}.
 
@@ -491,42 +488,67 @@ Ménage à prévoir : le ${end} après le départ des voyageurs
 Merci beaucoup,
 L'équipe Boostinghost`;
 
-      const htmlBody = `
-        <p>${hello}</p>
-        <p>Un nouveau séjour vient d’être réservé pour le logement <strong>${propertyName}</strong>.</p>
-        <ul>
-          <li><strong>Voyageur :</strong> ${guest}</li>
-          <li><strong>Séjour :</strong> du ${start} au ${end}</li>
-          <li><strong>Ménage à prévoir :</strong> le ${end} après le départ des voyageurs</li>
-        </ul>
-        <p style="font-size:13px;color:#6b7280;">
-          Heure exacte de check-out à confirmer avec la conciergerie.
-        </p>
-      `;
+        const htmlBody = `
+          <p>${hello}</p>
+          <p>Un nouveau séjour vient d’être réservé pour le logement <strong>${propertyName}</strong>.</p>
+          <ul>
+            <li><strong>Voyageur :</strong> ${guest}</li>
+            <li><strong>Séjour :</strong> du ${start} au ${end}</li>
+            <li><strong>Ménage à prévoir :</strong> le ${end} après le départ des voyageurs</li>
+          </ul>
+          <p style="font-size:13px;color:#6b7280;">
+            Heure exacte de check-out à confirmer avec la conciergerie.
+          </p>
+        `;
 
-      tasks.push(
-        transporter
-          .sendMail({
-            from,
-            to: cleanerEmail,
-            subject,
-            text: textBody,
-            html: htmlBody
-          })
-          .then(() => {
-            console.log(
-              `📧 Notification ménage envoyée à ${cleanerEmail} (resa uid=${res.uid || res.id})`
-            );
-          })
-          .catch((err) => {
-            console.error('❌ Erreur envoi email notification ménage :', err);
-          })
-      );
+        tasks.push(
+          transporter
+            .sendMail({
+              from,
+              to: cleanerEmail,
+              subject,
+              text: textBody,
+              html: htmlBody
+            })
+            .then(() => {
+              console.log(
+                `📧 Notification ménage envoyée à ${cleanerEmail} (resa uid=${res.uid || res.id})`
+              );
+            })
+            .catch((err) => {
+              console.error('❌ Erreur envoi email notification ménage :', err);
+            })
+        );
+      }
+
+      // WhatsApp
+      if (whatsappService.isConfigured() && cleanerPhone) {
+        const waText =
+          `Nouveau ménage à prévoir:\n` +
+          `Logement: ${propertyName}\n` +
+          `Voyageur: ${guest}\n` +
+          `Séjour: du ${start} au ${end}\n` +
+          `Ménage à prévoir le ${end} après check-out.`;
+
+        tasks.push(
+          whatsappService
+            .sendWhatsAppText(cleanerPhone, waText)
+            .then(() => {
+              console.log(
+                `📱 Notification WhatsApp ménage envoyée à ${cleanerPhone} (resa uid=${res.uid || res.id})`
+              );
+            })
+            .catch((err) => {
+              console.error('❌ Erreur envoi WhatsApp notification ménage :', err);
+            })
+        );
+      }
     }
   }
 
   await Promise.all(tasks);
 }
+
 
 // ============================================
 // APP / STRIPE / STORE
