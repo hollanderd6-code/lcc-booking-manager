@@ -548,6 +548,148 @@ L'équipe Boostinghost`;
 
   await Promise.all(tasks);
 }
+/**
+ * Envoie chaque jour un planning de ménage pour "demain"
+ * à chaque cleaner assigné (email + WhatsApp si dispo).
+ */
+async function sendDailyCleaningPlan() {
+  const transporter = getEmailTransporter();
+  if (!transporter && !whatsappService.isConfigured()) {
+    console.log('⚠️  Ni email ni WhatsApp configurés, planning ménage non envoyé');
+    return;
+  }
+
+  if (!PROPERTIES || !Array.isArray(PROPERTIES) || PROPERTIES.length === 0) {
+    console.log('ℹ️ Aucun logement configuré, pas de planning ménage à envoyer.');
+    return;
+  }
+
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const tomorrowIso = tomorrow.toISOString().slice(0, 10); // yyyy-mm-dd
+
+  // 1) Construire un map propertyId -> { cleanerId, name, email, phone }
+  const assignmentsByPropertyId = {};
+
+  const userIds = [...new Set(PROPERTIES.map((p) => p.userId))];
+  for (const userId of userIds) {
+    const map = await getCleanerAssignmentsMapForUser(userId);
+    Object.keys(map).forEach((propertyId) => {
+      assignmentsByPropertyId[propertyId] = map[propertyId];
+    });
+  }
+
+  // 2) Construire tâches par cleaner
+  const tasksByCleanerId = {}; // cleanerId -> { cleaner, tasks: [] }
+
+  for (const property of PROPERTIES) {
+    const assignment = assignmentsByPropertyId[property.id];
+    if (!assignment) continue;
+
+    const reservations = reservationsStore.properties[property.id] || [];
+    for (const r of reservations) {
+      if (!r || !r.end) continue;
+      if (r.type === 'block' || r.source === 'BLOCK') continue;
+
+      const endDate = new Date(r.end);
+      if (Number.isNaN(endDate.getTime())) continue;
+
+      const endIso = endDate.toISOString().slice(0, 10);
+      if (endIso !== tomorrowIso) continue; // checkout pas demain → ignore
+
+      const cleanerId = assignment.cleanerId;
+      if (!tasksByCleanerId[cleanerId]) {
+        tasksByCleanerId[cleanerId] = {
+          cleaner: assignment,
+          tasks: []
+        };
+      }
+
+      tasksByCleanerId[cleanerId].tasks.push({
+        propertyName: property.name || property.id,
+        guestName: r.guestName || r.guest_name || r.name || 'Voyageur',
+        start: formatDateForEmail(r.start || r.startDate || r.checkIn || r.checkin),
+        end: formatDateForEmail(r.end)
+      });
+    }
+  }
+
+  const tasks = [];
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+
+  Object.keys(tasksByCleanerId).forEach((cleanerId) => {
+    const entry = tasksByCleanerId[cleanerId];
+    const cleaner = entry.cleaner;
+    const jobs = entry.tasks;
+
+    if (!jobs || jobs.length === 0) return;
+
+    const cleanerName = cleaner.name || '';
+    const cleanerEmail = cleaner.email;
+    const cleanerPhone = cleaner.phone;
+
+    const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
+    const subject = `🧹 Planning ménage – ${tomorrowIso}`;
+
+    // Email
+    if (transporter && cleanerEmail) {
+      let textBody = `${hello}\n\nVoici vos ménages prévus pour demain :\n\n`;
+      let htmlBody = `<p>${hello}</p><p>Voici vos ménages prévus pour demain :</p><ul>`;
+
+      jobs.forEach((job, index) => {
+        textBody += `${index + 1}. ${job.propertyName} – départ le ${job.end} (séjour du ${job.start} au ${job.end}, ${job.guestName})\n`;
+        htmlBody += `<li><strong>${job.propertyName}</strong> – départ le ${job.end} (séjour du ${job.start} au ${job.end}, ${job.guestName})</li>`;
+      });
+
+      textBody += `\nMerci beaucoup,\nL'équipe Boostinghost\n`;
+      htmlBody += `</ul><p style="font-size:13px;color:#6b7280;">Merci beaucoup,<br>L'équipe Boostinghost</p>`;
+
+      tasks.push(
+        transporter
+          .sendMail({
+            from,
+            to: cleanerEmail,
+            subject,
+            text: textBody,
+            html: htmlBody
+          })
+          .then(() => {
+            console.log(
+              `📧 Planning ménage envoyé à ${cleanerEmail} pour ${tomorrowIso}`
+            );
+          })
+          .catch((err) => {
+            console.error('❌ Erreur envoi planning ménage (email) :', err);
+          })
+      );
+    }
+
+    // WhatsApp
+    if (whatsappService.isConfigured() && cleanerPhone) {
+      let waText = `Planning ménage de demain (${tomorrowIso}):\n`;
+      jobs.forEach((job, index) => {
+        waText += `${index + 1}. ${job.propertyName} – départ le ${job.end} (${job.guestName})\n`;
+      });
+
+      tasks.push(
+        whatsappService
+          .sendWhatsAppText(cleanerPhone, waText)
+          .then(() => {
+            console.log(
+              `📱 Planning ménage WhatsApp envoyé à ${cleanerPhone} pour ${tomorrowIso}`
+            );
+          })
+          .catch((err) => {
+            console.error('❌ Erreur WhatsApp planning ménage :', err);
+          })
+      );
+    }
+  });
+
+  await Promise.all(tasks);
+
+  console.log('✅ Planning ménage quotidien envoyé (si tâches détectées).');
+}
 
 
 // ============================================
@@ -2448,6 +2590,17 @@ app.listen(PORT, async () => {
     console.log('');
     console.log('⏰ Synchronisation automatique programmée');
     await syncAllCalendars();
+  });
+  const cleaningPlanHour = parseInt(process.env.CLEANING_PLAN_HOUR || '18', 10); // heure FR (18h par défaut)
+
+  cron.schedule(`0 ${cleaningPlanHour} * * *`, async () => {
+    console.log('');
+    console.log(`⏰ Envoi du planning ménage quotidien (pour demain) à ${cleaningPlanHour}h`);
+    try {
+      await sendDailyCleaningPlan();
+    } catch (err) {
+      console.error('❌ Erreur lors de l’envoi du planning ménage quotidien :', err);
+    }
   });
 
   console.log('');
