@@ -1525,6 +1525,110 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ============================================
+// ROUTES API - ASSIGNATIONS MENAGE (par user)
+// ============================================
+
+// GET - Liste des assignations de ménage
+app.get('/api/cleaning/assignments', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        ca.property_id,
+        ca.cleaner_id,
+        c.name  AS cleaner_name,
+        c.email AS cleaner_email,
+        c.phone AS cleaner_phone
+      FROM cleaning_assignments ca
+      LEFT JOIN cleaners c ON c.id = ca.cleaner_id
+      WHERE ca.user_id = $1
+      ORDER BY ca.property_id ASC
+      `,
+      [user.id]
+    );
+
+    res.json({
+      assignments: result.rows
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/assignments :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer / mettre à jour / supprimer une assignation
+app.post('/api/cleaning/assignments', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, cleanerId } = req.body || {};
+
+    if (!propertyId) {
+      return res.status(400).json({ error: 'propertyId requis' });
+    }
+
+    // Si cleanerId vide → on supprime l'assignation
+    if (!cleanerId) {
+      await pool.query(
+        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND property_id = $2',
+        [user.id, propertyId]
+      );
+      return res.json({
+        message: 'Assignation ménage supprimée',
+        propertyId
+      });
+    }
+
+    // Vérifier que le logement appartient bien à l'utilisateur
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
+    }
+
+    // Vérifier que le cleaner appartient bien à l'utilisateur
+    const cleanerResult = await pool.query(
+      `SELECT id, name, email, phone
+       FROM cleaners
+       WHERE id = $1 AND user_id = $2`,
+      [cleanerId, user.id]
+    );
+
+    if (cleanerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Personne de ménage introuvable pour cet utilisateur' });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO cleaning_assignments (user_id, property_id, cleaner_id, created_at, updated_at)
+      VALUES ($1, $2, $3, NOW(), NOW())
+      ON CONFLICT (user_id, property_id) DO UPDATE
+        SET cleaner_id = EXCLUDED.cleaner_id,
+            updated_at = NOW()
+      `,
+      [user.id, propertyId, cleanerId]
+    );
+
+    res.json({
+      message: 'Assignation ménage enregistrée',
+      assignment: {
+        propertyId,
+        cleanerId
+      }
+    });
+  } catch (err) {
+    console.error('Erreur POST /api/cleaning/assignments :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
