@@ -26,7 +26,7 @@ const pool = new Pool({
     : false
 });
 
-// Init DB : création tables users + welcome_books + cleaners
+// Init DB : création tables users + welcome_books + cleaners + user_settings
 async function initDb() {
   try {
     await pool.query(`
@@ -57,14 +57,22 @@ async function initDb() {
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS user_settings (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        notifications JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `);
 
-    console.log('✅ Tables users, welcome_books & cleaners OK dans Postgres');
+    console.log('✅ Tables users, welcome_books, cleaners & user_settings OK dans Postgres');
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
   }
 }
+
 
 // ============================================
 // NOTIFICATIONS PROPRIÉTAIRES – EMAIL
