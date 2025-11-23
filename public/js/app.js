@@ -227,12 +227,17 @@ function initializeCalendar() {
 
       let sourceBadge = '';
       if (sourceKey) {
-        const letter =
-          sourceKey === 'airbnb' ? 'A' :
-          sourceKey === 'booking' ? 'B' :
-          sourceKey === 'block'   ? 'X' :
-          'D';
-        sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${letter}</span>`;
+        let inner = '';
+        if (sourceKey === 'airbnb') {
+          inner = '<i class="fab fa-airbnb"></i>';
+        } else if (sourceKey === 'booking') {
+          inner = '<span class="bh-source-letter">B.</span>';
+        } else if (sourceKey === 'block') {
+          inner = '<span class="bh-source-letter">X</span>';
+        } else {
+          inner = '<span class="bh-source-letter">D</span>';
+        }
+        sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${inner}</span>`;
       }
 
       wrapper.innerHTML = `
