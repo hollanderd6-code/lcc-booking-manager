@@ -12,7 +12,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const nodemailer = require('nodemailer'); // 
-const whatsappService = require('./services/whatsappService'); //
+const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 
