@@ -26,7 +26,7 @@ const pool = new Pool({
     : false
 });
 
-// Init DB : création tables users + welcome_books + cleaners + user_settings
+// Init DB : création tables users + welcome_books + cleaners + user_settings + cleaning_assignments
 async function initDb() {
   try {
     await pool.query(`
@@ -64,14 +64,24 @@ async function initDb() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS cleaning_assignments (
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT NOT NULL,
+        cleaner_id TEXT NOT NULL REFERENCES cleaners(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, property_id)
+      );
     `);
 
-    console.log('✅ Tables users, welcome_books, cleaners & user_settings OK dans Postgres');
+    console.log('✅ Tables users, welcome_books, cleaners, user_settings & cleaning_assignments OK dans Postgres');
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
   }
 }
+
 
 
 // ============================================
@@ -207,6 +217,42 @@ async function saveNotificationSettings(userId, settings) {
   );
 
   return clean;
+}
+// Récupère les assignations de ménage pour un utilisateur sous forme de map { propertyId -> cleaner }
+async function getCleanerAssignmentsMapForUser(userId) {
+  if (!userId) return {};
+
+  const result = await pool.query(
+    `
+    SELECT
+      ca.property_id,
+      ca.cleaner_id,
+      c.name  AS cleaner_name,
+      c.email AS cleaner_email,
+      c.phone AS cleaner_phone,
+      c.is_active AS cleaner_active
+    FROM cleaning_assignments ca
+    LEFT JOIN cleaners c ON c.id = ca.cleaner_id
+    WHERE ca.user_id = $1
+    `,
+    [userId]
+  );
+
+  const map = {};
+  for (const row of result.rows) {
+    // On ignore les cleaners désactivés
+    if (row.cleaner_active === false) continue;
+    if (!row.property_id || !row.cleaner_id) continue;
+
+    map[row.property_id] = {
+      cleanerId: row.cleaner_id,
+      name: row.cleaner_name,
+      email: row.cleaner_email,
+      phone: row.cleaner_phone
+    };
+  }
+
+  return map;
 }
 
 /**
@@ -350,6 +396,133 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 
   (newReservations || []).forEach(res => handleReservation(res, 'new'));
   (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
+
+  await Promise.all(tasks);
+}
+/**
+ * Notifications ménage : pour chaque nouvelle réservation, si un logement a un cleaner assigné,
+ * on envoie un email à ce cleaner.
+ */
+async function notifyCleanersAboutNewBookings(newReservations) {
+  const transporter = getEmailTransporter();
+  if (!transporter) {
+    console.log('⚠️  Transport email non configuré, aucune notification ménage envoyée');
+    return;
+  }
+
+  if (!newReservations || newReservations.length === 0) {
+    return;
+  }
+
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+  const tasks = [];
+
+  // On groupe par user, pour ne pas requêter 50 fois la base
+  const byUser = new Map();
+  for (const res of newReservations) {
+    if (!res.userId || !res.propertyId) continue;
+    if (!byUser.has(res.userId)) {
+      byUser.set(res.userId, []);
+    }
+    byUser.get(res.userId).push(res);
+  }
+
+  for (const [userId, userReservations] of byUser.entries()) {
+    let assignmentsMap = {};
+    try {
+      assignmentsMap = await getCleanerAssignmentsMapForUser(userId);
+    } catch (err) {
+      console.error('Erreur récupération assignations ménage pour user', userId, err);
+      continue;
+    }
+
+    if (!assignmentsMap || Object.keys(assignmentsMap).length === 0) {
+      continue;
+    }
+
+    for (const res of userReservations) {
+      const assignment = assignmentsMap[res.propertyId];
+      if (!assignment) {
+        // Aucun cleaner assigné à ce logement → rien à envoyer
+        continue;
+      }
+      if (!assignment.email) {
+        console.log(
+          `ℹ️ Cleaner ${assignment.cleanerId} pour logement ${res.propertyId} n'a pas d'email, notification ménage ignorée.`
+        );
+        continue;
+      }
+
+      const cleanerEmail = assignment.email;
+      const cleanerName = assignment.name || 'partenaire ménage';
+
+      const propertyName =
+        res.propertyName ||
+        (res.property && res.property.name) ||
+        'Votre logement';
+
+      const guest =
+        res.guestName ||
+        res.guest_name ||
+        res.guest ||
+        res.name ||
+        'Un voyageur';
+
+      const start = formatDateForEmail(
+        res.start || res.startDate || res.checkIn || res.checkin
+      );
+      const end = formatDateForEmail(
+        res.end || res.endDate || res.checkOut || res.checkout
+      );
+
+      const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
+
+      const subject = `🧹 Nouveau ménage à prévoir – ${propertyName}`;
+      const textBody = `${hello}
+
+Un nouveau séjour vient d’être réservé pour le logement ${propertyName}.
+
+Voyageur : ${guest}
+Séjour  : du ${start} au ${end}
+Ménage à prévoir : le ${end} après le départ des voyageurs
+(heure exacte de check-out à confirmer avec la conciergerie).
+
+Merci beaucoup,
+L'équipe Boostinghost`;
+
+      const htmlBody = `
+        <p>${hello}</p>
+        <p>Un nouveau séjour vient d’être réservé pour le logement <strong>${propertyName}</strong>.</p>
+        <ul>
+          <li><strong>Voyageur :</strong> ${guest}</li>
+          <li><strong>Séjour :</strong> du ${start} au ${end}</li>
+          <li><strong>Ménage à prévoir :</strong> le ${end} après le départ des voyageurs</li>
+        </ul>
+        <p style="font-size:13px;color:#6b7280;">
+          Heure exacte de check-out à confirmer avec la conciergerie.
+        </p>
+      `;
+
+      tasks.push(
+        transporter
+          .sendMail({
+            from,
+            to: cleanerEmail,
+            subject,
+            text: textBody,
+            html: htmlBody
+          })
+          .then(() => {
+            console.log(
+              `📧 Notification ménage envoyée à ${cleanerEmail} (resa uid=${res.uid || res.id})`
+            );
+          })
+          .catch((err) => {
+            console.error('❌ Erreur envoi email notification ménage :', err);
+          })
+      );
+    }
+  }
 
   await Promise.all(tasks);
 }
@@ -539,10 +712,6 @@ function getUserProperties(userId) {
   return PROPERTIES.filter(p => p.userId === userId);
 }
 
-// ============================================
-// SYNCHRO ICAL
-// ============================================
-
 async function syncAllCalendars() {
   console.log('🔄 Démarrage de la synchronisation iCal...');
   const isFirstSync = !reservationsStore.lastSync; // première sync depuis le démarrage ?
@@ -641,6 +810,14 @@ async function syncAllCalendars() {
       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
     } catch (err) {
       console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
+    }
+
+    if (newReservations.length > 0) {
+      try {
+        await notifyCleanersAboutNewBookings(newReservations);
+      } catch (err) {
+        console.error('❌ Erreur lors de l’envoi des notifications ménage:', err);
+      }
     }
   } else if (isFirstSync) {
     console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
