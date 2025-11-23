@@ -774,14 +774,12 @@
 
         if (isAirbnb) {
           actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
-        } else if (isBooking) {
+        } else {
           actionsHtml = `
             <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
               ${d ? 'Nouveau lien' : 'Créer un lien'}
             </button>
           `;
-        } else {
-          actionsHtml = '<span class="small-hint text-secondary">Caution non disponible pour cette source</span>';
         }
 
         html += `
