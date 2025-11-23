@@ -43,7 +43,18 @@
     html {
       scroll-behavior: smooth;
     }
-  </style>
+  
+
+    /* Badges source pour FullCalendar */
+    .bh-event-source i {
+      font-size: 11px;
+    }
+
+    .bh-source-letter {
+      font-size: 11px;
+      font-weight: 700;
+    }
+</style>
 
   <style>
 /* ============================================
@@ -602,7 +613,15 @@
     /* Platform Icons */
     .booking-block .platform-icon {
       margin-right: 4px;
-      font-size: 10px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .booking-block .booking-letter {
+      font-size: 11px;
+      font-weight: 700;
     }
 
     /* Price Display */
@@ -1003,16 +1022,8 @@
               <span class="status-label status-warning">À connecter</span>
             </div>
             <h3>Booking.com</h3>
-            <p>
-              Copiez vos liens iCal Boostinghost depuis "Mes logements",
-              puis collez-les dans Booking.com.
-            </p>
-            <button
-              class="btn btn-secondary btn-xs"
-              onclick="window.location.href='/settings.html#propertiesGrid'"
-            >
-              Gérer les iCal
-            </button>
+            <p>Ajoutez votre lien iCal Booking.com.</p>
+            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
           </article>
 
           <article class="status-card">
@@ -2236,7 +2247,7 @@
                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
       DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
       PLATFORMS: {
-        airbnb:  { icon: 'fa-home' },
+        airbnb:  { icon: 'fa-airbnb' },
         booking: { icon: 'fa-bed' },
         expedia: { icon: 'fa-plane' },
         vrbo:    { icon: 'fa-house-user' },
@@ -2617,40 +2628,27 @@
     }
 
     function createCalendarCell(property, dateObj) {
-  var cell = document.createElement('div');
-  cell.className = 'calendar-cell';
-  cell.setAttribute('data-property-id', property.id);
+      var cell = document.createElement('div');
+      cell.className = 'calendar-cell';
+      cell.setAttribute('data-property-id', property.id);
 
-  var y = dateObj.getFullYear();
-  var m = String(dateObj.getMonth() + 1).padStart(2, '0');
-  var d = String(dateObj.getDate()).padStart(2, '0');
-  var dateStr = y + '-' + m + '-' + d;
-  cell.setAttribute('data-date', dateStr);
+      var y = dateObj.getFullYear();
+      var m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      var d = String(dateObj.getDate()).padStart(2, '0');
+      cell.setAttribute('data-date', y + '-' + m + '-' + d);
 
-  var dow = dateObj.getDay();
-  if (dow === 0 || dow === 6) cell.classList.add('weekend');
-  if (isToday(dateObj)) cell.classList.add('today');
+      var dow = dateObj.getDay();
+      if (dow === 0 || dow === 6) cell.classList.add('weekend');
+      if (isToday(dateObj)) cell.classList.add('today');
 
-  // 👉 ICI : nouveau comportement au clic
-  cell.addEventListener('click', function (ev) {
-    // On ignore le clic si on a cliqué sur un bloc de réservation existant
-    if (ev.target.classList.contains('booking-block')) return;
+      cell.addEventListener('click', function(ev) {
+        if (!ev.target.classList.contains('booking-block')) {
+          // Ici on pourrait ouvrir le modal de nouvelle réservation si nécessaire
+        }
+      });
 
-    // On utilise la logique existante de l’app pour ouvrir le modal de blocage
-    if (window.handleCalendarSelect) {
-      try {
-        window.handleCalendarSelect({
-          startStr: dateStr, // YYYY-MM-DD
-          endStr: dateStr    // même jour (tu peux ensuite élargir dans le modal)
-        });
-      } catch (e) {
-        console.warn('Erreur ouverture blocage depuis calendrier moderne', e);
-      }
+      return cell;
     }
-  });
-
-  return cell;
-}
 
     function renderBookingsInCells(range) {
       var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
@@ -2721,11 +2719,21 @@
 
           // Texte seulement sur le 1er jour
           if (j === 0 || cells.length === 1) {
-            var icon = document.createElement('i');
-            icon.className =
-              'fas platform-icon ' +
-              (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
-            block.appendChild(icon);
+            var iconEl;
+            if (platform === 'airbnb') {
+              iconEl = document.createElement('i');
+              iconEl.className = 'fab fa-airbnb platform-icon';
+            } else if (platform === 'booking') {
+              iconEl = document.createElement('span');
+              iconEl.className = 'platform-icon booking-letter';
+              iconEl.textContent = 'B.';
+            } else {
+              iconEl = document.createElement('i');
+              iconEl.className =
+                'fas platform-icon ' +
+                (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
+            }
+            block.appendChild(iconEl);
 
             var label = document.createTextNode(b.guestName || 'Réservation');
             block.appendChild(label);
