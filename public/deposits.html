@@ -741,25 +741,22 @@
           }
         }
 
-        // Détection de la plateforme (Booking / Airbnb / autre)
+        // Détection de la plateforme (principalement pour exclure Airbnb)
         const rawSource = (r.source || r.sourceRaw || r.channel || '').toString().toLowerCase();
-        const isBooking = rawSource.includes('booking');
         const isAirbnb = rawSource.includes('airbnb');
 
         const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
 
         let actionsHtml = '';
 
-        if (isBooking) {
+        if (isAirbnb) {
+          actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
+        } else {
           actionsHtml = `
             <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
               ${d ? 'Nouveau lien' : 'Créer un lien'}
             </button>
           `;
-        } else if (isAirbnb) {
-          actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
-        } else {
-          actionsHtml = '<span class="small-hint text-secondary">Caution non disponible pour cette source</span>';
         }
 
         html += `
