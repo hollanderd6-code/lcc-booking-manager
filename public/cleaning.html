@@ -655,6 +655,37 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
     localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
   }
+  // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
+  async function loadAssignmentsFromApi() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      });
+
+      if (!res.ok) {
+        console.warn('Erreur lors du chargement des assignations ménage', res.status);
+        return;
+      }
+
+      const data = await res.json();
+      const map = {};
+      (data.assignments || []).forEach((row) => {
+        if (row.property_id && row.cleaner_id) {
+          map[row.property_id] = row.cleaner_id;
+        }
+      });
+
+      assignments = map;
+      saveLocalData();
+    } catch (e) {
+      console.error('Erreur loadAssignmentsFromApi()', e);
+    }
+  }
 
   async function loadRemoteData() {
     try {
@@ -761,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(
                   (c) => `
                 <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
-                  ${c.name}
+                  ${c.name || c.email || c.phone || c.id}
                 </option>
               `
                 )
@@ -776,18 +807,39 @@ document.addEventListener('DOMContentLoaded', () => {
     assignContainer.innerHTML = html;
 
     assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
-      sel.addEventListener('change', (e) => {
+      sel.addEventListener('change', async (e) => {
         const propertyId = e.target.getAttribute('data-property-id');
         const cleanerId = e.target.value;
+
         if (cleanerId) {
           assignments[propertyId] = cleanerId;
         } else {
           delete assignments[propertyId];
         }
         saveLocalData();
+
+        const token = localStorage.getItem('lcc_token');
+        if (!token) return;
+
+        try {
+          await fetch(`${API_URL}/api/cleaning/assignments`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token
+            },
+            body: JSON.stringify({
+              propertyId,
+              cleanerId: cleanerId || null
+            })
+          });
+        } catch (err) {
+          console.error('Erreur sauvegarde assignation ménage', err);
+        }
       });
     });
   }
+
 
   // Ajout d’un membre
   if (cleanerForm) {
@@ -1065,10 +1117,12 @@ document.addEventListener('DOMContentLoaded', () => {
   (async function initCleaningPage() {
     loadLocalData();
     await loadRemoteData();
+    await loadAssignmentsFromApi();
     renderCleaners();
     renderAssignments();
   })();
 });
+
 </script>
 
   <!-- MOBILE MENU SCRIPT -->
