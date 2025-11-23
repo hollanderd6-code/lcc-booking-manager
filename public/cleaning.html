@@ -619,413 +619,457 @@
     })();
 
     // --------------------------
-    // GESTION EQUIPE + ASSIGNATION + PLANNING
-    // --------------------------
-    document.addEventListener('DOMContentLoaded', () => {
-      const STORAGE_CLEANERS = 'lcc_cleaners';
-      const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
+// GESTION EQUIPE + ASSIGNATION + PLANNING
+// --------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  const API_URL = 'https://lcc-booking-manager.onrender.com';
+  const STORAGE_CLEANERS = 'lcc_cleaners';
+  const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
 
-      // À terme : remplacé par les vrais logements de ton API
-      const PROPERTIES = window.LCC_PROPERTIES || [
-        { id: 'apt-demo-1', name: 'Appartement démo 1' },
-        { id: 'apt-demo-2', name: 'Appartement démo 2' }
-      ];
+  let PROPERTIES = [];
+  let RESERVATIONS = [];
 
-      // Idem pour les réservations, si ton app les expose déjà
-      const RESERVATIONS = window.LCC_RESERVATIONS || [];
+  let cleaners = [];
+  let assignments = {};
 
-      let cleaners = [];
-      let assignments = {};
+  const cleanerForm = document.getElementById('cleanerForm');
+  const cleanerList = document.getElementById('cleanerList');
+  const assignContainer = document.getElementById('assignContainer');
 
-      const cleanerForm = document.getElementById('cleanerForm');
-      const cleanerList = document.getElementById('cleanerList');
-      const assignContainer = document.getElementById('assignContainer');
+  const planningDateInput = document.getElementById('planningDate');
+  const generatePlanningBtn = document.getElementById('generatePlanningBtn');
+  const planningContainer = document.getElementById('planningContainer');
+  const planningHint = document.getElementById('planningHint');
 
-      const planningDateInput = document.getElementById('planningDate');
-      const generatePlanningBtn = document.getElementById('generatePlanningBtn');
-      const planningContainer = document.getElementById('planningContainer');
-      const planningHint = document.getElementById('planningHint');
+  function loadLocalData() {
+    try {
+      cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
+      assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
+    } catch (e) {
+      cleaners = [];
+      assignments = {};
+    }
+  }
 
-      function loadData() {
-        try {
-          cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
-          assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
-        } catch (e) {
-          cleaners = [];
-          assignments = {};
+  function saveLocalData() {
+    localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
+    localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
+  }
+
+  async function loadRemoteData() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/api/reservations`, {
+        headers: {
+          Authorization: 'Bearer ' + token
         }
+      });
+
+      if (!response.ok) {
+        console.warn('Erreur lors du chargement des réservations pour le ménage', response.status);
+        return;
       }
 
-      function saveData() {
-        localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
-        localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
+      const data = await response.json().catch(() => ({}));
+
+      RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
+      PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
+
+      // Fallback de démo si aucune propriété
+      if (!PROPERTIES.length) {
+        PROPERTIES = [
+          { id: 'apt-demo-1', name: 'Appartement démo 1' },
+          { id: 'apt-demo-2', name: 'Appartement démo 2' }
+        ];
       }
+    } catch (e) {
+      console.error('Erreur loadRemoteData()', e);
+      if (!PROPERTIES.length) {
+        PROPERTIES = [
+          { id: 'apt-demo-1', name: 'Appartement démo 1' },
+          { id: 'apt-demo-2', name: 'Appartement démo 2' }
+        ];
+      }
+    }
+  }
 
-      function renderCleaners() {
-        if (!cleanerList) return;
-        if (!cleaners.length) {
-          cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour l’instant.</p>';
-          return;
-        }
+  function renderCleaners() {
+    if (!cleanerList) return;
+    if (!cleaners.length) {
+      cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour l’instant. Ajoutez votre première personne de ménage.</p>';
+      return;
+    }
 
-        cleanerList.innerHTML = '';
-        cleaners.forEach(c => {
-          const div = document.createElement('div');
-          div.className = 'cleaner-item';
-          div.innerHTML = `
-            <div class="cleaner-item-header">
-              <div>
-                <div class="cleaner-name">${c.name}</div>
-                <div class="cleaner-tags">
-                  ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
-                  ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
-                </div>
-              </div>
-              <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
-                <i class="fas fa-trash"></i>
-              </button>
+    cleanerList.innerHTML = '';
+    cleaners.forEach((c) => {
+      const div = document.createElement('div');
+      div.className = 'cleaner-item';
+      div.innerHTML = `
+        <div class="cleaner-item-header">
+          <div>
+            <div class="cleaner-name">${c.name}</div>
+            <div class="cleaner-tags">
+              ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
+              ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
             </div>
-            ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
-          `;
-          cleanerList.appendChild(div);
-        });
-      }
-
-      function renderAssignments() {
-        if (!assignContainer) return;
-
-        if (!PROPERTIES.length) {
-          assignContainer.innerHTML = `
-            <p class="text-secondary" style="font-size:13px;">
-              Aucun logement détecté. Connectez vos logements pour pouvoir les assigner.
-            </p>`;
-          return;
-        }
-
-        let html = `
-          <table class="assign-table">
-            <thead>
-              <tr>
-                <th>Logement</th>
-                <th>Personne en charge</th>
-              </tr>
-            </thead>
-            <tbody>
-        */
-
-        `;
-
-        assignContainer.innerHTML = '';
-
-        // construction HTML propre (correction du commentaire qui traîne)
-        html = `
-          <table class="assign-table">
-            <thead>
-              <tr>
-                <th>Logement</th>
-                <th>Personne en charge</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        PROPERTIES.forEach(p => {
-          const assignedId = assignments[p.id] || '';
-          html += `
-            <tr>
-              <td>${p.name}</td>
-              <td>
-                <select class="assign-select" data-property-id="${p.id}">
-                  <option value="">Aucun</option>
-                  ${cleaners.map(c => `
-                    <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
-                      ${c.name}
-                    </option>
-                  `).join('')}
-                </select>
-              </td>
-            </tr>
-          `;
-        });
-
-        html += '</tbody></table>';
-        assignContainer.innerHTML = html;
-
-        assignContainer.querySelectorAll('.assign-select').forEach(sel => {
-          sel.addEventListener('change', e => {
-            const propertyId = e.target.getAttribute('data-property-id');
-            const cleanerId = e.target.value;
-            if (cleanerId) {
-              assignments[propertyId] = cleanerId;
-            } else {
-              delete assignments[propertyId];
-            }
-            saveData();
-          });
-        });
-      }
-
-      // Ajout d’un membre
-      if (cleanerForm) {
-        cleanerForm.addEventListener('submit', e => {
-          e.preventDefault();
-          const name = document.getElementById('cleanerName').value.trim();
-          const email = document.getElementById('cleanerEmail').value.trim();
-          const phone = document.getElementById('cleanerPhone').value.trim();
-          const notes = document.getElementById('cleanerNotes').value.trim();
-
-          if (!name) return;
-
-          cleaners.push({
-            id: 'c_' + Date.now(),
-            name, email, phone, notes
-          });
-
-          cleanerForm.reset();
-          saveData();
-          renderCleaners();
-          renderAssignments();
-        });
-      }
-
-      // Suppression d’un membre
-      if (cleanerList) {
-        cleanerList.addEventListener('click', e => {
-          const btn = e.target.closest('[data-action="deleteCleaner"]');
-          if (!btn) return;
-
-          const id = btn.getAttribute('data-id');
-          cleaners = cleaners.filter(c => c.id !== id);
-
-          // On enlève les assignations liées
-          Object.keys(assignments).forEach(pid => {
-            if (assignments[pid] === id) {
-              delete assignments[pid];
-            }
-          });
-
-          saveData();
-          renderCleaners();
-          renderAssignments();
-        });
-      }
-
-      // --------- PLANNING "IA" (brouillon) ---------
-      function normalizeDateString(dateStr) {
-        return dateStr ? dateStr.slice(0, 10) : null;
-      }
-
-      function getPropertyName(propertyId) {
-        const p = PROPERTIES.find(x => x.id === propertyId || x.propertyId === propertyId);
-        return p ? (p.name || p.title || p.label || propertyId) : (propertyId || 'Logement');
-      }
-
-      function getCleanerById(id) {
-        return cleaners.find(c => c.id === id) || null;
-      }
-
-      // Ici c'est notre "IA" simplifiée : on regarde départs / arrivées du jour,
-      // on récupère la personne assignée et on génère un planning lisible.
-      function generatePlanningForDate(dateStr) {
-        if (!dateStr) return [];
-
-        const list = [];
-
-        RESERVATIONS.forEach(r => {
-          if (!r.start || !r.end || !r.propertyId) return;
-
-          const startStr = normalizeDateString(r.start);
-          const endStr = normalizeDateString(r.end);
-          const propertyId = r.propertyId;
-          const propertyName = getPropertyName(propertyId);
-          const cleanerId = assignments[propertyId];
-          const cleaner = cleanerId ? getCleanerById(cleanerId) : null;
-
-          // Départ = ménage prioritaire
-          if (endStr === dateStr) {
-            list.push({
-              type: 'departure',
-              label: 'Après un départ',
-              propertyId,
-              propertyName,
-              cleaner,
-              timeHint: 'À programmer entre le départ et la prochaine arrivée',
-              reservation: r
-            });
-          }
-
-          // Arrivée le même jour : check final
-          if (startStr === dateStr) {
-            list.push({
-              type: 'arrival',
-              label: 'Avant une arrivée',
-              propertyId,
-              propertyName,
-              cleaner,
-              timeHint: 'Vérifier que tout est OK avant l’arrivée',
-              reservation: r
-            });
-          }
-        });
-
-        return list;
-      }
-
-
-      function renderPlanning(dateStr) {
-        if (!planningContainer) return;
-
-        if (!dateStr) {
-          planningContainer.innerHTML = '<p class="planning-empty">Choisissez une date pour générer un planning.</p>';
-          return;
-        }
-
-        const tasks = generatePlanningForDate(dateStr);
-
-        if (!tasks.length) {
-          planningContainer.innerHTML = `
-            <p class="planning-empty">
-              Aucun départ ou arrivée détecté pour cette date. Aucun ménage automatique à prévoir.
-            </p>`;
-          return;
-        }
-
-        // On enrichit chaque tâche avec un statut initial "pending"
-        const enriched = tasks.map(t => Object.assign({ status: 'pending' }, t));
-
-        // Sauvegarde dans le localStorage pour l'historique
-        try {
-          const key = 'LCC_CLEANING_PLANS';
-          let all = {};
-          const raw = localStorage.getItem(key);
-          if (raw) all = JSON.parse(raw);
-          all[dateStr] = enriched;
-          localStorage.setItem(key, JSON.stringify(all));
-        } catch (e) {
-          console.warn('Impossible de sauvegarder le planning ménage', e);
-        }
-
-        let html = `
-          <div class="planning-actions">
-            <button type="button" class="btn btn-ghost btn-xs" id="exportPlanningPdfBtn">
-              <i class="fas fa-file-pdf"></i>
-              Exporter en PDF
-            </button>
           </div>
-          <table class="planning-table">
-            <thead>
-              <tr>
-                <th>Logement</th>
-                <th>Type d’intervention</th>
-                <th>Personne recommandée</th>
-                <th>Détails</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
+          <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
+      `;
+      cleanerList.appendChild(div);
+    });
+  }
 
-        enriched.forEach((t, index) => {
-          const cleanerLabel = t.cleaner
-            ? `<span class="badge-cleaner"><i class="fas fa-user"></i>${t.cleaner.name}</span>`
-            : `<span class="planning-tag"><i class="fas fa-exclamation-triangle"></i>Personne non assignée</span>`;
+  function renderAssignments() {
+    if (!assignContainer) return;
 
-          const guest = t.reservation.guestName || t.reservation.name || '';
-          const stayInfo = `${t.reservation.start?.slice(0,10)} → ${t.reservation.end?.slice(0,10)}`;
+    if (!PROPERTIES.length) {
+      assignContainer.innerHTML = `
+        <p class="text-secondary" style="font-size:13px;">
+          Aucun logement détecté. Connectez vos logements pour pouvoir les assigner.
+        </p>`;
+      return;
+    }
 
-          html += `
-            <tr data-idx="${index}">
-              <td>
-                ${t.propertyName}
-                <span class="badge-type">${t.type === 'departure' ? 'Après départ' : 'Avant arrivée'}</span>
-              </td>
-              <td>${t.label}</td>
-              <td>${cleanerLabel}</td>
-              <td>
-                <div style="font-size:13px; margin-bottom:4px;">${t.timeHint}</div>
-                ${guest ? `<div style="font-size:12px; color:var(--text-secondary);">Voyageur : ${guest}</div>` : ''}
-                <div style="font-size:12px; color:var(--text-tertiary);">Séjour : ${stayInfo}</div>
-              </td>
-              <td>
-                <button type="button" class="status-pill status-pending">
-                  <span class="status-dot"></span>
-                  À faire
-                </button>
-              </td>
-            </tr>
-          `;
-        });
+    assignContainer.innerHTML = '';
 
-        html += '</tbody></table>';
-        planningContainer.innerHTML = html;
+    let html = `
+      <table class="assign-table">
+        <thead>
+          <tr>
+            <th>Logement</th>
+            <th>Personne en charge</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
 
-        const tableBody = planningContainer.querySelector('tbody');
-        if (tableBody) {
-          tableBody.addEventListener('click', function(e) {
-            const btn = e.target.closest('.status-pill');
-            if (!btn) return;
-            const row = btn.closest('tr[data-idx]');
-            if (!row) return;
-            const idx = parseInt(row.getAttribute('data-idx'), 10);
-            const dot = btn.querySelector('.status-dot');
+    PROPERTIES.forEach((p) => {
+      const assignedId = assignments[p.id] || '';
+      html += `
+        <tr>
+          <td>${p.name || p.title || p.label || p.id}</td>
+          <td>
+            <select class="assign-select" data-property-id="${p.id}">
+              <option value="">Aucun</option>
+              ${cleaners
+                .map(
+                  (c) => `
+                <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
+                  ${c.name}
+                </option>
+              `
+                )
+                .join('')}
+            </select>
+          </td>
+        </tr>
+      `;
+    });
 
-            // cycle pending -> in-progress -> done
-            if (btn.classList.contains('status-pending')) {
-              btn.classList.remove('status-pending');
-              btn.classList.add('status-inprogress');
-              btn.innerHTML = '<span class="status-dot"></span>En cours';
-            } else if (btn.classList.contains('status-inprogress')) {
-              btn.classList.remove('status-inprogress');
-              btn.classList.add('status-done');
-              btn.innerHTML = '<span class="status-dot"></span>Terminé';
-            } else {
-              btn.classList.remove('status-done');
-              btn.classList.add('status-pending');
-              btn.innerHTML = '<span class="status-dot"></span>À faire';
-            }
+    html += '</tbody></table>';
+    assignContainer.innerHTML = html;
 
-            // Sauvegarde du statut dans le localStorage
-            try {
-              const key = 'LCC_CLEANING_PLANS';
-              const raw = localStorage.getItem(key);
-              if (!raw) return;
-              const all = JSON.parse(raw);
-              const dayTasks = all[dateStr] || [];
-              if (dayTasks[idx]) {
-                if (btn.classList.contains('status-pending')) {
-                  dayTasks[idx].status = 'pending';
-                } else if (btn.classList.contains('status-inprogress')) {
-                  dayTasks[idx].status = 'inprogress';
-                } else if (btn.classList.contains('status-done')) {
-                  dayTasks[idx].status = 'done';
-                }
-                all[dateStr] = dayTasks;
-                localStorage.setItem(key, JSON.stringify(all));
-              }
-            } catch (e) {
-              console.warn('Impossible de mettre à jour le statut ménage', e);
-            }
-          });
+    assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
+      sel.addEventListener('change', (e) => {
+        const propertyId = e.target.getAttribute('data-property-id');
+        const cleanerId = e.target.value;
+        if (cleanerId) {
+          assignments[propertyId] = cleanerId;
+        } else {
+          delete assignments[propertyId];
         }
+        saveLocalData();
+      });
+    });
+  }
 
-        const exportBtn = document.getElementById('exportPlanningPdfBtn');
-        if (exportBtn) {
-          exportBtn.addEventListener('click', function() {
-            window.print();
-          });
-        }
-      }
-vos réservations et des assignations ménage.";
-          renderPlanning(dateStr);
-        });
-      }
+  // Ajout d’un membre
+  if (cleanerForm) {
+    cleanerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('cleanerName').value.trim();
+      const email = document.getElementById('cleanerEmail').value.trim();
+      const phone = document.getElementById('cleanerPhone').value.trim();
+      const notes = document.getElementById('cleanerNotes').value.trim();
 
-      // Init
-      loadData();
+      if (!name) return;
+
+      cleaners.push({
+        id: 'c_' + Date.now(),
+        name,
+        email,
+        phone,
+        notes
+      });
+
+      cleanerForm.reset();
+      saveLocalData();
       renderCleaners();
       renderAssignments();
     });
-  </script>
+  }
+
+  // Suppression d’un membre
+  if (cleanerList) {
+    cleanerList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="deleteCleaner"]');
+      if (!btn) return;
+
+      const id = btn.getAttribute('data-id');
+      cleaners = cleaners.filter((c) => c.id !== id);
+
+      // On enlève les assignations liées
+      Object.keys(assignments).forEach((pid) => {
+        if (assignments[pid] === id) {
+          delete assignments[pid];
+        }
+      });
+
+      saveLocalData();
+      renderCleaners();
+      renderAssignments();
+    });
+  }
+
+  // --------- PLANNING "IA" (brouillon) ---------
+  function normalizeDateString(dateStr) {
+    return dateStr ? dateStr.slice(0, 10) : null;
+  }
+
+  function getPropertyName(propertyId) {
+    const p = PROPERTIES.find((x) => x.id === propertyId || x.propertyId === propertyId);
+    return p ? p.name || p.title || p.label || propertyId : propertyId || 'Logement';
+  }
+
+  function getCleanerById(id) {
+    return cleaners.find((c) => c.id === id) || null;
+  }
+
+  // Ici c'est notre "IA" simplifiée : on regarde départs / arrivées du jour,
+  // on récupère la personne assignée et on génère un planning lisible.
+  function generatePlanningForDate(dateStr) {
+    if (!dateStr) return [];
+
+    const list = [];
+
+    (RESERVATIONS || []).forEach((r) => {
+      if (!r.start || !r.end || !r.propertyId) return;
+
+      const startStr = normalizeDateString(r.start);
+      const endStr = normalizeDateString(r.end);
+      const propertyId = r.propertyId;
+      const propertyName = getPropertyName(propertyId);
+      const cleanerId = assignments[propertyId];
+      const cleaner = cleanerId ? getCleanerById(cleanerId) : null;
+
+      // Départ = ménage prioritaire
+      if (endStr === dateStr) {
+        list.push({
+          type: 'departure',
+          label: 'Après un départ',
+          propertyId,
+          propertyName,
+          cleaner,
+          timeHint: 'À programmer entre le départ et la prochaine arrivée',
+          reservation: r
+        });
+      }
+
+      // Arrivée le même jour : check final
+      if (startStr === dateStr) {
+        list.push({
+          type: 'arrival',
+          label: 'Avant une arrivée',
+          propertyId,
+          propertyName,
+          cleaner,
+          timeHint: "Vérifier que tout est OK avant l’arrivée",
+          reservation: r
+        });
+      }
+    });
+
+    return list;
+  }
+
+  function renderPlanning(dateStr) {
+    if (!planningContainer) return;
+
+    if (!dateStr) {
+      planningContainer.innerHTML =
+        '<p class="planning-empty">Choisissez une date pour générer un planning.</p>';
+      return;
+    }
+
+    const tasks = generatePlanningForDate(dateStr);
+
+    if (!tasks.length) {
+      planningContainer.innerHTML = `
+        <p class="planning-empty">
+          Aucun départ ou arrivée détecté pour cette date. Aucun ménage automatique à prévoir.
+        </p>`;
+      return;
+    }
+
+    const enriched = tasks.map((t) => Object.assign({ status: 'pending' }, t));
+
+    // Sauvegarde dans le localStorage pour l'historique
+    try {
+      const key = 'LCC_CLEANING_PLANS';
+      let all = {};
+      const raw = localStorage.getItem(key);
+      if (raw) all = JSON.parse(raw);
+      all[dateStr] = enriched;
+      localStorage.setItem(key, JSON.stringify(all));
+    } catch (e) {
+      console.warn('Impossible de sauvegarder le planning ménage', e);
+    }
+
+    let html = `
+      <div class="planning-actions">
+        <button type="button" class="btn btn-ghost btn-xs" id="exportPlanningPdfBtn">
+          <i class="fas fa-file-pdf"></i>
+          Exporter en PDF
+        </button>
+      </div>
+      <table class="planning-table">
+        <thead>
+          <tr>
+            <th>Logement</th>
+            <th>Type d’intervention</th>
+            <th>Personne recommandée</th>
+            <th>Détails</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    enriched.forEach((t, index) => {
+      const cleanerLabel = t.cleaner
+        ? `<span class="badge-cleaner"><i class="fas fa-user"></i>${t.cleaner.name}</span>`
+        : `<span class="planning-tag"><i class="fas fa-exclamation-triangle"></i>Personne non assignée</span>`;
+
+      const guest = t.reservation.guestName || t.reservation.name || '';
+      const stayInfo = `${t.reservation.start?.slice(0, 10)} → ${t.reservation.end?.slice(0, 10)}`;
+
+      html += `
+        <tr data-idx="${index}">
+          <td>
+            ${t.propertyName}
+            <span class="badge-type">${
+              t.type === 'departure' ? 'Après départ' : 'Avant arrivée'
+            }</span>
+          </td>
+          <td>${t.label}</td>
+          <td>${cleanerLabel}</td>
+          <td>
+            <div style="font-size:13px; margin-bottom:4px;">${t.timeHint}</div>
+            ${
+              guest
+                ? `<div style="font-size:12px; color:var(--text-secondary);">Voyageur : ${guest}</div>`
+                : ''
+            }
+            <div style="font-size:12px; color:var(--text-tertiary);">Séjour : ${stayInfo}</div>
+          </td>
+          <td>
+            <button type="button" class="status-pill status-pending">
+              <span class="status-dot"></span>
+              À faire
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table>';
+    planningContainer.innerHTML = html;
+
+    const tableBody = planningContainer.querySelector('tbody');
+    if (tableBody) {
+      tableBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('.status-pill');
+        if (!btn) return;
+        const row = btn.closest('tr[data-idx]');
+        if (!row) return;
+        const idx = parseInt(row.getAttribute('data-idx'), 10);
+
+        if (btn.classList.contains('status-pending')) {
+          btn.classList.remove('status-pending');
+          btn.classList.add('status-inprogress');
+          btn.innerHTML = '<span class="status-dot"></span>En cours';
+        } else if (btn.classList.contains('status-inprogress')) {
+          btn.classList.remove('status-inprogress');
+          btn.classList.add('status-done');
+          btn.innerHTML = '<span class="status-dot"></span>Terminé';
+        } else {
+          btn.classList.remove('status-done');
+          btn.classList.add('status-pending');
+          btn.innerHTML = '<span class="status-dot"></span>À faire';
+        }
+
+        // Sauvegarde du statut dans le localStorage
+        try {
+          const key = 'LCC_CLEANING_PLANS';
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const all = JSON.parse(raw);
+          const dayTasks = all[dateStr] || [];
+          if (dayTasks[idx]) {
+            if (btn.classList.contains('status-pending')) {
+              dayTasks[idx].status = 'pending';
+            } else if (btn.classList.contains('status-inprogress')) {
+              dayTasks[idx].status = 'inprogress';
+            } else if (btn.classList.contains('status-done')) {
+              dayTasks[idx].status = 'done';
+            }
+            all[dateStr] = dayTasks;
+            localStorage.setItem(key, JSON.stringify(all));
+          }
+        } catch (e) {
+          console.warn('Impossible de mettre à jour le statut ménage', e);
+        }
+      });
+    }
+
+    const exportBtn = document.getElementById('exportPlanningPdfBtn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        window.print();
+      });
+    }
+  }
+
+  if (generatePlanningBtn) {
+    generatePlanningBtn.addEventListener('click', () => {
+      const dateStr =
+        (planningDateInput && planningDateInput.value) ||
+        new Date().toISOString().slice(0, 10);
+
+      if (planningHint) {
+        planningHint.textContent =
+          'Planning généré automatiquement à partir de vos réservations et des assignations ménage.';
+      }
+
+      renderPlanning(dateStr);
+    });
+  }
+
+  // Init
+  (async function initCleaningPage() {
+    loadLocalData();
+    await loadRemoteData();
+    renderCleaners();
+    renderAssignments();
+  })();
+});
+</script>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
