@@ -227,17 +227,12 @@ function initializeCalendar() {
 
       let sourceBadge = '';
       if (sourceKey) {
-        let inner = '';
-        if (sourceKey === 'airbnb') {
-          inner = '<i class="fab fa-airbnb"></i>';
-        } else if (sourceKey === 'booking') {
-          inner = '<span class="bh-source-letter">B.</span>';
-        } else if (sourceKey === 'block') {
-          inner = '<span class="bh-source-letter">X</span>';
-        } else {
-          inner = '<span class="bh-source-letter">D</span>';
-        }
-        sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${inner}</span>`;
+        const letter =
+          sourceKey === 'airbnb' ? 'A' :
+          sourceKey === 'booking' ? 'B' :
+          sourceKey === 'block'   ? 'X' :
+          'D';
+        sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${letter}</span>`;
       }
 
       wrapper.innerHTML = `
@@ -641,8 +636,19 @@ function togglePropertyFilter(propertyId) {
     badge.classList.toggle('active');
   }
 
+  // Met à jour le calendrier FullCalendar
   updateCalendarEvents();
+
+  // Met à jour aussi le calendrier moderne (vue tableau)
+  if (typeof window.renderModernCalendar === 'function') {
+    try {
+      window.renderModernCalendar(allReservations, allProperties);
+    } catch (e) {
+      console.warn('Erreur lors de la mise à jour du calendrier moderne (filtres)', e);
+    }
+  }
 }
+
 
 function clearFilters() {
   activeFilters.clear();
@@ -651,8 +657,19 @@ function clearFilters() {
     .querySelectorAll('.property-badge')
     .forEach(badge => badge.classList.remove('active'));
 
+  // Met à jour le calendrier FullCalendar
   updateCalendarEvents();
+
+  // Met à jour aussi le calendrier moderne (vue tableau)
+  if (typeof window.renderModernCalendar === 'function') {
+    try {
+      window.renderModernCalendar(allReservations, allProperties);
+    } catch (e) {
+      console.warn('Erreur lors de la mise à jour du calendrier moderne (clearFilters)', e);
+    }
+  }
 }
+
 
 // ========================================
 // MODALS
