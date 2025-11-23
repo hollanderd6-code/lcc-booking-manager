@@ -559,8 +559,9 @@
       }
     }
 
-function openDepositModal(reservation) {
+    function openDepositModal(reservation) {
       currentReservationForDeposit = reservation;
+
       const amountInput = document.getElementById('depositAmount');
       const errorEl = document.getElementById('depositError');
 
@@ -645,40 +646,46 @@ function openDepositModal(reservation) {
       const select = document.getElementById('propertyFilter');
       const selectedPropertyId = select ? select.value : '';
 
-      // Filtre par logement
+      // Filtrer par logement
       const filtered = allReservationsWithDeposits.filter((r) =>
         !selectedPropertyId || r.propertyId === selectedPropertyId
       );
 
-      // Regroupement par séjour (reservationUid)
+      // Regrouper par séjour (1 ligne par réservation, pas par nuit)
       const byReservation = new Map();
 
       filtered.forEach((r) => {
-        const key = r.reservationUid || r.id || r._id || (
-          (r.propertyId || '') + '|' + (r.startDate || '') + '|' + (r.endDate || '') + '|' + (r.guestName || '')
-        );
+        const key =
+          r.reservationUid ||
+          (r.propertyId || '') + '|' + (r.startDate || '') + '|' + (r.endDate || '') + '|' + (r.guestName || '');
 
         if (!byReservation.has(key)) {
+          // On clone l'objet pour pouvoir l'enrichir
           byReservation.set(key, { ...r });
         } else {
           const existing = byReservation.get(key);
 
-          // On agrège les dates si besoin
+          // On agrège les dates au cas où
           if (r.startDate && (!existing.startDate || r.startDate < existing.startDate)) {
             existing.startDate = r.startDate;
           }
           if (r.endDate && (!existing.endDate || r.endDate > existing.endDate)) {
             existing.endDate = r.endDate;
           }
-          // On conserve une caution si elle existe
+
+          // Si une des lignes a déjà une caution, on la garde
           if (!existing.deposit && r.deposit) {
             existing.deposit = r.deposit;
           }
         }
       });
 
-      const data = Array.from(byReservation.values())
-        .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+      const data = Array.from(byReservation.values()).sort((a, b) => {
+        if (!a.startDate || !b.startDate) return 0;
+        if (a.startDate < b.startDate) return -1;
+        if (a.startDate > b.startDate) return 1;
+        return 0;
+      });
 
       if (!data.length) {
         container.innerHTML = '<p class="empty-state">Aucune réservation pour ce filtre.</p>';
@@ -703,11 +710,6 @@ function openDepositModal(reservation) {
 
       data.forEach((r) => {
         const d = r.deposit || null;
-
-        const rawSource = (r.source || r.sourceRaw || r.channel || '').toString().toLowerCase();
-        const isBooking = rawSource.includes('booking');
-        const isAirbnb = rawSource.includes('airbnb');
-
         let amountText = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
         let linkHtml = '';
@@ -739,6 +741,11 @@ function openDepositModal(reservation) {
           }
         }
 
+        // Détection de la plateforme (Booking / Airbnb / autre)
+        const rawSource = (r.source || r.sourceRaw || r.channel || '').toString().toLowerCase();
+        const isBooking = rawSource.includes('booking');
+        const isAirbnb = rawSource.includes('airbnb');
+
         const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
 
         let actionsHtml = '';
@@ -758,7 +765,7 @@ function openDepositModal(reservation) {
         html += `
           <tr>
             <td>${r.propertyName || 'Logement'}</td>
-            <td>${r.startDate || ''} → ${r.endDate || ''}</td>
+            <td>${r.startDate} → ${r.endDate}</td>
             <td>${r.guestName || '-'}</td>
             <td>${amountText}</td>
             <td>${statusBadge}</td>
@@ -771,7 +778,6 @@ function openDepositModal(reservation) {
       html += '</tbody></table>';
       container.innerHTML = html;
     }
-
 
     async function createDeposit() {
       const errorEl = document.getElementById('depositError');
@@ -844,7 +850,6 @@ Merci, et à très bientôt !
         errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
       }
     }
-}
 
     document.addEventListener('DOMContentLoaded', () => {
       const refreshBtn = document.getElementById('refreshBtn');
