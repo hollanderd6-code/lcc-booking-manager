@@ -1015,6 +1015,47 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
 
   res.json(result);
 });
+// ============================================
+// ROUTES API - PARAMÈTRES NOTIFICATIONS (par user)
+// ============================================
+
+app.get('/api/settings/notifications', async (req, res) => {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Non autorisé' });
+  }
+
+  try {
+    const settings = await getNotificationSettings(user.id);
+    res.json(settings);
+  } catch (err) {
+    console.error('Erreur /api/settings/notifications GET :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/settings/notifications', async (req, res) => {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Non autorisé' });
+  }
+
+  try {
+    const { newReservation, reminder } = req.body || {};
+    const saved = await saveNotificationSettings(user.id, {
+      newReservation,
+      reminder,
+    });
+
+    res.json({
+      message: 'Préférences de notifications mises à jour',
+      settings: saved,
+    });
+  } catch (err) {
+    console.error('Erreur /api/settings/notifications POST :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ============================================
 // ROUTE ICS EXPORT - Calendrier Boostinghost
