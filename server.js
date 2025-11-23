@@ -82,6 +82,12 @@ let emailTransporter = null;
 // Cache des users pour ne pas spammer la base pendant une sync
 const notificationUserCache = new Map();
 
+// Valeurs par défaut des préférences de notifications
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  newReservation: true,
+  reminder: false,
+};
+
 function getEmailTransporter() {
   if (emailTransporter) return emailTransporter;
 
@@ -149,6 +155,64 @@ function formatDateForEmail(dateStr) {
   });
 }
 
+// Récupère les préférences de notifications pour un utilisateur
+async function getNotificationSettings(userId) {
+  if (!userId) return { ...DEFAULT_NOTIFICATION_SETTINGS };
+
+  const result = await pool.query(
+    'SELECT notifications FROM user_settings WHERE user_id = $1',
+    [userId]
+  );
+
+  if (!result.rows.length || !result.rows[0].notifications) {
+    return { ...DEFAULT_NOTIFICATION_SETTINGS };
+  }
+
+  const raw = result.rows[0].notifications;
+
+  return {
+    newReservation:
+      typeof raw.newReservation === 'boolean'
+        ? raw.newReservation
+        : DEFAULT_NOTIFICATION_SETTINGS.newReservation,
+    reminder:
+      typeof raw.reminder === 'boolean'
+        ? raw.reminder
+        : DEFAULT_NOTIFICATION_SETTINGS.reminder,
+  };
+}
+
+// Sauvegarde les préférences de notifications pour un utilisateur
+async function saveNotificationSettings(userId, settings) {
+  if (!userId) throw new Error('userId manquant pour saveNotificationSettings');
+
+  const clean = {
+    newReservation:
+      typeof settings.newReservation === 'boolean'
+        ? settings.newReservation
+        : DEFAULT_NOTIFICATION_SETTINGS.newReservation,
+    reminder:
+      typeof settings.reminder === 'boolean'
+        ? settings.reminder
+        : DEFAULT_NOTIFICATION_SETTINGS.reminder,
+  };
+
+  await pool.query(
+    `INSERT INTO user_settings (user_id, notifications, created_at, updated_at)
+     VALUES ($1, $2, NOW(), NOW())
+     ON CONFLICT (user_id) DO UPDATE
+       SET notifications = EXCLUDED.notifications,
+           updated_at = NOW()`,
+    [userId, clean]
+  );
+
+  return clean;
+}
+
+/**
+ * Envoie les emails de notifications de nouvelles réservations / annulations,
+ * en respectant les préférences de l'utilisateur.
+ */
 async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
   const transporter = getEmailTransporter();
   if (!transporter) {
@@ -170,6 +234,27 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
       const user = await getUserForNotifications(userId);
       if (!user || !user.email) {
         console.log(`⚠️  Aucun email trouvé pour user ${userId}, notification ignorée`);
+        return;
+      }
+
+      // 🔔 Récupérer les préférences de notifications
+      let settings;
+      try {
+        settings = await getNotificationSettings(userId);
+      } catch (e) {
+        console.error(
+          'Erreur lors de la récupération des préférences de notifications pour user',
+          userId,
+          e
+        );
+        settings = { ...DEFAULT_NOTIFICATION_SETTINGS };
+      }
+
+      // Pour l'instant, on utilise la même option pour nouvelles résas & annulations
+      if (settings && settings.newReservation === false) {
+        console.log(
+          `ℹ️ Notifications de réservations désactivées pour user ${userId}, email non envoyé.`
+        );
         return;
       }
 
