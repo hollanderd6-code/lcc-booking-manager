@@ -11,6 +11,7 @@ const messagingService = require('./services/messagingService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+const nodemailer = require('nodemailer'); // 🔹 AJOUT
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 
@@ -64,6 +65,205 @@ async function initDb() {
     process.exit(1);
   }
 }
+
+// ============================================
+// NOTIFICATIONS PROPRIÉTAIRES – EMAIL
+// ============================================
+
+let emailTransporter = null;
+// Cache des users pour ne pas spammer la base pendant une sync
+const notificationUserCache = new Map();
+
+function getEmailTransporter() {
+  if (emailTransporter) return emailTransporter;
+
+  const host = process.env.EMAIL_HOST;
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASSWORD;
+
+  if (!host || !user || !pass) {
+    console.log('⚠️  Email non configuré (EMAIL_HOST, EMAIL_USER ou EMAIL_PASSWORD manquants)');
+    return null;
+  }
+
+  emailTransporter = nodemailer.createTransport({
+    host,
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    secure: process.env.EMAIL_SECURE === 'true', // true = 465
+    auth: {
+      user,
+      pass
+    }
+  });
+
+  return emailTransporter;
+}
+
+async function getUserForNotifications(userId) {
+  if (!userId) return null;
+  if (notificationUserCache.has(userId)) {
+    return notificationUserCache.get(userId);
+  }
+
+  const result = await pool.query(
+    `SELECT id, company, first_name, last_name, email
+     FROM users
+     WHERE id = $1`,
+    [userId]
+  );
+
+  if (result.rows.length === 0) {
+    notificationUserCache.set(userId, null);
+    return null;
+  }
+
+  const row = result.rows[0];
+  const user = {
+    id: row.id,
+    email: row.email,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    company: row.company
+  };
+
+  notificationUserCache.set(userId, user);
+  return user;
+}
+
+function formatDateForEmail(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
+  const transporter = getEmailTransporter();
+  if (!transporter) {
+    console.log('⚠️  Transport email non configuré, aucune notification propriétaire envoyée');
+    return;
+  }
+
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+  const tasks = [];
+
+  const handleReservation = (res, type) => {
+    const userId = res.userId;
+    if (!userId) {
+      console.log('⚠️  Réservation sans userId, notification ignorée :', res.uid || res.id);
+      return;
+    }
+
+    tasks.push((async () => {
+      const user = await getUserForNotifications(userId);
+      if (!user || !user.email) {
+        console.log(`⚠️  Aucun email trouvé pour user ${userId}, notification ignorée`);
+        return;
+      }
+
+      const propertyName =
+        res.propertyName ||
+        (res.property && res.property.name) ||
+        'Votre logement';
+
+      const guest =
+        res.guestName ||
+        res.guest_name ||
+        res.guest ||
+        res.name ||
+        'Un voyageur';
+
+      const source = res.source || res.platform || 'une plateforme';
+
+      const start = formatDateForEmail(
+        res.start || res.startDate || res.checkIn || res.checkin
+      );
+      const end = formatDateForEmail(
+        res.end || res.endDate || res.checkOut || res.checkout
+      );
+
+      const hello = user.firstName ? `Bonjour ${user.firstName},` : 'Bonjour,';
+
+      let subject;
+      let textBody;
+      let htmlBody;
+
+      if (type === 'new') {
+        subject = `🛎️ Nouvelle réservation – ${propertyName}`;
+        textBody = `${hello}
+
+Une nouvelle réservation vient d'être enregistrée via ${source}.
+
+Logement : ${propertyName}
+Voyageur : ${guest}
+Séjour  : du ${start} au ${end}
+
+Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.`;
+
+        htmlBody = `
+          <p>${hello}</p>
+          <p>Une nouvelle réservation vient d'être enregistrée via <strong>${source}</strong>.</p>
+          <ul>
+            <li><strong>Logement :</strong> ${propertyName}</li>
+            <li><strong>Voyageur :</strong> ${guest}</li>
+            <li><strong>Séjour :</strong> du ${start} au ${end}</li>
+          </ul>
+          <p>Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.</p>
+        `;
+      } else {
+        subject = `⚠️ Réservation annulée – ${propertyName}`;
+        textBody = `${hello}
+
+Une réservation vient d'être annulée sur ${source}.
+
+Logement : ${propertyName}
+Voyageur : ${guest}
+Séjour initial : du ${start} au ${end}
+
+Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
+
+        htmlBody = `
+          <p>${hello}</p>
+          <p>Une réservation vient d'être <strong>annulée</strong> sur <strong>${source}</strong>.</p>
+          <ul>
+            <li><strong>Logement :</strong> ${propertyName}</li>
+            <li><strong>Voyageur :</strong> ${guest}</li>
+            <li><strong>Séjour initial :</strong> du ${start} au ${end}</li>
+          </ul>
+          <p>Pensez à vérifier votre calendrier et vos blocages si nécessaire.</p>
+        `;
+      }
+
+      try {
+        await transporter.sendMail({
+          from,
+          to: user.email,
+          subject,
+          text: textBody,
+          html: htmlBody
+        });
+        console.log(
+          `📧 Notification "${type}" envoyée à ${user.email} (resa uid=${res.uid || res.id})`
+        );
+      } catch (err) {
+        console.error('❌ Erreur envoi email notification réservation :', err);
+      }
+    })());
+  };
+
+  (newReservations || []).forEach(res => handleReservation(res, 'new'));
+  (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
+
+  await Promise.all(tasks);
+}
+
+// ============================================
+// APP / STRIPE / STORE
+// ============================================
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -252,9 +452,11 @@ function getUserProperties(userId) {
 
 async function syncAllCalendars() {
   console.log('🔄 Démarrage de la synchronisation iCal...');
+  const isFirstSync = !reservationsStore.lastSync; // première sync depuis le démarrage ?
   reservationsStore.syncStatus = 'syncing';
 
   const newReservations = [];
+  const cancelledReservations = [];
 
   for (const property of PROPERTIES) {
     if (!property.icalUrls || property.icalUrls.length === 0) {
@@ -265,23 +467,56 @@ async function syncAllCalendars() {
     try {
       const reservations = await icalService.fetchReservations(property);
 
-      const oldReservations = reservationsStore.properties[property.id] || [];
-      const oldIds = new Set(oldReservations.map(r => r.uid));
+      // Ancien état (iCal + manuelles) :
+      const previousAllReservations = reservationsStore.properties[property.id] || [];
 
-      const trulyNewReservations = reservations.filter(r => !oldIds.has(r.uid));
+      // On ne regarde que les résas iCal (pas les manuelles ni les blocages)
+      const oldIcalReservations = previousAllReservations.filter(r =>
+        r &&
+        r.uid &&
+        r.source !== 'MANUEL' &&
+        r.source !== 'BLOCK' &&
+        r.type !== 'manual' &&
+        r.type !== 'block'
+      );
+
+      const newIcalReservations = reservations || [];
+
+      const oldIds = new Set(oldIcalReservations.map(r => r.uid));
+      const newIds = new Set(newIcalReservations.map(r => r.uid));
+
+      // ➕ Nouvelles réservations (présentes dans new mais pas dans old)
+      const trulyNewReservations = newIcalReservations.filter(r => !oldIds.has(r.uid));
+
+      // ➖ Réservations annulées (présentes dans old mais plus dans new)
+      const cancelledForProperty = oldIcalReservations.filter(r => !newIds.has(r.uid));
 
       if (trulyNewReservations.length > 0) {
-        newReservations.push(...trulyNewReservations.map(r => ({
-          ...r,
-          propertyId: property.id,
-          propertyName: property.name,
-          propertyColor: property.color,
-          userId: property.userId
-        })));
+        newReservations.push(
+          ...trulyNewReservations.map(r => ({
+            ...r,
+            propertyId: property.id,
+            propertyName: property.name,
+            propertyColor: property.color,
+            userId: property.userId
+          }))
+        );
+      }
+
+      if (cancelledForProperty.length > 0) {
+        cancelledReservations.push(
+          ...cancelledForProperty.map(r => ({
+            ...r,
+            propertyId: property.id,
+            propertyName: property.name,
+            propertyColor: property.color,
+            userId: property.userId
+          }))
+        );
       }
 
       // Base = iCal
-      reservationsStore.properties[property.id] = reservations;
+      reservationsStore.properties[property.id] = newIcalReservations;
 
       // Ajouter les réservations manuelles (y compris blocages)
       const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
@@ -304,10 +539,18 @@ async function syncAllCalendars() {
   reservationsStore.lastSync = new Date();
   reservationsStore.syncStatus = 'idle';
 
-  // Notifications nouvelles résas
-  if (newReservations.length > 0) {
-    console.log(`📧 ${newReservations.length} nouvelle(s) réservation(s) détectée(s)`);
-    await notificationService.sendNewBookingNotifications(newReservations);
+  // 🔔 Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
+  if (!isFirstSync && (newReservations.length > 0 || cancelledReservations.length > 0)) {
+    console.log(
+      `📧 Notifications à envoyer – nouvelles: ${newReservations.length}, annulées: ${cancelledReservations.length}`
+    );
+    try {
+      await notifyOwnersAboutBookings(newReservations, cancelledReservations);
+    } catch (err) {
+      console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
+    }
+  } else if (isFirstSync) {
+    console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
   }
 
   console.log('✅ Synchronisation terminée');
