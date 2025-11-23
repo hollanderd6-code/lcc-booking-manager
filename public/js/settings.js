@@ -249,35 +249,10 @@ function renderProperties() {
         </div>
       </div>
       
-            <div class="ical-export-block">
-        <label class="ical-label">Lien iCal Boostinghost</label>
-
-        <div class="ical-row">
-          <input
-            type="text"
-            class="ical-input"
-            readonly
-            value="${API_URL}/ical/${property.id}.ics"
-          />
-          <button
-            type="button"
-            class="btn-copy-ical-export"
-            data-ical-url="${API_URL}/ical/${property.id}.ics"
-          >
-            Copier
-          </button>
-        </div>
-
-        <p class="ical-help">
-          Copiez ce lien et collez-le dans Airbnb / Booking
-          (Paramètres → Disponibilités → Synchronisation du calendrier).
-        </p>
-      </div>
-
       ${
         property.icalUrls.length > 0
           ? `
-        <div class="ical-urls"
+        <div class="ical-urls">
           ${property.icalUrls
             .map(
               (urlData) => `
@@ -465,44 +440,5 @@ document.addEventListener("keydown", (e) => {
       .forEach((modal) =>
         modal.classList.remove("active")
       );
-  }
-});
-
-
-// ========================================
-// ICAL EXPORT – BOUTON "COPIER"
-// ========================================
-document.addEventListener("click", async (event) => {
-  const btn = event.target.closest(".btn-copy-ical-export");
-  if (!btn) return;
-
-  const icalUrl = btn.dataset.icalUrl;
-  const row = btn.closest(".ical-row");
-  const input = row ? row.querySelector(".ical-input") : null;
-
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(icalUrl);
-    } else if (input) {
-      // Fallback navigateurs anciens
-      input.removeAttribute("readonly");
-      input.select();
-      document.execCommand("copy");
-      input.setAttribute("readonly", "readonly");
-    }
-
-    const originalText = btn.textContent;
-    btn.textContent = "Copié ✅";
-    btn.disabled = true;
-
-    setTimeout(() => {
-      btn.textContent = originalText;
-      btn.disabled = false;
-    }, 1500);
-  } catch (error) {
-    console.error("Erreur copie iCal export :", error);
-    alert(
-      "Impossible de copier automatiquement. Sélectionnez le lien et copiez-le manuellement."
-    );
   }
 });
