@@ -649,35 +649,93 @@
         });
       }
 
-      /* -------- NOTIFICATIONS -------- */
+            /* -------- NOTIFICATIONS -------- */
 
       const notifNewReservation = document.getElementById('notifNewReservation');
       const notifReminder       = document.getElementById('notifReminder');
       const saveNotifBtn        = document.getElementById('saveNotifBtn');
       const notifSaveStatus     = document.getElementById('notifSaveStatus');
 
-      const savedNotifRaw = localStorage.getItem('lcc_settings_notif');
-      if (savedNotifRaw) {
-        try {
-          const savedNotif = JSON.parse(savedNotifRaw);
-          if (typeof savedNotif.newReservation === 'boolean') {
-            notifNewReservation.checked = savedNotif.newReservation;
+      const tokenNotif = localStorage.getItem('lcc_token');
+
+      async function loadNotificationSettings() {
+        if (!notifNewReservation || !notifReminder) return;
+
+        // 1) Essayer de charger depuis l'API
+        if (tokenNotif) {
+          try {
+            const res = await fetch('/api/settings/notifications', {
+              headers: {
+                'Authorization': 'Bearer ' + tokenNotif
+              }
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (typeof data.newReservation === 'boolean') {
+                notifNewReservation.checked = data.newReservation;
+              }
+              if (typeof data.reminder === 'boolean') {
+                notifReminder.checked = data.reminder;
+              }
+
+              // On garde aussi une copie locale pour l'UI
+              localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
+              return; // on s'arrête là si tout va bien
+            }
+          } catch (e) {
+            console.error('Erreur chargement notifs depuis API', e);
           }
-          if (typeof savedNotif.reminder === 'boolean') {
-            notifReminder.checked = savedNotif.reminder;
+        }
+
+        // 2) Fallback : lire depuis le localStorage si l'API n'a pas répondu
+        const savedNotifRaw = localStorage.getItem('lcc_settings_notif');
+        if (savedNotifRaw) {
+          try {
+            const savedNotif = JSON.parse(savedNotifRaw);
+            if (typeof savedNotif.newReservation === 'boolean') {
+              notifNewReservation.checked = savedNotif.newReservation;
+            }
+            if (typeof savedNotif.reminder === 'boolean') {
+              notifReminder.checked = savedNotif.reminder;
+            }
+          } catch (e) {
+            console.error('Erreur lecture notifs paramètres', e);
           }
-        } catch (e) {
-          console.error('Erreur lecture notifs paramètres', e);
         }
       }
 
-      if (saveNotifBtn) {
-        saveNotifBtn.addEventListener('click', function () {
+      loadNotificationSettings();
+
+      if (saveNotifBtn && notifNewReservation && notifReminder) {
+        saveNotifBtn.addEventListener('click', async function () {
           const data = {
             newReservation: notifNewReservation.checked,
             reminder: notifReminder.checked
           };
+
+          // Sauvegarde locale pour l'UI
           localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
+
+          // Sauvegarde côté serveur
+          if (tokenNotif) {
+            try {
+              const res = await fetch('/api/settings/notifications', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + tokenNotif
+                },
+                body: JSON.stringify(data)
+              });
+              if (!res.ok) {
+                console.error('Erreur API sauvegarde notifs, statut:', res.status);
+              }
+            } catch (e) {
+              console.error('Erreur sauvegarde notifs via API', e);
+            }
+          }
+
           if (notifSaveStatus) {
             notifSaveStatus.textContent = 'Préférences de notifications enregistrées.';
             setTimeout(() => { notifSaveStatus.textContent = ''; }, 2500);
