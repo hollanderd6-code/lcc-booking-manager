@@ -55,6 +55,58 @@
       font-weight: 700;
     }
 </style>
+<style>
+  /* Responsive mobile Dashboard */
+  @media (max-width: 768px) {
+    .main-content {
+      padding: 12px 12px 24px;
+    }
+
+    .main-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 20px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      max-width: 100%;
+    }
+
+    .header-actions {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Les cartes passent en une seule colonne */
+    .status-grid,
+    .kpi-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-card,
+    .kpi-card {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page-title {
+      font-size: 18px;
+    }
+    .page-subtitle {
+      font-size: 12px;
+    }
+  }
+</style>
 
   <style>
 /* ============================================
