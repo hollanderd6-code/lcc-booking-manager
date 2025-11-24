@@ -1098,7 +1098,7 @@
             </div>
             <div class="kpi-main">
               <span class="kpi-value" id="kpiOccupancyValue">82%</span>
-              <span class="kpi-sub">sur les 30 prochains jours</span>
+              <span class="kpi-sub">sur le mois en cours</span>
             </div>
           </article>
 
@@ -1131,6 +1131,17 @@
               <span class="kpi-sub">connectés à au moins un OTA</span>
             </div>
           </article>
+          <!-- KPI 4 : Ménages du jour -->
+<article class="kpi-card">
+  <div class="kpi-header">
+    <span class="kpi-label">Ménages du jour</span>
+  </div>
+  <div class="kpi-main">
+    <span class="kpi-value" id="kpiCleaningTodayValue">0</span>
+    <span class="kpi-sub">départs à nettoyer aujourd’hui</span>
+  </div>
+</article>
+
         </section>
 
         <!-- ONBOARDING -->
@@ -2158,54 +2169,122 @@
   </script>
 
   <script>
-    (function() {
-      function updateKpisFromLocal() {
-        try {
-          var reservationsRaw = localStorage.getItem('LCC_RESERVATIONS');
-          var propertiesRaw = localStorage.getItem('LCC_PROPERTIES');
-          var reservations = reservationsRaw ? JSON.parse(reservationsRaw) : [];
-          var properties = propertiesRaw ? JSON.parse(propertiesRaw) : [];
+  (function() {
+    const API_URL = 'https://lcc-booking-manager.onrender.com';
 
-          // Occupation approximative : ratio de nuits réservées / (logements * 30 jours)
-          var today = new Date();
-          var horizon = new Date();
-          horizon.setDate(today.getDate() + 30);
-          var totalNightsPossible = (properties.length || 1) * 30;
-          var nightsBooked = 0;
-          var futureRevenue = 0;
+    function computeKpis(reservations, properties) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
 
-          (reservations || []).forEach(function(r) {
-            if (!r.start || !r.end) return;
-            var start = new Date(r.start);
-            var end = new Date(r.end);
-            if (end < today || start > horizon) return;
-            var d = (end - start) / (1000*60*60*24);
-            nightsBooked += d;
-            futureRevenue += r.amount || 0;
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+      const daysInMonth = monthEnd.getDate();
+
+      const totalNightsPossible = (properties.length || 1) * daysInMonth;
+
+      let nightsBooked = 0;
+      let futureRevenue = 0;
+      let cleaningToday = 0;
+
+      const todayStr = now.toISOString().slice(0, 10);
+      const horizon = new Date(now);
+      horizon.setDate(now.getDate() + 30);
+
+      (reservations || []).forEach((r) => {
+        if (!r.start || !r.end) return;
+
+        const start = new Date(r.start);
+        const end = new Date(r.end);
+
+        // Nuits réservées sur le mois en cours (clamp dans [monthStart, monthEnd])
+        const startClamped = start < monthStart ? monthStart : start;
+        const endClamped = end > monthEnd ? monthEnd : end;
+        if (endClamped > startClamped) {
+          const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+          nightsBooked += d;
+        }
+
+        // Revenus à venir sur 30 jours
+        if (end >= now && start <= horizon) {
+          futureRevenue += r.amount || 0;
+        }
+
+        // Ménage du jour : départ aujourd'hui
+        const endStr = r.end.slice(0, 10);
+        if (endStr === todayStr) {
+          cleaningToday += 1;
+        }
+      });
+
+      let occupancy = Math.round(
+        (nightsBooked / (totalNightsPossible || 1)) * 100
+      );
+      if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
+      if (occupancy > 100) occupancy = 100;
+
+      const occEl = document.getElementById('kpiOccupancyValue');
+      const revEl = document.getElementById('kpiRevenueValue');
+      const propEl = document.getElementById('kpiPropertiesValue');
+      const cleaningEl = document.getElementById('kpiCleaningTodayValue');
+
+      if (occEl) occEl.textContent = occupancy + '%';
+      if (revEl) {
+        revEl.textContent = new Intl.NumberFormat('fr-FR', {
+          style: 'currency',
+          currency: 'EUR'
+        }).format(futureRevenue);
+      }
+      if (propEl) propEl.textContent = properties.length || 0;
+      if (cleaningEl) cleaningEl.textContent = cleaningToday;
+    }
+
+    async function loadDataAndUpdateKpis() {
+      try {
+        const token = localStorage.getItem('lcc_token');
+        let reservations = [];
+        let properties = [];
+
+        if (token) {
+          const res = await fetch(`${API_URL}/api/reservations`, {
+            headers: {
+              Authorization: 'Bearer ' + token
+            }
           });
 
-          var occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
-          if (occupancy < 0 || !isFinite(occupancy)) occupancy = 0;
-          if (occupancy > 100) occupancy = 100;
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            reservations = Array.isArray(data.reservations) ? data.reservations : [];
+            properties = Array.isArray(data.properties) ? data.properties : [];
 
-          var occEl = document.getElementById('kpiOccupancyValue');
-          var revEl = document.getElementById('kpiRevenueValue');
-          var propEl = document.getElementById('kpiPropertiesValue');
-
-          if (occEl) occEl.textContent = occupancy + '%';
-          if (revEl) {
-            var formatted = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(futureRevenue);
-            revEl.textContent = formatted;
+            // stock pour le reste du dashboard (notifs, calendrier…)
+            localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
+            localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
+            window.LCC_RESERVATIONS = reservations;
           }
-          if (propEl && properties.length) propEl.textContent = properties.length;
-        } catch (e) {
-          console.warn('Impossible de recalculer les KPI', e);
+        } else {
+          // fallback : données déjà en localStorage
+          const rRaw = localStorage.getItem('LCC_RESERVATIONS');
+          const pRaw = localStorage.getItem('LCC_PROPERTIES');
+          reservations = rRaw ? JSON.parse(rRaw) : [];
+          properties = pRaw ? JSON.parse(pRaw) : [];
         }
-      }
 
-      document.addEventListener('DOMContentLoaded', updateKpisFromLocal);
-    })();
-  </script>
+        // Alimente aussi le calendrier moderne s'il est présent
+        if (window.renderModernCalendar) {
+          window.renderModernCalendar(reservations, properties);
+        }
+
+        computeKpis(reservations, properties);
+      } catch (e) {
+        console.warn('Erreur KPI dashboard', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+  })();
+</script>
+
 
   <script>
   // ============================================
