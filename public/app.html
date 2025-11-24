@@ -55,58 +55,6 @@
       font-weight: 700;
     }
 </style>
-<style>
-  /* Responsive mobile Dashboard */
-  @media (max-width: 768px) {
-    .main-content {
-      padding: 12px 12px 24px;
-    }
-
-    .main-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
-    .page-title {
-      font-size: 20px;
-    }
-
-    .page-subtitle {
-      font-size: 13px;
-      max-width: 100%;
-    }
-
-    .header-actions {
-      width: 100%;
-      justify-content: flex-start;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    /* Les cartes passent en une seule colonne */
-    .status-grid,
-    .kpi-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .status-card,
-    .kpi-card {
-      width: 100%;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .page-title {
-      font-size: 18px;
-    }
-    .page-subtitle {
-      font-size: 12px;
-    }
-  }
-</style>
 
   <style>
 /* ============================================
@@ -1181,8 +1129,7 @@
         </section>
 
         <!-- ONBOARDING -->
-<section class="onboarding-section" id="onboardingSection">
-
+        <section class="onboarding-section">
           <header class="onboarding-header">
             <div>
               <h2>Bien démarrer avec Boostinghost</h2>
@@ -3074,33 +3021,6 @@
     </div>
   </div>
 </div>
-<script>
-  (function () {
-    document.addEventListener('DOMContentLoaded', function () {
-      const section = document.getElementById('onboardingSection');
-      if (!section) return;
-
-      const steps = section.querySelectorAll('.onboarding-step');
-      let completed = 0;
-
-      steps.forEach(step => {
-        const status = step.querySelector('.onboarding-step-status');
-        if (status && status.classList.contains('done')) {
-          completed++;
-        }
-      });
-
-      // met à jour le "X/4 complétées"
-      const progressEl = document.getElementById('onboardingProgressValue');
-      if (progressEl) progressEl.textContent = completed;
-
-      // si toutes les étapes sont en "done" => on cache le bloc
-      if (completed === steps.length) {
-        section.style.display = 'none';
-      }
-    });
-  })();
-</script>
   
 </body>
 </html>
