@@ -54,6 +54,46 @@
       font-size: 11px;
       font-weight: 700;
     }
+
+    /* Responsive global dashboard layout */
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 16px 12px 24px;
+      }
+      .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .status-grid,
+      .kpi-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .status-card,
+      .kpi-card,
+      .overview-card,
+      .onboarding-section,
+      .card {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .page-title {
+        font-size: 20px;
+      }
+      .page-subtitle {
+        font-size: 13px;
+      }
+    }
 </style>
 
   <style>
@@ -1017,7 +1057,6 @@
   </div>
 
       <!-- Page Content -->
-      <div class="page-content">
         
         <!-- ÉTAT DES CONNEXIONS -->
         <section class="status-grid">
@@ -1068,12 +1107,12 @@
             <p>Scénarios IA prêts pour vos voyageurs.</p>
             <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
           </article>
-                    <article class="status-card">
+                    <article class="status-card" id="whatsappStatusCard">
             <div class="status-card-header">
               <div class="status-icon status-icon-whatsapp">
                 <i class="fab fa-whatsapp"></i>
               </div>
-              <span class="status-label status-warning">À configurer</span>
+              <span class="status-label status-warning" id="whatsappStatusLabel">À configurer</span>
             </div>
             <h3>Notifications WhatsApp</h3>
             <p>Recevez un message à chaque nouvelle réservation.</p>
@@ -1129,7 +1168,7 @@
         </section>
 
         <!-- ONBOARDING -->
-        <section class="onboarding-section">
+        <section class="onboarding-section" id="onboardingSection">
           <header class="onboarding-header">
             <div>
               <h2>Bien démarrer avec Boostinghost</h2>
@@ -2267,6 +2306,57 @@
 
     document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
   })();
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // Onboarding progress + auto-hide when 100%
+      const onboardingSection = document.getElementById('onboardingSection');
+      if (onboardingSection) {
+        const steps = onboardingSection.querySelectorAll('.onboarding-step');
+        let completed = 0;
+        steps.forEach(step => {
+          const status = step.querySelector('.onboarding-step-status');
+          if (status && status.classList.contains('done')) {
+            completed++;
+          }
+        });
+        const progressEl = document.getElementById('onboardingProgressValue');
+        if (progressEl) {
+          progressEl.textContent = completed;
+        }
+        if (completed === steps.length && steps.length > 0) {
+          onboardingSection.style.display = 'none';
+        }
+      }
+
+      // WhatsApp UI (badge + alerte en haut)
+      try {
+        const raw = localStorage.getItem('lcc_notifications_settings');
+        const alertEl = document.getElementById('whatsappSetupAlert');
+        const card = document.getElementById('whatsappStatusCard');
+        const label = document.getElementById('whatsappStatusLabel');
+
+        let configured = false;
+
+        if (raw) {
+          const settings = JSON.parse(raw);
+          const smsEnabled = settings.smsEnabled;
+          const smsNumbers = (settings.smsNumbers || '').trim();
+          configured = !!(smsEnabled && smsNumbers);
+        }
+
+        if (alertEl) {
+          alertEl.style.display = configured ? 'none' : 'block';
+        }
+
+        if (card && label) {
+          label.textContent = configured ? 'Actif' : 'À configurer';
+          label.classList.remove('status-ok', 'status-warning');
+          label.classList.add(configured ? 'status-ok' : 'status-warning');
+        }
+      } catch (e) {
+        console.warn('Erreur lors de la mise à jour de l’UI WhatsApp', e);
+      }
+    });
 </script>
 
 
