@@ -890,6 +890,7 @@
 
 </head>
 <body data-page="app">
+  <link rel="stylesheet" href="/css/calendar-modals.css">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
@@ -3239,6 +3240,191 @@
     </div>
   </div>
 </div>
-  
+  <!-- ============================================
+     MODALS DU CALENDRIER MODERNE
+     À ajouter AVANT </body> dans app.html
+     ============================================ -->
+
+<!-- Reservation Details Modal -->
+<div class="booking-modal" id="reservationDetailsModal">
+  <div class="modal-overlay" id="detailsModalOverlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="detailsModalTitle">Détails de la réservation</h2>
+      <button class="modal-close" id="closeDetailsModal">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div id="reservationDetailsContent" class="reservation-details">
+      <!-- Le contenu sera inséré dynamiquement -->
+    </div>
+    <div class="modal-actions" id="detailsModalActions">
+      <button type="button" class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;">
+        <i class="fas fa-trash"></i> Supprimer
+      </button>
+      <button type="button" class="btn btn-ghost" id="closeDetailsBtn">Fermer</button>
+      <button type="button" class="btn btn-primary" id="editBookingBtn">
+        <i class="fas fa-edit"></i> Modifier
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Booking Modal -->
+<div class="booking-modal" id="editBookingModal">
+  <div class="modal-overlay" id="editModalOverlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Modifier la réservation</h2>
+      <button class="modal-close" id="closeEditModal">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form id="editBookingForm" class="booking-form">
+      <input type="hidden" id="editBookingId">
+      <input type="hidden" id="editBookingSource">
+      
+      <div class="form-group">
+        <label for="editBookingProperty">Logement</label>
+        <select id="editBookingProperty" required>
+          <option value="">Sélectionner un logement</option>
+        </select>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="editCheckIn">Arrivée</label>
+          <input type="date" id="editCheckIn" required>
+        </div>
+        <div class="form-group">
+          <label for="editCheckOut">Départ</label>
+          <input type="date" id="editCheckOut" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="editGuestName">Nom du client</label>
+        <input type="text" id="editGuestName" placeholder="Ex: Jean Dupont" required>
+      </div>
+
+      <div class="form-group">
+        <label for="editGuestPhone">Téléphone</label>
+        <input type="tel" id="editGuestPhone" placeholder="Ex: +33 6 12 34 56 78">
+      </div>
+
+      <div class="form-group">
+        <label for="editGuestEmail">Email</label>
+        <input type="email" id="editGuestEmail" placeholder="Ex: client@email.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="editPlatform">Plateforme</label>
+        <select id="editPlatform">
+          <option value="direct">Direct</option>
+          <option value="booking">Booking.com</option>
+          <option value="airbnb">Airbnb</option>
+          <option value="expedia">Expedia</option>
+          <option value="vrbo">VRBO</option>
+          <option value="hotels">Hotels.com</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="editPrice">Prix (€)</label>
+        <input type="number" id="editPrice" min="0" step="0.01" placeholder="75">
+      </div>
+
+      <div class="form-group">
+        <label for="editNotes">Notes</label>
+        <textarea id="editNotes" rows="3" placeholder="Notes supplémentaires..."></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelEditBooking">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New Booking Modal -->
+<div class="booking-modal" id="bookingModal">
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Nouvelle Réservation</h2>
+      <button class="modal-close" id="closeModal">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form id="bookingForm" class="booking-form">
+      <div class="form-group">
+        <label for="bookingProperty">Logement</label>
+        <select id="bookingProperty" required>
+          <option value="">Sélectionner un logement</option>
+        </select>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="checkIn">Arrivée</label>
+          <input type="date" id="checkIn" required>
+        </div>
+        <div class="form-group">
+          <label for="checkOut">Départ</label>
+          <input type="date" id="checkOut" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="guestName">Nom du client</label>
+        <input type="text" id="guestName" placeholder="Ex: Jean Dupont" required>
+      </div>
+
+      <div class="form-group">
+        <label for="guestPhone">Téléphone</label>
+        <input type="tel" id="guestPhone" placeholder="Ex: +33 6 12 34 56 78">
+      </div>
+
+      <div class="form-group">
+        <label for="guestEmail">Email</label>
+        <input type="email" id="guestEmail" placeholder="Ex: client@email.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="platform">Plateforme</label>
+        <select id="platform">
+          <option value="direct">Direct</option>
+          <option value="booking">Booking.com</option>
+          <option value="airbnb">Airbnb</option>
+          <option value="expedia">Expedia</option>
+          <option value="vrbo">VRBO</option>
+          <option value="hotels">Hotels.com</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="price">Prix (€)</label>
+        <input type="number" id="price" min="0" step="0.01" placeholder="75">
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelBooking">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Floating Action Button (bouton +) -->
+<button class="fab" id="addBookingBtn" title="Nouvelle réservation">
+  <i class="fas fa-plus"></i>
+</button>
+<script src="/js/calendar-modern-integration.js"></script>
 </body>
 </html>
