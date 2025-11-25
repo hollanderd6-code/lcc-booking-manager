@@ -127,12 +127,25 @@
       });
     });
 
-    // Modal
+    // Booking Modal
     elements.addBookingBtn.addEventListener('click', openBookingModal);
     document.getElementById('closeModal').addEventListener('click', closeBookingModal);
     document.getElementById('cancelBooking').addEventListener('click', closeBookingModal);
     elements.modalOverlay.addEventListener('click', closeBookingModal);
     elements.bookingForm.addEventListener('submit', handleBookingSubmit);
+
+    // Details Modal
+    document.getElementById('closeDetailsModal').addEventListener('click', closeDetailsModal);
+    document.getElementById('closeDetailsBtn').addEventListener('click', closeDetailsModal);
+    document.getElementById('detailsModalOverlay').addEventListener('click', closeDetailsModal);
+    document.getElementById('editBookingBtn').addEventListener('click', openEditBookingModal);
+    document.getElementById('deleteBookingBtn').addEventListener('click', deleteBooking);
+
+    // Edit Modal
+    document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+    document.getElementById('cancelEditBooking').addEventListener('click', closeEditModal);
+    document.getElementById('editModalOverlay').addEventListener('click', closeEditModal);
+    document.getElementById('editBookingForm').addEventListener('submit', handleEditBookingSubmit);
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', logout);
@@ -231,12 +244,13 @@
       showLoading();
       
       const token = localStorage.getItem('lcc_token');
-      const response = await fetch(`${CONFIG.API_URL}/api/bookings`, {
+      const response = await fetch(`${CONFIG.API_URL}/api/reservations`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
-        state.bookings = await response.json();
+        const data = await response.json();
+        state.bookings = data.reservations || [];
         updateCalendar();
       }
     } catch (error) {
@@ -687,13 +701,17 @@
       checkIn: document.getElementById('checkIn').value,
       checkOut: document.getElementById('checkOut').value,
       guestName: document.getElementById('guestName').value,
+      guestPhone: document.getElementById('guestPhone').value,
+      guestEmail: document.getElementById('guestEmail').value,
       platform: document.getElementById('platform').value,
-      price: parseFloat(document.getElementById('price').value) || 0
+      price: parseFloat(document.getElementById('price').value) || 0,
+      notes: document.getElementById('notes').value,
+      source: 'manual'
     };
     
     try {
       const token = localStorage.getItem('lcc_token');
-      const response = await fetch(`${CONFIG.API_URL}/api/bookings`, {
+      const response = await fetch(`${CONFIG.API_URL}/api/reservations/manual`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -707,7 +725,7 @@
         state.bookings.push(booking);
         updateCalendar();
         closeBookingModal();
-        showNotification('Réservation ajoutée avec succès');
+        showNotification('Réservation ajoutée avec succès', 'success');
       } else {
         throw new Error('Erreur lors de l\'ajout de la réservation');
       }
@@ -718,79 +736,290 @@
   }
 
   function showBookingDetails(booking) {
-  const modal = document.getElementById('reservationModal');
-  const modalBody = document.getElementById('modalBody');
+    state.selectedBooking = booking;
+    const modal = document.getElementById('reservationDetailsModal');
+    const content = document.getElementById('reservationDetailsContent');
+    
+    if (!modal || !content) {
+      console.warn('Modal de détails introuvable');
+      return;
+    }
 
-  if (!modal || !modalBody) {
-    console.warn('Modal de réservation introuvable');
-    console.log('Booking :', booking);
-    return;
+    const property = state.properties.find(p => p.id === booking.propertyId);
+    const checkIn = new Date(booking.checkIn);
+    const checkOut = new Date(booking.checkOut);
+    
+    // Calculate number of nights
+    const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+    
+    // Get platform info
+    const platformInfo = CONFIG.PLATFORMS[booking.platform || 'direct'];
+    
+    // Build HTML
+    let detailsHTML = `
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        
+        <!-- Property Info -->
+        <div style="display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;background:var(--bg-secondary);">
+          <div style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:${platformInfo.color};color:white;font-size:20px;">
+            <i class="fas fa-home"></i>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:16px;color:var(--text-primary);">
+              ${property ? property.name : 'Logement'}
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">
+              <i class="fas fa-tag" style="margin-right:4px;"></i>
+              ${platformInfo.name}
+            </div>
+          </div>
+        </div>
+
+        <!-- Guest Info -->
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);margin-bottom:8px;">
+            Informations voyageur
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:36px;height:36px;border-radius:999px;background:var(--primary-color);color:white;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-user"></i>
+              </div>
+              <div>
+                <div style="font-weight:600;color:var(--text-primary);">${booking.guestName || 'Nom non renseigné'}</div>
+                ${booking.guestEmail ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;"><i class="fas fa-envelope" style="margin-right:4px;"></i>${booking.guestEmail}</div>` : ''}
+              </div>
+            </div>
+            ${booking.guestPhone ? `
+              <div style="display:flex;align-items:center;gap:12px;padding-top:8px;border-top:1px solid var(--border-color);">
+                <div style="width:36px;height:36px;border-radius:999px;background:var(--success-color);color:white;display:flex;align-items:center;justify-content:center;">
+                  <i class="fas fa-phone"></i>
+                </div>
+                <div>
+                  <div style="font-size:12px;color:var(--text-secondary);">Téléphone</div>
+                  <div style="font-weight:600;color:var(--text-primary);">${booking.guestPhone}</div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Dates -->
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);margin-bottom:8px;">
+            Dates du séjour
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;">
+              <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">
+                <i class="fas fa-sign-in-alt" style="margin-right:4px;"></i>
+                Arrivée
+              </div>
+              <div style="font-weight:700;font-size:16px;color:var(--text-primary);">
+                ${checkIn.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+                ${checkIn.toLocaleDateString('fr-FR', { weekday: 'long' })}
+              </div>
+            </div>
+            <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;">
+              <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">
+                <i class="fas fa-sign-out-alt" style="margin-right:4px;"></i>
+                Départ
+              </div>
+              <div style="font-weight:700;font-size:16px;color:var(--text-primary);">
+                ${checkOut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+                ${checkOut.toLocaleDateString('fr-FR', { weekday: 'long' })}
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;text-align:center;font-size:14px;color:var(--text-secondary);">
+            <i class="fas fa-moon" style="margin-right:4px;"></i>
+            ${nights} nuit${nights > 1 ? 's' : ''}
+          </div>
+        </div>
+
+        <!-- Price -->
+        ${booking.price ? `
+          <div style="background:linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);border-radius:12px;padding:16px;color:white;text-align:center;">
+            <div style="font-size:12px;opacity:0.9;margin-bottom:4px;">Prix total</div>
+            <div style="font-size:32px;font-weight:800;">${booking.price}€</div>
+          </div>
+        ` : ''}
+
+        <!-- Notes -->
+        ${booking.notes ? `
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);margin-bottom:8px;">
+              Notes
+            </div>
+            <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;">
+              <div style="color:var(--text-primary);line-height:1.6;">${booking.notes}</div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Source Info -->
+        ${booking.source ? `
+          <div style="font-size:12px;color:var(--text-tertiary);text-align:center;padding:12px;background:var(--bg-secondary);border-radius:8px;">
+            <i class="fas fa-info-circle" style="margin-right:4px;"></i>
+            Source: ${booking.source === 'ical' ? 'Calendrier iCal' : 'Réservation manuelle'}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    content.innerHTML = detailsHTML;
+    
+    // Show/hide edit/delete buttons based on source
+    const editBtn = document.getElementById('editBookingBtn');
+    const deleteBtn = document.getElementById('deleteBookingBtn');
+    
+    if (booking.source === 'ical') {
+      // Les réservations iCal ne peuvent pas être modifiées/supprimées
+      editBtn.style.display = 'none';
+      deleteBtn.style.display = 'none';
+    } else {
+      editBtn.style.display = 'inline-flex';
+      deleteBtn.style.display = 'inline-flex';
+    }
+    
+    modal.classList.add('open');
   }
 
-  const property = state.properties.find(p => p.id === booking.propertyId);
-  const checkIn  = new Date(booking.checkIn);
-  const checkOut = new Date(booking.checkOut);
+  function openEditBookingModal() {
+    if (!state.selectedBooking) return;
+    
+    const booking = state.selectedBooking;
+    const modal = document.getElementById('editBookingModal');
+    
+    // Pre-fill form
+    document.getElementById('editBookingId').value = booking.id;
+    document.getElementById('editBookingSource').value = booking.source || 'manual';
+    
+    // Populate property select
+    const propertySelect = document.getElementById('editBookingProperty');
+    propertySelect.innerHTML = '<option value="">Sélectionner un logement</option>';
+    state.properties.forEach(property => {
+      const option = document.createElement('option');
+      option.value = property.id;
+      option.textContent = property.name;
+      option.selected = property.id === booking.propertyId;
+      propertySelect.appendChild(option);
+    });
+    
+    // Fill other fields
+    document.getElementById('editCheckIn').value = booking.checkIn.split('T')[0];
+    document.getElementById('editCheckOut').value = booking.checkOut.split('T')[0];
+    document.getElementById('editGuestName').value = booking.guestName || '';
+    document.getElementById('editGuestPhone').value = booking.guestPhone || '';
+    document.getElementById('editGuestEmail').value = booking.guestEmail || '';
+    document.getElementById('editPlatform').value = booking.platform || 'direct';
+    document.getElementById('editPrice').value = booking.price || '';
+    document.getElementById('editNotes').value = booking.notes || '';
+    
+    // Close details modal and open edit modal
+    closeDetailsModal();
+    modal.classList.add('open');
+  }
 
-  modalBody.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:16px;">
+  async function handleEditBookingSubmit(e) {
+    e.preventDefault();
+    
+    const bookingId = document.getElementById('editBookingId').value;
+    const formData = {
+      id: bookingId,
+      propertyId: document.getElementById('editBookingProperty').value,
+      checkIn: document.getElementById('editCheckIn').value,
+      checkOut: document.getElementById('editCheckOut').value,
+      guestName: document.getElementById('editGuestName').value,
+      guestPhone: document.getElementById('editGuestPhone').value,
+      guestEmail: document.getElementById('editGuestEmail').value,
+      platform: document.getElementById('editPlatform').value,
+      price: parseFloat(document.getElementById('editPrice').value) || 0,
+      notes: document.getElementById('editNotes').value,
+      source: document.getElementById('editBookingSource').value
+    };
+    
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const response = await fetch(`${CONFIG.API_URL}/api/reservations/manual/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (response.ok) {
+        const updatedBooking = await response.json();
+        
+        // Update in state
+        const index = state.bookings.findIndex(b => b.id === bookingId);
+        if (index !== -1) {
+          state.bookings[index] = updatedBooking;
+        }
+        
+        updateCalendar();
+        closeEditModal();
+        showNotification('Réservation modifiée avec succès', 'success');
+      } else {
+        throw new Error('Erreur lors de la modification');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      showNotification('Erreur lors de la modification de la réservation', 'error');
+    }
+  }
 
-      <div style="display:flex;align-items:center;gap:12px;
-                  padding:12px;border-radius:12px;
-                  background:var(--bg-secondary);">
-        <div style="width:40px;height:40px;border-radius:999px;
-                    display:flex;align-items:center;justify-content:center;
-                    background:var(--primary-color);color:white;">
-          <i class="fas fa-home"></i>
-        </div>
-        <div>
-          <div style="font-weight:700;color:var(--text-primary);">
-            ${property ? property.name : 'Logement'}
-          </div>
-          <div style="font-size:13px;color:var(--text-secondary);text-transform:uppercase;">
-            ${booking.platform || 'Direct'}
-          </div>
-        </div>
-      </div>
+  async function deleteBooking() {
+    if (!state.selectedBooking) return;
+    
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
+      return;
+    }
+    
+    const booking = state.selectedBooking;
+    
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const response = await fetch(`${CONFIG.API_URL}/api/reservations/manual/${booking.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        // Remove from state
+        state.bookings = state.bookings.filter(b => b.id !== booking.id);
+        
+        updateCalendar();
+        closeDetailsModal();
+        showNotification('Réservation supprimée avec succès', 'success');
+      } else {
+        throw new Error('Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      showNotification('Erreur lors de la suppression de la réservation', 'error');
+    }
+  }
 
-      <div>
-        <div style="font-size:12px;font-weight:600;text-transform:uppercase;
-                    color:var(--text-tertiary);margin-bottom:4px;">
-          Voyageur
-        </div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary);">
-          <i class="fas fa-user" style="color:var(--primary-color);margin-right:8px;"></i>
-          ${booking.guestName || 'Voyageur'}
-        </div>
-      </div>
+  function closeDetailsModal() {
+    const modal = document.getElementById('reservationDetailsModal');
+    modal.classList.remove('open');
+    state.selectedBooking = null;
+  }
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;
-                      color:var(--text-tertiary);margin-bottom:4px;">
-            Arrivée
-          </div>
-          <div style="font-weight:600;color:var(--text-primary);">
-            <i class="fas fa-calendar-check" style="margin-right:8px;"></i>
-            ${checkIn.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
-        </div>
-
-        <div>
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;
-                      color:var(--text-tertiary);margin-bottom:4px;">
-            Départ
-          </div>
-          <div style="font-weight:600;color:var(--text-primary);">
-            <i class="fas fa-calendar-times" style="margin-right:8px;"></i>
-            ${checkOut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  modal.classList.add('active');
-}
+  function closeEditModal() {
+    const modal = document.getElementById('editBookingModal');
+    modal.classList.remove('open');
+    document.getElementById('editBookingForm').reset();
+  }
 
   // ============================================
   // FONCTIONS UTILITAIRES
@@ -865,8 +1094,25 @@
   }
 
   function showNotification(message, type = 'success') {
-    // TODO: Implement notification system
-    console.log(`${type}: ${message}`);
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+      <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+      <span>${message}</span>
+    `;
+    
+    // Add to body
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   }
 
   function logout() {
