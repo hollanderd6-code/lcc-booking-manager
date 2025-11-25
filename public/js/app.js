@@ -675,6 +675,8 @@ function clearFilters() {
 // ========================================
 
 function showReservationModal(reservation) {
+  console.log('showReservationModal', reservation); // pour debug
+
   if (!reservation) return;
 
   const modal = document.getElementById('reservationModal');
@@ -687,8 +689,13 @@ function showReservationModal(reservation) {
     (reservation.property && reservation.property.name) ||
     'Logement';
 
-  const platformRaw = (reservation.source || reservation.platform || reservation.channel || 'Direct').toString();
-  const platform = platformRaw.toUpperCase();
+  const platformRaw =
+    reservation.source ||
+    reservation.platform ||
+    reservation.channel ||
+    'Direct';
+
+  const platform = String(platformRaw).toUpperCase();
 
   const guestName =
     reservation.guestName ||
@@ -698,10 +705,10 @@ function showReservationModal(reservation) {
   const notes = reservation.notes || '';
 
   const start = reservation.start || reservation.checkIn || reservation.startDate;
-  const end = reservation.end || reservation.checkOut || reservation.endDate;
+  const end   = reservation.end   || reservation.checkOut || reservation.endDate;
 
   const startDate = start ? new Date(start) : null;
-  const endDate = end ? new Date(end) : null;
+  const endDate   = end   ? new Date(end)   : null;
 
   let nights = reservation.nights;
   if (!nights && startDate && endDate) {
@@ -709,149 +716,64 @@ function showReservationModal(reservation) {
     nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
   }
 
-  // On considère "manuelle" si type = 'manual' ou source = 'MANUEL'
-  const isManual = reservation.type === 'manual' || platformRaw.toUpperCase() === 'MANUEL';
+  // Réservation manuelle ?
+  const isManual =
+    reservation.type === 'manual' ||
+    String(platformRaw).toUpperCase() === 'MANUEL';
 
-  modalBody.innerHTML = `
-    <div style="
-      display:flex;
-      flex-direction:column;
-      gap:20px;
-    ">
+  // Contenu très simple pour limiter les erreurs de syntaxe
+  let html = '';
 
-      <div style="
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:16px;
-        padding:14px 16px;
-        background:var(--bg-secondary);
-        border-radius:var(--radius-lg);
-      ">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="
-            width:44px;
-            height:44px;
-            border-radius:999px;
-            background:var(--primary-color);
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            color:white;
-            box-shadow:0 4px 12px rgba(16,185,129,0.35);
-          ">
-            <i class="fas fa-home"></i>
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:16px;color:var(--text-primary);">
-              ${propertyName}
-            </div>
-            <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-tertiary);">
-              ${platform}
-            </div>
-          </div>
-        </div>
+  html += '<div class="reservation-modal-body">';
+  html +=   '<h3 style="margin-bottom:8px;">' + propertyName + '</h3>';
+  html +=   '<p style="margin:0 0 4px 0;font-size:13px;color:var(--text-secondary);">';
+  html +=     'Source : ' + platform;
+  html +=   '</p>';
+  html +=   '<p style="margin:0 0 12px 0;font-size:15px;font-weight:600;">';
+  html +=     'Voyageur : ' + guestName;
+  html +=   '</p>';
 
-        <div>
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:4px;">
-            Voyageur
-          </div>
-          <div style="font-size:16px;font-weight:600;color:var(--text-primary);white-space:nowrap;">
-            <i class="fas fa-user" style="color:var(--primary-color);margin-right:8px;"></i>
-            ${guestName}
-          </div>
-        </div>
-      </div>
+  html +=   '<p style="margin:0 0 4px 0;">Arrivée : ' +
+              (startDate ? startDate.toLocaleDateString('fr-FR') : '') +
+            '</p>';
+  html +=   '<p style="margin:0 0 8px 0;">Départ : ' +
+              (endDate ? endDate.toLocaleDateString('fr-FR') : '') +
+            '</p>';
+  html +=   '<p style="margin:0 0 12px 0;">Nuits : ' + (nights || '') + '</p>';
 
-      <div style="
-        display:grid;
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:12px;
-      ">
-        <div style="padding:12px;border-radius:var(--radius-md);background:var(--bg-secondary);">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:4px;">
-            Arrivée
-          </div>
-          <div style="font-weight:600;color:var(--text-primary);">
-            <i class="fas fa-calendar-check" style="color:var(--success);margin-right:6px;"></i>
-            ${startDate ? startDate.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) : ''}
-          </div>
-        </div>
+  if (notes) {
+    html += '<p style="margin:0 0 12px 0;white-space:pre-wrap;">';
+    html +=   'Notes : ' + notes;
+    html += '</p>';
+  }
 
-        <div style="padding:12px;border-radius:var(--radius-md);background:var(--bg-secondary);">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:4px;">
-            Départ
-          </div>
-          <div style="font-weight:600;color:var(--text-primary);">
-            <i class="fas fa-calendar-times" style="color:var(--danger, #ef4444);margin-right:6px;"></i>
-            ${endDate ? endDate.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) : ''}
-          </div>
-        </div>
+  html +=   '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  html +=     '<a href="/messages.html" class="btn btn-primary">';
+  html +=       '<i class="fas fa-comments"></i>';
+  html +=       '<span style="margin-left:6px;">Ouvrir la messagerie</span>';
+  html +=     '</a>';
 
-        <div style="padding:12px;border-radius:var(--radius-md);background:var(--bg-secondary);text-align:center;">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:4px;">
-            Nuits
-          </div>
-          <div style="font-size:18px;font-weight:700;color:var(--primary-color);">
-            <i class="fas fa-moon"></i> ${nights || ''}
-          </div>
-        </div>
-      </div>
+  if (isManual) {
+    html +=   '<button type="button" class="btn btn-ghost" id="deleteReservationBtn">';
+    html +=     '<i class="fas fa-trash"></i>';
+    html +=     '<span style="margin-left:6px;">Supprimer cette réservation</span>';
+    html +=   '</button>';
+  }
 
-      ${notes ? `
-      <div>
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:4px;">
-          Notes
-        </div>
-        <div style="
-          padding:12px;
-          border-radius:var(--radius-md);
-          background:var(--bg-secondary);
-          color:var(--text-secondary);
-          white-space:pre-wrap;
-        ">
-          ${notes}
-        </div>
-      </div>
-      ` : ''}
+  html +=   '</div>';
 
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px;">
-        <a href="/messages.html" class="btn btn-primary">
-          <i class="fas fa-comments"></i>
-          <span style="margin-left:6px;">Ouvrir la messagerie</span>
-        </a>
+  if (!isManual && platform !== 'DIRECT') {
+    html += '<p style="margin-top:12px;font-size:12px;color:var(--text-secondary);">';
+    html +=   'Cette réservation provient de ' + platform + '. Les modifications se font sur la plateforme.';
+    html += '</p>';
+  }
 
-        ${isManual ? `
-        <button
-          type="button"
-          class="btn btn-ghost"
-          id="deleteReservationBtn"
-          style="border-color:#fecaca;color:#b91c1c;background:#fef2f2;"
-        >
-          <i class="fas fa-trash"></i>
-          <span style="margin-left:6px;">Supprimer cette réservation</span>
-        </button>
-        ` : ''}
-      </div>
+  html += '</div>';
 
-      ${!isManual && platform && platform !== 'DIRECT' ? `
-      <div style="
-        margin-top:4px;
-        font-size:12px;
-        color:var(--text-secondary);
-        background:var(--bg-secondary);
-        border-radius:var(--radius-md);
-        padding:8px 10px;
-      ">
-        Cette réservation est importée depuis ${platform}. Les modifications
-        doivent se faire directement sur la plateforme.
-      </div>
-      ` : ''}
-    </div>
-  `;
-
+  modalBody.innerHTML = html;
   modal.classList.add('active');
 
+  // Gestion du bouton SUPPRIMER (pour les réservations manuelles uniquement)
   if (isManual) {
     const deleteBtn = document.getElementById('deleteReservationBtn');
     if (deleteBtn) {
@@ -867,24 +789,21 @@ function showReservationModal(reservation) {
 
         try {
           const token = localStorage.getItem('lcc_token');
-          const headers = {
-            'Content-Type': 'application/json'
-          };
+          const headers = { 'Content-Type': 'application/json' };
           if (token) {
             headers['Authorization'] = 'Bearer ' + token;
           }
 
-          const response = await fetch(`${API_URL}/api/reservations/manual/${encodeURIComponent(reservation.uid)}`, {
-            method: 'DELETE',
-            headers
-          });
+          const resp = await fetch(
+            API_URL + '/api/reservations/manual/' + encodeURIComponent(reservation.uid),
+            { method: 'DELETE', headers }
+          );
 
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
             throw new Error(err.error || 'Erreur lors de la suppression de la réservation.');
           }
 
-          // On recharge toutes les réservations pour mettre à jour les calendriers
           if (typeof loadReservations === 'function') {
             try {
               await loadReservations();
@@ -894,14 +813,15 @@ function showReservationModal(reservation) {
           }
 
           modal.classList.remove('active');
-        } catch (err) {
-          console.error('Erreur suppression réservation manuelle', err);
-          alert(err.message || 'Erreur lors de la suppression de la réservation.');
+        } catch (e) {
+          console.error('Erreur suppression réservation manuelle', e);
+          alert(e.message || 'Erreur lors de la suppression de la réservation.');
         }
       });
     }
   }
 }
+
 
 // Création d’un blocage depuis le modal
 async function submitBlockForm() {
