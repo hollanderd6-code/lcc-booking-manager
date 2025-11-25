@@ -1050,8 +1050,22 @@ app.get('/api/reservations', async (req, res) => {
   userProps.forEach(property => {
     const propertyReservations = reservationsStore.properties[property.id] || [];
     propertyReservations.forEach(reservation => {
+      // Normaliser le format de la réservation
       allReservations.push({
-        ...reservation,
+        id: reservation.id || reservation.uid,
+        uid: reservation.uid,
+        propertyId: property.id,
+        checkIn: reservation.checkIn || reservation.start,
+        checkOut: reservation.checkOut || reservation.end,
+        start: reservation.start || reservation.checkIn,
+        end: reservation.end || reservation.checkOut,
+        guestName: reservation.guestName || reservation.summary || 'Réservation',
+        guestPhone: reservation.guestPhone || '',
+        guestEmail: reservation.guestEmail || '',
+        platform: reservation.platform || reservation.source || 'direct',
+        source: reservation.source || reservation.type || 'ical',
+        price: reservation.price || 0,
+        notes: reservation.notes || reservation.description || '',
         property: {
           id: property.id,
           name: property.name,
@@ -1082,10 +1096,14 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { propertyId, start, end, guestName, notes } = req.body;
+    const { propertyId, checkIn, checkOut, guestName, guestPhone, guestEmail, platform, price, notes, source } = req.body;
 
-    if (!propertyId || !start || !end) {
-      return res.status(400).json({ error: 'propertyId, start et end sont requis' });
+    // Support both 'checkIn/checkOut' and 'start/end' formats
+    const startDate = checkIn || req.body.start;
+    const endDate = checkOut || req.body.end;
+
+    if (!propertyId || !startDate || !endDate) {
+      return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
     }
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
@@ -1094,13 +1112,20 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
 
     const reservation = {
+      id: 'manual_' + Date.now(),
       uid: 'manual_' + Date.now(),
-      start,
-      end,
-      source: 'MANUEL',
-      platform: 'MANUEL',
+      propertyId: propertyId,
+      start: startDate,
+      end: endDate,
+      checkIn: startDate,
+      checkOut: endDate,
+      source: source || 'manual',
+      platform: platform || 'direct',
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
+      guestPhone: guestPhone || '',
+      guestEmail: guestEmail || '',
+      price: price || 0,
       notes: notes || '',
       createdAt: new Date().toISOString()
     };
@@ -1116,15 +1141,130 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
     reservationsStore.properties[propertyId].push(reservation);
 
-    res.status(201).json({
-      message: 'Réservation manuelle créée',
-      reservation
-    });
+    res.status(201).json(reservation);
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+// PUT - Modifier une réservation manuelle
+app.put('/api/reservations/manual/:uid', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const uid = req.params.uid;
+    const { propertyId, checkIn, checkOut, guestName, guestPhone, guestEmail, platform, price, notes } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: 'Identifiant de réservation manquant' });
+    }
+
+    if (!checkIn || !checkOut) {
+      return res.status(400).json({ error: 'checkIn et checkOut sont requis' });
+    }
+
+    let foundPropertyId = null;
+    let foundReservationIndex = -1;
+
+    // Trouver la réservation
+    for (const [propId, list] of Object.entries(MANUAL_RESERVATIONS)) {
+      const property = PROPERTIES.find(p => p.id === propId && p.userId === user.id);
+      if (!property) {
+        continue;
+      }
+
+      const index = list.findIndex(r => r.uid === uid);
+      if (index !== -1) {
+        foundPropertyId = propId;
+        foundReservationIndex = index;
+        break;
+      }
+    }
+
+    if (!foundPropertyId || foundReservationIndex === -1) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+
+    // Vérifier que le nouveau propertyId appartient à l'utilisateur si fourni
+    if (propertyId && propertyId !== foundPropertyId) {
+      const newProperty = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+      if (!newProperty) {
+        return res.status(404).json({ error: 'Nouveau logement non trouvé' });
+      }
+    }
+
+    // Mettre à jour la réservation
+    const updatedReservation = {
+      ...MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex],
+      start: checkIn,
+      end: checkOut,
+      checkIn: checkIn,
+      checkOut: checkOut,
+      guestName: guestName || MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex].guestName,
+      guestPhone: guestPhone || '',
+      guestEmail: guestEmail || '',
+      platform: platform || MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex].platform,
+      price: price || 0,
+      notes: notes || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    // Si on change de logement
+    if (propertyId && propertyId !== foundPropertyId) {
+      // Supprimer de l'ancien logement
+      MANUAL_RESERVATIONS[foundPropertyId].splice(foundReservationIndex, 1);
+      if (MANUAL_RESERVATIONS[foundPropertyId].length === 0) {
+        delete MANUAL_RESERVATIONS[foundPropertyId];
+      }
+
+      // Ajouter au nouveau logement
+      if (!MANUAL_RESERVATIONS[propertyId]) {
+        MANUAL_RESERVATIONS[propertyId] = [];
+      }
+      updatedReservation.propertyId = propertyId;
+      MANUAL_RESERVATIONS[propertyId].push(updatedReservation);
+
+      // Mettre à jour le store global
+      if (reservationsStore.properties[foundPropertyId]) {
+        const idx = reservationsStore.properties[foundPropertyId].findIndex(r => r.uid === uid);
+        if (idx !== -1) {
+          reservationsStore.properties[foundPropertyId].splice(idx, 1);
+        }
+      }
+      if (!reservationsStore.properties[propertyId]) {
+        reservationsStore.properties[propertyId] = [];
+      }
+      reservationsStore.properties[propertyId].push(updatedReservation);
+    } else {
+      // Même logement, juste mettre à jour
+      updatedReservation.propertyId = foundPropertyId;
+      MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex] = updatedReservation;
+
+      // Mettre à jour le store global
+      if (reservationsStore.properties[foundPropertyId]) {
+        const idx = reservationsStore.properties[foundPropertyId].findIndex(r => r.uid === uid);
+        if (idx !== -1) {
+          reservationsStore.properties[foundPropertyId][idx] = updatedReservation;
+        }
+      }
+    }
+
+    await saveManualReservations();
+
+    res.json({
+      message: 'Réservation modifiée avec succès',
+      reservation: updatedReservation
+    });
+  } catch (err) {
+    console.error('Erreur modification réservation manuelle:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // DELETE - Supprimer une réservation manuelle
 app.delete('/api/reservations/manual/:uid', async (req, res) => {
   try {
