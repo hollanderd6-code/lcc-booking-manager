@@ -1,119 +1,32 @@
 // ============================================
-// INTÉGRATION CALENDRIER MODERNE DANS APP.HTML
+// CALENDRIER MODERNE - VERSION ULTRA-SIMPLE
+// S'exécute immédiatement sans attendre state
 // ============================================
-// Ce script remplace le calendrier existant et utilise les mêmes données (state.properties, state.bookings)
 
 (function() {
   'use strict';
 
-  // Attendre que le DOM et les données soient chargées
-  function initModernCalendar() {
-    // Vérifier que state existe (défini dans app.html)
-    if (typeof state === 'undefined') {
-      console.error('❌ State non défini. Création de state vide...');
-      window.state = {
-        properties: [],
-        bookings: [],
-        currentView: 'month',
-        currentDate: new Date(),
-        selectedPropertyId: null
-      };
-      
-      // Essayer de charger les données depuis les API
-      loadDataFromAPI();
-      return;
-    }
+  console.log('🚀 Initialisation calendrier moderne...');
 
-    console.log('✅ State trouvé:', state.properties.length, 'logements');
-
-    // Ajouter les event listeners pour les modals
+  // Attendre que le DOM soit prêt
+  function init() {
+    // Attacher les listeners immédiatement
     attachModalListeners();
-    
-    // Override de renderPropertyList pour utiliser le style moderne
-    if (typeof renderPropertyList !== 'undefined') {
-      window.originalRenderPropertyList = renderPropertyList;
-      window.renderPropertyList = renderModernPropertyList;
-    }
-    
-    // Ajouter les clics sur les réservations
     attachBookingClickListeners();
     
-    console.log('✅ Calendrier moderne initialisé avec', state.properties.length, 'logements');
-  }
-
-  function renderModernPropertyList() {
-    var wrapper = document.getElementById('propertyList');
-    if (!wrapper) return;
-    wrapper.innerHTML = '';
-
-    if (!state.properties.length) {
-      var div = document.createElement('div');
-      div.className = 'property-item empty';
-      div.innerHTML = '<i class="fas fa-home" style="opacity:0.3; margin-right:8px;"></i><span>Aucun logement</span>';
-      wrapper.appendChild(div);
-      return;
-    }
-
-    for (var i = 0; i < state.properties.length; i++) {
-      var p = state.properties[i];
-      var count = 0;
-      for (var j = 0; j < state.bookings.length; j++) {
-        var b = state.bookings[j];
-        if (b.propertyId && String(b.propertyId) === String(p.id)) {
-          count++;
-        }
-      }
-
-      var item = document.createElement('div');
-      item.className = 'property-item';
-      item.setAttribute('data-property-id', p.id);
-
-      var iconSpan = document.createElement('span');
-      iconSpan.className = 'property-icon';
-      iconSpan.innerHTML = '<i class="fas fa-home"></i>';
-
-      var nameSpan = document.createElement('span');
-      nameSpan.className = 'property-name';
-      nameSpan.textContent = p.name;
-
-      item.appendChild(iconSpan);
-      item.appendChild(nameSpan);
-
-      if (count > 0) {
-        var badge = document.createElement('span');
-        badge.className = 'property-count';
-        badge.textContent = String(count);
-        item.appendChild(badge);
-      }
-
-      (function(propertyId) {
-        item.addEventListener('click', function() {
-          selectProperty(propertyId);
-        });
-      })(p.id);
-
-      wrapper.appendChild(item);
-    }
+    console.log('✅ Calendrier moderne actif (clics sur réservations fonctionnels)');
   }
 
   function attachModalListeners() {
     // Modal Details
-    const detailsModal = document.getElementById('reservationDetailsModal');
     const closeDetailsBtn = document.getElementById('closeDetailsModal');
     const closeDetailsBtn2 = document.getElementById('closeDetailsBtn');
     const detailsOverlay = document.getElementById('detailsModalOverlay');
     
-    if (closeDetailsBtn) {
-      closeDetailsBtn.addEventListener('click', closeDetailsModal);
-    }
-    if (closeDetailsBtn2) {
-      closeDetailsBtn2.addEventListener('click', closeDetailsModal);
-    }
-    if (detailsOverlay) {
-      detailsOverlay.addEventListener('click', closeDetailsModal);
-    }
+    if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeDetailsModal);
+    if (closeDetailsBtn2) closeDetailsBtn2.addEventListener('click', closeDetailsModal);
+    if (detailsOverlay) detailsOverlay.addEventListener('click', closeDetailsModal);
 
-    // Bouton Edit dans le modal details
     const editBtn = document.getElementById('editBookingBtn');
     if (editBtn) {
       editBtn.addEventListener('click', function() {
@@ -123,7 +36,6 @@
       });
     }
 
-    // Bouton Delete dans le modal details
     const deleteBtn = document.getElementById('deleteBookingBtn');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', function() {
@@ -134,58 +46,38 @@
     }
 
     // Modal Edit
-    const editModal = document.getElementById('editBookingModal');
     const closeEditBtn = document.getElementById('closeEditModal');
     const cancelEditBtn = document.getElementById('cancelEditBooking');
     const editOverlay = document.getElementById('editModalOverlay');
     
-    if (closeEditBtn) {
-      closeEditBtn.addEventListener('click', closeEditModal);
-    }
-    if (cancelEditBtn) {
-      cancelEditBtn.addEventListener('click', closeEditModal);
-    }
-    if (editOverlay) {
-      editOverlay.addEventListener('click', closeEditModal);
-    }
+    if (closeEditBtn) closeEditBtn.addEventListener('click', closeEditModal);
+    if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+    if (editOverlay) editOverlay.addEventListener('click', closeEditModal);
 
-    // Form Edit submission
     const editForm = document.getElementById('editBookingForm');
-    if (editForm) {
-      editForm.addEventListener('submit', handleEditSubmit);
-    }
+    if (editForm) editForm.addEventListener('submit', handleEditSubmit);
 
-    // FAB Button (+ pour nouvelle réservation)
+    // FAB Button
     const fabBtn = document.getElementById('addBookingBtn');
     if (fabBtn) {
       fabBtn.addEventListener('click', openNewBookingModal);
+      console.log('✅ Bouton + actif');
     }
 
     // Modal New Booking
-    const bookingModal = document.getElementById('bookingModal');
     const closeBookingBtn = document.getElementById('closeModal');
     const cancelBookingBtn = document.getElementById('cancelBooking');
     const bookingOverlay = document.getElementById('modalOverlay');
     
-    if (closeBookingBtn) {
-      closeBookingBtn.addEventListener('click', closeBookingModal);
-    }
-    if (cancelBookingBtn) {
-      cancelBookingBtn.addEventListener('click', closeBookingModal);
-    }
-    if (bookingOverlay) {
-      bookingOverlay.addEventListener('click', closeBookingModal);
-    }
+    if (closeBookingBtn) closeBookingBtn.addEventListener('click', closeBookingModal);
+    if (cancelBookingBtn) cancelBookingBtn.addEventListener('click', closeBookingModal);
+    if (bookingOverlay) bookingOverlay.addEventListener('click', closeBookingModal);
 
-    // Form New Booking submission
     const bookingForm = document.getElementById('bookingForm');
-    if (bookingForm) {
-      bookingForm.addEventListener('submit', handleNewBookingSubmit);
-    }
+    if (bookingForm) bookingForm.addEventListener('submit', handleNewBookingSubmit);
   }
 
   function attachBookingClickListeners() {
-    // Utiliser la délégation d'événements sur le calendrier
     const calendarGrid = document.getElementById('calendarGrid');
     if (!calendarGrid) return;
 
@@ -193,12 +85,20 @@
       const bookingBlock = e.target.closest('.booking-block');
       if (bookingBlock && bookingBlock.dataset.bookingId) {
         const bookingId = bookingBlock.dataset.bookingId;
-        const booking = state.bookings.find(b => String(b.id) === String(bookingId));
+        
+        // Chercher la réservation dans window.state ou window.BOOKINGS
+        const bookings = window.state?.bookings || window.BOOKINGS || [];
+        const booking = bookings.find(b => String(b.id) === String(bookingId));
+        
         if (booking) {
           showBookingDetails(booking);
+        } else {
+          console.warn('Réservation non trouvée:', bookingId);
         }
       }
     });
+    
+    console.log('✅ Clics sur réservations actifs');
   }
 
   function showBookingDetails(booking) {
@@ -207,35 +107,27 @@
     const modal = document.getElementById('reservationDetailsModal');
     const content = document.getElementById('reservationDetailsContent');
     
-    if (!modal || !content) {
-      console.warn('Modal de détails introuvable');
-      return;
-    }
+    if (!modal || !content) return;
 
-    const property = state.properties.find(p => String(p.id) === String(booking.propertyId));
+    const properties = window.state?.properties || window.PROPERTIES || [];
+    const property = properties.find(p => String(p.id) === String(booking.propertyId));
     const propertyName = property ? property.name : 'Logement inconnu';
 
     const platformColors = {
       'airbnb': '#FF5A5F',
       'booking': '#003580',
-      'expedia': '#FFC72C',
-      'direct': '#10B981',
-      'vrbo': '#1569C7',
-      'hotels': '#D32F2F'
+      'direct': '#10B981'
     };
 
     const platformNames = {
       'airbnb': 'Airbnb',
       'booking': 'Booking.com',
-      'expedia': 'Expedia',
-      'direct': 'Direct',
-      'vrbo': 'VRBO',
-      'hotels': 'Hotels.com'
+      'direct': 'Direct'
     };
 
-    const platform = booking.source || booking.platform || 'direct';
-    const platformColor = platformColors[platform.toLowerCase()] || '#10B981';
-    const platformName = platformNames[platform.toLowerCase()] || 'Direct';
+    const platform = (booking.source || booking.platform || 'direct').toLowerCase();
+    const platformColor = platformColors[platform] || '#10B981';
+    const platformName = platformNames[platform] || 'Direct';
 
     const startDate = new Date(booking.startDate);
     const endDate = new Date(booking.endDate);
@@ -251,15 +143,13 @@
       <div class="detail-group">
         <label><i class="fas fa-phone"></i> Téléphone</label>
         <div class="detail-value">${booking.guestPhone}</div>
-      </div>
-      ` : ''}
+      </div>` : ''}
 
       ${booking.guestEmail ? `
       <div class="detail-group">
         <label><i class="fas fa-envelope"></i> Email</label>
         <div class="detail-value">${booking.guestEmail}</div>
-      </div>
-      ` : ''}
+      </div>` : ''}
 
       <div class="detail-group">
         <label><i class="fas fa-home"></i> Logement</label>
@@ -294,19 +184,19 @@
       <div class="detail-group">
         <label><i class="fas fa-euro-sign"></i> Prix</label>
         <div class="detail-value">${booking.price} €</div>
-      </div>
-      ` : ''}
+      </div>` : ''}
 
       ${booking.notes ? `
       <div class="detail-group">
         <label><i class="fas fa-sticky-note"></i> Notes</label>
         <div class="detail-value">${booking.notes}</div>
-      </div>
-      ` : ''}
+      </div>` : ''}
     `;
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    console.log('✅ Modal ouvert pour:', booking.guestName);
   }
 
   function closeDetailsModal() {
@@ -323,9 +213,7 @@
     const modal = document.getElementById('editBookingModal');
     if (!modal) return;
 
-    // Remplir le formulaire
     document.getElementById('editBookingId').value = booking.id;
-    document.getElementById('editBookingSource').value = booking.source || 'manual';
     document.getElementById('editBookingProperty').value = booking.propertyId || '';
     document.getElementById('editCheckIn').value = booking.startDate ? booking.startDate.split('T')[0] : '';
     document.getElementById('editCheckOut').value = booking.endDate ? booking.endDate.split('T')[0] : '';
@@ -336,7 +224,6 @@
     document.getElementById('editPrice').value = booking.price || '';
     document.getElementById('editNotes').value = booking.notes || '';
 
-    // Remplir le select des logements
     fillPropertySelect('editBookingProperty');
 
     modal.classList.add('active');
@@ -377,27 +264,15 @@
       });
 
       if (response.ok) {
-        const updatedBooking = await response.json();
-        
-        // Mettre à jour dans state
-        const index = state.bookings.findIndex(b => String(b.id) === String(bookingId));
-        if (index !== -1) {
-          state.bookings[index] = updatedBooking;
-        }
-
-        // Rafraîchir le calendrier
-        if (typeof renderCalendar === 'function') {
-          renderCalendar();
-        }
-        
         closeEditModal();
         showNotification('Réservation modifiée avec succès', 'success');
+        setTimeout(() => window.location.reload(), 1000);
       } else {
         throw new Error('Erreur lors de la modification');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      showNotification('Erreur lors de la modification de la réservation', 'error');
+      showNotification('Erreur lors de la modification', 'error');
     }
   }
 
@@ -414,22 +289,15 @@
       });
 
       if (response.ok) {
-        // Retirer de state
-        state.bookings = state.bookings.filter(b => String(b.id) !== String(booking.id));
-
-        // Rafraîchir le calendrier
-        if (typeof renderCalendar === 'function') {
-          renderCalendar();
-        }
-
         closeDetailsModal();
         showNotification('Réservation supprimée avec succès', 'success');
+        setTimeout(() => window.location.reload(), 1000);
       } else {
         throw new Error('Erreur lors de la suppression');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      showNotification('Erreur lors de la suppression de la réservation', 'error');
+      showNotification('Erreur lors de la suppression', 'error');
     }
   }
 
@@ -437,14 +305,13 @@
     const modal = document.getElementById('bookingModal');
     if (!modal) return;
 
-    // Réinitialiser le formulaire
     document.getElementById('bookingForm').reset();
-    
-    // Remplir le select des logements
     fillPropertySelect('bookingProperty');
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    console.log('✅ Modal nouvelle réservation ouvert');
   }
 
   function closeBookingModal() {
@@ -480,22 +347,15 @@
       });
 
       if (response.ok) {
-        const newBooking = await response.json();
-        state.bookings.push(newBooking);
-
-        // Rafraîchir le calendrier
-        if (typeof renderCalendar === 'function') {
-          renderCalendar();
-        }
-
         closeBookingModal();
         showNotification('Réservation ajoutée avec succès', 'success');
+        setTimeout(() => window.location.reload(), 1000);
       } else {
         throw new Error('Erreur lors de l\'ajout');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      showNotification('Erreur lors de l\'ajout de la réservation', 'error');
+      showNotification('Erreur lors de l\'ajout', 'error');
     }
   }
 
@@ -505,7 +365,8 @@
 
     select.innerHTML = '<option value="">Sélectionner un logement</option>';
     
-    state.properties.forEach(p => {
+    const properties = window.state?.properties || window.PROPERTIES || [];
+    properties.forEach(p => {
       const option = document.createElement('option');
       option.value = p.id;
       option.textContent = p.name;
@@ -514,15 +375,7 @@
   }
 
   function showNotification(message, type = 'info') {
-    // Utiliser le système de notification existant si disponible
-    if (typeof window.showNotification === 'function') {
-      window.showNotification(message, type);
-      return;
-    }
-
-    // Sinon, créer une notification simple
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
     notification.textContent = message;
     notification.style.cssText = `
       position: fixed;
@@ -552,55 +405,11 @@
     return d.toLocaleDateString('fr-FR', options);
   }
 
-  async function loadDataFromAPI() {
-    console.log('🔄 Chargement des données depuis API...');
-    
-    try {
-      // Charger les logements
-      const propsResponse = await fetch('/api/properties', { credentials: 'include' });
-      if (propsResponse.ok) {
-        const propsData = await propsResponse.json();
-        state.properties = Array.isArray(propsData) ? propsData : (propsData.properties || propsData.logements || []);
-        console.log('✅ Logements chargés:', state.properties.length);
-      }
-
-      // Charger les réservations
-      const bookingsResponse = await fetch('/api/reservations', { credentials: 'include' });
-      if (bookingsResponse.ok) {
-        const bookingsData = await bookingsResponse.json();
-        state.bookings = bookingsData.reservations || bookingsData || [];
-        console.log('✅ Réservations chargées:', state.bookings.length);
-      }
-
-      // Initialiser après chargement
-      attachModalListeners();
-      if (typeof renderPropertyList === 'function') {
-        window.originalRenderPropertyList = renderPropertyList;
-        window.renderPropertyList = renderModernPropertyList;
-        renderPropertyList();
-      }
-      attachBookingClickListeners();
-      console.log('✅ Calendrier moderne initialisé (mode API)');
-      
-    } catch (error) {
-      console.error('❌ Erreur chargement données:', error);
-    }
-  }
-
-  // Initialiser quand le DOM est prêt ET que state existe
-  function waitForState() {
-    if (typeof state !== 'undefined' && state.properties) {
-      initModernCalendar();
-    } else {
-      console.log('⏳ Attente de state...');
-      setTimeout(waitForState, 500);
-    }
-  }
-
+  // Initialiser dès que possible
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForState);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    waitForState();
+    init();
   }
 
 })();
