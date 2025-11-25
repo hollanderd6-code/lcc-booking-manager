@@ -85,10 +85,6 @@
     const bookingId = bookingBlock.dataset.bookingId;
     const guestName = bookingBlock.textContent.trim() || 'Client';
     
-    // Trouver la cellule parente pour avoir la date
-    const cell = bookingBlock.closest('.calendar-cell');
-    const date = cell?.dataset.date || '';
-    
     // Trouver le logement
     const row = bookingBlock.closest('.calendar-row');
     const propertyId = row?.dataset.propertyId || '';
@@ -107,12 +103,37 @@
       platformColor = '#003580';
     }
 
+    // Trouver les dates de début et fin en cherchant tous les blocs avec le même bookingId
+    const allBlocksForBooking = row.querySelectorAll(`[data-booking-id="${bookingId}"]`);
+    let startDate = null;
+    let endDate = null;
+    
+    allBlocksForBooking.forEach(block => {
+      const cell = block.closest('.calendar-cell');
+      const cellDate = cell?.dataset.date;
+      
+      if (cellDate) {
+        if (!startDate || cellDate < startDate) startDate = cellDate;
+        if (!endDate || cellDate > endDate) endDate = cellDate;
+      }
+    });
+
+    // Calculer les nuitées
+    let nights = 0;
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1; // +1 car on inclut le dernier jour
+    }
+
     // Créer un faux booking object
     window.currentBookingDetails = {
       id: bookingId,
       guestName: guestName,
       propertyId: propertyId,
-      platform: platform
+      platform: platform,
+      startDate: startDate,
+      endDate: endDate
     };
 
     content.innerHTML = `
@@ -126,10 +147,23 @@
         <div class="detail-value">${propertyName}</div>
       </div>
 
+      ${startDate ? `
       <div class="detail-group">
-        <label><i class="fas fa-calendar-check"></i> Date</label>
-        <div class="detail-value">${formatDate(new Date(date))}</div>
-      </div>
+        <label><i class="fas fa-calendar-check"></i> Arrivée</label>
+        <div class="detail-value">${formatDate(new Date(startDate))}</div>
+      </div>` : ''}
+
+      ${endDate ? `
+      <div class="detail-group">
+        <label><i class="fas fa-calendar-times"></i> Départ</label>
+        <div class="detail-value">${formatDate(new Date(endDate))}</div>
+      </div>` : ''}
+
+      ${nights > 0 ? `
+      <div class="detail-group">
+        <label><i class="fas fa-moon"></i> Nuitées</label>
+        <div class="detail-value">${nights} nuit${nights > 1 ? 's' : ''}</div>
+      </div>` : ''}
 
       <div class="detail-group">
         <label><i class="fas fa-tag"></i> Plateforme</label>
@@ -138,17 +172,6 @@
             ${platform.toUpperCase()}
           </span>
         </div>
-      </div>
-
-      <div class="detail-group">
-        <label><i class="fas fa-info-circle"></i> ID</label>
-        <div class="detail-value" style="font-size: 11px; color: #6b7280;">${bookingId}</div>
-      </div>
-
-      <div style="margin-top: 24px; padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
-        <p style="margin: 0; font-size: 14px; color: #92400e;">
-          ⚠️ Détails complets disponibles après correction du problème de session.
-        </p>
       </div>
     `;
 
@@ -291,6 +314,11 @@
   function fillPropertySelectFromCache() {
     const select = document.getElementById('bookingProperty');
     if (!select) return;
+
+    // Si le cache est vide, extraire à nouveau
+    if (cachedProperties.length === 0) {
+      extractPropertiesFromDOM();
+    }
 
     select.innerHTML = '<option value="">Sélectionner un logement</option>';
     
