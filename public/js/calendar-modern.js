@@ -115,8 +115,8 @@
     });
 
     // Period navigation
-    elements.prevPeriodBtn.addEventListener('click', navigatePrevious);
-    elements.nextPeriodBtn.addEventListener('click', navigateNext);
+    if (elements.prevPeriodBtn) elements.prevPeriodBtn.addEventListener('click', navigatePrevious);
+    if (elements.nextPeriodBtn) elements.nextPeriodBtn.addEventListener('click', navigateNext);
 
     // Month selector
     document.querySelectorAll('.month-btn').forEach(btn => {
@@ -128,27 +128,41 @@
     });
 
     // Booking Modal
-    elements.addBookingBtn.addEventListener('click', openBookingModal);
-    document.getElementById('closeModal').addEventListener('click', closeBookingModal);
-    document.getElementById('cancelBooking').addEventListener('click', closeBookingModal);
-    elements.modalOverlay.addEventListener('click', closeBookingModal);
-    elements.bookingForm.addEventListener('submit', handleBookingSubmit);
+    if (elements.addBookingBtn) elements.addBookingBtn.addEventListener('click', openBookingModal);
+    const closeModal = document.getElementById('closeModal');
+    const cancelBooking = document.getElementById('cancelBooking');
+    if (closeModal) closeModal.addEventListener('click', closeBookingModal);
+    if (cancelBooking) cancelBooking.addEventListener('click', closeBookingModal);
+    if (elements.modalOverlay) elements.modalOverlay.addEventListener('click', closeBookingModal);
+    if (elements.bookingForm) elements.bookingForm.addEventListener('submit', handleBookingSubmit);
 
     // Details Modal
-    document.getElementById('closeDetailsModal').addEventListener('click', closeDetailsModal);
-    document.getElementById('closeDetailsBtn').addEventListener('click', closeDetailsModal);
-    document.getElementById('detailsModalOverlay').addEventListener('click', closeDetailsModal);
-    document.getElementById('editBookingBtn').addEventListener('click', openEditBookingModal);
-    document.getElementById('deleteBookingBtn').addEventListener('click', deleteBooking);
+    const closeDetailsModalBtn = document.getElementById('closeDetailsModal');
+    const closeDetailsBtn = document.getElementById('closeDetailsBtn');
+    const detailsModalOverlay = document.getElementById('detailsModalOverlay');
+    const editBookingBtn = document.getElementById('editBookingBtn');
+    const deleteBookingBtn = document.getElementById('deleteBookingBtn');
+    
+    if (closeDetailsModalBtn) closeDetailsModalBtn.addEventListener('click', closeDetailsModal);
+    if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeDetailsModal);
+    if (detailsModalOverlay) detailsModalOverlay.addEventListener('click', closeDetailsModal);
+    if (editBookingBtn) editBookingBtn.addEventListener('click', openEditBookingModal);
+    if (deleteBookingBtn) deleteBookingBtn.addEventListener('click', deleteBooking);
 
     // Edit Modal
-    document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
-    document.getElementById('cancelEditBooking').addEventListener('click', closeEditModal);
-    document.getElementById('editModalOverlay').addEventListener('click', closeEditModal);
-    document.getElementById('editBookingForm').addEventListener('submit', handleEditBookingSubmit);
+    const closeEditModalBtn = document.getElementById('closeEditModal');
+    const cancelEditBooking = document.getElementById('cancelEditBooking');
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    const editBookingForm = document.getElementById('editBookingForm');
+    
+    if (closeEditModalBtn) closeEditModalBtn.addEventListener('click', closeEditModal);
+    if (cancelEditBooking) cancelEditBooking.addEventListener('click', closeEditModal);
+    if (editModalOverlay) editModalOverlay.addEventListener('click', closeEditModal);
+    if (editBookingForm) editBookingForm.addEventListener('submit', handleEditBookingSubmit);
 
     // Logout
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', logout);
   }
 
   // ============================================
