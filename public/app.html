@@ -1931,9 +1931,58 @@
       const newReservationClose = document.getElementById('newReservationClose');
       const newReservationCancel = document.getElementById('newReservationCancel');
       const newReservationForm = document.getElementById('newReservationForm');
+      const nrPropertySelect = document.getElementById('nrProperty');
+
+      function getAvailablePropertiesForNewReservation() {
+        try {
+          // vient de app-5.js (loadReservations)
+          if (typeof allProperties !== 'undefined' && Array.isArray(allProperties) && allProperties.length > 0) {
+            return allProperties;
+          }
+          if (Array.isArray(window.LCC_PROPERTIES)) {
+            return window.LCC_PROPERTIES;
+          }
+        } catch (e) {
+          console.warn('Impossible de lire la liste des logements pour la nouvelle réservation', e);
+        }
+        return [];
+      }
+
+      function populateNewReservationProperties() {
+        if (!nrPropertySelect) return;
+
+        const props = getAvailablePropertiesForNewReservation();
+        nrPropertySelect.innerHTML = '';
+
+        if (!props.length) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Aucun logement disponible';
+          nrPropertySelect.appendChild(opt);
+          nrPropertySelect.disabled = true;
+          return;
+        }
+
+        nrPropertySelect.disabled = false;
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Sélectionnez un logement';
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        nrPropertySelect.appendChild(placeholder);
+
+        props.forEach(function(p, index) {
+          const opt = document.createElement('option');
+          opt.value = String(p.id != null ? p.id : index);
+          opt.textContent = p.name || ('Logement ' + (index + 1));
+          nrPropertySelect.appendChild(opt);
+        });
+      }
 
       function openNewReservationModal() {
         if (newReservationModal) {
+          populateNewReservationProperties();
           newReservationModal.classList.add('active');
         }
       }
@@ -1941,7 +1990,12 @@
       function closeNewReservationModal() {
         if (newReservationModal) {
           newReservationModal.classList.remove('active');
-          if (newReservationForm) newReservationForm.reset();
+        }
+        if (newReservationForm) {
+          newReservationForm.reset();
+        }
+        if (nrPropertySelect) {
+          nrPropertySelect.selectedIndex = 0;
         }
       }
 
@@ -1956,10 +2010,73 @@
       }
 
       if (newReservationForm) {
-        newReservationForm.addEventListener('submit', function (e) {
+        newReservationForm.addEventListener('submit', async function (e) {
           e.preventDefault();
-          alert('Réservation enregistrée (démo)');
-          closeNewReservationModal();
+
+          if (!nrPropertySelect || !nrPropertySelect.value) {
+            alert('Merci de sélectionner un logement.');
+            return;
+          }
+
+          const propertyIdRaw = nrPropertySelect.value;
+          const propertyId = propertyIdRaw ? parseInt(propertyIdRaw, 10) : null;
+
+          const guestNameInput = document.getElementById('nrGuestName');
+          const startDateInput = document.getElementById('nrStartDate');
+          const endDateInput = document.getElementById('nrEndDate');
+          const notesInput = document.getElementById('nrNotes');
+
+          const guestName = guestNameInput ? guestNameInput.value.trim() : '';
+          const startDate = startDateInput ? startDateInput.value : '';
+          const endDate = endDateInput ? endDateInput.value : '';
+          const notes = notesInput ? notesInput.value.trim() : '';
+
+          if (!startDate || !endDate) {
+            alert("Merci de renseigner les dates d'arrivée et de départ.");
+            return;
+          }
+
+          try {
+            const token = localStorage.getItem('lcc_token');
+            const headers = {
+              'Content-Type': 'application/json'
+            };
+            if (token) {
+              headers['Authorization'] = 'Bearer ' + token;
+            }
+
+            const response = await fetch('/api/reservations/manual', {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify({
+                propertyId: propertyId,
+                start: startDate,
+                end: endDate,
+                guestName: guestName,
+                notes: notes
+              })
+            });
+
+            if (!response.ok) {
+              const err = await response.json().catch(function () { return {}; });
+              throw new Error(err.error || 'Erreur lors de la création de la réservation.');
+            }
+
+            // Recharger les réservations pour mettre à jour les calendriers
+            if (typeof loadReservations === 'function') {
+              try {
+                await loadReservations();
+              } catch (e) {
+                console.warn('Impossible de recharger les réservations après la création', e);
+              }
+            }
+
+            alert('Réservation enregistrée.');
+            closeNewReservationModal();
+          } catch (err) {
+            console.error('Erreur création réservation manuelle', err);
+            alert(err.message || 'Erreur lors de la création de la réservation.');
+          }
         });
       }
 
