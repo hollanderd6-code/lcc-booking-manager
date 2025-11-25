@@ -1125,6 +1125,68 @@ app.post('/api/reservations/manual', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// DELETE - Supprimer une réservation manuelle
+app.delete('/api/reservations/manual/:uid', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const uid = req.params.uid;
+    if (!uid) {
+      return res.status(400).json({ error: 'Identifiant de réservation manquant' });
+    }
+
+    let foundPropertyId = null;
+    let foundReservationIndex = -1;
+    let foundReservation = null;
+
+    // On parcourt toutes les réservations manuelles de l'utilisateur
+    for (const [propertyId, list] of Object.entries(MANUAL_RESERVATIONS)) {
+      const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+      if (!property) {
+        // ce logement ne lui appartient pas, on ignore
+        continue;
+      }
+
+      const index = list.findIndex(r => r.uid === uid);
+      if (index !== -1) {
+        foundPropertyId = propertyId;
+        foundReservationIndex = index;
+        foundReservation = list[index];
+        break;
+      }
+    }
+
+    if (!foundPropertyId || foundReservationIndex === -1 || !foundReservation) {
+      return res.status(404).json({ error: 'Réservation manuelle non trouvée' });
+    }
+
+    // Suppression dans MANUAL_RESERVATIONS
+    MANUAL_RESERVATIONS[foundPropertyId].splice(foundReservationIndex, 1);
+    if (MANUAL_RESERVATIONS[foundPropertyId].length === 0) {
+      delete MANUAL_RESERVATIONS[foundPropertyId];
+    }
+    await saveManualReservations();
+
+    // Suppression aussi dans le store global utilisé par /api/reservations
+    if (reservationsStore.properties[foundPropertyId]) {
+      const idx = reservationsStore.properties[foundPropertyId].findIndex(r => r.uid === uid);
+      if (idx !== -1) {
+        reservationsStore.properties[foundPropertyId].splice(idx, 1);
+      }
+    }
+
+    return res.json({
+      message: 'Réservation manuelle supprimée',
+      deletedUid: uid
+    });
+  } catch (err) {
+    console.error('Erreur suppression réservation manuelle:', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // POST - Créer un blocage manuel (dates bloquées)
 app.post('/api/blocks', async (req, res) => {
