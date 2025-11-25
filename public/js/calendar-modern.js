@@ -67,11 +67,8 @@
   }
 
   function checkAuth() {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      window.location.href = '/login.html';
-      return false;
-    }
+    // Dans app.html, on est déjà authentifié
+    // Pas besoin de vérifier le token localStorage
     return true;
   }
 
@@ -237,15 +234,19 @@
 
   async function loadProperties() {
     try {
-      const token = localStorage.getItem('lcc_token');
       const response = await fetch(`${CONFIG.API_URL}/api/properties`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       
       if (response.ok) {
-        state.properties = await response.json();
+        const data = await response.json();
+        // Gérer à la fois le format array et le format {logements: [...]}
+        state.properties = Array.isArray(data) ? data : (data.logements || data.properties || []);
         renderPropertyList();
         loadBookings();
+      } else {
+        console.error('Erreur chargement logements:', response.status);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des logements:', error);
@@ -257,15 +258,17 @@
       state.loading = true;
       showLoading();
       
-      const token = localStorage.getItem('lcc_token');
       const response = await fetch(`${CONFIG.API_URL}/api/reservations`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       
       if (response.ok) {
         const data = await response.json();
-        state.bookings = data.reservations || [];
+        state.bookings = data.reservations || data || [];
         updateCalendar();
+      } else {
+        console.error('Erreur chargement réservations:', response.status);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des réservations:', error);
@@ -724,11 +727,10 @@
     };
     
     try {
-      const token = localStorage.getItem('lcc_token');
       const response = await fetch(`${CONFIG.API_URL}/api/reservations/manual`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -958,11 +960,10 @@
     };
     
     try {
-      const token = localStorage.getItem('lcc_token');
       const response = await fetch(`${CONFIG.API_URL}/api/reservations/manual/${bookingId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -999,11 +1000,11 @@
     const booking = state.selectedBooking;
     
     try {
-      const token = localStorage.getItem('lcc_token');
       const response = await fetch(`${CONFIG.API_URL}/api/reservations/manual/${booking.id}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         }
       });
       
