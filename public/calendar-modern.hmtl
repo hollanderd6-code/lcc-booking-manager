@@ -408,6 +408,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="calendar-modern.js"></script>
+  <script src="/js/calendar-modern.js"></script>
 </body>
 </html>
