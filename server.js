@@ -2439,18 +2439,6 @@ function findReservationByUidForUser(reservationUid, userId) {
 }
 
 // GET - Récupérer la caution liée à une réservation (si existe)
-app.get('/api/deposits/:reservationUid', async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-
-  const { reservationUid } = req.params;
-  const deposit = DEPOSITS.find(d => d.reservationUid === reservationUid) || null;
-  res.json({ deposit });
-});
-
-// POST - Créer une caution Stripe pour une réservation (empreinte bancaire)
 app.post('/api/deposits', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -2477,19 +2465,37 @@ app.post('/api/deposits', async (req, res) => {
     const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
 
-    // Créer l'objet "caution" en mémoire + fichier JSON
-    const depositId = 'dep_' + Date.now().toString(36);
-    const deposit = {
-      id: depositId,
-      reservationUid,
-      amountCents,
-      currency: 'eur',
-      status: 'pending',
-      stripeSessionId: null,
-      checkoutUrl: null,
-      createdAt: new Date().toISOString()
-    };
-    DEPOSITS.push(deposit);
+    // 🔁 Idempotence : 1 seule caution par séjour (reservationUid)
+    let deposit = DEPOSITS.find(d => d.reservationUid === reservationUid);
+
+    // Si une caution existe déjà ET qu'un lien a déjà été généré,
+    // on renvoie simplement le même lien (pas de nouvelle caution Stripe)
+    if (deposit && deposit.checkoutUrl) {
+      return res.json({
+        deposit,
+        checkoutUrl: deposit.checkoutUrl,
+        alreadyExists: true
+      });
+    }
+
+    // Sinon, on crée ou complète l'objet caution
+    if (!deposit) {
+      const depositId = 'dep_' + Date.now().toString(36);
+      deposit = {
+        id: depositId,
+        reservationUid,
+        amountCents,
+        currency: 'eur',
+        status: 'pending',
+        stripeSessionId: null,
+        checkoutUrl: null,
+        createdAt: new Date().toISOString()
+      };
+      DEPOSITS.push(deposit);
+    } else {
+      // Caution déjà créée mais sans checkoutUrl (par ex. crash avant Stripe)
+      deposit.amountCents = amountCents;
+    }
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
@@ -2555,6 +2561,7 @@ app.post('/api/deposits', async (req, res) => {
     });
   }
 });
+
 
 // ============================================
 // DÉMARRAGE
