@@ -192,6 +192,12 @@
       font-size: 11px;
       color: var(--text-secondary);
     }
+.actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
 
     .text-secondary {
       color: var(--text-secondary);
@@ -594,6 +600,39 @@
         alert('Votre navigateur ne supporte pas la copie automatique, copiez le lien manuellement.');
       }
     }
+function buildDepositMessage(reservation, checkoutUrl) {
+  return `
+Bonjour ${reservation.guestName || ''},
+
+Votre séjour au logement "${reservation.propertyName || 'le logement'}"
+du ${reservation.startDate} au ${reservation.endDate} nécessite une caution.
+Voici le lien sécurisé pour procéder au paiement :
+
+${checkoutUrl}
+
+Merci, et à très bientôt !
+  `.trim();
+}
+
+async function copyExistingDepositMessage(reservation) {
+  if (!reservation || !reservation.deposit || !reservation.deposit.checkoutUrl) {
+    alert('Aucun lien de caution disponible pour ce séjour.');
+    return;
+  }
+
+  const message = buildDepositMessage(reservation, reservation.deposit.checkoutUrl);
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(message);
+      alert("Message de caution copié ! Vous pouvez le coller dans Airbnb, Booking, WhatsApp, email…");
+    } catch (e) {
+      alert("Impossible de copier automatiquement, copiez le message manuellement :\n\n" + message);
+    }
+  } else {
+    alert("Votre navigateur ne supporte pas la copie automatique. Voici le message :\n\n" + message);
+  }
+}
 
     async function loadPropertiesForFilter() {
       const select = document.getElementById('propertyFilter');
@@ -773,14 +812,26 @@
         let actionsHtml = '';
 
         if (isAirbnb) {
-          actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
-        } else {
-          actionsHtml = `
-            <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
-              ${d ? 'Nouveau lien' : 'Créer un lien'}
-            </button>
-          `;
-        }
+  actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
+} else if (d && d.status === 'pending' && d.checkoutUrl) {
+  actionsHtml = `
+    <div class="actions-stack">
+      <button class="btn btn-ghost btn-xs" onclick='copyExistingDepositMessage(${safeJson})'>
+        Copier le message
+      </button>
+      <span class="small-hint text-secondary">Lien déjà créé pour ce séjour</span>
+    </div>
+  `;
+} else if (!d) {
+  actionsHtml = `
+    <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
+      Créer un lien
+    </button>
+  `;
+} else {
+  actionsHtml = '<span class="small-hint text-secondary">Caution déjà gérée pour ce séjour</span>';
+}
+
 
         html += `
           <tr>
