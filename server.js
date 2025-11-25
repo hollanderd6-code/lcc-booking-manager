@@ -708,6 +708,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
+app.use(express.static(__dirname)); // Servir aussi les fichiers à la racine
 
 // Store for reservations (en mémoire)
 let reservationsStore = {
