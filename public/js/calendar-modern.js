@@ -718,9 +718,79 @@
   }
 
   function showBookingDetails(booking) {
-    // TODO: Implement booking details modal
-    console.log('Booking details:', booking);
+  const modal = document.getElementById('reservationModal');
+  const modalBody = document.getElementById('modalBody');
+
+  if (!modal || !modalBody) {
+    console.warn('Modal de réservation introuvable');
+    console.log('Booking :', booking);
+    return;
   }
+
+  const property = state.properties.find(p => p.id === booking.propertyId);
+  const checkIn  = new Date(booking.checkIn);
+  const checkOut = new Date(booking.checkOut);
+
+  modalBody.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <div style="display:flex;align-items:center;gap:12px;
+                  padding:12px;border-radius:12px;
+                  background:var(--bg-secondary);">
+        <div style="width:40px;height:40px;border-radius:999px;
+                    display:flex;align-items:center;justify-content:center;
+                    background:var(--primary-color);color:white;">
+          <i class="fas fa-home"></i>
+        </div>
+        <div>
+          <div style="font-weight:700;color:var(--text-primary);">
+            ${property ? property.name : 'Logement'}
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);text-transform:uppercase;">
+            ${booking.platform || 'Direct'}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;
+                    color:var(--text-tertiary);margin-bottom:4px;">
+          Voyageur
+        </div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);">
+          <i class="fas fa-user" style="color:var(--primary-color);margin-right:8px;"></i>
+          ${booking.guestName || 'Voyageur'}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;
+                      color:var(--text-tertiary);margin-bottom:4px;">
+            Arrivée
+          </div>
+          <div style="font-weight:600;color:var(--text-primary);">
+            <i class="fas fa-calendar-check" style="margin-right:8px;"></i>
+            ${checkIn.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;
+                      color:var(--text-tertiary);margin-bottom:4px;">
+            Départ
+          </div>
+          <div style="font-weight:600;color:var(--text-primary);">
+            <i class="fas fa-calendar-times" style="margin-right:8px;"></i>
+            ${checkOut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modal.classList.add('active');
+}
 
   // ============================================
   // FONCTIONS UTILITAIRES
@@ -806,3 +876,14 @@
   }
 
 })();
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('reservationModal');
+  const closeBtn = document.getElementById('modalClose');
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
+  }
+});
