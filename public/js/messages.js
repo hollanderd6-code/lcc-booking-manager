@@ -79,6 +79,9 @@ async function generateMessage(reservationUid, templateKey) {
 // RESERVATIONS ORGANIZATION
 // ========================================
 function organizeReservations() {
+  // Sécurise au cas où allReservations serait undefined
+  const reservations = Array.isArray(allReservations) ? allReservations : [];
+
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
