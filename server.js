@@ -1135,7 +1135,6 @@ app.get('/api/reservations', async (req, res) => {
       count: (reservationsStore.properties[p.id] || []).length
     }))
   });
-});
 
 // POST - Créer une réservation manuelle
 app.post('/api/reservations/manual', async (req, res) => {
