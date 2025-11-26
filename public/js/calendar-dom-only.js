@@ -76,130 +76,132 @@
   // ============================================
   
   function showBookingDetailsFromDOM(bookingBlock) {
-    const modal = document.getElementById('reservationDetailsModal');
-    const content = document.getElementById('reservationDetailsContent');
-    
-    if (!modal || !content) return;
+  const modal = document.getElementById('reservationDetailsModal');
+  const content = document.getElementById('reservationDetailsContent');
+  
+  if (!modal || !content) return;
 
-    // Extraire les infos depuis le bloc HTML
-    const bookingId = bookingBlock.dataset.bookingId;
-    const guestName = bookingBlock.textContent.trim() || 'Client';
-    
-    // Trouver le logement
-    const row = bookingBlock.closest('.calendar-row');
-    const propertyId = row?.dataset.propertyId || '';
-    const property = cachedProperties.find(p => p.id === propertyId);
-    const propertyName = property?.name || 'Logement inconnu';
+  // Petite fonction utilitaire pour parser "YYYY-MM-DD"
+  function parseYMD(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
 
-    // Détecter la plateforme depuis la classe
-    let platform = 'direct';
-    let platformColor = '#10B981';
+  // Extraire les infos depuis le bloc HTML
+  const bookingId = bookingBlock.dataset.bookingId;
+  const guestName = bookingBlock.textContent.trim() || 'Client';
+  
+  // Trouver le logement
+  const row = bookingBlock.closest('.calendar-row');
+  const propertyId = row?.dataset.propertyId || '';
+  const property = cachedProperties.find(p => p.id === propertyId);
+  const propertyName = property?.name || 'Logement inconnu';
+
+  // Détecter la plateforme depuis la classe
+  let platform = 'direct';
+  let platformColor = '#10B981';
+  
+  if (bookingBlock.classList.contains('airbnb')) {
+    platform = 'airbnb';
+    platformColor = '#FF5A5F';
+  } else if (bookingBlock.classList.contains('booking')) {
+    platform = 'booking';
+    platformColor = '#003580';
+  }
+
+  // Trouver les dates (cases colorées) -> startDate = 1er jour coloré, endDate = dernière nuit
+  const allBlocksForBooking = row.querySelectorAll(`[data-booking-id="${bookingId}"]`);
+  let startDate = null; // string "YYYY-MM-DD"
+  let endDate = null;   // string "YYYY-MM-DD" (dernière nuit)
+  
+  allBlocksForBooking.forEach(block => {
+    const cell = block.closest('.calendar-cell');
+    const cellDate = cell?.dataset.date;
     
-    if (bookingBlock.classList.contains('airbnb')) {
-      platform = 'airbnb';
-      platformColor = '#FF5A5F';
-    } else if (bookingBlock.classList.contains('booking')) {
-      platform = 'booking';
-      platformColor = '#003580';
+    if (cellDate) {
+      if (!startDate || cellDate < startDate) startDate = cellDate;
+      if (!endDate || cellDate > endDate) endDate = cellDate;
     }
+  });
 
-    // Trouver les dates de début et fin en cherchant tous les blocs avec le même bookingId
-    const allBlocksForBooking = row.querySelectorAll(`[data-booking-id="${bookingId}"]`);
-    let startDate = null;
-    let endDate = null;
-    
-    allBlocksForBooking.forEach(block => {
-      const cell = block.closest('.calendar-cell');
-      const cellDate = cell?.dataset.date;
-      
-      if (cellDate) {
-        if (!startDate || cellDate < startDate) startDate = cellDate;
-        if (!endDate || cellDate > endDate) endDate = cellDate;
-      }
-    });
+  // Calcul des vraies dates d'arrivée / départ + nuits
+  let nights = 0;
+  let checkInDate = null;   // Date objet = jour d'arrivée
+  let checkOutDate = null;  // Date objet = jour de départ (checkout, jour SUIVANT la dernière nuit)
 
-    // Calculer les nuitées et la vraie date de départ (checkout)
-let nights = 0;
-let checkInDate = null;
-let checkOutDate = null;
+  if (startDate && endDate) {
+    const start = parseYMD(startDate);      // arrivée
+    const lastNight = parseYMD(endDate);    // dernière nuit affichée dans le calendrier
 
-if (startDate && endDate) {
-  const start = new Date(startDate);      // jour d'arrivée
-  const lastNight = new Date(endDate);    // dernière nuit affichée dans le calendrier
+    checkInDate = start;
 
-  checkInDate = start;
+    const checkout = new Date(lastNight);
+    checkout.setDate(checkout.getDate() + 1); // départ = dernière nuit + 1
+    checkOutDate = checkout;
 
-  // Le départ réel = dernière nuit + 1 jour
-  const checkout = new Date(lastNight);
-  checkout.setDate(checkout.getDate() + 1);
-  checkOutDate = checkout;
+    const diffMs = checkOutDate - checkInDate;
+    nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  }
 
-  // Nombre de nuits = (départ - arrivée) en jours
-  nights = Math.max(
-    1,
-    Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24))
-  );
-}
+  // Créer un faux booking object, avec dates ARRIVÉE / DÉPART réel
+  window.currentBookingDetails = {
+    id: bookingId,
+    guestName: guestName,
+    propertyId: propertyId,
+    platform: platform,
+    startDate: checkInDate
+      ? checkInDate.toISOString().slice(0, 10)
+      : startDate,
+    endDate: checkOutDate
+      ? checkOutDate.toISOString().slice(0, 10)
+      : endDate
+  };
 
+  content.innerHTML = `
+    <div class="detail-group">
+      <label><i class="fas fa-user"></i> Client</label>
+      <div class="detail-value">${guestName}</div>
+    </div>
+
+    <div class="detail-group">
+      <label><i class="fas fa-home"></i> Logement</label>
+      <div class="detail-value">${propertyName}</div>
+    </div>
 
     ${checkInDate ? `
-  <div class="detail-group">
-    <label><i class="fas fa-calendar-check"></i> Arrivée</label>
-    <div class="detail-value">${formatDate(checkInDate)}</div>
-  </div>` : ''}
+    <div class="detail-group">
+      <label><i class="fas fa-calendar-check"></i> Arrivée</label>
+      <div class="detail-value">${formatDate(checkInDate)}</div>
+    </div>` : ''}
 
-${checkOutDate ? `
-  <div class="detail-group">
-    <label><i class="fas fa-calendar-times"></i> Départ</label>
-    <div class="detail-value">${formatDate(checkOutDate)}</div>
-  </div>` : ''}
+    ${checkOutDate ? `
+    <div class="detail-group">
+      <label><i class="fas fa-calendar-times"></i> Départ</label>
+      <div class="detail-value">${formatDate(checkOutDate)}</div>
+    </div>` : ''}
 
+    ${nights > 0 ? `
+    <div class="detail-group">
+      <label><i class="fas fa-moon"></i> Nuitées</label>
+      <div class="detail-value">${nights} nuit${nights > 1 ? 's' : ''}</div>
+    </div>` : ''}
 
-    content.innerHTML = `
-      <div class="detail-group">
-        <label><i class="fas fa-user"></i> Client</label>
-        <div class="detail-value">${guestName}</div>
+    <div class="detail-group">
+      <label><i class="fas fa-tag"></i> Plateforme</label>
+      <div class="detail-value">
+        <span style="background:${platformColor}; color:white; padding:4px 12px; border-radius:4px; font-size:12px; font-weight:600;">
+          ${platform.toUpperCase()}
+        </span>
       </div>
+    </div>
+  `;
 
-      <div class="detail-group">
-        <label><i class="fas fa-home"></i> Logement</label>
-        <div class="detail-value">${propertyName}</div>
-      </div>
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  
+  console.log('✅ Modal ouvert (DOM only, avec vraie date de départ)');
+}
 
-      ${checkInDate ? `
-  <div class="detail-group">
-    <label><i class="fas fa-calendar-check"></i> Arrivée</label>
-    <div class="detail-value">${formatDate(checkInDate)}</div>
-  </div>` : ''}
-
-${checkOutDate ? `
-  <div class="detail-group">
-    <label><i class="fas fa-calendar-times"></i> Départ</label>
-    <div class="detail-value">${formatDate(checkOutDate)}</div>
-  </div>` : ''}
-
-
-      ${nights > 0 ? `
-      <div class="detail-group">
-        <label><i class="fas fa-moon"></i> Nuitées</label>
-        <div class="detail-value">${nights} nuit${nights > 1 ? 's' : ''}</div>
-      </div>` : ''}
-
-      <div class="detail-group">
-        <label><i class="fas fa-tag"></i> Plateforme</label>
-        <div class="detail-value">
-          <span style="background:${platformColor}; color:white; padding:4px 12px; border-radius:4px; font-size:12px; font-weight:600;">
-            ${platform.toUpperCase()}
-          </span>
-        </div>
-      </div>
-    `;
-
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ Modal ouvert (mode simplifié)');
-  }
 
   // ============================================
   // ACTIVER LES MODALS
