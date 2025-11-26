@@ -2253,7 +2253,7 @@ app.delete('/api/properties/:propertyId', async (req, res) => {
     await pool.query(
       'DELETE FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, user.id]
-    );
+    )
 
     delete reservationsStore.properties[propertyId];
 
