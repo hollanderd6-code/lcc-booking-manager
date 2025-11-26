@@ -2510,10 +2510,6 @@ app.post('/api/messages/generate', (req, res) => {
   res.json(message);
 });
 
-  // 🔴 NOUVEAU : construire l'URL de check-in pour cette réservation
-  const uid = reservation.uid || reservation.id;  // au cas où ce soit "id" et pas "uid"
-  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-  const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
 
   // Données supplémentaires envoyées au moteur de messages
   const customData = {
