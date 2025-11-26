@@ -1193,7 +1193,6 @@ app.post('/api/reservations/manual', async (req, res) => {
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
-});
 
 // PUT - Modifier une réservation manuelle
 app.put('/api/reservations/manual/:uid', async (req, res) => {
