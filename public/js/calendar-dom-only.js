@@ -118,13 +118,29 @@
       }
     });
 
-    // Calculer les nuitées
-    let nights = 0;
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1; // +1 car on inclut le dernier jour
-    }
+    // Calculer les nuitées et la vraie date de départ (checkout)
+let nights = 0;
+let checkInDate = null;
+let checkOutDate = null;
+
+if (startDate && endDate) {
+  const start = new Date(startDate);      // jour d'arrivée
+  const lastNight = new Date(endDate);    // dernière nuit affichée dans le calendrier
+
+  checkInDate = start;
+
+  // Le départ réel = dernière nuit + 1 jour
+  const checkout = new Date(lastNight);
+  checkout.setDate(checkout.getDate() + 1);
+  checkOutDate = checkout;
+
+  // Nombre de nuits = (départ - arrivée) en jours
+  nights = Math.max(
+    1,
+    Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24))
+  );
+}
+
 
     // Créer un faux booking object
     window.currentBookingDetails = {
