@@ -909,22 +909,33 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 15px;
+  overflow: hidden; /* important pour les logos */
 }
 
+.status-icon .status-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Couleurs de fond brandées (optionnel mais joli) */
 .status-icon-airbnb {
-  background: radial-gradient(circle at 30% 0%, #FF385C, #BE123C);
-  color: #fff;
+  background: #FF5A5F;
 }
 
 .status-icon-booking {
-  background: radial-gradient(circle at 30% 0%, #2563EB, #1D4ED8);
-  color: #E0F2FE;
+  background: #003580;
 }
 
 .status-icon-stripe {
-  background: radial-gradient(circle at 30% 0%, #6366F1, #4F46E5);
-  color: #EEF2FF;
+  background: #635BFF;
 }
+
+.status-icon-whatsapp {
+  background: #25D366;
+}
+
 
 .status-icon-ai {
   background: radial-gradient(circle at 30% 0%, #22C55E, #16A34A);
