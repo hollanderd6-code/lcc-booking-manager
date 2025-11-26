@@ -720,6 +720,10 @@ let reservationsStore = {
 // Fichiers locaux pour certains stocks
 const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
+const CHECKINS_FILE = path.join(__dirname, 'checkins.json');
+
+// Check-in invités : { [reservationUid]: { ...données formulaire... } }
+let CHECKINS = {};
 
 // Data en mémoire
 let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations ou blocages] }
@@ -737,6 +741,25 @@ async function loadManualReservations() {
   } catch (error) {
     MANUAL_RESERVATIONS = {};
     console.log('⚠️  Aucun fichier manual-reservations.json, démarrage sans réservations manuelles');
+  }
+}
+async function loadEmailProxies() {
+  try {
+    const data = await fs.readFile(EMAIL_PROXIES_FILE, 'utf8');
+    EMAIL_PROXIES = JSON.parse(data);
+    console.log('✅ Email proxies chargés depuis email-proxies.json');
+  } catch (error) {
+    EMAIL_PROXIES = {};
+    console.log('ℹ️ Aucun fichier email-proxies.json, démarrage à vide');
+  }
+}
+
+async function saveEmailProxies() {
+  try {
+    await fs.writeFile(EMAIL_PROXIES_FILE, JSON.stringify(EMAIL_PROXIES, null, 2));
+    console.log('✅ Email proxies sauvegardés');
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde email proxies:', error.message);
   }
 }
 
@@ -2453,6 +2476,38 @@ app.get('/api/messages/upcoming', async (req, res) => {
     checkoutsToday: messagingService.getUpcomingCheckOuts(allReservations, 0)
   });
 });
+// ============================================
+// ROUTE API - EMAIL PROXY PAR RÉSERVATION
+// ============================================
+
+app.post('/api/reservations/:uid/email-proxy', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { uid } = req.params;
+    const { emailProxy, platform } = req.body || {};
+
+    if (!emailProxy) {
+      return res.status(400).json({ error: 'emailProxy requis' });
+    }
+
+    EMAIL_PROXIES[uid] = {
+      email: emailProxy,
+      platform: platform || null,
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveEmailProxies();
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Erreur /api/reservations/:uid/email-proxy :', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ============================================
 // 💳 ROUTES API - ABONNEMENTS (Stripe Billing)
@@ -2921,7 +2976,7 @@ app.listen(PORT, async () => {
   await loadProperties();
   await loadManualReservations();
   await loadDeposits();
-
+await loadEmailProxies();
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
     const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
