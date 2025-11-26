@@ -1124,18 +1124,6 @@ app.get('/api/reservations', async (req, res) => {
   });
 });
 
-  res.json({
-    reservations: allReservations,
-    lastSync: reservationsStore.lastSync,
-    syncStatus: reservationsStore.syncStatus,
-    properties: userProps.map(p => ({
-      id: p.id,
-      name: p.name,
-      color: p.color,
-      count: (reservationsStore.properties[p.id] || []).length
-    }))
-  });
-
 // POST - Créer une réservation manuelle
 app.post('/api/reservations/manual', async (req, res) => {
   try {
