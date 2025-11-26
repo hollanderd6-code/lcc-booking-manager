@@ -31,50 +31,85 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ========================================
 async function loadReservations() {
   showLoading();
-
+  
   try {
-    const response = await fetch(`${API_URL}/api/reservations`);
-    const data = await response.json();
+    // 1) On récupère le token stocké au login
+    const token = localStorage.getItem('lcc_token');
 
+    // Pas de token -> on renvoie l’utilisateur au login
+    if (!token) {
+      console.warn('Aucun token trouvé, redirection vers la page de connexion');
+      window.location.href = '/login.html';
+      return;
+    }
+
+    // 2) Appel API avec l’en-tête Authorization
+    const response = await fetch(`${API_URL}/api/reservations`, {
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
+    });
+
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (e) {
+      console.error('Réponse non JSON /api/reservations :', e);
+      data = {};
+    }
+
+    // 3) Gestion des erreurs HTTP
     if (!response.ok) {
       console.error('Réponse non OK /api/reservations:', response.status, data);
-      // on évite de crasher plus loin
+
+      // Si 401 -> token invalide ou expiré : on nettoie et on renvoie au login
+      if (response.status === 401) {
+        localStorage.removeItem('lcc_token');
+        localStorage.removeItem('lcc_user');
+        window.location.href = '/login.html';
+        return;
+      }
+
       allReservations = [];
       showToast(data.error || 'Erreur lors du chargement des réservations', 'error');
       return;
     }
 
-    // on sécurise : si jamais ce n'est pas un tableau, on retombe sur []
+    // 4) Succès : on stocke un tableau (même si vide)
     allReservations = Array.isArray(data.reservations) ? data.reservations : [];
-
     console.log(`📦 ${allReservations.length} réservation(s) chargée(s)`);
   } catch (error) {
     console.error('Erreur chargement:', error);
-    allReservations = []; // pour que organizeReservations ne plante pas
+    allReservations = [];
     showToast('Erreur lors du chargement des réservations', 'error');
   } finally {
     hideLoading();
   }
 }
 
-
 async function generateMessage(reservationUid, templateKey) {
   try {
+    const token = localStorage.getItem('lcc_token');
+
     const response = await fetch(`${API_URL}/api/messages/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {})
+      },
       body: JSON.stringify({
         reservationUid,
         templateKey
       })
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('Erreur génération message:', error);
     return null;
   }
 }
+
 
 // ========================================
 // RESERVATIONS ORGANIZATION
