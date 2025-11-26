@@ -49,16 +49,32 @@ async function saveProperty(event) {
   event.preventDefault();
   showLoading();
 
-  const propertyId = document.getElementById("propertyId").value;
-  const name = document.getElementById("propertyName").value;
-  const color = document.getElementById("propertyColor").value;
+ const propertyId = document.getElementById("propertyId").value;
+const name = document.getElementById("propertyName").value;
+const color = document.getElementById("propertyColor").value;
 
-  const urlInputs = document.querySelectorAll(".url-input");
-  const icalUrls = Array.from(urlInputs)
-    .map((input) => input.value.trim())
-    .filter((url) => url.length > 0);
+const address = document.getElementById("propertyAddress").value.trim();
+const accessCode = document.getElementById("propertyAccessCode").value.trim();
+const wifiName = document.getElementById("propertyWifiName").value.trim();
+const wifiPassword = document.getElementById("propertyWifiPassword").value.trim();
+const parkingInfo = document.getElementById("propertyParkingInfo").value.trim();
 
-  const propertyData = { name, color, icalUrls };
+const urlInputs = document.querySelectorAll(".url-input");
+const icalUrls = Array.from(urlInputs)
+  .map((input) => input.value.trim())
+  .filter((url) => url.length > 0);
+
+const propertyData = {
+  name,
+  color,
+  icalUrls,
+  address,
+  accessCode,
+  wifiName,
+  wifiPassword,
+  parkingInfo,
+};
+
 
   try {
     const token = localStorage.getItem("lcc_token");
@@ -292,6 +308,11 @@ function openAddPropertyModal() {
   document.getElementById("propertyName").value = "";
   document.getElementById("propertyColor").value = "#E67E50";
   document.getElementById("colorPreview").textContent = "#E67E50";
+document.getElementById("propertyAddress").value = "";
+document.getElementById("propertyAccessCode").value = "";
+document.getElementById("propertyWifiName").value = "";
+document.getElementById("propertyWifiPassword").value = "";
+document.getElementById("propertyParkingInfo").value = "";
 
   const urlList = document.getElementById("urlList");
   urlList.innerHTML = "";
@@ -314,6 +335,11 @@ function openEditPropertyModal(propertyId) {
   document.getElementById("propertyName").value = property.name;
   document.getElementById("propertyColor").value = property.color;
   document.getElementById("colorPreview").textContent = property.color;
+document.getElementById("propertyAddress").value = property.address || "";
+document.getElementById("propertyAccessCode").value = property.accessCode || "";
+document.getElementById("propertyWifiName").value = property.wifiName || "";
+document.getElementById("propertyWifiPassword").value = property.wifiPassword || "";
+document.getElementById("propertyParkingInfo").value = property.parkingInfo || "";
 
   const urlList = document.getElementById("urlList");
   urlList.innerHTML = "";
