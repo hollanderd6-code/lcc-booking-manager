@@ -403,31 +403,25 @@
       color: var(--text-secondary);
     }
 
-    /* ===================================== */
-/* V1 simplifiée : on ne garde que      */
-/* la timeline "Messages rapides"       */
-/* ===================================== */
+ /* =====================================
+   V1 simplifiée : ne garder que
+   "Messages rapides – arrivées & séjours"
+   ===================================== */
 
-/* Bloc "Modèles intelligents – messages voyageurs" */
-.smart-templates-section,
-.smart-messages-section {
+/* Dans .page-content, on masque : 
+   1) Modèles intelligents – messages voyageurs
+   2) Messagerie e-mail (adresse masquée)
+   3) Assistant IA voyageurs
+   5) Messages équipe ménage
+   On laisse seulement le 4e bloc : "Messages rapides – arrivées & séjours"
+*/
+.page-content > .timeline-section:nth-of-type(1),
+.page-content > .timeline-section:nth-of-type(2),
+.page-content > .timeline-section:nth-of-type(3),
+.page-content > .timeline-section:nth-of-type(5) {
   display: none;
 }
 
-/* Bloc "Messagerie e-mail (adresse masquée)" */
-.email-messaging-section {
-  display: none;
-}
-
-/* Bloc "Assistant de rédaction – voyageurs (brouillon libre)" */
-.ai-section {
-  display: none;
-}
-
-/* Bloc "Messages équipe ménage" (si présent dans cette page) */
-.cleaning-messages-section {
-  display: none;
-}
   </style>
 </head>
 <body data-page="messages">
@@ -614,7 +608,7 @@
       <div class="page-content">
 
         <!-- 1️⃣ Modèles intelligents voyageurs -->
-        <section class="timeline-section">
+        
           <div class="timeline-header">
             <div class="timeline-icon" style="background:#3b82f6;">
               <i class="fas fa-bolt"></i>
@@ -715,7 +709,7 @@
 
         <!-- 2️⃣ Assistant IA voyageurs (brouillon libre) -->
         <!-- 3️⃣ Messagerie e-mail (adresse masquée) -->
-        <section class="timeline-section">
+        
           <div class="timeline-header">
             <div class="timeline-icon" style="background: #0ea5e9;">
               <i class="fas fa-envelope"></i>
@@ -956,7 +950,7 @@
         </section>
 
         <!-- 4️⃣ Messages équipe ménage -->
-        <section class="timeline-section cleaning-messages-section">
+        
           <div class="timeline-header">
             <div class="timeline-icon" style="background:#0f766e;">
               <i class="fas fa-broom"></i>
