@@ -2025,39 +2025,6 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// ============================================
-// ROUTE API - CHECK-IN INVITÉS (publique)
-// ============================================
-// ============================================
-// ROUTE API - CHECK-IN INVITÉS (publique)
-// ============================================
-app.post('/api/checkin/submit', async (req, res) => {
-  try {
-    const data = req.body || {};
-    const reservationUid =
-      data.reservationId ||
-      data.reservationUid ||
-      data.uid;
-
-    if (!reservationUid) {
-      return res.status(400).json({ error: 'reservationId requis' });
-    }
-
-    CHECKINS[reservationUid] = {
-      ...data,
-      reservationUid,
-      receivedAt: new Date().toISOString()
-    };
-
-    await saveCheckins();
-
-    return res.json({ ok: true });
-  } catch (error) {
-    console.error('❌ Erreur /api/checkin/submit :', error);
-    return res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 
 // ============================================
 // ROUTE API - CHECK-IN INVITÉS (publique)
@@ -2481,12 +2448,34 @@ app.get('/api/messages/templates', (req, res) => {
 app.post('/api/messages/generate', (req, res) => {
   const { reservationUid, templateKey } = req.body;
 
-    if (!reservation) {
-    return res.status(404).json({ error: 'Réservation non trouvée' });
+  if (!reservationUid || !templateKey) {
+    return res
+      .status(400)
+      .json({ error: 'reservationUid et templateKey requis' });
+  }
+
+  let reservation = null;
+
+  // Recherche de la réservation dans le store en mémoire
+  for (const propertyId in reservationsStore.properties) {
+    const list = reservationsStore.properties[propertyId] || [];
+    const found = list.find(r => r.uid === reservationUid);
+    if (found) {
+      reservation = found;
+      break;
+    }
+  }
+
+  if (!reservation) {
+    return res
+      .status(404)
+      .json({ error: 'Réservation non trouvée' });
   }
 
   const uid = reservation.uid || reservation.id;
-  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+  const appUrl =
+    process.env.APP_URL ||
+    'https://lcc-booking-manager.onrender.com';
   const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
   const checkinData = uid ? (CHECKINS[uid] || null) : null;
 
@@ -2504,37 +2493,14 @@ app.post('/api/messages/generate', (req, res) => {
   );
 
   if (!message) {
-    return res.status(404).json({ error: 'Template non trouvé' });
+    return res
+      .status(404)
+      .json({ error: 'Template non trouvé' });
   }
 
-  res.json(message);
+  return res.json(message);
 });
 
-  // 🔴 NOUVEAU : construire l'URL de check-in pour cette réservation
-  const uid = reservation.uid || reservation.id;  // au cas où ce soit "id" et pas "uid"
-  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-  const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
-
-  // Données supplémentaires envoyées au moteur de messages
-  const customData = {
-    propertyAddress: 'Adresse du logement à définir',
-    accessCode: 'Code à définir',
-    checkinUrl      // 👉 nouvelle clé accessible dans messagingService
-  };
-
-  const message = messagingService.generateQuickMessage(
-    reservation,
-    templateKey,
-    customData
-  );
-
-
-  if (!message) {
-    return res.status(404).json({ error: 'Template non trouvé' });
-  }
-
-  res.json(message);
-})
 
 app.get('/api/messages/upcoming', async (req, res) => {
   const user = await getUserFromRequest(req);
