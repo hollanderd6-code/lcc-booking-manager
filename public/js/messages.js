@@ -164,65 +164,80 @@ function organizeReservations() {
   renderSection('listCheckouts', 'countCheckouts', checkoutsToday, 'checkout-reminder');
 }
 
-function renderSection(listId, countId, reservations, defaultTemplate) {
+
+function renderSection(listId, countId, reservations, defaultTemplateKey) {
   const listEl = document.getElementById(listId);
   const countEl = document.getElementById(countId);
-  
+
+  if (!listEl || !countEl) return;
+
+  // Compteur dans le petit badge
   countEl.textContent = reservations.length;
-  
-  if (reservations.length === 0) {
+
+  if (!reservations.length) {
     listEl.innerHTML = `
       <div class="empty-state">
-        <i class="fas fa-check-circle"></i>
-        <p>Aucune réservation dans cette catégorie</p>
+        <p>Aucune réservation dans cette section.</p>
       </div>
     `;
     return;
   }
-    listEl.innerHTML = reservations.map(r => `
-    <div class="reservation-item" style="border-left-color: ${r.property.color}">
-      <div class="reservation-header">
-        <div class="reservation-info">
-          <h3>${r.property.name} – ${r.guestName}</h3>
-          <div class="reservation-meta">
-            <span><i class="fas fa-calendar"></i> ${formatDate(r.start)} → ${formatDate(r.end)}</span>
-            <span><i class="fas fa-moon"></i> ${r.nights} nuit(s)</span>
-            <span><i class="fas fa-tag"></i> ${r.source}</span>
+
+  listEl.innerHTML = reservations.map(r => {
+    const guestName = r.guestName || 'Voyageur';
+    const propertyName = (r.property && r.property.name) || 'Logement';
+    const nights = r.nights || r.nightCount || '';
+    const source = r.source || r.channel || '';
+    const start = formatDate(r.start);
+    const end = formatDate(r.end);
+    const color = (r.property && r.property.color) || '#0f172a';
+
+    return `
+      <div class="reservation-item" style="border-left-color: ${color}">
+        <div class="reservation-header">
+          <div class="reservation-info">
+            <h3>${propertyName} – ${guestName}</h3>
+            <div class="reservation-meta">
+              <span><i class="fas fa-calendar"></i> ${start} → ${end}</span>
+              ${nights ? `<span><i class="fas fa-moon"></i> ${nights} nuit(s)</span>` : ''}
+              ${source ? `<span><i class="fas fa-tag"></i> ${source}</span>` : ''}
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Actions principales -->
-      <div class="reservation-actions">
-        <button class="copy-btn" onclick="selectTemplate('${r.uid}', '${defaultTemplate}')">
-          <i class="fas fa-magic"></i>
-          Préparer le message
-        </button>
+        <!-- Actions principales -->
+        <div class="reservation-actions">
+          <button class="copy-btn" onclick="selectTemplate('${r.uid}', '${defaultTemplateKey}')">
+            <i class="fas fa-magic"></i>
+            Préparer le message
+          </button>
 
-        ${r.emailProxy ? `
-        <a 
-          id="mailto-${r.uid}" 
-          class="copy-btn copy-btn-secondary"
-          style="margin-left:8px;"
-          target="_blank"
-        >
-          <i class="fas fa-envelope"></i>
-          Email proxy
-        </a>
-        ` : ''}
+          ${r.emailProxy ? `
+          <a 
+            id="mailto-${r.uid}" 
+            class="copy-btn copy-btn-secondary"
+            style="margin-left:8px;"
+            target="_blank"
+          >
+            <i class="fas fa-envelope"></i>
+            Email proxy
+          </a>
+          ` : ''}
+        </div>
+        
+        <!-- Preview du message généré -->
+        <div class="message-preview" id="preview-${r.uid}" style="display: none;">
+          <div class="message-subject" id="subject-${r.uid}"></div>
+          <div class="message-body" id="body-${r.uid}"></div>
+          <button class="copy-btn" onclick="copyMessage('${r.uid}')">
+            <i class="fas fa-copy"></i>
+            <span id="copy-text-${r.uid}">Copier le message</span>
+          </button>
+        </div>
       </div>
-      
-      <!-- Preview du message généré -->
-      <div class="message-preview" id="preview-${r.uid}" style="display: none;">
-        <div class="message-subject" id="subject-${r.uid}"></div>
-        <div class="message-body" id="body-${r.uid}"></div>
-        <button class="copy-btn" onclick="copyMessage('${r.uid}')">
-          <i class="fas fa-copy"></i>
-          <span id="copy-text-${r.uid}">Copier le message</span>
-        </button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+}
 
       
       <div class="template-selector" id="templates-${r.uid}">
