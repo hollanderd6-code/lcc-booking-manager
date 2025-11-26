@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Messages – Boostinghost</title>
-  
+
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
+
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
+
   <!-- CSS plateforme -->
   <link rel="stylesheet" href="/css/style.css">
 
@@ -48,7 +48,7 @@
       margin-bottom: 24px;
       border: 1px solid var(--border-color);
     }
-    
+
     .timeline-header {
       display: flex;
       align-items: center;
@@ -57,7 +57,7 @@
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border-color);
     }
-    
+
     .timeline-icon {
       width: 40px;
       height: 40px;
@@ -68,13 +68,13 @@
       font-size: 18px;
       color: white;
     }
-    
+
     .timeline-title {
       font-size: 16px;
       font-weight: 700;
       color: var(--text-primary);
     }
-    
+
     .timeline-count {
       background: var(--primary-light);
       color: var(--primary-color);
@@ -84,12 +84,12 @@
       font-weight: 600;
       margin-left: auto;
     }
-    
+
     .reservation-list {
       display: grid;
       gap: 16px;
     }
-    
+
     .reservation-item {
       padding: 16px;
       background: var(--bg-secondary);
@@ -97,26 +97,26 @@
       border-left: 4px solid var(--primary-color);
       transition: var(--transition);
     }
-    
+
     .reservation-item:hover {
       box-shadow: var(--shadow-sm);
       transform: translateX(4px);
     }
-    
+
     .reservation-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 12px;
     }
-    
+
     .reservation-info h3 {
       font-size: 15px;
       font-weight: 700;
       color: var(--text-primary);
       margin-bottom: 4px;
     }
-    
+
     .reservation-meta {
       color: var(--text-secondary);
       font-size: 13px;
@@ -132,89 +132,11 @@
       color: var(--text-secondary);
       font-size: 14px;
     }
-    
+
     .empty-state i {
       font-size: 40px;
       opacity: 0.3;
       margin-bottom: 12px;
-    }
-
-    /* ============================================
-       ASSISTANT IA - RÉDACTION VOYAGEURS
-       ============================================ */
-
-  
-
-    .message-reply-body {
-      margin-top: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .message-reply-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    .message-reply-input {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
-      padding: var(--spacing-md);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--text-primary);
-    }
-
-    .message-reply-input:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 1px var(--primary-light);
-    }
-
-    .message-reply-footer {
-      margin-top: var(--spacing-md);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: var(--spacing-md);
-      flex-wrap: wrap;
-    }
-
-    .message-reply-ai {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      flex: 1;
-      min-width: 260px;
-    }
-
-    .btn-ai {
-      white-space: nowrap;
-    }
-
-    .message-reply-hint {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .message-reply-actions {
-      display: flex;
-      gap: var(--spacing-sm);
-      flex-wrap: wrap;
-    }
-
-    @media (max-width: 768px) {
-      .message-reply-footer {
-        flex-direction: column;
-        align-items: flex-start;
-      }
     }
 
     .copy-btn {
@@ -231,197 +153,16 @@
       gap: 8px;
       font-size: 13px;
     }
-    
+
     .copy-btn:hover {
       background: var(--primary-hover);
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
-    
+
     .copy-btn.copied {
       background: #16a34a;
     }
-
-    /* ============================================
-       MODÈLES INTELLIGENTS – MESSAGES VOYAGEURS
-       ============================================ */
-
-    .templates-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      gap: var(--spacing-lg);
-    }
-
-    @media (max-width: 900px) {
-      .templates-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .template-form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .template-field {
-      flex: 1;
-      min-width: 160px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .template-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    .template-input,
-    .template-select {
-      padding: 8px 10px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-size: 14px;
-      font-family: inherit;
-      color: var(--text-primary);
-    }
-
-    .template-input:focus,
-    .template-select:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 1px var(--primary-light);
-    }
-
-    .template-help-text {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .template-result {
-      width: 100%;
-      min-height: 200px;
-      resize: vertical;
-      padding: var(--spacing-md);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text-primary);
-    }
-
-    /* ============================================
-       MESSAGES ÉQUIPE MÉNAGE
-       ============================================ */
-
-    
-
-    .cleaning-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-      align-items: center;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .cleaning-controls input[type="date"] {
-      padding: 8px 10px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-size: 14px;
-    }
-
-    .cleaning-hint {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .cleaning-messages-container {
-      display: grid;
-      gap: var(--spacing-md);
-    }
-
-    .cleaning-message-card {
-      padding: var(--spacing-md);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-    }
-
-    .cleaning-message-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: 8px;
-    }
-
-    .cleaning-message-title {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .cleaning-message-meta {
-      font-size: 12px;
-      color: var(--text-secondary);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .cleaning-message-textarea {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
-      padding: var(--spacing-sm);
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      font-size: 13px;
-      font-family: inherit;
-      line-height: 1.5;
-      margin-top: 8px;
-    }
-
-    .badge-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      color: var(--text-secondary);
-    }
-
- /* =====================================
-   V1 simplifiée : ne garder que
-   "Messages rapides – arrivées & séjours"
-   ===================================== */
-
-/* Dans .page-content, on masque : 
-   1) Modèles intelligents – messages voyageurs
-   2) Messagerie e-mail (adresse masquée)
-   3) Assistant IA voyageurs
-   5) Messages équipe ménage
-   On laisse seulement le 4e bloc : "Messages rapides – arrivées & séjours"
-*/
-.page-content > .timeline-section:nth-of-type(1),
-.page-content > .timeline-section:nth-of-type(2),
-.page-content > .timeline-section:nth-of-type(3),
-.page-content > .timeline-section:nth-of-type(5) {
-  display: none;
-}
-
   </style>
 </head>
 <body data-page="messages">
@@ -438,57 +179,6 @@
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <div class="app-container">
-    
-       <!DOCTYPE html>
-<html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookingmanage – Dashboard</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
-  
-  <!-- Platform CSS -->
-  <link rel="stylesheet" href="/css/style.css">
-
-  <style>
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    .app-container {
-      margin-top: 0 !important;
-    }
-
-    .main-header {
-      margin-top: 0 !important;
-    }
-
-    .main-content {
-      margin-top: 0 !important;
-      padding-top: 24px !important;
-    }
-
-    .page-content {
-      margin-top: 0 !important;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-  </style>
-</head>
-<body data-page="messages">
-  <div class="app-container">
-    
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -500,81 +190,81 @@
           </div>
         </a>
       </div>
-      
+
       <nav class="sidebar-nav">
-  <!-- PRINCIPAL -->
-  <div class="nav-section">
-    <div class="nav-section-title">Principal</div>
+        <!-- PRINCIPAL -->
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
 
-    <a href="/app.html" class="nav-item" data-page="app">
-      <i class="fas fa-th-large"></i>
-      <span>Dashboard</span>
-    </a>
+          <a href="/app.html" class="nav-item" data-page="app">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
 
-    <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-      <i class="fas fa-calendar"></i>
-      <span>Calendrier</span>
-      <span class="nav-badge" id="navTotalReservations">0</span>
-    </a>
+          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
 
-    <a href="/messages.html" class="nav-item active" data-page="messages">
-      <i class="fas fa-comment-dots"></i>
-      <span>Messages</span>
-    </a>
-  </div>
+          <a href="/messages.html" class="nav-item active" data-page="messages">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
 
-  <!-- GESTION -->
-  <div class="nav-section">
-    <div class="nav-section-title">Gestion</div>
+        <!-- GESTION -->
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
 
-    <a href="/settings.html" class="nav-item" data-page="settings">
-      <i class="fas fa-home"></i>
-      <span>Mes logements</span>
-    </a>
+          <a href="/settings.html" class="nav-item" data-page="settings">
+            <i class="fas fa-home"></i>
+            <span>Mes logements</span>
+          </a>
 
-    <a href="/welcome.html" class="nav-item" data-page="welcome">
-      <i class="fas fa-book-open"></i>
-      <span>Livret d'accueil</span>
-    </a>
+          <a href="/welcome.html" class="nav-item" data-page="welcome">
+            <i class="fas fa-book-open"></i>
+            <span>Livret d'accueil</span>
+          </a>
 
-    <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-      <i class="fas fa-broom"></i>
-      <span>Gestion du ménage</span>
-      <span class="nav-badge">Nouveau</span>
-    </a>
+          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+            <i class="fas fa-broom"></i>
+            <span>Gestion du ménage</span>
+            <span class="nav-badge">Nouveau</span>
+          </a>
 
-    <a href="/statistics.html" class="nav-item" data-page="statistics">
-      <i class="fas fa-chart-bar"></i>
-      <span>Statistiques</span>
-    </a>
+          <a href="/statistics.html" class="nav-item" data-page="statistics">
+            <i class="fas fa-chart-bar"></i>
+            <span>Statistiques</span>
+          </a>
 
-    <a href="/deposits.html" class="nav-item" data-page="deposits">
-      <i class="fas fa-shield-alt"></i>
-      <span>Cautions</span>
-    </a>
+          <a href="/deposits.html" class="nav-item" data-page="deposits">
+            <i class="fas fa-shield-alt"></i>
+            <span>Cautions</span>
+          </a>
 
-    <a href="/notifications.html" class="nav-item" data-page="notifications">
-      <i class="fas fa-bell"></i>
-      <span>Notifications</span>
-    </a>
-  </div>
+          <a href="/notifications.html" class="nav-item" data-page="notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+        </div>
 
-  <!-- PARAMÈTRES -->
-  <div class="nav-section">
-    <div class="nav-section-title">Paramètres</div>
+        <!-- PARAMÈTRES -->
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
 
-    <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-      <i class="fas fa-cog"></i>
-      <span>Paramètres</span>
-    </a>
+          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
 
-    <a href="/help.html" class="nav-item" data-page="help">
-      <i class="fas fa-question-circle"></i>
-      <span>Aide</span>
-    </a>
-  </div>
-</nav>
-      
+          <a href="/help.html" class="nav-item" data-page="help">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
+
       <div class="sidebar-footer">
         <div class="user-profile">
           <div class="user-avatar" id="sidebarUserAvatar">C</div>
@@ -599,287 +289,14 @@
             Messages
           </h1>
           <p class="page-subtitle">
-            Préparez vos messages pour les voyageurs et vos équipes en quelques clics.
+            Préparez vos messages pour les voyageurs en quelques clics.
           </p>
         </div>
       </header>
 
       <!-- Page Content -->
       <div class="page-content">
-
-        <!-- 1️⃣ Modèles intelligents voyageurs -->
-        
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background:#3b82f6;">
-              <i class="fas fa-bolt"></i>
-            </div>
-            <div class="timeline-title">Modèles intelligents – messages voyageurs</div>
-          </div>
-
-          <div class="templates-grid">
-            <!-- Colonne : paramètres -->
-            <div>
-              <p class="template-help-text">
-                Choisissez un type de message, sélectionnez le logement et les dates de séjour, puis générez un texte prêt à être collé dans Airbnb / Booking.
-              </p>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplType">Type de message</label>
-                  <select id="tplType" class="template-select">
-                    <option value="prearrival">Avant l’arrivée (instructions + accueil)</option>
-                    <option value="arrivalday">Jour d’arrivée (rappel check-in)</option>
-                    <option value="duringstay">Pendant le séjour (prise de nouvelles)</option>
-                    <option value="checkout">Rappel départ / check-out</option>
-                    <option value="thankyou">Remerciement + demande d’avis</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplGuestName">Prénom du voyageur</label>
-                  <input type="text" id="tplGuestName" class="template-input" placeholder="Ex : Marie" />
-                </div>
-                <div class="template-field">
-                  <label class="template-label" for="tplPropertyName">Nom du logement</label>
-                  <!-- 🔽 Select auto-rempli avec LCC_PROPERTIES -->
-                  <select id="tplPropertyName" class="template-select">
-                    <option value="">Sélectionner un logement</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplCheckinDate">Date d’arrivée</label>
-                  <input type="date" id="tplCheckinDate" class="template-input" />
-                </div>
-                <div class="template-field">
-                  <label class="template-label" for="tplCheckoutDate">Date de départ</label>
-                  <input type="date" id="tplCheckoutDate" class="template-input" />
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplArrivalTime">Heure d’arrivée prévue (optionnel)</label>
-                  <input type="text" id="tplArrivalTime" class="template-input" placeholder="Ex : entre 18h et 19h" />
-                </div>
-              </div>
-
-              <div class="template-form-row">
-                <div class="template-field">
-                  <label class="template-label" for="tplExtraInfo">
-                    Infos complémentaires (optionnel)
-                  </label>
-                  <input type="text" id="tplExtraInfo" class="template-input" placeholder="Ex : parking, lit bébé, animaux, etc." />
-                </div>
-              </div>
-
-              <div style="display:flex; gap:8px; margin-top:var(--spacing-sm); flex-wrap:wrap;">
-                <button type="button" class="btn btn-secondary" id="tplGenerateBtn">
-                  <i class="fas fa-magic"></i>
-                  Générer le message
-                </button>
-                <button type="button" class="btn btn-ghost" id="tplResetBtn">
-                  Réinitialiser
-                </button>
-              </div>
-            </div>
-
-            <!-- Colonne : résultat -->
-            <div>
-              <label class="template-label" for="tplResult">Message généré</label>
-              <textarea
-                id="tplResult"
-                class="template-result"
-                placeholder="Le message généré apparaîtra ici. Vous pouvez le modifier avant de le copier."
-              ></textarea>
-
-              <div style="margin-top:var(--spacing-sm); display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="copy-btn" id="tplCopyBtn">
-                  <i class="fas fa-copy"></i>
-                  Copier le message
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 2️⃣ Assistant IA voyageurs (brouillon libre) -->
-        <!-- 3️⃣ Messagerie e-mail (adresse masquée) -->
-        
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background: #0ea5e9;">
-              <i class="fas fa-envelope"></i>
-            </div>
-            <div class="timeline-title">
-              Messagerie e-mail (adresse masquée Airbnb / Booking)
-            </div>
-          </div>
-
-          <div class="timeline-body">
-            <p class="timeline-intro">
-              Préparez vos emails à destination des adresses masquées Airbnb / Booking
-              (par exemple <code>abc123@guest.airbnb.com</code>), puis copiez-les pour les coller dans votre messagerie.
-            </p>
-
-            <div class="templates-grid" style="grid-template-columns: minmax(0, 2.2fr) minmax(0, 2.8fr);">
-              <div class="template-panel">
-                <div class="template-header">
-                  <h3>Coordonnées de l’e-mail</h3>
-                </div>
-                <div class="template-body">
-                  <div class="template-row">
-                    <div class="template-field">
-                      <label class="template-label" for="emailMasked">
-                        Adresse e-mail invitée (Airbnb, Booking…)
-                      </label>
-                      <input
-                        id="emailMasked"
-                        type="email"
-                        class="template-input"
-                        placeholder="Ex : abcd1234@guest.airbnb.com"
-                      />
-                    </div>
-                    <div class="template-field">
-                      <label class="template-label" for="emailSubject">
-                        Sujet
-                      </label>
-                      <input
-                        id="emailSubject"
-                        type="text"
-                        class="template-input"
-                        placeholder="Ex : Informations pour votre arrivée"
-                      />
-                    </div>
-                  </div>
-                  <div class="template-row">
-                    <div class="template-field">
-                      <label class="template-label" for="emailFromName">
-                        Nom affiché de l’expéditeur
-                      </label>
-                      <input
-                        id="emailFromName"
-                        type="text"
-                        class="template-input"
-                        placeholder="Ex : LCC Bookingmanage / Nom de votre conciergerie"
-                      />
-                    </div>
-                    <div class="template-field">
-                      <label class="template-label" for="emailBase">
-                        Votre adresse e-mail d’envoi
-                      </label>
-                      <input
-                        id="emailBase"
-                        type="email"
-                        class="template-input"
-                        placeholder="Ex : contact@votre-conciergerie.fr"
-                      />
-                    </div>
-                  </div>
-                  <p class="template-help">
-                    Vous enverrez ensuite cet e-mail depuis votre boîte habituelle (Gmail, Outlook…).
-                  </p>
-                </div>
-              </div>
-
-              <div class="template-panel">
-                <div class="template-header">
-                  <h3>Contenu de l’e-mail</h3>
-                </div>
-                <div class="template-body">
-                  <div class="template-row" style="flex-direction: column;">
-                    <label class="template-label" for="emailBody">
-                      Corps du message
-                    </label>
-                    <textarea
-                      id="emailBody"
-                      class="template-input"
-                      rows="8"
-                      placeholder="Collez ici un message généré plus haut ou rédigez votre e-mail à envoyer au voyageur."
-                    ></textarea>
-                  </div>
-
-                  <div class="template-actions">
-                    <button type="button" class="btn btn-ghost btn-xs" id="emailUseGeneratedBtn">
-                      <i class="fas fa-magic"></i>
-                      Utiliser le dernier message généré
-                    </button>
-                    <button type="button" class="btn btn-primary btn-xs" id="emailCopyAllBtn">
-                      <i class="fas fa-copy"></i>
-                      Copier sujet + message
-                    </button>
-                  </div>
-                  <p class="template-help">
-                    Le bouton “Utiliser le dernier message généré” récupère en priorité la proposition IA,
-                    puis le modèle de message si disponible.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 4️⃣ Messages équipe ménage -->
-
-        <section class="timeline-section ai-section">
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background: #8b5cf6;">
-              <i class="fas fa-wand-magic-sparkles"></i>
-            </div>
-            <div class="timeline-title">Assistant de rédaction – voyageurs (brouillon libre)</div>
-          </div>
-
-          <div class="message-reply-body">
-            <label for="aiContext" class="message-reply-label">
-              Contexte du message (collez ici le message du voyageur ou décrivez la situation)
-            </label>
-            <textarea
-              id="aiContext"
-              class="message-reply-input"
-              rows="4"
-              placeholder="Exemples :&#10;- Demande d’arrivée tardive vers 23h&#10;- Le client demande si les draps sont fournis&#10;- Réponse à une réclamation sur le ménage"
-            ></textarea>
-          </div>
-
-          <div class="message-reply-body">
-            <label for="aiReply" class="message-reply-label">
-              Proposition de réponse
-            </label>
-            <textarea
-              id="aiReply"
-              class="message-reply-input"
-              rows="5"
-              placeholder="La réponse proposée par l’IA apparaîtra ici. Vous pourrez la modifier avant de la copier."
-            ></textarea>
-          </div>
-
-          <div class="message-reply-footer">
-            <div class="message-reply-ai">
-              <button type="button" class="btn btn-secondary btn-ai" id="aiSuggestBtn">
-                <i class="fas fa-magic"></i>
-                Proposer une réponse avec l’IA
-              </button>
-              <span class="message-reply-hint" id="aiHint">
-                L’IA rédigera un brouillon poli et professionnel à partir du contexte.
-              </span>
-            </div>
-
-            <div class="message-reply-actions">
-              <button type="button" class="btn btn-ghost" id="aiClearBtn">
-                Effacer
-              </button>
-              <button type="button" class="btn btn-primary copy-btn" id="aiCopyBtn">
-                <i class="fas fa-copy"></i>
-                Copier la réponse
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- 3️⃣ Messages rapides – timeline réservations -->
+        <!-- Messages rapides – timeline réservations -->
         <section class="timeline-section">
           <div class="timeline-header">
             <div class="timeline-icon" style="background:#10b981;">
@@ -948,40 +365,6 @@
             <div class="reservation-list" id="listCheckouts"></div>
           </div>
         </section>
-
-        <!-- 4️⃣ Messages équipe ménage -->
-        
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background:#0f766e;">
-              <i class="fas fa-broom"></i>
-            </div>
-            <div class="timeline-title">Messages à envoyer à l’équipe ménage</div>
-          </div>
-
-          <div class="cleaning-controls">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="cleaningMsgDate" style="font-size:13px; font-weight:600; color:var(--text-secondary);">
-                Date des interventions
-              </label>
-              <input type="date" id="cleaningMsgDate">
-            </div>
-            <button type="button" class="btn btn-secondary" id="generateCleaningMessagesBtn">
-              <i class="fas fa-wand-magic-sparkles"></i>
-              Générer les messages ménage
-            </button>
-            <span class="cleaning-hint" id="cleaningMsgHint">
-              Les messages sont construits à partir de vos réservations, logements et assignations ménage.
-            </span>
-          </div>
-
-          <div id="cleaningMessagesContainer" class="cleaning-messages-container">
-            <p class="empty-state">
-              <i class="fas fa-comment-slash"></i><br>
-              Choisissez une date puis générez les messages pour vos intervenants ménage.
-            </p>
-          </div>
-        </section>
-
       </div>
     </main>
   </div>
@@ -994,10 +377,10 @@
     </div>
   </div>
 
-  <!-- JS spécifique messages (listes, etc.) -->
+  <!-- JS spécifique messages (timeline) -->
   <script src="/js/messages.js"></script>
 
-  <!-- Script auth + user + logout -->
+  <!-- Script auth + user + logout + menu mobile + nav active -->
   <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
@@ -1044,607 +427,17 @@
           window.location.href = '/login.html';
         });
       }
-    })();
-  </script>
 
-  <!-- Script assistant IA + modèles + messages ménage -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      /* ========= Données logements (partagées) ========= */
-      const PROPERTIES = window.LCC_PROPERTIES || [
-        { id: 'apt-demo-1', name: 'Appartement démo 1' },
-        { id: 'apt-demo-2', name: 'Appartement démo 2' }
-      ];
-
-      /* ========= Messagerie e-mail simulée ========= */
-
-      function getLastGeneratedMessage() {
-        const aiArea = document.getElementById('aiReply');
-        const tplArea = document.getElementById('tplResult');
-        const fromAI = aiArea && aiArea.value.trim();
-        const fromTpl = tplArea && tplArea.value.trim();
-
-        if (fromAI) return fromAI.trim();
-        if (fromTpl) return fromTpl.trim();
-        return '';
-      }
-
-      function initEmailMessaging() {
-        const useGeneratedBtn = document.getElementById('emailUseGeneratedBtn');
-        const copyAllBtn = document.getElementById('emailCopyAllBtn');
-        const emailBody = document.getElementById('emailBody');
-        const emailSubject = document.getElementById('emailSubject');
-
-        if (useGeneratedBtn && emailBody) {
-          useGeneratedBtn.addEventListener('click', function() {
-            const msg = getLastGeneratedMessage();
-            if (!msg) {
-              alert("Aucun message généré trouvé. Utilisez d’abord les modèles ou l’assistant IA.");
-              return;
-            }
-            emailBody.value = msg;
-            emailBody.focus();
-          });
-        }
-
-        if (copyAllBtn) {
-          copyAllBtn.addEventListener('click', async function() {
-            const subject = emailSubject ? (emailSubject.value || '').trim() : '';
-            const body = emailBody ? (emailBody.value || '').trim() : '';
-
-            if (!subject && !body) {
-              alert("Sujet et contenu sont vides. Rédigez un message avant de copier.");
-              return;
-            }
-
-            let full = '';
-            if (subject) {
-              full += 'Sujet : ' + subject + '\n\n';
-            }
-            if (body) {
-              full += body;
-            }
-
-            try {
-              await navigator.clipboard.writeText(full);
-              alert("Sujet + message copiés dans le presse-papiers. Vous pouvez les coller dans votre e-mail Airbnb / Booking.");
-            } catch (e) {
-              console.error(e);
-              alert("Impossible de copier automatiquement. Sélectionnez et copiez le texte manuellement.");
-            }
-          });
-        }
-      }
-
-
-
-      /* ========= 1) MODÈLES INTELLIGENTS ========= */
-      const tplType = document.getElementById('tplType');
-      const tplGuestName = document.getElementById('tplGuestName');
-      const tplPropertyName = document.getElementById('tplPropertyName');
-      const tplCheckinDate = document.getElementById('tplCheckinDate');
-      const tplCheckoutDate = document.getElementById('tplCheckoutDate');
-      const tplArrivalTime = document.getElementById('tplArrivalTime');
-      const tplExtraInfo = document.getElementById('tplExtraInfo');
-      const tplResult = document.getElementById('tplResult');
-      const tplGenerateBtn = document.getElementById('tplGenerateBtn');
-      const tplResetBtn = document.getElementById('tplResetBtn');
-      const tplCopyBtn = document.getElementById('tplCopyBtn');
-
-      // 🔽 On remplit le select des logements avec LCC_PROPERTIES
-      if (tplPropertyName && PROPERTIES && PROPERTIES.length) {
-        PROPERTIES.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = (p.name || p.title || p.label || p.id || '').toString();
-          opt.textContent = p.name || p.title || p.label || p.id;
-          tplPropertyName.appendChild(opt);
-        });
-      }
-
-      function formatDateFr(iso) {
-        if (!iso) return '';
-        const d = new Date(iso);
-        if (isNaN(d)) return iso;
-        return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
-      }
-
-      function buildSmartTemplate() {
-        const type = tplType.value;
-        const guest = tplGuestName.value.trim() || 'Bonjour';
-        const firstLine = guest.toLowerCase().startsWith('bonjour') ? guest : `Bonjour ${guest},`;
-
-        const property = (tplPropertyName.value || '').trim() || 'votre logement';
-        const ci = tplCheckinDate.value ? formatDateFr(tplCheckinDate.value) : null;
-        const co = tplCheckoutDate.value ? formatDateFr(tplCheckoutDate.value) : null;
-        const arrTime = tplArrivalTime.value.trim();
-        const extra = tplExtraInfo.value.trim();
-
-        const stayLine = (ci && co)
-          ? `Votre séjour est prévu du ${ci} au ${co}.`
-          : ci
-            ? `Votre arrivée est prévue le ${ci}.`
-            : '';
-
-        let body = '';
-
-        if (type === 'prearrival') {
-          body += (stayLine ? stayLine + '\n\n' : '');
-          body += `Je vous confirme la réservation de ${property}. `;
-          body += `Vous recevrez, avant votre arrivée, toutes les informations détaillées concernant l'accès au logement, le code ou la remise des clés, ainsi que le fonctionnement du check-in.`;
-          if (arrTime) {
-            body += `\n\nSi possible, merci de me confirmer votre heure d’arrivée approximative (${arrTime}) afin que je puisse m’organiser au mieux.`;
-          } else {
-            body += `\n\nSi possible, merci de me communiquer votre heure d’arrivée approximative afin que je puisse m’organiser au mieux.`;
-          }
-          if (extra) {
-            body += `\n\nÀ noter : ${extra}.`;
-          }
-        }
-
-        if (type === 'arrivalday') {
-          body += (stayLine ? stayLine + '\n\n' : '');
-          body += `Petit rappel pour votre arrivée à ${property} aujourd’hui. `;
-          body += `Les instructions de check-in (adresse exacte, accès à l’immeuble, codes ou clés) sont disponibles dans vos messages et dans le livret d’accueil.`;
-          if (arrTime) {
-            body += `\n\nComme indiqué, votre arrivée est prévue ${arrTime}. Si votre horaire change, n’hésitez pas à me prévenir.`;
-          } else {
-            body += `\n\nSi votre horaire d’arrivée change, n’hésitez pas à me prévenir.`;
-          }
-          if (extra) {
-            body += `\n\nRappel utile : ${extra}.`;
-          }
-        }
-
-        if (type === 'duringstay') {
-          body += (stayLine ? stayLine + '\n\n' : '');
-          body += `J’espère que tout se passe bien pour vous à ${property}. `;
-          body += `N’hésitez surtout pas à me signaler si quelque chose manque, si vous avez une question sur le logement ou besoin d’une recommandation (restaurants, activités, transports…).`;
-          if (extra) {
-            body += `\n\nInformations utiles pour votre séjour : ${extra}.`;
-          }
-        }
-
-        if (type === 'checkout') {
-          body += co
-            ? `Comme prévu, votre départ est prévu le ${co}.\n\n`
-            : 'Petit rappel concernant votre départ.\n\n';
-          body += `Le check-out se fait généralement avant 11h (sauf accord différent). `;
-          body += `Merci de laisser le logement dans un état correct, de vérifier que vous n’avez rien oublié et de vous assurer que la porte est bien fermée en partant.`;
-          if (extra) {
-            body += `\n\nDernier rappel important : ${extra}.`;
-          }
-        }
-
-        if (type === 'thankyou') {
-          body += co
-            ? `Merci encore pour votre séjour du ${ci || ''}${ci && co ? ' au ' : ''}${co || ''} à ${property}.\n\n`
-            : `Merci encore pour votre séjour à ${property}.\n\n`;
-          body += `J’espère que tout s’est bien passé et que vous avez passé un agréable moment. `;
-          body += `Si vous avez quelques minutes, je serais ravi(e) que vous laissiez un avis sur la plateforme, cela m’aide beaucoup pour la suite.`;
-          if (extra) {
-            body += `\n\nVous pouvez également me faire un retour direct si vous voyez un point à améliorer : ${extra}.`;
-          }
-        }
-
-        let msg = firstLine + '\n\n' + body + '\n\n' + 'Bien cordialement,\nLa Conciergerie de Charles';
-        return msg.trim();
-      }
-
-      if (tplGenerateBtn && tplResult) {
-        tplGenerateBtn.addEventListener('click', () => {
-          tplResult.value = buildSmartTemplate();
-        });
-      }
-
-      if (tplResetBtn) {
-        tplResetBtn.addEventListener('click', () => {
-          tplGuestName.value = '';
-          tplPropertyName.value = '';
-          tplCheckinDate.value = '';
-          tplCheckoutDate.value = '';
-          tplArrivalTime.value = '';
-          tplExtraInfo.value = '';
-          tplResult.value = '';
-        });
-      }
-
-      if (tplCopyBtn) {
-        tplCopyBtn.addEventListener('click', async () => {
-          const text = tplResult.value.trim();
-          if (!text) return;
-          try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              await navigator.clipboard.writeText(text);
-              tplCopyBtn.classList.add('copied');
-              tplCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-              setTimeout(() => {
-                tplCopyBtn.classList.remove('copied');
-                tplCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le message';
-              }, 1500);
-            } else {
-              const t = document.createElement('textarea');
-              t.value = text;
-              document.body.appendChild(t);
-              t.select();
-              document.execCommand('copy');
-              document.body.removeChild(t);
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        });
-      }
-
-      /* ========= 2) Assistant IA voyageurs (brouillon) ========= */
-      const aiContext = document.getElementById('aiContext');
-      const aiReply = document.getElementById('aiReply');
-      const aiSuggestBtn = document.getElementById('aiSuggestBtn');
-      const aiHint = document.getElementById('aiHint');
-      const aiClearBtn = document.getElementById('aiClearBtn');
-      const aiCopyBtn = document.getElementById('aiCopyBtn');
-
-      if (aiContext && aiReply && aiSuggestBtn) {
-        async function fetchAiSuggestion(contextText) {
-          const intro = "Bonjour,";
-          let core;
-
-          if (contextText && contextText.length > 10) {
-            core = "Merci pour votre message. " +
-              "Je vous confirme avoir bien pris en compte votre demande. " +
-              "Je reste bien entendu disponible si vous avez la moindre question ou besoin supplémentaire pendant votre séjour.";
-          } else {
-            core = "Merci pour votre message. " +
-              "Je reste à votre disposition pour toute question ou précision concernant votre arrivée ou votre séjour.";
-          }
-
-          return (
-            intro + "\n\n" +
-            core + "\n\n" +
-            "Bien cordialement,\nLa Conciergerie de Charles"
-          );
-        }
-
-        aiSuggestBtn.addEventListener('click', async () => {
-          const contextText = aiContext.value.trim();
-
-          aiSuggestBtn.disabled = true;
-          aiSuggestBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération…';
-          aiHint.textContent = "Génération d’un brouillon de réponse…";
-
-          try {
-            const suggestion = await fetchAiSuggestion(contextText);
-
-            if (!aiReply.value.trim()) {
-              aiReply.value = suggestion;
-            } else {
-              aiReply.value = aiReply.value.trim() + "\n\n" + suggestion;
-            }
-
-            aiHint.textContent = "Brouillon généré. Tu peux le modifier avant de le copier dans Airbnb/Booking.";
-          } catch (e) {
-            console.error(e);
-            aiHint.textContent = "Impossible de générer une réponse pour le moment.";
-          } finally {
-            aiSuggestBtn.disabled = false;
-            aiSuggestBtn.innerHTML = '<i class="fas fa-magic"></i> Proposer une réponse avec l’IA';
-          }
-        });
-
-        if (aiClearBtn) {
-          aiClearBtn.addEventListener('click', () => {
-            aiContext.value = '';
-            aiReply.value = '';
-            aiHint.textContent = "L’IA rédigera un brouillon poli et professionnel à partir du contexte.";
-          });
-        }
-
-        if (aiCopyBtn) {
-          aiCopyBtn.addEventListener('click', async () => {
-            const text = aiReply.value.trim();
-            if (!text) return;
-
-            try {
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(text);
-                aiCopyBtn.classList.add('copied');
-                aiCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                setTimeout(() => {
-                  aiCopyBtn.classList.remove('copied');
-                  aiCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier la réponse';
-                }, 1500);
-              } else {
-                const temp = document.createElement('textarea');
-                temp.value = text;
-                document.body.appendChild(temp);
-                temp.select();
-                document.execCommand('copy');
-                document.body.removeChild(temp);
-              }
-            } catch (e) {
-              console.error(e);
-            }
-          });
-        }
-      }
-
-      /* ========= 3) Messages équipe ménage ========= */
-
-      const STORAGE_CLEANERS = 'lcc_cleaners';
-      const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
-
-      const RESERVATIONS = window.LCC_RESERVATIONS || [];
-
-      let cleaners = [];
-      let assignments = {};
-
-      function loadCleaningData() {
-        try {
-          cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
-          assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
-        } catch (e) {
-          cleaners = [];
-          assignments = {};
-        }
-      }
-
-      function normalizeDateString(dateStr) {
-        return dateStr ? dateStr.slice(0, 10) : null;
-      }
-
-      function getPropertyName(propertyId) {
-        const p = PROPERTIES.find(x => x.id === propertyId || x.propertyId === propertyId);
-        return p ? (p.name || p.title || p.label || propertyId) : (propertyId || 'Logement');
-      }
-
-      function getCleanerById(id) {
-        return cleaners.find(c => c.id === id) || null;
-      }
-
-      function generateCleaningTasks(dateStr) {
-        if (!dateStr) return [];
-
-        const tasks = [];
-
-        RESERVATIONS.forEach(r => {
-          if (!r.start || !r.end || !r.propertyId) return;
-
-          const startStr = normalizeDateString(r.start);
-          const endStr = normalizeDateString(r.end);
-          const propertyId = r.propertyId;
-          const propertyName = getPropertyName(propertyId);
-          const cleanerId = assignments[propertyId];
-          const cleaner = cleanerId ? getCleanerById(cleanerId) : null;
-
-          if (endStr === dateStr) {
-            tasks.push({
-              type: 'departure',
-              propertyId,
-              propertyName,
-              cleaner,
-              reservation: r
-            });
-          }
-
-          if (startStr === dateStr) {
-            tasks.push({
-              type: 'arrival',
-              propertyId,
-              propertyName,
-              cleaner,
-              reservation: r
-            });
-          }
-        });
-
-        return tasks;
-      }
-
-      function buildMessageForCleaner(cleaner, tasksForCleaner, dateStr) {
-        const date = new Date(dateStr);
-        const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' });
-
-        const firstName = cleaner.name?.split(' ')[0] || cleaner.name || '';
-        let lines = [];
-
-        lines.push(`Bonjour ${firstName},`);
-        lines.push('');
-        lines.push(`Voici vos interventions ménage prévues pour ${formattedDate} :`);
-        lines.push('');
-
-        tasksForCleaner.forEach(t => {
-          const res = t.reservation;
-          const guest = res.guestName || res.name || 'client';
-          const stayInfo = `${normalizeDateString(res.start)} → ${normalizeDateString(res.end)}`;
-
-          if (t.type === 'departure') {
-            lines.push(`- ${t.propertyName} – après un départ (${guest}, séjour ${stayInfo})`);
-          } else {
-            lines.push(`- ${t.propertyName} – vérification avant une arrivée (${guest}, séjour ${stayInfo})`);
-          }
-        });
-
-        lines.push('');
-        lines.push(`Merci beaucoup, et n’hésite pas à me signaler tout problème ou anomalie.`);
-        lines.push('');
-        lines.push('La Conciergerie de Charles');
-
-        return lines.join('\n');
-      }
-
-      function buildMessageForUnassigned(tasks, dateStr) {
-        const date = new Date(dateStr);
-        const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long' });
-
-        let lines = [];
-        lines.push(`Tâches ménage sans personne assignée – ${formattedDate}`);
-        lines.push('');
-
-        tasks.forEach(t => {
-          const res = t.reservation;
-          const guest = res.guestName || res.name || 'client';
-          const stayInfo = `${normalizeDateString(res.start)} → ${normalizeDateString(res.end)}`;
-
-          if (t.type === 'departure') {
-            lines.push(`- ${t.propertyName} – après un départ (${guest}, séjour ${stayInfo})`);
-          } else {
-            lines.push(`- ${t.propertyName} – avant une arrivée (${guest}, séjour ${stayInfo})`);
-          }
-        });
-
-        lines.push('');
-        lines.push('Pensez à assigner ces logements à une personne de ménage dans le module dédié.');
-        return lines.join('\n');
-      }
-
-      const cleaningMsgDate = document.getElementById('cleaningMsgDate');
-      const generateCleaningMessagesBtn = document.getElementById('generateCleaningMessagesBtn');
-      const cleaningMessagesContainer = document.getElementById('cleaningMessagesContainer');
-      const cleaningMsgHint = document.getElementById('cleaningMsgHint');
-
-      if (cleaningMsgDate && generateCleaningMessagesBtn && cleaningMessagesContainer) {
-        const today = new Date();
-        const isoToday = today.toISOString().slice(0,10);
-        cleaningMsgDate.value = isoToday;
-
-        generateCleaningMessagesBtn.addEventListener('click', () => {
-          const dateStr = cleaningMsgDate.value;
-          if (!dateStr) return;
-
-          loadCleaningData();
-          const tasks = generateCleaningTasks(dateStr);
-
-          if (!tasks.length) {
-            cleaningMessagesContainer.innerHTML = `
-              <p class="empty-state">
-                <i class="fas fa-calendar-times"></i><br>
-                Aucun départ ou arrivée trouvé pour cette date. Aucun message ménage généré.
-              </p>`;
-            return;
-          }
-
-          const byCleaner = {};
-          const unassigned = [];
-
-          tasks.forEach(t => {
-            if (t.cleaner) {
-              const id = t.cleaner.id;
-              if (!byCleaner[id]) byCleaner[id] = [];
-              byCleaner[id].push(t);
-            } else {
-              unassigned.push(t);
-            }
-          });
-
-          cleaningMessagesContainer.innerHTML = '';
-
-          Object.keys(byCleaner).forEach(cleanerId => {
-            const cleaner = getCleanerById(cleanerId);
-            if (!cleaner) return;
-            const tasksForCleaner = byCleaner[cleanerId];
-            const messageText = buildMessageForCleaner(cleaner, tasksForCleaner, dateStr);
-
-            const card = document.createElement('div');
-            card.className = 'cleaning-message-card';
-
-            const phone = cleaner.phone || '';
-            const email = cleaner.email || '';
-
-            card.innerHTML = `
-              <div class="cleaning-message-header">
-                <div>
-                  <div class="cleaning-message-title">
-                    ${cleaner.name}
-                  </div>
-                  <div class="cleaning-message-meta">
-                    ${phone ? `<span class="badge-pill"><i class="fas fa-phone"></i>${phone}</span>` : ''}
-                    ${email ? `<span class="badge-pill"><i class="fas fa-envelope"></i>${email}</span>` : ''}
-                    <span class="badge-pill"><i class="fas fa-list-check"></i>${tasksForCleaner.length} intervention(s)</span>
-                  </div>
-                </div>
-                <button type="button" class="copy-btn cleaning-copy-btn">
-                  <i class="fas fa-copy"></i> Copier le message
-                </button>
-              </div>
-              <textarea class="cleaning-message-textarea">${messageText}</textarea>
-            `;
-
-            cleaningMessagesContainer.appendChild(card);
-          });
-
-          if (unassigned.length) {
-            const text = buildMessageForUnassigned(unassigned, dateStr);
-            const card = document.createElement('div');
-            card.className = 'cleaning-message-card';
-            card.innerHTML = `
-              <div class="cleaning-message-header">
-                <div>
-                  <div class="cleaning-message-title">
-                    Logements sans personne assignée
-                  </div>
-                  <div class="cleaning-message-meta">
-                    <span class="badge-pill"><i class="fas fa-triangle-exclamation"></i>${unassigned.length} tâche(s)</span>
-                  </div>
-                </div>
-                <button type="button" class="copy-btn cleaning-copy-btn">
-                  <i class="fas fa-copy"></i> Copier le message
-                </button>
-              </div>
-              <textarea class="cleaning-message-textarea">${text}</textarea>
-            `;
-            cleaningMessagesContainer.appendChild(card);
-          }
-
-          cleaningMsgHint.textContent = "Messages générés. Tu peux les ajuster avant de les coller dans SMS / WhatsApp / email.";
-
-          cleaningMessagesContainer.querySelectorAll('.cleaning-copy-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-              const card = btn.closest('.cleaning-message-card');
-              if (!card) return;
-              const ta = card.querySelector('.cleaning-message-textarea');
-              if (!ta) return;
-              const text = ta.value.trim();
-              if (!text) return;
-
-              try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  await navigator.clipboard.writeText(text);
-                  btn.classList.add('copied');
-                  btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-                  setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.innerHTML = '<i class="fas fa-copy"></i> Copier le message';
-                  }, 1500);
-                } else {
-                  const temp = document.createElement('textarea');
-                  temp.value = text;
-                  document.body.appendChild(temp);
-                  temp.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(temp);
-                }
-              } catch (e) {
-                console.error(e);
-              }
-            });
-          });
-        });
-      }
-      initEmailMessaging();
-    });
-  </script>
-
-  <!-- MOBILE MENU SCRIPT -->
-  <script>
-    (function() {
+      // Mobile menu
       const menuBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
       const overlay = document.getElementById('sidebarOverlay');
-      
+
       if (menuBtn && sidebar && overlay) {
         menuBtn.addEventListener('click', function() {
           sidebar.classList.toggle('active');
           overlay.classList.toggle('active');
-          
+
           const icon = menuBtn.querySelector('i');
           if (sidebar.classList.contains('active')) {
             icon.classList.remove('fa-bars');
@@ -1654,7 +447,7 @@
             icon.classList.add('fa-bars');
           }
         });
-        
+
         overlay.addEventListener('click', function() {
           sidebar.classList.remove('active');
           overlay.classList.remove('active');
@@ -1662,7 +455,7 @@
           icon.classList.remove('fa-times');
           icon.classList.add('fa-bars');
         });
-        
+
         if (window.innerWidth <= 1024) {
           document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
@@ -1675,9 +468,8 @@
           });
         }
       }
-    })();
-    
-    (function() {
+
+      // Nav active
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1687,26 +479,6 @@
         if (activeLink) {
           activeLink.classList.add('active');
         }
-      }
-    })();
-    
-    document.getElementById('logoutBtn')?.addEventListener('click', function() {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
-    });
-    
-    (function() {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) {
-        const companyEl = document.getElementById('sidebarUserCompany');
-        if (companyEl) companyEl.textContent = user.company;
       }
     })();
   </script>
