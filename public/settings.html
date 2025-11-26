@@ -758,7 +758,7 @@
               <i class="fas fa-home"></i>
               <span>Nom du logement</span>
             </label>
-            <input type="text" id="propertyName" required placeholder="Ex: Saint-Gratien - RDC">
+            <input type="text" id="propertyName" required placeholder="Ex: Lyon ">
           </div>
 
           <div class="form-group">
@@ -775,6 +775,71 @@
           <div class="form-group">
             <label>
               <i class="fas fa-link"></i>
+                        <!-- Infos pour les messages voyageurs -->
+          <div class="form-group">
+            <label>
+              <i class="fas fa-info-circle"></i>
+              <span>Infos utilisées dans les messages</span>
+            </label>
+
+            <div class="template-form-row">
+              <div class="template-field">
+                <span class="template-label">Adresse complète</span>
+                <textarea
+                  id="propertyAddress"
+                  class="template-input"
+                  rows="2"
+                  placeholder="Ex : 25 boulevard de la République, 95210 Saint-Gratien"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="template-form-row">
+              <div class="template-field">
+                <span class="template-label">Code / accès principal</span>
+                <input
+                  type="text"
+                  id="propertyAccessCode"
+                  class="template-input"
+                  placeholder="Ex : Boîte à clés n°3 – Code 4852"
+                />
+              </div>
+            </div>
+
+            <div class="template-form-row">
+              <div class="template-field">
+                <span class="template-label">Wi-Fi – Nom du réseau</span>
+                <input
+                  type="text"
+                  id="propertyWifiName"
+                  class="template-input"
+                  placeholder="Ex : Livebox-1234"
+                />
+              </div>
+              <div class="template-field">
+                <span class="template-label">Wi-Fi – Mot de passe</span>
+                <input
+                  type="text"
+                  id="propertyWifiPassword"
+                  class="template-input"
+                  placeholder="Ex : 7Kp9-df83-L"
+                />
+              </div>
+            </div>
+
+            <div class="template-form-row">
+              <div class="template-field">
+                <span class="template-label">Infos parking / accès</span>
+                <textarea
+                  id="propertyParkingInfo"
+                  class="template-input"
+                  rows="2"
+                  placeholder="Ex : Parking gratuit dans la rue, merci de ne pas utiliser la place n°12."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
               <span>URLs iCal</span>
             </label>
             <div class="url-list" id="urlList">
