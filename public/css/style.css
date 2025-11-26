@@ -1296,6 +1296,40 @@ body {
   background: #fff;
   color: #003580;
 }
+/* ===========================
+   LOADING OVERLAY GLOBAL
+   =========================== */
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;                /* caché par défaut */
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.25); /* léger voile */
+  z-index: 9998;
+}
+
+.loading-overlay.active {
+  display: flex;                /* affiché seulement avec .active */
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--bg-primary, #ffffff);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+  color: var(--text-primary, #111827);
+  font-size: 14px;
+}
+
+.loading-spinner i {
+  font-size: 16px;
+}
+
 
 .bh-source-direct {
   background: rgba(255, 255, 255, 0.2);
