@@ -163,17 +163,18 @@ if (startDate && endDate) {
         <div class="detail-value">${propertyName}</div>
       </div>
 
-      ${startDate ? `
-      <div class="detail-group">
-        <label><i class="fas fa-calendar-check"></i> Arrivée</label>
-        <div class="detail-value">${formatDate(new Date(startDate))}</div>
-      </div>` : ''}
+      ${checkInDate ? `
+  <div class="detail-group">
+    <label><i class="fas fa-calendar-check"></i> Arrivée</label>
+    <div class="detail-value">${formatDate(checkInDate)}</div>
+  </div>` : ''}
 
-      ${endDate ? `
-      <div class="detail-group">
-        <label><i class="fas fa-calendar-times"></i> Départ</label>
-        <div class="detail-value">${formatDate(new Date(endDate))}</div>
-      </div>` : ''}
+${checkOutDate ? `
+  <div class="detail-group">
+    <label><i class="fas fa-calendar-times"></i> Départ</label>
+    <div class="detail-value">${formatDate(checkOutDate)}</div>
+  </div>` : ''}
+
 
       ${nights > 0 ? `
       <div class="detail-group">
