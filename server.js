@@ -1089,34 +1089,40 @@ app.get('/api/reservations', async (req, res) => {
 
   const allReservations = [];
   const userProps = getUserProperties(user.id);
+  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
   userProps.forEach(property => {
     const propertyReservations = reservationsStore.properties[property.id] || [];
     propertyReservations.forEach(reservation => {
-      // Normaliser le format de la réservation
+      const uid = reservation.uid || reservation.id;
+      const checkinData = uid ? (CHECKINS[uid] || null) : null;
+      const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
+
       allReservations.push({
-        id: reservation.id || reservation.uid,
-        uid: reservation.uid,
-        propertyId: property.id,
-        checkIn: reservation.checkIn || reservation.start,
-        checkOut: reservation.checkOut || reservation.end,
-        start: reservation.start || reservation.checkIn,
-        end: reservation.end || reservation.checkOut,
-        guestName: reservation.guestName || reservation.summary || 'Réservation',
-        guestPhone: reservation.guestPhone || '',
-        guestEmail: reservation.guestEmail || '',
-        platform: reservation.platform || reservation.source || 'direct',
-        source: reservation.source || reservation.type || 'ical',
-        price: reservation.price || 0,
-        notes: reservation.notes || reservation.description || '',
+        ...reservation,
         property: {
           id: property.id,
           name: property.name,
           color: property.color
-        }
+        },
+        checkinData,
+        checkinUrl
       });
     });
   });
+
+  res.json({
+    reservations: allReservations,
+    lastSync: reservationsStore.lastSync,
+    syncStatus: reservationsStore.syncStatus,
+    properties: userProps.map(p => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      count: (reservationsStore.properties[p.id] || []).length
+    }))
+  });
+});
 
   res.json({
     reservations: allReservations,
@@ -2039,6 +2045,65 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ============================================
+// ROUTE API - CHECK-IN INVITÉS (publique)
+// ============================================
+app.post('/api/checkin/submit', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const reservationUid =
+      data.reservationId ||
+      data.reservationUid ||
+      data.uid;
+
+    if (!reservationUid) {
+      return res.status(400).json({ error: 'reservationId requis' });
+    }
+
+    CHECKINS[reservationUid] = {
+      ...data,
+      reservationUid,
+      receivedAt: new Date().toISOString()
+    };
+
+    await saveCheckins();
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Erreur /api/checkin/submit :', error);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// ROUTE API - CHECK-IN INVITÉS (publique)
+// ============================================
+app.post('/api/checkin/submit', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const reservationUid =
+      data.reservationId ||
+      data.reservationUid ||
+      data.uid;
+
+    if (!reservationUid) {
+      return res.status(400).json({ error: 'reservationId requis' });
+    }
+
+    CHECKINS[reservationUid] = {
+      ...data,
+      reservationUid,
+      receivedAt: new Date().toISOString()
+    };
+
+    await saveCheckins();
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Erreur /api/checkin/submit :', error);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
@@ -2432,22 +2497,34 @@ app.get('/api/messages/templates', (req, res) => {
 app.post('/api/messages/generate', (req, res) => {
   const { reservationUid, templateKey } = req.body;
 
-  if (!reservationUid || !templateKey) {
-    return res.status(400).json({ error: 'reservationUid et templateKey requis' });
-  }
-
-  let reservation = null;
-  for (const propertyId in reservationsStore.properties) {
-    const found = reservationsStore.properties[propertyId].find(r => r.uid === reservationUid);
-    if (found) {
-      reservation = found;
-      break;
-    }
-  }
-
     if (!reservation) {
     return res.status(404).json({ error: 'Réservation non trouvée' });
   }
+
+  const uid = reservation.uid || reservation.id;
+  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+  const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
+  const checkinData = uid ? (CHECKINS[uid] || null) : null;
+
+  const customData = {
+    propertyAddress: 'Adresse du logement à définir',
+    accessCode: 'Code à définir',
+    checkinUrl,
+    checkinData
+  };
+
+  const message = messagingService.generateQuickMessage(
+    { ...reservation, checkinData, checkinUrl },
+    templateKey,
+    customData
+  );
+
+  if (!message) {
+    return res.status(404).json({ error: 'Template non trouvé' });
+  }
+
+  res.json(message);
+});
 
   // 🔴 NOUVEAU : construire l'URL de check-in pour cette réservation
   const uid = reservation.uid || reservation.id;  // au cas où ce soit "id" et pas "uid"
