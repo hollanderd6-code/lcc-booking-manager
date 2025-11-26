@@ -722,7 +722,7 @@ const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
 const CHECKINS_FILE = path.join(__dirname, 'checkins.json');
 
-// Check-in invités : { [reservationUid]: { ...données formulaire... } }
+// Données de check-in invités : { [reservationUid]: { ...données formulaire... } }
 let CHECKINS = {};
 
 // Data en mémoire
@@ -789,6 +789,25 @@ async function saveDeposits() {
     console.log('✅ Cautions sauvegardées');
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde des cautions:', error.message);
+  }
+}
+async function loadCheckins() {
+  try {
+    const data = await fs.readFile(CHECKINS_FILE, 'utf8');
+    CHECKINS = JSON.parse(data);
+    console.log('✅ Check-ins chargés depuis checkins.json');
+  } catch (error) {
+    CHECKINS = {};
+    console.log('ℹ️ Aucun fichier checkins.json, démarrage sans check-ins');
+  }
+}
+
+async function saveCheckins() {
+  try {
+    await fs.writeFile(CHECKINS_FILE, JSON.stringify(CHECKINS, null, 2));
+    console.log('✅ Check-ins sauvegardés dans checkins.json');
+  } catch (error) {
+    console.error('❌ Erreur lors de la sauvegarde des check-ins:', error.message);
   }
 }
 
@@ -2988,7 +3007,8 @@ app.listen(PORT, async () => {
   await loadProperties();
   await loadManualReservations();
   await loadDeposits();
-await loadEmailProxies();
+  await loadEmailProxies();
+  await loadCheckins();
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
     const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
