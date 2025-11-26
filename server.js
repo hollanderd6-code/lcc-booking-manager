@@ -1194,7 +1194,6 @@ app.post('/api/reservations/manual', async (req, res) => {
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
-  }
 });
 
 // PUT - Modifier une réservation manuelle
@@ -2048,6 +2047,9 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 // ============================================
 // ROUTE API - CHECK-IN INVITÉS (publique)
 // ============================================
+// ============================================
+// ROUTE API - CHECK-IN INVITÉS (publique)
+// ============================================
 app.post('/api/checkin/submit', async (req, res) => {
   try {
     const data = req.body || {};
@@ -2074,6 +2076,7 @@ app.post('/api/checkin/submit', async (req, res) => {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 // ============================================
 // ROUTE API - CHECK-IN INVITÉS (publique)
