@@ -2767,6 +2767,143 @@ app.post('/api/deposits', async (req, res) => {
 
 
 // ============================================
+// 🗄️ ADMIN - GESTION BASE DE DONNÉES
+// ============================================
+
+// Page admin database
+app.get('/admin/database', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.redirect('/login.html');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'admin-database.html'));
+  } catch (error) {
+    console.error('Erreur page admin:', error);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
+// API : Vérifier l'état de la DB
+app.get('/api/admin/check-database', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const requiredColumns = [
+      'guest_nationality',
+      'guest_birth_date',
+      'id_document_path',
+      'checkin_completed',
+      'checkin_date',
+      'checkin_link_sent',
+      'checkin_link_sent_at',
+      'proxy_email'
+    ];
+
+    // Récupérer les colonnes existantes de la table reservations
+    const result = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public'
+        AND table_name = 'reservations'
+    `);
+
+    const existingColumns = result.rows.map(row => row.column_name);
+    const missingColumns = requiredColumns.filter(
+      col => !existingColumns.includes(col)
+    );
+
+    res.json({
+      allColumnsExist: missingColumns.length === 0,
+      existingColumns: requiredColumns.filter(col => existingColumns.includes(col)),
+      missingColumns,
+      totalRequired: requiredColumns.length
+    });
+
+  } catch (error) {
+    console.error('Erreur vérification DB:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la vérification',
+      message: error.message 
+    });
+  }
+});
+
+// API : Installer les colonnes manquantes
+app.post('/api/admin/install-columns', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const columnsToAdd = [
+      { name: 'guest_nationality', type: 'VARCHAR(10)' },
+      { name: 'guest_birth_date', type: 'DATE' },
+      { name: 'id_document_path', type: 'VARCHAR(255)' },
+      { name: 'checkin_completed', type: 'BOOLEAN DEFAULT FALSE' },
+      { name: 'checkin_date', type: 'TIMESTAMP' },
+      { name: 'checkin_link_sent', type: 'BOOLEAN DEFAULT FALSE' },
+      { name: 'checkin_link_sent_at', type: 'TIMESTAMP' },
+      { name: 'proxy_email', type: 'VARCHAR(255)' }
+    ];
+
+    let installed = 0;
+
+    for (const column of columnsToAdd) {
+      try {
+        // Vérifier si la colonne existe déjà
+        const checkResult = await pool.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public'
+            AND table_name = 'reservations'
+            AND column_name = $1
+        `, [column.name]);
+
+        if (checkResult.rows.length > 0) {
+          console.log(`⚠️  Colonne ${column.name} existe déjà`);
+          continue;
+        }
+
+        // Ajouter la colonne
+        await pool.query(`
+          ALTER TABLE reservations 
+          ADD COLUMN ${column.name} ${column.type}
+        `);
+        
+        installed++;
+        console.log(`✅ Colonne ajoutée: ${column.name}`);
+        
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`⚠️  Colonne ${column.name} existe déjà (erreur)`);
+          continue;
+        }
+        console.error(`❌ Erreur pour ${column.name}:`, error.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      installed: installed,
+      message: `${installed} colonne${installed > 1 ? 's ajoutées' : ' ajoutée'}`
+    });
+
+  } catch (error) {
+    console.error('Erreur installation colonnes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'installation',
+      message: error.message
+    });
+  }
+});
+
+// ============================================
 // DÉMARRAGE
 // ============================================
 
