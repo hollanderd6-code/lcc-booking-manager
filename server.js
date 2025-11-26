@@ -2551,7 +2551,7 @@ app.post('/api/messages/generate', (req, res) => {
   }
 
   res.json(message);
-});
+})
 
 app.get('/api/messages/upcoming', async (req, res) => {
   const user = await getUserFromRequest(req);
