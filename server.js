@@ -1144,14 +1144,10 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { propertyId, checkIn, checkOut, guestName, guestPhone, guestEmail, platform, price, notes, source } = req.body;
+    const { propertyId, start, end, guestName, notes } = req.body;
 
-    // Support both 'checkIn/checkOut' and 'start/end' formats
-    const startDate = checkIn || req.body.start;
-    const endDate = checkOut || req.body.end;
-
-    if (!propertyId || !startDate || !endDate) {
-      return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
+    if (!propertyId || !start || !end) {
+      return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
@@ -1160,20 +1156,13 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
 
     const reservation = {
-      id: 'manual_' + Date.now(),
       uid: 'manual_' + Date.now(),
-      propertyId: propertyId,
-      start: startDate,
-      end: endDate,
-      checkIn: startDate,
-      checkOut: endDate,
-      source: source || 'manual',
-      platform: platform || 'direct',
+      start,
+      end,
+      source: 'MANUEL',
+      platform: 'MANUEL',
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
-      guestPhone: guestPhone || '',
-      guestEmail: guestEmail || '',
-      price: price || 0,
       notes: notes || '',
       createdAt: new Date().toISOString()
     };
@@ -1189,10 +1178,16 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
     reservationsStore.properties[propertyId].push(reservation);
 
-    res.status(201).json(reservation);
+    res.status(201).json({
+      message: 'Réservation manuelle créée',
+      reservation
+    });
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 
 // PUT - Modifier une réservation manuelle
 app.put('/api/reservations/manual/:uid', async (req, res) => {
