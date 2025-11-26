@@ -2426,16 +2426,28 @@ app.post('/api/messages/generate', (req, res) => {
     }
   }
 
-  if (!reservation) {
+    if (!reservation) {
     return res.status(404).json({ error: 'Réservation non trouvée' });
   }
 
+  // 🔴 NOUVEAU : construire l'URL de check-in pour cette réservation
+  const uid = reservation.uid || reservation.id;  // au cas où ce soit "id" et pas "uid"
+  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+  const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
+
+  // Données supplémentaires envoyées au moteur de messages
   const customData = {
     propertyAddress: 'Adresse du logement à définir',
-    accessCode: 'Code à définir'
+    accessCode: 'Code à définir',
+    checkinUrl      // 👉 nouvelle clé accessible dans messagingService
   };
 
-  const message = messagingService.generateQuickMessage(reservation, templateKey, customData);
+  const message = messagingService.generateQuickMessage(
+    reservation,
+    templateKey,
+    customData
+  );
+
 
   if (!message) {
     return res.status(404).json({ error: 'Template non trouvé' });
