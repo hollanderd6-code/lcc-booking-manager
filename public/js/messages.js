@@ -113,56 +113,103 @@ async function generateMessage(reservationUid, templateKey) {
 // ========================================
 // RESERVATIONS ORGANIZATION
 // ========================================
+function getReservationStart(reservation) {
+  return (
+    reservation.start ||
+    reservation.startDate ||
+    reservation.checkIn ||
+    reservation.checkin ||
+    null
+  );
+}
+
+function getReservationEnd(reservation) {
+  return (
+    reservation.end ||
+    reservation.endDate ||
+    reservation.checkOut ||
+    reservation.checkout ||
+    null
+  );
+}
+
 function organizeReservations() {
-  // Sécurise au cas où allReservations serait undefined
+  // On sécurise au cas où allReservations serait undefined
   const reservations = Array.isArray(allReservations) ? allReservations : [];
 
+  console.log('📊 Organisation des réservations, total =', reservations.length);
+
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
+
   const next7 = new Date(now);
   next7.setDate(next7.getDate() + 7);
-  
+
   // Arrivées aujourd'hui
-  const checkinsToday = allReservations.filter(r => {
-    const checkin = new Date(r.start);
-    return isSameDay(checkin, now);
+  const checkinsToday = reservations.filter(r => {
+    const raw = getReservationStart(r);
+    if (!raw) return false;
+    const d = new Date(raw);
+    return isSameDay(d, now);
   });
-  
+
   // Arrivées demain
-  const checkinsTomorrow = allReservations.filter(r => {
-    const checkin = new Date(r.start);
-    return isSameDay(checkin, tomorrow);
+  const checkinsTomorrow = reservations.filter(r => {
+    const raw = getReservationStart(r);
+    if (!raw) return false;
+    const d = new Date(raw);
+    return isSameDay(d, tomorrow);
   });
-  
-  // Prochains 7 jours (après demain)
-  const checkinsNext7 = allReservations.filter(r => {
-    const checkin = new Date(r.start);
-    const dayAfterTomorrow = new Date(tomorrow);
-    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-    return checkin > tomorrow && checkin <= next7;
+
+  // Arrivées dans les 7 prochains jours (hors aujourd'hui et demain)
+  const checkinsNext7 = reservations.filter(r => {
+    const raw = getReservationStart(r);
+    if (!raw) return false;
+    const d = new Date(raw);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() > tomorrow.getTime() && d.getTime() <= next7.getTime();
   });
-  
+
   // Séjours en cours
-  const currentStays = allReservations.filter(r => {
-    const checkin = new Date(r.start);
-    const checkout = new Date(r.end);
-    return checkin <= now && checkout >= now;
+  const currentStays = reservations.filter(r => {
+    const startRaw = getReservationStart(r);
+    const endRaw = getReservationEnd(r);
+    if (!startRaw || !endRaw) return false;
+
+    const start = new Date(startRaw);
+    const end = new Date(endRaw);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    return start.getTime() <= now.getTime() && now.getTime() < end.getTime();
   });
-  
+
   // Départs aujourd'hui
-  const checkoutsToday = allReservations.filter(r => {
-    const checkout = new Date(r.end);
-    return isSameDay(checkout, now);
+  const checkoutsToday = reservations.filter(r => {
+    const raw = getReservationEnd(r);
+    if (!raw) return false;
+    const d = new Date(raw);
+    return isSameDay(d, now);
   });
-  
-  // Render each section
-  renderSection('listToday', 'countToday', checkinsToday, 'reminder-checkin');
+
+  console.log(
+    '   👉 Today:', checkinsToday.length,
+    '| Tomorrow:', checkinsTomorrow.length,
+    '| Next7:', checkinsNext7.length,
+    '| Current:', currentStays.length,
+    '| CheckoutsToday:', checkoutsToday.length
+  );
+
+  renderSection('listToday', 'countToday', checkinsToday, 'welcome');
   renderSection('listTomorrow', 'countTomorrow', checkinsTomorrow, 'checkin-instructions');
   renderSection('listNext7', 'countNext7', checkinsNext7, 'welcome');
   renderSection('listCurrent', 'countCurrent', currentStays, 'during-stay');
   renderSection('listCheckouts', 'countCheckouts', checkoutsToday, 'checkout-reminder');
 }
+
 
 
 function renderSection(listId, countId, reservations, defaultTemplateKey) {
