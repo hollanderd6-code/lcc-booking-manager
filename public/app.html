@@ -1424,50 +1424,62 @@
       <!-- Page Content -->
         
         <!-- ÉTAT DES CONNEXIONS -->
-        <section class="status-grid">
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-airbnb">
-                <i class="fab fa-airbnb"></i>
-              </div>
-              <span class="status-label status-ok">Connecté</span>
-            </div>
-            <h3>Airbnb</h3>
-            <p>Synchronisation iCal active.</p>
-            <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
-          </article>
+        <!-- Airbnb -->
+<article class="status-card">
+  <div class="status-card-header">
+    <div class="status-icon status-icon-airbnb">
+      <img src="/assets/logos/airbnb.svg" alt="Airbnb" class="status-logo" />
+    </div>
+    <span class="status-label status-ok">Connecté</span>
+  </div>
+  <h3>Airbnb</h3>
+  <p>Synchronisation iCal active.</p>
+  <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
+</article>
 
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-booking">
-                <i class="fas fa-bed"></i>
-              </div>
-              <span class="status-label status-warning">À connecter</span>
-            </div>
-            <h3>Booking.com</h3>
-            <p>Ajoutez votre lien iCal Booking.com.</p>
-            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
-          </article>
+<!-- Booking.com -->
+<article class="status-card">
+  <div class="status-card-header">
+    <div class="status-icon status-icon-booking">
+      <img src="/assets/logos/booking.svg" alt="Booking.com" class="status-logo" />
+    </div>
+    <span class="status-label status-warning">À connecter</span>
+  </div>
+  <h3>Booking.com</h3>
+  <p>Ajoutez votre lien iCal Booking.com.</p>
+  <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
+</article>
 
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-stripe">
-                <i class="fab fa-stripe-s"></i>
-              </div>
-              <span class="status-label status-ok">Connecté</span>
-            </div>
-            <h3>Stripe</h3>
-            <p>Cautions et paiements sécurisés.</p>
-            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
-          </article>
+<!-- Stripe -->
+<article class="status-card">
+  <div class="status-card-header">
+    <div class="status-icon status-icon-stripe">
+      <img src="/assets/logos/stripe.svg" alt="Stripe" class="status-logo" />
+    </div>
+    <span class="status-label status-ok">Connecté</span>
+  </div>
+  <h3>Stripe</h3>
+  <p>Cautions et paiements sécurisés.</p>
+  <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
+</article>
 
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-ai">
-                <i class="fas fa-wand-magic-sparkles"></i>
-              </div>
-              <span class="status-label status-ok">Actif</span>
-            </div>
+<!-- WhatsApp -->
+<article class="status-card" id="whatsappStatusCard">
+  <div class="status-card-header">
+    <div class="status-icon status-icon-whatsapp">
+      <img src="/assets/logos/whatsapp.svg" alt="WhatsApp" class="status-logo" />
+    </div>
+    <span class="status-label status-warning" id="whatsappStatusLabel">À configurer</span>
+  </div>
+  <h3>Notifications WhatsApp</h3>
+  <p>Recevez un message à chaque nouvelle réservation.</p>
+  <button
+    class="btn btn-ghost btn-xs"
+    onclick="window.location.href='/notifications.html#whatsappBlock'">
+    Configurer
+  </button>
+</article>
+
             <h3>Messages automatiques</h3>
             <p>Scénarios IA prêts pour vos voyageurs.</p>
             <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
