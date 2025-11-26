@@ -1,7 +1,8 @@
 // ========================================
 // CONFIGURATION & STATE
 // ========================================
-const API_URL = '';
+const API_URL = 'https://lcc-booking-manager.onrender.com';
+';
 let allReservations = [];
 
 const TEMPLATES = {
