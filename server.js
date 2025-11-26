@@ -874,8 +874,10 @@ async function getUserFromRequest(req) {
 async function loadProperties() {
   try {
     const result = await pool.query(`
-      SELECT id, user_id, name, color, ical_urls
-      FROM properties
+      SELECT id, user_id, name, color, ical_urls,
+       address, access_code, wifi_name, wifi_password, parking_info
+FROM properties
+
       ORDER BY created_at ASC
     `);
 
@@ -900,13 +902,17 @@ async function loadProperties() {
       }
 
       return {
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        color: row.color,
-        // Toujours un tableau de STRING en interne
-        icalUrls
-      };
+  id: row.id,
+  userId: row.user_id,
+  name: row.name,
+  color: row.color,
+  icalUrls,
+  address: row.address || null,
+  accessCode: row.access_code || null,
+  wifiName: row.wifi_name || null,
+  wifiPassword: row.wifi_password || null,
+  parkingInfo: row.parking_info || null,
+};
     });
 
     console.log(`✅ ${PROPERTIES.length} logements chargés depuis Postgres`);
