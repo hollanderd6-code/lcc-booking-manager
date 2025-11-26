@@ -30,21 +30,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ========================================
 async function loadReservations() {
   showLoading();
-  
+
   try {
     const response = await fetch(`${API_URL}/api/reservations`);
     const data = await response.json();
-    
-    allReservations = data.reservations;
-    
+
+    if (!response.ok) {
+      console.error('Réponse non OK /api/reservations:', response.status, data);
+      // on évite de crasher plus loin
+      allReservations = [];
+      showToast(data.error || 'Erreur lors du chargement des réservations', 'error');
+      return;
+    }
+
+    // on sécurise : si jamais ce n'est pas un tableau, on retombe sur []
+    allReservations = Array.isArray(data.reservations) ? data.reservations : [];
+
     console.log(`📦 ${allReservations.length} réservation(s) chargée(s)`);
   } catch (error) {
     console.error('Erreur chargement:', error);
+    allReservations = []; // pour que organizeReservations ne plante pas
     showToast('Erreur lors du chargement des réservations', 'error');
   } finally {
     hideLoading();
   }
 }
+
 
 async function generateMessage(reservationUid, templateKey) {
   try {
