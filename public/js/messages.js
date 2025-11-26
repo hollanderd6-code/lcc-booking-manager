@@ -271,8 +271,12 @@ function renderSection(listId, countId, reservations, defaultTemplateKey) {
 // ========================================
 // TEMPLATE MANAGEMENT
 // ========================================
+// ========================================
+// TEMPLATE MANAGEMENT
+// ========================================
 async function selectTemplate(reservationUid, templateKey) {
-  // On essaie de mettre à jour les boutons si jamais il y en a (compatibilité ancienne version)
+  // Compatibilité ancienne version : si jamais il reste des boutons de template,
+  // on met à jour la classe "active" (sinon on ignore).
   const container = document.getElementById(`templates-${reservationUid}`);
   if (container) {
     container.querySelectorAll('.template-btn').forEach(btn => {
@@ -280,26 +284,33 @@ async function selectTemplate(reservationUid, templateKey) {
     });
   }
   
-  // Show preview
+  // Récupère les éléments de preview
   const preview = document.getElementById(`preview-${reservationUid}`);
   const subjectEl = document.getElementById(`subject-${reservationUid}`);
   const bodyEl = document.getElementById(`body-${reservationUid}`);
   
-  if (!preview || !subjectEl || !bodyEl) return;
+  if (!preview || !subjectEl || !bodyEl) {
+    console.warn('Impossible de trouver les éléments de preview pour', reservationUid);
+    return;
+  }
 
+  // Affiche la zone et met un état "chargement"
   preview.style.display = 'block';
   subjectEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
   bodyEl.textContent = '';
   
-  // Generate message via backend
+  // Appel API pour générer le message
   const message = await generateMessage(reservationUid, templateKey);
   
   if (message) {
     subjectEl.innerHTML = `<i class="fas fa-envelope"></i> ${message.subject}`;
     bodyEl.textContent = message.message;
 
-    // Si on a un email proxy, on prépare aussi le mailto
-    const reservation = allReservations.find(r => r.uid === reservationUid);
+    // Si on a un email proxy, on prépare aussi le lien mailto
+    const reservation = Array.isArray(allReservations)
+      ? allReservations.find(r => r.uid === reservationUid)
+      : null;
+
     if (reservation && reservation.emailProxy) {
       const mailLink = document.getElementById(`mailto-${reservationUid}`);
       if (mailLink) {
@@ -314,6 +325,7 @@ async function selectTemplate(reservationUid, templateKey) {
     bodyEl.textContent = 'Impossible de générer le message';
   }
 }
+
 
 async function copyMessage(reservationUid) {
   const subject = document.getElementById(`subject-${reservationUid}`).textContent;
