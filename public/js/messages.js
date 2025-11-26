@@ -257,27 +257,43 @@ function renderSection(listId, countId, reservations, defaultTemplate) {
 // TEMPLATE MANAGEMENT
 // ========================================
 async function selectTemplate(reservationUid, templateKey) {
-  // Update active button
+  // On essaie de mettre à jour les boutons si jamais il y en a (compatibilité ancienne version)
   const container = document.getElementById(`templates-${reservationUid}`);
-  container.querySelectorAll('.template-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.template === templateKey);
-  });
+  if (container) {
+    container.querySelectorAll('.template-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.template === templateKey);
+    });
+  }
   
   // Show preview
   const preview = document.getElementById(`preview-${reservationUid}`);
   const subjectEl = document.getElementById(`subject-${reservationUid}`);
   const bodyEl = document.getElementById(`body-${reservationUid}`);
   
+  if (!preview || !subjectEl || !bodyEl) return;
+
   preview.style.display = 'block';
   subjectEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
   bodyEl.textContent = '';
   
-  // Generate message
+  // Generate message via backend
   const message = await generateMessage(reservationUid, templateKey);
   
   if (message) {
     subjectEl.innerHTML = `<i class="fas fa-envelope"></i> ${message.subject}`;
     bodyEl.textContent = message.message;
+
+    // Si on a un email proxy, on prépare aussi le mailto
+    const reservation = allReservations.find(r => r.uid === reservationUid);
+    if (reservation && reservation.emailProxy) {
+      const mailLink = document.getElementById(`mailto-${reservationUid}`);
+      if (mailLink) {
+        const mailto = `mailto:${reservation.emailProxy
+          }?subject=${encodeURIComponent(message.subject)
+          }&body=${encodeURIComponent(message.message)}`;
+        mailLink.href = mailto;
+      }
+    }
   } else {
     subjectEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur';
     bodyEl.textContent = 'Impossible de générer le message';
