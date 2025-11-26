@@ -142,15 +142,18 @@ if (startDate && endDate) {
 }
 
 
-    // Créer un faux booking object
-    window.currentBookingDetails = {
-      id: bookingId,
-      guestName: guestName,
-      propertyId: propertyId,
-      platform: platform,
-      startDate: startDate,
-      endDate: endDate
-    };
+    ${checkInDate ? `
+  <div class="detail-group">
+    <label><i class="fas fa-calendar-check"></i> Arrivée</label>
+    <div class="detail-value">${formatDate(checkInDate)}</div>
+  </div>` : ''}
+
+${checkOutDate ? `
+  <div class="detail-group">
+    <label><i class="fas fa-calendar-times"></i> Départ</label>
+    <div class="detail-value">${formatDate(checkOutDate)}</div>
+  </div>` : ''}
+
 
     content.innerHTML = `
       <div class="detail-group">
