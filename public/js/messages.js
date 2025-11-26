@@ -179,12 +179,11 @@ function renderSection(listId, countId, reservations, defaultTemplate) {
     `;
     return;
   }
-  
-  listEl.innerHTML = reservations.map(r => `
+    listEl.innerHTML = reservations.map(r => `
     <div class="reservation-item" style="border-left-color: ${r.property.color}">
       <div class="reservation-header">
         <div class="reservation-info">
-          <h3>${r.property.name} - ${r.guestName}</h3>
+          <h3>${r.property.name} – ${r.guestName}</h3>
           <div class="reservation-meta">
             <span><i class="fas fa-calendar"></i> ${formatDate(r.start)} → ${formatDate(r.end)}</span>
             <span><i class="fas fa-moon"></i> ${r.nights} nuit(s)</span>
@@ -192,6 +191,39 @@ function renderSection(listId, countId, reservations, defaultTemplate) {
           </div>
         </div>
       </div>
+
+      <!-- Actions principales -->
+      <div class="reservation-actions">
+        <button class="copy-btn" onclick="selectTemplate('${r.uid}', '${defaultTemplate}')">
+          <i class="fas fa-magic"></i>
+          Préparer le message
+        </button>
+
+        ${r.emailProxy ? `
+        <a 
+          id="mailto-${r.uid}" 
+          class="copy-btn copy-btn-secondary"
+          style="margin-left:8px;"
+          target="_blank"
+        >
+          <i class="fas fa-envelope"></i>
+          Email proxy
+        </a>
+        ` : ''}
+      </div>
+      
+      <!-- Preview du message généré -->
+      <div class="message-preview" id="preview-${r.uid}" style="display: none;">
+        <div class="message-subject" id="subject-${r.uid}"></div>
+        <div class="message-body" id="body-${r.uid}"></div>
+        <button class="copy-btn" onclick="copyMessage('${r.uid}')">
+          <i class="fas fa-copy"></i>
+          <span id="copy-text-${r.uid}">Copier le message</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+
       
       <div class="template-selector" id="templates-${r.uid}">
         ${Object.entries(TEMPLATES).map(([key, tmpl]) => `
