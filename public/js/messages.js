@@ -5,7 +5,7 @@ const API_URL = 'https://lcc-booking-manager.onrender.com';
 let allReservations = [];
 
 const TEMPLATES = {
-  'welcome': { icon: '👋', label: 'Bienvenue (J-7)' },
+  welcome: { icon: '👋', label: 'Bienvenue (J-7)' },
   'checkin-instructions': { icon: '🔑', label: 'Instructions (J-2)' },
   'reminder-checkin': { icon: '⏰', label: 'Rappel (J-1)' },
   'during-stay': { icon: '💬', label: 'Pendant séjour' },
@@ -14,16 +14,40 @@ const TEMPLATES = {
 };
 
 // ========================================
-// INITIALIZATION
+// INIT
 // ========================================
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('💬 Messages Rapides - Initialisation...');
-  
-  await loadReservations();
-  organizeReservations();
-  
-  console.log('✅ Messages initialisés');
+  try {
+    await loadReservations();
+    organizeReservations();
+    console.log('✅ Messages initialisés');
+  } catch (error) {
+    console.error('❌ Erreur init messages:', error);
+  }
 });
+
+// ========================================
+// HELPERS
+// ========================================
+function isSameDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short'
+  });
+}
 
 // ========================================
 // API CALLS
@@ -32,17 +56,14 @@ async function loadReservations() {
   showLoading();
   
   try {
-    // 1) On récupère le token stocké au login
     const token = localStorage.getItem('lcc_token');
 
-    // Pas de token -> on renvoie l’utilisateur au login
     if (!token) {
       console.warn('Aucun token trouvé, redirection vers la page de connexion');
       window.location.href = '/login.html';
       return;
     }
 
-    // 2) Appel API avec l’en-tête Authorization
     const response = await fetch(`${API_URL}/api/reservations`, {
       headers: {
         Authorization: 'Bearer ' + token
@@ -57,11 +78,9 @@ async function loadReservations() {
       data = {};
     }
 
-    // 3) Gestion des erreurs HTTP
     if (!response.ok) {
       console.error('Réponse non OK /api/reservations:', response.status, data);
 
-      // Si 401 -> token invalide ou expiré : on nettoie et on renvoie au login
       if (response.status === 401) {
         localStorage.removeItem('lcc_token');
         localStorage.removeItem('lcc_user');
@@ -74,7 +93,6 @@ async function loadReservations() {
       return;
     }
 
-    // 4) Succès : on stocke un tableau (même si vide)
     allReservations = Array.isArray(data.reservations) ? data.reservations : [];
     console.log(`📦 ${allReservations.length} réservation(s) chargée(s)`);
   } catch (error) {
@@ -102,6 +120,11 @@ async function generateMessage(reservationUid, templateKey) {
       })
     });
 
+    if (!response.ok) {
+      console.error('Réponse non OK /api/messages/generate:', response.status);
+      return null;
+    }
+
     return await response.json();
   } catch (error) {
     console.error('Erreur génération message:', error);
@@ -109,9 +132,8 @@ async function generateMessage(reservationUid, templateKey) {
   }
 }
 
-
 // ========================================
-// RESERVATIONS ORGANIZATION
+// ORGANISATION DES RÉSERVATIONS
 // ========================================
 function getReservationStart(reservation) {
   return (
@@ -134,7 +156,6 @@ function getReservationEnd(reservation) {
 }
 
 function organizeReservations() {
-  // On sécurise au cas où allReservations serait undefined
   const reservations = Array.isArray(allReservations) ? allReservations : [];
 
   console.log('📊 Organisation des réservations, total =', reservations.length);
@@ -148,23 +169,22 @@ function organizeReservations() {
   const next7 = new Date(now);
   next7.setDate(next7.getDate() + 7);
 
-  // Arrivées aujourd'hui
   const checkinsToday = reservations.filter(r => {
     const raw = getReservationStart(r);
     if (!raw) return false;
     const d = new Date(raw);
-    return isSameDay(d, now);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === now.getTime();
   });
 
-  // Arrivées demain
   const checkinsTomorrow = reservations.filter(r => {
     const raw = getReservationStart(r);
     if (!raw) return false;
     const d = new Date(raw);
-    return isSameDay(d, tomorrow);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === tomorrow.getTime();
   });
 
-  // Arrivées dans les 7 prochains jours (hors aujourd'hui et demain)
   const checkinsNext7 = reservations.filter(r => {
     const raw = getReservationStart(r);
     if (!raw) return false;
@@ -173,7 +193,6 @@ function organizeReservations() {
     return d.getTime() > tomorrow.getTime() && d.getTime() <= next7.getTime();
   });
 
-  // Séjours en cours
   const currentStays = reservations.filter(r => {
     const startRaw = getReservationStart(r);
     const endRaw = getReservationEnd(r);
@@ -187,12 +206,12 @@ function organizeReservations() {
     return start.getTime() <= now.getTime() && now.getTime() < end.getTime();
   });
 
-  // Départs aujourd'hui
   const checkoutsToday = reservations.filter(r => {
     const raw = getReservationEnd(r);
     if (!raw) return false;
     const d = new Date(raw);
-    return isSameDay(d, now);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === now.getTime();
   });
 
   console.log(
@@ -210,15 +229,15 @@ function organizeReservations() {
   renderSection('listCheckouts', 'countCheckouts', checkoutsToday, 'checkout-reminder');
 }
 
-
-
+// ========================================
+// RENDU DE SECTION
+// ========================================
 function renderSection(listId, countId, reservations, defaultTemplateKey) {
   const listEl = document.getElementById(listId);
   const countEl = document.getElementById(countId);
 
   if (!listEl || !countEl) return;
 
-  // Compteur dans le petit badge
   countEl.textContent = reservations.length;
 
   if (!reservations.length) {
@@ -235,8 +254,8 @@ function renderSection(listId, countId, reservations, defaultTemplateKey) {
     const propertyName = (r.property && r.property.name) || 'Logement';
     const nights = r.nights || r.nightCount || '';
     const source = r.source || r.channel || '';
-    const start = formatDate(r.start);
-    const end = formatDate(r.end);
+    const start = formatDate(getReservationStart(r));
+    const end = formatDate(getReservationEnd(r));
     const color = (r.property && r.property.color) || '#0f172a';
 
     return `
@@ -252,7 +271,6 @@ function renderSection(listId, countId, reservations, defaultTemplateKey) {
           </div>
         </div>
 
-        <!-- Actions principales -->
         <div class="reservation-actions">
           <button class="copy-btn" onclick="selectTemplate('${r.uid}', '${defaultTemplateKey}')">
             <i class="fas fa-magic"></i>
@@ -272,7 +290,6 @@ function renderSection(listId, countId, reservations, defaultTemplateKey) {
           ` : ''}
         </div>
         
-        <!-- Preview du message généré -->
         <div class="message-preview" id="preview-${r.uid}" style="display: none;">
           <div class="message-subject" id="subject-${r.uid}"></div>
           <div class="message-body" id="body-${r.uid}"></div>
@@ -286,44 +303,10 @@ function renderSection(listId, countId, reservations, defaultTemplateKey) {
   }).join('');
 }
 
-      
-      <div class="template-selector" id="templates-${r.uid}">
-        ${Object.entries(TEMPLATES).map(([key, tmpl]) => `
-          <button class="template-btn ${key === defaultTemplate ? 'active' : ''}" 
-                  onclick="selectTemplate('${r.uid}', '${key}')"
-                  data-template="${key}">
-            <span>${tmpl.icon}</span>
-            <span>${tmpl.label}</span>
-          </button>
-        `).join('')}
-      </div>
-      
-      <div class="message-preview" id="preview-${r.uid}" style="display: none;">
-        <div class="message-subject" id="subject-${r.uid}"></div>
-        <div class="message-body" id="body-${r.uid}"></div>
-        <button class="copy-btn" onclick="copyMessage('${r.uid}')">
-          <i class="fas fa-copy"></i>
-          <span id="copy-text-${r.uid}">Copier le message</span>
-        </button>
-      </div>
-    </div>
-  `).join('');
-  
-  // Auto-load default template for first reservation
-  if (reservations.length > 0) {
-    selectTemplate(reservations[0].uid, defaultTemplate);
-  }
-}
-
-// ========================================
-// TEMPLATE MANAGEMENT
-// ========================================
 // ========================================
 // TEMPLATE MANAGEMENT
 // ========================================
 async function selectTemplate(reservationUid, templateKey) {
-  // Compatibilité ancienne version : si jamais il reste des boutons de template,
-  // on met à jour la classe "active" (sinon on ignore).
   const container = document.getElementById(`templates-${reservationUid}`);
   if (container) {
     container.querySelectorAll('.template-btn').forEach(btn => {
@@ -331,7 +314,6 @@ async function selectTemplate(reservationUid, templateKey) {
     });
   }
   
-  // Récupère les éléments de preview
   const preview = document.getElementById(`preview-${reservationUid}`);
   const subjectEl = document.getElementById(`subject-${reservationUid}`);
   const bodyEl = document.getElementById(`body-${reservationUid}`);
@@ -341,19 +323,16 @@ async function selectTemplate(reservationUid, templateKey) {
     return;
   }
 
-  // Affiche la zone et met un état "chargement"
   preview.style.display = 'block';
   subjectEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
   bodyEl.textContent = '';
   
-  // Appel API pour générer le message
   const message = await generateMessage(reservationUid, templateKey);
   
   if (message) {
     subjectEl.innerHTML = `<i class="fas fa-envelope"></i> ${message.subject}`;
     bodyEl.textContent = message.message;
 
-    // Si on a un email proxy, on prépare aussi le lien mailto
     const reservation = Array.isArray(allReservations)
       ? allReservations.find(r => r.uid === reservationUid)
       : null;
@@ -373,48 +352,35 @@ async function selectTemplate(reservationUid, templateKey) {
   }
 }
 
+// ========================================
+// ACTIONS UTILITAIRES
+// ========================================
+function copyMessage(reservationUid) {
+  const subjectEl = document.getElementById(`subject-${reservationUid}`);
+  const bodyEl = document.getElementById(`body-${reservationUid}`);
+  const copyTextEl = document.getElementById(`copy-text-${reservationUid}`);
 
-async function copyMessage(reservationUid) {
-  const subject = document.getElementById(`subject-${reservationUid}`).textContent;
-  const body = document.getElementById(`body-${reservationUid}`).textContent;
-  const copyBtn = document.getElementById(`copy-text-${reservationUid}`);
-  
-  const fullMessage = `${subject}\n\n${body}`;
-  
-  try {
-    await navigator.clipboard.writeText(fullMessage);
-    
-    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    copyBtn.parentElement.classList.add('copied');
-    
-    setTimeout(() => {
-      copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le message';
-      copyBtn.parentElement.classList.remove('copied');
-    }, 2000);
-    
-    showToast('Message copié ! Collez-le dans Airbnb/Booking', 'success');
-  } catch (error) {
-    showToast('Erreur lors de la copie', 'error');
-  }
+  if (!subjectEl || !bodyEl) return;
+
+  const textToCopy = `${subjectEl.textContent}\n\n${bodyEl.textContent}`;
+
+  navigator.clipboard.writeText(textToCopy).then(
+    () => {
+      if (copyTextEl) copyTextEl.textContent = 'Copié !';
+      setTimeout(() => {
+        if (copyTextEl) copyTextEl.textContent = 'Copier le message';
+      }, 2000);
+    },
+    err => {
+      console.error('Erreur copie presse-papier:', err);
+      showToast('Impossible de copier le message', 'error');
+    }
+  );
 }
 
 // ========================================
-// UTILITIES
+// LOADING & TOASTS
 // ========================================
-function isSameDay(date1, date2) {
-  return date1.getFullYear() === date2.getFullYear() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getDate() === date2.getDate();
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short'
-  });
-}
-
 function showLoading() {
   const overlay = document.getElementById('loadingOverlay');
   if (overlay) {
@@ -455,4 +421,3 @@ function showToast(message, type = 'info') {
     }, 300);
   }, 3500);
 }
-
