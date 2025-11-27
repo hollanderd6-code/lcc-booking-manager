@@ -4034,30 +4034,31 @@ if (!booking) {
     }
   });
   let modalButtonsSetup = false;
-  function setupModalButtons() {
-    if (modalButtonsSetup) return;  
+
+function setupModalButtons() {
+  if (modalButtonsSetup) return;  
   modalButtonsSetup = true;     
-    // Bouton Supprimer
-    document.addEventListener('click', function(e) {
-      if (e.target.id === 'deleteBookingBtn' || e.target.closest('#deleteBookingBtn')) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleDeleteBooking();
-      }
-    });
-    
-    // Bouton Modifier
-    document.addEventListener('click', function(e) {
-      if (e.target.id === 'editBookingBtn' || e.target.closest('#editBookingBtn')) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleEditBooking();
-      }
-    });
-  }
   
- function handleDeleteBooking() {
-  // Empêcher l'exécution multiple
+  // Bouton Supprimer
+  document.addEventListener('click', function(e) {
+    if (e.target.id === 'deleteBookingBtn' || e.target.closest('#deleteBookingBtn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleDeleteBooking();
+    }
+  });
+  
+  // Bouton Modifier
+  document.addEventListener('click', function(e) {
+    if (e.target.id === 'editBookingBtn' || e.target.closest('#editBookingBtn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleEditBooking();
+    }
+  });
+}
+
+function handleDeleteBooking() {
   if (window.deletingInProgress) {
     console.log('⚠️ Suppression déjà en cours, ignoré');
     return;
@@ -4109,98 +4110,101 @@ if (!booking) {
     return res.json();
   })
   .then(data => {
-  alert('Suppression réussie !');
-  document.getElementById('reservationDetailsModal').style.display = 'none';
-  window.deletingInProgress = false;
-  location.reload();
-})
-.catch(err => {
-  window.deletingInProgress = false;
-  console.error('Erreur suppression:', err);
-  alert('Erreur : ' + err.message);
-});
-  
-  function handleEditBooking() {
-    if (!currentBookingData) {
-      alert('Impossible de trouver les données de la réservation');
-      return;
-    }
-    }
-    // Fermer le modal de détails
-    const detailsModal = document.getElementById('reservationDetailsModal');
-    if (detailsModal) {
-      detailsModal.style.display = 'none';
-      detailsModal.classList.remove('active');
-    }
-    
-    // Ouvrir le modal d'édition et pré-remplir
-    const editModal = document.getElementById('editBookingModal');
-    if (editModal) {
-      editModal.style.display = 'flex';
-      setTimeout(() => editModal.classList.add('active'), 10);
-      
-      // Pré-remplir les champs
-      document.getElementById('editBookingId').value = currentBookingData.uid;
-      document.getElementById('editBookingProperty').value = currentBookingData.propertyId;
-      document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
-      document.getElementById('editCheckOut').value = currentBookingData.end.split('T')[0];
-      document.getElementById('editGuestName').value = currentBookingData.guestName || '';
-      document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
-      document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
-      document.getElementById('editPrice').value = currentBookingData.amount || '';
-      document.getElementById('editNotes').value = currentBookingData.notes || '';
-      
-      // Platform
-      const platform = (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
-      document.getElementById('editPlatform').value = platform;
-    }
-  }
-   document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
-    const propertyId = document.getElementById('blockPropertySelect').value;
-    const startDate = document.getElementById('blockStartDate').value;
-    const endDate = document.getElementById('blockEndDate').value;
-    const reason = document.getElementById('blockReason').value;
-    
-    console.log('🔍 ENVOI - propertyId:', propertyId);
-    console.log('🔍 ENVOI - dates:', startDate, '->', endDate);
-    
-    if (!propertyId || !startDate || !endDate) {
-      alert('Veuillez remplir tous les champs');
-      return;
-    }
-    
-    const token = localStorage.getItem('lcc_token');
-    
-    try {
-      const response = await fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          propertyId: propertyId,
-          start: startDate,
-          end: endDate,
-          reason: reason || 'Blocage manuel'
-        })
-      });
-      
-      const data = await response.json();
-      console.log('📥 Réponse serveur:', data);
-      
-      if (data.block || data.message) {
-        alert('Blocage créé !');
-        document.getElementById('blockModal').style.display = 'none';
-        location.reload();
-      } else {
-        alert('Erreur: ' + (data.error || 'Erreur inconnue'));
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Erreur de connexion');
-    }
+    alert('Suppression réussie !');
+    document.getElementById('reservationDetailsModal').style.display = 'none';
+    window.deletingInProgress = false;
+    location.reload();
+  })
+  .catch(err => {
+    window.deletingInProgress = false;
+    console.error('Erreur suppression:', err);
+    alert('Erreur : ' + err.message);
   });
+}
+
+function handleEditBooking() {
+  if (!currentBookingData) {
+    alert('Impossible de trouver les données de la réservation');
+    return;
+  }
+  
+  // Fermer le modal de détails
+  const detailsModal = document.getElementById('reservationDetailsModal');
+  if (detailsModal) {
+    detailsModal.style.display = 'none';
+    detailsModal.classList.remove('active');
+  }
+  
+  // Ouvrir le modal d'édition et pré-remplir
+  const editModal = document.getElementById('editBookingModal');
+  if (editModal) {
+    editModal.style.display = 'flex';
+    setTimeout(() => editModal.classList.add('active'), 10);
+    
+    // Pré-remplir les champs
+    document.getElementById('editBookingId').value = currentBookingData.uid;
+    document.getElementById('editBookingProperty').value = currentBookingData.propertyId;
+    document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
+    document.getElementById('editCheckOut').value = currentBookingData.end.split('T')[0];
+    document.getElementById('editGuestName').value = currentBookingData.guestName || '';
+    document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
+    document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
+    document.getElementById('editPrice').value = currentBookingData.amount || '';
+    document.getElementById('editNotes').value = currentBookingData.notes || '';
+    
+    // Platform
+    const platform = (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
+    document.getElementById('editPlatform').value = platform;
+  }
+}
+
+document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
+  const propertyId = document.getElementById('blockPropertySelect').value;
+  const startDate = document.getElementById('blockStartDate').value;
+  const endDate = document.getElementById('blockEndDate').value;
+  const reason = document.getElementById('blockReason').value;
+  
+  console.log('🔍 ENVOI - propertyId:', propertyId);
+  console.log('🔍 ENVOI - dates:', startDate, '->', endDate);
+  
+  if (!propertyId || !startDate || !endDate) {
+    alert('Veuillez remplir tous les champs');
+    return;
+  }
+  
+  const token = localStorage.getItem('lcc_token');
+  
+  try {
+    const response = await fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        propertyId: propertyId,
+        start: startDate,
+        end: endDate,
+        reason: reason || 'Blocage manuel'
+      })
+    });
+    
+    const data = await response.json();
+    console.log('📥 Réponse serveur:', data);
+    
+    if (data.block || data.message) {
+      alert('Blocage créé !');
+      document.getElementById('blockModal').style.display = 'none';
+      location.reload();
+    } else {
+      alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erreur de connexion');
+  }
+});
+
 })();
 </script>
 <script src="/js/calendar-dom-only.js"></script>
