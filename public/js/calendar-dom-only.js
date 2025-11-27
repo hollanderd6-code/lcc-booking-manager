@@ -217,22 +217,6 @@
     if (closeDetailsBtn2) closeDetailsBtn2.onclick = closeDetailsModal;
     if (detailsOverlay) detailsOverlay.onclick = closeDetailsModal;
 
-    // Désactiver les boutons Edit et Delete pour l'instant
-    const editBtn = document.getElementById('editBookingBtn');
-    const deleteBtn = document.getElementById('deleteBookingBtn');
-    
-    if (editBtn) {
-      editBtn.onclick = () => {
-        showNotification('Fonctionnalité temporairement désactivée (problème de session)', 'error');
-      };
-    }
-    
-    if (deleteBtn) {
-      deleteBtn.onclick = () => {
-        showNotification('Fonctionnalité temporairement désactivée (problème de session)', 'error');
-      };
-    }
-
     // Modal New Booking - Fermeture
     const closeBookingBtn = document.getElementById('closeModal');
     const cancelBookingBtn = document.getElementById('cancelBooking');
