@@ -3988,7 +3988,18 @@ function fixModalContent(bookingBlock) {
       }
     }, 200);
   }
-  
+  document.addEventListener('click', function(e) {
+    const bookingBlock = e.target.closest('.booking-block');
+    if (bookingBlock) {
+      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      if (reservations.length === 0) {
+        console.log('⚠️ Données non chargées, attente...');
+        setTimeout(() => fixModalContent(bookingBlock), 500);
+      } else {
+        setTimeout(() => fixModalContent(bookingBlock), 200);
+      }
+    }
+  });
   function setupModalButtons() {
     // Bouton Supprimer
     document.addEventListener('click', function(e) {
