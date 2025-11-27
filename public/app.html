@@ -3804,9 +3804,11 @@
 <button class="fab" id="addBookingBtn" title="Nouvelle réservation">
   <i class="fas fa-plus"></i>
 </button>
-  <script>
+ <script>
 // Script complet pour le blocage de dates
 (function() {
+  let propertiesLoaded = false;
+  
   // Remplir la liste des logements
   function loadPropertiesInBlockModal() {
     const token = localStorage.getItem('lcc_token');
@@ -3822,10 +3824,12 @@
         select.innerHTML = '<option value="">Sélectionner un logement</option>';
         data.properties.forEach(prop => {
           const option = document.createElement('option');
-          option.value = prop._id;
+          option.value = prop.id;  // ← Changé de prop._id à prop.id
           option.textContent = prop.name;
           select.appendChild(option);
         });
+        propertiesLoaded = true;
+        console.log('✅ Logements chargés dans le select:', data.properties.length);
       }
     })
     .catch(err => console.log('Erreur chargement logements:', err));
@@ -3847,6 +3851,8 @@
             const date = cell.getAttribute('data-date');
             const row = cell.closest('.calendar-row, [data-property-id]');
             const propertyId = row ? row.getAttribute('data-property-id') : null;
+            
+            console.log('📅 Clic sur cellule - Date:', date, 'PropertyId:', propertyId);
             
             if (date) {
               openBlockModal(date, propertyId);
@@ -3870,7 +3876,9 @@
       if (endDate) endDate.value = date;
       
       if (propertySelect && propertyId) {
+        console.log('🎯 Tentative de pré-sélection:', propertyId);
         propertySelect.value = propertyId;
+        console.log('✅ Valeur du select après:', propertySelect.value);
       }
     }
   }
