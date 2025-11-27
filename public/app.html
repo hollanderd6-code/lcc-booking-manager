@@ -3803,6 +3803,65 @@
 <button class="fab" id="addBookingBtn" title="Nouvelle réservation">
   <i class="fas fa-plus"></i>
 </button>
+  <script>
+// Rendre les cellules du calendrier cliquables pour bloquer des dates
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      const calendarBody = document.querySelector('.calendar-body, .calendar-grid');
+      
+      if (calendarBody) {
+        calendarBody.addEventListener('click', function(e) {
+          // Ne rien faire si on clique sur une réservation existante
+          if (e.target.closest('.booking-block')) {
+            return;
+          }
+          
+          const cell = e.target.closest('.calendar-cell');
+          if (cell) {
+            const date = cell.getAttribute('data-date');
+            const row = cell.closest('.calendar-row, [data-property-id]');
+            const propertyId = row ? row.getAttribute('data-property-id') : null;
+            
+            if (date) {
+              openBlockModal(date, propertyId);
+            }
+          }
+        });
+      }
+    }, 1000);
+  });
+  
+  function openBlockModal(date, propertyId) {
+    const modal = document.getElementById('blockModal');
+    const startDate = document.getElementById('blockStartDate');
+    const endDate = document.getElementById('blockEndDate');
+    const propertySelect = document.getElementById('blockPropertySelect');
+    
+    if (modal) {
+      modal.style.display = 'flex';
+      
+      // Pré-remplir les dates
+      if (startDate) startDate.value = date;
+      if (endDate) endDate.value = date;
+      
+      // Pré-sélectionner le logement si possible
+      if (propertySelect && propertyId) {
+        propertySelect.value = propertyId;
+      }
+    }
+  }
+  
+  // Fermeture du modal
+  document.getElementById('blockModalClose')?.addEventListener('click', function() {
+    document.getElementById('blockModal').style.display = 'none';
+  });
+  
+  document.getElementById('blockModalCancel')?.addEventListener('click', function() {
+    document.getElementById('blockModal').style.display = 'none';
+  });
+})();
+</script>
 <script src="/js/calendar-dom-only.js"></script>
 </body>
 </html>
