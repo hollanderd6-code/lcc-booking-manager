@@ -708,7 +708,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
-app.use(express.static(__dirname)); // Servir aussi les fichiers à la racine
 
 // Store for reservations (en mémoire)
 let reservationsStore = {
@@ -720,10 +719,6 @@ let reservationsStore = {
 // Fichiers locaux pour certains stocks
 const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
-const CHECKINS_FILE = path.join(__dirname, 'checkins.json');
-
-// Données de check-in invités : { [reservationUid]: { ...données formulaire... } }
-let CHECKINS = {};
 
 // Data en mémoire
 let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations ou blocages] }
@@ -741,25 +736,6 @@ async function loadManualReservations() {
   } catch (error) {
     MANUAL_RESERVATIONS = {};
     console.log('⚠️  Aucun fichier manual-reservations.json, démarrage sans réservations manuelles');
-  }
-}
-async function loadEmailProxies() {
-  try {
-    const data = await fs.readFile(EMAIL_PROXIES_FILE, 'utf8');
-    EMAIL_PROXIES = JSON.parse(data);
-    console.log('✅ Email proxies chargés depuis email-proxies.json');
-  } catch (error) {
-    EMAIL_PROXIES = {};
-    console.log('ℹ️ Aucun fichier email-proxies.json, démarrage à vide');
-  }
-}
-
-async function saveEmailProxies() {
-  try {
-    await fs.writeFile(EMAIL_PROXIES_FILE, JSON.stringify(EMAIL_PROXIES, null, 2));
-    console.log('✅ Email proxies sauvegardés');
-  } catch (error) {
-    console.error('❌ Erreur sauvegarde email proxies:', error.message);
   }
 }
 
@@ -789,25 +765,6 @@ async function saveDeposits() {
     console.log('✅ Cautions sauvegardées');
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde des cautions:', error.message);
-  }
-}
-async function loadCheckins() {
-  try {
-    const data = await fs.readFile(CHECKINS_FILE, 'utf8');
-    CHECKINS = JSON.parse(data);
-    console.log('✅ Check-ins chargés depuis checkins.json');
-  } catch (error) {
-    CHECKINS = {};
-    console.log('ℹ️ Aucun fichier checkins.json, démarrage sans check-ins');
-  }
-}
-
-async function saveCheckins() {
-  try {
-    await fs.writeFile(CHECKINS_FILE, JSON.stringify(CHECKINS, null, 2));
-    console.log('✅ Check-ins sauvegardés dans checkins.json');
-  } catch (error) {
-    console.error('❌ Erreur lors de la sauvegarde des check-ins:', error.message);
   }
 }
 
@@ -874,10 +831,8 @@ async function getUserFromRequest(req) {
 async function loadProperties() {
   try {
     const result = await pool.query(`
-      SELECT id, user_id, name, color, ical_urls,
-       address, access_code, wifi_name, wifi_password, parking_info
-FROM properties
-
+      SELECT id, user_id, name, color, ical_urls
+      FROM properties
       ORDER BY created_at ASC
     `);
 
@@ -902,17 +857,13 @@ FROM properties
       }
 
       return {
-  id: row.id,
-  userId: row.user_id,
-  name: row.name,
-  color: row.color,
-  icalUrls,
-  address: row.address || null,
-  accessCode: row.access_code || null,
-  wifiName: row.wifi_name || null,
-  wifiPassword: row.wifi_password || null,
-  parkingInfo: row.parking_info || null,
-};
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        color: row.color,
+        // Toujours un tableau de STRING en interne
+        icalUrls
+      };
     });
 
     console.log(`✅ ${PROPERTIES.length} logements chargés depuis Postgres`);
@@ -1095,24 +1046,17 @@ app.get('/api/reservations', async (req, res) => {
 
   const allReservations = [];
   const userProps = getUserProperties(user.id);
-  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
   userProps.forEach(property => {
     const propertyReservations = reservationsStore.properties[property.id] || [];
     propertyReservations.forEach(reservation => {
-      const uid = reservation.uid || reservation.id;
-      const checkinData = uid ? (CHECKINS[uid] || null) : null;
-      const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
-
       allReservations.push({
         ...reservation,
         property: {
           id: property.id,
           name: property.name,
           color: property.color
-        },
-        checkinData,
-        checkinUrl
+        }
       });
     });
   });
@@ -1179,187 +1123,6 @@ app.post('/api/reservations/manual', async (req, res) => {
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-
-// PUT - Modifier une réservation manuelle
-app.put('/api/reservations/manual/:uid', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const uid = req.params.uid;
-    const { propertyId, checkIn, checkOut, guestName, guestPhone, guestEmail, platform, price, notes } = req.body;
-
-    if (!uid) {
-      return res.status(400).json({ error: 'Identifiant de réservation manquant' });
-    }
-
-    if (!checkIn || !checkOut) {
-      return res.status(400).json({ error: 'checkIn et checkOut sont requis' });
-    }
-
-    let foundPropertyId = null;
-    let foundReservationIndex = -1;
-
-    // Trouver la réservation
-    for (const [propId, list] of Object.entries(MANUAL_RESERVATIONS)) {
-      const property = PROPERTIES.find(p => p.id === propId && p.userId === user.id);
-      if (!property) {
-        continue;
-      }
-
-      const index = list.findIndex(r => r.uid === uid);
-      if (index !== -1) {
-        foundPropertyId = propId;
-        foundReservationIndex = index;
-        break;
-      }
-    }
-
-    if (!foundPropertyId || foundReservationIndex === -1) {
-      return res.status(404).json({ error: 'Réservation non trouvée' });
-    }
-
-    // Vérifier que le nouveau propertyId appartient à l'utilisateur si fourni
-    if (propertyId && propertyId !== foundPropertyId) {
-      const newProperty = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-      if (!newProperty) {
-        return res.status(404).json({ error: 'Nouveau logement non trouvé' });
-      }
-    }
-
-    // Mettre à jour la réservation
-    const updatedReservation = {
-      ...MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex],
-      start: checkIn,
-      end: checkOut,
-      checkIn: checkIn,
-      checkOut: checkOut,
-      guestName: guestName || MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex].guestName,
-      guestPhone: guestPhone || '',
-      guestEmail: guestEmail || '',
-      platform: platform || MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex].platform,
-      price: price || 0,
-      notes: notes || '',
-      updatedAt: new Date().toISOString()
-    };
-
-    // Si on change de logement
-    if (propertyId && propertyId !== foundPropertyId) {
-      // Supprimer de l'ancien logement
-      MANUAL_RESERVATIONS[foundPropertyId].splice(foundReservationIndex, 1);
-      if (MANUAL_RESERVATIONS[foundPropertyId].length === 0) {
-        delete MANUAL_RESERVATIONS[foundPropertyId];
-      }
-
-      // Ajouter au nouveau logement
-      if (!MANUAL_RESERVATIONS[propertyId]) {
-        MANUAL_RESERVATIONS[propertyId] = [];
-      }
-      updatedReservation.propertyId = propertyId;
-      MANUAL_RESERVATIONS[propertyId].push(updatedReservation);
-
-      // Mettre à jour le store global
-      if (reservationsStore.properties[foundPropertyId]) {
-        const idx = reservationsStore.properties[foundPropertyId].findIndex(r => r.uid === uid);
-        if (idx !== -1) {
-          reservationsStore.properties[foundPropertyId].splice(idx, 1);
-        }
-      }
-      if (!reservationsStore.properties[propertyId]) {
-        reservationsStore.properties[propertyId] = [];
-      }
-      reservationsStore.properties[propertyId].push(updatedReservation);
-    } else {
-      // Même logement, juste mettre à jour
-      updatedReservation.propertyId = foundPropertyId;
-      MANUAL_RESERVATIONS[foundPropertyId][foundReservationIndex] = updatedReservation;
-
-      // Mettre à jour le store global
-      if (reservationsStore.properties[foundPropertyId]) {
-        const idx = reservationsStore.properties[foundPropertyId].findIndex(r => r.uid === uid);
-        if (idx !== -1) {
-          reservationsStore.properties[foundPropertyId][idx] = updatedReservation;
-        }
-      }
-    }
-
-    await saveManualReservations();
-
-    res.json({
-      message: 'Réservation modifiée avec succès',
-      reservation: updatedReservation
-    });
-  } catch (err) {
-    console.error('Erreur modification réservation manuelle:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// DELETE - Supprimer une réservation manuelle
-app.delete('/api/reservations/manual/:uid', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const uid = req.params.uid;
-    if (!uid) {
-      return res.status(400).json({ error: 'Identifiant de réservation manquant' });
-    }
-
-    let foundPropertyId = null;
-    let foundReservationIndex = -1;
-    let foundReservation = null;
-
-    // On parcourt toutes les réservations manuelles de l'utilisateur
-    for (const [propertyId, list] of Object.entries(MANUAL_RESERVATIONS)) {
-      const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-      if (!property) {
-        // ce logement ne lui appartient pas, on ignore
-        continue;
-      }
-
-      const index = list.findIndex(r => r.uid === uid);
-      if (index !== -1) {
-        foundPropertyId = propertyId;
-        foundReservationIndex = index;
-        foundReservation = list[index];
-        break;
-      }
-    }
-
-    if (!foundPropertyId || foundReservationIndex === -1 || !foundReservation) {
-      return res.status(404).json({ error: 'Réservation manuelle non trouvée' });
-    }
-
-    // Suppression dans MANUAL_RESERVATIONS
-    MANUAL_RESERVATIONS[foundPropertyId].splice(foundReservationIndex, 1);
-    if (MANUAL_RESERVATIONS[foundPropertyId].length === 0) {
-      delete MANUAL_RESERVATIONS[foundPropertyId];
-    }
-    await saveManualReservations();
-
-    // Suppression aussi dans le store global utilisé par /api/reservations
-    if (reservationsStore.properties[foundPropertyId]) {
-      const idx = reservationsStore.properties[foundPropertyId].findIndex(r => r.uid === uid);
-      if (idx !== -1) {
-        reservationsStore.properties[foundPropertyId].splice(idx, 1);
-      }
-    }
-
-    return res.json({
-      message: 'Réservation manuelle supprimée',
-      deletedUid: uid
-    });
-  } catch (err) {
-    console.error('Erreur suppression réservation manuelle:', err);
-    return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -2033,36 +1796,6 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 });
 
 // ============================================
-// ROUTE API - CHECK-IN INVITÉS (publique)
-// ============================================
-app.post('/api/checkin/submit', async (req, res) => {
-  try {
-    const data = req.body || {};
-    const reservationUid =
-      data.reservationId ||
-      data.reservationUid ||
-      data.uid;
-
-    if (!reservationUid) {
-      return res.status(400).json({ error: 'reservationId requis' });
-    }
-
-    CHECKINS[reservationUid] = {
-      ...data,
-      reservationUid,
-      receivedAt: new Date().toISOString()
-    };
-
-    await saveCheckins();
-
-    return res.json({ ok: true });
-  } catch (error) {
-    console.error('❌ Erreur /api/checkin/submit :', error);
-    return res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 // ============================================
 
@@ -2123,59 +1856,73 @@ app.post('/api/properties', async (req, res) => {
       return res.status(400).json({ error: 'Nom et couleur requis' });
     }
 
-    // Toujours un tableau de chaînes propre côté serveur
-    const sanitizedIcalUrls = Array.isArray(icalUrls)
-      ? icalUrls
-          .filter((u) => typeof u === 'string' && u.trim().length > 0)
-      : [];
+    name = String(name).trim();
+    color = String(color).trim();
+
+    // Normaliser la liste des URLs iCal (on accepte soit un tableau de chaînes, soit déjà un tableau d'objets)
+    let sanitizedIcalUrls = [];
+    if (Array.isArray(icalUrls)) {
+      sanitizedIcalUrls = icalUrls
+        .filter((u) => typeof u === 'string' && u.trim().length > 0)
+        .map((u) => ({ url: u.trim(), source: 'Autre' }));
+    } else if (icalUrls && typeof icalUrls === 'object') {
+      sanitizedIcalUrls = icalUrls;
+    }
+
+    // S'assurer que le cache PROPERTIES est chargé
+    if (typeof loadProperties === 'function') {
+      await loadProperties();
+    }
 
     const baseSlug = name
       .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .normalize('NFD').replace(/[̀-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'logement';
 
-    // ID de base : userId + slug
     const idBase = `${user.id}-${baseSlug}`;
     let id = idBase;
     let suffix = 2;
 
-    // Si un logement avec le même id existe déjà, on ajoute -2, -3, etc.
-    while (PROPERTIES && PROPERTIES.some((p) => p.id === id)) {
-      id = `${idBase}-${suffix++}`;
+    // Si un logement avec cet id existe déjà, on ajoute -2, -3, etc.
+    if (Array.isArray(PROPERTIES)) {
+      while (PROPERTIES.some((p) => p.id === id)) {
+        id = `${idBase}-${suffix++}`;
+      }
     }
 
-    await pool.query(
+    const result = await pool.query(
       `INSERT INTO properties (id, user_id, name, color, ical_urls, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING *`,
       [id, user.id, name, color, JSON.stringify(sanitizedIcalUrls)]
     );
 
-    // Recharge le cache PROPERTIES depuis la base
-    await loadProperties();
+    const property = result.rows[0];
 
-    const property = PROPERTIES.find((p) => p.id === id);
+    // Mettre à jour le cache en mémoire si présent
+    if (Array.isArray(PROPERTIES)) {
+      PROPERTIES.push(property);
+    } else if (typeof loadProperties === 'function') {
+      await loadProperties();
+    }
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Logement créé avec succès',
-      property,
+      property
     });
   } catch (err) {
     console.error('Erreur création logement:', err);
 
-    // Table manquante
-    if (err.code === '42P01') {
-      return res.status(500).json({
-        error:
-          "La table 'properties' n'existe pas en base. Lance la requête SQL de création de table puis redémarre le serveur.",
+    if (err.code === '23505') {
+      return res.status(400).json({
+        error: 'Un logement portant déjà ce nom existe. Modifiez légèrement le nom.'
       });
     }
 
-    // Doublon de clé (au cas où)
-    if (err.code === '23505') {
-      return res.status(400).json({
-        error:
-          'Un logement portant déjà ce nom existe. Modifie légèrement le nom ou le slug.',
+    if (err.code === '42P01') {
+      return res.status(500).json({
+        error: "La table 'properties' est manquante en base de données."
       });
     }
 
@@ -2242,7 +1989,7 @@ app.delete('/api/properties/:propertyId', async (req, res) => {
     await pool.query(
       'DELETE FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, user.id]
-    )
+    );
 
     delete reservationsStore.properties[propertyId];
 
@@ -2488,17 +2235,12 @@ app.post('/api/messages/generate', (req, res) => {
   const { reservationUid, templateKey } = req.body;
 
   if (!reservationUid || !templateKey) {
-    return res
-      .status(400)
-      .json({ error: 'reservationUid et templateKey requis' });
+    return res.status(400).json({ error: 'reservationUid et templateKey requis' });
   }
 
   let reservation = null;
-
-  // Recherche de la réservation dans le store en mémoire
   for (const propertyId in reservationsStore.properties) {
-    const list = reservationsStore.properties[propertyId] || [];
-    const found = list.find(r => r.uid === reservationUid);
+    const found = reservationsStore.properties[propertyId].find(r => r.uid === reservationUid);
     if (found) {
       reservation = found;
       break;
@@ -2506,40 +2248,22 @@ app.post('/api/messages/generate', (req, res) => {
   }
 
   if (!reservation) {
-    return res
-      .status(404)
-      .json({ error: 'Réservation non trouvée' });
+    return res.status(404).json({ error: 'Réservation non trouvée' });
   }
-
-  const uid = reservation.uid || reservation.id;
-  const appUrl =
-    process.env.APP_URL ||
-    'https://lcc-booking-manager.onrender.com';
-  const checkinUrl = uid ? `${appUrl}/checkin.html?res=${uid}` : null;
-  const checkinData = uid ? (CHECKINS[uid] || null) : null;
 
   const customData = {
     propertyAddress: 'Adresse du logement à définir',
-    accessCode: 'Code à définir',
-    checkinUrl,
-    checkinData
+    accessCode: 'Code à définir'
   };
 
-  const message = messagingService.generateQuickMessage(
-    { ...reservation, checkinData, checkinUrl },
-    templateKey,
-    customData
-  );
+  const message = messagingService.generateQuickMessage(reservation, templateKey, customData);
 
   if (!message) {
-    return res
-      .status(404)
-      .json({ error: 'Template non trouvé' });
+    return res.status(404).json({ error: 'Template non trouvé' });
   }
 
-  return res.json(message);
+  res.json(message);
 });
-
 
 app.get('/api/messages/upcoming', async (req, res) => {
   const user = await getUserFromRequest(req);
@@ -2572,38 +2296,6 @@ app.get('/api/messages/upcoming', async (req, res) => {
     currentStays: messagingService.getCurrentStays(allReservations),
     checkoutsToday: messagingService.getUpcomingCheckOuts(allReservations, 0)
   });
-});
-// ============================================
-// ROUTE API - EMAIL PROXY PAR RÉSERVATION
-// ============================================
-
-app.post('/api/reservations/:uid/email-proxy', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { uid } = req.params;
-    const { emailProxy, platform } = req.body || {};
-
-    if (!emailProxy) {
-      return res.status(400).json({ error: 'emailProxy requis' });
-    }
-
-    EMAIL_PROXIES[uid] = {
-      email: emailProxy,
-      platform: platform || null,
-      updatedAt: new Date().toISOString()
-    };
-
-    await saveEmailProxies();
-
-    res.json({ ok: true });
-  } catch (error) {
-    console.error('❌ Erreur /api/reservations/:uid/email-proxy :', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
 });
 
 // ============================================
@@ -2794,6 +2486,18 @@ function findReservationByUidForUser(reservationUid, userId) {
 }
 
 // GET - Récupérer la caution liée à une réservation (si existe)
+app.get('/api/deposits/:reservationUid', async (req, res) => {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Non autorisé' });
+  }
+
+  const { reservationUid } = req.params;
+  const deposit = DEPOSITS.find(d => d.reservationUid === reservationUid) || null;
+  res.json({ deposit });
+});
+
+// POST - Créer une caution Stripe pour une réservation (empreinte bancaire)
 app.post('/api/deposits', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -2820,37 +2524,19 @@ app.post('/api/deposits', async (req, res) => {
     const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
 
-    // 🔁 Idempotence : 1 seule caution par séjour (reservationUid)
-    let deposit = DEPOSITS.find(d => d.reservationUid === reservationUid);
-
-    // Si une caution existe déjà ET qu'un lien a déjà été généré,
-    // on renvoie simplement le même lien (pas de nouvelle caution Stripe)
-    if (deposit && deposit.checkoutUrl) {
-      return res.json({
-        deposit,
-        checkoutUrl: deposit.checkoutUrl,
-        alreadyExists: true
-      });
-    }
-
-    // Sinon, on crée ou complète l'objet caution
-    if (!deposit) {
-      const depositId = 'dep_' + Date.now().toString(36);
-      deposit = {
-        id: depositId,
-        reservationUid,
-        amountCents,
-        currency: 'eur',
-        status: 'pending',
-        stripeSessionId: null,
-        checkoutUrl: null,
-        createdAt: new Date().toISOString()
-      };
-      DEPOSITS.push(deposit);
-    } else {
-      // Caution déjà créée mais sans checkoutUrl (par ex. crash avant Stripe)
-      deposit.amountCents = amountCents;
-    }
+    // Créer l'objet "caution" en mémoire + fichier JSON
+    const depositId = 'dep_' + Date.now().toString(36);
+    const deposit = {
+      id: depositId,
+      reservationUid,
+      amountCents,
+      currency: 'eur',
+      status: 'pending',
+      stripeSessionId: null,
+      checkoutUrl: null,
+      createdAt: new Date().toISOString()
+    };
+    DEPOSITS.push(deposit);
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
@@ -2917,144 +2603,6 @@ app.post('/api/deposits', async (req, res) => {
   }
 });
 
-
-// ============================================
-// 🗄️ ADMIN - GESTION BASE DE DONNÉES
-// ============================================
-
-// Page admin database
-app.get('/admin/database', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.redirect('/login.html');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'admin-database.html'));
-  } catch (error) {
-    console.error('Erreur page admin:', error);
-    res.status(500).send('Erreur serveur');
-  }
-});
-
-// API : Vérifier l'état de la DB
-app.get('/api/admin/check-database', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const requiredColumns = [
-      'guest_nationality',
-      'guest_birth_date',
-      'id_document_path',
-      'checkin_completed',
-      'checkin_date',
-      'checkin_link_sent',
-      'checkin_link_sent_at',
-      'proxy_email'
-    ];
-
-    // Récupérer les colonnes existantes de la table reservations
-    const result = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_schema = 'public'
-        AND table_name = 'reservations'
-    `);
-
-    const existingColumns = result.rows.map(row => row.column_name);
-    const missingColumns = requiredColumns.filter(
-      col => !existingColumns.includes(col)
-    );
-
-    res.json({
-      allColumnsExist: missingColumns.length === 0,
-      existingColumns: requiredColumns.filter(col => existingColumns.includes(col)),
-      missingColumns,
-      totalRequired: requiredColumns.length
-    });
-
-  } catch (error) {
-    console.error('Erreur vérification DB:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors de la vérification',
-      message: error.message 
-    });
-  }
-});
-
-// API : Installer les colonnes manquantes
-app.post('/api/admin/install-columns', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const columnsToAdd = [
-      { name: 'guest_nationality', type: 'VARCHAR(10)' },
-      { name: 'guest_birth_date', type: 'DATE' },
-      { name: 'id_document_path', type: 'VARCHAR(255)' },
-      { name: 'checkin_completed', type: 'BOOLEAN DEFAULT FALSE' },
-      { name: 'checkin_date', type: 'TIMESTAMP' },
-      { name: 'checkin_link_sent', type: 'BOOLEAN DEFAULT FALSE' },
-      { name: 'checkin_link_sent_at', type: 'TIMESTAMP' },
-      { name: 'proxy_email', type: 'VARCHAR(255)' }
-    ];
-
-    let installed = 0;
-
-    for (const column of columnsToAdd) {
-      try {
-        // Vérifier si la colonne existe déjà
-        const checkResult = await pool.query(`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_schema = 'public'
-            AND table_name = 'reservations'
-            AND column_name = $1
-        `, [column.name]);
-
-        if (checkResult.rows.length > 0) {
-          console.log(`⚠️  Colonne ${column.name} existe déjà`);
-          continue;
-        }
-
-        // Ajouter la colonne
-        await pool.query(`
-          ALTER TABLE reservations 
-          ADD COLUMN ${column.name} ${column.type}
-        `);
-        
-        installed++;
-        console.log(`✅ Colonne ajoutée: ${column.name}`);
-        
-      } catch (error) {
-        if (error.message.includes('already exists')) {
-          console.log(`⚠️  Colonne ${column.name} existe déjà (erreur)`);
-          continue;
-        }
-        console.error(`❌ Erreur pour ${column.name}:`, error.message);
-      }
-    }
-
-    res.json({
-      success: true,
-      installed: installed,
-      message: `${installed} colonne${installed > 1 ? 's ajoutées' : ' ajoutée'}`
-    });
-
-  } catch (error) {
-    console.error('Erreur installation colonnes:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de l\'installation',
-      message: error.message
-    });
-  }
-});
-
 // ============================================
 // DÉMARRAGE
 // ============================================
@@ -3073,8 +2621,7 @@ app.listen(PORT, async () => {
   await loadProperties();
   await loadManualReservations();
   await loadDeposits();
-  await loadEmailProxies();
-  await loadCheckins();
+
   console.log('Logements configurés:');
   PROPERTIES.forEach(p => {
     const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
