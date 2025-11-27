@@ -4108,7 +4108,7 @@ if (!booking) {
     }
     return res.json();
   })
-  ..then(data => {
+  .then(data => {
   alert('Suppression réussie !');
   document.getElementById('reservationDetailsModal').style.display = 'none';
   window.deletingInProgress = false;
