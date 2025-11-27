@@ -4135,6 +4135,52 @@ if (!booking) {
       document.getElementById('editPlatform').value = platform;
     }
   }
+   document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
+    const propertyId = document.getElementById('blockPropertySelect').value;
+    const startDate = document.getElementById('blockStartDate').value;
+    const endDate = document.getElementById('blockEndDate').value;
+    const reason = document.getElementById('blockReason').value;
+    
+    console.log('🔍 ENVOI - propertyId:', propertyId);
+    console.log('🔍 ENVOI - dates:', startDate, '->', endDate);
+    
+    if (!propertyId || !startDate || !endDate) {
+      alert('Veuillez remplir tous les champs');
+      return;
+    }
+    
+    const token = localStorage.getItem('lcc_token');
+    
+    try {
+      const response = await fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          propertyId: propertyId,
+          start: startDate,
+          end: endDate,
+          reason: reason || 'Blocage manuel'
+        })
+      });
+      
+      const data = await response.json();
+      console.log('📥 Réponse serveur:', data);
+      
+      if (data.block || data.message) {
+        alert('Blocage créé !');
+        document.getElementById('blockModal').style.display = 'none';
+        location.reload();
+      } else {
+        alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erreur de connexion');
+    }
+  });
 })();
 </script>
 <script src="/js/calendar-dom-only.js"></script>
