@@ -3980,11 +3980,24 @@ function fixModalContent(bookingBlock) {
       
       currentBookingData = booking;
       
+      // Récupérer le nom du logement
+      let propertyName = booking.propertyName;
+      
+      // Si pas de propertyName, le récupérer depuis LCC_PROPERTIES
+      if (!propertyName && booking.propertyId) {
+        const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+        const property = properties.find(p => p.id === booking.propertyId);
+        if (property) {
+          propertyName = property.name;
+          console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
+        }
+      }
+      
       // Corriger "Logement inconnu"
-      if (allText.includes('Logement inconnu') && booking.propertyName) {
+      if (allText.includes('Logement inconnu') && propertyName) {
         const htmlContent = detailsContent.innerHTML;
-        detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, booking.propertyName);
-        console.log('✅ Logement corrigé:', booking.propertyName);
+        detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
+        console.log('✅ Logement corrigé:', propertyName);
       }
     }, 200);
   }
