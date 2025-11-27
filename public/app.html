@@ -3915,19 +3915,25 @@
         reason: reason || 'Blocage manuel'
       })
     })
-    .then(res => res.json())
+    .then(res => {
+      console.log('Réponse statut:', res.status);
+      return res.json();
+    })
     .then(data => {
+      console.log('Données reçues:', data);
+      
       if (data.success || data.block) {
         alert('Dates bloquées avec succès !');
         document.getElementById('blockModal').style.display = 'none';
         location.reload();
       } else {
-        alert('Erreur : ' + (data.message || 'Impossible de bloquer ces dates'));
+        // Afficher le message d'erreur complet du serveur
+        alert('Erreur : ' + JSON.stringify(data));
       }
     })
     .catch(err => {
-      alert('Erreur de connexion');
-      console.error(err);
+      console.error('Erreur complète:', err);
+      alert('Erreur de connexion : ' + err.message);
     });
   });
 </script>
