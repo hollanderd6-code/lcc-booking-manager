@@ -854,7 +854,7 @@ async function submitBlockForm() {
         propertyId,
         start: startDate,
         end: endDate,
-        reason
+        reason: reason || 'Blocage manuel'
       })
     });
 
