@@ -3804,18 +3804,42 @@
   <i class="fas fa-plus"></i>
 </button>
   <script>
-// Rendre les cellules du calendrier cliquables pour bloquer des dates
+// Script complet pour le blocage de dates
 (function() {
+  // Remplir la liste des logements
+  function loadPropertiesInBlockModal() {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    
+    fetch('https://lcc-booking-manager.onrender.com/api/properties', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const select = document.getElementById('blockPropertySelect');
+      if (select && data.properties) {
+        select.innerHTML = '<option value="">Sélectionner un logement</option>';
+        data.properties.forEach(prop => {
+          const option = document.createElement('option');
+          option.value = prop._id;
+          option.textContent = prop.name;
+          select.appendChild(option);
+        });
+      }
+    })
+    .catch(err => console.log('Erreur chargement logements:', err));
+  }
+  
   document.addEventListener('DOMContentLoaded', function() {
+    loadPropertiesInBlockModal();
+    
+    // Rendre les cellules cliquables
     setTimeout(function() {
       const calendarBody = document.querySelector('.calendar-body, .calendar-grid');
       
       if (calendarBody) {
         calendarBody.addEventListener('click', function(e) {
-          // Ne rien faire si on clique sur une réservation existante
-          if (e.target.closest('.booking-block')) {
-            return;
-          }
+          if (e.target.closest('.booking-block')) return;
           
           const cell = e.target.closest('.calendar-cell');
           if (cell) {
@@ -3841,11 +3865,9 @@
     if (modal) {
       modal.style.display = 'flex';
       
-      // Pré-remplir les dates
       if (startDate) startDate.value = date;
       if (endDate) endDate.value = date;
       
-      // Pré-sélectionner le logement si possible
       if (propertySelect && propertyId) {
         propertySelect.value = propertyId;
       }
