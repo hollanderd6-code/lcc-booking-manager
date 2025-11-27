@@ -4033,7 +4033,10 @@ if (!booking) {
       }
     }
   });
+  let modalButtonsSetup = false;
   function setupModalButtons() {
+    if (modalButtonsSetup) return;  
+  modalButtonsSetup = true;     
     // Bouton Supprimer
     document.addEventListener('click', function(e) {
       if (e.target.id === 'deleteBookingBtn' || e.target.closest('#deleteBookingBtn')) {
