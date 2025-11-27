@@ -856,7 +856,7 @@ console.log('🔍 submitBlockForm - propertySelect:', propertySelect);
         Authorization: 'Bearer ' + token
       },
       body: JSON.stringify({
-        propertyId,
+        propertyId: propertyId, 
         start: startDate,
         end: endDate,
         reason: reason || 'Blocage manuel'
