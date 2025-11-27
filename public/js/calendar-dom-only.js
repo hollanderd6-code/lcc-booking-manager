@@ -217,6 +217,10 @@
     if (closeDetailsBtn2) closeDetailsBtn2.onclick = closeDetailsModal;
     if (detailsOverlay) detailsOverlay.onclick = closeDetailsModal;
 
+   
+    const editBtn = document.getElementById('editBookingBtn');
+    const deleteBtn = document.getElementById('deleteBookingBtn');
+
     // Modal New Booking - Fermeture
     const closeBookingBtn = document.getElementById('closeModal');
     const cancelBookingBtn = document.getElementById('cancelBooking');
