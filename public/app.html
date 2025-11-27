@@ -3922,35 +3922,61 @@ function fixModalContent(bookingBlock) {
     setTimeout(function() {
       const allText = detailsContent.innerText || '';
       
-      // Extraire les dates du modal (format: jeudi 27 novembre 2025, etc.)
-      // Chercher aussi les dates ISO dans le HTML
-      const html = detailsContent.innerHTML;
+      // Parser les dates françaises
+      const moisFr = {
+        'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
+        'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
+        'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
+      };
       
-      // Méthode 1: Chercher dans le texte visible
-      const lines = allText.split('\n');
-      let arrivalDate = '';
-      let departDate = '';
+      const lines = allText.split('\n').map(l => l.trim());
+      let startDate = null;
+      let endDate = null;
       
-      lines.forEach((line, i) => {
-        if (line.includes('ARRIVÉE') && lines[i+1]) {
-          // Convertir "jeudi 27 novembre 2025" en date
-          arrivalDate = lines[i+1].trim();
+      // Trouver arrivée et départ
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i] === 'ARRIVÉE' && lines[i+1]) {
+          const match = lines[i+1].match(/(\d+)\s+(\w+)\s+(\d{4})/);
+          if (match) {
+            const jour = match[1].padStart(2, '0');
+            const mois = moisFr[match[2].toLowerCase()];
+            const annee = match[3];
+            startDate = `${annee}-${mois}-${jour}`;
+          }
         }
-        if (line.includes('DÉPART') && lines[i+1]) {
-          departDate = lines[i+1].trim();
+        if (lines[i] === 'DÉPART' && lines[i+1]) {
+          const match = lines[i+1].match(/(\d+)\s+(\w+)\s+(\d{4})/);
+          if (match) {
+            const jour = match[1].padStart(2, '0');
+            const mois = moisFr[match[2].toLowerCase()];
+            const annee = match[3];
+            endDate = `${annee}-${mois}-${jour}`;
+          }
         }
+      }
+      
+      console.log('📅 Dates parsées:', startDate, '->', endDate);
+      
+      if (!startDate || !endDate) {
+        console.log('❌ Impossible de parser les dates');
+        return;
+      }
+      
+      // Chercher la réservation par dates exactes
+      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      const booking = reservations.find(r => {
+        if (!r.start || !r.end) return false;
+        const rStart = r.start.split('T')[0];
+        const rEnd = r.end.split('T')[0];
+        return rStart === startDate && rEnd === endDate;
       });
       
-      console.log('📅 Dates texte:', arrivalDate, '->', departDate);
+      console.log('🔍 Réservation trouvée par dates:', booking);
       
-      // Méthode 2: Utiliser l'index original du booking-block
-      const bookingIndex = parseInt(bookingBlock.getAttribute('data-booking-id'));
-      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-      const booking = reservations[bookingIndex];
-      
-      console.log('🔍 Index:', bookingIndex, 'Réservation trouvée:', booking);
-      
-      if (!booking) return;
+      if (!booking) {
+        console.log('❌ Aucune réservation ne correspond à ces dates');
+        return;
+      }
       
       currentBookingData = booking;
       
