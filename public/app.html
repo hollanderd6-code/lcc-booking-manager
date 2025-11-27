@@ -4108,11 +4108,16 @@ if (!booking) {
     }
     return res.json();
   })
-  .then(data => {
-    alert('Suppression réussie !');
-    document.getElementById('reservationDetailsModal').style.display = 'none';
-    window.deletingInProgress = false;
-    location.reload();
+  ..then(data => {
+  alert('Suppression réussie !');
+  document.getElementById('reservationDetailsModal').style.display = 'none';
+  window.deletingInProgress = false;
+  location.reload();
+})
+.catch(err => {
+  window.deletingInProgress = false;
+  console.error('Erreur suppression:', err);
+  alert('Erreur : ' + err.message);
 });
   
   function handleEditBooking() {
