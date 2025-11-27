@@ -4054,7 +4054,7 @@ if (!booking) {
   }
   
  function handleDeleteBooking() {
-     // Empêcher l'exécution multiple
+  // Empêcher l'exécution multiple
   if (window.deletingInProgress) {
     console.log('⚠️ Suppression déjà en cours, ignoré');
     return;
@@ -4066,57 +4066,57 @@ if (!booking) {
     alert('Impossible de trouver les données de la réservation');
     return;
   }
-   if (!currentBookingData) {
-      alert('Impossible de trouver les données de la réservation');
-      return;
-    }
-    
-    const isBlock = currentBookingData.type === 'block' || currentBookingData.source === 'BLOCK';
-    const isManual = currentBookingData.source === 'direct' || currentBookingData.source === 'DIRECT';
-    const isFromIcal = currentBookingData.source === 'Airbnb' || currentBookingData.source === 'Booking.com';
-    
-    // On ne peut supprimer que les blocages manuels ou réservations directes
-    if (isFromIcal) {
-      alert('Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking. Supprimez-la sur la plateforme source.');
-      return;
-    }
-    
-    const message = isBlock 
-      ? 'Êtes-vous sûr de vouloir supprimer ce blocage ?' 
-      : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
-    
-    if (!confirm(message)) return;
-    
-    const token = localStorage.getItem('lcc_token');
-    
-    // Nouvelle méthode : on envoie propertyId et uid pour filtrer côté serveur
-    fetch(`https://lcc-booking-manager.onrender.com/api/manual-reservations/delete`, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        propertyId: currentBookingData.propertyId,
-        uid: currentBookingData.uid
-      })
-    })
-    .then(res => {
-      if (!res.ok) {
-        throw new Error('Erreur ' + res.status);
-      }
-      return res.json();
-    })
-    .then(data => {
-      alert('Suppression réussie !');
-      document.getElementById('reservationDetailsModal').style.display = 'none';
-      location.reload();
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Erreur : Cet endpoint n\'existe pas encore sur le serveur. Il faut l\'ajouter dans server-3.js');
-    });
+  
+  const isBlock = currentBookingData.type === 'block' || currentBookingData.source === 'BLOCK';
+  const isManual = currentBookingData.source === 'direct' || currentBookingData.source === 'DIRECT';
+  const isFromIcal = currentBookingData.source === 'Airbnb' || currentBookingData.source === 'Booking.com';
+  
+  if (isFromIcal) {
+    window.deletingInProgress = false;
+    alert('Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking. Supprimez-la sur la plateforme source.');
+    return;
   }
+  
+  const message = isBlock 
+    ? 'Êtes-vous sûr de vouloir supprimer ce blocage ?' 
+    : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
+  
+  if (!confirm(message)) {
+    window.deletingInProgress = false;
+    return;
+  }
+  
+  const token = localStorage.getItem('lcc_token');
+  
+  fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      propertyId: currentBookingData.propertyId,
+      uid: currentBookingData.uid
+    })
+  })
+  .then(res => {
+    if (!res.ok) {
+      throw new Error('Erreur ' + res.status);
+    }
+    return res.json();
+  })
+  .then(data => {
+    alert('Suppression réussie !');
+    document.getElementById('reservationDetailsModal').style.display = 'none';
+    window.deletingInProgress = false;
+    location.reload();
+  })
+  .catch(err => {
+    window.deletingInProgress = false;
+    console.error(err);
+    alert('Erreur : ' + err.message);
+  });
+}
   
   function handleEditBooking() {
     if (!currentBookingData) {
