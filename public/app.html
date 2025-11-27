@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost Manager â€“ Dashboard</title>
+  <title>Boostinghost Manager – Dashboard</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -103,7 +103,7 @@
     
     /* Variables du calendrier */
     :root {
-      --calendar-header-bg: #10B981; /* Vert de votre thÃ¨me */
+      --calendar-header-bg: #10B981; /* Vert de votre thème */
       --calendar-header-hover: #059669;
       --calendar-cell-height: 28px;
       --property-column-width: 160px;
@@ -295,7 +295,7 @@
       overflow-y: hidden;
     }
 
-/* Mode annÃ©e : on cache la colonne des logements et l'en-tÃªte des jours */
+/* Mode année : on cache la colonne des logements et l'en-tête des jours */
     .calendar-container.year-view .property-list-column {
       display: none;
     }
@@ -520,13 +520,13 @@
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25);
 }
 
-/* Mise en avant de la carte filtres quand on clique sur lâ€™icÃ´ne filtre */
+/* Mise en avant de la carte filtres quand on clique sur l’icône filtre */
 .filters-highlight {
   box-shadow: 0 0 0 2px var(--primary-color);
   border-radius: var(--radius-2xl);
 }
 
-   /* Booking Blocks avec dÃ©bordement visuel sur le jour suivant */
+   /* Booking Blocks avec débordement visuel sur le jour suivant */
 .booking-block {
   position: absolute;
   top: 3px;
@@ -549,29 +549,29 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* 1 seule nuit (ex : 21 â†’ 22) : on dÃ©borde lÃ©gÃ¨rement sur la case du 22 */
+/* 1 seule nuit (ex : 21 → 22) : on déborde légèrement sur la case du 22 */
 .booking-block.single {
   left: 4px;
-  right: -10px; /* dÃ©borde un peu sur le jour de dÃ©part */
+  right: -10px; /* déborde un peu sur le jour de départ */
 }
 
-/* Premier jour d'un sÃ©jour (arrivÃ©e) */
+/* Premier jour d'un séjour (arrivée) */
 .booking-block.start {
   left: 4px;
-  right: -10px; /* dÃ©passe sur la case suivante et sur la ligne grise */
+  right: -10px; /* dépasse sur la case suivante et sur la ligne grise */
   border-top-left-radius: 999px;
   border-bottom-left-radius: 999px;
 }
 
-/* Dernier jour (derniÃ¨re nuit, checkout le lendemain) */
+/* Dernier jour (dernière nuit, checkout le lendemain) */
 .booking-block.end {
-  left: -10px;  /* revient lÃ©gÃ¨rement dans la case prÃ©cÃ©dente */
+  left: -10px;  /* revient légèrement dans la case précédente */
   right: 4px;
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
 }
 
-/* Jours intermÃ©diaires : dÃ©bord lÃ©ger des deux cÃ´tÃ©s */
+/* Jours intermédiaires : débord léger des deux côtés */
 .booking-block:not(.single):not(.start):not(.end) {
   left: -10px;
   right: -10px;
@@ -580,7 +580,7 @@
 
     /* Booking Blocks avec couleurs par plateforme */
 
-/* On autorise les blocs Ã  dÃ©border sur la cellule suivante */
+/* On autorise les blocs à déborder sur la cellule suivante */
 .calendar-cell {
   position: relative;
   overflow: visible;
@@ -593,7 +593,7 @@
   left: 4px;
   right: 4px;
 
-  /* base : rectangle, on gÃ¨re les arrondis avec .start / .end / .single */
+  /* base : rectangle, on gère les arrondis avec .start / .end / .single */
   border-radius: 0;
 
   padding: 2px 8px;
@@ -611,7 +611,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* Couleurs par plateforme (inchangÃ©) */
+/* Couleurs par plateforme (inchangé) */
 .booking-block.airbnb {
   background: linear-gradient(135deg, var(--booking-color-airbnb), #E84C50);
 }
@@ -631,20 +631,20 @@
   background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
 }
 
-/* Premier jour de la rÃ©servation */
+/* Premier jour de la réservation */
 .booking-block.start {
   border-top-left-radius: 999px;
   border-bottom-left-radius: 999px;
 }
 
-/* DerniÃ¨re nuit de la rÃ©servation : arrondi + petite queue qui dÃ©borde sur le jour de dÃ©part */
+/* Dernière nuit de la réservation : arrondi + petite queue qui déborde sur le jour de départ */
 .booking-block.end {
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
-  right: -10px; /* dÃ©borde lÃ©gÃ¨rement sur la cellule suivante */
+  right: -10px; /* déborde légèrement sur la cellule suivante */
 }
 
-/* RÃ©servation dâ€™une seule nuit (start + end dans la mÃªme cellule) */
+/* Réservation d’une seule nuit (start + end dans la même cellule) */
 .booking-block.single {
   border-radius: 999px;
   right: -10px; /* petite queue aussi */
@@ -1221,7 +1221,7 @@
       }
     }
 
-    /* Property List amÃ©liorÃ© */
+    /* Property List amélioré */
     .property-item .property-icon {
       width: 32px;
       height: 32px;
@@ -1257,21 +1257,10 @@
 
   <style>
     .status-icon .status-logo {
-      width: 24px;
-      height: 24px;
+      width: 18px;
+      height: 18px;
       object-fit: contain;
       display: block;
-    }
-    
-    /* Ajustements spécifiques pour certains logos */
-    .status-icon-airbnb .status-logo {
-      width: 28px;
-      height: 28px;
-    }
-    
-    .status-icon-booking .status-logo {
-      width: 32px;
-      height: 32px;
     }
   </style>
 </head>
@@ -1340,7 +1329,7 @@
 
           <a href="/cleaning.html" class="nav-item" data-page="cleaning">
             <i class="fas fa-broom"></i>
-            <span>Gestion du mÃ©nage</span>
+            <span>Gestion du ménage</span>
              </a>
 
           <a href="/statistics.html" class="nav-item" data-page="statistics">
@@ -1359,13 +1348,13 @@
           </a>
         </div>
 
-        <!-- PARAMÃˆTRES -->
+        <!-- PARAMÈTRES -->
         <div class="nav-section">
-          <div class="nav-section-title">ParamÃ¨tres</div>
+          <div class="nav-section-title">Paramètres</div>
 
           <a href="/settings-account.html" class="nav-item" data-page="settings-account">
             <i class="fas fa-cog"></i>
-            <span>ParamÃ¨tres</span>
+            <span>Paramètres</span>
           </a>
 
           <a href="/help.html" class="nav-item" data-page="help">
@@ -1394,14 +1383,19 @@
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
-          <div class="page-kicker">Vue dâ€™ensemble</div>
+          <div class="page-kicker">Vue d’ensemble</div>
           <h1 class="page-title">Dashboard</h1>
           <p class="page-subtitle">
-            Suivez en temps rÃ©el vos rÃ©servations, sÃ©jours en cours et disponibilitÃ© de vos logements.
+            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
           </p>
         </div>
         
         <div class="header-actions">
+          <button class="btn btn-ghost hide-on-mobile" id="newReservationBtn">
+            <i class="fas fa-plus"></i>
+            Nouvelle réservation
+          </button>
+
           <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -1411,7 +1405,7 @@
             <span class="notification-badge"></span>
           </button>
 
-          <button class="theme-toggle" id="themeToggle" title="Changer le thÃ¨me">
+          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
             <i class="fas fa-moon"></i>
           </button>
         </div>
@@ -1426,7 +1420,7 @@
           <i class="fab fa-whatsapp"></i> Active les notifications WhatsApp
         </div>
         <div style="font-size:13px; color:var(--text-secondary); margin-top:4px;">
-          Renseigne ton numÃ©ro WhatsApp pour Ãªtre prÃ©venu automatiquement Ã  chaque nouvelle rÃ©servation.
+          Renseigne ton numéro WhatsApp pour être prévenu automatiquement à chaque nouvelle réservation.
         </div>
       </div>
       <button class="btn btn-primary btn-xs"
@@ -1438,13 +1432,13 @@
 
       <!-- Page Content -->
         
-        <!-- Ã‰TAT DES CONNEXIONS -->
+        <!-- ÉTAT DES CONNEXIONS -->
         <section class="status-grid">
           <!-- Airbnb -->
 <article class="status-card">
   <div class="status-card-header">
     <div class="status-icon status-icon-airbnb">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_B%C3%A9lo.svg" alt="Airbnb" class="status-logo">
+      <i class="fa-brands fa-airbnb"></i>
     </div>
     <span class="status-label status-warning">À connecter</span>
   </div>
@@ -1457,7 +1451,7 @@
 <article class="status-card">
   <div class="status-card-header">
     <div class="status-icon status-icon-booking">
-      <img src="https://cf.bstatic.com/static/img/b26logo/booking_logo_knowledge_graph/247454a990efac1952e44dddbf30c58677aa0fd8.png" alt="Booking.com" class="status-logo">
+      <i class="fa-solid fa-bed"></i>
     </div>
     <span class="status-label status-warning">À connecter</span>
   </div>
@@ -1472,10 +1466,10 @@
     <div class="status-icon status-icon-stripe">
       <i class="fa-brands fa-stripe-s"></i>
     </div>
-    <span class="status-label status-ok">ConnectÃ©</span>
+    <span class="status-label status-ok">Connecté</span>
   </div>
   <h3>Stripe</h3>
-  <p>Cautions et paiements sÃ©curisÃ©s.</p>
+  <p>Cautions et paiements sécurisés.</p>
   <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">
     Voir les cautions
   </button>
@@ -1487,10 +1481,10 @@
     <div class="status-icon status-icon-whatsapp">
       <i class="fa-brands fa-whatsapp"></i>
     </div>
-    <span class="status-label status-warning" id="whatsappStatusLabel">Ã€ configurer</span>
+    <span class="status-label status-warning" id="whatsappStatusLabel">À configurer</span>
   </div>
   <h3>Notifications WhatsApp</h3>
-  <p>Recevez un message Ã  chaque nouvelle rÃ©servation.</p>
+  <p>Recevez un message à chaque nouvelle réservation.</p>
   <button
     class="btn btn-ghost btn-xs"
     onclick="window.location.href='/notifications.html#whatsappBlock'">
@@ -1507,7 +1501,7 @@
               <span class="status-label status-ok">Actif</span>
             </div>
             <h3>Messages automatiques</h3>
-            <p>ScÃ©narios IA prÃªts pour vos voyageurs.</p>
+            <p>Scénarios IA prêts pour vos voyageurs.</p>
             <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
           </article>
         </section>
@@ -1534,22 +1528,22 @@
               <span class="kpi-label">Logements actifs</span>
               <span class="kpi-pill kpi-pill-neutral">
                 <i class="fas fa-home"></i>
-                synchronisÃ©s
+                synchronisés
               </span>
             </div>
             <div class="kpi-main">
               <span class="kpi-value" id="kpiPropertiesValue">12</span>
-              <span class="kpi-sub">connectÃ©s Ã  au moins un OTA</span>
+              <span class="kpi-sub">connectés à au moins un OTA</span>
             </div>
           </article>
-          <!-- KPI 3 : MÃ©nages du jour -->
+          <!-- KPI 3 : Ménages du jour -->
 <article class="kpi-card">
   <div class="kpi-header">
-    <span class="kpi-label">MÃ©nages du jour</span>
+    <span class="kpi-label">Ménages du jour</span>
   </div>
   <div class="kpi-main">
     <span class="kpi-value" id="kpiCleaningTodayValue">0</span>
-    <span class="kpi-sub">dÃ©parts Ã  nettoyer aujourdâ€™hui</span>
+    <span class="kpi-sub">départs à nettoyer aujourd’hui</span>
   </div>
 </article>
 
@@ -1559,11 +1553,11 @@
         <section class="onboarding-section" id="onboardingSection">
           <header class="onboarding-header">
             <div>
-              <h2>Bien dÃ©marrer avec Boostinghost</h2>
-              <p>ComplÃ©tez ces Ã©tapes clÃ©s pour automatiser votre gestion.</p>
+              <h2>Bien démarrer avec Boostinghost</h2>
+              <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
             </div>
             <span class="onboarding-progress-badge">
-              <span id="onboardingProgressValue">2</span>/4 complÃ©tÃ©es
+              <span id="onboardingProgressValue">2</span>/4 complétées
             </span>
           </header>
 
@@ -1574,9 +1568,9 @@
               </div>
               <div class="onboarding-step-content">
                 <h3>Ajouter votre premier logement</h3>
-                <p>DÃ©clarez au moins un logement avec son nom, adresse et capacitÃ©.</p>
+                <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
               </div>
-              <span class="onboarding-step-status done">TerminÃ©</span>
+              <span class="onboarding-step-status done">Terminé</span>
             </button>
 
             <button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
@@ -1585,9 +1579,9 @@
               </div>
               <div class="onboarding-step-content">
                 <h3>Connecter vos liens iCal</h3>
-                <p>Collez les URL iCal Airbnb, Booking, Abritelâ€¦ pour centraliser votre calendrier.</p>
+                <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
               </div>
-              <span class="onboarding-step-status todo">Ã€ faire</span>
+              <span class="onboarding-step-status todo">À faire</span>
             </button>
 
             <button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
@@ -1596,9 +1590,9 @@
               </div>
               <div class="onboarding-step-content">
                 <h3>Connecter Stripe</h3>
-                <p>Activez les cautions et paiements sÃ©curisÃ©s pour vos rÃ©servations.</p>
+                <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
               </div>
-              <span class="onboarding-step-status todo">Ã€ faire</span>
+              <span class="onboarding-step-status todo">À faire</span>
             </button>
 
             <button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
@@ -1607,42 +1601,42 @@
               </div>
               <div class="onboarding-step-content">
                 <h3>Configurer les messages automatiques</h3>
-                <p>CrÃ©ez vos scÃ©narios : avant arrivÃ©e, check-in, pendant le sÃ©jour, dÃ©partâ€¦</p>
+                <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
               </div>
-              <span class="onboarding-step-status done">TerminÃ©</span>
+              <span class="onboarding-step-status done">Terminé</span>
             </button>
           </div>
         </section>
 
-        <!-- Vue dâ€™ensemble arrivÃ©es / sÃ©jours / dÃ©parts -->
+        <!-- Vue d’ensemble arrivées / séjours / départs -->
         <section class="overview-card">
           <div class="overview-header">
             <div>
-              <div class="overview-kicker">Vue dâ€™ensemble</div>
-              <div class="overview-title">Aujourdâ€™hui &amp; Ã  venir</div>
+              <div class="overview-kicker">Vue d’ensemble</div>
+              <div class="overview-title">Aujourd’hui &amp; à venir</div>
             </div>
             <button class="overview-chip">
-              Dashboard temps rÃ©el
+              Dashboard temps réel
             </button>
           </div>
 
           <div class="overview-metrics">
             <div class="overview-metric">
-              <div class="overview-metric-label">RÃ©servations Ã  venir</div>
+              <div class="overview-metric-label">Réservations à venir</div>
               <div class="overview-metric-value" id="ovUpcoming">-</div>
             </div>
             <div class="overview-metric">
-              <div class="overview-metric-label">SÃ©jours en cours</div>
+              <div class="overview-metric-label">Séjours en cours</div>
               <div class="overview-metric-value" id="ovCurrent">-</div>
             </div>
             <div class="overview-metric">
-              <div class="overview-metric-label">Taux dâ€™occupation</div>
+              <div class="overview-metric-label">Taux d’occupation</div>
               <div class="overview-metric-value" id="ovOccupancy">78%</div>
             </div>
           </div>
 
           <div class="overview-timeline" id="overviewTimeline">
-            <p class="overview-empty">Aucun mouvement aujourdâ€™hui.</p>
+            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
           </div>
         </section>
 
@@ -1655,11 +1649,11 @@
             </div>
             <button class="btn btn-ghost" onclick="clearFilters()">
               <i class="fas fa-times"></i>
-              RÃ©initialiser
+              Réinitialiser
             </button>
           </div>
           <div class="property-filters" id="propertyFilters">
-            <!-- GÃ©nÃ©rÃ© dynamiquement par app.js -->
+            <!-- Généré dynamiquement par app.js -->
           </div>
         </section>
         
@@ -1668,7 +1662,7 @@
           <div class="section-header">
             <h2 class="section-title">
               <i class="fas fa-calendar-alt"></i>
-              Calendrier des rÃ©servations
+              Calendrier des réservations
             </h2>
             
           </div>
@@ -1689,7 +1683,7 @@
                   <button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
                     <i class="fas fa-filter"></i>
                   </button>
-                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="ParamÃ¨tres">
+                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
                     <i class="fas fa-cog"></i>
                   </button>
                 </div>
@@ -1712,7 +1706,7 @@
                   </button>
                   <button class="view-tab" data-view="year">
                     <i class="fas fa-calendar"></i>
-                    <span>AnnÃ©e</span>
+                    <span>Année</span>
                   </button>
                 </div>
               </div>
@@ -1740,7 +1734,7 @@
                   <span>Logements</span>
                 </div>
                 <div class="property-list-items" id="propertyList">
-                  <!-- Les logements seront ajoutÃ©s dynamiquement -->
+                  <!-- Les logements seront ajoutés dynamiquement -->
                 </div>
               </div>
               
@@ -1748,12 +1742,12 @@
               <div class="calendar-grid-wrapper">
                 <!-- Days Header -->
                 <div class="days-header" id="daysHeader">
-                  <!-- Les jours seront ajoutÃ©s dynamiquement -->
+                  <!-- Les jours seront ajoutés dynamiquement -->
                 </div>
                 
                 <!-- Calendar Grid -->
                 <div class="calendar-grid" id="calendarGrid">
-                  <!-- Les cellules seront ajoutÃ©es dynamiquement -->
+                  <!-- Les cellules seront ajoutées dynamiquement -->
                 </div>
               </div>
             </div>
@@ -1782,13 +1776,13 @@
   <div class="modal" id="reservationModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modalTitle">DÃ©tails de la rÃ©servation</h2>
+        <h2 id="modalTitle">Détails de la réservation</h2>
         <button class="modal-close" id="modalClose">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="modal-body" id="modalBody">
-        <!-- Contenu gÃ©nÃ©rÃ© dynamiquement -->
+        <!-- Contenu généré dynamiquement -->
       </div>
     </div>
   </div>
@@ -1797,7 +1791,7 @@
   <div class="modal" id="newReservationModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Nouvelle rÃ©servation</h2>
+        <h2>Nouvelle réservation</h2>
         <button class="modal-close" id="newReservationClose">
           <i class="fas fa-times"></i>
         </button>
@@ -1817,12 +1811,12 @@
           </div>
 
           <div class="form-row">
-            <label for="nrStartDate">ArrivÃ©e</label>
+            <label for="nrStartDate">Arrivée</label>
             <input type="date" id="nrStartDate" name="startDate" required />
           </div>
 
           <div class="form-row">
-            <label for="nrEndDate">DÃ©part</label>
+            <label for="nrEndDate">Départ</label>
             <input type="date" id="nrEndDate" name="endDate" required />
           </div>
 
@@ -1861,7 +1855,7 @@
   <script src="/js/app.js"></script>
   
   <style>
-    /* Styles spÃ©cifiques calendrier & UI complÃ©mentaire */
+    /* Styles spécifiques calendrier & UI complémentaire */
     #calendar {
       margin-top: 24px;
     }
@@ -2125,7 +2119,7 @@
       color: var(--text-secondary);
     }
 
-    /* Carte Vue d'ensemble (arrivÃ©es / sÃ©jours / dÃ©parts) */
+    /* Carte Vue d'ensemble (arrivées / séjours / départs) */
     .overview-card {
       background: linear-gradient(135deg, #f3f4ff, #eef9ff);
       border-radius: 24px;
@@ -2309,10 +2303,10 @@
     })();
   </script>
 
-  <!-- Script pour Nouvelle rÃ©servation + Notifications + Scroll calendrier -->
+  <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      /* Nouvelle rÃ©servation */
+      /* Nouvelle réservation */
 
       const newReservationBtn = document.getElementById('newReservationBtn');
       const newReservationModal = document.getElementById('newReservationModal');
@@ -2331,7 +2325,7 @@
             return window.LCC_PROPERTIES;
           }
         } catch (e) {
-          console.warn('Impossible de lire la liste des logements pour la nouvelle rÃ©servation', e);
+          console.warn('Impossible de lire la liste des logements pour la nouvelle réservation', e);
         }
         return [];
       }
@@ -2355,7 +2349,7 @@
 
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'SÃ©lectionnez un logement';
+        placeholder.textContent = 'Sélectionnez un logement';
         placeholder.disabled = true;
         placeholder.selected = true;
         nrPropertySelect.appendChild(placeholder);
@@ -2402,11 +2396,11 @@
     e.preventDefault();
 
     if (!nrPropertySelect || !nrPropertySelect.value) {
-      alert('Merci de sÃ©lectionner un logement.');
+      alert('Merci de sélectionner un logement.');
       return;
     }
 
-    // âš ï¸ On garde lâ€™ID tel quâ€™il est (string), pas de parseInt
+    // ⚠️ On garde l’ID tel qu’il est (string), pas de parseInt
     const propertyId = nrPropertySelect.value;
 
     const guestNameInput = document.getElementById('nrGuestName');
@@ -2420,12 +2414,12 @@
     const notes = notesInput ? notesInput.value.trim() : '';
 
     if (!startDate || !endDate) {
-      alert("Merci de renseigner les dates d'arrivÃ©e et de dÃ©part.");
+      alert("Merci de renseigner les dates d'arrivée et de départ.");
       return;
     }
 
-    // Juste pour vÃ©rifier dans la console si besoin
-    console.log('Payload nouvelle rÃ©servation :', {
+    // Juste pour vérifier dans la console si besoin
+    console.log('Payload nouvelle réservation :', {
       propertyId,
       start: startDate,
       end: endDate,
@@ -2442,7 +2436,7 @@
         headers['Authorization'] = 'Bearer ' + token;
       }
 
-      // ðŸ”¥ IMPORTANT : on envoie bien start et end (pas startDate / endDate)
+      // 🔥 IMPORTANT : on envoie bien start et end (pas startDate / endDate)
       const response = await fetch('/api/reservations/manual', {
         method: 'POST',
         headers: headers,
@@ -2457,23 +2451,23 @@
 
       if (!response.ok) {
         const err = await response.json().catch(function () { return {}; });
-        throw new Error(err.error || 'Erreur lors de la crÃ©ation de la rÃ©servation.');
+        throw new Error(err.error || 'Erreur lors de la création de la réservation.');
       }
 
-      // Recharger les rÃ©servations pour mettre Ã  jour les calendriers
+      // Recharger les réservations pour mettre à jour les calendriers
       if (typeof loadReservations === 'function') {
         try {
           await loadReservations();
         } catch (e) {
-          console.warn('Impossible de recharger les rÃ©servations aprÃ¨s la crÃ©ation', e);
+          console.warn('Impossible de recharger les réservations après la création', e);
         }
       }
 
-      alert('RÃ©servation enregistrÃ©e.');
+      alert('Réservation enregistrée.');
       closeNewReservationModal();
     } catch (err) {
-      console.error('Erreur crÃ©ation rÃ©servation manuelle', err);
-      alert(err.message || 'Erreur lors de la crÃ©ation de la rÃ©servation.');
+      console.error('Erreur création réservation manuelle', err);
+      alert(err.message || 'Erreur lors de la création de la réservation.');
     }
   });
 }
@@ -2521,9 +2515,9 @@
           if (startStr === todayStr || startStr === tomorrowStr) {
             items.push({
               type: 'arrival',
-              title: `ArrivÃ©e â€“ ${propertyName}`,
+              title: `Arrivée – ${propertyName}`,
               message: guestName ? `Client : ${guestName}` : '',
-              when: startStr === todayStr ? 'Aujourdâ€™hui' : 'Demain',
+              when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
               time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
             });
           }
@@ -2531,7 +2525,7 @@
           if (start <= now && end >= now) {
             items.push({
               type: 'stay',
-              title: `SÃ©jour en cours â€“ ${propertyName}`,
+              title: `Séjour en cours – ${propertyName}`,
               message: guestName ? `Client : ${guestName}` : '',
               when: 'En cours',
               time: ''
@@ -2541,9 +2535,9 @@
           if (endStr === todayStr || endStr === tomorrowStr) {
             items.push({
               type: 'departure',
-              title: `DÃ©part â€“ ${propertyName}`,
+              title: `Départ – ${propertyName}`,
               message: guestName ? `Client : ${guestName}` : '',
-              when: endStr === todayStr ? 'Aujourdâ€™hui' : 'Demain',
+              when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
               time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
             });
           }
@@ -2552,7 +2546,7 @@
         const limited = items.slice(0, 15);
 
         if (limited.length === 0) {
-          notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourdâ€™hui / demain.</p>';
+          notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
           return;
         }
 
@@ -2580,7 +2574,7 @@
               ${n.message ? `<div>${n.message}</div>` : ''}
             </div>
             <div class="notification-item-meta">
-              ${n.when}${n.time ? ' â€¢ ' + n.time : ''}
+              ${n.when}${n.time ? ' • ' + n.time : ''}
             </div>
           `;
           notificationsList.appendChild(item);
@@ -2736,7 +2730,7 @@
         const start = new Date(r.start);
         const end = new Date(r.end);
 
-        // Nuits rÃ©servÃ©es sur le mois en cours (clamp dans [monthStart, monthEnd])
+        // Nuits réservées sur le mois en cours (clamp dans [monthStart, monthEnd])
         const startClamped = start < monthStart ? monthStart : start;
         const endClamped = end > monthEnd ? monthEnd : end;
         if (endClamped > startClamped) {
@@ -2744,12 +2738,12 @@
           nightsBooked += d;
         }
 
-        // Revenus Ã  venir sur 30 jours
+        // Revenus à venir sur 30 jours
         if (end >= now && start <= horizon) {
           futureRevenue += r.amount || 0;
         }
 
-        // MÃ©nage du jour : dÃ©part aujourd'hui
+        // Ménage du jour : départ aujourd'hui
         const endStr = r.end.slice(0, 10);
         if (endStr === todayStr) {
           cleaningToday += 1;
@@ -2796,20 +2790,20 @@
             reservations = Array.isArray(data.reservations) ? data.reservations : [];
             properties = Array.isArray(data.properties) ? data.properties : [];
 
-            // stock pour le reste du dashboard (notifs, calendrierâ€¦)
+            // stock pour le reste du dashboard (notifs, calendrier…)
             localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
             localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
             window.LCC_RESERVATIONS = reservations;
           }
         } else {
-          // fallback : donnÃ©es dÃ©jÃ  en localStorage
+          // fallback : données déjà en localStorage
           const rRaw = localStorage.getItem('LCC_RESERVATIONS');
           const pRaw = localStorage.getItem('LCC_PROPERTIES');
           reservations = rRaw ? JSON.parse(rRaw) : [];
           properties = pRaw ? JSON.parse(pRaw) : [];
         }
 
-        // Alimente aussi le calendrier moderne s'il est prÃ©sent
+        // Alimente aussi le calendrier moderne s'il est présent
         if (window.renderModernCalendar) {
           window.renderModernCalendar(reservations, properties);
         }
@@ -2870,12 +2864,12 @@
         }
 
         if (card && label) {
-          label.textContent = configured ? 'Actif' : 'Ã€ configurer';
+          label.textContent = configured ? 'Actif' : 'À configurer';
           label.classList.remove('status-ok', 'status-warning');
           label.classList.add(configured ? 'status-ok' : 'status-warning');
         }
       } catch (e) {
-        console.warn('Erreur lors de la mise Ã  jour de lâ€™UI WhatsApp', e);
+        console.warn('Erreur lors de la mise à jour de l’UI WhatsApp', e);
       }
     });
 </script>
@@ -2890,8 +2884,8 @@
     'use strict';
 
     var CONFIG = {
-      MONTHS: ['Janvier', 'FÃ©vrier', 'Mars', 'Avril', 'Mai', 'Juin',
-               'Juillet', 'AoÃ»t', 'Septembre', 'Octobre', 'Novembre', 'DÃ©cembre'],
+      MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
       DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
       PLATFORMS: {
         airbnb:  { icon: 'fa-airbnb' },
@@ -2917,18 +2911,18 @@
 
       attachCalendarEventListeners();
       updatePeriodDisplay();
-      renderCalendar(); // affichage vide au dÃ©but
+      renderCalendar(); // affichage vide au début
     });
 
     // ============================================
-    // API PUBLIQUE - appelÃ©e par app.js
+    // API PUBLIQUE - appelée par app.js
     // ============================================
     window.renderModernCalendar = function(reservations, properties) {
       try {
         reservations = Array.isArray(reservations) ? reservations : [];
         properties = Array.isArray(properties) ? properties : [];
 
-        // Construire la liste des propriÃ©tÃ©s
+        // Construire la liste des propriétés
         var props = [];
         if (properties.length) {
           for (var i = 0; i < properties.length; i++) {
@@ -2944,7 +2938,7 @@
             });
           }
         } else {
-          // dÃ©duction depuis les rÃ©servations
+          // déduction depuis les réservations
           var map = {};
           for (var j = 0; j < reservations.length; j++) {
             var r = reservations[j];
@@ -2967,7 +2961,7 @@
         }
         state.properties = props;
 
-        // RÃ©servations normalisÃ©es
+        // Réservations normalisées
         var bookings = [];
         for (var k = 0; k < reservations.length; k++) {
           var r2 = reservations[k];
@@ -2988,8 +2982,8 @@
         }
         state.bookings = bookings;
 
-        console.info('âœ… Calendrier moderne: ' + state.properties.length +
-                     ' logements / ' + state.bookings.length + ' rÃ©servations');
+        console.info('✅ Calendrier moderne: ' + state.properties.length +
+                     ' logements / ' + state.bookings.length + ' réservations');
 
         renderPropertyList();
         renderCalendar();
@@ -3002,7 +2996,7 @@
     // Navigation & vues
     // ============================================
     function attachCalendarEventListeners() {
-      // Onglets Jour / Semaine / Mois / AnnÃ©e
+      // Onglets Jour / Semaine / Mois / Année
       var viewTabs = document.querySelectorAll('.view-tab');
 
       for (var i = 0; i < viewTabs.length; i++) {
@@ -3022,7 +3016,7 @@
         })(viewTabs[i]);
       }
 
-      // FlÃ¨ches prÃ©cÃ©dent / suivant
+      // Flèches précédent / suivant
       var prev = document.getElementById('prevPeriod');
       var next = document.getElementById('nextPeriod');
 
@@ -3033,7 +3027,7 @@
         next.addEventListener('click', function() { navigate(1); });
       }
 
-      // ðŸ” Bouton recherche
+      // 🔍 Bouton recherche
       var searchBtn = document.getElementById('calendarSearchBtn');
       if (searchBtn) {
         searchBtn.addEventListener('click', function () {
@@ -3041,7 +3035,7 @@
         });
       }
 
-      // ðŸ§¹ Bouton filtre : scroll vers la carte "Filtrer par logement"
+      // 🧹 Bouton filtre : scroll vers la carte "Filtrer par logement"
       var filterBtn = document.getElementById('calendarFilterBtn');
       if (filterBtn) {
         filterBtn.addEventListener('click', function () {
@@ -3056,14 +3050,14 @@
         });
       }
 
-      // âš™ï¸ Bouton paramÃ¨tres : simple toast pour lâ€™instant
+      // ⚙️ Bouton paramètres : simple toast pour l’instant
       var settingsBtn = document.getElementById('calendarSettingsBtn');
       if (settingsBtn) {
         settingsBtn.addEventListener('click', function () {
           if (typeof showToast === 'function') {
-            showToast('Les paramÃ¨tres avancÃ©s du calendrier arrivent bientÃ´t.', 'info');
+            showToast('Les paramètres avancés du calendrier arrivent bientôt.', 'info');
           } else {
-            alert('Les paramÃ¨tres avancÃ©s du calendrier arrivent bientÃ´t.');
+            alert('Les paramètres avancés du calendrier arrivent bientôt.');
           }
         });
       }
@@ -3073,7 +3067,7 @@
     function toggleSearchPanel() {
       var panel = document.getElementById('calendarSearchPanel');
 
-      // CrÃ©ation la premiÃ¨re fois
+      // Création la première fois
       if (!panel) {
         panel = document.createElement('div');
         panel.id = 'calendarSearchPanel';
@@ -3104,7 +3098,7 @@
       panel.classList.toggle('hidden');
 
       if (panel.classList.contains('hidden')) {
-        // On ferme : on rÃ©initialise la recherche
+        // On ferme : on réinitialise la recherche
         state.searchQuery = '';
         var inputEl = document.getElementById('calendarSearchInput');
         if (inputEl) inputEl.value = '';
@@ -3144,7 +3138,7 @@
       var year = state.currentDate.getFullYear();
 
       if (state.currentView === 'year') {
-        monthEl.textContent = 'AnnÃ©e';
+        monthEl.textContent = 'Année';
       } else {
         var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
         monthEl.textContent = monthName;
@@ -3250,7 +3244,7 @@
         emptyCell.style.justifyContent = 'center';
         emptyCell.style.alignItems = 'center';
         emptyCell.style.color = 'var(--text-secondary)';
-        emptyCell.textContent = 'Aucun logement configurÃ©';
+        emptyCell.textContent = 'Aucun logement configuré';
         emptyRow.appendChild(emptyCell);
         grid.appendChild(emptyRow);
         return;
@@ -3290,7 +3284,7 @@
 
       cell.addEventListener('click', function(ev) {
         if (!ev.target.classList.contains('booking-block')) {
-          // Ici on pourrait ouvrir le modal de nouvelle rÃ©servation si nÃ©cessaire
+          // Ici on pourrait ouvrir le modal de nouvelle réservation si nécessaire
         }
       });
 
@@ -3323,7 +3317,7 @@
         var endDate = new Date(b.endDate);
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
 
-        // Nuits : du jour d'arrivÃ©e au jour AVANT le checkout
+        // Nuits : du jour d'arrivée au jour AVANT le checkout
         var startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
         var endDay   = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
@@ -3382,7 +3376,7 @@
             }
             block.appendChild(iconEl);
 
-            var label = document.createTextNode(b.guestName || 'RÃ©servation');
+            var label = document.createTextNode(b.guestName || 'Réservation');
             block.appendChild(label);
           }
 
@@ -3418,7 +3412,7 @@
           '<div class="year-month-stats">' +
             '<div class="year-month-stat">' +
               '<i class="fas fa-calendar-check"></i>' +
-              '<span>' + stats.bookings + ' rÃ©serv.</span>' +
+              '<span>' + stats.bookings + ' réserv.</span>' +
             '</div>' +
             '<div class="year-month-stat">' +
               '<i class="fas fa-moon"></i>' +
@@ -3449,7 +3443,7 @@
     }
 
     // ============================================
-    // PropriÃ©tÃ©s - colonne de gauche
+    // Propriétés - colonne de gauche
     // ============================================
     function renderPropertyList() {
       var wrapper = document.getElementById('propertyList');
@@ -3639,13 +3633,13 @@
   <div class="modal-overlay" id="detailsModalOverlay"></div>
   <div class="modal-content">
     <div class="modal-header">
-      <h2 id="detailsModalTitle">DÃ©tails de la rÃ©servation</h2>
+      <h2 id="detailsModalTitle">Détails de la réservation</h2>
       <button class="modal-close" id="closeDetailsModal">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div id="reservationDetailsContent" class="reservation-details">
-      <!-- Le contenu sera insÃ©rÃ© dynamiquement -->
+      <!-- Le contenu sera inséré dynamiquement -->
     </div>
     <div class="modal-actions" id="detailsModalActions">
       <button type="button" class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;">
@@ -3664,7 +3658,7 @@
   <div class="modal-overlay" id="editModalOverlay"></div>
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Modifier la rÃ©servation</h2>
+      <h2>Modifier la réservation</h2>
       <button class="modal-close" id="closeEditModal">
         <i class="fas fa-times"></i>
       </button>
@@ -3676,17 +3670,17 @@
       <div class="form-group">
         <label for="editBookingProperty">Logement</label>
         <select id="editBookingProperty" required>
-          <option value="">SÃ©lectionner un logement</option>
+          <option value="">Sélectionner un logement</option>
         </select>
       </div>
       
       <div class="form-row">
         <div class="form-group">
-          <label for="editCheckIn">ArrivÃ©e</label>
+          <label for="editCheckIn">Arrivée</label>
           <input type="date" id="editCheckIn" required>
         </div>
         <div class="form-group">
-          <label for="editCheckOut">DÃ©part</label>
+          <label for="editCheckOut">Départ</label>
           <input type="date" id="editCheckOut" required>
         </div>
       </div>
@@ -3697,7 +3691,7 @@
       </div>
 
       <div class="form-group">
-        <label for="editGuestPhone">TÃ©lÃ©phone</label>
+        <label for="editGuestPhone">Téléphone</label>
         <input type="tel" id="editGuestPhone" placeholder="Ex: +33 6 12 34 56 78">
       </div>
 
@@ -3719,13 +3713,13 @@
       </div>
       
       <div class="form-group">
-        <label for="editPrice">Prix (â‚¬)</label>
+        <label for="editPrice">Prix (€)</label>
         <input type="number" id="editPrice" min="0" step="0.01" placeholder="75">
       </div>
 
       <div class="form-group">
         <label for="editNotes">Notes</label>
-        <textarea id="editNotes" rows="3" placeholder="Notes supplÃ©mentaires..."></textarea>
+        <textarea id="editNotes" rows="3" placeholder="Notes supplémentaires..."></textarea>
       </div>
       
       <div class="modal-actions">
@@ -3741,7 +3735,7 @@
   <div class="modal-overlay" id="modalOverlay"></div>
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Nouvelle RÃ©servation</h2>
+      <h2>Nouvelle Réservation</h2>
       <button class="modal-close" id="closeModal">
         <i class="fas fa-times"></i>
       </button>
@@ -3750,17 +3744,17 @@
       <div class="form-group">
         <label for="bookingProperty">Logement</label>
         <select id="bookingProperty" required>
-          <option value="">SÃ©lectionner un logement</option>
+          <option value="">Sélectionner un logement</option>
         </select>
       </div>
       
       <div class="form-row">
         <div class="form-group">
-          <label for="checkIn">ArrivÃ©e</label>
+          <label for="checkIn">Arrivée</label>
           <input type="date" id="checkIn" required>
         </div>
         <div class="form-group">
-          <label for="checkOut">DÃ©part</label>
+          <label for="checkOut">Départ</label>
           <input type="date" id="checkOut" required>
         </div>
       </div>
@@ -3771,7 +3765,7 @@
       </div>
 
       <div class="form-group">
-        <label for="guestPhone">TÃ©lÃ©phone</label>
+        <label for="guestPhone">Téléphone</label>
         <input type="tel" id="guestPhone" placeholder="Ex: +33 6 12 34 56 78">
       </div>
 
@@ -3793,13 +3787,13 @@
       </div>
       
       <div class="form-group">
-        <label for="price">Prix (â‚¬)</label>
+        <label for="price">Prix (€)</label>
         <input type="number" id="price" min="0" step="0.01" placeholder="75">
       </div>
 
       <div class="form-group">
         <label for="notes">Notes</label>
-        <textarea id="notes" rows="3" placeholder="Notes supplÃ©mentaires..."></textarea>
+        <textarea id="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
       </div>
       
       <div class="modal-actions">
@@ -3811,274 +3805,9 @@
 </div>
 
 <!-- Floating Action Button (bouton +) -->
-<button class="fab" id="addBookingBtn" title="Nouvelle rÃ©servation">
+<button class="fab" id="addBookingBtn" title="Nouvelle réservation">
   <i class="fas fa-plus"></i>
 </button>
-
-<!-- Modal Action Rapide - Créer ou Bloquer -->
-<div class="booking-modal" id="quickActionModal">
-  <div class="modal-overlay" id="quickActionModalOverlay"></div>
-  <div class="modal-content" style="max-width: 500px;">
-    <div class="modal-header">
-      <h2 id="quickActionModalTitle">Action rapide</h2>
-      <button class="modal-close" id="closeQuickActionModal">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body" style="padding: 24px;">
-      <p style="margin-bottom: 20px; color: var(--text-secondary);">
-        <i class="fas fa-calendar"></i>
-        <span id="quickActionDateDisplay"></span> - 
-        <span id="quickActionPropertyDisplay"></span>
-      </p>
-      
-      <div style="display: grid; gap: 12px;">
-        <button class="btn btn-primary btn-block" id="quickCreateReservation" style="justify-content: center; padding: 16px;">
-          <i class="fas fa-plus-circle"></i>
-          Créer une nouvelle réservation
-        </button>
-        
-        <button class="btn btn-secondary btn-block" id="quickBlockDates" style="justify-content: center; padding: 16px; background: #ef4444; border-color: #ef4444; color: white;">
-          <i class="fas fa-lock"></i>
-          Bloquer cette date / période
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Style pour le bouton block -->
-<style>
-  .btn-block {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-  }
-  
-  #quickBlockDates:hover {
-    background: #dc2626 !important;
-    border-color: #dc2626 !important;
-  }
-</style>
-
-<!-- Script pour gérer le modal action rapide et enrichir le modal de détails -->
-<script>
-(function() {
-  let selectedDate = null;
-  let selectedPropertyId = null;
-  
-  // Fonction pour ouvrir le modal action rapide
-  window.openQuickActionModal = function(date, propertyId, propertyName) {
-    selectedDate = date;
-    selectedPropertyId = propertyId;
-    
-    const modal = document.getElementById('quickActionModal');
-    const dateDisplay = document.getElementById('quickActionDateDisplay');
-    const propertyDisplay = document.getElementById('quickActionPropertyDisplay');
-    
-    if (modal && dateDisplay && propertyDisplay) {
-      // Formater la date
-      const d = new Date(date);
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      dateDisplay.textContent = d.toLocaleDateString('fr-FR', options);
-      propertyDisplay.textContent = propertyName || 'Logement';
-      
-      modal.style.display = 'flex';
-      setTimeout(() => modal.classList.add('active'), 10);
-    }
-  };
-  
-  // Fonction pour fermer le modal action rapide
-  function closeQuickActionModal() {
-    const modal = document.getElementById('quickActionModal');
-    if (modal) {
-      modal.classList.remove('active');
-      setTimeout(() => modal.style.display = 'none', 300);
-    }
-  }
-  
-  // Event listeners pour le modal
-  document.addEventListener('DOMContentLoaded', function() {
-    // Fermeture du modal
-    const closeBtn = document.getElementById('closeQuickActionModal');
-    const overlay = document.getElementById('quickActionModalOverlay');
-    
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeQuickActionModal);
-    }
-    
-    if (overlay) {
-      overlay.addEventListener('click', closeQuickActionModal);
-    }
-    
-    // Bouton créer une réservation
-    const createBtn = document.getElementById('quickCreateReservation');
-    if (createBtn) {
-      createBtn.addEventListener('click', function() {
-        closeQuickActionModal();
-        
-        // Ouvrir le modal de nouvelle réservation avec la date pré-remplie
-        const bookingModal = document.getElementById('bookingModal');
-        const checkInInput = document.getElementById('checkIn');
-        const propertySelect = document.getElementById('bookingProperty');
-        
-        if (bookingModal) {
-          bookingModal.style.display = 'flex';
-          setTimeout(() => bookingModal.classList.add('active'), 10);
-          
-          // Pré-remplir la date
-          if (checkInInput && selectedDate) {
-            checkInInput.value = selectedDate;
-          }
-          
-          // Pré-sélectionner le logement
-          if (propertySelect && selectedPropertyId) {
-            propertySelect.value = selectedPropertyId;
-          }
-        }
-      });
-    }
-    
-    // Bouton bloquer des dates
-    const blockBtn = document.getElementById('quickBlockDates');
-    if (blockBtn) {
-      blockBtn.addEventListener('click', function() {
-        closeQuickActionModal();
-        
-        // Ouvrir le modal de blocage avec la date pré-remplie
-        const blockModal = document.getElementById('blockModal');
-        const startDateInput = document.getElementById('blockStartDate');
-        const endDateInput = document.getElementById('blockEndDate');
-        const propertySelect = document.getElementById('blockPropertySelect');
-        
-        if (blockModal) {
-          blockModal.style.display = 'flex';
-          
-          // Pré-remplir les dates
-          if (startDateInput && selectedDate) {
-            startDateInput.value = selectedDate;
-          }
-          if (endDateInput && selectedDate) {
-            endDateInput.value = selectedDate;
-          }
-          
-          // Pré-sélectionner le logement
-          if (propertySelect && selectedPropertyId) {
-            propertySelect.value = selectedPropertyId;
-          }
-        }
-      });
-    }
-  });
-  
-  // Améliorer le modal de détails avec les informations de ménage
-  window.enrichBookingDetailsWithCleaning = function(bookingId) {
-    // Cette fonction sera appelée quand le modal de détails s'ouvre
-    // Elle va chercher les informations de ménage et les afficher
-    
-    const token = localStorage.getItem('lcc_token');
-    if (!token || !bookingId) return;
-    
-    // Récupérer les informations de ménage pour cette réservation
-    fetch(`https://lcc-booking-manager.onrender.com/api/cleaning/by-reservation/${bookingId}`, {
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.assignedTo) {
-        // Trouver où insérer l'info de ménage dans le modal
-        const detailsContent = document.getElementById('reservationDetailsContent');
-        if (detailsContent) {
-          // Vérifier si l'info n'existe pas déjà
-          let cleaningInfo = detailsContent.querySelector('.cleaning-assignment-info');
-          if (!cleaningInfo) {
-            cleaningInfo = document.createElement('div');
-            cleaningInfo.className = 'detail-group cleaning-assignment-info';
-            cleaningInfo.innerHTML = `
-              <label><i class="fas fa-broom"></i> Ménage assigné à</label>
-              <div class="detail-value">
-                <i class="fas fa-user-check" style="color: #10B981; margin-right: 8px;"></i>
-                ${data.assignedTo}
-              </div>
-            `;
-            // Insérer après le dernier detail-group
-            detailsContent.appendChild(cleaningInfo);
-          } else {
-            // Mettre à jour si déjà présent
-            const valueDiv = cleaningInfo.querySelector('.detail-value');
-            if (valueDiv) {
-              valueDiv.innerHTML = `
-                <i class="fas fa-user-check" style="color: #10B981; margin-right: 8px;"></i>
-                ${data.assignedTo}
-              `;
-            }
-          }
-        }
-      }
-    })
-    .catch(err => console.log('Pas d\'info de ménage pour cette réservation'));
-  };
-})();
-
-// Script pour rendre les cellules du calendrier cliquables
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    // Observer les changements dans le calendrier (pour supporter le rendu dynamique)
-    const observeCalendar = function() {
-      const calendarBody = document.querySelector('.calendar-body');
-      if (!calendarBody) {
-        setTimeout(observeCalendar, 500);
-        return;
-      }
-      
-      // Utiliser la délégation d'événement pour gérer les clics
-      calendarBody.addEventListener('click', function(e) {
-        const cell = e.target.closest('.calendar-cell');
-        
-        // Ignorer si on a cliqué sur un booking-block
-        if (e.target.closest('.booking-block')) {
-          return;
-        }
-        
-        if (cell) {
-          const date = cell.getAttribute('data-date');
-          const propertyRow = cell.closest('.calendar-row');
-          
-          if (date && propertyRow) {
-            const propertyId = propertyRow.getAttribute('data-property-id');
-            const propertyNameEl = propertyRow.querySelector('.property-name');
-            const propertyName = propertyNameEl ? propertyNameEl.textContent : 'Logement';
-            
-            // Ouvrir le modal d'action rapide
-            if (window.openQuickActionModal) {
-              window.openQuickActionModal(date, propertyId, propertyName);
-            }
-          }
-        }
-      });
-      
-      // Ajouter un style de hover pour les cellules vides
-      const style = document.createElement('style');
-      style.textContent = `
-        .calendar-cell:not(:has(.booking-block)) {
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-        .calendar-cell:not(:has(.booking-block)):hover {
-          background-color: var(--cell-hover-bg) !important;
-        }
-      `;
-      document.head.appendChild(style);
-    };
-    
-    observeCalendar();
-  });
-})();
-</script>
-
 <script src="/js/calendar-dom-only.js"></script>
 </body>
 </html>
