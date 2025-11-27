@@ -3893,6 +3893,106 @@
   });
 })();
 </script>
+  <script>
+// Correction du modal de détails de réservation
+(function() {
+  // Observer les changements dans le modal de détails
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.addedNodes.length) {
+        fixReservationDetails();
+      }
+    });
+  });
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    const detailsModal = document.getElementById('reservationDetailsModal');
+    const detailsContent = document.getElementById('reservationDetailsContent');
+    
+    if (detailsContent) {
+      observer.observe(detailsContent, { childList: true, subtree: true });
+    }
+    
+    // Corriger aussi quand le modal s'ouvre
+    if (detailsModal) {
+      detailsModal.addEventListener('click', function(e) {
+        if (e.target.closest('.booking-block')) {
+          setTimeout(fixReservationDetails, 100);
+        }
+      });
+    }
+  });
+  
+  function fixReservationDetails() {
+    const detailsContent = document.getElementById('reservationDetailsContent');
+    if (!detailsContent) return;
+    
+    // Trouver le texte "Logement inconnu" et le remplacer
+    const detailValues = detailsContent.querySelectorAll('.detail-value');
+    detailValues.forEach(function(el) {
+      if (el.textContent.trim() === 'Logement inconnu') {
+        // Récupérer les réservations
+        const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+        
+        // Trouver la réservation affichée (via le nom du client par exemple)
+        const guestNameEl = detailsContent.querySelector('.detail-value');
+        if (guestNameEl) {
+          const guestName = guestNameEl.textContent.trim();
+          const reservation = reservations.find(r => r.guestName === guestName);
+          
+          if (reservation && reservation.propertyName) {
+            el.textContent = reservation.propertyName;
+          }
+        }
+      }
+    });
+  }
+  
+  // Gérer les boutons Supprimer et Modifier
+  document.addEventListener('click', function(e) {
+    // Bouton Supprimer
+    if (e.target.id === 'deleteBookingBtn' || e.target.closest('#deleteBookingBtn')) {
+      e.preventDefault();
+      handleDeleteBooking();
+    }
+    
+    // Bouton Modifier
+    if (e.target.id === 'editBookingBtn' || e.target.closest('#editBookingBtn')) {
+      e.preventDefault();
+      handleEditBooking();
+    }
+  });
+  
+  function handleDeleteBooking() {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation/blocage ?')) {
+      return;
+    }
+    
+    // Récupérer l'ID de la réservation depuis le modal
+    const detailsContent = document.getElementById('reservationDetailsContent');
+    // TODO: Implémenter la suppression
+    alert('Fonction de suppression à implémenter');
+  }
+  
+  function handleEditBooking() {
+    // Ouvrir le modal d'édition
+    const editModal = document.getElementById('editBookingModal');
+    if (editModal) {
+      editModal.style.display = 'flex';
+      setTimeout(() => editModal.classList.add('active'), 10);
+    }
+    
+    // Fermer le modal de détails
+    const detailsModal = document.getElementById('reservationDetailsModal');
+    if (detailsModal) {
+      detailsModal.style.display = 'none';
+      detailsModal.classList.remove('active');
+    }
+    
+    // TODO: Pré-remplir le formulaire d'édition avec les données
+  }
+})();
+</script>
 <script src="/js/calendar-dom-only.js"></script>
 </body>
 </html>
