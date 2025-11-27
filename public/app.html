@@ -3961,13 +3961,22 @@
     });
   }
   
-  function handleDeleteBooking() {
+ function handleDeleteBooking() {
     if (!currentBookingData) {
       alert('Impossible de trouver les données de la réservation');
       return;
     }
     
     const isBlock = currentBookingData.type === 'block' || currentBookingData.source === 'BLOCK';
+    const isManual = currentBookingData.source === 'direct' || currentBookingData.source === 'DIRECT';
+    const isFromIcal = currentBookingData.source === 'Airbnb' || currentBookingData.source === 'Booking.com';
+    
+    // On ne peut supprimer que les blocages manuels ou réservations directes
+    if (isFromIcal) {
+      alert('Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking. Supprimez-la sur la plateforme source.');
+      return;
+    }
+    
     const message = isBlock 
       ? 'Êtes-vous sûr de vouloir supprimer ce blocage ?' 
       : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
@@ -3975,28 +3984,33 @@
     if (!confirm(message)) return;
     
     const token = localStorage.getItem('lcc_token');
-    const endpoint = isBlock ? '/api/blocks' : '/api/reservations';
     
-    fetch(`https://lcc-booking-manager.onrender.com${endpoint}/${currentBookingData.uid}`, {
-      method: 'DELETE',
+    // Nouvelle méthode : on envoie propertyId et uid pour filtrer côté serveur
+    fetch(`https://lcc-booking-manager.onrender.com/api/manual-reservations/delete`, {
+      method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        propertyId: currentBookingData.propertyId,
+        uid: currentBookingData.uid
+      })
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success || data.message) {
-        alert('Suppression réussie !');
-        document.getElementById('reservationDetailsModal').style.display = 'none';
-        location.reload();
-      } else {
-        alert('Erreur : ' + (data.error || 'Impossible de supprimer'));
+    .then(res => {
+      if (!res.ok) {
+        throw new Error('Erreur ' + res.status);
       }
+      return res.json();
+    })
+    .then(data => {
+      alert('Suppression réussie !');
+      document.getElementById('reservationDetailsModal').style.display = 'none';
+      location.reload();
     })
     .catch(err => {
       console.error(err);
-      alert('Erreur de connexion');
+      alert('Erreur : Cet endpoint n\'existe pas encore sur le serveur. Il faut l\'ajouter dans server-3.js');
     });
   }
   
