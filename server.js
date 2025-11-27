@@ -1205,6 +1205,124 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   });
 });
 
+
+// ============================================
+// ROUTES API - BOOKINGS (alias pour réservations)
+// Utilisé par le calendrier moderne (calendar-modern.js)
+// ============================================
+
+// GET - Liste des bookings pour l'utilisateur courant
+app.get('/api/bookings', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const userProps = getUserProperties(user.id);
+    const bookings = [];
+
+    userProps.forEach(property => {
+      const propertyReservations = reservationsStore.properties[property.id] || [];
+
+      propertyReservations.forEach(r => {
+        const checkIn = r.checkIn || r.start;
+        const checkOut = r.checkOut || r.end;
+        if (!checkIn || !checkOut) return;
+
+        let platformRaw = r.platform || r.source || '';
+        let platform = (platformRaw || '').toString().toLowerCase();
+        if (platform.includes('airbnb')) platform = 'airbnb';
+        else if (platform.includes('booking')) platform = 'booking';
+        else if (platform.includes('vrbo') || platform.includes('abritel') || platform.includes('homeaway')) platform = 'vrbo';
+        else if (platform.includes('expedia')) platform = 'expedia';
+        else if (platform.includes('block')) platform = 'block';
+        else if (!platform) platform = 'direct';
+
+        bookings.push({
+          id: r.uid || r.id || `${property.id}-${checkIn}-${checkOut}`,
+          propertyId: property.id,
+          propertyName: property.name,
+          propertyColor: property.color,
+          checkIn,
+          checkOut,
+          guestName: r.guestName || r.summary || '',
+          platform,
+          price: r.price || 0,
+          type: r.type || (platform === 'block' ? 'block' : 'manual')
+        });
+      });
+    });
+
+    res.json(bookings);
+  } catch (err) {
+    console.error('Erreur GET /api/bookings :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer un booking manuel (alias de /api/reservations/manual)
+app.post('/api/bookings', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, checkIn, checkOut, guestName, platform, price } = req.body || {};
+
+    if (!propertyId || !checkIn || !checkOut) {
+      return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
+    }
+
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    const reservation = {
+      uid: 'manual_' + Date.now(),
+      start: checkIn,
+      end: checkOut,
+      source: platform || 'MANUEL',
+      platform: platform || 'direct',
+      type: 'manual',
+      guestName: guestName || 'Réservation manuelle',
+      price: typeof price === 'number' ? price : 0,
+      createdAt: new Date().toISOString()
+    };
+
+    if (!MANUAL_RESERVATIONS[propertyId]) {
+      MANUAL_RESERVATIONS[propertyId] = [];
+    }
+    MANUAL_RESERVATIONS[propertyId].push(reservation);
+    await saveManualReservations();
+
+    if (!reservationsStore.properties[propertyId]) {
+      reservationsStore.properties[propertyId] = [];
+    }
+    reservationsStore.properties[propertyId].push(reservation);
+
+    const bookingForClient = {
+      id: reservation.uid,
+      propertyId: property.id,
+      propertyName: property.name,
+      propertyColor: property.color,
+      checkIn,
+      checkOut,
+      guestName: reservation.guestName,
+      platform: reservation.platform,
+      price: reservation.price,
+      type: reservation.type
+    };
+
+    res.status(201).json(bookingForClient);
+  } catch (err) {
+    console.error('Erreur POST /api/bookings :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // POST - Forcer une synchronisation
 app.post('/api/sync', async (req, res) => {
   const user = await getUserFromRequest(req);
@@ -1850,83 +1968,36 @@ app.post('/api/properties', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    let { name, color, icalUrls } = req.body;
+    const { name, color, icalUrls } = req.body;
 
     if (!name || !color) {
       return res.status(400).json({ error: 'Nom et couleur requis' });
     }
 
-    name = String(name).trim();
-    color = String(color).trim();
-
-    // Normaliser la liste des URLs iCal (on accepte soit un tableau de chaînes, soit déjà un tableau d'objets)
-    let sanitizedIcalUrls = [];
-    if (Array.isArray(icalUrls)) {
-      sanitizedIcalUrls = icalUrls
-        .filter((u) => typeof u === 'string' && u.trim().length > 0)
-        .map((u) => ({ url: u.trim(), source: 'Autre' }));
-    } else if (icalUrls && typeof icalUrls === 'object') {
-      sanitizedIcalUrls = icalUrls;
-    }
-
-    // S'assurer que le cache PROPERTIES est chargé
-    if (typeof loadProperties === 'function') {
-      await loadProperties();
-    }
-
-    const baseSlug = name
-      .toLowerCase()
-      .normalize('NFD').replace(/[̀-\u036f]/g, '')
+    const baseId = name.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'logement';
+      .replace(/^-+|-+$/g, '');
 
-    const idBase = `${user.id}-${baseSlug}`;
-    let id = idBase;
-    let suffix = 2;
+    const id = `${user.id}-${baseId}`;
 
-    // Si un logement avec cet id existe déjà, on ajoute -2, -3, etc.
-    if (Array.isArray(PROPERTIES)) {
-      while (PROPERTIES.some((p) => p.id === id)) {
-        id = `${idBase}-${suffix++}`;
-      }
-    }
-
-    const result = await pool.query(
+    await pool.query(
       `INSERT INTO properties (id, user_id, name, color, ical_urls, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING *`,
-      [id, user.id, name, color, JSON.stringify(sanitizedIcalUrls)]
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [id, user.id, name, color, JSON.stringify(icalUrls || [])]
     );
 
-    const property = result.rows[0];
+    await loadProperties();
 
-    // Mettre à jour le cache en mémoire si présent
-    if (Array.isArray(PROPERTIES)) {
-      PROPERTIES.push(property);
-    } else if (typeof loadProperties === 'function') {
-      await loadProperties();
-    }
+    const property = PROPERTIES.find(p => p.id === id);
 
-    return res.status(201).json({
+    res.status(201).json({
       message: 'Logement créé avec succès',
       property
     });
   } catch (err) {
     console.error('Erreur création logement:', err);
-
-    if (err.code === '23505') {
-      return res.status(400).json({
-        error: 'Un logement portant déjà ce nom existe. Modifiez légèrement le nom.'
-      });
-    }
-
-    if (err.code === '42P01') {
-      return res.status(500).json({
-        error: "La table 'properties' est manquante en base de données."
-      });
-    }
-
-    return res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
