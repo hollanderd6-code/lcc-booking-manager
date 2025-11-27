@@ -4056,7 +4056,9 @@ if (!booking) {
     });
   }
   
- function handleDeleteBooking() {
+}
+
+function handleDeleteBooking() {
   // Empêcher l'exécution multiple
   if (window.deletingInProgress) {
     console.log('⚠️ Suppression déjà en cours, ignoré');
@@ -4109,52 +4111,53 @@ if (!booking) {
     return res.json();
   })
   .then(data => {
-  alert('Suppression réussie !');
-  document.getElementById('reservationDetailsModal').style.display = 'none';
-  window.deletingInProgress = false;
-  location.reload();
-})
-.catch(err => {
-  window.deletingInProgress = false;
-  console.error('Erreur suppression:', err);
-  alert('Erreur : ' + err.message);
-});
-  
-  function handleEditBooking() {
-    if (!currentBookingData) {
-      alert('Impossible de trouver les données de la réservation');
-      return;
-    }
-    }
-    // Fermer le modal de détails
-    const detailsModal = document.getElementById('reservationDetailsModal');
-    if (detailsModal) {
-      detailsModal.style.display = 'none';
-      detailsModal.classList.remove('active');
-    }
-    
-    // Ouvrir le modal d'édition et pré-remplir
-    const editModal = document.getElementById('editBookingModal');
-    if (editModal) {
-      editModal.style.display = 'flex';
-      setTimeout(() => editModal.classList.add('active'), 10);
-      
-      // Pré-remplir les champs
-      document.getElementById('editBookingId').value = currentBookingData.uid;
-      document.getElementById('editBookingProperty').value = currentBookingData.propertyId;
-      document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
-      document.getElementById('editCheckOut').value = currentBookingData.end.split('T')[0];
-      document.getElementById('editGuestName').value = currentBookingData.guestName || '';
-      document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
-      document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
-      document.getElementById('editPrice').value = currentBookingData.amount || '';
-      document.getElementById('editNotes').value = currentBookingData.notes || '';
-      
-      // Platform
-      const platform = (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
-      document.getElementById('editPlatform').value = platform;
-    }
+    alert('Suppression réussie !');
+    document.getElementById('reservationDetailsModal').style.display = 'none';
+    window.deletingInProgress = false;
+    location.reload();
+  })
+  .catch(err => {
+    window.deletingInProgress = false;
+    console.error('Erreur suppression:', err);
+    alert('Erreur : ' + err.message);
+  });
+}  // ← AJOUTEZ cette ligne pour fermer handleDeleteBooking
+
+function handleEditBooking() {
+  if (!currentBookingData) {
+    alert('Impossible de trouver les données de la réservation');
+    return;
   }
+  
+  // Fermer le modal de détails
+  const detailsModal = document.getElementById('reservationDetailsModal');
+  if (detailsModal) {
+    detailsModal.style.display = 'none';
+    detailsModal.classList.remove('active');
+  }
+  
+  // Ouvrir le modal d'édition et pré-remplir
+  const editModal = document.getElementById('editBookingModal');
+  if (editModal) {
+    editModal.style.display = 'flex';
+    setTimeout(() => editModal.classList.add('active'), 10);
+    
+    // Pré-remplir les champs
+    document.getElementById('editBookingId').value = currentBookingData.uid;
+    document.getElementById('editBookingProperty').value = currentBookingData.propertyId;
+    document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
+    document.getElementById('editCheckOut').value = currentBookingData.end.split('T')[0];
+    document.getElementById('editGuestName').value = currentBookingData.guestName || '';
+    document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
+    document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
+    document.getElementById('editPrice').value = currentBookingData.amount || '';
+    document.getElementById('editNotes').value = currentBookingData.notes || '';
+    
+    // Platform
+    const platform = (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
+    document.getElementById('editPlatform').value = platform;
+  }
+}
    document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
     const propertyId = document.getElementById('blockPropertySelect').value;
     const startDate = document.getElementById('blockStartDate').value;
