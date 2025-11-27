@@ -2729,3 +2729,47 @@ app.listen(PORT, async () => {
   console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
   console.log('');
 });
+// Route pour supprimer une réservation manuelle ou un blocage
+app.post('/api/manual-reservations/delete', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, uid } = req.body || {};
+
+    if (!propertyId || !uid) {
+      return res.status(400).json({ error: 'propertyId et uid sont requis' });
+    }
+
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    if (MANUAL_RESERVATIONS[propertyId]) {
+      const initialLength = MANUAL_RESERVATIONS[propertyId].length;
+      MANUAL_RESERVATIONS[propertyId] = MANUAL_RESERVATIONS[propertyId].filter(r => r.uid !== uid);
+      const newLength = MANUAL_RESERVATIONS[propertyId].length;
+      
+      if (initialLength === newLength) {
+        return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
+      }
+      
+      await saveManualReservations();
+      
+      if (reservationsStore.properties[propertyId]) {
+        reservationsStore.properties[propertyId] = reservationsStore.properties[propertyId].filter(r => r.uid !== uid);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Réservation/blocage supprimé'
+    });
+  } catch (err) {
+    console.error('Erreur suppression réservation manuelle:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
