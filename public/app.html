@@ -4054,7 +4054,19 @@ if (!booking) {
   }
   
  function handleDeleteBooking() {
-    if (!currentBookingData) {
+     // Empêcher l'exécution multiple
+  if (window.deletingInProgress) {
+    console.log('⚠️ Suppression déjà en cours, ignoré');
+    return;
+  }
+  window.deletingInProgress = true;
+  
+  if (!currentBookingData) {
+    window.deletingInProgress = false;
+    alert('Impossible de trouver les données de la réservation');
+    return;
+  }
+   if (!currentBookingData) {
       alert('Impossible de trouver les données de la réservation');
       return;
     }
