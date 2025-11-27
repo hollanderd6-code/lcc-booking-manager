@@ -49,32 +49,16 @@ async function saveProperty(event) {
   event.preventDefault();
   showLoading();
 
- const propertyId = document.getElementById("propertyId").value;
-const name = document.getElementById("propertyName").value;
-const color = document.getElementById("propertyColor").value;
+  const propertyId = document.getElementById("propertyId").value;
+  const name = document.getElementById("propertyName").value;
+  const color = document.getElementById("propertyColor").value;
 
-const address = document.getElementById("propertyAddress").value.trim();
-const accessCode = document.getElementById("propertyAccessCode").value.trim();
-const wifiName = document.getElementById("propertyWifiName").value.trim();
-const wifiPassword = document.getElementById("propertyWifiPassword").value.trim();
-const parkingInfo = document.getElementById("propertyParkingInfo").value.trim();
+  const urlInputs = document.querySelectorAll(".url-input");
+  const icalUrls = Array.from(urlInputs)
+    .map((input) => input.value.trim())
+    .filter((url) => url.length > 0);
 
-const urlInputs = document.querySelectorAll(".url-input");
-const icalUrls = Array.from(urlInputs)
-  .map((input) => input.value.trim())
-  .filter((url) => url.length > 0);
-
-const propertyData = {
-  name,
-  color,
-  icalUrls,
-  address,
-  accessCode,
-  wifiName,
-  wifiPassword,
-  parkingInfo,
-};
-
+  const propertyData = { name, color, icalUrls };
 
   try {
     const token = localStorage.getItem("lcc_token");
@@ -308,11 +292,6 @@ function openAddPropertyModal() {
   document.getElementById("propertyName").value = "";
   document.getElementById("propertyColor").value = "#E67E50";
   document.getElementById("colorPreview").textContent = "#E67E50";
-document.getElementById("propertyAddress").value = "";
-document.getElementById("propertyAccessCode").value = "";
-document.getElementById("propertyWifiName").value = "";
-document.getElementById("propertyWifiPassword").value = "";
-document.getElementById("propertyParkingInfo").value = "";
 
   const urlList = document.getElementById("urlList");
   urlList.innerHTML = "";
@@ -335,11 +314,6 @@ function openEditPropertyModal(propertyId) {
   document.getElementById("propertyName").value = property.name;
   document.getElementById("propertyColor").value = property.color;
   document.getElementById("colorPreview").textContent = property.color;
-document.getElementById("propertyAddress").value = property.address || "";
-document.getElementById("propertyAccessCode").value = property.accessCode || "";
-document.getElementById("propertyWifiName").value = property.wifiName || "";
-document.getElementById("propertyWifiPassword").value = property.wifiPassword || "";
-document.getElementById("propertyParkingInfo").value = property.parkingInfo || "";
 
   const urlList = document.getElementById("urlList");
   urlList.innerHTML = "";
@@ -468,3 +442,122 @@ document.addEventListener("keydown", (e) => {
       );
   }
 });
+
+
+// ========================================
+// UI RENDERING (override with iCal export link)
+// ========================================
+function renderProperties() {
+  const grid = document.getElementById("propertiesGrid");
+
+  if (!properties.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-home"></i>
+        <p>Aucun logement configuré</p>
+        <p style="font-size: 14px; margin-top: 8px;">Cliquez sur "Ajouter un logement" pour commencer</p>
+      </div>
+    `;
+    return;
+  }
+
+  const baseApi = (typeof API_URL === "string" ? API_URL.replace(/\/$/, "") : "");
+
+  grid.innerHTML = properties
+    .map((property) => {
+      const exportUrl = baseApi
+        ? `${baseApi}/ical/property/${property.id}.ics`
+        : `/ical/property/${property.id}.ics`;
+
+      const icalSourcesHtml =
+        property.icalUrls && property.icalUrls.length > 0
+          ? `
+        <div class="ical-urls">
+          ${property.icalUrls
+            .map(
+              (urlData) => `
+            <div class="ical-url-item">
+              <i class="fas fa-link"></i>
+              <span class="ical-source">${urlData.source || "URL"}</span>
+              <span class="ical-url-text" title="${urlData.url}">${urlData.url}</span>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      `
+          : `
+        <div style="padding: 12px; background: var(--bg-secondary, #f3f4f6); border-radius: 12px; display:flex; align-items:center; gap:8px; font-size: 14px; color: var(--text-secondary);">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>Aucune URL iCal configurée</span>
+        </div>
+      `;
+
+      return `
+    <div class="property-card" style="border-left-color: ${property.color}">
+      <div class="property-header">
+        <div class="property-info">
+          <div class="property-name">
+            <div class="color-badge" style="background-color: ${property.color}"></div>
+            ${property.name}
+          </div>
+          <div class="property-meta">
+            ${property.reservationCount || 0} réservation(s) • 
+            ${(property.icalUrls && property.icalUrls.length) || 0} source(s) iCal importées
+          </div>
+        </div>
+        <div class="property-actions">
+          <button class="btn-icon-action btn-edit" 
+                  onclick="openEditPropertyModal('${property.id}')"
+                  title="Modifier">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-icon-action btn-delete" 
+                  onclick="deleteProperty('${property.id}', '${(property.name || "").replace(/'/g, "\'")}')"
+                  title="Supprimer">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="property-ical-export">
+        <div class="ical-export-label">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>Lien iCal Boostinghost pour ce logement</span>
+        </div>
+        <div class="ical-export-body">
+          <span class="ical-export-url" title="${exportUrl}">${exportUrl}</span>
+          <button class="btn-copy-ical" type="button" onclick="copyIcalExportUrl('${exportUrl}')">
+            <i class="fa-regular fa-copy"></i>
+            Copier
+          </button>
+        </div>
+      </div>
+
+      ${icalSourcesHtml}
+    </div>
+  `;
+    })
+    .join("");
+}
+
+// Copier le lien iCal export
+function copyIcalExportUrl(url) {
+  if (!url) return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        if (typeof showToast === "function") {
+          showToast("Lien iCal copié dans le presse-papiers", "success");
+        }
+      })
+      .catch(() => {
+        window.prompt("Copiez ce lien iCal :", url);
+      });
+  } else {
+    window.prompt("Copiez ce lien iCal :", url);
+  }
+}
+
