@@ -3919,7 +3919,13 @@ console.log('🔍 Start:', startDate, 'End:', endDate);
 function fixModalContent(bookingBlock) {
     const detailsContent = document.getElementById('reservationDetailsContent');
     if (!detailsContent) return;
-    
+      // Récupérer immédiatement via data-booking-id comme fallback
+  const bookingIndex = parseInt(bookingBlock.getAttribute('data-booking-id'));
+  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+  if (!isNaN(bookingIndex) && reservations[bookingIndex]) {
+    currentBookingData = reservations[bookingIndex];
+    console.log('📦 Données stockées via index:', currentBookingData);
+  }
     // Attendre que le modal soit vraiment rempli
     setTimeout(function() {
       const allText = detailsContent.innerText || '';
