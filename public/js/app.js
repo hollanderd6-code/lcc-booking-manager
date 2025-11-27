@@ -834,7 +834,12 @@ async function submitBlockForm() {
   const startDate = startInput ? startInput.value : '';
   const endDate = endInput ? endInput.value : '';
   const reason = reasonInput ? reasonInput.value : '';
-console.log('PropertyId sélectionné:', propertyId);
+console.log('🔍 submitBlockForm - propertySelect:', propertySelect);
+  console.log('🔍 submitBlockForm - propertyId:', propertyId);
+  console.log('🔍 submitBlockForm - startDate:', startDate);
+  console.log('🔍 submitBlockForm - endDate:', endDate);
+  
+  console.log('PropertyId sélectionné:', propertyId);
   if (!propertyId || !startDate || !endDate) {
     showToast('Merci de choisir un logement et des dates', 'error');
     return;
