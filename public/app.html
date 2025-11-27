@@ -3966,12 +3966,24 @@ function fixModalContent(bookingBlock) {
       
       // Chercher la réservation par dates exactes
       const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-      const booking = reservations.find(r => {
-        if (!r.start || !r.end) return false;
-        const rStart = r.start.split('T')[0];
-        const rEnd = r.end.split('T')[0];
-        return rStart === startDate && rEnd === endDate;
-      });
+     // D'abord chercher un blocage avec ces dates
+let booking = reservations.find(r => {
+  if (!r.start || !r.end) return false;
+  const rStart = r.start.split('T')[0];
+  const rEnd = r.end.split('T')[0];
+  const isBlock = r.type === 'block' || r.source === 'BLOCK';
+  return rStart === startDate && rEnd === endDate && isBlock;
+});
+
+// Si pas de blocage trouvé, chercher n'importe quelle réservation
+if (!booking) {
+  booking = reservations.find(r => {
+    if (!r.start || !r.end) return false;
+    const rStart = r.start.split('T')[0];
+    const rEnd = r.end.split('T')[0];
+    return rStart === startDate && rEnd === endDate;
+  });
+}
       
       console.log('🔍 Réservation trouvée par dates:', booking);
       
