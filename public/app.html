@@ -1254,6 +1254,15 @@
     }
   </style>
 
+
+  <style>
+    .status-icon .status-logo {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      display: block;
+    }
+  </style>
 </head>
 <body data-page="app">
   <!-- MOBILE HEADER -->
@@ -1424,62 +1433,50 @@
       <!-- Page Content -->
         
         <!-- ÉTAT DES CONNEXIONS -->
-        <!-- Airbnb -->
-<article class="status-card">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-airbnb">
-      <img src="/assets/logos/airbnb.svg" alt="Airbnb" class="status-logo" />
-    </div>
-    <span class="status-label status-ok">Connecté</span>
-  </div>
-  <h3>Airbnb</h3>
-  <p>Synchronisation iCal active.</p>
-  <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
-</article>
+        <section class="status-grid">
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-airbnb">
+                <img src="/assets/logos/airbnb.svg" alt="Airbnb" class="status-logo" />
+              </div>
+              <span class="status-label status-ok">Connecté</span>
+            </div>
+            <h3>Airbnb</h3>
+            <p>Synchronisation iCal active.</p>
+            <button class="btn btn-ghost btn-xs">Gérer les connexions</button>
+          </article>
 
-<!-- Booking.com -->
-<article class="status-card">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-booking">
-      <img src="/assets/logos/booking.svg" alt="Booking.com" class="status-logo" />
-    </div>
-    <span class="status-label status-warning">À connecter</span>
-  </div>
-  <h3>Booking.com</h3>
-  <p>Ajoutez votre lien iCal Booking.com.</p>
-  <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
-</article>
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-booking">
+                <img src="/assets/logos/booking.svg" alt="Booking.com" class="status-logo" />
+              </div>
+              <span class="status-label status-warning">À connecter</span>
+            </div>
+            <h3>Booking.com</h3>
+            <p>Ajoutez votre lien iCal Booking.com.</p>
+            <button class="btn btn-secondary btn-xs">Ajouter un iCal</button>
+          </article>
 
-<!-- Stripe -->
-<article class="status-card">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-stripe">
-      <img src="/assets/logos/stripe.svg" alt="Stripe" class="status-logo" />
-    </div>
-    <span class="status-label status-ok">Connecté</span>
-  </div>
-  <h3>Stripe</h3>
-  <p>Cautions et paiements sécurisés.</p>
-  <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
-</article>
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-stripe">
+                <img src="/assets/logos/stripe.svg" alt="Stripe" class="status-logo" />
+              </div>
+              <span class="status-label status-ok">Connecté</span>
+            </div>
+            <h3>Stripe</h3>
+            <p>Cautions et paiements sécurisés.</p>
+            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">Voir les cautions</button>
+          </article>
 
-<!-- WhatsApp -->
-<article class="status-card" id="whatsappStatusCard">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-whatsapp">
-      <img src="/assets/logos/whatsapp.svg" alt="WhatsApp" class="status-logo" />
-    </div>
-    <span class="status-label status-warning" id="whatsappStatusLabel">À configurer</span>
-  </div>
-  <h3>Notifications WhatsApp</h3>
-  <p>Recevez un message à chaque nouvelle réservation.</p>
-  <button
-    class="btn btn-ghost btn-xs"
-    onclick="window.location.href='/notifications.html#whatsappBlock'">
-    Configurer
-  </button>
-</article>
-
+          <article class="status-card">
+            <div class="status-card-header">
+              <div class="status-icon status-icon-ai">
+                <i class="fas fa-wand-magic-sparkles"></i>
+              </div>
+              <span class="status-label status-ok">Actif</span>
+            </div>
             <h3>Messages automatiques</h3>
             <p>Scénarios IA prêts pour vos voyageurs.</p>
             <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
@@ -1487,7 +1484,7 @@
                     <article class="status-card" id="whatsappStatusCard">
             <div class="status-card-header">
               <div class="status-icon status-icon-whatsapp">
-                <i class="fab fa-whatsapp"></i>
+                <img src="/assets/logos/whatsapp.svg" alt="WhatsApp" class="status-logo" />
               </div>
               <span class="status-label status-warning" id="whatsappStatusLabel">À configurer</span>
             </div>
@@ -2813,27 +2810,32 @@
   })();
 
     document.addEventListener('DOMContentLoaded', function () {
+      
       // Onboarding progress + auto-hide when 100%
       const onboardingSection = document.getElementById('onboardingSection');
       if (onboardingSection) {
         const steps = onboardingSection.querySelectorAll('.onboarding-step');
         let completed = 0;
-        steps.forEach(step => {
+
+        steps.forEach(function(step) {
           const status = step.querySelector('.onboarding-step-status');
           if (status && status.classList.contains('done')) {
             completed++;
           }
         });
+
         const progressEl = document.getElementById('onboardingProgressValue');
         if (progressEl) {
           progressEl.textContent = completed;
         }
+
+        // Hide the whole card when all steps are done
         if (completed === steps.length && steps.length > 0) {
           onboardingSection.style.display = 'none';
         }
       }
 
-      // WhatsApp UI (badge + alerte en haut)
+// WhatsApp UI (badge + alerte en haut)
       try {
         const raw = localStorage.getItem('lcc_notifications_settings');
         const alertEl = document.getElementById('whatsappSetupAlert');
