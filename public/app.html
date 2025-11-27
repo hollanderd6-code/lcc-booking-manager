@@ -4113,13 +4113,7 @@ if (!booking) {
     document.getElementById('reservationDetailsModal').style.display = 'none';
     window.deletingInProgress = false;
     location.reload();
-  })
-  .catch(err => {
-    window.deletingInProgress = false;
-    console.error(err);
-    alert('Erreur : ' + err.message);
-  });
-}
+});
   
   function handleEditBooking() {
     if (!currentBookingData) {
