@@ -2117,36 +2117,69 @@ app.post('/api/properties', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { name, color, icalUrls } = req.body;
+    let { name, color, icalUrls } = req.body;
 
     if (!name || !color) {
       return res.status(400).json({ error: 'Nom et couleur requis' });
     }
 
-    const baseId = name.toLowerCase()
+    // Toujours un tableau de chaînes propre côté serveur
+    const sanitizedIcalUrls = Array.isArray(icalUrls)
+      ? icalUrls
+          .filter((u) => typeof u === 'string' && u.trim().length > 0)
+      : [];
+
+    const baseSlug = name
+      .toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+      .replace(/^-+|-+$/g, '') || 'logement';
 
-    const id = `${user.id}-${baseId}`;
+    // ID de base : userId + slug
+    const idBase = `${user.id}-${baseSlug}`;
+    let id = idBase;
+    let suffix = 2;
+
+    // Si un logement avec le même id existe déjà, on ajoute -2, -3, etc.
+    while (PROPERTIES && PROPERTIES.some((p) => p.id === id)) {
+      id = `${idBase}-${suffix++}`;
+    }
 
     await pool.query(
       `INSERT INTO properties (id, user_id, name, color, ical_urls, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [id, user.id, name, color, JSON.stringify(icalUrls || [])]
+      [id, user.id, name, color, JSON.stringify(sanitizedIcalUrls)]
     );
 
+    // Recharge le cache PROPERTIES depuis la base
     await loadProperties();
 
-    const property = PROPERTIES.find(p => p.id === id);
+    const property = PROPERTIES.find((p) => p.id === id);
 
     res.status(201).json({
       message: 'Logement créé avec succès',
-      property
+      property,
     });
   } catch (err) {
     console.error('Erreur création logement:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+
+    // Table manquante
+    if (err.code === '42P01') {
+      return res.status(500).json({
+        error:
+          "La table 'properties' n'existe pas en base. Lance la requête SQL de création de table puis redémarre le serveur.",
+      });
+    }
+
+    // Doublon de clé (au cas où)
+    if (err.code === '23505') {
+      return res.status(400).json({
+        error:
+          'Un logement portant déjà ce nom existe. Modifie légèrement le nom ou le slug.',
+      });
+    }
+
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
