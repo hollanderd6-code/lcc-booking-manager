@@ -3918,12 +3918,12 @@
     const detailsContent = document.getElementById('reservationDetailsContent');
     if (!detailsContent) return;
     
-    // Récupérer les données de la réservation depuis le block
-    const uid = bookingBlock.getAttribute('data-uid');
+    // Récupérer l'index de la réservation depuis le block
+    const bookingIndex = bookingBlock.getAttribute('data-booking-id');
     const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-    const booking = reservations.find(r => r.uid === uid);
+    const booking = reservations[parseInt(bookingIndex)];
     
-    console.log('🔍 Réservation trouvée:', booking);
+    console.log('🔍 Index:', bookingIndex, 'Réservation trouvée:', booking);
     
     if (!booking) return;
     
