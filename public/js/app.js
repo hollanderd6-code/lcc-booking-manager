@@ -849,7 +849,7 @@ console.log('🔍 submitBlockForm - propertySelect:', propertySelect);
     showLoading();
     const token = localStorage.getItem('lcc_token');
 
-    const response = await fetch(`${API_URL}/api/blocks`, {
+    const response = await fetch`${API_URL}/api/blocks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
