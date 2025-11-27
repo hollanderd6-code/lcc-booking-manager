@@ -3883,6 +3883,53 @@
     document.getElementById('blockModal').style.display = 'none';
   });
 })();
+  // Sauvegarde du blocage
+  document.getElementById('blockSaveBtn')?.addEventListener('click', function() {
+    const propertyId = document.getElementById('blockPropertySelect').value;
+    const startDate = document.getElementById('blockStartDate').value;
+    const endDate = document.getElementById('blockEndDate').value;
+    const reason = document.getElementById('blockReason').value;
+    
+    if (!propertyId) {
+      alert('Veuillez sélectionner un logement');
+      return;
+    }
+    
+    if (!startDate || !endDate) {
+      alert('Veuillez sélectionner les dates');
+      return;
+    }
+    
+    const token = localStorage.getItem('lcc_token');
+    
+    fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        propertyId: propertyId,
+        startDate: startDate,
+        endDate: endDate,
+        reason: reason || 'Blocage manuel'
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success || data.block) {
+        alert('Dates bloquées avec succès !');
+        document.getElementById('blockModal').style.display = 'none';
+        location.reload();
+      } else {
+        alert('Erreur : ' + (data.message || 'Impossible de bloquer ces dates'));
+      }
+    })
+    .catch(err => {
+      alert('Erreur de connexion');
+      console.error(err);
+    });
+  });
 </script>
 <script src="/js/calendar-dom-only.js"></script>
 </body>
