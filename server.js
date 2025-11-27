@@ -1147,6 +1147,7 @@ app.post('/api/blocks', async (req, res) => {
 
     const block = {
       uid: 'block_' + Date.now(),
+      propertyId,
       start,
       end,
       source: 'BLOCK',
