@@ -15,6 +15,8 @@ const nodemailer = require('nodemailer'); //
 const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
+const axios = require('axios');
+
 
 // ============================================
 // CONNEXION POSTGRES
@@ -136,7 +138,63 @@ function getEmailTransporter() {
 
   return emailTransporter;
 }
+function getBrevoSender() {
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
 
+  const match = from.match(/^(.*)<([^>]+)>$/);
+  if (match) {
+    return {
+      name: (match[1] || 'Boostinghost').trim().replace(/^"|"$/g, ''),
+      email: match[2].trim()
+    };
+  }
+
+  return {
+    name: 'Boostinghost',
+    email: from.trim()
+  };
+}
+
+async function sendEmailViaBrevo({ to, subject, text, html }) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    throw new Error('BREVO_API_KEY manquant pour l’envoi via Brevo');
+  }
+
+  const sender = getBrevoSender();
+
+  const payload = {
+    sender,
+    to: [{ email: to }],
+    subject
+  };
+
+  if (html) payload.htmlContent = html;
+  if (text) payload.textContent = text;
+
+  try {
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      payload,
+      {
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+
+    return response.data;
+  } catch (err) {
+    console.error(
+      '❌ Erreur envoi email via Brevo :',
+      err.response?.data || err.message || err
+    );
+    throw err;
+  }
+}
 async function getUserForNotifications(userId) {
   if (!userId) return null;
   if (notificationUserCache.has(userId)) {
@@ -274,14 +332,19 @@ async function getCleanerAssignmentsMapForUser(userId) {
  * en respectant les préférences de l'utilisateur.
  */
 async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
-  const transporter = getEmailTransporter();
-  if (!transporter) {
-    console.log('⚠️  Transport email non configuré, aucune notification propriétaire envoyée');
+  const useBrevo = !!process.env.BREVO_API_KEY;
+  const transporter = useBrevo ? null : getEmailTransporter();
+
+  if (!useBrevo && !transporter) {
+    console.log(
+      '⚠️  Transport email non configuré (ni Brevo ni SMTP), aucune notification propriétaire envoyée'
+    );
     return;
   }
 
   const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
   const tasks = [];
+
 
   const handleReservation = (res, type) => {
     const userId = res.userId;
@@ -391,22 +454,30 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
         `;
       }
 
-      try {
-        await transporter.sendMail({
-          from,
-          to: user.email,
-          subject,
-          text: textBody,
-          html: htmlBody
-        });
+            try {
+        if (useBrevo) {
+          await sendEmailViaBrevo({
+            to: user.email,
+            subject,
+            text: textBody,
+            html: htmlBody
+          });
+        } else if (transporter) {
+          await transporter.sendMail({
+            from,
+            to: user.email,
+            subject,
+            text: textBody,
+            html: htmlBody
+          });
+        }
+
         console.log(
           `📧 Notification "${type}" envoyée à ${user.email} (resa uid=${res.uid || res.id})`
         );
       } catch (err) {
         console.error('❌ Erreur envoi email notification réservation :', err);
       }
-    })());
-  };
 
   (newReservations || []).forEach(res => handleReservation(res, 'new'));
   (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
@@ -418,9 +489,13 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
  * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
  */
 async function notifyCleanersAboutNewBookings(newReservations) {
-  const transporter = getEmailTransporter();
-  if (!transporter && !whatsappService.isConfigured()) {
-    console.log('⚠️  Ni email ni WhatsApp configurés, aucune notification ménage envoyée');
+  const useBrevo = !!process.env.BREVO_API_KEY;
+  const transporter = useBrevo ? null : getEmailTransporter();
+
+  if (!useBrevo && !transporter && !whatsappService.isConfigured()) {
+    console.log(
+      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, aucune notification ménage envoyée'
+    );
     return;
   }
 
@@ -486,8 +561,8 @@ async function notifyCleanersAboutNewBookings(newReservations) {
 
       const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
 
-      // Email
-      if (transporter && cleanerEmail) {
+            // Email
+      if ((useBrevo || transporter) && cleanerEmail) {
         const subject = `🧹 Nouveau ménage à prévoir – ${propertyName}`;
         const textBody = `${hello}
 
@@ -515,14 +590,21 @@ L'équipe Boostinghost`;
         `;
 
         tasks.push(
-          transporter
-            .sendMail({
-              from,
-              to: cleanerEmail,
-              subject,
-              text: textBody,
-              html: htmlBody
-            })
+          (useBrevo
+            ? sendEmailViaBrevo({
+                to: cleanerEmail,
+                subject,
+                text: textBody,
+                html: htmlBody
+              })
+            : transporter.sendMail({
+                from,
+                to: cleanerEmail,
+                subject,
+                text: textBody,
+                html: htmlBody
+              })
+          )
             .then(() => {
               console.log(
                 `📧 Notification ménage envoyée à ${cleanerEmail} (resa uid=${res.uid || res.id})`
@@ -533,6 +615,7 @@ L'équipe Boostinghost`;
             })
         );
       }
+
 
       // WhatsApp
       if (whatsappService.isConfigured() && cleanerPhone) {
@@ -566,11 +649,16 @@ L'équipe Boostinghost`;
  * à chaque cleaner assigné (email + WhatsApp si dispo).
  */
 async function sendDailyCleaningPlan() {
-  const transporter = getEmailTransporter();
-  if (!transporter && !whatsappService.isConfigured()) {
-    console.log('⚠️  Ni email ni WhatsApp configurés, planning ménage non envoyé');
+  const useBrevo = !!process.env.BREVO_API_KEY;
+  const transporter = useBrevo ? null : getEmailTransporter();
+
+  if (!useBrevo && !transporter && !whatsappService.isConfigured()) {
+    console.log(
+      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, planning ménage non envoyé'
+    );
     return;
   }
+
 
   if (!PROPERTIES || !Array.isArray(PROPERTIES) || PROPERTIES.length === 0) {
     console.log('ℹ️ Aucun logement configuré, pas de planning ménage à envoyer.');
@@ -644,28 +732,24 @@ async function sendDailyCleaningPlan() {
     const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
     const subject = `🧹 Planning ménage – ${tomorrowIso}`;
 
-    // Email
-    if (transporter && cleanerEmail) {
-      let textBody = `${hello}\n\nVoici vos ménages prévus pour demain :\n\n`;
-      let htmlBody = `<p>${hello}</p><p>Voici vos ménages prévus pour demain :</p><ul>`;
-
-      jobs.forEach((job, index) => {
-        textBody += `${index + 1}. ${job.propertyName} – départ le ${job.end} (séjour du ${job.start} au ${job.end}, ${job.guestName})\n`;
-        htmlBody += `<li><strong>${job.propertyName}</strong> – départ le ${job.end} (séjour du ${job.start} au ${job.end}, ${job.guestName})</li>`;
-      });
-
-      textBody += `\nMerci beaucoup,\nL'équipe Boostinghost\n`;
-      htmlBody += `</ul><p style="font-size:13px;color:#6b7280;">Merci beaucoup,<br>L'équipe Boostinghost</p>`;
-
+        if ((useBrevo || transporter) && cleanerEmail) {
+      ...
       tasks.push(
-        transporter
-          .sendMail({
-            from,
-            to: cleanerEmail,
-            subject,
-            text: textBody,
-            html: htmlBody
-          })
+        (useBrevo
+          ? sendEmailViaBrevo({
+              to: cleanerEmail,
+              subject,
+              text: textBody,
+              html: htmlBody
+            })
+          : transporter.sendMail({
+              from,
+              to: cleanerEmail,
+              subject,
+              text: textBody,
+              html: htmlBody
+            })
+        )
           .then(() => {
             console.log(
               `📧 Planning ménage envoyé à ${cleanerEmail} pour ${tomorrowIso}`
@@ -2371,7 +2455,9 @@ app.get('/api/config', async (req, res) => {
       hasIcalUrls: p.icalUrls && p.icalUrls.length > 0
     })),
     syncInterval: process.env.SYNC_INTERVAL || 15,
-    emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD),
+   emailConfigured:
+  !!process.env.BREVO_API_KEY ||
+  !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD),
     timezone: process.env.TIMEZONE || 'Europe/Paris',
     stripeConfigured: !!STRIPE_SECRET_KEY
   });
