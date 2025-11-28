@@ -1103,7 +1103,8 @@ app.post('/api/reservations/manual', async (req, res) => {
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
       notes: notes || '',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+        propertyId: property.id,
      propertyName: property.name,
      propertyColor: property.color,
       userId: user.id
