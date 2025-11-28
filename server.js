@@ -2774,3 +2774,4 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
