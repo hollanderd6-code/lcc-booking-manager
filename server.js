@@ -1036,38 +1036,7 @@ app.get('/api/debug-users', async (req, res) => {
 // ============================================
 // ROUTES API - RESERVATIONS (par user)
 // ============================================
-// ============================================
-// ENDPOINT DE DEBUG - VÉRIFICATION NOTIFICATIONS
-// ============================================
 
-app.get('/api/debug/notification-settings', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const settings = await getNotificationSettings(user.id);
-    const transporter = getEmailTransporter();
-    
-    res.json({
-      userId: user.id,
-      email: user.email,
-      notificationSettings: settings,
-      emailConfigured: transporter !== null,
-      whatsappConfigured: whatsappService.isConfigured(),
-      emailEnv: {
-        EMAIL_HOST: process.env.EMAIL_HOST ? '✅ Défini' : '❌ Manquant',
-        EMAIL_USER: process.env.EMAIL_USER ? '✅ Défini' : '❌ Manquant',
-        EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? '✅ Défini' : '❌ Manquant',
-        EMAIL_FROM: process.env.EMAIL_FROM || 'Valeur par défaut'
-      }
-    });
-  } catch (err) {
-    console.error('Erreur debug notification settings:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
 // GET - Toutes les réservations du user
 app.get('/api/reservations', async (req, res) => {
   const user = await getUserFromRequest(req);
@@ -1134,12 +1103,8 @@ app.post('/api/reservations/manual', async (req, res) => {
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
       notes: notes || '',
-      createdAt: new Date().toISOString(),
-        propertyId: property.id,
-     propertyName: property.name,
-     propertyColor: property.color,
-      userId: user.id
-   };
+      createdAt: new Date().toISOString()
+    };
 
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
@@ -1151,16 +1116,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       reservationsStore.properties[propertyId] = [];
     }
     reservationsStore.properties[propertyId].push(reservation);
-// ✅ NOUVEAU : Envoyer les notifications
-   try {
-    console.log('📧 Envoi des notifications pour la réservation manuelle...');
-      await notifyOwnersAboutBookings([reservation], []);
-await notifyCleanersAboutNewBookings([reservation]);
-     console.log('✅ Notifications envoyées avec succès');
-    } catch (err) {
-      console.error('❌ Erreur lors de l\'envoi des notifications:', err);
-     // On continue quand même, la réservation est créée
-    }
+
     res.status(201).json({
       message: 'Réservation manuelle créée',
       reservation
@@ -1168,40 +1124,6 @@ await notifyCleanersAboutNewBookings([reservation]);
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-// ============================================
-// ENDPOINT DE DEBUG POUR NOTIFICATIONS
-// À AJOUTER dans server-3.js
-// ============================================
-
-// GET - Vérifier les préférences de notifications et configuration
-app.get('/api/debug/notification-settings', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const settings = await getNotificationSettings(user.id);
-    const transporter = getEmailTransporter();
-    
-    res.json({
-      userId: user.id,
-      email: user.email,
-      notificationSettings: settings,
-      emailConfigured: transporter !== null,
-      whatsappConfigured: whatsappService.isConfigured(),
-      emailEnv: {
-        EMAIL_HOST: process.env.EMAIL_HOST ? '✅ Défini' : '❌ Manquant',
-        EMAIL_USER: process.env.EMAIL_USER ? '✅ Défini' : '❌ Manquant',
-        EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? '✅ Défini' : '❌ Manquant',
-        EMAIL_FROM: process.env.EMAIL_FROM || 'Valeur par défaut'
-      }
-    });
-  } catch (err) {
-    console.error('Erreur debug notification settings:', err);
-    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1348,14 +1270,18 @@ app.post('/api/bookings', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
+
     const { propertyId, checkIn, checkOut, guestName, platform, price } = req.body || {};
+
     if (!propertyId || !checkIn || !checkOut) {
       return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
     }
+
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
+
     const reservation = {
       uid: 'manual_' + Date.now(),
       start: checkIn,
@@ -1367,15 +1293,18 @@ app.post('/api/bookings', async (req, res) => {
       price: typeof price === 'number' ? price : 0,
       createdAt: new Date().toISOString()
     };
+
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(reservation);
     await saveManualReservations();
+
     if (!reservationsStore.properties[propertyId]) {
       reservationsStore.properties[propertyId] = [];
     }
     reservationsStore.properties[propertyId].push(reservation);
+
     const bookingForClient = {
       id: reservation.uid,
       propertyId: property.id,
@@ -1388,6 +1317,7 @@ app.post('/api/bookings', async (req, res) => {
       price: reservation.price,
       type: reservation.type
     };
+
     res.status(201).json(bookingForClient);
   } catch (err) {
     console.error('Erreur POST /api/bookings :', err);
@@ -2894,5 +2824,3 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-
