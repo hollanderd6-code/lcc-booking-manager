@@ -102,24 +102,37 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
 function getEmailTransporter() {
   if (emailTransporter) return emailTransporter;
 
-  const host = process.env.EMAIL_HOST;
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASSWORD;
+  const host = process.env.EMAIL_HOST;
+  const service = process.env.EMAIL_SERVICE;
 
-  if (!host || !user || !pass) {
-    console.log('⚠️  Email non configuré (EMAIL_HOST, EMAIL_USER ou EMAIL_PASSWORD manquants)');
+  if (!user || !pass) {
+    console.log('⚠️  Email non configuré (EMAIL_USER ou EMAIL_PASSWORD manquants)');
     return null;
   }
 
-  emailTransporter = nodemailer.createTransport({
-    host,
-    port: parseInt(process.env.EMAIL_PORT || '587', 10),
-    secure: process.env.EMAIL_SECURE === 'true', // true = 465
-    auth: {
-      user,
-      pass
-    }
-  });
+  // Mode SMTP complet (Mailgun, OVH, etc.)
+  if (host) {
+    emailTransporter = nodemailer.createTransport({
+      host,
+      port: parseInt(process.env.EMAIL_PORT || '587', 10),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user,
+        pass
+      }
+    });
+  } else {
+    // Mode "service" (Gmail, Outlook...) – compatible avec l'ancien système
+    emailTransporter = nodemailer.createTransport({
+      service: service || 'gmail',
+      auth: {
+        user,
+        pass
+      }
+    });
+  }
 
   return emailTransporter;
 }
