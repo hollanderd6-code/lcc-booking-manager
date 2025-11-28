@@ -3971,167 +3971,126 @@ function fixModalContent(bookingBlock) {
   }, 200);
 }
 
-      
-      // Trouver arrivée et départ
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i] === 'ARRIVÉE' && lines[i+1]) {
-          const match = lines[i+1].match(/(\d+)\s+(\w+)\s+(\d{4})/);
-          if (match) {
-            const jour = match[1].padStart(2, '0');
-            const mois = moisFr[match[2].toLowerCase()];
-            const annee = match[3];
-            startDate = `${annee}-${mois}-${jour}`;
-          }
-        }
-        if (lines[i] === 'DÉPART' && lines[i+1]) {
-          const match = lines[i+1].match(/(\d+)\s+(\w+)\s+(\d{4})/);
-          if (match) {
-            const jour = match[1].padStart(2, '0');
-            const mois = moisFr[match[2].toLowerCase()];
-            const annee = match[3];
-            endDate = `${annee}-${mois}-${jour}`;
-          }
-        }
-      }
-      
-      console.log('📅 Dates parsées:', startDate, '->', endDate);
+// Listener sur les blocs de réservation dans le calendrier
+document.addEventListener('click', function(e) {
+  const bookingBlock = e.target.closest('.booking-block');
+  if (!bookingBlock) return;
 
-if (!startDate || !endDate) {
-  console.log(
-    '⚠️ Impossible de parser les dates, on garde les données trouvées via index (blocage / cas particulier)'
-  );
-  // ⚠️ Surtout ne pas faire "currentBookingData = null" ici
-  // ⚠️ Et ne pas faire "return" si le reste de ta fonction a encore des choses à faire
-  return; // 👉 Si le reste de ton code, en-dessous, UTILISE startDate/endDate, tu peux laisser ce return
-}
+  const bookingIndexAttr = bookingBlock.getAttribute('data-booking-id');
+  const bookingIndex = bookingIndexAttr ? parseInt(bookingIndexAttr, 10) : NaN;
+  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
 
-      
-      // Chercher la réservation par dates exactes
-      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-     // D'abord chercher un blocage avec ces dates
-let booking = reservations.find(r => {
-  if (!r.start || !r.end) return false;
-  const rStart = r.start.split('T')[0];
-  const rEnd = r.end.split('T')[0];
-  const isBlock = r.type === 'block' || r.source === 'BLOCK';
-  return rStart === startDate && rEnd === endDate && isBlock;
+  if (!isNaN(bookingIndex) && reservations[bookingIndex]) {
+    currentBookingData = reservations[bookingIndex];
+    console.log('📦 currentBookingData défini au clic :', currentBookingData);
+  } else {
+    console.log('⚠️ Impossible de trouver la réservation via index', bookingIndexAttr);
+    currentBookingData = null;
+  }
+
+  // On laisse fixModalContent s'occuper de corriger l'affichage du modal
+  fixModalContent(bookingBlock);
 });
 
-// Si pas de blocage trouvé, chercher n'importe quelle réservation
-if (!booking) {
-  booking = reservations.find(r => {
-    if (!r.start || !r.end) return false;
-    const rStart = r.start.split('T')[0];
-    const rEnd = r.end.split('T')[0];
-    return rStart === startDate && rEnd === endDate;
-  });
-}
-      
-      console.log('🔍 Réservation trouvée par dates:', booking);
-      
-      if (!booking) {
-        console.log('❌ Aucune réservation ne correspond à ces dates');
-        return;
-      }
-      
-      currentBookingData = booking;
-      
-      // Récupérer le nom du logement
-      let propertyName = booking.propertyName;
-      
-      // Si pas de propertyName, le récupérer depuis LCC_PROPERTIES
-      if (!propertyName && booking.propertyId) {
-        const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-        const property = properties.find(p => p.id === booking.propertyId);
-        if (property) {
-          propertyName = property.name;
-          console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
-        }
-      }
-      
-      // Corriger "Logement inconnu"
-      if (allText.includes('Logement inconnu') && propertyName) {
-        const htmlContent = detailsContent.innerHTML;
-        detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
-        console.log('✅ Logement corrigé:', propertyName);
-      }
-    }, 200);
+// Listener global pour les boutons du modal (Supprimer / Modifier)
+document.addEventListener('click', function(e) {
+  const deleteBtn = e.target.closest('#deleteBookingBtn');
+  if (deleteBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🟥 Click sur deleteBookingBtn', e.target);
+    handleDeleteBooking();
+    return;
   }
-  document.addEventListener('click', function(e) {
-    const bookingBlock = e.target.closest('.booking-block');
-    if (bookingBlock) {
-      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-      if (reservations.length === 0) {
-        console.log('⚠️ Données non chargées, attente...');
-        setTimeout(() => fixModalContent(bookingBlock), 500);
-      } else {
-        setTimeout(() => fixModalContent(bookingBlock), 200);
-      }
-    }
-  });
- 
+
+  const editBtn = e.target.closest('#editBookingBtn');
+  if (editBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🟦 Click sur editBookingBtn', e.target);
+    handleEditBooking();
+    return;
+  }
+});
+
 function handleDeleteBooking() {
   if (window.deletingInProgress) {
     console.log('⚠️ Suppression déjà en cours, ignoré');
     return;
   }
   window.deletingInProgress = true;
+
   console.log('🧨 handleDeleteBooking avec currentBookingData =', currentBookingData);
+
   if (!currentBookingData) {
     window.deletingInProgress = false;
     alert('Impossible de trouver les données de la réservation');
     return;
   }
-  
-  const isBlock = currentBookingData.type === 'block' || currentBookingData.source === 'BLOCK';
-  const isManual = currentBookingData.source === 'direct' || currentBookingData.source === 'DIRECT';
-  const isFromIcal = currentBookingData.source === 'Airbnb' || currentBookingData.source === 'Booking.com';
-  
+
+  const isBlock =
+    currentBookingData.type === 'block' ||
+    currentBookingData.source === 'BLOCK';
+
+  const isFromIcal =
+    currentBookingData.source === 'Airbnb' ||
+    currentBookingData.source === 'Booking.com';
+
   if (isFromIcal) {
     window.deletingInProgress = false;
-    alert('Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking. Supprimez-la sur la plateforme source.');
+    alert(
+      "Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking. Supprimez-la sur la plateforme source."
+    );
     return;
   }
-  
-  const message = isBlock 
-    ? 'Êtes-vous sûr de vouloir supprimer ce blocage ?' 
+
+  const message = isBlock
+    ? 'Êtes-vous sûr de vouloir supprimer ce blocage ?'
     : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
-  
+
   if (!confirm(message)) {
     window.deletingInProgress = false;
     return;
   }
-  
+
   const token = localStorage.getItem('lcc_token');
-  
+  const payload = {
+    propertyId: currentBookingData.propertyId,
+    uid: currentBookingData.uid
+  };
+
+  console.log('📤 Envoi suppression :', payload);
+
   fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      propertyId: currentBookingData.propertyId,
-      uid: currentBookingData.uid
+    body: JSON.stringify(payload)
+  })
+    .then(res => {
+      console.log('📥 Réponse /manual-reservations/delete status =', res.status);
+      if (!res.ok) {
+        throw new Error('Erreur ' + res.status);
+      }
+      return res.json();
     })
-  })
-  .then(res => {
-    if (!res.ok) {
-      throw new Error('Erreur ' + res.status);
-    }
-    return res.json();
-  })
-  .then(data => {
-    alert('Suppression réussie !');
-    document.getElementById('reservationDetailsModal').style.display = 'none';
-    window.deletingInProgress = false;
-    location.reload();
-  })
-  .catch(err => {
-    window.deletingInProgress = false;
-    console.error('Erreur suppression:', err);
-    alert('Erreur : ' + err.message);
-  });
+    .then(data => {
+      console.log('✅ Suppression backend OK :', data);
+      alert('Suppression réussie !');
+      const detailsModal = document.getElementById('reservationDetailsModal');
+      if (detailsModal) {
+        detailsModal.style.display = 'none';
+      }
+      window.deletingInProgress = false;
+      location.reload();
+    })
+    .catch(err => {
+      window.deletingInProgress = false;
+      console.error('Erreur suppression :', err);
+      alert('Erreur : ' + err.message);
+    });
 }
 
 function handleEditBooking() {
@@ -4139,20 +4098,20 @@ function handleEditBooking() {
     alert('Impossible de trouver les données de la réservation');
     return;
   }
-  
+
   // Fermer le modal de détails
   const detailsModal = document.getElementById('reservationDetailsModal');
   if (detailsModal) {
     detailsModal.style.display = 'none';
     detailsModal.classList.remove('active');
   }
-  
+
   // Ouvrir le modal d'édition et pré-remplir
   const editModal = document.getElementById('editBookingModal');
   if (editModal) {
     editModal.style.display = 'flex';
     setTimeout(() => editModal.classList.add('active'), 10);
-    
+
     // Pré-remplir les champs
     document.getElementById('editBookingId').value = currentBookingData.uid;
     document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
@@ -4162,14 +4121,15 @@ function handleEditBooking() {
     document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
     document.getElementById('editPrice').value = currentBookingData.amount || '';
     document.getElementById('editNotes').value = currentBookingData.notes || '';
-    
+
     // Platform
-    const platform = (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
+    const platform =
+      (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
     const platformSelect = document.getElementById('editPlatform');
     if (platformSelect) {
       platformSelect.value = platform;
     }
-    
+
     // Property
     const propertySelect = document.getElementById('editBookingProperty');
     if (propertySelect && currentBookingData.propertyId) {
@@ -4177,6 +4137,7 @@ function handleEditBooking() {
     }
   }
 }
+
 // Listener global pour les boutons du modal
 document.addEventListener('click', function(e) {
   const deleteBtn = e.target.closest('#deleteBookingBtn');
