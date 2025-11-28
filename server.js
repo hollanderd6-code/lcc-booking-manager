@@ -1075,55 +1075,174 @@ app.get('/api/reservations', async (req, res) => {
 });
 
 // POST - Créer une réservation manuelle
-app.post('/api/reservations/manual', async (req, res) => {
+app.post('/api/bookings', async (req, res) => {
+  console.log('📝 Nouvelle demande de création de réservation');
+  
   try {
+    // 1. VÉRIFICATION AUTHENTIFICATION
     const user = await getUserFromRequest(req);
     if (!user) {
+      console.log('❌ Utilisateur non authentifié');
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
-    const { propertyId, start, end, guestName, notes } = req.body;
-
-    if (!propertyId || !start || !end) {
-      return res.status(400).json({ error: 'propertyId, start et end sont requis' });
+    console.log('✅ Utilisateur authentifié:', user.id);
+    
+    // 2. EXTRACTION ET VALIDATION DES DONNÉES
+    const { propertyId, checkIn, checkOut, guestName, platform, price } = req.body || {};
+    console.log('📦 Données reçues:', { propertyId, checkIn, checkOut, guestName, platform, price });
+    
+    if (!propertyId) {
+      console.log('❌ propertyId manquant');
+      return res.status(400).json({ error: 'propertyId est requis' });
     }
-
+    if (!checkIn) {
+      console.log('❌ checkIn manquant');
+      return res.status(400).json({ error: 'checkIn est requis' });
+    }
+    if (!checkOut) {
+      console.log('❌ checkOut manquant');
+      return res.status(400).json({ error: 'checkOut est requis' });
+    }
+    
+    // 3. VÉRIFICATION DU LOGEMENT
+    if (!Array.isArray(PROPERTIES)) {
+      console.error('❌ PROPERTIES n\'est pas un tableau');
+      return res.status(500).json({ error: 'Erreur de configuration serveur (PROPERTIES)' });
+    }
+    
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
+      console.log('❌ Logement non trouvé:', propertyId);
+      console.log('📋 Logements disponibles pour cet utilisateur:', 
+        PROPERTIES.filter(p => p.userId === user.id).map(p => ({ id: p.id, name: p.name }))
+      );
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
-
+    console.log('✅ Logement trouvé:', property.name);
+    
+    // 4. CRÉATION DE LA RÉSERVATION
+    const uid = 'manual_' + Date.now();
     const reservation = {
-      uid: 'manual_' + Date.now(),
-      propertyId, 
-      start,
-      end,
-      source: 'MANUEL',
-      platform: 'MANUEL',
+      uid: uid,
+      start: checkIn,
+      end: checkOut,
+      source: platform || 'MANUEL',
+      platform: platform || 'direct',
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
-      notes: notes || '',
-      createdAt: new Date().toISOString()
+      price: typeof price === 'number' ? price : 0,
+      createdAt: new Date().toISOString(),
+      // Données supplémentaires pour les notifications
+      propertyId: property.id,
+      propertyName: property.name,
+      propertyColor: property.color || '#3b82f6',
+      userId: user.id
     };
-
-    if (!MANUAL_RESERVATIONS[propertyId]) {
-      MANUAL_RESERVATIONS[propertyId] = [];
+    console.log('✅ Réservation créée:', uid);
+    
+    // 5. SAUVEGARDE DANS MANUAL_RESERVATIONS
+    try {
+      if (typeof MANUAL_RESERVATIONS === 'undefined') {
+        console.log('⚠️  MANUAL_RESERVATIONS non défini, initialisation');
+        global.MANUAL_RESERVATIONS = {};
+      }
+      
+      if (!MANUAL_RESERVATIONS[propertyId]) {
+        MANUAL_RESERVATIONS[propertyId] = [];
+      }
+      MANUAL_RESERVATIONS[propertyId].push(reservation);
+      
+      // Sauvegarde sur disque (si la fonction existe)
+      if (typeof saveManualReservations === 'function') {
+        await saveManualReservations();
+        console.log('✅ Sauvegarde MANUAL_RESERVATIONS OK');
+      } else {
+        console.log('⚠️  Fonction saveManualReservations non trouvée');
+      }
+    } catch (saveErr) {
+      console.error('⚠️  Erreur sauvegarde MANUAL_RESERVATIONS:', saveErr);
+      // On continue quand même
     }
-    MANUAL_RESERVATIONS[propertyId].push(reservation);
-    await saveManualReservations();
-
-    if (!reservationsStore.properties[propertyId]) {
-      reservationsStore.properties[propertyId] = [];
+    
+    // 6. AJOUT AU STORE DES RÉSERVATIONS
+    try {
+      if (typeof reservationsStore === 'undefined') {
+        console.log('⚠️  reservationsStore non défini, initialisation');
+        global.reservationsStore = { properties: {} };
+      }
+      
+      if (!reservationsStore.properties) {
+        reservationsStore.properties = {};
+      }
+      
+      if (!reservationsStore.properties[propertyId]) {
+        reservationsStore.properties[propertyId] = [];
+      }
+      reservationsStore.properties[propertyId].push(reservation);
+      console.log('✅ Ajout au reservationsStore OK');
+    } catch (storeErr) {
+      console.error('⚠️  Erreur ajout au reservationsStore:', storeErr);
+      // On continue quand même
     }
-    reservationsStore.properties[propertyId].push(reservation);
-
-    res.status(201).json({
-      message: 'Réservation manuelle créée',
-      reservation
+    
+    // 7. PRÉPARATION DE LA RÉPONSE
+    const bookingForClient = {
+      id: reservation.uid,
+      propertyId: property.id,
+      propertyName: property.name,
+      propertyColor: property.color || '#3b82f6',
+      checkIn: checkIn,
+      checkOut: checkOut,
+      guestName: reservation.guestName,
+      platform: reservation.platform,
+      price: reservation.price,
+      type: reservation.type
+    };
+    
+    // 8. ENVOI DE LA RÉPONSE (AVANT LES NOTIFICATIONS)
+    console.log('✅ Réservation créée avec succès, envoi de la réponse');
+    res.status(201).json(bookingForClient);
+    
+    // 9. NOTIFICATIONS EN ARRIÈRE-PLAN (après avoir répondu au client)
+    setImmediate(async () => {
+      try {
+        console.log('📧 Tentative d\'envoi des notifications...');
+        
+        // Vérifier que les fonctions de notification existent
+        if (typeof notifyOwnersAboutBookings === 'function') {
+          await notifyOwnersAboutBookings([reservation], []);
+          console.log('✅ Notification propriétaire envoyée');
+        } else {
+          console.log('⚠️  Fonction notifyOwnersAboutBookings non trouvée');
+        }
+        
+        if (typeof notifyCleanersAboutNewBookings === 'function') {
+          await notifyCleanersAboutNewBookings([reservation]);
+          console.log('✅ Notification cleaners envoyée');
+        } else {
+          console.log('⚠️  Fonction notifyCleanersAboutNewBookings non trouvée');
+        }
+        
+        console.log('✅ Notifications traitées');
+      } catch (notifErr) {
+        console.error('⚠️  Erreur lors de l\'envoi des notifications (réservation créée quand même):', notifErr.message);
+        console.error('Stack:', notifErr.stack);
+      }
     });
+    
   } catch (err) {
-    console.error('Erreur création réservation manuelle:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('❌ ERREUR CRITIQUE POST /api/bookings:', err);
+    console.error('Message:', err.message);
+    console.error('Stack:', err.stack);
+    
+    // Si on n'a pas encore envoyé de réponse
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Erreur serveur lors de la création de la réservation',
+        message: err.message,
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
+    }
   }
 });
 
