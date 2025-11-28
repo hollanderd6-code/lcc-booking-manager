@@ -1036,7 +1036,100 @@ app.get('/api/debug-users', async (req, res) => {
 // ============================================
 // ROUTES API - RESERVATIONS (par user)
 // ============================================
+// ============================================
+// ENDPOINT /api/reservations/manual
+// (appelé par le frontend)
+// ============================================
 
+app.post('/api/reservations/manual', async (req, res) => {
+  console.log('📝 /api/reservations/manual appelé');
+  
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, start, end, guestName, notes } = req.body;
+    console.log('📦 Données reçues:', { propertyId, start, end, guestName });
+
+    if (!propertyId || !start || !end) {
+      return res.status(400).json({ error: 'propertyId, start et end sont requis' });
+    }
+
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      console.log('❌ Logement non trouvé:', propertyId);
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+    console.log('✅ Logement trouvé:', property.name);
+
+    const uid = 'manual_' + Date.now();
+    const reservation = {
+      uid: uid,
+      start: start,
+      end: end,
+      source: 'MANUEL',
+      platform: 'MANUEL',
+      type: 'manual',
+      guestName: guestName || 'Réservation manuelle',
+      notes: notes || '',
+      createdAt: new Date().toISOString(),
+      propertyId: property.id,
+      propertyName: property.name,
+      propertyColor: property.color || '#3b82f6',
+      userId: user.id
+    };
+    console.log('✅ Réservation créée:', uid);
+
+    // Sauvegarde
+    if (!MANUAL_RESERVATIONS[propertyId]) {
+      MANUAL_RESERVATIONS[propertyId] = [];
+    }
+    MANUAL_RESERVATIONS[propertyId].push(reservation);
+    
+    if (typeof saveManualReservations === 'function') {
+      await saveManualReservations();
+    }
+
+    if (!reservationsStore.properties[propertyId]) {
+      reservationsStore.properties[propertyId] = [];
+    }
+    reservationsStore.properties[propertyId].push(reservation);
+
+    // Réponse au client AVANT les notifications
+    res.status(201).json({
+      message: 'Réservation manuelle créée',
+      reservation: reservation
+    });
+    console.log('✅ Réponse envoyée au client');
+
+    // Notifications en arrière-plan
+    setImmediate(async () => {
+      try {
+        console.log('📧 Envoi des notifications...');
+        
+        if (typeof notifyOwnersAboutBookings === 'function') {
+          await notifyOwnersAboutBookings([reservation], []);
+          console.log('✅ Notification propriétaire envoyée');
+        }
+        
+        if (typeof notifyCleanersAboutNewBookings === 'function') {
+          await notifyCleanersAboutNewBookings([reservation]);
+          console.log('✅ Notification cleaners envoyée');
+        }
+      } catch (notifErr) {
+        console.error('⚠️  Erreur notifications:', notifErr.message);
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Erreur /api/reservations/manual:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+});
 // GET - Toutes les réservations du user
 app.get('/api/reservations', async (req, res) => {
   const user = await getUserFromRequest(req);
