@@ -3964,11 +3964,16 @@ function fixModalContent(bookingBlock) {
       }
       
       console.log('📅 Dates parsées:', startDate, '->', endDate);
-      
-      if (!startDate || !endDate) {
-        console.log('❌ Impossible de parser les dates');
-        return;
-      }
+
+if (!startDate || !endDate) {
+  console.log(
+    '⚠️ Impossible de parser les dates, on garde les données trouvées via index (blocage / cas particulier)'
+  );
+  // ⚠️ Surtout ne pas faire "currentBookingData = null" ici
+  // ⚠️ Et ne pas faire "return" si le reste de ta fonction a encore des choses à faire
+  return; // 👉 Si le reste de ton code, en-dessous, UTILISE startDate/endDate, tu peux laisser ce return
+}
+
       
       // Chercher la réservation par dates exactes
       const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
