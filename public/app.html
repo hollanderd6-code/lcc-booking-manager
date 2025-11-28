@@ -4100,7 +4100,7 @@ function handleDeleteBooking() {
     return;
   }
   window.deletingInProgress = true;
-  
+  console.log('🧨 handleDeleteBooking avec currentBookingData =', currentBookingData);
   if (!currentBookingData) {
     window.deletingInProgress = false;
     alert('Impossible de trouver les données de la réservation');
