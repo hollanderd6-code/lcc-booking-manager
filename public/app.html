@@ -4226,6 +4226,40 @@ document.addEventListener('click', function(e) {
     return;
   }
 });
+function closeEditBookingModal() {
+  const editModal = document.getElementById('editBookingModal');
+  if (editModal) {
+    editModal.classList.remove('active');
+    editModal.style.display = 'none';
+  }
+}
+
+// Croix en haut à droite
+const closeEditModalBtn = document.getElementById('closeEditModal');
+if (closeEditModalBtn) {
+  closeEditModalBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    closeEditBookingModal();
+  });
+}
+
+// Bouton "Annuler"
+const cancelEditBtn = document.getElementById('cancelEditBooking');
+if (cancelEditBtn) {
+  cancelEditBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    closeEditBookingModal();
+  });
+}
+
+// Clic sur le fond gris
+const editModalOverlay = document.getElementById('editModalOverlay');
+if (editModalOverlay) {
+  editModalOverlay.addEventListener('click', function (e) {
+    e.preventDefault();
+    closeEditBookingModal();
+  });
+}
 
 document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
   const propertyId = document.getElementById('blockPropertySelect').value;
