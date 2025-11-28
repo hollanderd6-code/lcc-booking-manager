@@ -4160,17 +4160,67 @@ function handleEditBooking() {
   }
 
   const editModal = document.getElementById('editBookingModal');
-  if (!editModal) return;
+  if (!editModal) {
+    console.warn('⚠️ Pas de #editBookingModal dans le DOM');
+    return;
+  }
 
-  // 1️⃣ Peupler la liste des logements AVANT de sélectionner
-  populateEditBookingProperties(currentBookingData.propertyId);
+  // === Remplir le select des logements ===
+  const propertySelect = document.getElementById('editBookingProperty');
+  if (propertySelect) {
+    let props = [];
+    try {
+      if (Array.isArray(window.LCC_PROPERTIES)) {
+        props = window.LCC_PROPERTIES;
+      } else {
+        props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      }
+    } catch (e) {
+      console.warn('Impossible de lire la liste des logements pour l’édition', e);
+    }
 
-  // 2️⃣ Afficher le modal
+    propertySelect.innerHTML = '';
+
+    if (!props.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'Aucun logement disponible';
+      propertySelect.appendChild(opt);
+      propertySelect.disabled = true;
+    } else {
+      propertySelect.disabled = false;
+
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Sélectionner un logement';
+      placeholder.disabled = true;
+      propertySelect.appendChild(placeholder);
+
+      props.forEach((p, index) => {
+        const opt = document.createElement('option');
+        opt.value = String(p.id != null ? p.id : index);
+        opt.textContent = p.name || ('Logement ' + (index + 1));
+        propertySelect.appendChild(opt);
+      });
+
+      if (currentBookingData.propertyId) {
+        propertySelect.value = String(currentBookingData.propertyId);
+        if (propertySelect.selectedIndex === -1) {
+          propertySelect.selectedIndex = 0;
+        }
+      } else {
+        propertySelect.selectedIndex = 0;
+      }
+    }
+  }
+
+  // === Afficher le modal d’édition ===
   editModal.style.display = 'flex';
   setTimeout(() => editModal.classList.add('active'), 10);
 
-  // 3️⃣ Pré-remplir les champs
+  // === Pré-remplir les champs ===
   document.getElementById('editBookingId').value = currentBookingData.uid;
+
   const sourceInput = document.getElementById('editBookingSource');
   if (sourceInput) {
     sourceInput.value = currentBookingData.source || currentBookingData.platform || '';
@@ -4187,23 +4237,14 @@ function handleEditBooking() {
   document.getElementById('editPrice').value = currentBookingData.amount || '';
   document.getElementById('editNotes').value = currentBookingData.notes || '';
 
-  // Plateforme
   const platformSelect = document.getElementById('editPlatform');
   if (platformSelect) {
     const platform =
       (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
     platformSelect.value = platform;
   }
-
-  // Logement
-  const propertySelect = document.getElementById('editBookingProperty');
-  if (propertySelect && currentBookingData.propertyId) {
-    propertySelect.value = String(currentBookingData.propertyId);
-    if (propertySelect.selectedIndex === -1) {
-      propertySelect.selectedIndex = 0;
-    }
-  }
 }
+
 
 
 // Listener global pour les boutons du modal
