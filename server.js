@@ -2735,34 +2735,84 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
+      console.log('❌ Suppression refusée : utilisateur non authentifié');
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
     const { propertyId, uid } = req.body || {};
+    console.log('🗑 Demande de suppression manuelle reçue :', {
+      userId: user.id,
+      propertyId,
+      uid
+    });
 
     if (!propertyId || !uid) {
+      console.log('❌ Requête invalide pour suppression : propertyId ou uid manquant', {
+        propertyId,
+        uid
+      });
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
     }
 
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(
+      (p) => p.id === propertyId && p.userId === user.id
+    );
     if (!property) {
+      console.log('❌ Logement non trouvé pour suppression', {
+        propertyId,
+        userId: user.id
+      });
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
-    if (MANUAL_RESERVATIONS[propertyId]) {
-      const initialLength = MANUAL_RESERVATIONS[propertyId].length;
-      MANUAL_RESERVATIONS[propertyId] = MANUAL_RESERVATIONS[propertyId].filter(r => r.uid !== uid);
-      const newLength = MANUAL_RESERVATIONS[propertyId].length;
-      
-      if (initialLength === newLength) {
-        return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
-      }
-      
-      await saveManualReservations();
-      
-      if (reservationsStore.properties[propertyId]) {
-        reservationsStore.properties[propertyId] = reservationsStore.properties[propertyId].filter(r => r.uid !== uid);
-      }
+    if (!MANUAL_RESERVATIONS[propertyId] || MANUAL_RESERVATIONS[propertyId].length === 0) {
+      console.log('❌ Aucune réservation/blocage trouvé pour ce logement', {
+        propertyId,
+        uid
+      });
+      return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
+    }
+
+    const initialLength = MANUAL_RESERVATIONS[propertyId].length;
+    MANUAL_RESERVATIONS[propertyId] =
+      MANUAL_RESERVATIONS[propertyId].filter((r) => r.uid !== uid);
+    const newLength = MANUAL_RESERVATIONS[propertyId].length;
+
+    console.log('📊 Suppression dans MANUAL_RESERVATIONS :', {
+      propertyId,
+      uid,
+      initialLength,
+      newLength
+    });
+
+    if (initialLength === newLength) {
+      console.log(
+        '❌ Aucune entrée supprimée (uid non trouvé dans MANUAL_RESERVATIONS)',
+        { propertyId, uid }
+      );
+      return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
+    }
+
+    await saveManualReservations();
+    console.log('💾 MANUAL_RESERVATIONS sauvegardé après suppression');
+
+    if (reservationsStore.properties[propertyId]) {
+      const initialStoreLength = reservationsStore.properties[propertyId].length;
+      reservationsStore.properties[propertyId] =
+        reservationsStore.properties[propertyId].filter((r) => r.uid !== uid);
+      const newStoreLength = reservationsStore.properties[propertyId].length;
+
+      console.log('🧮 reservationsStore mis à jour :', {
+        propertyId,
+        uid,
+        initialStoreLength,
+        newStoreLength
+      });
+    } else {
+      console.log(
+        'ℹ️ Aucun entry dans reservationsStore pour ce propertyId au moment de la suppression',
+        { propertyId }
+      );
     }
 
     res.status(200).json({
@@ -2774,4 +2824,5 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
