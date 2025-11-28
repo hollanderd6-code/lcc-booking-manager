@@ -3903,43 +3903,74 @@ console.log('🔍 Start:', startDate, 'End:', endDate);
   document.addEventListener('DOMContentLoaded', function() {
     // Intercepter les clics sur les booking-blocks
     document.addEventListener('click', function(e) {
-      const bookingBlock = e.target.closest('.booking-block');
-      if (bookingBlock) {
-        // Attendre que le modal soit rempli
-        setTimeout(function() {
-          fixModalContent(bookingBlock);
-        }, 200);
-      }
-    });
-    
+  const bookingBlock = e.target.closest('.booking-block');
+  if (!bookingBlock) return;
+
+  // 1️⃣ On récupère TOUT DE SUITE la réservation via l'index
+  const bookingIndex = parseInt(bookingBlock.getAttribute('data-booking-id'), 10);
+  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+
+  if (!isNaN(bookingIndex) && reservations[bookingIndex]) {
+    currentBookingData = reservations[bookingIndex];
+    console.log('📦 currentBookingData défini au clic :', currentBookingData);
+  } else {
+    console.log('⚠️ Impossible de trouver la réservation via index', bookingIndex, reservations);
+    currentBookingData = null;
+  }
+
+  // 2️⃣ Ensuite seulement, on laisse le temps au modal de se remplir,
+  // et on appelle fixModalContent pour corriger l'affichage si besoin
+  if (reservations.length === 0) {
+    console.log('⚠️ Données non chargées, attente...');
+    setTimeout(() => fixModalContent(bookingBlock), 500);
+  } else {
+    setTimeout(() => fixModalContent(bookingBlock), 200);
+  }
+});
+
     // Gérer les boutons du modal
     setupModalButtons();
   });
   
 function fixModalContent(bookingBlock) {
-    const detailsContent = document.getElementById('reservationDetailsContent');
-    if (!detailsContent) return;
-      // Récupérer immédiatement via data-booking-id comme fallback
-  const bookingIndex = parseInt(bookingBlock.getAttribute('data-booking-id'));
-  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-  if (!isNaN(bookingIndex) && reservations[bookingIndex]) {
-    currentBookingData = reservations[bookingIndex];
-    console.log('📦 Données stockées via index:', currentBookingData);
+  const detailsContent = document.getElementById('reservationDetailsContent');
+  if (!detailsContent) {
+    console.log('⚠️ Pas de reservationDetailsContent, on ne touche à rien');
+    return;
   }
-    // Attendre que le modal soit vraiment rempli
-    setTimeout(function() {
-      const allText = detailsContent.innerText || '';
-      
-      // Parser les dates françaises
-      const moisFr = {
-        'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
-        'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
-        'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
-      };
-      
-      const lines = allText.split('\n').map(l => l.trim());
-      let startDate = null;
-      let endDate = null;
+
+  // On NE TOUCHE PLUS à currentBookingData ici.
+  // On laisse juste le temps au modal de se remplir,
+  // puis on corrige l'affichage si besoin (ex: "Logement inconnu").
+  setTimeout(function() {
+    const allText = detailsContent.innerText || '';
+
+    if (!currentBookingData) {
+      console.log('⚠️ Pas de currentBookingData dans fixModalContent, on sort');
+      return;
+    }
+
+    // Récupérer le nom du logement
+    let propertyName = currentBookingData.propertyName;
+
+    if (!propertyName && currentBookingData.propertyId) {
+      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      const property = properties.find(p => p.id === currentBookingData.propertyId);
+      if (property) {
+        propertyName = property.name;
+        console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
+      }
+    }
+
+    // Corriger "Logement inconnu" dans le HTML du modal
+    if (propertyName && allText.includes('Logement inconnu')) {
+      const htmlContent = detailsContent.innerHTML;
+      detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
+      console.log('✅ Logement corrigé dans le modal :', propertyName);
+    }
+  }, 200);
+}
+
       
       // Trouver arrivée et départ
       for (let i = 0; i < lines.length; i++) {
