@@ -297,12 +297,22 @@
     };
 
     try {
-      const response = await fetch('/api/reservations/manual', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
+      // Récupérer le token
+const token = localStorage.getItem('lcc_token');
+
+const response = await fetch('/api/reservations/manual', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`  // ✅ AJOUTER CETTE LIGNE
+  },
+  body: JSON.stringify({
+    propertyId: ...,
+    start: ...,
+    end: ...,
+    guestName: ...
+  })
+});
 
       if (response.ok) {
         closeBookingModal();
