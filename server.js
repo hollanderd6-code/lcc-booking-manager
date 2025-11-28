@@ -773,6 +773,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
         console.error('❌ Erreur envoi planning ménage (email) :', err);
       })
   );
+  }
     // WhatsApp
     if (whatsappService.isConfigured() && cleanerPhone) {
       let waText = `Planning ménage de demain (${tomorrowIso}):\n`;
