@@ -3952,53 +3952,7 @@ console.log('🔍 Start:', startDate, 'End:', endDate);
 // Correction du modal de détails de réservation - Version 2
 (function() {
   let currentBookingData = null;
-    // Réservations + cautions (récupérées via /api/reservations-with-deposits)
-  let reservationsWithDeposits = [];
-  function findDepositForBooking(booking) {
-    if (!booking || !Array.isArray(reservationsWithDeposits) || reservationsWithDeposits.length === 0) {
-      return null;
-    }
-
-    const uid = booking.uid || booking.reservationUid || booking.id;
-    const startStr = (booking.start || booking.startDate || '').slice(0, 10);
-    const endStr   = (booking.end   || booking.endDate   || '').slice(0, 10);
-    const propId = booking.propertyId || (booking.property && booking.property.id) || null;
-    const guestName = (booking.guestName || booking.name || '').trim().toLowerCase();
-
-    let found = null;
-
-    // 1) Matching direct sur l’uid s’il existe
-    if (uid) {
-      found = reservationsWithDeposits.find(r => {
-        const rUid = r.reservationUid || r.uid;
-        return rUid && String(rUid) === String(uid);
-      });
-    }
-
-    // 2) Sinon, matching par property + dates (+ nom éventuellement)
-    if (!found) {
-      found = reservationsWithDeposits.find(r => {
-        if (propId && r.propertyId && String(r.propertyId) !== String(propId)) {
-          return false;
-        }
-
-        const rStart = (r.startDate || '').slice(0, 10);
-        const rEnd   = (r.endDate   || '').slice(0, 10);
-
-        if (startStr && rStart && rStart !== startStr) return false;
-        if (endStr   && rEnd   && rEnd   !== endStr)   return false;
-
-        if (guestName) {
-          const g = (r.guestName || '').trim().toLowerCase();
-          if (g && g !== guestName) return false;
-        }
-
-        return true;
-      });
-    }
-
-    return found || null;
-  }
+  
   document.addEventListener('DOMContentLoaded', function() {
     // Intercepter les clics sur les booking-blocks
     document.addEventListener('click', function(e) {
@@ -4030,50 +3984,7 @@ console.log('🔍 Start:', startDate, 'End:', endDate);
     // Gérer les boutons du modal
     setupModalButtons();
   });
-  // Charger les infos de cautions pour toutes les réservations
-    loadReservationsWithDepositsForCalendar();
-  });
-      async function loadReservationsWithDepositsForCalendar() {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      console.warn('🔐 Pas de token, impossible de charger les cautions');
-      return;
-    }
-
-    try {
-      const res = await fetch('https://lcc-booking-manager.onrender.com/api/reservations-with-deposits', {
-        headers: {
-          'Authorization': 'Bearer ' + token
-        }
-      });
-
-      if (!res.ok) {
-        console.warn('⚠️ Erreur API /reservations-with-deposits :', res.status);
-        return;
-      }
-
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        reservationsWithDeposits = data;
-        console.log('✅ Cautions chargées pour le calendrier :', data.length, 'séjours');
-      } else {
-        console.warn('⚠️ Réponse inattendue pour /reservations-with-deposits', data);
-      }
-    } catch (err) {
-      console.warn('⚠️ Impossible de charger les cautions', err);
-    }
-  }
-  function normalizeSourceForDeposit(raw) {
-    if (!raw) return 'direct';
-    const val = String(raw).toLowerCase();
-    if (val.includes('airbnb')) return 'airbnb';
-    if (val.includes('booking')) return 'booking';
-    if (val.includes('vrbo') || val.includes('abritel') || val.includes('homeaway')) return 'vrbo';
-    if (val.includes('expedia')) return 'expedia';
-    if (val.includes('block') || val.includes('blocage') || val.includes('indispo')) return 'block';
-    return 'direct';
-  }
-
+  
 function fixModalContent(bookingBlock) {
   const detailsContent = document.getElementById('reservationDetailsContent');
   if (!detailsContent) {
@@ -4110,10 +4021,8 @@ function fixModalContent(bookingBlock) {
       detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
       console.log('✅ Logement corrigé dans le modal :', propertyName);
     }
-          // ➕ Mise à jour du bloc "Caution" dans le modal
-      updateDepositInfoInDetailsModal(currentBookingData, detailsContent);
-    }, 200);
-  }
+  }, 200);
+}
 
 // Listener sur les blocs de réservation dans le calendrier
 document.addEventListener('click', function(e) {
