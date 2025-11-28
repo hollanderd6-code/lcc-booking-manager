@@ -4069,31 +4069,7 @@ if (!booking) {
       }
     }
   });
-  let modalButtonsSetup = false;
-
-function setupModalButtons() {
-  if (modalButtonsSetup) return;  
-  modalButtonsSetup = true;     
-  
-  // Bouton Supprimer
-  document.addEventListener('click', function(e) {
-    if (e.target.id === 'deleteBookingBtn' || e.target.closest('#deleteBookingBtn')) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleDeleteBooking();
-    }
-  });
-  
-  // Bouton Modifier
-  document.addEventListener('click', function(e) {
-    if (e.target.id === 'editBookingBtn' || e.target.closest('#editBookingBtn')) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleEditBooking();
-    }
-  });
-}
-setupModalButtons();
+ 
 function handleDeleteBooking() {
   if (window.deletingInProgress) {
     console.log('⚠️ Suppression déjà en cours, ignoré');
@@ -4201,6 +4177,26 @@ function handleEditBooking() {
     }
   }
 }
+// Listener global pour les boutons du modal
+document.addEventListener('click', function(e) {
+  const deleteBtn = e.target.closest('#deleteBookingBtn');
+  if (deleteBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🟥 Click sur deleteBookingBtn', e.target);
+    handleDeleteBooking();
+    return;
+  }
+
+  const editBtn = e.target.closest('#editBookingBtn');
+  if (editBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🟦 Click sur editBookingBtn', e.target);
+    handleEditBooking();
+    return;
+  }
+});
 
 document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
   const propertyId = document.getElementById('blockPropertySelect').value;
