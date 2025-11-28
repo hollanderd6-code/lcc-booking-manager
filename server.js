@@ -1095,6 +1095,7 @@ app.post('/api/reservations/manual', async (req, res) => {
 
     const reservation = {
       uid: 'manual_' + Date.now(),
+      propertyId, 
       start,
       end,
       source: 'MANUEL',
