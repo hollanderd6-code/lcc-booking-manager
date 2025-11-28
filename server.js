@@ -726,42 +726,53 @@ async function sendDailyCleaningPlan() {
 
     if (!jobs || jobs.length === 0) return;
 
-    const cleanerName = cleaner.name || '';
-    const cleanerEmail = cleaner.email;
-    const cleanerPhone = cleaner.phone;
+const cleanerName = cleaner.name || '';
+const cleanerEmail = cleaner.email;
+const cleanerPhone = cleaner.phone;
 
-    const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
-    const subject = `🧹 Planning ménage – ${tomorrowIso}`;
+const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
+const subject = `🧹 Planning ménage – ${tomorrowIso}`;
 
-        if ((useBrevo || transporter) && cleanerEmail) {
-      ...
-      tasks.push(
-        (useBrevo
-          ? sendEmailViaBrevo({
-              to: cleanerEmail,
-              subject,
-              text: textBody,
-              html: htmlBody
-            })
-          : transporter.sendMail({
-              from,
-              to: cleanerEmail,
-              subject,
-              text: textBody,
-              html: htmlBody
-            })
-        )
-          .then(() => {
-            console.log(
-              `📧 Planning ménage envoyé à ${cleanerEmail} pour ${tomorrowIso}`
-            );
-          })
-          .catch((err) => {
-            console.error('❌ Erreur envoi planning ménage (email) :', err);
-          })
-      );
-    }
+if ((useBrevo || transporter) && cleanerEmail) {
+  // Construction du textBody
+  let textBody = `${hello}\n\nPlanning ménage de demain (${tomorrowIso}):\n\n`;
+  jobs.forEach((job, index) => {
+    textBody += `${index + 1}. ${job.propertyName} – départ le ${job.end} (${job.guestName})\n`;
+  });
+  textBody += '\nMerci beaucoup,\nL\'équipe Boostinghost';
 
+  // Construction du htmlBody
+  let htmlBody = `<p>${hello}</p><p>Planning ménage de demain (${tomorrowIso}):</p><ul>`;
+  jobs.forEach((job) => {
+    htmlBody += `<li><strong>${job.propertyName}</strong> – départ le ${job.end} (${job.guestName})</li>`;
+  });
+  htmlBody += `</ul><p>Merci beaucoup,<br>L'équipe Boostinghost</p>`;
+
+  tasks.push(
+    (useBrevo
+      ? sendEmailViaBrevo({
+          to: cleanerEmail,
+          subject,
+          text: textBody,
+          html: htmlBody
+        })
+      : transporter.sendMail({
+          from,
+          to: cleanerEmail,
+          subject,
+          text: textBody,
+          html: htmlBody
+        })
+    )
+      .then(() => {
+        console.log(
+          `📧 Planning ménage envoyé à ${cleanerEmail} pour ${tomorrowIso}`
+        );
+      })
+      .catch((err) => {
+        console.error('❌ Erreur envoi planning ménage (email) :', err);
+      })
+  );
     // WhatsApp
     if (whatsappService.isConfigured() && cleanerPhone) {
       let waText = `Planning ménage de demain (${tomorrowIso}):\n`;
