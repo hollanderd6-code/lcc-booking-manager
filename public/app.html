@@ -4301,6 +4301,123 @@ if (editModalOverlay) {
     closeEditBookingModal();
   });
 }
+// Soumission du formulaire "Modifier la réservation"
+const editBookingForm = document.getElementById('editBookingForm');
+if (editBookingForm) {
+  editBookingForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    console.log('✏️ Soumission du formulaire d’édition');
+
+    if (!currentBookingData) {
+      alert('Impossible de trouver les données de la réservation');
+      return;
+    }
+
+    const isBlock =
+      currentBookingData.type === 'block' ||
+      currentBookingData.source === 'BLOCK';
+
+    const isFromIcal =
+      currentBookingData.source === 'Airbnb' ||
+      currentBookingData.source === 'Booking.com';
+
+    if (isFromIcal) {
+      alert("Vous ne pouvez pas modifier ici une réservation importée (Airbnb / Booking). Modifiez-la sur la plateforme source.");
+      return;
+    }
+
+    // Pour l’instant on gère surtout le cas BLOCAGE
+    if (!isBlock) {
+      alert("Pour l’instant, ce formulaire permet surtout de déplacer / modifier les blocages manuels. Les autres réservations resteront sur le même logement.");
+      // tu pourras étendre plus tard si tu veux
+      // return ici si tu veux vraiment empêcher toute édition sur les autres types
+      // return;
+    }
+
+    const propertyId = document.getElementById('editBookingProperty').value;
+    const start = document.getElementById('editCheckIn').value;
+    const end = document.getElementById('editCheckOut').value;
+    const guestName = document.getElementById('editGuestName').value;
+    const notes = document.getElementById('editNotes').value;
+
+    if (!propertyId || !start || !end) {
+      alert('Merci de sélectionner un logement et des dates.');
+      return;
+    }
+
+    const token = localStorage.getItem('lcc_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
+    }
+
+    try {
+      // 1️⃣ On supprime l’ancien blocage (sur l’ancien logement)
+      console.log('🧨 Édition blocage - ancien logement:', currentBookingData.propertyId, 'nouveau:', propertyId);
+
+      const deleteRes = await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          propertyId: currentBookingData.propertyId, // ancien logement
+          uid: currentBookingData.uid
+        })
+      });
+
+      let deleteBody = {};
+      try {
+        deleteBody = await deleteRes.json();
+      } catch (e) {}
+      console.log('📥 Réponse suppression blocage:', deleteRes.status, deleteBody);
+
+      // Si 404 on tolère (au pire déjà supprimé)
+      if (!deleteRes.ok && deleteRes.status !== 404) {
+        throw new Error(deleteBody.error || 'Erreur lors de la suppression (' + deleteRes.status + ')');
+      }
+
+      // 2️⃣ On recrée un blocage sur le nouveau logement
+      if (isBlock) {
+        const blockPayload = {
+          propertyId,
+          start,
+          end,
+          reason: notes || guestName || 'Blocage manuel'
+        };
+
+        console.log('📤 Création nouveau blocage:', blockPayload);
+
+        const createRes = await fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(blockPayload)
+        });
+
+        let createBody = {};
+        try {
+          createBody = await createRes.json();
+        } catch (e) {}
+        console.log('📥 Réponse création blocage:', createRes.status, createBody);
+
+        if (!createRes.ok) {
+          throw new Error(createBody.error || 'Erreur lors de l’enregistrement (' + createRes.status + ')');
+        }
+      }
+
+      alert('Blocage mis à jour !');
+
+      const editModal = document.getElementById('editBookingModal');
+      if (editModal) {
+        editModal.classList.remove('active');
+        editModal.style.display = 'none';
+      }
+
+      location.reload();
+    } catch (err) {
+      console.error('❌ Erreur mise à jour blocage:', err);
+      alert('Erreur : ' + err.message);
+    }
+  });
+}
 
 document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
   const propertyId = document.getElementById('blockPropertySelect').value;
