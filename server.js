@@ -1348,18 +1348,14 @@ app.post('/api/bookings', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
     const { propertyId, checkIn, checkOut, guestName, platform, price } = req.body || {};
-
     if (!propertyId || !checkIn || !checkOut) {
       return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
     }
-
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
-
     const reservation = {
       uid: 'manual_' + Date.now(),
       start: checkIn,
@@ -1369,39 +1365,17 @@ app.post('/api/bookings', async (req, res) => {
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
       price: typeof price === 'number' ? price : 0,
-      createdAt: new Date().toISOString(),
-       propertyId: property.id,
-  propertyName: property.name,
-  propertyColor: property.color || '#3b82f6',
-  userId: user.id
+      createdAt: new Date().toISOString()
     };
-
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(reservation);
     await saveManualReservations();
-
     if (!reservationsStore.properties[propertyId]) {
       reservationsStore.properties[propertyId] = [];
     }
     reservationsStore.properties[propertyId].push(reservation);
-// ✅ AJOUTER CE BLOC COMPLET :
-try {
-  console.log('📧 Envoi des notifications pour la réservation manuelle...');
-  
-  if (typeof notifyOwnersAboutBookings === 'function') {
-    await notifyOwnersAboutBookings([reservation], []);
-  }
-  
-  if (typeof notifyCleanersAboutNewBookings === 'function') {
-    await notifyCleanersAboutNewBookings([reservation]);
-  }
-  
-  console.log('✅ Notifications envoyées avec succès');
-} catch (notifErr) {
-  console.error('❌ Erreur notifications:', notifErr);
-}
     const bookingForClient = {
       id: reservation.uid,
       propertyId: property.id,
@@ -1414,7 +1388,6 @@ try {
       price: reservation.price,
       type: reservation.type
     };
-
     res.status(201).json(bookingForClient);
   } catch (err) {
     console.error('Erreur POST /api/bookings :', err);
