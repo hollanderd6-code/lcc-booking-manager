@@ -1109,7 +1109,6 @@ app.post('/api/reservations/manual', async (req, res) => {
      propertyColor: property.color,
       userId: user.id
    };
-    };
 
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
