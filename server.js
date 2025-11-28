@@ -1036,7 +1036,38 @@ app.get('/api/debug-users', async (req, res) => {
 // ============================================
 // ROUTES API - RESERVATIONS (par user)
 // ============================================
+// ============================================
+// ENDPOINT DE DEBUG - VÉRIFICATION NOTIFICATIONS
+// ============================================
 
+app.get('/api/debug/notification-settings', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const settings = await getNotificationSettings(user.id);
+    const transporter = getEmailTransporter();
+    
+    res.json({
+      userId: user.id,
+      email: user.email,
+      notificationSettings: settings,
+      emailConfigured: transporter !== null,
+      whatsappConfigured: whatsappService.isConfigured(),
+      emailEnv: {
+        EMAIL_HOST: process.env.EMAIL_HOST ? '✅ Défini' : '❌ Manquant',
+        EMAIL_USER: process.env.EMAIL_USER ? '✅ Défini' : '❌ Manquant',
+        EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? '✅ Défini' : '❌ Manquant',
+        EMAIL_FROM: process.env.EMAIL_FROM || 'Valeur par défaut'
+      }
+    });
+  } catch (err) {
+    console.error('Erreur debug notification settings:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 // GET - Toutes les réservations du user
 app.get('/api/reservations', async (req, res) => {
   const user = await getUserFromRequest(req);
