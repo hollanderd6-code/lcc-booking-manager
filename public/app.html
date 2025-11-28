@@ -2339,6 +2339,59 @@
           nrPropertySelect.disabled = true;
           return;
         }
+function populateEditBookingProperties(selectedPropertyId) {
+  const select = document.getElementById('editBookingProperty');
+  if (!select) return;
+
+  let props = [];
+  try {
+    if (typeof getAvailablePropertiesForNewReservation === 'function') {
+      props = getAvailablePropertiesForNewReservation();
+    } else if (Array.isArray(window.LCC_PROPERTIES)) {
+      props = window.LCC_PROPERTIES;
+    } else {
+      props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+    }
+  } catch (e) {
+    console.warn('Impossible de lire la liste des logements pour l’édition', e);
+  }
+
+  select.innerHTML = '';
+
+  if (!props.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'Aucun logement disponible';
+    select.appendChild(opt);
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Sélectionner un logement';
+  placeholder.disabled = true;
+  select.appendChild(placeholder);
+
+  props.forEach((p, index) => {
+    const opt = document.createElement('option');
+    opt.value = String(p.id != null ? p.id : index);
+    opt.textContent = p.name || ('Logement ' + (index + 1));
+    select.appendChild(opt);
+  });
+
+  if (selectedPropertyId) {
+    select.value = String(selectedPropertyId);
+    if (select.selectedIndex === -1) {
+      // au cas où l’ID ne matche pas une option
+      select.selectedIndex = 0;
+    }
+  } else {
+    select.selectedIndex = 0;
+  }
+}
 
         nrPropertySelect.disabled = false;
 
@@ -4106,37 +4159,52 @@ function handleEditBooking() {
     detailsModal.classList.remove('active');
   }
 
-  // Ouvrir le modal d'édition et pré-remplir
   const editModal = document.getElementById('editBookingModal');
-  if (editModal) {
-    editModal.style.display = 'flex';
-    setTimeout(() => editModal.classList.add('active'), 10);
+  if (!editModal) return;
 
-    // Pré-remplir les champs
-    document.getElementById('editBookingId').value = currentBookingData.uid;
-    document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
-    document.getElementById('editCheckOut').value = currentBookingData.end.split('T')[0];
-    document.getElementById('editGuestName').value = currentBookingData.guestName || '';
-    document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
-    document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
-    document.getElementById('editPrice').value = currentBookingData.amount || '';
-    document.getElementById('editNotes').value = currentBookingData.notes || '';
+  // 1️⃣ Peupler la liste des logements AVANT de sélectionner
+  populateEditBookingProperties(currentBookingData.propertyId);
 
-    // Platform
+  // 2️⃣ Afficher le modal
+  editModal.style.display = 'flex';
+  setTimeout(() => editModal.classList.add('active'), 10);
+
+  // 3️⃣ Pré-remplir les champs
+  document.getElementById('editBookingId').value = currentBookingData.uid;
+  const sourceInput = document.getElementById('editBookingSource');
+  if (sourceInput) {
+    sourceInput.value = currentBookingData.source || currentBookingData.platform || '';
+  }
+
+  document.getElementById('editCheckIn').value =
+    (currentBookingData.start || '').split('T')[0] || '';
+  document.getElementById('editCheckOut').value =
+    (currentBookingData.end || '').split('T')[0] || '';
+
+  document.getElementById('editGuestName').value = currentBookingData.guestName || '';
+  document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
+  document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
+  document.getElementById('editPrice').value = currentBookingData.amount || '';
+  document.getElementById('editNotes').value = currentBookingData.notes || '';
+
+  // Plateforme
+  const platformSelect = document.getElementById('editPlatform');
+  if (platformSelect) {
     const platform =
       (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
-    const platformSelect = document.getElementById('editPlatform');
-    if (platformSelect) {
-      platformSelect.value = platform;
-    }
+    platformSelect.value = platform;
+  }
 
-    // Property
-    const propertySelect = document.getElementById('editBookingProperty');
-    if (propertySelect && currentBookingData.propertyId) {
-      propertySelect.value = currentBookingData.propertyId;
+  // Logement
+  const propertySelect = document.getElementById('editBookingProperty');
+  if (propertySelect && currentBookingData.propertyId) {
+    propertySelect.value = String(currentBookingData.propertyId);
+    if (propertySelect.selectedIndex === -1) {
+      propertySelect.selectedIndex = 0;
     }
   }
 }
+
 
 // Listener global pour les boutons du modal
 document.addEventListener('click', function(e) {
