@@ -471,13 +471,14 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
             html: htmlBody
           });
         }
-
         console.log(
           `📧 Notification "${type}" envoyée à ${user.email} (resa uid=${res.uid || res.id})`
         );
       } catch (err) {
         console.error('❌ Erreur envoi email notification réservation :', err);
       }
+    })());  
+  };  
 
   (newReservations || []).forEach(res => handleReservation(res, 'new'));
   (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
