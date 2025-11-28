@@ -1369,7 +1369,11 @@ app.post('/api/bookings', async (req, res) => {
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
       price: typeof price === 'number' ? price : 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+       propertyId: property.id,
+  propertyName: property.name,
+  propertyColor: property.color || '#3b82f6',
+  userId: user.id
     };
 
     if (!MANUAL_RESERVATIONS[propertyId]) {
@@ -1382,7 +1386,22 @@ app.post('/api/bookings', async (req, res) => {
       reservationsStore.properties[propertyId] = [];
     }
     reservationsStore.properties[propertyId].push(reservation);
-
+// ✅ AJOUTER CE BLOC COMPLET :
+try {
+  console.log('📧 Envoi des notifications pour la réservation manuelle...');
+  
+  if (typeof notifyOwnersAboutBookings === 'function') {
+    await notifyOwnersAboutBookings([reservation], []);
+  }
+  
+  if (typeof notifyCleanersAboutNewBookings === 'function') {
+    await notifyCleanersAboutNewBookings([reservation]);
+  }
+  
+  console.log('✅ Notifications envoyées avec succès');
+} catch (notifErr) {
+  console.error('❌ Erreur notifications:', notifErr);
+}
     const bookingForClient = {
       id: reservation.uid,
       propertyId: property.id,
