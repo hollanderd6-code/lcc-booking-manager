@@ -1104,6 +1104,11 @@ app.post('/api/reservations/manual', async (req, res) => {
       guestName: guestName || 'Réservation manuelle',
       notes: notes || '',
       createdAt: new Date().toISOString()
+      propertyId: property.id,
+     propertyName: property.name,
+     propertyColor: property.color,
+      userId: user.id
+   };
     };
 
     if (!MANUAL_RESERVATIONS[propertyId]) {
@@ -1116,7 +1121,16 @@ app.post('/api/reservations/manual', async (req, res) => {
       reservationsStore.properties[propertyId] = [];
     }
     reservationsStore.properties[propertyId].push(reservation);
-
+// ✅ NOUVEAU : Envoyer les notifications
+   try {
+    console.log('📧 Envoi des notifications pour la réservation manuelle...');
+      await notifyOwnersAboutBookings([reservation], []);
+await notifyCleanersAboutNewBookings([reservation]);
+     console.log('✅ Notifications envoyées avec succès');
+    } catch (err) {
+      console.error('❌ Erreur lors de l\'envoi des notifications:', err);
+     // On continue quand même, la réservation est créée
+    }
     res.status(201).json({
       message: 'Réservation manuelle créée',
       reservation
@@ -1124,6 +1138,40 @@ app.post('/api/reservations/manual', async (req, res) => {
   } catch (err) {
     console.error('Erreur création réservation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+// ============================================
+// ENDPOINT DE DEBUG POUR NOTIFICATIONS
+// À AJOUTER dans server-3.js
+// ============================================
+
+// GET - Vérifier les préférences de notifications et configuration
+app.get('/api/debug/notification-settings', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const settings = await getNotificationSettings(user.id);
+    const transporter = getEmailTransporter();
+    
+    res.json({
+      userId: user.id,
+      email: user.email,
+      notificationSettings: settings,
+      emailConfigured: transporter !== null,
+      whatsappConfigured: whatsappService.isConfigured(),
+      emailEnv: {
+        EMAIL_HOST: process.env.EMAIL_HOST ? '✅ Défini' : '❌ Manquant',
+        EMAIL_USER: process.env.EMAIL_USER ? '✅ Défini' : '❌ Manquant',
+        EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? '✅ Défini' : '❌ Manquant',
+        EMAIL_FROM: process.env.EMAIL_FROM || 'Valeur par défaut'
+      }
+    });
+  } catch (err) {
+    console.error('Erreur debug notification settings:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
