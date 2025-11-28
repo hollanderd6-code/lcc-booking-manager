@@ -4143,7 +4143,6 @@ function handleEditBooking() {
     
     // Pré-remplir les champs
     document.getElementById('editBookingId').value = currentBookingData.uid;
-    document.getElementById('editBookingProperty').value = currentBookingData.propertyId;
     document.getElementById('editCheckIn').value = currentBookingData.start.split('T')[0];
     document.getElementById('editCheckOut').value = currentBookingData.end.split('T')[0];
     document.getElementById('editGuestName').value = currentBookingData.guestName || '';
@@ -4154,14 +4153,16 @@ function handleEditBooking() {
     
     // Platform
     const platform = (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
-    document.getElementById('editPlatform').value = platform;
-  }
-}
-// Property
-const propertySelect = document.getElementById('editBookingProperty');
-if (propertySelect && currentBookingData.propertyId) {
-  propertySelect.value = currentBookingData.propertyId;
-}
+    const platformSelect = document.getElementById('editPlatform');
+    if (platformSelect) {
+      platformSelect.value = platform;
+    }
+    
+    // Property
+    const propertySelect = document.getElementById('editBookingProperty');
+    if (propertySelect && currentBookingData.propertyId) {
+      propertySelect.value = currentBookingData.propertyId;
+    }
   }
 }
 
