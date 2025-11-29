@@ -569,9 +569,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-document.getElementById('menuToggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('active');
-});
+const menuToggle = document.getElementById('menuToggle');
+if (menuToggle) {
+  menuToggle.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.toggle('active');
+  });
+}
+
 
 function logout() {
   localStorage.removeItem('lcc_token');
@@ -636,9 +641,17 @@ async function loadClients() {
         return `<option value="${c.id}">${name}</option>`;
       }).join('');
     }
-  } catch (err) {
-    console.error(err);
+    } catch (err) {
+    console.error('Erreur loadArticles', err);
+    const loading = document.getElementById('articlesLoading');
+    const empty = document.getElementById('articlesEmpty');
+    const container = document.getElementById('articlesContainer');
+    if (loading) loading.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    if (container) container.style.display = 'none';
   }
+}
+
 }
 
 async function loadArticles() {
@@ -896,11 +909,17 @@ async function saveClient() {
       const err = await res.json();
       alert('Erreur : ' + err.error);
     }
-  } catch (err) {
-    console.error(err);
-    alert('Erreur serveur');
+    } catch (err) {
+    console.error('Erreur loadClients', err);
+    const loading = document.getElementById('clientsLoading');
+    const empty = document.getElementById('clientsEmpty');
+    const container = document.getElementById('clientsContainer');
+    if (loading) loading.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    if (container) container.style.display = 'none';
   }
 }
+
 
 function editClient(id) {
   openClientModal(id);
@@ -1225,10 +1244,17 @@ async function deleteInvoice(id) {
       const err = await res.json();
       alert(err.error);
     }
-  } catch (err) {
-    console.error(err);
+    } catch (err) {
+    console.error('Erreur loadInvoices', err);
+    const loading = document.getElementById('invoicesLoading');
+    const empty = document.getElementById('invoicesEmpty');
+    const container = document.getElementById('invoicesContainer');
+    if (loading) loading.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    if (container) container.style.display = 'none';
   }
 }
+
 
 async function sendDraftInvoice(id) {
   if (!confirm('Envoyer cette facture ?')) return;
