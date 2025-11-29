@@ -99,6 +99,8 @@ const notificationUserCache = new Map();
 const DEFAULT_NOTIFICATION_SETTINGS = {
   newReservation: true,
   reminder: false,
+   whatsappEnabled: false,
+  whatsappNumber: ''
 };
 
 function getEmailTransporter() {
@@ -261,7 +263,15 @@ async function getNotificationSettings(userId) {
       typeof raw.reminder === 'boolean'
         ? raw.reminder
         : DEFAULT_NOTIFICATION_SETTINGS.reminder,
-  };
+     whatsappEnabled:
+    typeof raw.whatsappEnabled === 'boolean'
+      ? raw.whatsappEnabled
+      : DEFAULT_NOTIFICATION_SETTINGS.whatsappEnabled,
+  whatsappNumber:
+    typeof raw.whatsappNumber === 'string'
+      ? raw.whatsappNumber
+      : DEFAULT_NOTIFICATION_SETTINGS.whatsappNumber
+};
 }
 
 // Sauvegarde les préférences de notifications pour un utilisateur
@@ -277,7 +287,15 @@ async function saveNotificationSettings(userId, settings) {
       typeof settings.reminder === 'boolean'
         ? settings.reminder
         : DEFAULT_NOTIFICATION_SETTINGS.reminder,
-  };
+ whatsappEnabled:
+    typeof settings.whatsappEnabled === 'boolean'
+      ? settings.whatsappEnabled
+      : DEFAULT_NOTIFICATION_SETTINGS.whatsappEnabled,
+  whatsappNumber:
+    typeof settings.whatsappNumber === 'string'
+      ? settings.whatsappNumber
+      : DEFAULT_NOTIFICATION_SETTINGS.whatsappNumber
+};
 
   await pool.query(
     `INSERT INTO user_settings (user_id, notifications, created_at, updated_at)
@@ -1825,10 +1843,13 @@ app.post('/api/settings/notifications', async (req, res) => {
   }
 
   try {
-    const { newReservation, reminder } = req.body || {};
+    const { newReservation, reminder, whatsappEnabled,
+      whatsappNumber } = req.body || {};
     const saved = await saveNotificationSettings(user.id, {
       newReservation,
       reminder,
+      whatsappEnabled,
+      whatsappNumber
     });
 
     res.json({
