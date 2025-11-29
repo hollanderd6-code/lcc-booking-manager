@@ -1149,6 +1149,18 @@ async function syncAllCalendars() {
   console.log('✅ Synchronisation terminée');
   return reservationsStore;
 }
+app.get('/api/test-whatsapp', async (req, res) => {
+  try {
+    await whatsappService.sendWhatsAppText(
+      '+336XXXXXXXX', // ton numéro perso
+      'Test WhatsApp Boostinghost ✅'
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Erreur /api/test-whatsapp :', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ============================================
 // TEST CONNEXION BASE DE DONNÉES
