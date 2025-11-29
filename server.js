@@ -3409,6 +3409,586 @@ app.post('/api/deposits', async (req, res) => {
     });
   }
 });
+// ============================================
+// ROUTES API - FACTURATION PROPRIÉTAIRES
+// ============================================
+// À ajouter dans server.js
+
+const multer = require('multer');
+const path = require('path');
+const ExcelJS = require('exceljs');
+
+// Configuration upload pour justificatifs
+const storageAttachments = multer.diskStorage({
+  destination: 'public/uploads/justificatifs/',
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'justificatif-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const uploadAttachment = multer({
+  storage: storageAttachments,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Format de fichier non supporté'));
+  }
+});
+
+// ============================================
+// CLIENTS PROPRIÉTAIRES - CRUD
+// ============================================
+
+// 1. LISTE DES CLIENTS
+app.get('/api/owner-clients', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM owner_clients 
+       WHERE user_id = $1 
+       ORDER BY 
+         CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
+      [user.id]
+    );
+
+    res.json({ clients: result.rows });
+  } catch (err) {
+    console.error('Erreur liste clients:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 2. DÉTAIL D'UN CLIENT
+app.get('/api/owner-clients/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Client non trouvé' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Erreur détail client:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 3. CRÉER UN CLIENT
+app.post('/api/owner-clients', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const {
+      clientType, firstName, lastName, companyName,
+      email, phone, address, postalCode, city, country,
+      siret, vatNumber,
+      defaultCommissionRate, vatApplicable, defaultVatRate,
+      properties, notes
+    } = req.body;
+
+    // Validation
+    if (clientType === 'business' && !companyName) {
+      return res.status(400).json({ error: 'Nom d\'entreprise requis' });
+    }
+    if (clientType === 'individual' && (!firstName || !lastName)) {
+      return res.status(400).json({ error: 'Nom et prénom requis' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO owner_clients (
+        user_id, client_type, first_name, last_name, company_name,
+        email, phone, address, postal_code, city, country,
+        siret, vat_number,
+        default_commission_rate, vat_applicable, default_vat_rate,
+        properties, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING *
+    `, [
+      user.id, clientType, firstName, lastName, companyName,
+      email, phone, address, postalCode, city, country || 'France',
+      siret, vatNumber,
+      defaultCommissionRate || 20, vatApplicable || false, defaultVatRate || 20,
+      JSON.stringify(properties || []), notes
+    ]);
+
+    res.json({ client: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur création client:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 4. MODIFIER UN CLIENT
+app.put('/api/owner-clients/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const {
+      clientType, firstName, lastName, companyName,
+      email, phone, address, postalCode, city, country,
+      siret, vatNumber,
+      defaultCommissionRate, vatApplicable, defaultVatRate,
+      properties, notes
+    } = req.body;
+
+    const result = await pool.query(`
+      UPDATE owner_clients SET
+        client_type = $1, first_name = $2, last_name = $3, company_name = $4,
+        email = $5, phone = $6, address = $7, postal_code = $8, city = $9, country = $10,
+        siret = $11, vat_number = $12,
+        default_commission_rate = $13, vat_applicable = $14, default_vat_rate = $15,
+        properties = $16, notes = $17
+      WHERE id = $18 AND user_id = $19
+      RETURNING *
+    `, [
+      clientType, firstName, lastName, companyName,
+      email, phone, address, postalCode, city, country,
+      siret, vatNumber,
+      defaultCommissionRate, vatApplicable, defaultVatRate,
+      JSON.stringify(properties || []), notes,
+      req.params.id, user.id
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Client non trouvé' });
+    }
+
+    res.json({ client: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur modification client:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 5. SUPPRIMER UN CLIENT
+app.delete('/api/owner-clients/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Vérifier qu'il n'y a pas de factures liées
+    const checkInvoices = await pool.query(
+      'SELECT COUNT(*) as count FROM owner_invoices WHERE client_id = $1',
+      [req.params.id]
+    );
+
+    if (parseInt(checkInvoices.rows[0].count) > 0) {
+      return res.status(400).json({ 
+        error: 'Impossible de supprimer : ce client a des factures associées' 
+      });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Client non trouvé' });
+    }
+
+    res.json({ message: 'Client supprimé' });
+  } catch (err) {
+    console.error('Erreur suppression client:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// FACTURES PROPRIÉTAIRES
+// ============================================
+
+// 6. CRÉER UNE FACTURE
+app.post('/api/owner-invoices', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    await client.query('BEGIN');
+
+    const {
+      clientId, periodStart, periodEnd, issueDate, dueDate,
+      items, // Array des prestations
+      vatApplicable, vatRate,
+      notes, footerText, internalNotes,
+      sendEmail
+    } = req.body;
+
+    // Récupérer les infos du client
+    const clientResult = await client.query(
+      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [clientId, user.id]
+    );
+
+    if (clientResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Client non trouvé' });
+    }
+
+    const clientData = clientResult.rows[0];
+    const clientName = clientData.client_type === 'business' 
+      ? clientData.company_name 
+      : `${clientData.first_name} ${clientData.last_name}`;
+
+    // Calculs
+    let subtotalHt = 0;
+    let subtotalDebours = 0;
+
+    items.forEach(item => {
+      const itemTotal = parseFloat(item.total || 0);
+      if (item.isDebours) {
+        subtotalDebours += itemTotal;
+      } else {
+        subtotalHt += itemTotal;
+      }
+    });
+
+    const vatAmount = vatApplicable ? subtotalHt * (parseFloat(vatRate) / 100) : 0;
+    const totalTtc = subtotalHt + subtotalDebours + vatAmount;
+
+    // Générer numéro de facture
+    const invoiceNumberResult = await client.query(
+      "SELECT get_next_invoice_number($1) as invoice_number",
+      [user.id]
+    );
+    const invoiceNumber = invoiceNumberResult.rows[0].invoice_number;
+
+    // Insérer la facture
+    const invoiceResult = await client.query(`
+      INSERT INTO owner_invoices (
+        invoice_number, user_id, client_id,
+        client_name, client_email, client_address, client_postal_code, client_city, client_siret,
+        period_start, period_end, issue_date, due_date,
+        vat_applicable, vat_rate,
+        subtotal_ht, subtotal_debours, vat_amount, total_ttc,
+        status, notes, footer_text, internal_notes, sent_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+      ) RETURNING id
+    `, [
+      invoiceNumber, user.id, clientId,
+      clientName, clientData.email, clientData.address, clientData.postal_code, clientData.city, clientData.siret,
+      periodStart, periodEnd, issueDate || new Date(), dueDate,
+      vatApplicable, vatRate,
+      subtotalHt, subtotalDebours, vatAmount, totalTtc,
+      sendEmail ? 'sent' : 'draft', notes, footerText, internalNotes, sendEmail ? new Date() : null
+    ]);
+
+    const invoiceId = invoiceResult.rows[0].id;
+
+    // Insérer les lignes
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      await client.query(`
+        INSERT INTO owner_invoice_items (
+          invoice_id, item_type, description,
+          rental_amount, commission_rate, quantity, unit_price, total,
+          order_index, is_debours
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        invoiceId, item.itemType, item.description,
+        item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
+        i, item.isDebours || false
+      ]);
+    }
+
+    await client.query('COMMIT');
+
+    // Envoyer email si demandé
+    if (sendEmail && clientData.email) {
+      try {
+        await sendOwnerInvoiceEmail({
+          invoiceNumber, clientName, clientEmail: clientData.email,
+          periodStart, periodEnd, totalTtc, items,
+          userCompany: user.company, userEmail: user.email
+        });
+      } catch (emailErr) {
+        console.error('Erreur envoi email:', emailErr);
+      }
+    }
+
+    res.json({
+      success: true,
+      invoiceId,
+      invoiceNumber,
+      message: sendEmail ? 'Facture créée et envoyée' : 'Facture créée'
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erreur création facture:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
+  }
+});
+
+// 7. LISTE DES FACTURES
+app.get('/api/owner-invoices', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { status, clientId, year, limit, offset } = req.query;
+
+    let query = `
+      SELECT oi.*, oc.email as client_email_current
+      FROM owner_invoices oi
+      LEFT JOIN owner_clients oc ON oi.client_id = oc.id
+      WHERE oi.user_id = $1
+    `;
+    const params = [user.id];
+    let paramIndex = 2;
+
+    if (status) {
+      query += ` AND oi.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    if (clientId) {
+      query += ` AND oi.client_id = $${paramIndex}`;
+      params.push(clientId);
+      paramIndex++;
+    }
+
+    if (year) {
+      query += ` AND EXTRACT(YEAR FROM oi.issue_date) = $${paramIndex}`;
+      params.push(year);
+      paramIndex++;
+    }
+
+    query += ' ORDER BY oi.issue_date DESC';
+
+    if (limit) {
+      query += ` LIMIT $${paramIndex}`;
+      params.push(limit);
+      paramIndex++;
+    }
+
+    if (offset) {
+      query += ` OFFSET $${paramIndex}`;
+      params.push(offset);
+    }
+
+    const result = await pool.query(query, params);
+
+    res.json({ invoices: result.rows });
+  } catch (err) {
+    console.error('Erreur liste factures:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 8. DÉTAIL FACTURE
+app.get('/api/owner-invoices/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const invoiceResult = await pool.query(
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
+
+    if (invoiceResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    const itemsResult = await pool.query(
+      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
+      [req.params.id]
+    );
+
+    const attachmentsResult = await pool.query(
+      'SELECT * FROM owner_invoice_attachments WHERE invoice_id = $1',
+      [req.params.id]
+    );
+
+    res.json({
+      invoice: invoiceResult.rows[0],
+      items: itemsResult.rows,
+      attachments: attachmentsResult.rows
+    });
+  } catch (err) {
+    console.error('Erreur détail facture:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 9. UPLOAD JUSTIFICATIF
+app.post('/api/owner-invoices/:id/upload-justificatif', uploadAttachment.single('file'), async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier' });
+    }
+
+    const { itemId } = req.body;
+
+    const result = await pool.query(`
+      INSERT INTO owner_invoice_attachments (invoice_id, item_id, filename, file_path, file_size, mime_type)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [
+      req.params.id,
+      itemId || null,
+      req.file.originalname,
+      '/uploads/justificatifs/' + req.file.filename,
+      req.file.size,
+      req.file.mimetype
+    ]);
+
+    res.json({ attachment: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur upload:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 10. EXPORT EXCEL
+app.get('/api/owner-invoices/export/excel', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { year } = req.query;
+
+    let query = 'SELECT * FROM owner_invoices WHERE user_id = $1';
+    const params = [user.id];
+
+    if (year) {
+      query += ' AND EXTRACT(YEAR FROM issue_date) = $2';
+      params.push(year);
+    }
+
+    query += ' ORDER BY issue_date DESC';
+
+    const result = await pool.query(query, params);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Factures');
+
+    worksheet.columns = [
+      { header: 'N° Facture', key: 'invoice_number', width: 15 },
+      { header: 'Client', key: 'client_name', width: 30 },
+      { header: 'Date émission', key: 'issue_date', width: 15 },
+      { header: 'Période début', key: 'period_start', width: 15 },
+      { header: 'Période fin', key: 'period_end', width: 15 },
+      { header: 'Montant HT', key: 'subtotal_ht', width: 12 },
+      { header: 'Débours', key: 'subtotal_debours', width: 12 },
+      { header: 'TVA', key: 'vat_amount', width: 12 },
+      { header: 'Total TTC', key: 'total_ttc', width: 12 },
+      { header: 'Statut', key: 'status', width: 12 }
+    ];
+
+    result.rows.forEach(invoice => {
+      worksheet.addRow({
+        invoice_number: invoice.invoice_number,
+        client_name: invoice.client_name,
+        issue_date: invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString('fr-FR') : '',
+        period_start: invoice.period_start ? new Date(invoice.period_start).toLocaleDateString('fr-FR') : '',
+        period_end: invoice.period_end ? new Date(invoice.period_end).toLocaleDateString('fr-FR') : '',
+        subtotal_ht: parseFloat(invoice.subtotal_ht),
+        subtotal_debours: parseFloat(invoice.subtotal_debours),
+        vat_amount: parseFloat(invoice.vat_amount),
+        total_ttc: parseFloat(invoice.total_ttc),
+        status: invoice.status
+      });
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=factures-${year || 'all'}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    console.error('Erreur export Excel:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// FONCTION EMAIL
+// ============================================
+
+async function sendOwnerInvoiceEmail(data) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+
+  const itemsList = data.items.map(item => {
+    if (item.itemType === 'commission') {
+      return `- ${item.description}: ${item.total.toFixed(2)} € (${item.commissionRate}% de ${item.rentalAmount} €)`;
+    }
+    return `- ${item.description}: ${item.total.toFixed(2)} €`;
+  }).join('\n');
+
+  const emailContent = `
+Bonjour ${data.clientName},
+
+Veuillez trouver ci-dessous votre facture pour la période du ${new Date(data.periodStart).toLocaleDateString('fr-FR')} au ${new Date(data.periodEnd).toLocaleDateString('fr-FR')}.
+
+FACTURE N° ${data.invoiceNumber}
+
+Prestations :
+${itemsList}
+
+TOTAL : ${data.totalTtc.toFixed(2)} €
+
+Cordialement,
+${data.userCompany}
+  `;
+
+  await transporter.sendMail({
+    from: data.userEmail,
+    to: data.clientEmail,
+    subject: `Facture ${data.invoiceNumber} - ${data.userCompany}`,
+    text: emailContent
+  });
+}
+
+// ============================================
+// NOTES D'INSTALLATION
+// ============================================
+
+/*
+1. Installer les dépendances :
+   npm install exceljs
+
+2. Créer le dossier uploads :
+   mkdir -p public/uploads/justificatifs
+
+3. Les dépendances nodemailer et pdfkit sont déjà installées
+*/
 
 // ============================================
 // DÉMARRAGE
