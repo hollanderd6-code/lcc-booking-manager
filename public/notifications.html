@@ -191,6 +191,7 @@
 
   <!-- Script auth + user + logout -->
   <script>
+    const API_URL = 'https://lcc-booking-manager.onrender.com';
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
@@ -608,14 +609,66 @@
       const saveStatus = document.getElementById('saveStatus');
 
       const settings = loadSettings();
+
+const token = localStorage.getItem('lcc_token');
+if (token) {
+  fetch(`${API_URL}/api/settings/notifications`, {
+    headers: {
+      'Authorization': 'Bearer ' + token
+    }
+  })
+    .then(res => res.json())
+    .then(serverSettings => {
+      // on fusionne ce qui vient du backend dans notre objet front
+      settings.smsEnabled =
+        typeof serverSettings.whatsappEnabled === 'boolean'
+          ? serverSettings.whatsappEnabled
+          : settings.smsEnabled;
+
+      settings.smsNumbers =
+        typeof serverSettings.whatsappNumber === 'string'
+          ? serverSettings.whatsappNumber
+          : settings.smsNumbers;
+
       applyToForm(settings);
+      saveSettings(settings);
+    })
+    .catch(err => {
+      console.error('Erreur chargement settings serveur', err);
+      applyToForm(settings);
+    });
+} else {
+  applyToForm(settings);
+}
 
       saveBtn.addEventListener('click', () => {
-        const newSettings = readFromForm();
-        saveSettings(newSettings);
-        saveStatus.textContent = 'Préférences enregistrées.';
-        setTimeout(() => saveStatus.textContent = '', 2500);
-      });
+  const newSettings = readFromForm();
+  saveSettings(newSettings);
+
+  const token = localStorage.getItem('lcc_token');
+
+  if (token) {
+    fetch(`${API_URL}/api/settings/notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        newReservation: newSettings.newResEmailEnabled, // si tu as ce champ
+        reminder: false,
+        whatsappEnabled: newSettings.smsEnabled,
+        whatsappNumber: newSettings.smsNumbers
+      })
+    }).catch(err => {
+      console.error('Erreur sauvegarde notifications serveur', err);
+    });
+  }
+
+  saveStatus.textContent = 'Préférences enregistrées.';
+  setTimeout(() => (saveStatus.textContent = ''), 2500);
+});
+
 
       resetBtn.addEventListener('click', () => {
         const defaults = defaultSettings();
