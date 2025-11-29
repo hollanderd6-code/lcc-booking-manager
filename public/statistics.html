@@ -1,719 +1,398 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Factures</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
+  <title>Créer une facture - Boostinghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- CSS plateforme -->
   <link rel="stylesheet" href="/css/style.css">
-
   <style>
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    .main-content {
-      padding-top: 24px !important;
-    }
-
-    .page-content {
-      margin-top: 0 !important;
-      max-width: 1200px;
-    }
-
-    /* Stats Cards */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .stat-card {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .stat-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .stat-value {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .stat-value.currency::before {
-      content: attr(data-currency);
-      font-size: 20px;
-      margin-right: 4px;
-    }
-
-    /* Filters */
-    .filters-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .filter-btn {
-      padding: 8px 16px;
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .filter-btn.active {
-      background: var(--primary-color);
-      color: white;
-      border-color: var(--primary-color);
-    }
-
-    .filter-btn:hover:not(.active) {
-      border-color: var(--primary-color);
-    }
-
-    /* Invoice Table */
-    .invoice-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--bg-primary);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .invoice-table thead {
-      background: var(--bg-secondary);
-    }
-
-    .invoice-table th {
-      padding: 12px 16px;
-      text-align: left;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .invoice-table td {
-      padding: 16px;
-      border-top: 1px solid var(--border-color);
-      font-size: 14px;
-    }
-
-    .invoice-table tbody tr {
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .invoice-table tbody tr:hover {
-      background: var(--bg-secondary);
-    }
-
-    /* Status Badges */
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .status-badge.draft {
-      background: rgba(234, 179, 8, 0.15);
-      color: #854d0e;
-    }
-
-    .status-badge.issued {
-      background: rgba(59, 130, 246, 0.15);
-      color: #1e40af;
-    }
-
-    .status-badge.paid {
-      background: rgba(34, 197, 94, 0.15);
-      color: #166534;
-    }
-
-    .status-badge.overdue {
-      background: rgba(239, 68, 68, 0.15);
-      color: #991b1b;
-    }
-
-    .status-badge.cancelled {
-      background: rgba(107, 114, 128, 0.15);
-      color: #374151;
-    }
-
-    /* Actions */
-    .actions-cell {
-      display: flex;
-      gap: 8px;
-    }
-
-    .action-btn {
-      padding: 6px 10px;
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-      border-color: var(--primary-color);
-      color: var(--primary-color);
-    }
-
-    .action-btn.danger:hover {
-      border-color: #dc2626;
-      color: #dc2626;
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-secondary);
-    }
-
-    .empty-state i {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.3;
-    }
-
-    /* Loading */
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-secondary);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .invoice-table {
-        font-size: 13px;
-      }
-
-      .invoice-table th,
-      .invoice-table td {
-        padding: 10px;
-      }
-
-      .actions-cell {
-        flex-direction: column;
-      }
+    body { font-family: 'Inter', sans-serif; background: #f9fafb; }
+    .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    .header { text-align: center; margin-bottom: 40px; }
+    .header h1 { font-size: 32px; margin-bottom: 8px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .section-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #111827; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #059669; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; }
+    .checkbox-group input[type="checkbox"] { width: auto; }
+    .btn { padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary { background: #059669; color: white; }
+    .btn-primary:hover { background: #047857; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-secondary:hover { background: #4b5563; }
+    .actions { display: flex; gap: 12px; margin-top: 24px; }
+    
+    /* Invoice Preview */
+    .invoice-preview { border: 2px solid #e5e7eb; padding: 40px; background: white; }
+    .invoice-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #111827; padding-bottom: 20px; }
+    .invoice-header h2 { font-size: 24px; margin-bottom: 8px; }
+    .invoice-number { font-size: 14px; color: #6b7280; }
+    .invoice-section { margin-bottom: 24px; }
+    .invoice-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase; color: #6b7280; }
+    .invoice-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+    .invoice-total { display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; font-weight: 700; margin-top: 16px; border-top: 2px solid #111827; }
+    .paid-stamp { text-align: center; margin: 30px 0; padding: 20px; background: #dcfce7; border: 3px solid #16a34a; border-radius: 8px; }
+    .paid-stamp h3 { color: #16a34a; font-size: 24px; margin: 0; }
+    
+    @media (max-width: 968px) {
+      .grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
-<body data-page="invoices">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Boostinghost</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-file-invoice-dollar"></i> Créer une facture</h1>
+      <p style="color: #6b7280;">Remplissez le formulaire pour générer et envoyer une facture à votre client</p>
+    </div>
 
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">
-          <i class="fas fa-calendar-check"></i>
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">Boostinghost</span>
-            <span class="sidebar-logo-subtitle">Property Manager</span>
+    <div class="grid">
+      <!-- Formulaire -->
+      <div class="card">
+        <div class="section-title">Informations client</div>
+        
+        <div class="form-group">
+          <label>Nom complet *</label>
+          <input type="text" id="clientName" placeholder="Jean Dupont" required>
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="clientEmail" placeholder="client@exemple.com">
+        </div>
+
+        <div class="form-group">
+          <label>Adresse</label>
+          <input type="text" id="clientAddress" placeholder="12 rue de la République">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Code postal</label>
+            <input type="text" id="clientPostalCode" placeholder="75001">
           </div>
-        </a>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <!-- PRINCIPAL -->
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-
-          <a href="/app.html" class="nav-item" data-page="app">
-            <i class="fas fa-th-large"></i>
-            <span>Dashboard</span>
-          </a>
-
-          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-          </a>
-
-          <a href="/messages.html" class="nav-item" data-page="messages">
-            <i class="fas fa-comment-dots"></i>
-            <span>Messages</span>
-          </a>
-        </div>
-
-        <!-- GESTION -->
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-
-          <a href="/settings.html" class="nav-item" data-page="settings">
-            <i class="fas fa-home"></i>
-            <span>Mes logements</span>
-          </a>
-
-          <a href="/welcome.html" class="nav-item" data-page="welcome">
-            <i class="fas fa-book-open"></i>
-            <span>Livret d'accueil</span>
-          </a>
-
-          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-            <i class="fas fa-broom"></i>
-            <span>Gestion du ménage</span>
-          </a>
-
-          <a href="/invoices.html" class="nav-item active" data-page="invoices">
-            <i class="fas fa-file-invoice-dollar"></i>
-            <span>Factures</span>
-          </a>
-
-          <a href="/deposits.html" class="nav-item" data-page="deposits">
-            <i class="fas fa-shield-alt"></i>
-            <span>Cautions</span>
-          </a>
-
-          <a href="/notifications.html" class="nav-item" data-page="notifications">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-          </a>
-        </div>
-
-        <!-- PARAMÈTRES -->
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-
-          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-            <i class="fas fa-cog"></i>
-            <span>Paramètres</span>
-          </a>
-
-          <a href="/help.html" class="nav-item" data-page="help">
-            <i class="fas fa-question-circle"></i>
-            <span>Aide</span>
-          </a>
-        </div>
-      </nav>
-      
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar" id="sidebarUserAvatar">C</div>
-          <div class="user-info">
-            <div class="user-name" id="sidebarUserName">Utilisateur</div>
-            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-          </div>
-          <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
-        </div>
-      </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Gestion</div>
-          <h1 class="page-title">Factures</h1>
-          <p class="page-subtitle">
-            Créez et gérez vos factures professionnelles
-          </p>
-        </div>
-        <div class="header-actions">
-          <a href="/invoice-create.html" class="btn btn-primary">
-            <i class="fas fa-plus"></i>
-            Nouvelle facture
-          </a>
-        </div>
-      </header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-
-        <!-- Statistics -->
-        <div class="stats-grid" id="statsGrid">
-          <div class="stat-card">
-            <div class="stat-label">Brouillons</div>
-            <div class="stat-value" id="statDrafts">-</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Émises</div>
-            <div class="stat-value" id="statIssued">-</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Payées</div>
-            <div class="stat-value" id="statPaid">-</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Total encaissé</div>
-            <div class="stat-value currency" id="statTotalPaid" data-currency="€">-</div>
+          <div class="form-group">
+            <label>Ville</label>
+            <input type="text" id="clientCity" placeholder="Paris">
           </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filters-bar">
-          <button class="filter-btn active" data-status="all">Toutes</button>
-          <button class="filter-btn" data-status="draft">Brouillons</button>
-          <button class="filter-btn" data-status="issued">Émises</button>
-          <button class="filter-btn" data-status="paid">Payées</button>
-          <button class="filter-btn" data-status="overdue">En retard</button>
-          
-          <select id="yearFilter" class="filter-btn" style="cursor: pointer;">
-            <option value="">Toutes les années</option>
+        <div class="checkbox-group">
+          <input type="checkbox" id="isCompany">
+          <label for="isCompany" style="margin: 0;">Client professionnel</label>
+        </div>
+
+        <div class="form-group" id="siretGroup" style="display: none; margin-top: 12px;">
+          <label>SIRET</label>
+          <input type="text" id="clientSiret" placeholder="123 456 789 00012" maxlength="17">
+        </div>
+
+        <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+        <div class="section-title">Séjour</div>
+
+        <div class="form-group">
+          <label>Logement *</label>
+          <select id="propertyName" required>
+            <option value="">Sélectionner...</option>
           </select>
         </div>
 
-        <!-- Invoices Table -->
-        <div class="card">
-          <div class="card-body" style="padding: 0;">
-            
-            <div id="loadingState" class="loading">
-              <i class="fas fa-spinner fa-spin"></i>
-              <p>Chargement des factures...</p>
-            </div>
-
-            <div id="emptyState" class="empty-state" style="display: none;">
-              <i class="fas fa-file-invoice"></i>
-              <h3>Aucune facture</h3>
-              <p>Créez votre première facture pour commencer</p>
-              <br>
-              <a href="/invoice-create.html" class="btn btn-primary">
-                <i class="fas fa-plus"></i>
-                Créer une facture
-              </a>
-            </div>
-
-            <table class="invoice-table" id="invoiceTable" style="display: none;">
-              <thead>
-                <tr>
-                  <th>N° Facture</th>
-                  <th>Client</th>
-                  <th>Date</th>
-                  <th>Échéance</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="invoiceTableBody">
-                <!-- Populated by JavaScript -->
-              </tbody>
-            </table>
-
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date d'arrivée</label>
+            <input type="date" id="checkinDate">
+          </div>
+          <div class="form-group">
+            <label>Date de départ</label>
+            <input type="date" id="checkoutDate">
           </div>
         </div>
 
+        <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+        <div class="section-title">Facturation</div>
+
+        <div class="form-group">
+          <label>Loyer (prix total)</label>
+          <input type="number" id="rentAmount" placeholder="1050.00" step="0.01" min="0">
+        </div>
+
+        <div class="form-group">
+          <label>Taxe de séjour</label>
+          <input type="number" id="touristTaxAmount" placeholder="35.00" step="0.01" min="0">
+        </div>
+
+        <div class="form-group">
+          <label>Frais de ménage</label>
+          <input type="number" id="cleaningFee" placeholder="80.00" step="0.01" min="0">
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="withVat">
+          <label for="withVat" style="margin: 0;">Avec TVA</label>
+        </div>
+
+        <div class="form-group" id="vatGroup" style="display: none; margin-top: 12px;">
+          <label>Taux de TVA (%)</label>
+          <select id="vatRate">
+            <option value="10">10%</option>
+            <option value="20">20%</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateInvoice()">
+            <i class="fas fa-eye"></i> Aperçu
+          </button>
+          <button class="btn btn-secondary" onclick="sendInvoice()" id="sendBtn" disabled>
+            <i class="fas fa-envelope"></i> Envoyer par email
+          </button>
+          <button class="btn btn-secondary" onclick="downloadPDF()" id="pdfBtn" disabled>
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+        </div>
       </div>
-      
-    </main>
+
+      <!-- Aperçu -->
+      <div class="card">
+        <div class="section-title">Aperçu de la facture</div>
+        <div class="invoice-preview" id="invoicePreview">
+          <div style="text-align: center; color: #9ca3af; padding: 60px 20px;">
+            <i class="fas fa-file-invoice" style="font-size: 48px; margin-bottom: 16px;"></i>
+            <p>L'aperçu de la facture apparaîtra ici</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Scripts -->
   <script>
-    document.addEventListener('DOMContentLoaded', async function () {
+    let currentInvoiceId = null;
+    let invoiceNumber = '';
+
+    // Toggle SIRET
+    document.getElementById('isCompany').addEventListener('change', function() {
+      document.getElementById('siretGroup').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Toggle TVA
+    document.getElementById('withVat').addEventListener('change', function() {
+      document.getElementById('vatGroup').style.display = this.checked ? 'block' : 'none';
+      if (!this.checked) generateInvoice();
+    });
+
+    // Format SIRET
+    document.getElementById('clientSiret').addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\s/g, '').replace(/\D/g, '').substring(0, 14);
+      let formatted = '';
+      if (value.length > 0) formatted = value.substring(0, 3);
+      if (value.length > 3) formatted += ' ' + value.substring(3, 6);
+      if (value.length > 6) formatted += ' ' + value.substring(6, 9);
+      if (value.length > 9) formatted += ' ' + value.substring(9, 14);
+      e.target.value = formatted;
+    });
+
+    // Calcul des nuits
+    document.getElementById('checkoutDate').addEventListener('change', calculateNights);
+    document.getElementById('checkinDate').addEventListener('change', calculateNights);
+
+    function calculateNights() {
+      const checkin = document.getElementById('checkinDate').value;
+      const checkout = document.getElementById('checkoutDate').value;
+      if (checkin && checkout) {
+        const date1 = new Date(checkin);
+        const date2 = new Date(checkout);
+        const nights = Math.ceil((date2 - date1) / (1000 * 60 * 60 * 24));
+        return nights;
+      }
+      return 0;
+    }
+
+    // Charger les logements
+    async function loadProperties() {
       const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
+      try {
+        const response = await fetch('/api/properties', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const select = document.getElementById('propertyName');
+          data.properties.forEach(prop => {
+            const option = document.createElement('option');
+            option.value = prop.name;
+            option.textContent = prop.name;
+            select.appendChild(option);
+          });
+        }
+      } catch (err) {
+        console.error('Erreur chargement logements:', err);
+      }
+    }
+
+    // Générer l'aperçu
+    function generateInvoice() {
+      const clientName = document.getElementById('clientName').value;
+      const propertyName = document.getElementById('propertyName').value;
+      
+      if (!clientName || !propertyName) {
+        alert('Veuillez remplir au minimum le nom du client et le logement');
         return;
       }
 
-      let currentFilter = 'all';
-      let currentYear = '';
-
-      // Load user info
       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) {
-        const companyEl = document.getElementById('sidebarUserCompany');
-        if (companyEl) companyEl.textContent = user.company;
-      }
-
-      // Logout
-      document.getElementById('logoutBtn')?.addEventListener('click', function() {
-        localStorage.removeItem('lcc_token');
-        localStorage.removeItem('lcc_user');
-        window.location.href = '/login.html';
-      });
-
-      // Load stats
-      async function loadStats() {
-        try {
-          const response = await fetch(`/api/invoices/stats?year=${currentYear || new Date().getFullYear()}`, {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-
-          if (response.ok) {
-            const stats = await response.json();
-            document.getElementById('statDrafts').textContent = stats.drafts || 0;
-            document.getElementById('statIssued').textContent = stats.issued || 0;
-            document.getElementById('statPaid').textContent = stats.paid || 0;
-            document.getElementById('statTotalPaid').textContent = formatCurrency(stats.total_paid || 0);
-          }
-        } catch (err) {
-          console.error('Error loading stats:', err);
-        }
-      }
-
-      // Load invoices
-      async function loadInvoices() {
-        const loadingState = document.getElementById('loadingState');
-        const emptyState = document.getElementById('emptyState');
-        const invoiceTable = document.getElementById('invoiceTable');
-        const invoiceTableBody = document.getElementById('invoiceTableBody');
-
-        loadingState.style.display = 'block';
-        emptyState.style.display = 'none';
-        invoiceTable.style.display = 'none';
-
-        try {
-          const params = new URLSearchParams();
-          if (currentFilter !== 'all') params.append('status', currentFilter);
-          if (currentYear) params.append('year', currentYear);
-
-          const response = await fetch(`/api/invoices?${params.toString()}`, {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const invoices = data.invoices || [];
-
-            loadingState.style.display = 'none';
-
-            if (invoices.length === 0) {
-              emptyState.style.display = 'block';
-            } else {
-              invoiceTable.style.display = 'table';
-              invoiceTableBody.innerHTML = invoices.map(invoice => `
-                <tr onclick="window.location.href='/invoice-view.html?id=${invoice.id}'">
-                  <td><strong>${invoice.invoice_number}</strong></td>
-                  <td>${invoice.client_name}</td>
-                  <td>${formatDate(invoice.issue_date)}</td>
-                  <td>${invoice.due_date ? formatDate(invoice.due_date) : '-'}</td>
-                  <td><strong>${formatCurrency(invoice.total_ttc)} ${invoice.currency || 'EUR'}</strong></td>
-                  <td>${getStatusBadge(invoice.status, invoice.paid)}</td>
-                  <td onclick="event.stopPropagation();">
-                    <div class="actions-cell">
-                      <button class="action-btn" onclick="viewInvoice(${invoice.id})" title="Voir">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      ${invoice.status === 'draft' || invoice.status === 'issued' ? `
-                        <button class="action-btn" onclick="editInvoice(${invoice.id})" title="Modifier">
-                          <i class="fas fa-edit"></i>
-                        </button>
-                      ` : ''}
-                      ${!invoice.paid && invoice.status !== 'cancelled' ? `
-                        <button class="action-btn" onclick="markAsPaid(${invoice.id})" title="Marquer payée">
-                          <i class="fas fa-check"></i>
-                        </button>
-                      ` : ''}
-                      ${invoice.status === 'draft' ? `
-                        <button class="action-btn danger" onclick="deleteInvoice(${invoice.id}, '${invoice.invoice_number}')" title="Supprimer">
-                          <i class="fas fa-trash"></i>
-                        </button>
-                      ` : ''}
-                    </div>
-                  </td>
-                </tr>
-              `).join('');
-            }
-          } else {
-            throw new Error('Failed to load invoices');
-          }
-        } catch (err) {
-          console.error('Error loading invoices:', err);
-          loadingState.innerHTML = `
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Erreur lors du chargement des factures</p>
-          `;
-        }
-      }
-
-      // Filters
-      document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('.filter-btn[data-status]').forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          currentFilter = this.dataset.status;
-          loadInvoices();
-        });
-      });
-
-      document.getElementById('yearFilter').addEventListener('change', function() {
-        currentYear = this.value;
-        loadInvoices();
-        loadStats();
-      });
-
-      // Populate year filter
-      const currentYearValue = new Date().getFullYear();
-      const yearFilter = document.getElementById('yearFilter');
-      for (let year = currentYearValue; year >= currentYearValue - 5; year--) {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        if (year === currentYearValue) option.selected = true;
-        yearFilter.appendChild(option);
-      }
-
-      // Helper functions
-      function formatDate(dateString) {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('fr-FR');
-      }
-
-      function formatCurrency(amount) {
-        return new Intl.NumberFormat('fr-FR', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(amount);
-      }
-
-      function getStatusBadge(status, paid) {
-        const statusMap = {
-          draft: '<span class="status-badge draft"><i class="fas fa-edit"></i> Brouillon</span>',
-          issued: '<span class="status-badge issued"><i class="fas fa-paper-plane"></i> Émise</span>',
-          paid: '<span class="status-badge paid"><i class="fas fa-check-circle"></i> Payée</span>',
-          overdue: '<span class="status-badge overdue"><i class="fas fa-exclamation-triangle"></i> En retard</span>',
-          cancelled: '<span class="status-badge cancelled"><i class="fas fa-times-circle"></i> Annulée</span>'
-        };
-        return statusMap[status] || status;
-      }
-
-      // Actions
-      window.viewInvoice = function(id) {
-        window.location.href = `/invoice-view.html?id=${id}`;
-      };
-
-      window.editInvoice = function(id) {
-        window.location.href = `/invoice-create.html?id=${id}`;
-      };
-
-      window.markAsPaid = async function(id) {
-        if (!confirm('Marquer cette facture comme payée ?')) return;
-
-        try {
-          const response = await fetch(`/api/invoices/${id}/mark-paid`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({
-              paymentDate: new Date().toISOString().split('T')[0],
-              paymentMethod: 'Virement bancaire'
-            })
-          });
-
-          if (response.ok) {
-            alert('Facture marquée comme payée');
-            loadInvoices();
-            loadStats();
-          } else {
-            alert('Erreur lors du marquage de la facture');
-          }
-        } catch (err) {
-          console.error('Error marking as paid:', err);
-          alert('Erreur lors du marquage de la facture');
-        }
-      };
-
-      window.deleteInvoice = async function(id, invoiceNumber) {
-        if (!confirm(`Supprimer la facture ${invoiceNumber} ?\n\nCette action est irréversible.`)) return;
-
-        try {
-          const response = await fetch(`/api/invoices/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-
-          if (response.ok) {
-            alert('Facture supprimée');
-            loadInvoices();
-            loadStats();
-          } else {
-            alert('Erreur lors de la suppression');
-          }
-        } catch (err) {
-          console.error('Error deleting invoice:', err);
-          alert('Erreur lors de la suppression');
-        }
-      };
-
-      // Initial load
-      loadStats();
-      loadInvoices();
-
-      // Mobile menu
-      const menuBtn = document.getElementById('mobileMenuBtn');
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
+      const profile = JSON.parse(localStorage.getItem('lcc_settings_profile') || '{}');
       
-      if (menuBtn && sidebar && overlay) {
-        menuBtn.addEventListener('click', function() {
-          sidebar.classList.toggle('active');
-          overlay.classList.toggle('active');
-          const icon = menuBtn.querySelector('i');
-          if (sidebar.classList.contains('active')) {
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
-          } else {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-          }
-        });
-        
-        overlay.addEventListener('click', function() {
-          sidebar.classList.remove('active');
-          overlay.classList.remove('active');
-          const icon = menuBtn.querySelector('i');
-          icon.classList.remove('fa-times');
-          icon.classList.add('fa-bars');
-        });
+      const rentAmount = parseFloat(document.getElementById('rentAmount').value || 0);
+      const touristTaxAmount = parseFloat(document.getElementById('touristTaxAmount').value || 0);
+      const cleaningFee = parseFloat(document.getElementById('cleaningFee').value || 0);
+      const withVat = document.getElementById('withVat').checked;
+      const vatRate = withVat ? parseFloat(document.getElementById('vatRate').value) : 0;
+
+      const subtotal = rentAmount + touristTaxAmount + cleaningFee;
+      const vatAmount = withVat ? subtotal * (vatRate / 100) : 0;
+      const total = subtotal + vatAmount;
+
+      const nights = calculateNights();
+      const checkin = document.getElementById('checkinDate').value;
+      const checkout = document.getElementById('checkoutDate').value;
+
+      invoiceNumber = 'FACT-XXX'; // Sera généré par le serveur
+
+      const preview = `
+        <div class="invoice-header">
+          <h2>${profile.company || user.company || 'Ma Conciergerie'}</h2>
+          <div>${profile.address || ''}</div>
+          <div>${profile.postalCode || ''} ${profile.city || ''}</div>
+          ${profile.siret ? `<div>SIRET: ${profile.siret}</div>` : ''}
+          <div style="margin-top: 12px;">${user.email || ''}</div>
+          <div class="invoice-number">FACTURE N° ${invoiceNumber}</div>
+          <div class="invoice-number">Date: ${new Date().toLocaleDateString('fr-FR')}</div>
+        </div>
+
+        <div class="invoice-section">
+          <h3>Facturer à</h3>
+          <div><strong>${clientName}</strong></div>
+          <div>${document.getElementById('clientAddress').value || ''}</div>
+          <div>${document.getElementById('clientPostalCode').value || ''} ${document.getElementById('clientCity').value || ''}</div>
+          ${document.getElementById('isCompany').checked ? `<div>SIRET: ${document.getElementById('clientSiret').value || ''}</div>` : ''}
+        </div>
+
+        <div class="invoice-section">
+          <h3>Séjour</h3>
+          <div><strong>${propertyName}</strong></div>
+          ${checkin && checkout ? `<div>Du ${new Date(checkin).toLocaleDateString('fr-FR')} au ${new Date(checkout).toLocaleDateString('fr-FR')} (${nights} ${nights > 1 ? 'nuits' : 'nuit'})</div>` : ''}
+        </div>
+
+        <div class="invoice-section">
+          <h3>Détails</h3>
+          ${rentAmount > 0 ? `<div class="invoice-line"><span>Loyer ${propertyName}</span><span>${rentAmount.toFixed(2)} €</span></div>` : ''}
+          ${touristTaxAmount > 0 ? `<div class="invoice-line"><span>Taxe de séjour</span><span>${touristTaxAmount.toFixed(2)} €</span></div>` : ''}
+          ${cleaningFee > 0 ? `<div class="invoice-line"><span>Frais de ménage</span><span>${cleaningFee.toFixed(2)} €</span></div>` : ''}
+          
+          <div class="invoice-line" style="font-weight: 600;"><span>Sous-total HT</span><span>${subtotal.toFixed(2)} €</span></div>
+          ${withVat ? `<div class="invoice-line"><span>TVA (${vatRate}%)</span><span>${vatAmount.toFixed(2)} €</span></div>` : ''}
+        </div>
+
+        <div class="invoice-total">
+          <span>TOTAL TTC</span>
+          <span>${total.toFixed(2)} €</span>
+        </div>
+
+        <div class="paid-stamp">
+          <h3><i class="fas fa-check-circle"></i> FACTURE ACQUITTÉE</h3>
+        </div>
+
+        <div style="text-align: center; font-size: 12px; color: #6b7280; margin-top: 30px;">
+          ${!withVat ? 'TVA non applicable - Art. 293B du CGI' : ''}
+        </div>
+      `;
+
+      document.getElementById('invoicePreview').innerHTML = preview;
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('pdfBtn').disabled = false;
+    }
+
+    // Envoyer la facture
+    async function sendInvoice() {
+      const clientEmail = document.getElementById('clientEmail').value;
+      if (!clientEmail) {
+        alert('Veuillez renseigner l\'email du client');
+        return;
       }
+
+      if (!confirm('Envoyer la facture par email à ' + clientEmail + ' ?')) return;
+
+      const token = localStorage.getItem('lcc_token');
+      const data = {
+        clientName: document.getElementById('clientName').value,
+        clientEmail: clientEmail,
+        clientAddress: document.getElementById('clientAddress').value,
+        clientPostalCode: document.getElementById('clientPostalCode').value,
+        clientCity: document.getElementById('clientCity').value,
+        clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
+        propertyName: document.getElementById('propertyName').value,
+        checkinDate: document.getElementById('checkinDate').value,
+        checkoutDate: document.getElementById('checkoutDate').value,
+        nights: calculateNights(),
+        rentAmount: document.getElementById('rentAmount').value,
+        touristTaxAmount: document.getElementById('touristTaxAmount').value,
+        cleaningFee: document.getElementById('cleaningFee').value,
+        vatRate: document.getElementById('withVat').checked ? document.getElementById('vatRate').value : 0,
+        sendEmail: true
+      };
+
+      try {
+        const response = await fetch('/api/invoice/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert('Facture ' + result.invoiceNumber + ' créée et envoyée par email !');
+          currentInvoiceId = result.invoiceId;
+          invoiceNumber = result.invoiceNumber;
+          document.querySelector('.invoice-number').textContent = 'FACTURE N° ' + invoiceNumber;
+        } else {
+          alert('Erreur: ' + result.error);
+        }
+      } catch (err) {
+        console.error('Erreur:', err);
+        alert('Erreur lors de l\'envoi de la facture');
+      }
+    }
+
+    // Télécharger PDF
+    async function downloadPDF() {
+      if (!currentInvoiceId) {
+        alert('Veuillez d\'abord créer la facture');
+        return;
+      }
+
+      const token = localStorage.getItem('lcc_token');
+      window.open(`/api/invoice/${currentInvoiceId}/pdf?token=${token}`, '_blank');
+    }
+
+    // Auto-update preview
+    ['rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', generateInvoice);
     });
+
+    // Init
+    loadProperties();
   </script>
 </body>
 </html>
