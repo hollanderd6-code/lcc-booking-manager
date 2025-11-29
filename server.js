@@ -363,7 +363,6 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
   const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
   const tasks = [];
 
-
   const handleReservation = (res, type) => {
     const userId = res.userId;
     if (!userId) {
@@ -472,7 +471,8 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
         `;
       }
 
-            try {
+      try {
+        // 1) Email au propriétaire
         if (useBrevo) {
           await sendEmailViaBrevo({
             to: user.email,
@@ -492,11 +492,41 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
         console.log(
           `📧 Notification "${type}" envoyée à ${user.email} (resa uid=${res.uid || res.id})`
         );
+
+        // 2) WhatsApp au client (si configuré + activé)
+        if (
+          whatsappService.isConfigured() &&
+          settings &&
+          settings.whatsappEnabled &&
+          settings.whatsappNumber
+        ) {
+          const waText =
+            type === 'new'
+              ? `Nouvelle réservation\n` +
+                `Logement : ${propertyName}\n` +
+                `Voyageur : ${guest}\n` +
+                `Séjour : du ${start} au ${end}\n` +
+                `Source : ${source}`
+              : `Réservation annulée\n` +
+                `Logement : ${propertyName}\n` +
+                `Voyageur : ${guest}\n` +
+                `Séjour initial : du ${start} au ${end}\n` +
+                `Source : ${source}`;
+
+          await whatsappService.sendWhatsAppText(settings.whatsappNumber, waText);
+
+          console.log(
+            `📲 WhatsApp "${type}" envoyé à ${settings.whatsappNumber} (user ${userId}, resa uid=${res.uid || res.id})`
+          );
+        }
       } catch (err) {
-        console.error('❌ Erreur envoi email notification réservation :', err);
+        console.error(
+          '❌ Erreur envoi notification réservation (email/WhatsApp) :',
+          err
+        );
       }
-    })());  
-  };  
+    })());
+  };
 
   (newReservations || []).forEach(res => handleReservation(res, 'new'));
   (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
