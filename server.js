@@ -348,6 +348,8 @@ async function getCleanerAssignmentsMapForUser(userId) {
 /**
  * Envoie les emails de notifications de nouvelles réservations / annulations,
  * en respectant les préférences de l'utilisateur.
+ * 
+ * VERSION CORRIGÉE AVEC LOGS DÉTAILLÉS POUR DEBUGGING WHATSAPP
  */
 async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
   const useBrevo = !!process.env.BREVO_API_KEY;
@@ -381,6 +383,7 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
       let settings;
       try {
         settings = await getNotificationSettings(userId);
+        console.log(`📋 Settings récupérés pour user ${userId}:`, JSON.stringify(settings, null, 2));
       } catch (e) {
         console.error(
           'Erreur lors de la récupération des préférences de notifications pour user',
@@ -494,12 +497,19 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
         );
 
         // 2) WhatsApp au client (si configuré + activé)
+        console.log(`🔍 Vérification WhatsApp pour user ${userId}:`);
+        console.log(`   - whatsappService.isConfigured(): ${whatsappService.isConfigured()}`);
+        console.log(`   - settings.whatsappEnabled: ${settings?.whatsappEnabled}`);
+        console.log(`   - settings.whatsappNumber: ${settings?.whatsappNumber}`);
+        
         if (
           whatsappService.isConfigured() &&
           settings &&
           settings.whatsappEnabled &&
           settings.whatsappNumber
         ) {
+          console.log(`✅ Toutes les conditions WhatsApp remplies, envoi en cours...`);
+          
           const waText =
             type === 'new'
               ? `Nouvelle réservation\n` +
@@ -513,11 +523,22 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
                 `Séjour initial : du ${start} au ${end}\n` +
                 `Source : ${source}`;
 
-          await whatsappService.sendWhatsAppText(settings.whatsappNumber, waText);
+          console.log(`📲 Tentative d'envoi WhatsApp à: ${settings.whatsappNumber}`);
+          console.log(`📝 Message: ${waText.substring(0, 100)}...`);
 
-          console.log(
-            `📲 WhatsApp "${type}" envoyé à ${settings.whatsappNumber} (user ${userId}, resa uid=${res.uid || res.id})`
-          );
+          try {
+            await whatsappService.sendWhatsAppText(settings.whatsappNumber, waText);
+            console.log(
+              `✅ WhatsApp "${type}" envoyé avec succès à ${settings.whatsappNumber} (user ${userId}, resa uid=${res.uid || res.id})`
+            );
+          } catch (waErr) {
+            console.error(
+              `❌ Erreur spécifique WhatsApp pour ${settings.whatsappNumber}:`,
+              waErr.message || waErr
+            );
+          }
+        } else {
+          console.log(`⏭️  WhatsApp non envoyé - au moins une condition non remplie`);
         }
       } catch (err) {
         console.error(
@@ -1149,16 +1170,101 @@ async function syncAllCalendars() {
   console.log('✅ Synchronisation terminée');
   return reservationsStore;
 }
+// ============================================
+// ROUTE DE TEST WHATSAPP AMÉLIORÉE
+// ============================================
+
 app.get('/api/test-whatsapp', async (req, res) => {
   try {
-    await whatsappService.sendWhatsAppText(
-      '+336XXXXXXXX', // ton numéro perso
-      'Test WhatsApp Boostinghost ✅'
-    );
-    res.json({ ok: true });
+    console.log('🧪 Test WhatsApp demandé');
+    
+    // Vérifier si le service est configuré
+    const isConfigured = whatsappService.isConfigured();
+    console.log('   - Service configuré:', isConfigured);
+    
+    if (!isConfigured) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: 'Service WhatsApp non configuré. Vérifiez WHATSAPP_API_KEY et WHATSAPP_PHONE_ID' 
+      });
+    }
+    
+    // Utiliser le numéro passé en paramètre ou un numéro par défaut
+    const testNumber = req.query.number || '+33680559925'; // 
+    const testMessage = req.query.message || 'Test WhatsApp Boostinghost ✅';
+    
+    console.log(`   - Envoi à: ${testNumber}`);
+    console.log(`   - Message: ${testMessage}`);
+    
+    const result = await whatsappService.sendWhatsAppText(testNumber, testMessage);
+    
+    console.log('✅ WhatsApp envoyé avec succès:', result);
+    
+    res.json({ 
+      ok: true, 
+      message: 'WhatsApp envoyé avec succès',
+      to: testNumber,
+      result: result
+    });
   } catch (err) {
-    console.error('Erreur /api/test-whatsapp :', err);
-    res.status(500).json({ error: err.message });
+    console.error('❌ Erreur /api/test-whatsapp :', err);
+    res.status(500).json({ 
+      ok: false,
+      error: err.message,
+      details: err.stack
+    });
+  }
+});
+
+// Route pour tester avec l'utilisateur connecté
+app.get('/api/test-whatsapp-user', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    console.log(`🧪 Test WhatsApp pour user ${user.id}`);
+    
+    // Récupérer les settings de l'utilisateur
+    const settings = await getNotificationSettings(user.id);
+    
+    console.log('   - Settings utilisateur:', JSON.stringify(settings, null, 2));
+    
+    if (!settings.whatsappEnabled) {
+      return res.json({ 
+        ok: false, 
+        message: 'WhatsApp désactivé dans vos préférences' 
+      });
+    }
+    
+    if (!settings.whatsappNumber) {
+      return res.json({ 
+        ok: false, 
+        message: 'Aucun numéro WhatsApp configuré dans vos préférences' 
+      });
+    }
+    
+    const testMessage = `Test notification Boostinghost ✅\n\nCeci est un message de test envoyé à ${new Date().toLocaleString('fr-FR')}`;
+    
+    console.log(`   - Envoi à: ${settings.whatsappNumber}`);
+    
+    await whatsappService.sendWhatsAppText(settings.whatsappNumber, testMessage);
+    
+    console.log('✅ Test WhatsApp envoyé avec succès');
+    
+    res.json({ 
+      ok: true, 
+      message: 'Message WhatsApp envoyé avec succès à votre numéro',
+      to: settings.whatsappNumber
+    });
+    
+  } catch (err) {
+    console.error('❌ Erreur /api/test-whatsapp-user :', err);
+    res.status(500).json({ 
+      ok: false,
+      error: err.message 
+    });
   }
 });
 
