@@ -7,39 +7,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
- /* V2 - Catalogue articles */
-.articles-section { margin-bottom: 24px; }
-.articles-section-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; }
-.articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
-.article-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; }
-.article-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
-.article-card-name { font-weight: 600; margin-bottom: 4px; }
-.article-card-price { color: var(--primary-color); font-weight: 600; }
-.article-card-desc { font-size: 13px; color: var(--text-secondary); margin: 8px 0; }
-.article-card-actions { display: flex; gap: 8px; margin-top: 12px; }
-
-/* V2 - Catalogue selector */
-.catalogue-selector { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
-.catalogue-title { font-weight: 600; margin-bottom: 12px; }
-.catalogue-items { display: flex; gap: 8px; flex-wrap: wrap; }
-.catalogue-item-btn { padding: 8px 14px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 14px; }
-.catalogue-item-btn:hover { border-color: var(--primary-color); background: var(--primary-color); color: white; }
-
-/* V2 - Prestation actions */
-.prestation-actions { display: flex; gap: 8px; }
-.btn-icon { padding: 6px 10px; font-size: 14px; }
-
-/* V2 - Status cancelled */
-.status-badge.cancelled { background: rgba(239, 68, 68, 0.15); color: #991b1b; }
-
-/* V2 - Discount row */
-.discount-section { background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin: 16px 0; }
   <style>
     html, body { margin: 0 !important; padding: 0 !important; }
     .main-content { padding-top: 24px !important; }
     .page-content { margin-top: 0 !important; max-width: 1400px; }
-    
-    /* Onglets */
     .tabs-header { display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 24px; }
     .tab-btn { padding: 12px 20px; border: none; background: transparent; font-size: 14px; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
     .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
@@ -47,8 +18,6 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; animation: fadeIn 0.2s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Clients Grid */
     .clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
     .client-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; }
     .client-card:hover { border-color: var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -60,13 +29,9 @@
     .client-info { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
     .client-commission { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 14px; font-weight: 600; color: var(--primary-color); }
     .client-actions { display: flex; gap: 8px; margin-top: 12px; }
-    
-    /* Form Grid */
     .form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     @media (max-width: 768px) { .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; } }
-    
-    /* Prestations Builder */
     .prestations-list { margin: 20px 0; }
     .prestation-item { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
     .prestation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -75,338 +40,429 @@
     .prestation-type.cleaning { background: rgba(59, 130, 246, 0.1); color: #1e40af; }
     .prestation-type.debours { background: rgba(245, 158, 11, 0.1); color: #92400e; }
     .prestation-type.other { background: rgba(107, 114, 128, 0.1); color: #374151; }
-    .btn-remove { color: #dc2626; cursor: pointer; }
-    .btn-remove:hover { color: #991b1b; }
-    
-    /* Invoice Table */
+    .prestation-actions { display: flex; gap: 8px; }
+    .btn-icon { padding: 6px 10px; font-size: 14px; }
     .invoice-table { width: 100%; border-collapse: collapse; }
     .invoice-table th { background: var(--bg-secondary); padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
     .invoice-table td { padding: 14px 12px; border-top: 1px solid var(--border-color); font-size: 14px; }
-    .invoice-table tbody tr { cursor: pointer; transition: background 0.15s; }
+    .invoice-table tbody tr { transition: background 0.15s; cursor: pointer; }
     .invoice-table tbody tr:hover { background: var(--bg-secondary); }
     .status-badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
     .status-badge.draft { background: rgba(234, 179, 8, 0.15); color: #854d0e; }
     .status-badge.sent { background: rgba(59, 130, 246, 0.15); color: #1e40af; }
     .status-badge.paid { background: rgba(34, 197, 94, 0.15); color: #166534; }
-    
-    /* Upload Zone */
-    .upload-zone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .upload-zone:hover { border-color: var(--primary-color); background: var(--bg-secondary); }
-    .upload-zone input[type="file"] { display: none; }
-    
-    /* Modal */
+    .status-badge.cancelled { background: rgba(239, 68, 68, 0.15); color: #991b1b; }
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
     .modal-overlay.active { display: flex; }
     .modal-content { background: var(--bg-primary); border-radius: 16px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 32px; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .modal-title { font-size: 20px; font-weight: 700; }
     .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
+    .articles-section { margin-bottom: 24px; }
+    .articles-section-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; }
+    .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .article-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+    .article-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+    .article-card-name { font-weight: 600; margin-bottom: 4px; }
+    .article-card-price { color: var(--primary-color); font-weight: 600; }
+    .article-card-desc { font-size: 13px; color: var(--text-secondary); margin: 8px 0; }
+    .article-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .catalogue-selector { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    .catalogue-title { font-weight: 600; margin-bottom: 12px; }
+    .catalogue-items { display: flex; gap: 8px; flex-wrap: wrap; }
+    .catalogue-item-btn { padding: 8px 14px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+    .catalogue-item-btn:hover { border-color: var(--primary-color); background: var(--primary-color); color: white; }
+    .discount-section { background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin: 16px 0; }
   </style>
 </head>
-<body data-page="factures-proprietaires">
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo"><i class="fas fa-calendar-check"></i><span class="mobile-logo-text">Boostinghost</span></a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <div class="app-container">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">
-          <i class="fas fa-calendar-check"></i>
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">Boostinghost</span>
-            <span class="sidebar-logo-subtitle">Property Manager</span>
-          </div>
-        </a>
+<body>
+<div class="app-container">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Boostinghost</div>
+      <div class="logo-subtitle">PROPERTY MANAGER</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Principal</div>
+        <a href="/dashboard.html" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="/calendar.html" class="nav-item"><i class="fas fa-calendar-alt"></i><span>Calendrier</span></a>
+        <a href="/messages.html" class="nav-item"><i class="fas fa-comments"></i><span>Messages</span></a>
       </div>
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-          <a href="/app.html" class="nav-item"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
-          <a href="/app.html#calendarSection" class="nav-item"><i class="fas fa-calendar"></i><span>Calendrier</span></a>
-          <a href="/messages.html" class="nav-item"><i class="fas fa-comment-dots"></i><span>Messages</span></a>
-        </div>
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-          <a href="/settings.html" class="nav-item"><i class="fas fa-home"></i><span>Mes logements</span></a>
-          <a href="/welcome.html" class="nav-item"><i class="fas fa-book-open"></i><span>Livret d'accueil</span></a>
-          <a href="/cleaning.html" class="nav-item"><i class="fas fa-broom"></i><span>Gestion du ménage</span></a>
-        </div>
-        <div class="nav-section">
-          <div class="nav-section-title">Facturation</div>
-          <a href="/factures.html" class="nav-item"><i class="fas fa-file-invoice"></i><span>Factures clients</span></a>
-          <a href="/factures-proprietaires.html" class="nav-item active"><i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span></a>
-        </div>
-        <div class="nav-section">
-          <div class="nav-section-title">Autres</div>
-          <a href="/deposits.html" class="nav-item"><i class="fas fa-shield-alt"></i><span>Cautions</span></a>
-          <a href="/notifications.html" class="nav-item"><i class="fas fa-bell"></i><span>Notifications</span></a>
-        </div>
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-          <a href="/settings-account.html" class="nav-item"><i class="fas fa-cog"></i><span>Paramètres</span></a>
-          <a href="/help.html" class="nav-item"><i class="fas fa-question-circle"></i><span>Aide</span></a>
-        </div>
-      </nav>
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="user-avatar" id="sidebarUserAvatar">C</div>
+      <div class="nav-section">
+        <div class="nav-section-title">Gestion</div>
+        <a href="/properties.html" class="nav-item"><i class="fas fa-home"></i><span>Mes logements</span></a>
+        <a href="/welcome-book.html" class="nav-item"><i class="fas fa-book"></i><span>Livret d'accueil</span></a>
+        <a href="/cleaning.html" class="nav-item"><i class="fas fa-broom"></i><span>Gestion du ménage</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Facturation</div>
+        <a href="/factures.html" class="nav-item"><i class="fas fa-file-invoice"></i><span>Factures clients</span></a>
+        <a href="/factures-proprietaires.html" class="nav-item active"><i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Autres</div>
+        <a href="/cautions.html" class="nav-item"><i class="fas fa-shield-alt"></i><span>Cautions</span></a>
+        <a href="/notifications.html" class="nav-item"><i class="fas fa-bell"></i><span>Notifications</span></a>
+        <a href="/settings.html" class="nav-item"><i class="fas fa-cog"></i><span>Paramètres</span></a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Aide</div>
+        <a href="/settings.html" class="nav-item"><i class="fas fa-cog"></i><span>Paramètres</span></a>
+        <a href="#" class="nav-item" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Déconnexion</span></a>
+      </div>
+    </nav>
+  </aside>
+  <div class="main-wrapper">
+    <header class="top-bar">
+      <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+      <div class="top-bar-right">
+        <div class="user-menu">
+          <div class="user-avatar" id="userAvatar">C</div>
           <div class="user-info">
-            <div class="user-name" id="sidebarUserName">Utilisateur</div>
-            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+            <div class="user-name" id="userName">charles Induni</div>
+            <div class="user-role" id="userCompany">LCC</div>
           </div>
-          <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
-    </aside>
+    </header>
     <main class="main-content">
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Facturation</div>
-          <h1 class="page-title">Factures Propriétaires</h1>
-          <p class="page-subtitle">Gérez vos clients propriétaires et émettez vos factures de commission</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn btn-secondary" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
-          <button class="btn btn-primary" onclick="showTab('create')"><i class="fas fa-plus"></i> Nouvelle facture</button>
-        </div>
-      </header>
       <div class="page-content">
-       <div class="tabs-header">
-  <button class="tab-btn active" data-tab="clients" onclick="showTab('clients')">
-    <i class="fas fa-users"></i> Mes clients (<span id="clientCount">0</span>)
-  </button>
-  <button class="tab-btn" data-tab="catalogue" onclick="showTab('catalogue')">
-    <i class="fas fa-box"></i> Catalogue (<span id="articleCount">0</span>)
-  </button>
-  <button class="tab-btn" data-tab="create" onclick="showTab('create')">
-    <i class="fas fa-plus-circle"></i> Créer une facture
-  </button>
-  <button class="tab-btn" data-tab="history" onclick="showTab('history')">
-    <i class="fas fa-history"></i> Historique (<span id="invoiceCount">0</span>)
-  </button>
-</div>
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+          <div>
+            <div class="page-badge">FACTURATION</div>
+            <h1 class="page-title">Factures Propriétaires</h1>
+            <p class="page-subtitle">Gérez vos clients propriétaires et émettez vos factures de commission</p>
+          </div>
+          <div style="display:flex; gap:12px;">
+            <button class="btn btn-secondary btn-sm" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+            <button class="btn btn-primary" onclick="showTab('create')"><i class="fas fa-plus"></i> Nouvelle facture</button>
+          </div>
+        </div>
+
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="clients" onclick="showTab('clients')"><i class="fas fa-users"></i> Mes clients (<span id="clientCount">0</span>)</button>
+          <button class="tab-btn" data-tab="catalogue" onclick="showTab('catalogue')"><i class="fas fa-box"></i> Catalogue (<span id="articleCount">0</span>)</button>
+          <button class="tab-btn" data-tab="create" onclick="showTab('create')"><i class="fas fa-plus-circle"></i> Créer une facture</button>
+          <button class="tab-btn" data-tab="history" onclick="showTab('history')"><i class="fas fa-history"></i> Historique (<span id="invoiceCount">0</span>)</button>
+        </div>
+
         <!-- ONGLET CLIENTS -->
         <div class="tab-content active" id="tabClients">
           <div class="card">
             <div class="card-header">
-              <div class="card-title"><i class="fas fa-users"></i> Carnet de clients propriétaires</div>
+              <div class="card-title"><i class="fas fa-address-book"></i> Carnet de clients propriétaires</div>
               <button class="btn btn-primary btn-sm" onclick="openClientModal()"><i class="fas fa-plus"></i> Nouveau client</button>
             </div>
             <div class="card-body">
-              <div id="clientsLoading" style="text-align:center; padding:40px; color:var(--text-secondary);"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
-              <div id="clientsEmpty" style="display:none; text-align:center; padding:40px; color:var(--text-secondary);"><i class="fas fa-users" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucun client. Créez votre premier client !</p></div>
-              <div id="clientsGrid" class="clients-grid" style="display:none;"></div>
+              <div id="clientsLoading" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+              <div id="clientsEmpty" style="display:none; text-align:center; padding:40px;"><i class="fas fa-users" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucun client. Créez votre premier client !</p></div>
+              <div class="clients-grid" id="clientsContainer" style="display:none;"></div>
             </div>
           </div>
         </div>
+
         <!-- ONGLET CATALOGUE -->
-<div class="tab-content" id="tabCatalogue">
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-box"></i> Catalogue d'articles</div>
-      <button class="btn btn-primary btn-sm" onclick="openArticleModal()"><i class="fas fa-plus"></i> Nouvel article</button>
-    </div>
-    <div class="card-body">
-      <div id="articlesLoading" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
-      <div id="articlesEmpty" style="display:none; text-align:center; padding:40px;"><i class="fas fa-box" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucun article. Créez votre premier article !</p></div>
-      <div id="articlesContainer" style="display:none;">
-        <div class="articles-section">
-          <div class="articles-section-title">🧹 Ménage</div>
-          <div class="articles-grid" id="articlesMenage"></div>
+        <div class="tab-content" id="tabCatalogue">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-box"></i> Catalogue d'articles</div>
+              <button class="btn btn-primary btn-sm" onclick="openArticleModal()"><i class="fas fa-plus"></i> Nouvel article</button>
+            </div>
+            <div class="card-body">
+              <div id="articlesLoading" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+              <div id="articlesEmpty" style="display:none; text-align:center; padding:40px;"><i class="fas fa-box" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucun article. Créez votre premier article !</p></div>
+              <div id="articlesContainer" style="display:none;">
+                <div class="articles-section">
+                  <div class="articles-section-title">🧹 Ménage</div>
+                  <div class="articles-grid" id="articlesMenage"></div>
+                </div>
+                <div class="articles-section">
+                  <div class="articles-section-title">💰 Location</div>
+                  <div class="articles-grid" id="articlesLocation"></div>
+                </div>
+                <div class="articles-section">
+                  <div class="articles-section-title">➕ Personnalisés</div>
+                  <div class="articles-grid" id="articlesCustom"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="articles-section">
-          <div class="articles-section-title">💰 Location</div>
-          <div class="articles-grid" id="articlesLocation"></div>
-        </div>
-        <div class="articles-section">
-          <div class="articles-section-title">➕ Personnalisés</div>
-          <div class="articles-grid" id="articlesCustom"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
         <!-- ONGLET CRÉER FACTURE -->
         <div class="tab-content" id="tabCreate">
           <div class="card">
-            <div class="card-header"><div class="card-title"><i class="fas fa-file-invoice-dollar"></i> Nouvelle facture propriétaire</div></div>
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-file-invoice"></i> Nouvelle facture propriétaire</div>
+            </div>
             <div class="card-body">
-              <div class="form-row"><label>Client propriétaire *</label><select id="invoiceClientId" onchange="loadClientDefaults()" required><option value="">Sélectionner un client...</option></select></div>
-              <div class="form-grid-2" style="margin-top:16px;">
-                <div class="form-row"><label>Période du</label><input type="date" id="invoicePeriodStart"></div>
-                <div class="form-row"><label>Période au</label><input type="date" id="invoicePeriodEnd"></div>
+              <div class="form-row">
+                <label>Client propriétaire *</label>
+                <select id="invoiceClientId" onchange="loadClientDefaults()">
+                  <option value="">Sélectionner un client</option>
+                </select>
               </div>
               <div class="form-grid-2">
-                <div class="form-row"><label>Date d'émission</label><input type="date" id="invoiceIssueDate"></div>
-                <div class="form-row"><label>Date d'échéance</label><input type="date" id="invoiceDueDate"></div>
+                <div class="form-row">
+                  <label>Période - Du</label>
+                  <input type="date" id="invoicePeriodStart">
+                </div>
+                <div class="form-row">
+                  <label>Au</label>
+                  <input type="date" id="invoicePeriodEnd">
+                </div>
               </div>
+              <div class="form-grid-2">
+                <div class="form-row">
+                  <label>Date d'émission</label>
+                  <input type="date" id="invoiceIssueDate">
+                </div>
+                <div class="form-row">
+                  <label>Date d'échéance</label>
+                  <input type="date" id="invoiceDueDate">
+                </div>
+              </div>
+
               <hr style="margin:24px 0; border:none; border-top:1px solid var(--border-color);">
+
               <h3 style="font-size:16px; font-weight:600; margin-bottom:16px;"><i class="fas fa-list"></i> Prestations</h3>
+
               <div class="catalogue-selector">
-  <div class="catalogue-title">📦 Ajouter depuis le catalogue</div>
-  <div class="catalogue-items" id="catalogueQuickAdd">
-    <div style="color:var(--text-secondary); font-size:13px;">Chargement...</div>
-  </div>
-</div>
-              <div id="prestationsList" class="prestations-list"></div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-secondary btn-sm" onclick="addPrestation('commission')"><i class="fas fa-percent"></i> Commission</button>
-                <button class="btn btn-secondary btn-sm" onclick="addPrestation('cleaning')"><i class="fas fa-broom"></i> Ménage</button>
-                <button class="btn btn-secondary btn-sm" onclick="addPrestation('debours')"><i class="fas fa-receipt"></i> Débours</button>
-                <button class="btn btn-secondary btn-sm" onclick="addPrestation('other')"><i class="fas fa-plus"></i> Autre</button>
+                <div class="catalogue-title">📦 Ajouter depuis le catalogue</div>
+                <div class="catalogue-items" id="catalogueQuickAdd">
+                  <div style="color:var(--text-secondary); font-size:13px;">Chargement...</div>
+                </div>
               </div>
-              <hr style="margin:24px 0;">
+
+              <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                <button class="btn btn-sm btn-secondary" onclick="addPrestation('commission')"><i class="fas fa-percentage"></i> Commission</button>
+                <button class="btn btn-sm btn-secondary" onclick="addPrestation('cleaning')"><i class="fas fa-broom"></i> Ménage</button>
+                <button class="btn btn-sm btn-secondary" onclick="addPrestation('debours')"><i class="fas fa-receipt"></i> Débours</button>
+                <button class="btn btn-sm btn-secondary" onclick="addPrestation('other')"><i class="fas fa-plus"></i> Autre</button>
+              </div>
+
+              <div class="prestations-list" id="prestationsList"></div>
+
+              <hr style="margin:24px 0; border:none; border-top:1px solid var(--border-color);">
+
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
                 <input type="checkbox" id="invoiceVatApplicable" onchange="toggleVat()">
-                <label for="invoiceVatApplicable" style="margin:0; cursor:pointer;">Assujetti à la TVA</label>
+                <label for="invoiceVatApplicable" style="margin:0; cursor:pointer; font-weight:600;">Assujetti à la TVA</label>
               </div>
               <div id="vatRateGroup" style="display:none;">
-                <div class="form-row"><label>Taux de TVA (%)</label><input type="number" id="invoiceVatRate" value="20" step="0.01" min="0" max="100"></div>
+                <div class="form-row">
+                  <label>Taux de TVA (%)</label>
+                  <input type="number" id="invoiceVatRate" step="0.01" min="0" max="100" value="20" onchange="calculateTotals()">
+                </div>
               </div>
+
               <div class="discount-section">
-  <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-    <input type="checkbox" id="invoiceDiscountEnabled" onchange="toggleDiscount()">
-    <label for="invoiceDiscountEnabled" style="margin:0; cursor:pointer; font-weight:600;">Appliquer une réduction</label>
-  </div>
-  <div id="discountFields" style="display:none;">
-    <div class="form-grid-2">
-      <div class="form-row">
-        <label>Type de réduction</label>
-        <select id="invoiceDiscountType" onchange="calculateTotals()">
-          <option value="percentage">Pourcentage (%)</option>
-          <option value="fixed">Montant fixe (€)</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Valeur</label>
-        <input type="number" id="invoiceDiscountValue" step="0.01" min="0" value="0" onchange="calculateTotals()">
-      </div>
-    </div>
-  </div>
-</div>
-              <div class="discount-section">
-  <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-    <input type="checkbox" id="invoiceDiscountEnabled" onchange="toggleDiscount()">
-    <label for="invoiceDiscountEnabled" style="margin:0; cursor:pointer; font-weight:600;">Appliquer une réduction</label>
-  </div>
-  <div id="discountFields" style="display:none;">
-    <div class="form-grid-2">
-      <div class="form-row">
-        <label>Type de réduction</label>
-        <select id="invoiceDiscountType" onchange="calculateTotals()">
-          <option value="percentage">Pourcentage (%)</option>
-          <option value="fixed">Montant fixe (€)</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Valeur</label>
-        <input type="number" id="invoiceDiscountValue" step="0.01" min="0" value="0" onchange="calculateTotals()">
-      </div>
-    </div>
-  </div>
-</div>
-              <div class="form-row"><label>Notes (visibles par le client)</label><textarea id="invoiceNotes" rows="2"></textarea></div>
-              <div class="form-row"><label>Notes internes (non visibles)</label><textarea id="invoiceInternalNotes" rows="2" placeholder="Notes privées..."></textarea></div>
-             <div id="invoiceTotals" style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin:20px 0;">
-  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-    <span>Sous-total HT:</span>
-    <strong id="totalHt">0,00 €</strong>
-  </div>
-  <div id="totalDiscountRow" style="display:none; margin-bottom:8px; color:#dc2626;">
-    <div style="display:flex; justify-content:space-between;">
-      <span>Réduction (<span id="discountDisplay">0</span>):</span>
-      <strong id="totalDiscount">0,00 €</strong>
-    </div>
-  </div>
-  <div id="totalNetRow" style="display:none; margin-bottom:8px; padding-top:8px; border-top:1px solid var(--border-color);">
-    <div style="display:flex; justify-content:space-between; font-weight:600;">
-      <span>Net HT:</span>
-      <strong id="totalNet">0,00 €</strong>
-    </div>
-  </div>
-  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-    <span>Débours (hors TVA):</span>
-    <strong id="totalDebours">0,00 €</strong>
-  </div>
-  <div id="totalVatRow" style="display:none; margin-bottom:8px;">
-    <div style="display:flex; justify-content:space-between;">
-      <span>TVA (<span id="vatRateDisplay">20</span>%):</span>
-      <strong id="totalVat">0,00 €</strong>
-    </div>
-  </div>
-  <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:2px solid var(--border-color); font-size:18px; font-weight:700; color:var(--primary-color);">
-    <span>TOTAL TTC:</span>
-    <strong id="totalTtc">0,00 €</strong>
-  </div>
-</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                  <input type="checkbox" id="invoiceDiscountEnabled" onchange="toggleDiscount()">
+                  <label for="invoiceDiscountEnabled" style="margin:0; cursor:pointer; font-weight:600;">Appliquer une réduction</label>
+                </div>
+                <div id="discountFields" style="display:none;">
+                  <div class="form-grid-2">
+                    <div class="form-row">
+                      <label>Type de réduction</label>
+                      <select id="invoiceDiscountType" onchange="calculateTotals()">
+                        <option value="percentage">Pourcentage (%)</option>
+                        <option value="fixed">Montant fixe (€)</option>
+                      </select>
+                    </div>
+                    <div class="form-row">
+                      <label>Valeur</label>
+                      <input type="number" id="invoiceDiscountValue" step="0.01" min="0" value="0" onchange="calculateTotals()">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="invoiceTotals" style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin:20px 0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                  <span>Sous-total HT:</span>
+                  <strong id="totalHt">0,00 €</strong>
+                </div>
+                <div id="totalDiscountRow" style="display:none; margin-bottom:8px; color:#dc2626;">
+                  <div style="display:flex; justify-content:space-between;">
+                    <span>Réduction (<span id="discountDisplay">0</span>):</span>
+                    <strong id="totalDiscount">0,00 €</strong>
+                  </div>
+                </div>
+                <div id="totalNetRow" style="display:none; margin-bottom:8px; padding-top:8px; border-top:1px solid var(--border-color);">
+                  <div style="display:flex; justify-content:space-between; font-weight:600;">
+                    <span>Net HT:</span>
+                    <strong id="totalNet">0,00 €</strong>
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                  <span>Débours (hors TVA):</span>
+                  <strong id="totalDebours">0,00 €</strong>
+                </div>
+                <div id="totalVatRow" style="display:none; margin-bottom:8px;">
+                  <div style="display:flex; justify-content:space-between;">
+                    <span>TVA (<span id="vatRateDisplay">20</span>%):</span>
+                    <strong id="totalVat">0,00 €</strong>
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:2px solid var(--border-color); font-size:18px; font-weight:700; color:var(--primary-color);">
+                  <span>TOTAL TTC:</span>
+                  <strong id="totalTtc">0,00 €</strong>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label>Notes (visibles sur la facture)</label>
+                <textarea id="invoiceNotes" rows="3" placeholder="Notes pour le client..."></textarea>
+              </div>
+              <div class="form-row">
+                <label>Notes internes</label>
+                <textarea id="invoiceInternalNotes" rows="2" placeholder="Notes privées..."></textarea>
+              </div>
+
+              <div style="display:flex; gap:12px; margin-top:20px;">
+                <button class="btn btn-secondary" onclick="createInvoice(false)"><i class="fas fa-save"></i> Enregistrer brouillon</button>
+                <button class="btn btn-primary" onclick="createInvoice(true)"><i class="fas fa-paper-plane"></i> Enregistrer et envoyer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ONGLET HISTORIQUE -->
         <div class="tab-content" id="tabHistory">
           <div class="card">
-            <div class="card-header"><div class="card-title"><i class="fas fa-history"></i> Historique des factures</div></div>
-            <div class="card-body" style="padding:0;">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-history"></i> Historique des factures</div>
+            </div>
+            <div class="card-body">
               <div id="invoicesLoading" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
-              <div id="invoicesEmpty" style="display:none; text-align:center; padding:40px;"><i class="fas fa-file-invoice" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucune facture</p></div>
-              <table class="invoice-table" id="invoicesTable" style="display:none;">
-                <thead><tr><th>N° Facture</th><th>Client</th><th>Période</th><th>Montant TTC</th><th>Statut</th><th>Actions</th></tr></thead>
-                <tbody id="invoicesTableBody"></tbody>
-              </table>
+              <div id="invoicesEmpty" style="display:none; text-align:center; padding:40px;"><i class="fas fa-file-invoice" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucune facture. Créez votre première facture !</p></div>
+              <div id="invoicesContainer" style="display:none;">
+                <table class="invoice-table">
+                  <thead>
+                    <tr>
+                      <th>N° Facture</th>
+                      <th>Client</th>
+                      <th>Période</th>
+                      <th>Montant TTC</th>
+                      <th>Statut</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="invoicesTableBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </main>
   </div>
-  <!-- MODAL CLIENT -->
-  <div class="modal-overlay" id="clientModal">
-    <div class="modal-content">
-      <div class="modal-header"><div class="modal-title" id="clientModalTitle">Nouveau client</div><button class="modal-close" onclick="closeClientModal()">&times;</button></div>
-      <div style="display:flex; gap:16px; margin-bottom:16px;">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="clientType" value="individual" checked onchange="toggleClientType()"><span>Particulier</span></label>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="clientType" value="business" onchange="toggleClientType()"><span>Entreprise</span></label>
-      </div>
-      <div id="individualFields">
-        <div class="form-grid-2">
-          <div class="form-row"><label>Prénom *</label><input type="text" id="clientFirstName"></div>
-          <div class="form-row"><label>Nom *</label><input type="text" id="clientLastName"></div>
-        </div>
-      </div>
-      <div id="businessFields" style="display:none;">
-        <div class="form-row"><label>Nom de l'entreprise *</label><input type="text" id="clientCompanyName"></div>
-        <div class="form-grid-2">
-          <div class="form-row"><label>SIRET</label><input type="text" id="clientSiret" maxlength="17"></div>
-          <div class="form-row"><label>N° TVA</label><input type="text" id="clientVatNumber"></div>
-        </div>
-      </div>
-      <div class="form-grid-2">
-        <div class="form-row"><label>Email</label><input type="email" id="clientEmail"></div>
-        <div class="form-row"><label>Téléphone</label><input type="tel" id="clientPhone"></div>
-      </div>
-      <div class="form-row"><label>Adresse</label><input type="text" id="clientAddress"></div>
-      <div class="form-grid-3">
-        <div class="form-row"><label>Code postal</label><input type="text" id="clientPostalCode"></div>
-        <div class="form-row"><label>Ville</label><input type="text" id="clientCity"></div>
-        <div class="form-row"><label>Pays</label><input type="text" id="clientCountry" value="France"></div>
-      </div>
-      <hr style="margin:20px 0; border:none; border-top:1px solid var(--border-color);">
-      <h4 style="font-size:14px; font-weight:600; margin-bottom:12px;">Paramètres de facturation</h4>
-      <div class="form-grid-2">
-        <div class="form-row"><label>Commission par défaut (%)</label><input type="number" id="clientCommissionRate" value="20" step="0.01" min="0" max="100"></div>
-        <div class="form-row"><label>Taux TVA (%)</label><input type="number" id="clientVatRate" value="20" step="0.01" min="0" max="100"></div>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; margin:12px 0;">
-        <input type="checkbox" id="clientVatApplicable">
-        <label for="clientVatApplicable" style="margin:0; cursor:pointer;">Assujetti à la TVA</label>
-      </div>
-      <div class="form-row"><label>Notes internes</label><textarea id="clientNotes" rows="2"></textarea></div>
-      <div style="display:flex; gap:12px; margin-top:20px;">
-        <button class="btn btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Enregistrer</button>
-        <button class="btn btn-secondary" onclick="closeClientModal()">Annuler</button>
+</div>
+
+<!-- MODAL CLIENT -->
+<div class="modal-overlay" id="clientModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="clientModalTitle">Nouveau client</div>
+      <button class="modal-close" onclick="closeClientModal()">&times;</button>
+    </div>
+    <div class="form-row">
+      <label>Type de client</label>
+      <div style="display:flex; gap:16px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="radio" name="clientType" value="individual" checked onchange="toggleClientType()">
+          <span>Particulier</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="radio" name="clientType" value="business" onchange="toggleClientType()">
+          <span>Entreprise</span>
+        </label>
       </div>
     </div>
+    <div id="individualFields">
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Prénom *</label>
+          <input type="text" id="clientFirstName">
+        </div>
+        <div class="form-row">
+          <label>Nom *</label>
+          <input type="text" id="clientLastName">
+        </div>
+      </div>
+    </div>
+    <div id="businessFields" style="display:none;">
+      <div class="form-row">
+        <label>Raison sociale *</label>
+        <input type="text" id="clientCompanyName">
+      </div>
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>SIRET</label>
+          <input type="text" id="clientSiret">
+        </div>
+        <div class="form-row">
+          <label>N° TVA</label>
+          <input type="text" id="clientVatNumber">
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Email *</label>
+      <input type="email" id="clientEmail">
+    </div>
+    <div class="form-row">
+      <label>Téléphone</label>
+      <input type="tel" id="clientPhone">
+    </div>
+    <div class="form-row">
+      <label>Adresse</label>
+      <input type="text" id="clientAddress">
+    </div>
+    <div class="form-grid-3">
+      <div class="form-row">
+        <label>Code postal</label>
+        <input type="text" id="clientPostalCode">
+      </div>
+      <div class="form-row">
+        <label>Ville</label>
+        <input type="text" id="clientCity">
+      </div>
+      <div class="form-row">
+        <label>Pays</label>
+        <input type="text" id="clientCountry" value="France">
+      </div>
+    </div>
+    <hr style="margin:20px 0;">
+    <h4 style="font-size:14px; font-weight:600; margin-bottom:12px;">Paramètres de facturation</h4>
+    <div class="form-grid-2">
+      <div class="form-row">
+        <label>Commission par défaut (%)</label>
+        <input type="number" id="clientDefaultCommission" step="0.01" min="0" max="100" value="20">
+      </div>
+      <div class="form-row">
+        <label>Taux TVA par défaut (%)</label>
+        <input type="number" id="clientDefaultVatRate" step="0.01" min="0" max="100" value="20">
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; margin:12px 0;">
+      <input type="checkbox" id="clientVatApplicable">
+      <label for="clientVatApplicable" style="margin:0;">Assujetti à la TVA</label>
+    </div>
+    <div class="form-row">
+      <label>Notes internes</label>
+      <textarea id="clientNotes" rows="2"></textarea>
+    </div>
+    <div style="display:flex; gap:12px; margin-top:20px;">
+      <button class="btn btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Enregistrer</button>
+      <button class="btn btn-secondary" onclick="closeClientModal()">Annuler</button>
+    </div>
   </div>
-          <!-- MODAL ARTICLE -->
+</div>
+
+<!-- MODAL ARTICLE -->
 <div class="modal-overlay" id="articleModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -447,45 +503,142 @@
     </div>
   </div>
 </div>
-          // ============================================
-// V2 - VARIABLES
-// ============================================
+
+<script>
+let token = localStorage.getItem('token');
+let user = null;
+let clients = [];
+let invoices = [];
+let prestations = [];
+let prestationCounter = 0;
+let editingClientId = null;
 let articles = [];
 let editingArticleId = null;
 let editingInvoiceId = null;
 
-// ============================================
-// V2 - ARTICLES
-// ============================================
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
+  try {
+    const res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) throw new Error('Non autorisé');
+    user = await res.json();
+    document.getElementById('userName').textContent = user.name || user.email;
+    document.getElementById('userCompany').textContent = user.company || 'LCC';
+    document.getElementById('userAvatar').textContent = (user.name || user.email).charAt(0).toUpperCase();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('invoiceIssueDate').value = today;
+    document.getElementById('invoiceDueDate').value = today;
+    loadClients();
+    loadInvoices();
+    loadArticles();
+    fetch('/api/owner-articles/init-defaults', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).catch(() => {});
+  } catch (err) {
+    console.error(err);
+    localStorage.removeItem('token');
+    window.location.href = '/login.html';
+  }
+});
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('active');
+});
+
+function logout() {
+  localStorage.removeItem('token');
+  window.location.href = '/login.html';
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+  if (tab === 'clients') loadClients();
+  if (tab === 'history') loadInvoices();
+  if (tab === 'catalogue') loadArticles();
+}
+
+async function loadClients() {
+  try {
+    const res = await fetch('/api/owner-clients', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    clients = data.clients || [];
+    document.getElementById('clientCount').textContent = clients.length;
+    const loading = document.getElementById('clientsLoading');
+    const empty = document.getElementById('clientsEmpty');
+    const container = document.getElementById('clientsContainer');
+    loading.style.display = 'none';
+    if (clients.length === 0) {
+      empty.style.display = 'block';
+      container.style.display = 'none';
+    } else {
+      empty.style.display = 'none';
+      container.style.display = 'grid';
+      container.innerHTML = clients.map(c => {
+        const name = c.client_type === 'business' ? c.company_name : `${c.first_name} ${c.last_name}`;
+        const badge = c.client_type === 'business' ? 'PRO' : 'PART';
+        const badgeClass = c.client_type === 'business' ? 'business' : 'individual';
+        return `
+          <div class="client-card">
+            <div class="client-card-header">
+              <div class="client-name">${name}</div>
+              <span class="client-type-badge ${badgeClass}">${badge}</span>
+            </div>
+            <div class="client-info">
+              ${c.email ? `<div><i class="fas fa-envelope"></i> ${c.email}</div>` : ''}
+              ${c.phone ? `<div><i class="fas fa-phone"></i> ${c.phone}</div>` : ''}
+              ${c.city ? `<div><i class="fas fa-map-marker-alt"></i> ${c.city}</div>` : ''}
+            </div>
+            <div class="client-commission">
+              <i class="fas fa-percentage"></i> Commission : ${parseFloat(c.default_commission_rate || 0).toFixed(0)}%
+            </div>
+            <div class="client-actions">
+              <button class="btn btn-xs btn-secondary" onclick="editClient(${c.id})"><i class="fas fa-edit"></i> Modifier</button>
+              <button class="btn btn-xs btn-primary" onclick="createInvoiceForClient(${c.id})"><i class="fas fa-file-invoice"></i> Facturer</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      const select = document.getElementById('invoiceClientId');
+      select.innerHTML = '<option value="">Sélectionner un client</option>' + clients.map(c => {
+        const name = c.client_type === 'business' ? c.company_name : `${c.first_name} ${c.last_name}`;
+        return `<option value="${c.id}">${name}</option>`;
+      }).join('');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 async function loadArticles() {
   try {
     const res = await fetch('/api/owner-articles', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
     articles = data.articles || [];
     document.getElementById('articleCount').textContent = articles.length;
-    
     const loading = document.getElementById('articlesLoading');
     const empty = document.getElementById('articlesEmpty');
     const container = document.getElementById('articlesContainer');
-    
     loading.style.display = 'none';
-    
     if (articles.length === 0) {
       empty.style.display = 'block';
       container.style.display = 'none';
     } else {
       empty.style.display = 'none';
       container.style.display = 'block';
-      
       const menage = articles.filter(a => a.article_type === 'menage');
       const location = articles.filter(a => a.article_type === 'location');
       const custom = articles.filter(a => a.article_type === 'custom');
-      
       document.getElementById('articlesMenage').innerHTML = menage.map(renderArticleCard).join('');
       document.getElementById('articlesLocation').innerHTML = location.map(renderArticleCard).join('');
       document.getElementById('articlesCustom').innerHTML = custom.map(renderArticleCard).join('');
     }
-    
     updateCatalogueQuickAdd();
   } catch (err) {
     console.error(err);
@@ -493,10 +646,7 @@ async function loadArticles() {
 }
 
 function renderArticleCard(a) {
-  const price = a.article_type === 'location' 
-    ? `${parseFloat(a.commission_rate)}%` 
-    : `${parseFloat(a.unit_price).toFixed(2)} €`;
-  
+  const price = a.article_type === 'location' ? `${parseFloat(a.commission_rate)}%` : `${parseFloat(a.unit_price).toFixed(2)} €`;
   return `
     <div class="article-card">
       <div class="article-card-name">${a.name}</div>
@@ -525,7 +675,6 @@ function updateCatalogueQuickAdd() {
 function openArticleModal(id = null) {
   editingArticleId = id;
   document.getElementById('articleModalTitle').textContent = id ? 'Modifier l\'article' : 'Nouvel article';
-  
   if (id) {
     const article = articles.find(a => a.id === id);
     if (!article) return;
@@ -543,7 +692,6 @@ function openArticleModal(id = null) {
     document.getElementById('articleCommissionRate').value = 20;
     toggleArticleType();
   }
-  
   document.getElementById('articleModal').classList.add('active');
 }
 
@@ -566,9 +714,7 @@ async function saveArticle() {
     unitPrice: parseFloat(document.getElementById('articleUnitPrice').value) || 0,
     commissionRate: parseFloat(document.getElementById('articleCommissionRate').value) || 0
   };
-  
   if (!data.name) return alert('Nom requis');
-  
   try {
     const url = editingArticleId ? `/api/owner-articles/${editingArticleId}` : '/api/owner-articles';
     const method = editingArticleId ? 'PUT' : 'POST';
@@ -577,7 +723,6 @@ async function saveArticle() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify(data)
     });
-    
     if (res.ok) {
       closeArticleModal();
       loadArticles();
@@ -597,16 +742,12 @@ function editArticle(id) {
 
 async function deleteArticle(id) {
   if (!confirm('Supprimer cet article ?')) return;
-  
   try {
     const res = await fetch(`/api/owner-articles/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
-    
-    if (res.ok) {
-      loadArticles();
-    }
+    if (res.ok) loadArticles();
   } catch (err) {
     console.error(err);
   }
@@ -615,7 +756,6 @@ async function deleteArticle(id) {
 function addArticleFromCatalogue(articleId) {
   const article = articles.find(a => a.id === articleId);
   if (!article) return;
-  
   if (article.article_type === 'location') {
     addPrestation('commission');
     const lastId = prestations[prestations.length - 1].id;
@@ -629,9 +769,6 @@ function addArticleFromCatalogue(articleId) {
   }
 }
 
-// ============================================
-// V2 - RÉDUCTIONS
-// ============================================
 function toggleDiscount() {
   const enabled = document.getElementById('invoiceDiscountEnabled').checked;
   document.getElementById('discountFields').style.display = enabled ? 'block' : 'none';
@@ -640,23 +777,252 @@ function toggleDiscount() {
   calculateTotals();
 }
 
-// ============================================
-// V2 - MODIFIER calculateTotals() POUR RÉDUCTIONS
-// ============================================
-// REMPLACER la fonction calculateTotals() existante par celle-ci :
+function openClientModal(id = null) {
+  editingClientId = id;
+  document.getElementById('clientModalTitle').textContent = id ? 'Modifier le client' : 'Nouveau client';
+  if (id) {
+    const client = clients.find(c => c.id === id);
+    if (!client) return;
+    document.querySelector(`input[name="clientType"][value="${client.client_type}"]`).checked = true;
+    document.getElementById('clientFirstName').value = client.first_name || '';
+    document.getElementById('clientLastName').value = client.last_name || '';
+    document.getElementById('clientCompanyName').value = client.company_name || '';
+    document.getElementById('clientSiret').value = client.siret || '';
+    document.getElementById('clientVatNumber').value = client.vat_number || '';
+    document.getElementById('clientEmail').value = client.email || '';
+    document.getElementById('clientPhone').value = client.phone || '';
+    document.getElementById('clientAddress').value = client.address || '';
+    document.getElementById('clientPostalCode').value = client.postal_code || '';
+    document.getElementById('clientCity').value = client.city || '';
+    document.getElementById('clientCountry').value = client.country || 'France';
+    document.getElementById('clientDefaultCommission').value = client.default_commission_rate || 20;
+    document.getElementById('clientDefaultVatRate').value = client.default_vat_rate || 20;
+    document.getElementById('clientVatApplicable').checked = client.vat_applicable || false;
+    document.getElementById('clientNotes').value = client.notes || '';
+    toggleClientType();
+  } else {
+    document.querySelector('input[name="clientType"][value="individual"]').checked = true;
+    document.getElementById('clientFirstName').value = '';
+    document.getElementById('clientLastName').value = '';
+    document.getElementById('clientCompanyName').value = '';
+    document.getElementById('clientSiret').value = '';
+    document.getElementById('clientVatNumber').value = '';
+    document.getElementById('clientEmail').value = '';
+    document.getElementById('clientPhone').value = '';
+    document.getElementById('clientAddress').value = '';
+    document.getElementById('clientPostalCode').value = '';
+    document.getElementById('clientCity').value = '';
+    document.getElementById('clientCountry').value = 'France';
+    document.getElementById('clientDefaultCommission').value = 20;
+    document.getElementById('clientDefaultVatRate').value = 20;
+    document.getElementById('clientVatApplicable').checked = false;
+    document.getElementById('clientNotes').value = '';
+    toggleClientType();
+  }
+  document.getElementById('clientModal').classList.add('active');
+}
+
+function closeClientModal() {
+  document.getElementById('clientModal').classList.remove('active');
+  editingClientId = null;
+}
+
+function toggleClientType() {
+  const type = document.querySelector('input[name="clientType"]:checked').value;
+  document.getElementById('individualFields').style.display = type === 'individual' ? 'block' : 'none';
+  document.getElementById('businessFields').style.display = type === 'business' ? 'block' : 'none';
+}
+
+async function saveClient() {
+  const clientType = document.querySelector('input[name="clientType"]:checked').value;
+  const data = {
+    clientType,
+    firstName: document.getElementById('clientFirstName').value,
+    lastName: document.getElementById('clientLastName').value,
+    companyName: document.getElementById('clientCompanyName').value,
+    siret: document.getElementById('clientSiret').value,
+    vatNumber: document.getElementById('clientVatNumber').value,
+    email: document.getElementById('clientEmail').value,
+    phone: document.getElementById('clientPhone').value,
+    address: document.getElementById('clientAddress').value,
+    postalCode: document.getElementById('clientPostalCode').value,
+    city: document.getElementById('clientCity').value,
+    country: document.getElementById('clientCountry').value,
+    defaultCommissionRate: parseFloat(document.getElementById('clientDefaultCommission').value),
+    defaultVatRate: parseFloat(document.getElementById('clientDefaultVatRate').value),
+    vatApplicable: document.getElementById('clientVatApplicable').checked,
+    notes: document.getElementById('clientNotes').value
+  };
+  if (clientType === 'business' && !data.companyName) return alert('Raison sociale requise');
+  if (clientType === 'individual' && (!data.firstName || !data.lastName)) return alert('Prénom et nom requis');
+  if (!data.email) return alert('Email requis');
+  try {
+    const url = editingClientId ? `/api/owner-clients/${editingClientId}` : '/api/owner-clients';
+    const method = editingClientId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      closeClientModal();
+      loadClients();
+    } else {
+      const err = await res.json();
+      alert('Erreur : ' + err.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur');
+  }
+}
+
+function editClient(id) {
+  openClientModal(id);
+}
+
+function createInvoiceForClient(clientId) {
+  document.getElementById('invoiceClientId').value = clientId;
+  loadClientDefaults();
+  showTab('create');
+}
+
+function loadClientDefaults() {
+  const clientId = document.getElementById('invoiceClientId').value;
+  if (!clientId) return;
+  const client = clients.find(c => c.id === parseInt(clientId));
+  if (!client) return;
+  document.getElementById('invoiceVatApplicable').checked = client.vat_applicable || false;
+  document.getElementById('invoiceVatRate').value = client.default_vat_rate || 20;
+  toggleVat();
+}
+
+function addPrestation(type) {
+  prestationCounter++;
+  const id = 'prest_' + prestationCounter;
+  const prestation = {
+    id,
+    type,
+    description: '',
+    rentalAmount: 0,
+    commissionRate: 20,
+    quantity: 1,
+    unitPrice: 0,
+    total: 0,
+    isDebours: type === 'debours'
+  };
+  prestations.push(prestation);
+  renderPrestations();
+}
+
+function renderPrestations() {
+  const container = document.getElementById('prestationsList');
+  if (prestations.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">Aucune prestation. Cliquez sur les boutons ci-dessus pour en ajouter.</div>';
+    calculateTotals();
+    return;
+  }
+  container.innerHTML = prestations.map(p => {
+    const typeLabels = { commission: 'Commission', cleaning: 'Ménage', debours: 'Débours', other: 'Autre' };
+    const typeLabel = typeLabels[p.type] || 'Autre';
+    let fields = '';
+    if (p.type === 'commission') {
+      fields = `
+        <div class="form-grid-2" style="margin-top:12px;">
+          <div class="form-row">
+            <label>Loyer encaissé (€)</label>
+            <input type="number" value="${p.rentalAmount}" step="0.01" min="0" onchange="updatePrestation('${p.id}', 'rentalAmount', this.value)">
+          </div>
+          <div class="form-row">
+            <label>Commission (%)</label>
+            <input type="number" value="${p.commissionRate}" step="0.01" min="0" max="100" onchange="updatePrestation('${p.id}', 'commissionRate', this.value)">
+          </div>
+        </div>
+      `;
+    } else {
+      fields = `
+        <div class="form-grid-2" style="margin-top:12px;">
+          <div class="form-row">
+            <label>Quantité</label>
+            <input type="number" value="${p.quantity}" min="1" onchange="updatePrestation('${p.id}', 'quantity', this.value)">
+          </div>
+          <div class="form-row">
+            <label>Prix unitaire (€)</label>
+            <input type="number" value="${p.unitPrice}" step="0.01" min="0" onchange="updatePrestation('${p.id}', 'unitPrice', this.value)">
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="prestation-item">
+        <div class="prestation-header">
+          <span class="prestation-type ${p.type}">${typeLabel}</span>
+          <div class="prestation-actions">
+            <button class="btn btn-icon btn-secondary" onclick="duplicatePrestation('${p.id}')" title="Dupliquer"><i class="fas fa-copy"></i></button>
+            <button class="btn btn-icon btn-danger" onclick="removePrestation('${p.id}')" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Description</label>
+          <input type="text" value="${p.description}" placeholder="Description de la prestation" onchange="updatePrestation('${p.id}', 'description', this.value)">
+        </div>
+        ${fields}
+        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color); font-weight:600; text-align:right;">
+          Total : ${p.total.toFixed(2)} €
+        </div>
+      </div>
+    `;
+  }).join('');
+  calculateTotals();
+}
+
+function updatePrestation(id, field, value) {
+  const p = prestations.find(pr => pr.id === id);
+  if (!p) return;
+  if (field === 'rentalAmount' || field === 'commissionRate' || field === 'quantity' || field === 'unitPrice') {
+    p[field] = parseFloat(value) || 0;
+  } else {
+    p[field] = value;
+  }
+  if (p.type === 'commission') {
+    p.total = p.rentalAmount * (p.commissionRate / 100);
+  } else {
+    p.total = p.quantity * p.unitPrice;
+  }
+  renderPrestations();
+}
+
+function duplicatePrestation(id) {
+  const original = prestations.find(p => p.id === id);
+  if (!original) return;
+  prestationCounter++;
+  const newId = 'prest_' + prestationCounter;
+  prestations.push({ ...original, id: newId });
+  renderPrestations();
+}
+
+function removePrestation(id) {
+  prestations = prestations.filter(p => p.id !== id);
+  renderPrestations();
+}
+
+function toggleVat() {
+  const enabled = document.getElementById('invoiceVatApplicable').checked;
+  document.getElementById('vatRateGroup').style.display = enabled ? 'block' : 'none';
+  document.getElementById('totalVatRow').style.display = enabled ? 'flex' : 'none';
+  calculateTotals();
+}
+
 function calculateTotals() {
   let ht = 0, debours = 0;
   prestations.forEach(p => {
     if (p.isDebours) debours += p.total;
     else ht += p.total;
   });
-  
-  // Réduction
   let discountAmount = 0;
   if (document.getElementById('invoiceDiscountEnabled')?.checked) {
     const discountType = document.getElementById('invoiceDiscountType').value;
     const discountValue = parseFloat(document.getElementById('invoiceDiscountValue').value) || 0;
-    
     if (discountType === 'percentage') {
       discountAmount = ht * (discountValue / 100);
       document.getElementById('discountDisplay').textContent = discountValue + '%';
@@ -665,12 +1031,10 @@ function calculateTotals() {
       document.getElementById('discountDisplay').textContent = discountValue.toFixed(2) + '€';
     }
   }
-  
   const netHt = ht - discountAmount;
   const vatRate = document.getElementById('invoiceVatApplicable').checked ? parseFloat(document.getElementById('invoiceVatRate').value) : 0;
   const vat = netHt * (vatRate / 100);
   const ttc = netHt + debours + vat;
-  
   document.getElementById('totalHt').textContent = ht.toFixed(2) + ' €';
   document.getElementById('totalDiscount').textContent = '-' + discountAmount.toFixed(2) + ' €';
   document.getElementById('totalNet').textContent = netHt.toFixed(2) + ' €';
@@ -680,66 +1044,115 @@ function calculateTotals() {
   document.getElementById('totalTtc').textContent = ttc.toFixed(2) + ' €';
 }
 
-// ============================================
-// V2 - DUPLIQUER PRESTATION
-// ============================================
-function duplicatePrestation(id) {
-  const original = prestations.find(p => p.id === id);
-  if (!original) return;
-  
-  prestationCounter++;
-  const newId = 'prest_' + prestationCounter;
-  prestations.push({ ...original, id: newId });
-  renderPrestations();
+async function createInvoice(sendEmail) {
+  const clientId = document.getElementById('invoiceClientId').value;
+  if (!clientId) return alert('Sélectionnez un client');
+  if (prestations.length === 0) return alert('Ajoutez au moins une prestation');
+  const data = {
+    clientId: parseInt(clientId),
+    periodStart: document.getElementById('invoicePeriodStart').value,
+    periodEnd: document.getElementById('invoicePeriodEnd').value,
+    issueDate: document.getElementById('invoiceIssueDate').value,
+    dueDate: document.getElementById('invoiceDueDate').value,
+    items: prestations.map(p => ({
+      itemType: p.type,
+      description: p.description,
+      rentalAmount: p.rentalAmount,
+      commissionRate: p.commissionRate,
+      quantity: p.quantity,
+      unitPrice: p.unitPrice,
+      total: p.total,
+      isDebours: p.isDebours
+    })),
+    vatApplicable: document.getElementById('invoiceVatApplicable').checked,
+    vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
+    discountType: document.getElementById('invoiceDiscountEnabled')?.checked ? document.getElementById('invoiceDiscountType').value : 'none',
+    discountValue: document.getElementById('invoiceDiscountEnabled')?.checked ? parseFloat(document.getElementById('invoiceDiscountValue').value) : 0,
+    notes: document.getElementById('invoiceNotes').value,
+    internalNotes: document.getElementById('invoiceInternalNotes').value,
+    sendEmail
+  };
+  try {
+    const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
+    const method = editingInvoiceId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (res.ok) {
+      alert(result.message || `Facture ${result.invoiceNumber} créée !`);
+      prestations = [];
+      prestationCounter = 0;
+      editingInvoiceId = null;
+      renderPrestations();
+      showTab('history');
+    } else {
+      alert('Erreur : ' + result.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur');
+  }
 }
 
-// ============================================
-// V2 - MODIFIER renderPrestations() POUR DUPLIQUER
-// ============================================
-// Dans renderPrestations(), MODIFIER la section prestation-actions :
-// Chercher : <div class="prestation-header">
-// Et REMPLACER les boutons par :
-/*
-<div class="prestation-actions">
-  <button class="btn btn-icon btn-secondary" onclick="duplicatePrestation('${p.id}')" title="Dupliquer"><i class="fas fa-copy"></i></button>
-  <button class="btn btn-icon btn-danger" onclick="removePrestation('${p.id}')" title="Supprimer"><i class="fas fa-trash"></i></button>
-</div>
-*/
+async function loadInvoices() {
+  try {
+    const res = await fetch('/api/owner-invoices', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    invoices = data.invoices || [];
+    document.getElementById('invoiceCount').textContent = invoices.length;
+    const loading = document.getElementById('invoicesLoading');
+    const empty = document.getElementById('invoicesEmpty');
+    const container = document.getElementById('invoicesContainer');
+    loading.style.display = 'none';
+    if (invoices.length === 0) {
+      empty.style.display = 'block';
+      container.style.display = 'none';
+    } else {
+      empty.style.display = 'none';
+      container.style.display = 'block';
+      const tbody = document.getElementById('invoicesTableBody');
+      const statusLabels = { draft: 'Brouillon', sent: 'Envoyée', paid: 'Payée', cancelled: 'Annulée' };
+      tbody.innerHTML = invoices.map(inv => {
+        const periodStart = inv.period_start ? new Date(inv.period_start).toLocaleDateString('fr-FR') : '-';
+        const periodEnd = inv.period_end ? new Date(inv.period_end).toLocaleDateString('fr-FR') : '-';
+        return `
+          <tr>
+            <td><strong>${inv.invoice_number}</strong></td>
+            <td>${inv.client_name}</td>
+            <td>${periodStart} - ${periodEnd}</td>
+            <td><strong>${parseFloat(inv.total_ttc).toFixed(2)} €</strong></td>
+            <td><span class="status-badge ${inv.status}">${statusLabels[inv.status] || inv.status}</span></td>
+            <td onclick="event.stopPropagation();">
+              ${inv.status === 'draft' ? `
+                <button class="btn btn-xs btn-secondary" onclick="editInvoice(${inv.id})" title="Modifier"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-xs btn-danger" onclick="deleteInvoice(${inv.id})" title="Supprimer"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-xs btn-primary" onclick="sendDraftInvoice(${inv.id})" title="Envoyer"><i class="fas fa-envelope"></i></button>
+              ` : inv.status === 'cancelled' ? `
+                <button class="btn btn-xs btn-secondary" onclick="viewInvoice(${inv.id})"><i class="fas fa-eye"></i> Voir</button>
+                ${inv.credit_note_id ? `<button class="btn btn-xs btn-secondary" onclick="viewCreditNote(${inv.credit_note_id})"><i class="fas fa-file"></i> Avoir</button>` : ''}
+              ` : `
+                <button class="btn btn-xs btn-secondary" onclick="viewInvoice(${inv.id})"><i class="fas fa-eye"></i> Voir</button>
+                <button class="btn btn-xs btn-primary" onclick="createCreditNote(${inv.id})"><i class="fas fa-file-invoice"></i> Avoir</button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
 
-// ============================================
-// V2 - MODIFIER createInvoice() POUR RÉDUCTIONS
-// ============================================
-// Dans la fonction createInvoice(), AJOUTER discountType, discountValue :
-/*
-const data = {
-  clientId,
-  periodStart: document.getElementById('invoicePeriodStart').value,
-  periodEnd: document.getElementById('invoicePeriodEnd').value,
-  issueDate: document.getElementById('invoiceIssueDate').value,
-  dueDate: document.getElementById('invoiceDueDate').value,
-  items: prestations.map(p => ({ ... })),
-  vatApplicable: document.getElementById('invoiceVatApplicable').checked,
-  vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
-  discountType: document.getElementById('invoiceDiscountEnabled')?.checked ? document.getElementById('invoiceDiscountType').value : 'none',
-  discountValue: document.getElementById('invoiceDiscountEnabled')?.checked ? parseFloat(document.getElementById('invoiceDiscountValue').value) : 0,
-  notes: document.getElementById('invoiceNotes').value,
-  internalNotes: document.getElementById('invoiceInternalNotes').value,
-  sendEmail
-};
-*/
-
-// ============================================
-// V2 - BROUILLONS
-// ============================================
 async function editInvoice(id) {
   try {
     const res = await fetch(`/api/owner-invoices/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    
     editingInvoiceId = id;
     showTab('create');
-    
-    // Pré-remplir formulaire
     document.getElementById('invoiceClientId').value = data.invoice.client_id;
     document.getElementById('invoicePeriodStart').value = data.invoice.period_start || '';
     document.getElementById('invoicePeriodEnd').value = data.invoice.period_end || '';
@@ -749,17 +1162,13 @@ async function editInvoice(id) {
     document.getElementById('invoiceVatRate').value = data.invoice.vat_rate;
     document.getElementById('invoiceNotes').value = data.invoice.notes || '';
     document.getElementById('invoiceInternalNotes').value = data.invoice.internal_notes || '';
-    
     if (data.invoice.discount_type !== 'none') {
       document.getElementById('invoiceDiscountEnabled').checked = true;
       document.getElementById('invoiceDiscountType').value = data.invoice.discount_type;
       document.getElementById('invoiceDiscountValue').value = data.invoice.discount_value;
       toggleDiscount();
     }
-    
     toggleVat();
-    
-    // Charger items
     prestations = data.items.map((item, i) => ({
       id: 'prest_' + i,
       type: item.item_type,
@@ -771,10 +1180,8 @@ async function editInvoice(id) {
       total: item.total,
       isDebours: item.is_debours
     }));
-    
     prestationCounter = prestations.length;
     renderPrestations();
-    
   } catch (err) {
     console.error(err);
   }
@@ -782,13 +1189,11 @@ async function editInvoice(id) {
 
 async function deleteInvoice(id) {
   if (!confirm('Supprimer ce brouillon ?')) return;
-  
   try {
     const res = await fetch(`/api/owner-invoices/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
-    
     if (res.ok) {
       loadInvoices();
     } else {
@@ -802,13 +1207,11 @@ async function deleteInvoice(id) {
 
 async function sendDraftInvoice(id) {
   if (!confirm('Envoyer cette facture ?')) return;
-  
   try {
     const res = await fetch(`/api/owner-invoices/${id}/send`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token }
     });
-    
     if (res.ok) {
       alert('Facture envoyée !');
       loadInvoices();
@@ -818,22 +1221,16 @@ async function sendDraftInvoice(id) {
   }
 }
 
-// ============================================
-// V2 - AVOIRS
-// ============================================
 async function createCreditNote(invoiceId) {
   const reason = prompt('Motif d\'annulation (optionnel) :');
   if (reason === null) return;
-  
   try {
     const res = await fetch('/api/owner-credit-notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ invoiceId, reason })
     });
-    
     const data = await res.json();
-    
     if (res.ok) {
       alert(`Avoir ${data.creditNoteNumber} créé ! La facture est annulée.`);
       loadInvoices();
@@ -845,427 +1242,18 @@ async function createCreditNote(invoiceId) {
   }
 }
 
+function viewInvoice(id) {
+  alert('Fonctionnalité "Voir facture" en cours de développement');
+}
+
 function viewCreditNote(creditNoteId) {
   alert('Fonctionnalité "Voir avoir" en cours de développement');
 }
 
-// ============================================
-// V2 - MODIFIER loadInvoices() POUR STATUS CANCELLED
-// ============================================
-// Dans loadInvoices(), modifier statusLabels :
-/*
-const statusLabels = { 
-  draft: 'Brouillon', 
-  sent: 'Envoyée', 
-  paid: 'Payée',
-  cancelled: 'Annulée' 
-};
-*/
-
-// ============================================
-// V2 - INIT
-// ============================================
-// Dans DOMContentLoaded, AJOUTER :
-/*
-loadArticles();
-
-// Créer articles par défaut si besoin
-fetch('/api/owner-articles/init-defaults', {
-  method: 'POST',
-  headers: { 'Authorization': 'Bearer ' + token }
-}).catch(() => {});
-*/
-
-// ============================================
-// V2 - MODIFIER showTab() POUR CATALOGUE
-// ============================================
-// Dans showTab(), ajouter :
-/*
-if (tab === 'catalogue') loadArticles();
-*/
-  <script>
-    const token = localStorage.getItem('lcc_token');
-    if (!token) window.location.href = '/login.html';
-    let clients = [];
-    let invoices = [];
-    let prestations = [];
-    let editingClientId = null;
-    let prestationCounter = 0;
-    // Init
-    document.addEventListener('DOMContentLoaded', function() {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        document.getElementById('sidebarUserName').textContent = user.firstName + ' ' + (user.lastName || '');
-        document.getElementById('sidebarUserAvatar').textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) document.getElementById('sidebarUserCompany').textContent = user.company;
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('lcc_token');
-        localStorage.removeItem('lcc_user');
-        window.location.href = '/login.html';
-      });
-      const menuBtn = document.getElementById('mobileMenuBtn');
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
-      menuBtn?.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-        const icon = menuBtn.querySelector('i');
-        icon.classList.toggle('fa-bars');
-        icon.classList.toggle('fa-times');
-      });
-      overlay?.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-        menuBtn.querySelector('i').classList.remove('fa-times');
-        menuBtn.querySelector('i').classList.add('fa-bars');
-      });
-      document.getElementById('invoiceIssueDate').value = new Date().toISOString().split('T')[0];
-      loadClients();
-      loadInvoices();
-    });
-    // Tabs
-    function showTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-      if (tab === 'clients') loadClients();
-      if (tab === 'history') loadInvoices();
-    }
-    // CLIENTS
-    async function loadClients() {
-      try {
-        const res = await fetch('/api/owner-clients', { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        clients = data.clients || [];
-        document.getElementById('clientCount').textContent = clients.length;
-        const grid = document.getElementById('clientsGrid');
-        const loading = document.getElementById('clientsLoading');
-        const empty = document.getElementById('clientsEmpty');
-        loading.style.display = 'none';
-        if (clients.length === 0) {
-          empty.style.display = 'block';
-          grid.style.display = 'none';
-        } else {
-          empty.style.display = 'none';
-          grid.style.display = 'grid';
-          grid.innerHTML = clients.map(c => {
-            const name = c.client_type === 'business' ? c.company_name : `${c.first_name} ${c.last_name}`;
-            return `
-              <div class="client-card" onclick="editClient(${c.id})">
-                <div class="client-card-header">
-                  <div class="client-name">${name}</div>
-                  <div class="client-type-badge ${c.client_type}">${c.client_type === 'business' ? 'PRO' : 'PART'}</div>
-                </div>
-                <div class="client-info">
-                  ${c.email ? `<div><i class="fas fa-envelope"></i> ${c.email}</div>` : ''}
-                  ${c.phone ? `<div><i class="fas fa-phone"></i> ${c.phone}</div>` : ''}
-                  ${c.city ? `<div><i class="fas fa-map-marker-alt"></i> ${c.city}</div>` : ''}
-                </div>
-                <div class="client-commission"><i class="fas fa-percent"></i> Commission : ${parseFloat(c.default_commission_rate).toFixed(0)}%</div>
-                <div class="client-actions" onclick="event.stopPropagation()">
-                  <button class="btn btn-sm btn-secondary" onclick="editClient(${c.id})"><i class="fas fa-edit"></i> Modifier</button>
-                  <button class="btn btn-sm btn-primary" onclick="createInvoiceForClient(${c.id})"><i class="fas fa-file-invoice"></i> Facturer</button>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-        updateInvoiceClientSelect();
-      } catch (err) {
-        console.error('Erreur:', err);
-      }
-    }
-    function updateInvoiceClientSelect() {
-      const select = document.getElementById('invoiceClientId');
-      select.innerHTML = '<option value="">Sélectionner un client...</option>' + clients.map(c => {
-        const name = c.client_type === 'business' ? c.company_name : `${c.first_name} ${c.last_name}`;
-        return `<option value="${c.id}">${name}</option>`;
-      }).join('');
-    }
-    function openClientModal(id = null) {
-      editingClientId = id;
-      document.getElementById('clientModalTitle').textContent = id ? 'Modifier le client' : 'Nouveau client';
-      if (id) {
-        const client = clients.find(c => c.id === id);
-        if (!client) return;
-        document.querySelector(`input[name="clientType"][value="${client.client_type}"]`).checked = true;
-        toggleClientType();
-        if (client.client_type === 'individual') {
-          document.getElementById('clientFirstName').value = client.first_name || '';
-          document.getElementById('clientLastName').value = client.last_name || '';
-        } else {
-          document.getElementById('clientCompanyName').value = client.company_name || '';
-          document.getElementById('clientSiret').value = client.siret || '';
-          document.getElementById('clientVatNumber').value = client.vat_number || '';
-        }
-        document.getElementById('clientEmail').value = client.email || '';
-        document.getElementById('clientPhone').value = client.phone || '';
-        document.getElementById('clientAddress').value = client.address || '';
-        document.getElementById('clientPostalCode').value = client.postal_code || '';
-        document.getElementById('clientCity').value = client.city || '';
-        document.getElementById('clientCountry').value = client.country || 'France';
-        document.getElementById('clientCommissionRate').value = client.default_commission_rate || 20;
-        document.getElementById('clientVatRate').value = client.default_vat_rate || 20;
-        document.getElementById('clientVatApplicable').checked = client.vat_applicable || false;
-        document.getElementById('clientNotes').value = client.notes || '';
-      } else {
-        document.getElementById('clientFirstName').value = '';
-        document.getElementById('clientLastName').value = '';
-        document.getElementById('clientCompanyName').value = '';
-        document.getElementById('clientSiret').value = '';
-        document.getElementById('clientVatNumber').value = '';
-        document.getElementById('clientEmail').value = '';
-        document.getElementById('clientPhone').value = '';
-        document.getElementById('clientAddress').value = '';
-        document.getElementById('clientPostalCode').value = '';
-        document.getElementById('clientCity').value = '';
-        document.getElementById('clientCountry').value = 'France';
-        document.getElementById('clientCommissionRate').value = 20;
-        document.getElementById('clientVatRate').value = 20;
-        document.getElementById('clientVatApplicable').checked = false;
-        document.getElementById('clientNotes').value = '';
-      }
-      document.getElementById('clientModal').classList.add('active');
-    }
-    function closeClientModal() {
-      document.getElementById('clientModal').classList.remove('active');
-      editingClientId = null;
-    }
-    function toggleClientType() {
-      const type = document.querySelector('input[name="clientType"]:checked').value;
-      document.getElementById('individualFields').style.display = type === 'individual' ? 'block' : 'none';
-      document.getElementById('businessFields').style.display = type === 'business' ? 'block' : 'none';
-    }
-    async function saveClient() {
-      const type = document.querySelector('input[name="clientType"]:checked').value;
-      const data = {
-        clientType: type,
-        firstName: type === 'individual' ? document.getElementById('clientFirstName').value : null,
-        lastName: type === 'individual' ? document.getElementById('clientLastName').value : null,
-        companyName: type === 'business' ? document.getElementById('clientCompanyName').value : null,
-        siret: type === 'business' ? document.getElementById('clientSiret').value : null,
-        vatNumber: type === 'business' ? document.getElementById('clientVatNumber').value : null,
-        email: document.getElementById('clientEmail').value,
-        phone: document.getElementById('clientPhone').value,
-        address: document.getElementById('clientAddress').value,
-        postalCode: document.getElementById('clientPostalCode').value,
-        city: document.getElementById('clientCity').value,
-        country: document.getElementById('clientCountry').value,
-        defaultCommissionRate: parseFloat(document.getElementById('clientCommissionRate').value),
-        vatApplicable: document.getElementById('clientVatApplicable').checked,
-        defaultVatRate: parseFloat(document.getElementById('clientVatRate').value),
-        notes: document.getElementById('clientNotes').value
-      };
-      try {
-        const url = editingClientId ? `/api/owner-clients/${editingClientId}` : '/api/owner-clients';
-        const method = editingClientId ? 'PUT' : 'POST';
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify(data)
-        });
-        if (res.ok) {
-          alert(editingClientId ? 'Client modifié !' : 'Client créé !');
-          closeClientModal();
-          loadClients();
-        } else {
-          const err = await res.json();
-          alert('Erreur : ' + err.error);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Erreur serveur');
-      }
-    }
-    function editClient(id) {
-      openClientModal(id);
-    }
-    function createInvoiceForClient(clientId) {
-      showTab('create');
-      document.getElementById('invoiceClientId').value = clientId;
-      loadClientDefaults();
-    }
-    function loadClientDefaults() {
-      const clientId = parseInt(document.getElementById('invoiceClientId').value);
-      if (!clientId) return;
-      const client = clients.find(c => c.id === clientId);
-      if (!client) return;
-      document.getElementById('invoiceVatApplicable').checked = client.vat_applicable || false;
-      document.getElementById('invoiceVatRate').value = client.default_vat_rate || 20;
-      toggleVat();
-    }
-    // PRESTATIONS
-    function addPrestation(type) {
-      prestationCounter++;
-      const id = 'prest_' + prestationCounter;
-      prestations.push({ id, type, description: '', rentalAmount: 0, commissionRate: 0, quantity: 1, unitPrice: 0, total: 0, isDebours: type === 'debours' });
-      renderPrestations();
-    }
-    function removePrestation(id) {
-      prestations = prestations.filter(p => p.id !== id);
-      renderPrestations();
-    }
-    function renderPrestations() {
-      const container = document.getElementById('prestationsList');
-      if (prestations.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding:20px;">Aucune prestation. Ajoutez-en une ci-dessous.</p>';
-      } else {
-        container.innerHTML = prestations.map(p => {
-          const typeLabels = { commission: 'Commission', cleaning: 'Ménage', debours: 'Débours', other: 'Autre' };
-          let fields = '';
-          if (p.type === 'commission') {
-            fields = `
-              <div class="form-grid-2">
-                <div class="form-row"><label>Loyer encaissé (€)</label><input type="number" step="0.01" value="${p.rentalAmount}" onchange="updatePrestation('${p.id}', 'rentalAmount', this.value)"></div>
-                <div class="form-row"><label>Commission (%)</label><input type="number" step="0.01" value="${p.commissionRate}" onchange="updatePrestation('${p.id}', 'commissionRate', this.value)"></div>
-              </div>
-            `;
-          } else if (p.type === 'cleaning' || p.type === 'debours' || p.type === 'other') {
-            fields = `
-              <div class="form-grid-3">
-                <div class="form-row"><label>Quantité</label><input type="number" step="0.01" value="${p.quantity}" onchange="updatePrestation('${p.id}', 'quantity', this.value)"></div>
-                <div class="form-row"><label>Prix unitaire (€)</label><input type="number" step="0.01" value="${p.unitPrice}" onchange="updatePrestation('${p.id}', 'unitPrice', this.value)"></div>
-                <div class="form-row"><label>Total (€)</label><input type="number" step="0.01" value="${p.total}" readonly style="background:var(--bg-secondary);"></div>
-              </div>
-            `;
-          }
-          return `
-            <div class="prestation-item">
-              <div class="prestation-header">
-                <span class="prestation-type ${p.type}">${typeLabels[p.type]}</span>
-                <i class="fas fa-trash btn-remove" onclick="removePrestation('${p.id}')"></i>
-              </div>
-              <div class="form-row"><label>Description</label><input type="text" value="${p.description}" onchange="updatePrestation('${p.id}', 'description', this.value)" placeholder="Ex: Commission Nov 2024"></div>
-              ${fields}
-            </div>
-          `;
-        }).join('');
-      }
-      calculateTotals();
-    }
-    function updatePrestation(id, field, value) {
-      const p = prestations.find(pr => pr.id === id);
-      if (!p) return;
-      p[field] = field === 'description' ? value : parseFloat(value) || 0;
-      if (p.type === 'commission') {
-        p.total = p.rentalAmount * (p.commissionRate / 100);
-      } else {
-        p.total = p.quantity * p.unitPrice;
-      }
-      renderPrestations();
-    }
-    function toggleVat() {
-      const checked = document.getElementById('invoiceVatApplicable').checked;
-      document.getElementById('vatRateGroup').style.display = checked ? 'block' : 'none';
-      document.getElementById('totalVatRow').style.display = checked ? 'block' : 'none';
-      calculateTotals();
-    }
-    function calculateTotals() {
-      let ht = 0, debours = 0;
-      prestations.forEach(p => {
-        if (p.isDebours) debours += p.total;
-        else ht += p.total;
-      });
-      const vatRate = document.getElementById('invoiceVatApplicable').checked ? parseFloat(document.getElementById('invoiceVatRate').value) : 0;
-      const vat = ht * (vatRate / 100);
-      const ttc = ht + debours + vat;
-      document.getElementById('totalHt').textContent = ht.toFixed(2) + ' €';
-      document.getElementById('totalDebours').textContent = debours.toFixed(2) + ' €';
-      document.getElementById('vatRateDisplay').textContent = vatRate.toFixed(0);
-      document.getElementById('totalVat').textContent = vat.toFixed(2) + ' €';
-      document.getElementById('totalTtc').textContent = ttc.toFixed(2) + ' €';
-    }
-    async function createInvoice(sendEmail) {
-      const clientId = parseInt(document.getElementById('invoiceClientId').value);
-      if (!clientId) return alert('Sélectionnez un client');
-      if (prestations.length === 0) return alert('Ajoutez au moins une prestation');
-      const data = {
-        clientId,
-        periodStart: document.getElementById('invoicePeriodStart').value,
-        periodEnd: document.getElementById('invoicePeriodEnd').value,
-        issueDate: document.getElementById('invoiceIssueDate').value,
-        dueDate: document.getElementById('invoiceDueDate').value,
-        items: prestations.map(p => ({
-          itemType: p.type,
-          description: p.description,
-          rentalAmount: p.rentalAmount,
-          commissionRate: p.commissionRate,
-          quantity: p.quantity,
-          unitPrice: p.unitPrice,
-          total: p.total,
-          isDebours: p.isDebours
-        })),
-        vatApplicable: document.getElementById('invoiceVatApplicable').checked,
-        vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
-        notes: document.getElementById('invoiceNotes').value,
-        internalNotes: document.getElementById('invoiceInternalNotes').value,
-        sendEmail
-      };
-      try {
-        const res = await fetch('/api/owner-invoices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        if (res.ok) {
-          alert(`✅ Facture ${result.invoiceNumber} créée ${sendEmail ? 'et envoyée' : ''} !`);
-          prestations = [];
-          renderPrestations();
-          showTab('history');
-        } else {
-          alert('Erreur : ' + result.error);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Erreur serveur');
-      }
-    }
-    // INVOICES
-    async function loadInvoices() {
-      try {
-        const res = await fetch('/api/owner-invoices', { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        invoices = data.invoices || [];
-        document.getElementById('invoiceCount').textContent = invoices.length;
-        const tbody = document.getElementById('invoicesTableBody');
-        const loading = document.getElementById('invoicesLoading');
-        const empty = document.getElementById('invoicesEmpty');
-        const table = document.getElementById('invoicesTable');
-        loading.style.display = 'none';
-        if (invoices.length === 0) {
-          empty.style.display = 'block';
-          table.style.display = 'none';
-        } else {
-          empty.style.display = 'none';
-          table.style.display = 'table';
-          tbody.innerHTML = invoices.map(inv => {
-            const period = inv.period_start && inv.period_end ? `${new Date(inv.period_start).toLocaleDateString('fr-FR')} - ${new Date(inv.period_end).toLocaleDateString('fr-FR')}` : '-';
-            const statusLabels = { draft: 'Brouillon', sent: 'Envoyée', paid: 'Payée' };
-            return `
-              <tr onclick="viewInvoice(${inv.id})">
-                <td><strong>${inv.invoice_number}</strong></td>
-                <td>${inv.client_name}</td>
-                <td>${period}</td>
-                <td><strong>${parseFloat(inv.total_ttc).toFixed(2)} €</strong></td>
-                <td><span class="status-badge ${inv.status}">${statusLabels[inv.status] || inv.status}</span></td>
-                <td onclick="event.stopPropagation();"><button class="btn btn-xs btn-secondary"><i class="fas fa-eye"></i> Voir</button></td>
-              </tr>
-            `;
-          }).join('');
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    function viewInvoice(id) {
-      alert('Fonctionnalité "Voir facture" en cours de développement');
-    }
-    async function exportExcel() {
-      window.open(`/api/owner-invoices/export/excel?year=${new Date().getFullYear()}&token=${token}`, '_blank');
-    }
-  </script>
+function exportExcel() {
+  const currentYear = new Date().getFullYear();
+  window.open(`/api/owner-invoices/export/excel?year=${currentYear}&token=${token}`, '_blank');
+}
+</script>
 </body>
 </html>
