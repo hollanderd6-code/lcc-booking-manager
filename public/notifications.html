@@ -643,7 +643,7 @@ if (token) {
 
       saveBtn.addEventListener('click', () => {
   const newSettings = readFromForm();
-  saveSettings(newSettings);
+  saveSettings(newSettings); // garde le localStorage
 
   const token = localStorage.getItem('lcc_token');
 
@@ -655,7 +655,7 @@ if (token) {
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({
-        newReservation: newSettings.newResEmailEnabled, // si tu as ce champ
+        newReservation: newSettings.newResEmailEnabled,
         reminder: false,
         whatsappEnabled: newSettings.smsEnabled,
         whatsappNumber: newSettings.smsNumbers
@@ -666,8 +666,9 @@ if (token) {
   }
 
   saveStatus.textContent = 'Préférences enregistrées.';
-  setTimeout(() => (saveStatus.textContent = ''), 2500);
+  setTimeout(() => saveStatus.textContent = '', 2500);
 });
+
 
 
       resetBtn.addEventListener('click', () => {
