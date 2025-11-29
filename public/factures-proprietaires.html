@@ -504,7 +504,7 @@
 </div>
 
 <script>
-let token = localStorage.getItem('lcc_token');
+let token = null;
 let user = null;
 let clients = [];
 let invoices = [];
@@ -516,59 +516,71 @@ let editingArticleId = null;
 let editingInvoiceId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('🔍 DEBUG: Page chargée');
-  console.log('🔍 DEBUG: Token =', token);
-  
-  // 1. Vérif auth
+  console.log('🔍 [Owners] Page Factures Propriétaires chargée');
+
+  // 1. Récupération du token de session
+  token = localStorage.getItem('lcc_token');
+  console.log('🔍 [Owners] Token =', token);
+
   if (!token) {
-    console.log('❌ DEBUG: Pas de token, redirection login');
+    console.log('❌ Pas de token, redirection vers login');
     window.location.href = '/login.html';
     return;
   }
 
-  // 2. Récup user depuis le localStorage (comme sur app.html)
+  // 2. Récupération de l'utilisateur depuis le localStorage
   try {
     const rawUser = localStorage.getItem('lcc_user');
     user = rawUser ? JSON.parse(rawUser) : null;
   } catch (e) {
-    console.error('Impossible de lire lcc_user', e);
+    console.error('[Owners] Impossible de parser lcc_user', e);
+    user = null;
   }
 
+  // 3. Remplissage de l’en-tête utilisateur
   if (user) {
-    console.log('✅ DEBUG: User depuis localStorage =', user);
     const fullName = user.firstName
       ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
       : (user.email || 'Mon compte');
 
-    document.getElementById('userName').textContent = fullName;
-    document.getElementById('userCompany').textContent = user.company || 'LCC';
-    document.getElementById('userAvatar').textContent =
-      (user.firstName || user.email || '?').trim()[0].toUpperCase();
+    const userNameEl = document.getElementById('userName');
+    const userCompanyEl = document.getElementById('userCompany');
+    const userAvatarEl = document.getElementById('userAvatar');
+
+    if (userNameEl) userNameEl.textContent = fullName;
+    if (userCompanyEl) userCompanyEl.textContent = user.company || 'LCC';
+    if (userAvatarEl) {
+      const initial = (user.firstName || user.email || '?').trim().charAt(0).toUpperCase();
+      userAvatarEl.textContent = initial;
+    }
   }
 
-  // 3. Init dates par défaut
+  // 4. Dates par défaut de la facture
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('invoiceIssueDate').value = today;
-  document.getElementById('invoiceDueDate').value = today;
+  const issueEl = document.getElementById('invoiceIssueDate');
+  const dueEl = document.getElementById('invoiceDueDate');
+  if (issueEl) issueEl.value = today;
+  if (dueEl) dueEl.value = today;
 
-  // 4. Chargement des données
-  await loadClients();
-  await loadInvoices();
-  await loadArticles();
+  // 5. Chargement des données (clients / factures / articles)
+  try {
+    await Promise.all([
+      loadClients().catch(err => console.error('[Owners] Erreur loadClients', err)),
+      loadInvoices().catch(err => console.error('[Owners] Erreur loadInvoices', err)),
+      loadArticles().catch(err => console.error('[Owners] Erreur loadArticles', err))
+    ]);
+  } catch (e) {
+    console.error('[Owners] Erreur globale au chargement initial', e);
+  }
 
-  // 5. Init catalogue par défaut
+  // 6. Initialisation silencieuse du catalogue par défaut
   fetch('/api/owner-articles/init-defaults', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token }
   }).catch(() => {});
 });
 
-    console.error('❌ DEBUG: Erreur auth =', err);
-    localStorage.removeItem('token');
-    window.location.href = '/login.html';
-  }
-});
-
+// Sécurisation du toggle du menu
 const menuToggle = document.getElementById('menuToggle');
 if (menuToggle) {
   menuToggle.addEventListener('click', () => {
@@ -577,7 +589,7 @@ if (menuToggle) {
   });
 }
 
-
+// Déconnexion cohérente avec le reste de l'app
 function logout() {
   localStorage.removeItem('lcc_token');
   localStorage.removeItem('lcc_user');
@@ -587,12 +599,16 @@ function logout() {
 function showTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-  document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+  const btn = document.querySelector(`[data-tab="${tab}"]`);
+  const content = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+  if (btn) btn.classList.add('active');
+  if (content) content.classList.add('active');
+
   if (tab === 'clients') loadClients();
   if (tab === 'history') loadInvoices();
   if (tab === 'catalogue') loadArticles();
 }
+
 
 async function loadClients() {
   try {
