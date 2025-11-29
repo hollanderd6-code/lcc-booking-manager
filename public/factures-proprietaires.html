@@ -516,14 +516,25 @@ let editingArticleId = null;
 let editingInvoiceId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🔍 DEBUG: Page chargée');
+  console.log('🔍 DEBUG: Token =', token);
+  
   if (!token) {
+    console.log('❌ DEBUG: Pas de token, redirection login');
     window.location.href = '/login.html';
     return;
   }
+  
+  console.log('✅ DEBUG: Token trouvé, appel API /api/user/me');
+  
   try {
     const res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    console.log('🔍 DEBUG: Réponse API status =', res.status);
+    
     if (!res.ok) throw new Error('Non autorisé');
+    
     user = await res.json();
+    console.log('✅ DEBUG: User =', user);
     document.getElementById('userName').textContent = user.name || user.email;
     document.getElementById('userCompany').textContent = user.company || 'LCC';
     document.getElementById('userAvatar').textContent = (user.name || user.email).charAt(0).toUpperCase();
@@ -538,7 +549,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: { 'Authorization': 'Bearer ' + token }
     }).catch(() => {});
   } catch (err) {
-    console.error(err);
+    console.error('❌ DEBUG: Erreur auth =', err);
     localStorage.removeItem('token');
     window.location.href = '/login.html';
   }
