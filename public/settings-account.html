@@ -308,7 +308,7 @@
             <div class="card-header">
               <div class="card-title">
                 <i class="fas fa-user"></i>
-                Profil & entreprise
+                Informations personnelles
               </div>
             </div>
             <div class="card-body">
@@ -325,7 +325,24 @@
                 </div>
 
                 <div class="form-row">
-                  <label for="profileCompany">Nom de la conciergerie</label>
+                  <label for="profileEmail">Email</label>
+                  <input type="email" id="profileEmail" placeholder="vous@exemple.com">
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section class="card mb-lg">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fas fa-building"></i>
+                Informations entreprise
+              </div>
+            </div>
+            <div class="card-body">
+              <form class="form-grid">
+                <div class="form-row">
+                  <label for="profileCompany">Nom de la conciergerie / entreprise</label>
                   <input type="text" id="profileCompany" placeholder="La Conciergerie de Charles">
                   <p class="settings-hint">
                     Ce nom apparaîtra dans le header, la sidebar et dans certains messages générés.
@@ -333,8 +350,41 @@
                 </div>
 
                 <div class="form-row">
-                  <label for="profileEmail">Email</label>
-                  <input type="email" id="profileEmail" placeholder="vous@exemple.com">
+                  <label>Type de compte</label>
+                  <div style="display: flex; gap: 20px; margin-top: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="radio" name="accountType" id="accountTypeIndividual" value="individual" checked>
+                      <span>Particulier</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="radio" name="accountType" id="accountTypeBusiness" value="business">
+                      <span>Entreprise</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <label for="profileAddress">Adresse</label>
+                  <input type="text" id="profileAddress" placeholder="12 rue de la République">
+                </div>
+
+                <div class="form-row-inline">
+                  <div class="form-row">
+                    <label for="profilePostalCode">Code postal</label>
+                    <input type="text" id="profilePostalCode" placeholder="75001">
+                  </div>
+                  <div class="form-row">
+                    <label for="profileCity">Ville</label>
+                    <input type="text" id="profileCity" placeholder="Paris">
+                  </div>
+                </div>
+
+                <div class="form-row" id="siretRow" style="display: none;">
+                  <label for="profileSiret">Numéro SIRET</label>
+                  <input type="text" id="profileSiret" placeholder="123 456 789 00012" maxlength="14">
+                  <p class="settings-hint">
+                    14 chiffres - Format : XXX XXX XXX XXXXX
+                  </p>
                 </div>
 
                 <div class="form-actions" style="margin-top: 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
@@ -547,42 +597,149 @@
       const lastNameInput  = document.getElementById('profileLastName');
       const companyInput   = document.getElementById('profileCompany');
       const emailInput     = document.getElementById('profileEmail');
+      const addressInput   = document.getElementById('profileAddress');
+      const postalCodeInput = document.getElementById('profilePostalCode');
+      const cityInput      = document.getElementById('profileCity');
+      const siretInput     = document.getElementById('profileSiret');
+      const accountTypeIndividual = document.getElementById('accountTypeIndividual');
+      const accountTypeBusiness = document.getElementById('accountTypeBusiness');
+      const siretRow       = document.getElementById('siretRow');
       const saveProfileBtn = document.getElementById('saveProfileBtn');
       const profileSaveStatus = document.getElementById('profileSaveStatus');
 
-      const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
-      if (savedProfileRaw) {
-        try {
-          const savedProfile = JSON.parse(savedProfileRaw);
-          if (savedProfile.firstName) firstNameInput.value = savedProfile.firstName;
-          if (savedProfile.lastName)  lastNameInput.value  = savedProfile.lastName;
-          if (savedProfile.company)   companyInput.value   = savedProfile.company;
-          if (savedProfile.email)     emailInput.value     = savedProfile.email;
-        } catch (e) {
-          console.error('Erreur lecture profil paramètres', e);
-        }
-      } else {
-        const rawUser = localStorage.getItem('lcc_user');
-        if (rawUser) {
-          try {
-            const u = JSON.parse(rawUser);
-            if (u.firstName) firstNameInput.value = u.firstName;
-            if (u.lastName)  lastNameInput.value  = u.lastName;
-            if (u.company)   companyInput.value   = u.company;
-            if (u.email)     emailInput.value     = u.email;
-          } catch {}
+      // Fonction pour afficher/masquer le champ SIRET
+      function toggleSiretField() {
+        if (accountTypeBusiness.checked) {
+          siretRow.style.display = 'block';
+        } else {
+          siretRow.style.display = 'none';
+          siretInput.value = ''; // Vider le SIRET si on passe en particulier
         }
       }
 
+      // Écouter les changements de type de compte
+      accountTypeIndividual.addEventListener('change', toggleSiretField);
+      accountTypeBusiness.addEventListener('change', toggleSiretField);
+
+      // Formatage automatique du SIRET (ajout des espaces)
+      if (siretInput) {
+        siretInput.addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\s/g, ''); // Retirer les espaces
+          let formatted = '';
+          
+          // Garder uniquement les chiffres
+          value = value.replace(/\D/g, '');
+          
+          // Limiter à 14 chiffres
+          value = value.substring(0, 14);
+          
+          // Formater : XXX XXX XXX XXXXX
+          if (value.length > 0) {
+            formatted = value.substring(0, 3);
+          }
+          if (value.length > 3) {
+            formatted += ' ' + value.substring(3, 6);
+          }
+          if (value.length > 6) {
+            formatted += ' ' + value.substring(6, 9);
+          }
+          if (value.length > 9) {
+            formatted += ' ' + value.substring(9, 14);
+          }
+          
+          e.target.value = formatted;
+        });
+      }
+
+      // Charger le profil depuis l'API au chargement
+      async function loadProfileFromAPI() {
+        const token = localStorage.getItem('lcc_token');
+        if (!token) {
+          // Fallback sur localStorage si pas de token
+          const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
+          if (savedProfileRaw) {
+            try {
+              const savedProfile = JSON.parse(savedProfileRaw);
+              fillProfileFields(savedProfile);
+            } catch (e) {
+              console.error('Erreur lecture profil localStorage', e);
+            }
+          }
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+
+          if (response.ok) {
+            const profile = await response.json();
+            fillProfileFields(profile);
+            // Sauvegarder aussi en local pour fallback
+            localStorage.setItem('lcc_settings_profile', JSON.stringify(profile));
+          } else {
+            // Fallback sur localStorage
+            const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
+            if (savedProfileRaw) {
+              const savedProfile = JSON.parse(savedProfileRaw);
+              fillProfileFields(savedProfile);
+            }
+          }
+        } catch (e) {
+          console.error('Erreur chargement profil API', e);
+          // Fallback sur localStorage
+          const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
+          if (savedProfileRaw) {
+            try {
+              const savedProfile = JSON.parse(savedProfileRaw);
+              fillProfileFields(savedProfile);
+            } catch (err) {
+              console.error('Erreur lecture profil localStorage', err);
+            }
+          }
+        }
+      }
+
+      function fillProfileFields(profile) {
+        if (profile.firstName) firstNameInput.value = profile.firstName;
+        if (profile.lastName)  lastNameInput.value  = profile.lastName;
+        if (profile.company)   companyInput.value   = profile.company;
+        if (profile.email)     emailInput.value     = profile.email;
+        if (profile.address)   addressInput.value   = profile.address;
+        if (profile.postalCode) postalCodeInput.value = profile.postalCode;
+        if (profile.city)      cityInput.value      = profile.city;
+        if (profile.siret)     siretInput.value     = profile.siret;
+        
+        // Restaurer le type de compte
+        if (profile.accountType === 'business') {
+          accountTypeBusiness.checked = true;
+        } else {
+          accountTypeIndividual.checked = true;
+        }
+        toggleSiretField();
+      }
+
+      // Charger au démarrage
+      loadProfileFromAPI();
+
       if (saveProfileBtn) {
-        saveProfileBtn.addEventListener('click', function () {
+        saveProfileBtn.addEventListener('click', async function () {
           const data = {
             firstName: firstNameInput.value.trim(),
             lastName:  lastNameInput.value.trim(),
             company:   companyInput.value.trim(),
-            email:     emailInput.value.trim()
+            email:     emailInput.value.trim(),
+            address:   addressInput.value.trim(),
+            postalCode: postalCodeInput.value.trim(),
+            city:      cityInput.value.trim(),
+            accountType: accountTypeBusiness.checked ? 'business' : 'individual',
+            siret:     accountTypeBusiness.checked ? siretInput.value.trim() : ''
           };
 
+          // Sauvegarde locale immédiate pour UX
           localStorage.setItem('lcc_settings_profile', JSON.stringify(data));
 
           const rawUser = localStorage.getItem('lcc_user');
@@ -599,14 +756,64 @@
 
           localStorage.setItem('lcc_user', JSON.stringify(user));
 
-          if (profileSaveStatus) {
-            profileSaveStatus.textContent = 'Profil enregistré.';
-            setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
-          } else {
-            alert('Profil enregistré');
-          }
+          // Sauvegarde sur le serveur
+          const token = localStorage.getItem('lcc_token');
+          if (token) {
+            try {
+              const response = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(data)
+              });
 
-          window.setTimeout(() => window.location.reload(), 300);
+              const result = await response.json();
+
+              if (response.ok && result.success) {
+                if (profileSaveStatus) {
+                  profileSaveStatus.textContent = '✓ Profil enregistré avec succès';
+                  setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
+                } else {
+                  alert('Profil enregistré avec succès');
+                }
+                window.setTimeout(() => window.location.reload(), 300);
+              } else {
+                if (profileSaveStatus) {
+                  profileSaveStatus.textContent = '⚠ Erreur : ' + (result.error || 'Erreur inconnue');
+                  profileSaveStatus.style.color = '#dc2626';
+                  setTimeout(() => { 
+                    profileSaveStatus.textContent = ''; 
+                    profileSaveStatus.style.color = '';
+                  }, 3500);
+                } else {
+                  alert('Erreur : ' + (result.error || 'Erreur inconnue'));
+                }
+              }
+            } catch (err) {
+              console.error('Erreur sauvegarde profil API', err);
+              if (profileSaveStatus) {
+                profileSaveStatus.textContent = '⚠ Profil sauvegardé localement uniquement';
+                profileSaveStatus.style.color = '#f59e0b';
+                setTimeout(() => { 
+                  profileSaveStatus.textContent = ''; 
+                  profileSaveStatus.style.color = '';
+                }, 3500);
+              } else {
+                alert('Profil sauvegardé localement uniquement');
+              }
+            }
+          } else {
+            // Pas de token, sauvegarde locale seulement
+            if (profileSaveStatus) {
+              profileSaveStatus.textContent = 'Profil enregistré localement.';
+              setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
+            } else {
+              alert('Profil enregistré localement');
+            }
+            window.setTimeout(() => window.location.reload(), 300);
+          }
         });
       }
 
