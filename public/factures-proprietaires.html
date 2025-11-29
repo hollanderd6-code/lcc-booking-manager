@@ -7,6 +7,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
+ /* V2 - Catalogue articles */
+.articles-section { margin-bottom: 24px; }
+.articles-section-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; }
+.articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.article-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+.article-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+.article-card-name { font-weight: 600; margin-bottom: 4px; }
+.article-card-price { color: var(--primary-color); font-weight: 600; }
+.article-card-desc { font-size: 13px; color: var(--text-secondary); margin: 8px 0; }
+.article-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* V2 - Catalogue selector */
+.catalogue-selector { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.catalogue-title { font-weight: 600; margin-bottom: 12px; }
+.catalogue-items { display: flex; gap: 8px; flex-wrap: wrap; }
+.catalogue-item-btn { padding: 8px 14px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+.catalogue-item-btn:hover { border-color: var(--primary-color); background: var(--primary-color); color: white; }
+
+/* V2 - Prestation actions */
+.prestation-actions { display: flex; gap: 8px; }
+.btn-icon { padding: 6px 10px; font-size: 14px; }
+
+/* V2 - Status cancelled */
+.status-badge.cancelled { background: rgba(239, 68, 68, 0.15); color: #991b1b; }
+
+/* V2 - Discount row */
+.discount-section { background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin: 16px 0; }
   <style>
     html, body { margin: 0 !important; padding: 0 !important; }
     .main-content { padding-top: 24px !important; }
@@ -146,11 +173,20 @@
         </div>
       </header>
       <div class="page-content">
-        <div class="tabs-header">
-          <button class="tab-btn active" data-tab="clients" onclick="showTab('clients')"><i class="fas fa-users"></i> Mes clients (<span id="clientCount">0</span>)</button>
-          <button class="tab-btn" data-tab="create" onclick="showTab('create')"><i class="fas fa-plus-circle"></i> Créer une facture</button>
-          <button class="tab-btn" data-tab="history" onclick="showTab('history')"><i class="fas fa-history"></i> Historique (<span id="invoiceCount">0</span>)</button>
-        </div>
+       <div class="tabs-header">
+  <button class="tab-btn active" data-tab="clients" onclick="showTab('clients')">
+    <i class="fas fa-users"></i> Mes clients (<span id="clientCount">0</span>)
+  </button>
+  <button class="tab-btn" data-tab="catalogue" onclick="showTab('catalogue')">
+    <i class="fas fa-box"></i> Catalogue (<span id="articleCount">0</span>)
+  </button>
+  <button class="tab-btn" data-tab="create" onclick="showTab('create')">
+    <i class="fas fa-plus-circle"></i> Créer une facture
+  </button>
+  <button class="tab-btn" data-tab="history" onclick="showTab('history')">
+    <i class="fas fa-history"></i> Historique (<span id="invoiceCount">0</span>)
+  </button>
+</div>
         <!-- ONGLET CLIENTS -->
         <div class="tab-content active" id="tabClients">
           <div class="card">
@@ -165,6 +201,33 @@
             </div>
           </div>
         </div>
+        <!-- ONGLET CATALOGUE -->
+<div class="tab-content" id="tabCatalogue">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-box"></i> Catalogue d'articles</div>
+      <button class="btn btn-primary btn-sm" onclick="openArticleModal()"><i class="fas fa-plus"></i> Nouvel article</button>
+    </div>
+    <div class="card-body">
+      <div id="articlesLoading" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+      <div id="articlesEmpty" style="display:none; text-align:center; padding:40px;"><i class="fas fa-box" style="font-size:48px; opacity:0.2; margin-bottom:16px;"></i><p>Aucun article. Créez votre premier article !</p></div>
+      <div id="articlesContainer" style="display:none;">
+        <div class="articles-section">
+          <div class="articles-section-title">🧹 Ménage</div>
+          <div class="articles-grid" id="articlesMenage"></div>
+        </div>
+        <div class="articles-section">
+          <div class="articles-section-title">💰 Location</div>
+          <div class="articles-grid" id="articlesLocation"></div>
+        </div>
+        <div class="articles-section">
+          <div class="articles-section-title">➕ Personnalisés</div>
+          <div class="articles-grid" id="articlesCustom"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
         <!-- ONGLET CRÉER FACTURE -->
         <div class="tab-content" id="tabCreate">
           <div class="card">
@@ -181,6 +244,12 @@
               </div>
               <hr style="margin:24px 0; border:none; border-top:1px solid var(--border-color);">
               <h3 style="font-size:16px; font-weight:600; margin-bottom:16px;"><i class="fas fa-list"></i> Prestations</h3>
+              <div class="catalogue-selector">
+  <div class="catalogue-title">📦 Ajouter depuis le catalogue</div>
+  <div class="catalogue-items" id="catalogueQuickAdd">
+    <div style="color:var(--text-secondary); font-size:13px;">Chargement...</div>
+  </div>
+</div>
               <div id="prestationsList" class="prestations-list"></div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="btn btn-secondary btn-sm" onclick="addPrestation('commission')"><i class="fas fa-percent"></i> Commission</button>
@@ -196,21 +265,82 @@
               <div id="vatRateGroup" style="display:none;">
                 <div class="form-row"><label>Taux de TVA (%)</label><input type="number" id="invoiceVatRate" value="20" step="0.01" min="0" max="100"></div>
               </div>
+              <div class="discount-section">
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+    <input type="checkbox" id="invoiceDiscountEnabled" onchange="toggleDiscount()">
+    <label for="invoiceDiscountEnabled" style="margin:0; cursor:pointer; font-weight:600;">Appliquer une réduction</label>
+  </div>
+  <div id="discountFields" style="display:none;">
+    <div class="form-grid-2">
+      <div class="form-row">
+        <label>Type de réduction</label>
+        <select id="invoiceDiscountType" onchange="calculateTotals()">
+          <option value="percentage">Pourcentage (%)</option>
+          <option value="fixed">Montant fixe (€)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Valeur</label>
+        <input type="number" id="invoiceDiscountValue" step="0.01" min="0" value="0" onchange="calculateTotals()">
+      </div>
+    </div>
+  </div>
+</div>
+              <div class="discount-section">
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+    <input type="checkbox" id="invoiceDiscountEnabled" onchange="toggleDiscount()">
+    <label for="invoiceDiscountEnabled" style="margin:0; cursor:pointer; font-weight:600;">Appliquer une réduction</label>
+  </div>
+  <div id="discountFields" style="display:none;">
+    <div class="form-grid-2">
+      <div class="form-row">
+        <label>Type de réduction</label>
+        <select id="invoiceDiscountType" onchange="calculateTotals()">
+          <option value="percentage">Pourcentage (%)</option>
+          <option value="fixed">Montant fixe (€)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Valeur</label>
+        <input type="number" id="invoiceDiscountValue" step="0.01" min="0" value="0" onchange="calculateTotals()">
+      </div>
+    </div>
+  </div>
+</div>
               <div class="form-row"><label>Notes (visibles par le client)</label><textarea id="invoiceNotes" rows="2"></textarea></div>
               <div class="form-row"><label>Notes internes (non visibles)</label><textarea id="invoiceInternalNotes" rows="2" placeholder="Notes privées..."></textarea></div>
-              <div id="invoiceTotals" style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin:20px 0;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Sous-total HT:</span><strong id="totalHt">0,00 €</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Débours (hors TVA):</span><strong id="totalDebours">0,00 €</strong></div>
-                <div id="totalVatRow" style="display:none; margin-bottom:8px;"><div style="display:flex; justify-content:space-between;"><span>TVA (<span id="vatRateDisplay">20</span>%):</span><strong id="totalVat">0,00 €</strong></div></div>
-                <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:2px solid var(--border-color); font-size:18px; font-weight:700; color:var(--primary-color);"><span>TOTAL TTC:</span><strong id="totalTtc">0,00 €</strong></div>
-              </div>
-              <div style="display:flex; gap:12px;">
-                <button class="btn btn-primary" onclick="createInvoice(false)"><i class="fas fa-save"></i> Enregistrer brouillon</button>
-                <button class="btn btn-primary" onclick="createInvoice(true)"><i class="fas fa-envelope"></i> Enregistrer et envoyer</button>
-              </div>
-            </div>
-          </div>
-        </div>
+             <div id="invoiceTotals" style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin:20px 0;">
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>Sous-total HT:</span>
+    <strong id="totalHt">0,00 €</strong>
+  </div>
+  <div id="totalDiscountRow" style="display:none; margin-bottom:8px; color:#dc2626;">
+    <div style="display:flex; justify-content:space-between;">
+      <span>Réduction (<span id="discountDisplay">0</span>):</span>
+      <strong id="totalDiscount">0,00 €</strong>
+    </div>
+  </div>
+  <div id="totalNetRow" style="display:none; margin-bottom:8px; padding-top:8px; border-top:1px solid var(--border-color);">
+    <div style="display:flex; justify-content:space-between; font-weight:600;">
+      <span>Net HT:</span>
+      <strong id="totalNet">0,00 €</strong>
+    </div>
+  </div>
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>Débours (hors TVA):</span>
+    <strong id="totalDebours">0,00 €</strong>
+  </div>
+  <div id="totalVatRow" style="display:none; margin-bottom:8px;">
+    <div style="display:flex; justify-content:space-between;">
+      <span>TVA (<span id="vatRateDisplay">20</span>%):</span>
+      <strong id="totalVat">0,00 €</strong>
+    </div>
+  </div>
+  <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:2px solid var(--border-color); font-size:18px; font-weight:700; color:var(--primary-color);">
+    <span>TOTAL TTC:</span>
+    <strong id="totalTtc">0,00 €</strong>
+  </div>
+</div>
         <!-- ONGLET HISTORIQUE -->
         <div class="tab-content" id="tabHistory">
           <div class="card">
@@ -276,6 +406,483 @@
       </div>
     </div>
   </div>
+          <!-- MODAL ARTICLE -->
+<div class="modal-overlay" id="articleModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="articleModalTitle">Nouvel article</div>
+      <button class="modal-close" onclick="closeArticleModal()">&times;</button>
+    </div>
+    <div class="form-row">
+      <label>Type d'article *</label>
+      <select id="articleType" onchange="toggleArticleType()">
+        <option value="menage">🧹 Ménage (prix unitaire)</option>
+        <option value="location">💰 Location (% commission)</option>
+        <option value="custom">➕ Personnalisé (libre)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Nom *</label>
+      <input type="text" id="articleName" placeholder="Ex: Ménage standard">
+    </div>
+    <div class="form-row">
+      <label>Description</label>
+      <textarea id="articleDescription" rows="2" placeholder="Description optionnelle"></textarea>
+    </div>
+    <div id="articlePriceField">
+      <div class="form-row">
+        <label>Prix unitaire (€) *</label>
+        <input type="number" id="articleUnitPrice" step="0.01" min="0" value="30">
+      </div>
+    </div>
+    <div id="articleCommissionField" style="display:none;">
+      <div class="form-row">
+        <label>Taux de commission (%) *</label>
+        <input type="number" id="articleCommissionRate" step="0.01" min="0" max="100" value="20">
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; margin-top:20px;">
+      <button class="btn btn-primary" onclick="saveArticle()"><i class="fas fa-save"></i> Enregistrer</button>
+      <button class="btn btn-secondary" onclick="closeArticleModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+          // ============================================
+// V2 - VARIABLES
+// ============================================
+let articles = [];
+let editingArticleId = null;
+let editingInvoiceId = null;
+
+// ============================================
+// V2 - ARTICLES
+// ============================================
+async function loadArticles() {
+  try {
+    const res = await fetch('/api/owner-articles', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    articles = data.articles || [];
+    document.getElementById('articleCount').textContent = articles.length;
+    
+    const loading = document.getElementById('articlesLoading');
+    const empty = document.getElementById('articlesEmpty');
+    const container = document.getElementById('articlesContainer');
+    
+    loading.style.display = 'none';
+    
+    if (articles.length === 0) {
+      empty.style.display = 'block';
+      container.style.display = 'none';
+    } else {
+      empty.style.display = 'none';
+      container.style.display = 'block';
+      
+      const menage = articles.filter(a => a.article_type === 'menage');
+      const location = articles.filter(a => a.article_type === 'location');
+      const custom = articles.filter(a => a.article_type === 'custom');
+      
+      document.getElementById('articlesMenage').innerHTML = menage.map(renderArticleCard).join('');
+      document.getElementById('articlesLocation').innerHTML = location.map(renderArticleCard).join('');
+      document.getElementById('articlesCustom').innerHTML = custom.map(renderArticleCard).join('');
+    }
+    
+    updateCatalogueQuickAdd();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function renderArticleCard(a) {
+  const price = a.article_type === 'location' 
+    ? `${parseFloat(a.commission_rate)}%` 
+    : `${parseFloat(a.unit_price).toFixed(2)} €`;
+  
+  return `
+    <div class="article-card">
+      <div class="article-card-name">${a.name}</div>
+      <div class="article-card-price">${price}</div>
+      ${a.description ? `<div class="article-card-desc">${a.description}</div>` : ''}
+      <div class="article-card-actions">
+        <button class="btn btn-xs btn-secondary" onclick="editArticle(${a.id})"><i class="fas fa-edit"></i> Modifier</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteArticle(${a.id})"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+  `;
+}
+
+function updateCatalogueQuickAdd() {
+  const container = document.getElementById('catalogueQuickAdd');
+  if (articles.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-secondary); font-size:13px;">Créez des articles dans l\'onglet Catalogue</div>';
+  } else {
+    container.innerHTML = articles.map(a => {
+      const label = a.article_type === 'location' ? `${a.name} (${a.commission_rate}%)` : `${a.name} (${a.unit_price}€)`;
+      return `<button class="catalogue-item-btn" onclick="addArticleFromCatalogue(${a.id})">${label}</button>`;
+    }).join('');
+  }
+}
+
+function openArticleModal(id = null) {
+  editingArticleId = id;
+  document.getElementById('articleModalTitle').textContent = id ? 'Modifier l\'article' : 'Nouvel article';
+  
+  if (id) {
+    const article = articles.find(a => a.id === id);
+    if (!article) return;
+    document.getElementById('articleType').value = article.article_type;
+    document.getElementById('articleName').value = article.name;
+    document.getElementById('articleDescription').value = article.description || '';
+    document.getElementById('articleUnitPrice').value = article.unit_price;
+    document.getElementById('articleCommissionRate').value = article.commission_rate;
+    toggleArticleType();
+  } else {
+    document.getElementById('articleType').value = 'menage';
+    document.getElementById('articleName').value = '';
+    document.getElementById('articleDescription').value = '';
+    document.getElementById('articleUnitPrice').value = 30;
+    document.getElementById('articleCommissionRate').value = 20;
+    toggleArticleType();
+  }
+  
+  document.getElementById('articleModal').classList.add('active');
+}
+
+function closeArticleModal() {
+  document.getElementById('articleModal').classList.remove('active');
+  editingArticleId = null;
+}
+
+function toggleArticleType() {
+  const type = document.getElementById('articleType').value;
+  document.getElementById('articlePriceField').style.display = type === 'location' ? 'none' : 'block';
+  document.getElementById('articleCommissionField').style.display = type === 'location' ? 'block' : 'none';
+}
+
+async function saveArticle() {
+  const data = {
+    articleType: document.getElementById('articleType').value,
+    name: document.getElementById('articleName').value,
+    description: document.getElementById('articleDescription').value,
+    unitPrice: parseFloat(document.getElementById('articleUnitPrice').value) || 0,
+    commissionRate: parseFloat(document.getElementById('articleCommissionRate').value) || 0
+  };
+  
+  if (!data.name) return alert('Nom requis');
+  
+  try {
+    const url = editingArticleId ? `/api/owner-articles/${editingArticleId}` : '/api/owner-articles';
+    const method = editingArticleId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(data)
+    });
+    
+    if (res.ok) {
+      closeArticleModal();
+      loadArticles();
+    } else {
+      const err = await res.json();
+      alert('Erreur : ' + err.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur');
+  }
+}
+
+function editArticle(id) {
+  openArticleModal(id);
+}
+
+async function deleteArticle(id) {
+  if (!confirm('Supprimer cet article ?')) return;
+  
+  try {
+    const res = await fetch(`/api/owner-articles/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (res.ok) {
+      loadArticles();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function addArticleFromCatalogue(articleId) {
+  const article = articles.find(a => a.id === articleId);
+  if (!article) return;
+  
+  if (article.article_type === 'location') {
+    addPrestation('commission');
+    const lastId = prestations[prestations.length - 1].id;
+    updatePrestation(lastId, 'description', article.name);
+    updatePrestation(lastId, 'commissionRate', article.commission_rate);
+  } else {
+    addPrestation(article.article_type === 'menage' ? 'cleaning' : 'other');
+    const lastId = prestations[prestations.length - 1].id;
+    updatePrestation(lastId, 'description', article.name);
+    updatePrestation(lastId, 'unitPrice', article.unit_price);
+  }
+}
+
+// ============================================
+// V2 - RÉDUCTIONS
+// ============================================
+function toggleDiscount() {
+  const enabled = document.getElementById('invoiceDiscountEnabled').checked;
+  document.getElementById('discountFields').style.display = enabled ? 'block' : 'none';
+  document.getElementById('totalDiscountRow').style.display = enabled ? 'block' : 'none';
+  document.getElementById('totalNetRow').style.display = enabled ? 'block' : 'none';
+  calculateTotals();
+}
+
+// ============================================
+// V2 - MODIFIER calculateTotals() POUR RÉDUCTIONS
+// ============================================
+// REMPLACER la fonction calculateTotals() existante par celle-ci :
+function calculateTotals() {
+  let ht = 0, debours = 0;
+  prestations.forEach(p => {
+    if (p.isDebours) debours += p.total;
+    else ht += p.total;
+  });
+  
+  // Réduction
+  let discountAmount = 0;
+  if (document.getElementById('invoiceDiscountEnabled')?.checked) {
+    const discountType = document.getElementById('invoiceDiscountType').value;
+    const discountValue = parseFloat(document.getElementById('invoiceDiscountValue').value) || 0;
+    
+    if (discountType === 'percentage') {
+      discountAmount = ht * (discountValue / 100);
+      document.getElementById('discountDisplay').textContent = discountValue + '%';
+    } else {
+      discountAmount = discountValue;
+      document.getElementById('discountDisplay').textContent = discountValue.toFixed(2) + '€';
+    }
+  }
+  
+  const netHt = ht - discountAmount;
+  const vatRate = document.getElementById('invoiceVatApplicable').checked ? parseFloat(document.getElementById('invoiceVatRate').value) : 0;
+  const vat = netHt * (vatRate / 100);
+  const ttc = netHt + debours + vat;
+  
+  document.getElementById('totalHt').textContent = ht.toFixed(2) + ' €';
+  document.getElementById('totalDiscount').textContent = '-' + discountAmount.toFixed(2) + ' €';
+  document.getElementById('totalNet').textContent = netHt.toFixed(2) + ' €';
+  document.getElementById('totalDebours').textContent = debours.toFixed(2) + ' €';
+  document.getElementById('vatRateDisplay').textContent = vatRate.toFixed(0);
+  document.getElementById('totalVat').textContent = vat.toFixed(2) + ' €';
+  document.getElementById('totalTtc').textContent = ttc.toFixed(2) + ' €';
+}
+
+// ============================================
+// V2 - DUPLIQUER PRESTATION
+// ============================================
+function duplicatePrestation(id) {
+  const original = prestations.find(p => p.id === id);
+  if (!original) return;
+  
+  prestationCounter++;
+  const newId = 'prest_' + prestationCounter;
+  prestations.push({ ...original, id: newId });
+  renderPrestations();
+}
+
+// ============================================
+// V2 - MODIFIER renderPrestations() POUR DUPLIQUER
+// ============================================
+// Dans renderPrestations(), MODIFIER la section prestation-actions :
+// Chercher : <div class="prestation-header">
+// Et REMPLACER les boutons par :
+/*
+<div class="prestation-actions">
+  <button class="btn btn-icon btn-secondary" onclick="duplicatePrestation('${p.id}')" title="Dupliquer"><i class="fas fa-copy"></i></button>
+  <button class="btn btn-icon btn-danger" onclick="removePrestation('${p.id}')" title="Supprimer"><i class="fas fa-trash"></i></button>
+</div>
+*/
+
+// ============================================
+// V2 - MODIFIER createInvoice() POUR RÉDUCTIONS
+// ============================================
+// Dans la fonction createInvoice(), AJOUTER discountType, discountValue :
+/*
+const data = {
+  clientId,
+  periodStart: document.getElementById('invoicePeriodStart').value,
+  periodEnd: document.getElementById('invoicePeriodEnd').value,
+  issueDate: document.getElementById('invoiceIssueDate').value,
+  dueDate: document.getElementById('invoiceDueDate').value,
+  items: prestations.map(p => ({ ... })),
+  vatApplicable: document.getElementById('invoiceVatApplicable').checked,
+  vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
+  discountType: document.getElementById('invoiceDiscountEnabled')?.checked ? document.getElementById('invoiceDiscountType').value : 'none',
+  discountValue: document.getElementById('invoiceDiscountEnabled')?.checked ? parseFloat(document.getElementById('invoiceDiscountValue').value) : 0,
+  notes: document.getElementById('invoiceNotes').value,
+  internalNotes: document.getElementById('invoiceInternalNotes').value,
+  sendEmail
+};
+*/
+
+// ============================================
+// V2 - BROUILLONS
+// ============================================
+async function editInvoice(id) {
+  try {
+    const res = await fetch(`/api/owner-invoices/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    
+    editingInvoiceId = id;
+    showTab('create');
+    
+    // Pré-remplir formulaire
+    document.getElementById('invoiceClientId').value = data.invoice.client_id;
+    document.getElementById('invoicePeriodStart').value = data.invoice.period_start || '';
+    document.getElementById('invoicePeriodEnd').value = data.invoice.period_end || '';
+    document.getElementById('invoiceIssueDate').value = data.invoice.issue_date || '';
+    document.getElementById('invoiceDueDate').value = data.invoice.due_date || '';
+    document.getElementById('invoiceVatApplicable').checked = data.invoice.vat_applicable;
+    document.getElementById('invoiceVatRate').value = data.invoice.vat_rate;
+    document.getElementById('invoiceNotes').value = data.invoice.notes || '';
+    document.getElementById('invoiceInternalNotes').value = data.invoice.internal_notes || '';
+    
+    if (data.invoice.discount_type !== 'none') {
+      document.getElementById('invoiceDiscountEnabled').checked = true;
+      document.getElementById('invoiceDiscountType').value = data.invoice.discount_type;
+      document.getElementById('invoiceDiscountValue').value = data.invoice.discount_value;
+      toggleDiscount();
+    }
+    
+    toggleVat();
+    
+    // Charger items
+    prestations = data.items.map((item, i) => ({
+      id: 'prest_' + i,
+      type: item.item_type,
+      description: item.description,
+      rentalAmount: item.rental_amount || 0,
+      commissionRate: item.commission_rate || 0,
+      quantity: item.quantity || 1,
+      unitPrice: item.unit_price || 0,
+      total: item.total,
+      isDebours: item.is_debours
+    }));
+    
+    prestationCounter = prestations.length;
+    renderPrestations();
+    
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Supprimer ce brouillon ?')) return;
+  
+  try {
+    const res = await fetch(`/api/owner-invoices/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (res.ok) {
+      loadInvoices();
+    } else {
+      const err = await res.json();
+      alert(err.error);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function sendDraftInvoice(id) {
+  if (!confirm('Envoyer cette facture ?')) return;
+  
+  try {
+    const res = await fetch(`/api/owner-invoices/${id}/send`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (res.ok) {
+      alert('Facture envoyée !');
+      loadInvoices();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ============================================
+// V2 - AVOIRS
+// ============================================
+async function createCreditNote(invoiceId) {
+  const reason = prompt('Motif d\'annulation (optionnel) :');
+  if (reason === null) return;
+  
+  try {
+    const res = await fetch('/api/owner-credit-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ invoiceId, reason })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert(`Avoir ${data.creditNoteNumber} créé ! La facture est annulée.`);
+      loadInvoices();
+    } else {
+      alert('Erreur : ' + data.error);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function viewCreditNote(creditNoteId) {
+  alert('Fonctionnalité "Voir avoir" en cours de développement');
+}
+
+// ============================================
+// V2 - MODIFIER loadInvoices() POUR STATUS CANCELLED
+// ============================================
+// Dans loadInvoices(), modifier statusLabels :
+/*
+const statusLabels = { 
+  draft: 'Brouillon', 
+  sent: 'Envoyée', 
+  paid: 'Payée',
+  cancelled: 'Annulée' 
+};
+*/
+
+// ============================================
+// V2 - INIT
+// ============================================
+// Dans DOMContentLoaded, AJOUTER :
+/*
+loadArticles();
+
+// Créer articles par défaut si besoin
+fetch('/api/owner-articles/init-defaults', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer ' + token }
+}).catch(() => {});
+*/
+
+// ============================================
+// V2 - MODIFIER showTab() POUR CATALOGUE
+// ============================================
+// Dans showTab(), ajouter :
+/*
+if (tab === 'catalogue') loadArticles();
+*/
   <script>
     const token = localStorage.getItem('lcc_token');
     if (!token) window.location.href = '/login.html';
