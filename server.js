@@ -3413,12 +3413,18 @@ app.post('/api/deposits', async (req, res) => {
 // ROUTES API - FACTURATION PROPRIÉTAIRES
 // ============================================
 // À ajouter dans server.js
+// 
+// IMPORTANT : Ne pas re-déclarer ces variables si elles existent déjà :
+// - const multer = require('multer');
+// - const path = require('path');
+// - const ExcelJS = require('exceljs');
+//
+// Chercher dans server.js si elles sont déjà présentes, sinon les ajouter EN HAUT du fichier
 
-const multer = require('multer');
-const path = require('path');
-const ExcelJS = require('exceljs');
+// ============================================
+// CONFIGURATION UPLOAD JUSTIFICATIFS
+// ============================================
 
-// Configuration upload pour justificatifs
 const storageAttachments = multer.diskStorage({
   destination: 'public/uploads/justificatifs/',
   filename: (req, file, cb) => {
@@ -3888,7 +3894,7 @@ app.get('/api/owner-invoices/export/excel', async (req, res) => {
     const result = await pool.query(query, params);
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Factures');
+    const worksheet = workbook.addWorksheet('Factures Propriétaires');
 
     worksheet.columns = [
       { header: 'N° Facture', key: 'invoice_number', width: 15 },
@@ -3919,7 +3925,7 @@ app.get('/api/owner-invoices/export/excel', async (req, res) => {
     });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=factures-${year || 'all'}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename=factures-proprietaires-${year || 'all'}.xlsx`);
 
     await workbook.xlsx.write(res);
     res.end();
@@ -3975,6 +3981,10 @@ ${data.userCompany}
     text: emailContent
   });
 }
+
+// ============================================
+// FIN DES ROUTES - FACTURATION PROPRIÉTAIRES
+// ============================================
 
 // ============================================
 // NOTES D'INSTALLATION
