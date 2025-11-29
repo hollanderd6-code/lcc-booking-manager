@@ -1695,7 +1695,242 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   });
 });
 
+// ============================================
+// ROUTES API - PROFIL UTILISATEUR ÉTENDU
+// ============================================
+// À ajouter dans server.js après les routes existantes
 
+// GET - Récupérer le profil complet de l'utilisateur
+app.get('/api/user/profile', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    // Récupérer les infos complètes depuis la base
+    const result = await pool.query(
+      `SELECT 
+        id, 
+        email, 
+        first_name, 
+        last_name, 
+        company,
+        account_type,
+        address,
+        postal_code,
+        city,
+        siret,
+        created_at
+       FROM users 
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    const userProfile = result.rows[0];
+    
+    res.json({
+      id: userProfile.id,
+      email: userProfile.email,
+      firstName: userProfile.first_name,
+      lastName: userProfile.last_name,
+      company: userProfile.company,
+      accountType: userProfile.account_type || 'individual',
+      address: userProfile.address || '',
+      postalCode: userProfile.postal_code || '',
+      city: userProfile.city || '',
+      siret: userProfile.siret || '',
+      createdAt: userProfile.created_at
+    });
+
+  } catch (err) {
+    console.error('Erreur récupération profil:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT - Mettre à jour le profil complet de l'utilisateur
+app.put('/api/user/profile', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const {
+      firstName,
+      lastName,
+      company,
+      accountType,
+      address,
+      postalCode,
+      city,
+      siret
+    } = req.body;
+
+    // Validation du type de compte
+    if (accountType && !['individual', 'business'].includes(accountType)) {
+      return res.status(400).json({ 
+        error: 'Type de compte invalide. Doit être "individual" ou "business"' 
+      });
+    }
+
+    // Validation du SIRET si entreprise
+    if (accountType === 'business' && siret) {
+      const siretClean = siret.replace(/\s/g, '');
+      if (siretClean.length !== 14 || !/^\d{14}$/.test(siretClean)) {
+        return res.status(400).json({ 
+          error: 'Le numéro SIRET doit contenir exactement 14 chiffres' 
+        });
+      }
+    }
+
+    // Mise à jour dans la base de données
+    const result = await pool.query(
+      `UPDATE users 
+       SET 
+         first_name = COALESCE($1, first_name),
+         last_name = COALESCE($2, last_name),
+         company = COALESCE($3, company),
+         account_type = COALESCE($4, account_type),
+         address = $5,
+         postal_code = $6,
+         city = $7,
+         siret = $8
+       WHERE id = $9
+       RETURNING 
+         id, 
+         email, 
+         first_name, 
+         last_name, 
+         company,
+         account_type,
+         address,
+         postal_code,
+         city,
+         siret`,
+      [
+        firstName || null,
+        lastName || null,
+        company || null,
+        accountType || 'individual',
+        address || null,
+        postalCode || null,
+        city || null,
+        (accountType === 'business' ? siret : null) || null,
+        user.id
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    const updated = result.rows[0];
+
+    // Mettre à jour le cache si utilisé
+    if (notificationUserCache.has(user.id)) {
+      notificationUserCache.delete(user.id);
+    }
+
+    res.json({
+      success: true,
+      message: 'Profil mis à jour avec succès',
+      profile: {
+        id: updated.id,
+        email: updated.email,
+        firstName: updated.first_name,
+        lastName: updated.last_name,
+        company: updated.company,
+        accountType: updated.account_type,
+        address: updated.address,
+        postalCode: updated.postal_code,
+        city: updated.city,
+        siret: updated.siret
+      }
+    });
+
+  } catch (err) {
+    console.error('Erreur mise à jour profil:', err);
+    
+    // Gérer les erreurs de contraintes
+    if (err.code === '23514') { // Constraint violation
+      if (err.constraint === 'check_account_type') {
+        return res.status(400).json({ 
+          error: 'Type de compte invalide' 
+        });
+      }
+      if (err.constraint === 'check_siret_format') {
+        return res.status(400).json({ 
+          error: 'Format du SIRET invalide (14 chiffres requis)' 
+        });
+      }
+    }
+    
+    res.status(500).json({ error: 'Erreur serveur lors de la mise à jour' });
+  }
+});
+
+// ============================================
+// EXEMPLE D'UTILISATION DEPUIS LE FRONTEND
+// ============================================
+
+/*
+// 1. Récupérer le profil au chargement
+fetch('/api/user/profile', {
+  headers: {
+    'Authorization': 'Bearer ' + token
+  }
+})
+.then(res => res.json())
+.then(data => {
+  // Remplir les champs du formulaire
+  document.getElementById('profileFirstName').value = data.firstName || '';
+  document.getElementById('profileLastName').value = data.lastName || '';
+  document.getElementById('profileCompany').value = data.company || '';
+  document.getElementById('profileAddress').value = data.address || '';
+  document.getElementById('profilePostalCode').value = data.postalCode || '';
+  document.getElementById('profileCity').value = data.city || '';
+  document.getElementById('profileSiret').value = data.siret || '';
+  
+  if (data.accountType === 'business') {
+    document.getElementById('accountTypeBusiness').checked = true;
+  } else {
+    document.getElementById('accountTypeIndividual').checked = true;
+  }
+});
+
+// 2. Mettre à jour le profil lors de la sauvegarde
+fetch('/api/user/profile', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + token
+  },
+  body: JSON.stringify({
+    firstName: document.getElementById('profileFirstName').value,
+    lastName: document.getElementById('profileLastName').value,
+    company: document.getElementById('profileCompany').value,
+    accountType: document.getElementById('accountTypeBusiness').checked ? 'business' : 'individual',
+    address: document.getElementById('profileAddress').value,
+    postalCode: document.getElementById('profilePostalCode').value,
+    city: document.getElementById('profileCity').value,
+    siret: document.getElementById('profileSiret').value
+  })
+})
+.then(res => res.json())
+.then(data => {
+  if (data.success) {
+    alert('Profil mis à jour avec succès !');
+  } else {
+    alert('Erreur : ' + data.error);
+  }
+});
+*/
 // ============================================
 // ROUTES API - BOOKINGS (alias pour réservations)
 // Utilisé par le calendrier moderne (calendar-modern.js)
