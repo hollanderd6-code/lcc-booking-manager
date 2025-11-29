@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Statistiques</title>
+  <title>Boostinghost – Factures</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- Platform CSS -->
+  <!-- CSS plateforme -->
   <link rel="stylesheet" href="/css/style.css">
 
   <style>
@@ -19,221 +19,225 @@
       margin: 0 !important;
       padding: 0 !important;
     }
-    .app-container {
-      margin-top: 0 !important;
-    }
-    .main-header {
-      margin-top: 0 !important;
-    }
+
     .main-content {
-      margin-top: 0 !important;
       padding-top: 24px !important;
     }
+
     .page-content {
       margin-top: 0 !important;
-    }
-    html {
-      scroll-behavior: smooth;
+      max-width: 1200px;
     }
 
-    /* Petit extra pour les cartes stats de cette page */
+    /* Stats Cards */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
+
     .stat-card {
       background: var(--bg-primary);
-      border-radius: 18px;
-      padding: 16px 18px;
-      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
     }
-    .stat-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
+
     .stat-label {
       font-size: 13px;
       color: var(--text-secondary);
+      margin-bottom: 8px;
     }
-    .stat-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      background: rgba(37, 99, 235, 0.1);
-      color: #2563eb;
-    }
+
     .stat-value {
-      font-size: 22px;
+      font-size: 28px;
       font-weight: 700;
-      margin-bottom: 4px;
+      color: var(--text-primary);
     }
-    .stat-trend {
-      font-size: 12px;
-      color: var(--text-secondary);
+
+    .stat-value.currency::before {
+      content: attr(data-currency);
+      font-size: 20px;
+      margin-right: 4px;
+    }
+
+    /* Filters */
+    .filters-bar {
       display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 4px;
     }
-    .stat-trend.up i {
-      color: #16a34a;
+
+    .filter-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    .stat-trend.down i {
+
+    .filter-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    .filter-btn:hover:not(.active) {
+      border-color: var(--primary-color);
+    }
+
+    /* Invoice Table */
+    .invoice-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-primary);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .invoice-table thead {
+      background: var(--bg-secondary);
+    }
+
+    .invoice-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .invoice-table td {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    .invoice-table tbody tr {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .invoice-table tbody tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-badge.draft {
+      background: rgba(234, 179, 8, 0.15);
+      color: #854d0e;
+    }
+
+    .status-badge.issued {
+      background: rgba(59, 130, 246, 0.15);
+      color: #1e40af;
+    }
+
+    .status-badge.paid {
+      background: rgba(34, 197, 94, 0.15);
+      color: #166534;
+    }
+
+    .status-badge.overdue {
+      background: rgba(239, 68, 68, 0.15);
+      color: #991b1b;
+    }
+
+    .status-badge.cancelled {
+      background: rgba(107, 114, 128, 0.15);
+      color: #374151;
+    }
+
+    /* Actions */
+    .actions-cell {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .action-btn.danger:hover {
+      border-color: #dc2626;
       color: #dc2626;
     }
 
-    .card {
-      background: var(--bg-primary);
-      border-radius: 18px;
-      padding: 16px 18px;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 20px;
-    }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-    }
-    .card-title i {
-      font-size: 14px;
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
       color: var(--text-secondary);
     }
-    .card-subtitle {
-      font-size: 13px;
+
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
       color: var(--text-secondary);
-      margin-bottom: 10px;
-    }
-    .filter-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      font-size: 13px;
-      margin-bottom: 8px;
-    }
-    .filter-row select,
-    .filter-row input[type="date"] {
-      padding: 6px 8px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color-subtle);
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      font-size: 13px;
     }
 
-    .chart-wrapper {
-      position: relative;
-      width: 100%;
-      height: 260px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th, td {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border-color-subtle);
-      text-align: left;
-    }
-    th {
-      font-weight: 600;
-      background: var(--bg-secondary);
-    }
-    tr:last-child td {
-      border-bottom: none;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: rgba(37, 99, 235, 0.06);
-      color: #2563eb;
-    }
-
+    /* Responsive */
     @media (max-width: 768px) {
-      .filter-row {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .invoice-table {
+        font-size: 13px;
+      }
+
+      .invoice-table th,
+      .invoice-table td {
+        padding: 10px;
+      }
+
+      .actions-cell {
         flex-direction: column;
-        align-items: flex-start;
       }
     }
   </style>
-
-  <!-- Script auth + user + logout -->
-  <script>
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
-        return;
-      }
-
-      const rawUser = localStorage.getItem('lcc_user');
-      let user = null;
-
-      try {
-        user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {
-        console.error('Impossible de lire lcc_user', e);
-      }
-
-      window.addEventListener('DOMContentLoaded', () => {
-        if (user) {
-          const nameEl = document.getElementById('sidebarUserName');
-          const companyEl = document.getElementById('sidebarUserCompany');
-          const avatarEl = document.getElementById('sidebarUserAvatar');
-
-          if (nameEl) {
-            nameEl.textContent = user.firstName
-              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-              : (user.email || 'Mon compte');
-          }
-
-          if (companyEl) {
-            companyEl.textContent = user.company || 'Mon espace';
-          }
-
-          if (avatarEl) {
-            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-            avatarEl.textContent = initial.toUpperCase();
-          }
-        }
-
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', function () {
-            localStorage.removeItem('lcc_token');
-            localStorage.removeItem('lcc_user');
-            window.location.href = '/login.html';
-          });
-        }
-      });
-    })();
-  </script>
 </head>
-<body data-page="statistics">
+<body data-page="invoices">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
       <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Bookingmanage</span>
+      <span class="mobile-logo-text">Boostinghost</span>
     </a>
     <button class="mobile-menu-btn" id="mobileMenuBtn">
       <i class="fas fa-bars"></i>
@@ -249,86 +253,83 @@
         <a href="/" class="sidebar-logo">
           <i class="fas fa-calendar-check"></i>
           <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">Bookingmanage</span>
+            <span class="sidebar-logo-title">Boostinghost</span>
             <span class="sidebar-logo-subtitle">Property Manager</span>
           </div>
         </a>
       </div>
       
       <nav class="sidebar-nav">
-  <!-- PRINCIPAL -->
-  <div class="nav-section">
-    <div class="nav-section-title">Principal</div>
+        <!-- PRINCIPAL -->
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
 
-    <a href="/app.html" class="nav-item" data-page="app">
-      <i class="fas fa-th-large"></i>
-      <span>Dashboard</span>
-    </a>
+          <a href="/app.html" class="nav-item" data-page="app">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
 
-    <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-      <i class="fas fa-calendar"></i>
-      <span>Calendrier</span>
-      <span class="nav-badge" id="navTotalReservations">0</span>
-    </a>
+          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+          </a>
 
-    <a href="/messages.html" class="nav-item" data-page="messages">
-      <i class="fas fa-comment-dots"></i>
-      <span>Messages</span>
-    </a>
-  </div>
+          <a href="/messages.html" class="nav-item" data-page="messages">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
 
-  <!-- GESTION -->
-  <div class="nav-section">
-    <div class="nav-section-title">Gestion</div>
+        <!-- GESTION -->
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
 
-    <a href="/settings.html" class="nav-item" data-page="settings">
-      <i class="fas fa-home"></i>
-      <span>Mes logements</span>
-    </a>
+          <a href="/settings.html" class="nav-item" data-page="settings">
+            <i class="fas fa-home"></i>
+            <span>Mes logements</span>
+          </a>
 
-    <a href="/welcome.html" class="nav-item" data-page="welcome">
-      <i class="fas fa-book-open"></i>
-      <span>Livret d'accueil</span>
-    </a>
+          <a href="/welcome.html" class="nav-item" data-page="welcome">
+            <i class="fas fa-book-open"></i>
+            <span>Livret d'accueil</span>
+          </a>
 
-    <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-      <i class="fas fa-broom"></i>
-      <span>Gestion du ménage</span>
-      <span class="nav-badge">Nouveau</span>
-    </a>
+          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+            <i class="fas fa-broom"></i>
+            <span>Gestion du ménage</span>
+          </a>
 
-    <a href="/statistics.html" class="nav-item" data-page="statistics">
-  <i class="fas fa-file-invoice"></i>
-  <span>Factures</span>
-</a>
+          <a href="/invoices.html" class="nav-item active" data-page="invoices">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Factures</span>
+          </a>
 
+          <a href="/deposits.html" class="nav-item" data-page="deposits">
+            <i class="fas fa-shield-alt"></i>
+            <span>Cautions</span>
+          </a>
 
-    <a href="/deposits.html" class="nav-item" data-page="deposits">
-      <i class="fas fa-shield-alt"></i>
-      <span>Cautions</span>
-    </a>
+          <a href="/notifications.html" class="nav-item" data-page="notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+        </div>
 
-    <a href="/notifications.html" class="nav-item" data-page="notifications">
-      <i class="fas fa-bell"></i>
-      <span>Notifications</span>
-    </a>
-  </div>
+        <!-- PARAMÈTRES -->
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
 
-  <!-- PARAMÈTRES -->
-  <div class="nav-section">
-    <div class="nav-section-title">Paramètres</div>
+          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
 
-    <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-      <i class="fas fa-cog"></i>
-      <span>Paramètres</span>
-    </a>
-
-    <a href="/help.html" class="nav-item" data-page="help">
-      <i class="fas fa-question-circle"></i>
-      <span>Aide</span>
-    </a>
-  </div>
-</nav>
+          <a href="/help.html" class="nav-item" data-page="help">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
       
       <div class="sidebar-footer">
         <div class="user-profile">
@@ -337,7 +338,6 @@
             <div class="user-name" id="sidebarUserName">Utilisateur</div>
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
-
           <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
@@ -349,228 +349,344 @@
       <!-- Header -->
       <header class="main-header">
         <div class="header-left">
-          <div class="page-kicker">Analytique</div>
-          <h1 class="page-title">Statistiques</h1>
+          <div class="page-kicker">Gestion</div>
+          <h1 class="page-title">Factures</h1>
           <p class="page-subtitle">
-            Analysez les performances de vos logements : réservations, taux d’occupation et revenus.
+            Créez et gérez vos factures professionnelles
           </p>
         </div>
-        
         <div class="header-actions">
-          <button class="btn btn-ghost hide-on-mobile" onclick="window.location.href='/app.html'">
-            <i class="fas fa-th-large"></i>
-            Retour au dashboard
-          </button>
-
-          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
-            <i class="fas fa-moon"></i>
-          </button>
+          <a href="/invoice-create.html" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Nouvelle facture
+          </a>
         </div>
       </header>
       
       <!-- Page Content -->
       <div class="page-content">
 
-        <!-- KPIs -->
-        <section class="stats-grid">
+        <!-- Statistics -->
+        <div class="stats-grid" id="statsGrid">
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Total réservations (30 jours)</span>
-              <div class="stat-icon">
-                <i class="fas fa-calendar-check"></i>
-              </div>
-            </div>
-            <div class="stat-value" id="kpiTotalBookings">128</div>
-            <div class="stat-trend up">
-              <i class="fas fa-arrow-up"></i>
-              <span>+12 % vs période précédente</span>
-            </div>
+            <div class="stat-label">Brouillons</div>
+            <div class="stat-value" id="statDrafts">-</div>
           </div>
-
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Taux d’occupation moyen</span>
-              <div class="stat-icon">
-                <i class="fas fa-chart-pie"></i>
-              </div>
-            </div>
-            <div class="stat-value" id="kpiOccupancy">78%</div>
-            <div class="stat-trend up">
-              <i class="fas fa-arrow-up"></i>
-              <span>+5 pts vs période précédente</span>
-            </div>
+            <div class="stat-label">Émises</div>
+            <div class="stat-value" id="statIssued">-</div>
           </div>
-
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Revenu total</span>
-              <div class="stat-icon">
-                <i class="fas fa-euro-sign"></i>
-              </div>
-            </div>
-            <div class="stat-value" id="kpiRevenue">32 450 €</div>
-            <div class="stat-trend up">
-              <i class="fas fa-arrow-up"></i>
-              <span>+9 % vs période précédente</span>
-            </div>
+            <div class="stat-label">Payées</div>
+            <div class="stat-value" id="statPaid">-</div>
           </div>
-
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Taux d’annulation</span>
-              <div class="stat-icon">
-                <i class="fas fa-ban"></i>
-              </div>
+            <div class="stat-label">Total encaissé</div>
+            <div class="stat-value currency" id="statTotalPaid" data-currency="€">-</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <button class="filter-btn active" data-status="all">Toutes</button>
+          <button class="filter-btn" data-status="draft">Brouillons</button>
+          <button class="filter-btn" data-status="issued">Émises</button>
+          <button class="filter-btn" data-status="paid">Payées</button>
+          <button class="filter-btn" data-status="overdue">En retard</button>
+          
+          <select id="yearFilter" class="filter-btn" style="cursor: pointer;">
+            <option value="">Toutes les années</option>
+          </select>
+        </div>
+
+        <!-- Invoices Table -->
+        <div class="card">
+          <div class="card-body" style="padding: 0;">
+            
+            <div id="loadingState" class="loading">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Chargement des factures...</p>
             </div>
-            <div class="stat-value" id="kpiCancellation">4,3%</div>
-            <div class="stat-trend down">
-              <i class="fas fa-arrow-down"></i>
-              <span>-1,2 pts vs période précédente</span>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+              <i class="fas fa-file-invoice"></i>
+              <h3>Aucune facture</h3>
+              <p>Créez votre première facture pour commencer</p>
+              <br>
+              <a href="/invoice-create.html" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                Créer une facture
+              </a>
             </div>
-          </div>
-        </section>
 
-        <!-- Graphique -->
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-chart-line"></i>
-              <span>Évolution des réservations</span>
-            </div>
-          </div>
-          <p class="card-subtitle">
-            Nombre de réservations confirmées par jour sur la période sélectionnée.
-          </p>
-
-          <div class="filter-row">
-            <span>Période :</span>
-            <select id="periodSelect">
-              <option value="7">7 derniers jours</option>
-              <option value="30" selected>30 derniers jours</option>
-              <option value="90">3 derniers mois</option>
-              <option value="365">12 derniers mois</option>
-            </select>
-
-            <span id="customRange" style="display:none;">
-              <input type="date" id="startDate">
-              <span>→</span>
-              <input type="date" id="endDate">
-            </span>
-          </div>
-
-          <div class="chart-wrapper">
-            <canvas id="reservationsChart"></canvas>
-          </div>
-        </section>
-
-        <!-- Tableau par logement -->
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-building"></i>
-              <span>Performances par logement</span>
-            </div>
-          </div>
-          <p class="card-subtitle">
-            Vue synthétique du nombre de réservations, du taux d’occupation et des revenus générés par logement.
-          </p>
-
-          <div class="table-wrapper">
-            <table>
+            <table class="invoice-table" id="invoiceTable" style="display: none;">
               <thead>
                 <tr>
-                  <th>Logement</th>
-                  <th>Réservations</th>
-                  <th>Taux d’occupation</th>
-                  <th>Revenu</th>
+                  <th>N° Facture</th>
+                  <th>Client</th>
+                  <th>Date</th>
+                  <th>Échéance</th>
+                  <th>Montant</th>
                   <th>Statut</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody id="propertyStatsBody">
-                <tr>
-                  <td>Villa Deuil – Suite 1</td>
-                  <td>32</td>
-                  <td>82%</td>
-                  <td>12 800 €</td>
-                  <td><span class="badge">Top performer</span></td>
-                </tr>
-                <tr>
-                  <td>Villa Deuil – Suite 2</td>
-                  <td>28</td>
-                  <td>75%</td>
-                  <td>10 950 €</td>
-                  <td><span class="badge">Stable</span></td>
-                </tr>
-                <tr>
-                  <td>Villa LCC – Loft</td>
-                  <td>18</td>
-                  <td>64%</td>
-                  <td>6 300 €</td>
-                  <td><span class="badge">À développer</span></td>
-                </tr>
+              <tbody id="invoiceTableBody">
+                <!-- Populated by JavaScript -->
               </tbody>
             </table>
+
           </div>
-        </section>
+        </div>
 
       </div>
+      
     </main>
   </div>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Scripts -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const ctx = document.getElementById('reservationsChart');
-      if (!ctx) return;
+    document.addEventListener('DOMContentLoaded', async function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
 
-      const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['J-6', 'J-5', 'J-4', 'J-3', 'J-2', 'Hier', "Aujourd'hui"],
-          datasets: [{
-            label: 'Réservations confirmées',
-            data: [10, 14, 9, 12, 16, 11, 18],
-            fill: false,
-            tension: 0.35
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                stepSize: 5
-              }
-            }
+      let currentFilter = 'all';
+      let currentYear = '';
+
+      // Load user info
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
+
+      // Logout
+      document.getElementById('logoutBtn')?.addEventListener('click', function() {
+        localStorage.removeItem('lcc_token');
+        localStorage.removeItem('lcc_user');
+        window.location.href = '/login.html';
+      });
+
+      // Load stats
+      async function loadStats() {
+        try {
+          const response = await fetch(`/api/invoices/stats?year=${currentYear || new Date().getFullYear()}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+
+          if (response.ok) {
+            const stats = await response.json();
+            document.getElementById('statDrafts').textContent = stats.drafts || 0;
+            document.getElementById('statIssued').textContent = stats.issued || 0;
+            document.getElementById('statPaid').textContent = stats.paid || 0;
+            document.getElementById('statTotalPaid').textContent = formatCurrency(stats.total_paid || 0);
           }
+        } catch (err) {
+          console.error('Error loading stats:', err);
         }
+      }
+
+      // Load invoices
+      async function loadInvoices() {
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const invoiceTable = document.getElementById('invoiceTable');
+        const invoiceTableBody = document.getElementById('invoiceTableBody');
+
+        loadingState.style.display = 'block';
+        emptyState.style.display = 'none';
+        invoiceTable.style.display = 'none';
+
+        try {
+          const params = new URLSearchParams();
+          if (currentFilter !== 'all') params.append('status', currentFilter);
+          if (currentYear) params.append('year', currentYear);
+
+          const response = await fetch(`/api/invoices?${params.toString()}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const invoices = data.invoices || [];
+
+            loadingState.style.display = 'none';
+
+            if (invoices.length === 0) {
+              emptyState.style.display = 'block';
+            } else {
+              invoiceTable.style.display = 'table';
+              invoiceTableBody.innerHTML = invoices.map(invoice => `
+                <tr onclick="window.location.href='/invoice-view.html?id=${invoice.id}'">
+                  <td><strong>${invoice.invoice_number}</strong></td>
+                  <td>${invoice.client_name}</td>
+                  <td>${formatDate(invoice.issue_date)}</td>
+                  <td>${invoice.due_date ? formatDate(invoice.due_date) : '-'}</td>
+                  <td><strong>${formatCurrency(invoice.total_ttc)} ${invoice.currency || 'EUR'}</strong></td>
+                  <td>${getStatusBadge(invoice.status, invoice.paid)}</td>
+                  <td onclick="event.stopPropagation();">
+                    <div class="actions-cell">
+                      <button class="action-btn" onclick="viewInvoice(${invoice.id})" title="Voir">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      ${invoice.status === 'draft' || invoice.status === 'issued' ? `
+                        <button class="action-btn" onclick="editInvoice(${invoice.id})" title="Modifier">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                      ` : ''}
+                      ${!invoice.paid && invoice.status !== 'cancelled' ? `
+                        <button class="action-btn" onclick="markAsPaid(${invoice.id})" title="Marquer payée">
+                          <i class="fas fa-check"></i>
+                        </button>
+                      ` : ''}
+                      ${invoice.status === 'draft' ? `
+                        <button class="action-btn danger" onclick="deleteInvoice(${invoice.id}, '${invoice.invoice_number}')" title="Supprimer">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      ` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `).join('');
+            }
+          } else {
+            throw new Error('Failed to load invoices');
+          }
+        } catch (err) {
+          console.error('Error loading invoices:', err);
+          loadingState.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Erreur lors du chargement des factures</p>
+          `;
+        }
+      }
+
+      // Filters
+      document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.filter-btn[data-status]').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          currentFilter = this.dataset.status;
+          loadInvoices();
+        });
       });
 
-      const periodSelect = document.getElementById('periodSelect');
-      const customRange = document.getElementById('customRange');
-
-      periodSelect.addEventListener('change', () => {
-        if (periodSelect.value === 'custom') {
-          customRange.style.display = 'inline-flex';
-        } else {
-          customRange.style.display = 'none';
-          // Plus tard : recharger les données via ton API selon la période
-        }
+      document.getElementById('yearFilter').addEventListener('change', function() {
+        currentYear = this.value;
+        loadInvoices();
+        loadStats();
       });
-    });
-  </script>
 
-  <!-- MOBILE MENU SCRIPT -->
-  <script>
-    (function() {
+      // Populate year filter
+      const currentYearValue = new Date().getFullYear();
+      const yearFilter = document.getElementById('yearFilter');
+      for (let year = currentYearValue; year >= currentYearValue - 5; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYearValue) option.selected = true;
+        yearFilter.appendChild(option);
+      }
+
+      // Helper functions
+      function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('fr-FR');
+      }
+
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat('fr-FR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(amount);
+      }
+
+      function getStatusBadge(status, paid) {
+        const statusMap = {
+          draft: '<span class="status-badge draft"><i class="fas fa-edit"></i> Brouillon</span>',
+          issued: '<span class="status-badge issued"><i class="fas fa-paper-plane"></i> Émise</span>',
+          paid: '<span class="status-badge paid"><i class="fas fa-check-circle"></i> Payée</span>',
+          overdue: '<span class="status-badge overdue"><i class="fas fa-exclamation-triangle"></i> En retard</span>',
+          cancelled: '<span class="status-badge cancelled"><i class="fas fa-times-circle"></i> Annulée</span>'
+        };
+        return statusMap[status] || status;
+      }
+
+      // Actions
+      window.viewInvoice = function(id) {
+        window.location.href = `/invoice-view.html?id=${id}`;
+      };
+
+      window.editInvoice = function(id) {
+        window.location.href = `/invoice-create.html?id=${id}`;
+      };
+
+      window.markAsPaid = async function(id) {
+        if (!confirm('Marquer cette facture comme payée ?')) return;
+
+        try {
+          const response = await fetch(`/api/invoices/${id}/mark-paid`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+              paymentDate: new Date().toISOString().split('T')[0],
+              paymentMethod: 'Virement bancaire'
+            })
+          });
+
+          if (response.ok) {
+            alert('Facture marquée comme payée');
+            loadInvoices();
+            loadStats();
+          } else {
+            alert('Erreur lors du marquage de la facture');
+          }
+        } catch (err) {
+          console.error('Error marking as paid:', err);
+          alert('Erreur lors du marquage de la facture');
+        }
+      };
+
+      window.deleteInvoice = async function(id, invoiceNumber) {
+        if (!confirm(`Supprimer la facture ${invoiceNumber} ?\n\nCette action est irréversible.`)) return;
+
+        try {
+          const response = await fetch(`/api/invoices/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+
+          if (response.ok) {
+            alert('Facture supprimée');
+            loadInvoices();
+            loadStats();
+          } else {
+            alert('Erreur lors de la suppression');
+          }
+        } catch (err) {
+          console.error('Error deleting invoice:', err);
+          alert('Erreur lors de la suppression');
+        }
+      };
+
+      // Initial load
+      loadStats();
+      loadInvoices();
+
+      // Mobile menu
       const menuBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
       const overlay = document.getElementById('sidebarOverlay');
@@ -579,7 +695,6 @@
         menuBtn.addEventListener('click', function() {
           sidebar.classList.toggle('active');
           overlay.classList.toggle('active');
-          
           const icon = menuBtn.querySelector('i');
           if (sidebar.classList.contains('active')) {
             icon.classList.remove('fa-bars');
@@ -597,53 +712,8 @@
           icon.classList.remove('fa-times');
           icon.classList.add('fa-bars');
         });
-        
-        if (window.innerWidth <= 1024) {
-          document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-              sidebar.classList.remove('active');
-              overlay.classList.remove('active');
-              const icon = menuBtn.querySelector('i');
-              icon.classList.remove('fa-times');
-              icon.classList.add('fa-bars');
-            });
-          });
-        }
       }
-    })();
-    
-    (function() {
-      const currentPage = document.body.getAttribute('data-page');
-      if (currentPage) {
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.classList.remove('active');
-        });
-        const activeLink = document.querySelector('.nav-item[data-page="statistics"]');
-        if (activeLink) {
-          activeLink.classList.add('active');
-        }
-      }
-    })();
-    
-    document.getElementById('logoutBtn')?.addEventListener('click', function() {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
     });
-    
-    (function() {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) {
-        const companyEl = document.getElementById('sidebarUserCompany');
-        if (companyEl) companyEl.textContent = user.company;
-      }
-    })();
   </script>
 </body>
 </html>
