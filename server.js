@@ -3619,44 +3619,156 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
 });
 
 // ============================================
-// FACTURES PROPRIÉTAIRES
+// ROUTES API V2 - FACTURATION PROPRIÉTAIRES
+// ============================================
+// NOUVELLES ROUTES à ajouter APRÈS les routes V1 existantes
+
+// ============================================
+// ARTICLES (CATALOGUE)
 // ============================================
 
-// 6. CRÉER UNE FACTURE
-app.post('/api/owner-invoices', async (req, res) => {
+// 1. LISTE DES ARTICLES
+app.get('/api/owner-articles', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM owner_articles 
+       WHERE user_id = $1 AND is_active = true
+       ORDER BY article_type, name`,
+      [user.id]
+    );
+
+    res.json({ articles: result.rows });
+  } catch (err) {
+    console.error('Erreur liste articles:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 2. CRÉER UN ARTICLE
+app.post('/api/owner-articles', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { articleType, name, description, unitPrice, commissionRate } = req.body;
+
+    if (!name) return res.status(400).json({ error: 'Nom requis' });
+
+    const result = await pool.query(`
+      INSERT INTO owner_articles (user_id, article_type, name, description, unit_price, commission_rate)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [user.id, articleType, name, description, unitPrice || 0, commissionRate || 0]);
+
+    res.json({ article: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur création article:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 3. MODIFIER UN ARTICLE
+app.put('/api/owner-articles/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { name, description, unitPrice, commissionRate } = req.body;
+
+    const result = await pool.query(`
+      UPDATE owner_articles 
+      SET name = $1, description = $2, unit_price = $3, commission_rate = $4
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [name, description, unitPrice, commissionRate, req.params.id, user.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article non trouvé' });
+    }
+
+    res.json({ article: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur modification article:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 4. SUPPRIMER UN ARTICLE (soft delete)
+app.delete('/api/owner-articles/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      'UPDATE owner_articles SET is_active = false WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article non trouvé' });
+    }
+
+    res.json({ message: 'Article supprimé' });
+  } catch (err) {
+    console.error('Erreur suppression article:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 5. CRÉER ARTICLES PAR DÉFAUT
+app.post('/api/owner-articles/init-defaults', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    await pool.query('SELECT create_default_owner_articles($1)', [user.id]);
+
+    res.json({ message: 'Articles par défaut créés' });
+  } catch (err) {
+    console.error('Erreur init articles:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// FACTURES - ROUTES MODIFIÉES (AVEC RÉDUCTIONS)
+// ============================================
+
+// 6. MODIFIER UNE FACTURE BROUILLON
+app.put('/api/owner-invoices/:id', async (req, res) => {
   const client = await pool.connect();
   
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
+    // Vérifier que c'est un brouillon
+    const checkResult = await client.query(
+      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    if (checkResult.rows[0].status !== 'draft') {
+      return res.status(400).json({ error: 'Seuls les brouillons peuvent être modifiés' });
+    }
+
     await client.query('BEGIN');
 
     const {
-      clientId, periodStart, periodEnd, issueDate, dueDate,
-      items, // Array des prestations
+      items,
       vatApplicable, vatRate,
-      notes, footerText, internalNotes,
-      sendEmail
+      discountType, discountValue,
+      notes, internalNotes
     } = req.body;
 
-    // Récupérer les infos du client
-    const clientResult = await client.query(
-      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-      [clientId, user.id]
-    );
-
-    if (clientResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Client non trouvé' });
-    }
-
-    const clientData = clientResult.rows[0];
-    const clientName = clientData.client_type === 'business' 
-      ? clientData.company_name 
-      : `${clientData.first_name} ${clientData.last_name}`;
-
-    // Calculs
+    // Recalculer totaux
     let subtotalHt = 0;
     let subtotalDebours = 0;
 
@@ -3669,40 +3781,38 @@ app.post('/api/owner-invoices', async (req, res) => {
       }
     });
 
-    const vatAmount = vatApplicable ? subtotalHt * (parseFloat(vatRate) / 100) : 0;
-    const totalTtc = subtotalHt + subtotalDebours + vatAmount;
+    // Calculer réduction
+    let discountAmount = 0;
+    if (discountType === 'percentage') {
+      discountAmount = subtotalHt * (parseFloat(discountValue) / 100);
+    } else if (discountType === 'fixed') {
+      discountAmount = parseFloat(discountValue);
+    }
 
-    // Générer numéro de facture
-    const invoiceNumberResult = await client.query(
-      "SELECT get_next_invoice_number($1) as invoice_number",
-      [user.id]
-    );
-    const invoiceNumber = invoiceNumberResult.rows[0].invoice_number;
+    const netHt = subtotalHt - discountAmount;
+    const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100) : 0;
+    const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // Insérer la facture
-    const invoiceResult = await client.query(`
-      INSERT INTO owner_invoices (
-        invoice_number, user_id, client_id,
-        client_name, client_email, client_address, client_postal_code, client_city, client_siret,
-        period_start, period_end, issue_date, due_date,
-        vat_applicable, vat_rate,
-        subtotal_ht, subtotal_debours, vat_amount, total_ttc,
-        status, notes, footer_text, internal_notes, sent_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
-      ) RETURNING id
+    // Mettre à jour facture
+    await client.query(`
+      UPDATE owner_invoices SET
+        vat_applicable = $1, vat_rate = $2,
+        discount_type = $3, discount_value = $4, discount_amount = $5,
+        subtotal_ht = $6, subtotal_debours = $7, vat_amount = $8, total_ttc = $9,
+        notes = $10, internal_notes = $11
+      WHERE id = $12
     `, [
-      invoiceNumber, user.id, clientId,
-      clientName, clientData.email, clientData.address, clientData.postal_code, clientData.city, clientData.siret,
-      periodStart, periodEnd, issueDate || new Date(), dueDate,
       vatApplicable, vatRate,
+      discountType || 'none', discountValue || 0, discountAmount,
       subtotalHt, subtotalDebours, vatAmount, totalTtc,
-      sendEmail ? 'sent' : 'draft', notes, footerText, internalNotes, sendEmail ? new Date() : null
+      notes, internalNotes,
+      req.params.id
     ]);
 
-    const invoiceId = invoiceResult.rows[0].id;
+    // Supprimer anciennes lignes
+    await client.query('DELETE FROM owner_invoice_items WHERE invoice_id = $1', [req.params.id]);
 
-    // Insérer les lignes
+    // Insérer nouvelles lignes
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       await client.query(`
@@ -3712,7 +3822,7 @@ app.post('/api/owner-invoices', async (req, res) => {
           order_index, is_debours
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `, [
-        invoiceId, item.itemType, item.description,
+        req.params.id, item.itemType, item.description,
         item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
         i, item.isDebours || false
       ]);
@@ -3720,98 +3830,53 @@ app.post('/api/owner-invoices', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Envoyer email si demandé
-    if (sendEmail && clientData.email) {
-      try {
-        await sendOwnerInvoiceEmail({
-          invoiceNumber, clientName, clientEmail: clientData.email,
-          periodStart, periodEnd, totalTtc, items,
-          userCompany: user.company, userEmail: user.email
-        });
-      } catch (emailErr) {
-        console.error('Erreur envoi email:', emailErr);
-      }
-    }
-
-    res.json({
-      success: true,
-      invoiceId,
-      invoiceNumber,
-      message: sendEmail ? 'Facture créée et envoyée' : 'Facture créée'
-    });
+    res.json({ success: true, message: 'Facture modifiée' });
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Erreur création facture:', err);
+    console.error('Erreur modification facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   } finally {
     client.release();
   }
 });
 
-// 7. LISTE DES FACTURES
-app.get('/api/owner-invoices', async (req, res) => {
+// 7. SUPPRIMER UNE FACTURE BROUILLON
+app.delete('/api/owner-invoices/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { status, clientId, year, limit, offset } = req.query;
+    // Vérifier que c'est un brouillon
+    const checkResult = await pool.query(
+      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
 
-    let query = `
-      SELECT oi.*, oc.email as client_email_current
-      FROM owner_invoices oi
-      LEFT JOIN owner_clients oc ON oi.client_id = oc.id
-      WHERE oi.user_id = $1
-    `;
-    const params = [user.id];
-    let paramIndex = 2;
-
-    if (status) {
-      query += ` AND oi.status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
     }
 
-    if (clientId) {
-      query += ` AND oi.client_id = $${paramIndex}`;
-      params.push(clientId);
-      paramIndex++;
+    if (checkResult.rows[0].status !== 'draft') {
+      return res.status(400).json({ error: 'Seuls les brouillons peuvent être supprimés. Créez un avoir pour annuler.' });
     }
 
-    if (year) {
-      query += ` AND EXTRACT(YEAR FROM oi.issue_date) = $${paramIndex}`;
-      params.push(year);
-      paramIndex++;
-    }
+    await pool.query('DELETE FROM owner_invoices WHERE id = $1', [req.params.id]);
 
-    query += ' ORDER BY oi.issue_date DESC';
-
-    if (limit) {
-      query += ` LIMIT $${paramIndex}`;
-      params.push(limit);
-      paramIndex++;
-    }
-
-    if (offset) {
-      query += ` OFFSET $${paramIndex}`;
-      params.push(offset);
-    }
-
-    const result = await pool.query(query, params);
-
-    res.json({ invoices: result.rows });
+    res.json({ message: 'Facture supprimée' });
   } catch (err) {
-    console.error('Erreur liste factures:', err);
+    console.error('Erreur suppression facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// 8. DÉTAIL FACTURE
-app.get('/api/owner-invoices/:id', async (req, res) => {
+// 8. ENVOYER UN BROUILLON
+app.post('/api/owner-invoices/:id/send', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
+    // Récupérer la facture
     const invoiceResult = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [req.params.id, user.id]
@@ -3821,170 +3886,210 @@ app.get('/api/owner-invoices/:id', async (req, res) => {
       return res.status(404).json({ error: 'Facture non trouvée' });
     }
 
+    const invoice = invoiceResult.rows[0];
+
+    if (invoice.status !== 'draft') {
+      return res.status(400).json({ error: 'Cette facture a déjà été envoyée' });
+    }
+
+    // Récupérer les items
     const itemsResult = await pool.query(
       'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
       [req.params.id]
     );
 
-    const attachmentsResult = await pool.query(
-      'SELECT * FROM owner_invoice_attachments WHERE invoice_id = $1',
+    // Mettre à jour statut
+    await pool.query(
+      'UPDATE owner_invoices SET status = $1, sent_at = NOW() WHERE id = $2',
+      ['sent', req.params.id]
+    );
+
+    // Envoyer email
+    if (invoice.client_email) {
+      try {
+        await sendOwnerInvoiceEmail({
+          invoiceNumber: invoice.invoice_number,
+          clientName: invoice.client_name,
+          clientEmail: invoice.client_email,
+          periodStart: invoice.period_start,
+          periodEnd: invoice.period_end,
+          totalTtc: invoice.total_ttc,
+          items: itemsResult.rows,
+          userCompany: user.company,
+          userEmail: user.email
+        });
+      } catch (emailErr) {
+        console.error('Erreur envoi email:', emailErr);
+      }
+    }
+
+    res.json({ success: true, message: 'Facture envoyée' });
+
+  } catch (err) {
+    console.error('Erreur envoi facture:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// AVOIRS
+// ============================================
+
+// 9. CRÉER UN AVOIR
+app.post('/api/owner-credit-notes', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    await client.query('BEGIN');
+
+    const { invoiceId, reason } = req.body;
+
+    // Récupérer la facture d'origine
+    const invoiceResult = await client.query(
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [invoiceId, user.id]
+    );
+
+    if (invoiceResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    const invoice = invoiceResult.rows[0];
+
+    if (invoice.status !== 'sent' && invoice.status !== 'paid') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Seules les factures envoyées peuvent avoir un avoir' });
+    }
+
+    // Vérifier qu'il n'y a pas déjà un avoir
+    const existingCredit = await client.query(
+      'SELECT id FROM owner_credit_notes WHERE original_invoice_id = $1',
+      [invoiceId]
+    );
+
+    if (existingCredit.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Un avoir existe déjà pour cette facture' });
+    }
+
+    // Générer numéro avoir
+    const creditNumberResult = await client.query(
+      'SELECT get_next_credit_note_number($1) as credit_note_number',
+      [user.id]
+    );
+    const creditNoteNumber = creditNumberResult.rows[0].credit_note_number;
+
+    // Créer l'avoir (montants négatifs)
+    const creditResult = await client.query(`
+      INSERT INTO owner_credit_notes (
+        credit_note_number, user_id, original_invoice_id, original_invoice_number,
+        client_id, client_name, client_email,
+        subtotal_ht, subtotal_debours, vat_amount, total_ttc,
+        reason, status, sent_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      RETURNING id
+    `, [
+      creditNoteNumber, user.id, invoiceId, invoice.invoice_number,
+      invoice.client_id, invoice.client_name, invoice.client_email,
+      -invoice.subtotal_ht, -invoice.subtotal_debours, -invoice.vat_amount, -invoice.total_ttc,
+      reason, 'issued'
+    ]);
+
+    const creditNoteId = creditResult.rows[0].id;
+
+    // Copier les lignes (négatif)
+    const itemsResult = await client.query(
+      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1',
+      [invoiceId]
+    );
+
+    for (const item of itemsResult.rows) {
+      await client.query(`
+        INSERT INTO owner_credit_note_items (credit_note_id, item_type, description, total, order_index)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [creditNoteId, item.item_type, item.description, -item.total, item.order_index]);
+    }
+
+    // Mettre à jour facture (lien vers avoir + statut cancelled)
+    await client.query(
+      'UPDATE owner_invoices SET credit_note_id = $1, status = $2 WHERE id = $3',
+      [creditNoteId, 'cancelled', invoiceId]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      creditNoteId,
+      creditNoteNumber,
+      message: 'Avoir créé et facture annulée'
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erreur création avoir:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
+  }
+});
+
+// 10. LISTE DES AVOIRS
+app.get('/api/owner-credit-notes', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM owner_credit_notes 
+       WHERE user_id = $1 
+       ORDER BY issue_date DESC`,
+      [user.id]
+    );
+
+    res.json({ creditNotes: result.rows });
+  } catch (err) {
+    console.error('Erreur liste avoirs:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 11. DÉTAIL AVOIR
+app.get('/api/owner-credit-notes/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const creditResult = await pool.query(
+      'SELECT * FROM owner_credit_notes WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
+
+    if (creditResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Avoir non trouvé' });
+    }
+
+    const itemsResult = await pool.query(
+      'SELECT * FROM owner_credit_note_items WHERE credit_note_id = $1 ORDER BY order_index',
       [req.params.id]
     );
 
     res.json({
-      invoice: invoiceResult.rows[0],
-      items: itemsResult.rows,
-      attachments: attachmentsResult.rows
+      creditNote: creditResult.rows[0],
+      items: itemsResult.rows
     });
   } catch (err) {
-    console.error('Erreur détail facture:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// 9. UPLOAD JUSTIFICATIF
-app.post('/api/owner-invoices/:id/upload-justificatif', uploadAttachment.single('file'), async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'Aucun fichier' });
-    }
-
-    const { itemId } = req.body;
-
-    const result = await pool.query(`
-      INSERT INTO owner_invoice_attachments (invoice_id, item_id, filename, file_path, file_size, mime_type)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
-    `, [
-      req.params.id,
-      itemId || null,
-      req.file.originalname,
-      '/uploads/justificatifs/' + req.file.filename,
-      req.file.size,
-      req.file.mimetype
-    ]);
-
-    res.json({ attachment: result.rows[0] });
-  } catch (err) {
-    console.error('Erreur upload:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// 10. EXPORT EXCEL
-app.get('/api/owner-invoices/export/excel', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
-    const { year } = req.query;
-
-    let query = 'SELECT * FROM owner_invoices WHERE user_id = $1';
-    const params = [user.id];
-
-    if (year) {
-      query += ' AND EXTRACT(YEAR FROM issue_date) = $2';
-      params.push(year);
-    }
-
-    query += ' ORDER BY issue_date DESC';
-
-    const result = await pool.query(query, params);
-
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Factures Propriétaires');
-
-    worksheet.columns = [
-      { header: 'N° Facture', key: 'invoice_number', width: 15 },
-      { header: 'Client', key: 'client_name', width: 30 },
-      { header: 'Date émission', key: 'issue_date', width: 15 },
-      { header: 'Période début', key: 'period_start', width: 15 },
-      { header: 'Période fin', key: 'period_end', width: 15 },
-      { header: 'Montant HT', key: 'subtotal_ht', width: 12 },
-      { header: 'Débours', key: 'subtotal_debours', width: 12 },
-      { header: 'TVA', key: 'vat_amount', width: 12 },
-      { header: 'Total TTC', key: 'total_ttc', width: 12 },
-      { header: 'Statut', key: 'status', width: 12 }
-    ];
-
-    result.rows.forEach(invoice => {
-      worksheet.addRow({
-        invoice_number: invoice.invoice_number,
-        client_name: invoice.client_name,
-        issue_date: invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString('fr-FR') : '',
-        period_start: invoice.period_start ? new Date(invoice.period_start).toLocaleDateString('fr-FR') : '',
-        period_end: invoice.period_end ? new Date(invoice.period_end).toLocaleDateString('fr-FR') : '',
-        subtotal_ht: parseFloat(invoice.subtotal_ht),
-        subtotal_debours: parseFloat(invoice.subtotal_debours),
-        vat_amount: parseFloat(invoice.vat_amount),
-        total_ttc: parseFloat(invoice.total_ttc),
-        status: invoice.status
-      });
-    });
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=factures-proprietaires-${year || 'all'}.xlsx`);
-
-    await workbook.xlsx.write(res);
-    res.end();
-
-  } catch (err) {
-    console.error('Erreur export Excel:', err);
+    console.error('Erreur détail avoir:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
 // ============================================
-// FONCTION EMAIL
-// ============================================
-
-async function sendOwnerInvoiceEmail(data) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-
-  const itemsList = data.items.map(item => {
-    if (item.itemType === 'commission') {
-      return `- ${item.description}: ${item.total.toFixed(2)} € (${item.commissionRate}% de ${item.rentalAmount} €)`;
-    }
-    return `- ${item.description}: ${item.total.toFixed(2)} €`;
-  }).join('\n');
-
-  const emailContent = `
-Bonjour ${data.clientName},
-
-Veuillez trouver ci-dessous votre facture pour la période du ${new Date(data.periodStart).toLocaleDateString('fr-FR')} au ${new Date(data.periodEnd).toLocaleDateString('fr-FR')}.
-
-FACTURE N° ${data.invoiceNumber}
-
-Prestations :
-${itemsList}
-
-TOTAL : ${data.totalTtc.toFixed(2)} €
-
-Cordialement,
-${data.userCompany}
-  `;
-
-  await transporter.sendMail({
-    from: data.userEmail,
-    to: data.clientEmail,
-    subject: `Facture ${data.invoiceNumber} - ${data.userCompany}`,
-    text: emailContent
-  });
-}
-
-// ============================================
-// FIN DES ROUTES - FACTURATION PROPRIÉTAIRES
+// FIN DES ROUTES V2
 // ============================================
 
 // ============================================
