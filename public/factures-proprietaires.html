@@ -668,8 +668,6 @@ async function loadClients() {
   }
 }
 
-}
-
 async function loadArticles() {
   try {
     const res = await fetch('/api/owner-articles', { headers: { 'Authorization': 'Bearer ' + token } });
