@@ -504,7 +504,7 @@
 </div>
 
 <script>
-let token = localStorage.getItem('token');
+let token = localStorage.getItem('lcc_token');
 let user = null;
 let clients = [];
 let invoices = [];
@@ -519,36 +519,50 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('🔍 DEBUG: Page chargée');
   console.log('🔍 DEBUG: Token =', token);
   
+  // 1. Vérif auth
   if (!token) {
     console.log('❌ DEBUG: Pas de token, redirection login');
     window.location.href = '/login.html';
     return;
   }
-  
-  console.log('✅ DEBUG: Token trouvé, appel API /api/user/me');
-  
+
+  // 2. Récup user depuis le localStorage (comme sur app.html)
   try {
-    const res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token } });
-    console.log('🔍 DEBUG: Réponse API status =', res.status);
-    
-    if (!res.ok) throw new Error('Non autorisé');
-    
-    user = await res.json();
-    console.log('✅ DEBUG: User =', user);
-    document.getElementById('userName').textContent = user.name || user.email;
+    const rawUser = localStorage.getItem('lcc_user');
+    user = rawUser ? JSON.parse(rawUser) : null;
+  } catch (e) {
+    console.error('Impossible de lire lcc_user', e);
+  }
+
+  if (user) {
+    console.log('✅ DEBUG: User depuis localStorage =', user);
+    const fullName = user.firstName
+      ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+      : (user.email || 'Mon compte');
+
+    document.getElementById('userName').textContent = fullName;
     document.getElementById('userCompany').textContent = user.company || 'LCC';
-    document.getElementById('userAvatar').textContent = (user.name || user.email).charAt(0).toUpperCase();
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('invoiceIssueDate').value = today;
-    document.getElementById('invoiceDueDate').value = today;
-    loadClients();
-    loadInvoices();
-    loadArticles();
-    fetch('/api/owner-articles/init-defaults', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    }).catch(() => {});
-  } catch (err) {
+    document.getElementById('userAvatar').textContent =
+      (user.firstName || user.email || '?').trim()[0].toUpperCase();
+  }
+
+  // 3. Init dates par défaut
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('invoiceIssueDate').value = today;
+  document.getElementById('invoiceDueDate').value = today;
+
+  // 4. Chargement des données
+  await loadClients();
+  await loadInvoices();
+  await loadArticles();
+
+  // 5. Init catalogue par défaut
+  fetch('/api/owner-articles/init-defaults', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).catch(() => {});
+});
+
     console.error('❌ DEBUG: Erreur auth =', err);
     localStorage.removeItem('token');
     window.location.href = '/login.html';
@@ -560,7 +574,8 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 });
 
 function logout() {
-  localStorage.removeItem('token');
+  localStorage.removeItem('lcc_token');
+  localStorage.removeItem('lcc_user');
   window.location.href = '/login.html';
 }
 
