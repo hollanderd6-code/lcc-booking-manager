@@ -16,6 +16,8 @@ const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
+const multer = require('multer');
+const path = require('path');
 
 
 // ============================================
