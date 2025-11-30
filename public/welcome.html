@@ -136,20 +136,24 @@
     <!-- Main Content -->
     <main class="main-content">
       <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Livret d'accueil</div>
-          <h1 class="page-title">Préparez votre livret d'accueil</h1>
-          <p class="page-subtitle">
-            Renseignez toutes les informations utiles pour vos voyageurs. Nous utiliserons ces données pour générer un livret d'accueil prêt à l'emploi.
-          </p>
-        </div>
-        
-        <div class="header-actions">
-          <button class="btn btn-ghost" id="saveBtn">
-            <i class="fas fa-save"></i>
-            Enregistrer
-          </button>
+    <header class="main-header">
+  <div class="header-left">
+    <div class="page-kicker">Livret d'accueil</div>
+    <h1 class="page-title">Préparez votre livret d'accueil</h1>
+    <p class="page-subtitle">
+      Renseignez toutes les informations utiles pour vos voyageurs. Une fois le formulaire enregistré,
+      votre conciergerie recevra les données et se chargera de créer le livret d'accueil pour vous.
+    </p>
+  </div>
+  
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="saveBtn">
+      <i class="fas fa-save"></i>
+      Enregistrer le formulaire
+    </button>
+  </div>
+</header>
+
           <button class="btn btn-ghost hide-on-mobile" id="previewGuideBtn">
             <i class="fas fa-eye"></i>
             Prévisualiser le livret
@@ -286,39 +290,8 @@
               Ajouter une photo
             </button>
           </div>
-        
-
-        <!-- Aperçu du livret d'accueil -->
-        <div class="card mb-lg" id="guidePreviewCard" style="display:none;">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-book-open"></i>
-              Aperçu du livret d'accueil
-            </div>
-          </div>
-          <div class="card-body">
-            <p class="text-muted" style="margin-bottom: 12px;">
-              Cet aperçu reprend les informations saisies ci-dessus pour vous montrer ce que verront vos voyageurs.
-            </p>
-            <div id="guidePreview" class="guide-preview">
-              <!-- Contenu généré en JavaScript -->
-            </div>
-          </div>
-        </div>
-</div>
-
-      </div>
     </main>
   </div>
-
-  <!-- Script logique livret -->
-  <script>
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
-        return;
-      }
 
       // Remplir l'info utilisateur dans la sidebar
       const rawUser = localStorage.getItem('lcc_user');
