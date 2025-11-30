@@ -288,6 +288,15 @@
     </main> <!-- fin .main-content -->
   </div> <!-- fin .app-container -->
 
+       <!-- Script logique livret -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
       // Remplir l'info utilisateur dans la sidebar
       const rawUser = localStorage.getItem('lcc_user');
       let user = null;
@@ -564,7 +573,10 @@
         }
       }
 
-      document.getElementById('saveBtn').addEventListener('click', saveWelcomeData);
+      const saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', saveWelcomeData);
+      }
 
       loadWelcomeData();
     })();
