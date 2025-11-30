@@ -4234,6 +4234,52 @@ function fixModalContent(bookingBlock) {
     } catch (e) {
       console.warn('Erreur lors de l’injection des infos ménage dans le modal', e);
     }
+        // ➕ Ajouter une ligne "Ménage" avec l’assignation éventuelle
+    try {
+      // Assignations par logement (créées sur la page cleaning)
+      const assignments = JSON.parse(
+        localStorage.getItem('lcc_cleaning_assignments') || '{}'
+      );
+      const cleaners = JSON.parse(
+        localStorage.getItem('lcc_cleaners') || '[]'
+      );
+
+      function getCleanerNameById(cleanerId) {
+        if (!cleanerId || !Array.isArray(cleaners)) return null;
+        const c = cleaners.find(x => x.id === cleanerId);
+        return c ? (c.name || c.email || c.phone || null) : null;
+      }
+
+      const propertyId = currentBookingData.propertyId;
+      const assignedId =
+        propertyId && assignments ? assignments[propertyId] : null;
+      const cleanerName = getCleanerNameById(assignedId);
+
+      const statusText = cleanerName
+        ? 'Assigné à ' + cleanerName
+        : 'Pas encore assigné';
+
+      // On crée (ou récupère) un bloc "Ménage" en bas du modal
+      let group = detailsContent.querySelector('[data-cleaning-info="1"]');
+
+      if (!group) {
+        group = document.createElement('div');
+        group.className = 'detail-group';
+        group.setAttribute('data-cleaning-info', '1');
+        group.innerHTML = `
+          <label><i class="fas fa-broom"></i> Ménage</label>
+          <div class="detail-value"></div>
+        `;
+        detailsContent.appendChild(group);
+      }
+
+      const valueEl = group.querySelector('.detail-value');
+      if (valueEl) {
+        valueEl.textContent = statusText;
+      }
+    } catch (e) {
+      console.warn('Erreur lors de l’injection des infos ménage dans le modal', e);
+    }
   }, 200);
 }
 
