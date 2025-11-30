@@ -452,7 +452,7 @@
           <div class="page-kicker">Gestion</div>
           <h1 class="page-title">Gestion du ménage</h1>
           <p class="page-subtitle">
-            Configurez votre équipe de ménage, assignez-la à vos logements et générez un planning intelligent.
+            Assignez-la à vos logements et générez un planning intelligent.
           </p>
         </div>
         <div class="header-actions">
@@ -517,61 +517,29 @@
             </div>
           </section>
 
-          <!-- Colonne droite : assignation aux logements -->
+                    <!-- Colonne droite : assignation par réservation -->
           <section class="card">
             <div class="card-header">
               <div class="card-title">
-                <i class="fas fa-home"></i>
-                Assignation par logement
+                <i class="fas fa-broom"></i>
+                Assignation par réservation
               </div>
             </div>
 
             <p class="assign-hint">
-              Assignez une personne de ménage principale à chaque logement. 
-              Les assignations pourront ensuite être utilisées pour générer automatiquement les plannings.
+              Assignez une personne de ménage à chaque départ de réservation. 
+              Ces assignations seront visibles dans le dashboard et dans le calendrier.
             </p>
 
             <div id="assignContainer">
               <p class="text-secondary" style="font-size:13px;">
-                Chargement des logements…
+                Chargement des réservations…
               </p>
             </div>
           </section>
 
+
         </section>
-
-        <!-- SECTION PLANNING IA -->
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-clipboard-list"></i>
-              Planning de ménage (brouillon IA)
-            </div>
-          </div>
-
-          <div class="planning-controls">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="planningDate" style="font-size:13px; font-weight:600; color:var(--text-secondary);">
-                Date à planifier
-              </label>
-              <input type="date" id="planningDate">
-            </div>
-            <button type="button" class="btn btn-secondary" id="generatePlanningBtn">
-              <i class="fas fa-wand-magic-sparkles"></i>
-              Générer un planning de ménage (IA)
-            </button>
-            <span class="planning-hint" id="planningHint">
-              La date sera croisée avec vos réservations (départs / arrivées) et les personnes assignées.
-            </span>
-          </div>
-
-          <div id="planningContainer">
-            <p class="planning-empty">
-              Choisissez une date puis cliquez sur “Générer un planning de ménage (IA)”.
-            </p>
-          </div>
-        </section>
-
       </div>
     </main>
   </div>
@@ -644,11 +612,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const cleanerList = document.getElementById('cleanerList');
   const assignContainer = document.getElementById('assignContainer');
 
-  const planningDateInput = document.getElementById('planningDate');
-  const generatePlanningBtn = document.getElementById('generatePlanningBtn');
-  const planningContainer = document.getElementById('planningContainer');
-  const planningHint = document.getElementById('planningHint');
-
   function loadLocalData() {
     try {
       cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
@@ -663,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
     localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
   }
-  // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
+   // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
   async function loadAssignmentsFromApi() {
     try {
       const token = localStorage.getItem('lcc_token');
@@ -682,9 +645,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await res.json();
       const map = {};
+
+      // ➜ On attend maintenant des lignes avec reservation_key / reservation_uid
       (data.assignments || []).forEach((row) => {
-        if (row.property_id && row.cleaner_id) {
-          map[row.property_id] = row.cleaner_id;
+        const key =
+          row.reservation_key ||
+          row.reservation_uid ||
+          (row.reservationId != null ? String(row.reservationId) : null);
+
+        if (key && row.cleaner_id) {
+          map[key] = row.cleaner_id;
         }
       });
 
@@ -694,6 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Erreur loadAssignmentsFromApi()', e);
     }
   }
+
 
   async function loadRemoteData() {
     try {
@@ -733,6 +704,31 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+  function getReservationKey(reservation) {
+    if (!reservation) return null;
+    if (reservation.uid) return reservation.uid;
+    if (reservation.id != null) return String(reservation.id);
+    if (reservation.propertyId && reservation.start && reservation.end) {
+      return (
+        reservation.propertyId +
+        '::' +
+        String(reservation.start).slice(0, 10) +
+        '>' +
+        String(reservation.end).slice(0, 10)
+      );
+    }
+    return null;
+  }
+
+  function getPropertyNameById(propertyId) {
+    if (!propertyId) return 'Logement';
+    const p = PROPERTIES.find(
+      (x) =>
+        String(x.id) === String(propertyId) ||
+        String(x.propertyId) === String(propertyId)
+    );
+    return p ? (p.name || p.title || p.label || propertyId) : propertyId;
+  }
 
   function renderCleaners() {
     if (!cleanerList) return;
@@ -764,37 +760,70 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function renderAssignments() {
+    function renderAssignments() {
     if (!assignContainer) return;
 
-    if (!PROPERTIES.length) {
+    if (!RESERVATIONS.length) {
       assignContainer.innerHTML = `
         <p class="text-secondary" style="font-size:13px;">
-          Aucun logement détecté. Connectez vos logements pour pouvoir les assigner.
+          Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
         </p>`;
       return;
     }
 
-    assignContainer.innerHTML = '';
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // Réservations avec départ aujourd’hui ou plus tard
+    const upcoming = (RESERVATIONS || [])
+      .filter((r) => {
+        if (!r.end || !r.propertyId) return false;
+        const endStr = String(r.end).slice(0, 10);
+        return endStr >= todayStr;
+      })
+      .sort((a, b) => {
+        const aEnd = String(a.end).slice(0, 10);
+        const bEnd = String(b.end).slice(0, 10);
+        return aEnd.localeCompare(bEnd);
+      });
+
+    if (!upcoming.length) {
+      assignContainer.innerHTML = `
+        <p class="text-secondary" style="font-size:13px;">
+          Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
+        </p>`;
+      return;
+    }
 
     let html = `
       <table class="assign-table">
         <thead>
           <tr>
+            <th>Départ le</th>
             <th>Logement</th>
+            <th>Client</th>
             <th>Personne en charge</th>
           </tr>
         </thead>
         <tbody>
     `;
 
-    PROPERTIES.forEach((p) => {
-      const assignedId = assignments[p.id] || '';
+    upcoming.forEach((r) => {
+      const key = getReservationKey(r);
+      const assignedId = key && assignments[key] ? assignments[key] : '';
+      const propertyName =
+        r.propertyName || r.property || getPropertyNameById(r.propertyId);
+      const guestName = r.guestName || r.name || '';
+      const endStr = String(r.end).slice(0, 10);
+
       html += `
         <tr>
-          <td>${p.name || p.title || p.label || p.id}</td>
+          <td>${endStr}</td>
+          <td>${propertyName}</td>
+          <td>${guestName || '-'}</td>
           <td>
-            <select class="assign-select" data-property-id="${p.id}">
+            <select class="assign-select"
+                    data-reservation-key="${key || ''}"
+                    data-property-id="${r.propertyId || ''}">
               <option value="">Aucun</option>
               ${cleaners
                 .map(
@@ -816,13 +845,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
       sel.addEventListener('change', async (e) => {
-        const propertyId = e.target.getAttribute('data-property-id');
-        const cleanerId = e.target.value;
+        const select = e.target;
+        const key = select.getAttribute('data-reservation-key');
+        const propertyId = select.getAttribute('data-property-id') || null;
+        const cleanerId = select.value;
+
+        if (!key) return;
 
         if (cleanerId) {
-          assignments[propertyId] = cleanerId;
+          assignments[key] = cleanerId;
         } else {
-          delete assignments[propertyId];
+          delete assignments[key];
         }
         saveLocalData();
 
@@ -837,6 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
               Authorization: 'Bearer ' + token
             },
             body: JSON.stringify({
+              reservationKey: key,
               propertyId,
               cleanerId: cleanerId || null
             })
@@ -847,6 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
 
 
   // Ajout d’un membre
@@ -909,216 +944,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function getCleanerById(id) {
     return cleaners.find((c) => c.id === id) || null;
-  }
-
-  // Ici c'est notre "IA" simplifiée : on regarde départs / arrivées du jour,
-  // on récupère la personne assignée et on génère un planning lisible.
-  function generatePlanningForDate(dateStr) {
-    if (!dateStr) return [];
-
-    const list = [];
-
-    (RESERVATIONS || []).forEach((r) => {
-      if (!r.start || !r.end || !r.propertyId) return;
-
-      const startStr = normalizeDateString(r.start);
-      const endStr = normalizeDateString(r.end);
-      const propertyId = r.propertyId;
-      const propertyName = getPropertyName(propertyId);
-      const cleanerId = assignments[propertyId];
-      const cleaner = cleanerId ? getCleanerById(cleanerId) : null;
-
-      // Départ = ménage prioritaire
-      if (endStr === dateStr) {
-        list.push({
-          type: 'departure',
-          label: 'Après un départ',
-          propertyId,
-          propertyName,
-          cleaner,
-          timeHint: 'À programmer entre le départ et la prochaine arrivée',
-          reservation: r
-        });
-      }
-
-      // Arrivée le même jour : check final
-      if (startStr === dateStr) {
-        list.push({
-          type: 'arrival',
-          label: 'Avant une arrivée',
-          propertyId,
-          propertyName,
-          cleaner,
-          timeHint: "Vérifier que tout est OK avant l’arrivée",
-          reservation: r
-        });
-      }
-    });
-
-    return list;
-  }
-
-  function renderPlanning(dateStr) {
-    if (!planningContainer) return;
-
-    if (!dateStr) {
-      planningContainer.innerHTML =
-        '<p class="planning-empty">Choisissez une date pour générer un planning.</p>';
-      return;
-    }
-
-    const tasks = generatePlanningForDate(dateStr);
-
-    if (!tasks.length) {
-      planningContainer.innerHTML = `
-        <p class="planning-empty">
-          Aucun départ ou arrivée détecté pour cette date. Aucun ménage automatique à prévoir.
-        </p>`;
-      return;
-    }
-
-    const enriched = tasks.map((t) => Object.assign({ status: 'pending' }, t));
-
-    // Sauvegarde dans le localStorage pour l'historique
-    try {
-      const key = 'LCC_CLEANING_PLANS';
-      let all = {};
-      const raw = localStorage.getItem(key);
-      if (raw) all = JSON.parse(raw);
-      all[dateStr] = enriched;
-      localStorage.setItem(key, JSON.stringify(all));
-    } catch (e) {
-      console.warn('Impossible de sauvegarder le planning ménage', e);
-    }
-
-    let html = `
-      <div class="planning-actions">
-        <button type="button" class="btn btn-ghost btn-xs" id="exportPlanningPdfBtn">
-          <i class="fas fa-file-pdf"></i>
-          Exporter en PDF
-        </button>
-      </div>
-      <table class="planning-table">
-        <thead>
-          <tr>
-            <th>Logement</th>
-            <th>Type d’intervention</th>
-            <th>Personne recommandée</th>
-            <th>Détails</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    enriched.forEach((t, index) => {
-      const cleanerLabel = t.cleaner
-        ? `<span class="badge-cleaner"><i class="fas fa-user"></i>${t.cleaner.name}</span>`
-        : `<span class="planning-tag"><i class="fas fa-exclamation-triangle"></i>Personne non assignée</span>`;
-
-      const guest = t.reservation.guestName || t.reservation.name || '';
-      const stayInfo = `${t.reservation.start?.slice(0, 10)} → ${t.reservation.end?.slice(0, 10)}`;
-
-      html += `
-        <tr data-idx="${index}">
-          <td>
-            ${t.propertyName}
-            <span class="badge-type">${
-              t.type === 'departure' ? 'Après départ' : 'Avant arrivée'
-            }</span>
-          </td>
-          <td>${t.label}</td>
-          <td>${cleanerLabel}</td>
-          <td>
-            <div style="font-size:13px; margin-bottom:4px;">${t.timeHint}</div>
-            ${
-              guest
-                ? `<div style="font-size:12px; color:var(--text-secondary);">Voyageur : ${guest}</div>`
-                : ''
-            }
-            <div style="font-size:12px; color:var(--text-tertiary);">Séjour : ${stayInfo}</div>
-          </td>
-          <td>
-            <button type="button" class="status-pill status-pending">
-              <span class="status-dot"></span>
-              À faire
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-
-    html += '</tbody></table>';
-    planningContainer.innerHTML = html;
-
-    const tableBody = planningContainer.querySelector('tbody');
-    if (tableBody) {
-      tableBody.addEventListener('click', (e) => {
-        const btn = e.target.closest('.status-pill');
-        if (!btn) return;
-        const row = btn.closest('tr[data-idx]');
-        if (!row) return;
-        const idx = parseInt(row.getAttribute('data-idx'), 10);
-
-        if (btn.classList.contains('status-pending')) {
-          btn.classList.remove('status-pending');
-          btn.classList.add('status-inprogress');
-          btn.innerHTML = '<span class="status-dot"></span>En cours';
-        } else if (btn.classList.contains('status-inprogress')) {
-          btn.classList.remove('status-inprogress');
-          btn.classList.add('status-done');
-          btn.innerHTML = '<span class="status-dot"></span>Terminé';
-        } else {
-          btn.classList.remove('status-done');
-          btn.classList.add('status-pending');
-          btn.innerHTML = '<span class="status-dot"></span>À faire';
-        }
-
-        // Sauvegarde du statut dans le localStorage
-        try {
-          const key = 'LCC_CLEANING_PLANS';
-          const raw = localStorage.getItem(key);
-          if (!raw) return;
-          const all = JSON.parse(raw);
-          const dayTasks = all[dateStr] || [];
-          if (dayTasks[idx]) {
-            if (btn.classList.contains('status-pending')) {
-              dayTasks[idx].status = 'pending';
-            } else if (btn.classList.contains('status-inprogress')) {
-              dayTasks[idx].status = 'inprogress';
-            } else if (btn.classList.contains('status-done')) {
-              dayTasks[idx].status = 'done';
-            }
-            all[dateStr] = dayTasks;
-            localStorage.setItem(key, JSON.stringify(all));
-          }
-        } catch (e) {
-          console.warn('Impossible de mettre à jour le statut ménage', e);
-        }
-      });
-    }
-
-    const exportBtn = document.getElementById('exportPlanningPdfBtn');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', () => {
-        window.print();
-      });
-    }
-  }
-
-  if (generatePlanningBtn) {
-    generatePlanningBtn.addEventListener('click', () => {
-      const dateStr =
-        (planningDateInput && planningDateInput.value) ||
-        new Date().toISOString().slice(0, 10);
-
-      if (planningHint) {
-        planningHint.textContent =
-          'Planning généré automatiquement à partir de vos réservations et des assignations ménage.';
-      }
-
-      renderPlanning(dateStr);
-    });
   }
 
   // Init
