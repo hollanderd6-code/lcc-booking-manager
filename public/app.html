@@ -3177,9 +3177,10 @@ console.log('🔍 Start:', startDate, 'End:', endDate);
         }
 
         if (cleaningCard && modal && contentEl) {
-          cleaningCard.style.cursor = 'pointer';
-          cleaningCard.addEventListener('click', openCleaningTodayModal);
-        }
+  cleaningCard.classList.add('kpi-card--clickable');
+  cleaningCard.addEventListener('click', openCleaningTodayModal);
+}
+
         if (overlay) {
           overlay.addEventListener('click', closeCleaningTodayModal);
         }
@@ -4970,8 +4971,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       }
 
       // 🎯 Interaction
-      kpiCard.style.cursor = 'pointer';
-      kpiCard.addEventListener('click', openModal);
+      kpiCard.classList.add('kpi-card--clickable');
+kpiCard.addEventListener('click', openModal);
       modalOverlay.addEventListener('click', closeModal);
       modalClose.addEventListener('click', closeModal);
     });
