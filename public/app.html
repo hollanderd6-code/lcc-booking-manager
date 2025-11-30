@@ -4853,5 +4853,99 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 })();
 </script>
 <script src="/js/calendar-dom-only.js"></script>
+  <script>
+  (function() {
+    document.addEventListener('DOMContentLoaded', function () {
+      const kpiValueEl = document.getElementById('kpiPropertiesValue');
+      if (!kpiValueEl) return;
+
+      // 🔧 Création du modal en JS si pas déjà présent
+      let modal = document.getElementById('activePropertiesModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'activePropertiesModal';
+        modal.className = 'booking-modal';
+        modal.innerHTML = `
+          <div class="modal-overlay" id="activePropertiesOverlay"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Logements actifs</h2>
+              <button class="modal-close" id="closeActivePropertiesModal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div id="activePropertiesContent" class="reservation-details">
+              <p class="detail-value">Chargement des logements...</p>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      const modalOverlay = document.getElementById('activePropertiesOverlay');
+      const modalClose   = document.getElementById('closeActivePropertiesModal');
+      const modalContent = document.getElementById('activePropertiesContent');
+
+      // On clique sur toute la carte KPI (pas juste le chiffre)
+      const kpiCard = kpiValueEl.closest('.kpi-card') || kpiValueEl;
+
+      if (!modalOverlay || !modalClose || !modalContent || !kpiCard) return;
+
+      function getProperties() {
+        try {
+          if (Array.isArray(window.LCC_PROPERTIES)) {
+            return window.LCC_PROPERTIES;
+          }
+          const raw = localStorage.getItem('LCC_PROPERTIES');
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+          console.warn('Erreur lecture LCC_PROPERTIES', e);
+          return [];
+        }
+      }
+
+      function openModal() {
+        const props = getProperties();
+        modalContent.innerHTML = '';
+
+        if (!props.length) {
+          modalContent.innerHTML = `
+            <p class="detail-value">Aucun logement actif trouvé pour le moment.</p>
+          `;
+        } else {
+          props.forEach(function(p, idx) {
+            const name = p.name || p.title || ('Logement ' + (idx + 1));
+            const city = (p.city || p.town || p.locality || '').trim();
+
+            const row = document.createElement('div');
+            row.className = 'detail-group';
+            row.innerHTML = `
+              <label>
+                <i class="fas fa-home"></i>
+                Logement ${idx + 1}
+              </label>
+              <div class="detail-value">
+                ${name}${city ? ' – ' + city : ''}
+              </div>
+            `;
+            modalContent.appendChild(row);
+          });
+        }
+
+        modal.classList.add('active');
+      }
+
+      function closeModal() {
+        modal.classList.remove('active');
+      }
+
+      // 🎯 Interaction
+      kpiCard.style.cursor = 'pointer';
+      kpiCard.addEventListener('click', openModal);
+      modalOverlay.addEventListener('click', closeModal);
+      modalClose.addEventListener('click', closeModal);
+    });
+  })();
+</script>
 </body>
 </html>
