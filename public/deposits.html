@@ -557,6 +557,19 @@
 
     let currentReservationForDeposit = null;
     let allReservationsWithDeposits = [];
+function formatDateFr(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) {
+    // si jamais ce n'est pas une date valide, on renvoie la valeur brute
+    return dateStr;
+  }
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
 
     function getDefaultDepositAmount(propertyId) {
       if (!propertyId) return null;
@@ -589,7 +602,7 @@
       }
 
       document.getElementById('depositModalReservationLabel').textContent =
-        `${reservation.propertyName || 'Logement'} – ${reservation.startDate} → ${reservation.endDate}`;
+  `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
       document.getElementById('depositModal').classList.add('active');
     }
 
@@ -609,11 +622,14 @@
       }
     }
 function buildDepositMessage(reservation, checkoutUrl) {
+  const startFr = formatDateFr(reservation.startDate);
+  const endFr = formatDateFr(reservation.endDate);
+
   return `
 Bonjour ${reservation.guestName || ''},
 
 Votre séjour au logement "${reservation.propertyName || 'le logement'}"
-du ${reservation.startDate} au ${reservation.endDate} nécessite une caution.
+du ${startFr} au ${endFr} nécessite une caution.
 Voici le lien sécurisé pour procéder au paiement :
 
 ${checkoutUrl}
@@ -844,7 +860,7 @@ async function copyExistingDepositMessage(reservation) {
         html += `
           <tr>
             <td>${r.propertyName || 'Logement'}</td>
-            <td>${r.startDate} → ${r.endDate}</td>
+            <td>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</td>
             <td>${r.guestName || '-'}</td>
             <td>${sourceLabel}</td>
             <td>${amountText}</td>
@@ -905,18 +921,21 @@ async function copyExistingDepositMessage(reservation) {
         await loadReservationsWithDeposits();
 
         if (data.checkoutUrl) {
-          const r = currentReservationForDeposit;
-          const message = `
+          const startFr = formatDateFr(r.startDate);
+const endFr = formatDateFr(r.endDate);
+
+const message = `
 Bonjour ${r.guestName || ''},
 
 Votre séjour au logement "${r.propertyName || 'le logement'}"
-du ${r.startDate} au ${r.endDate} nécessite une caution.
+du ${startFr} au ${endFr} nécessite une caution.
 Voici le lien sécurisé pour procéder au paiement :
 
 ${data.checkoutUrl}
 
 Merci, et à très bientôt !
           `.trim();
+
 
           try {
             await navigator.clipboard.writeText(message);
