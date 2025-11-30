@@ -4147,138 +4147,135 @@ function fixModalContent(bookingBlock) {
     return;
   }
 
-  // On NE TOUCHE PLUS à currentBookingData ici.
-  // On laisse juste le temps au modal de se remplir,
-  // puis on corrige l'affichage si besoin (ex: "Logement inconnu").
-  setTimeout(function() {
+  // On laisse le temps au modal de se remplir,
+  // puis on corrige/complète son contenu.
+  setTimeout(function () {
     const allText = detailsContent.innerText || '';
 
-    if (!currentBookingData) {
+    if (!window.currentBookingData) {
       console.log('⚠️ Pas de currentBookingData dans fixModalContent, on sort');
       return;
     }
 
-    // Récupérer le nom du logement
-    let propertyName = currentBookingData.propertyName;
+    const booking = window.currentBookingData;
 
-    if (!propertyName && currentBookingData.propertyId) {
-      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-      const property = properties.find(p => p.id === currentBookingData.propertyId);
-      if (property) {
-        propertyName = property.name;
-        console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
-      }
-    }
-
-    // Corriger "Logement inconnu" dans le HTML du modal
-    if (propertyName && allText.includes('Logement inconnu')) {
-      const htmlContent = detailsContent.innerHTML;
-      detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
-      console.log('✅ Logement corrigé dans le modal :', propertyName);
-    }
-
-    // Ajouter une ligne "Ménage" avec l’assignation éventuelle
+    // 1️⃣ Correction du nom de logement ("Logement inconnu")
+    let propertyName = booking.propertyName;
     try {
-      const assignments = JSON.parse(
+      if (!propertyName && booking.propertyId) {
+        const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+        const property = properties.find(
+          (p) =>
+            String(p.id) === String(booking.propertyId) ||
+            String(p.propertyId) === String(booking.propertyId)
+        );
+        if (property) {
+          propertyName = property.name || property.title || property.label;
+        }
+      }
+
+      if (propertyName && allText.includes('Logement inconnu')) {
+        const htmlContent = detailsContent.innerHTML;
+        detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
+        console.log('✅ Logement corrigé dans le modal :', propertyName);
+      }
+    } catch (e) {
+      console.warn('Erreur lors de la correction du logement dans le modal', e);
+    }
+
+    // 2️⃣ Calculer une clé de réservation
+    function getReservationKey(reservation) {
+      if (!reservation) return null;
+      if (reservation.reservationKey) return String(reservation.reservationKey);
+      if (reservation.uid) return String(reservation.uid);
+      if (reservation.id != null) return String(reservation.id);
+      if (reservation.propertyId && reservation.start && reservation.end) {
+        const startStr = String(reservation.start).slice(0, 10);
+        const endStr = String(reservation.end).slice(0, 10);
+        return reservation.propertyId + '::' + startStr + '>' + endStr;
+      }
+      return null;
+    }
+
+    const reservationKey = getReservationKey(booking);
+    const propertyId = booking.propertyId ? String(booking.propertyId) : null;
+
+    // 3️⃣ Récupérer les assignations + équipe ménage
+    let reservationAssignments = {};
+    let genericAssignments = {};
+    let cleaners = [];
+
+    try {
+      reservationAssignments = JSON.parse(
         localStorage.getItem('lcc_cleaning_reservation_assignments') || '{}'
       );
-      const cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
+    } catch (e) {}
 
-      function getReservationKey(reservation) {
-        if (!reservation) return null;
-        if (reservation.uid) return reservation.uid;
-        if (reservation.id != null) return String(reservation.id);
-        if (reservation.propertyId && reservation.start && reservation.end) {
-          return (
-            reservation.propertyId +
-            '::' +
-            String(reservation.start).slice(0, 10) +
-            '>' +
-            String(reservation.end).slice(0, 10)
-          );
-        }
-        return null;
-      }
-
-      function getCleanerNameById(cleanerId) {
-        if (!cleanerId || !Array.isArray(cleaners)) return null;
-        const c = cleaners.find((x) => x.id === cleanerId);
-        return c ? (c.name || c.email || c.phone || null) : null;
-      }
-
-      const key = getReservationKey(currentBookingData);
-      const assignedId = key && assignments ? assignments[key] : null;
-      const cleanerName = getCleanerNameById(assignedId);
-
-      const statusText = cleanerName
-        ? 'Assigné à ' + cleanerName
-        : 'Pas encore assigné';
-
-      let group = detailsContent.querySelector('[data-cleaning-info="1"]');
-
-      if (!group) {
-        group = document.createElement('div');
-        group.className = 'detail-group';
-        group.setAttribute('data-cleaning-info', '1');
-        group.innerHTML = `
-          <label><i class="fas fa-broom"></i> Ménage</label>
-          <div class="detail-value"></div>
-        `;
-        detailsContent.appendChild(group);
-      }
-
-      const valueEl = group.querySelector('.detail-value');
-      if (valueEl) {
-        valueEl.textContent = statusText;
-      }
-    } catch (e) {
-      console.warn('Erreur lors de l’injection des infos ménage dans le modal', e);
-    }
-        // ➕ Ajouter une ligne "Ménage" avec l’assignation éventuelle
     try {
-      // Assignations par logement (créées sur la page cleaning)
-      const assignments = JSON.parse(
+      genericAssignments = JSON.parse(
         localStorage.getItem('lcc_cleaning_assignments') || '{}'
       );
-      const cleaners = JSON.parse(
-        localStorage.getItem('lcc_cleaners') || '[]'
-      );
+    } catch (e) {}
 
-      function getCleanerNameById(cleanerId) {
-        if (!cleanerId || !Array.isArray(cleaners)) return null;
-        const c = cleaners.find(x => x.id === cleanerId);
-        return c ? (c.name || c.email || c.phone || null) : null;
-      }
-
-      const propertyId = currentBookingData.propertyId;
-      const assignedId =
-        propertyId && assignments ? assignments[propertyId] : null;
-      const cleanerName = getCleanerNameById(assignedId);
-
-      const statusText = cleanerName
-        ? 'Assigné à ' + cleanerName
-        : 'Pas encore assigné';
-
-      // On crée (ou récupère) un bloc "Ménage" en bas du modal
-      let group = detailsContent.querySelector('[data-cleaning-info="1"]');
-
-      if (!group) {
-        group = document.createElement('div');
-        group.className = 'detail-group';
-        group.setAttribute('data-cleaning-info', '1');
-        group.innerHTML = `
-          <label><i class="fas fa-broom"></i> Ménage</label>
-          <div class="detail-value"></div>
-        `;
-        detailsContent.appendChild(group);
-      }
-
-      const valueEl = group.querySelector('.detail-value');
-      if (valueEl) {
-        valueEl.textContent = statusText;
-      }
+    try {
+      cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
     } catch (e) {
-      console.warn('Erreur lors de l’injection des infos ménage dans le modal', e);
+      cleaners = [];
+    }
+
+    function getCleanerNameById(cleanerId) {
+      if (!cleanerId || !Array.isArray(cleaners)) return null;
+      const strId = String(cleanerId);
+      const c = cleaners.find((x) => String(x.id) === strId);
+      return c ? (c.name || c.email || c.phone || strId) : null;
+    }
+
+    // 4️⃣ Trouver le cleaner assigné
+    let assignedId = null;
+
+    // Priorité : assignation par réservation dans l’objet dédié
+    if (reservationKey && reservationAssignments[reservationKey]) {
+      assignedId = reservationAssignments[reservationKey];
+    }
+
+    // Sinon, certains setups stockent la clé de résa dans l’objet générique
+    if (!assignedId && reservationKey && genericAssignments[reservationKey]) {
+      assignedId = genericAssignments[reservationKey];
+    }
+
+    // Sinon, fallback : assignation par logement
+    if (!assignedId && propertyId && genericAssignments[propertyId]) {
+      assignedId = genericAssignments[propertyId];
+    }
+
+    const cleanerName = getCleanerNameById(assignedId);
+    const statusText = cleanerName
+      ? 'Assigné à ' + cleanerName
+      : 'Pas encore assigné';
+
+    console.log('🧹 Statut ménage pour cette résa :', {
+      reservationKey,
+      propertyId,
+      assignedId,
+      cleanerName,
+    });
+
+    // 5️⃣ Injecter / mettre à jour le bloc "Ménage" dans le modal
+    let group = detailsContent.querySelector('[data-cleaning-info="1"]');
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'detail-group';
+      group.setAttribute('data-cleaning-info', '1');
+      group.innerHTML = `
+        <label><i class="fas fa-broom"></i> Ménage</label>
+        <div class="detail-value"></div>
+      `;
+      detailsContent.appendChild(group);
+    }
+
+    const valueEl = group.querySelector('.detail-value');
+    if (valueEl) {
+      valueEl.textContent = statusText;
     }
   }, 200);
 }
