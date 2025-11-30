@@ -85,6 +85,36 @@
         width: 100%;
       }
     }
+      .status-card,
+      .kpi-card,
+      .overview-card,
+      .onboarding-section,
+      .card {
+        width: 100%;
+      }
+    }
+
+/* KPI cliquables : effet hover pour montrer qu'on peut cliquer */
+    .kpi-card--clickable {
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+
+    .kpi-card--clickable:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    @media (max-width: 480px) {
+      .page-title {
+        font-size: 20px;
+      }
+      .page-subtitle {
+        font-size: 13px;
+      }
+    }
+</style>
 
     @media (max-width: 480px) {
       .page-title {
