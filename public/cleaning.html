@@ -626,44 +626,57 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
     localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
   }
-   // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
-  async function loadAssignmentsFromApi() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) return;
+   async function loadAssignmentsFromApi() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
 
-      const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      });
-
-      if (!res.ok) {
-        console.warn('Erreur lors du chargement des assignations ménage', res.status);
-        return;
+    const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
+      headers: {
+        Authorization: 'Bearer ' + token
       }
+    });
 
-      const data = await res.json();
-      const map = {};
-
-      // ➜ On attend maintenant des lignes avec reservation_key / reservation_uid
-      (data.assignments || []).forEach((row) => {
-        const key =
-          row.reservation_key ||
-          row.reservation_uid ||
-          (row.reservationId != null ? String(row.reservationId) : null);
-
-        if (key && row.cleaner_id) {
-          map[key] = row.cleaner_id;
-        }
-      });
-
-      assignments = map;
-      saveLocalData();
-    } catch (e) {
-      console.error('Erreur loadAssignmentsFromApi()', e);
+    if (!res.ok) {
+      console.warn('Erreur lors du chargement des assignations ménage', res.status);
+      return;
     }
+
+    const data = await res.json();
+    const rows = data.assignments || [];
+
+    // 🚫 TRÈS IMPORTANT :
+    // Si l'API ne renvoie rien, on NE touche PAS aux assignations déjà présentes
+    // (celles venant du localStorage).
+    if (!rows.length) {
+      console.log('Aucune assignation reçue de l’API, on conserve celles du localStorage.');
+      return;
+    }
+
+    const map = {};
+
+    rows.forEach((row) => {
+      // Si tu es passé en "par réservation", ton backend renvoie
+      // normalement reservation_key / reservation_uid…
+      const key =
+        row.reservation_key ||
+        row.reservation_uid ||
+        row.reservationId ||
+        row.property_id; // fallback "par logement" si besoin
+
+      if (key && row.cleaner_id) {
+        map[String(key)] = row.cleaner_id;
+      }
+    });
+
+    // Si on arrive ici, on a de vraies données venant du backend :
+    // on peut écraser en toute sécurité ce qu'on a localement.
+    assignments = map;
+    saveLocalData();
+  } catch (e) {
+    console.error('Erreur loadAssignmentsFromApi()', e);
   }
+}
 
 
   async function loadRemoteData() {
