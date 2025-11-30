@@ -1540,7 +1540,7 @@
             </div>
           </article>
           <!-- KPI 3 : Ménages du jour -->
-<article class="kpi-card">
+          <article class="kpi-card" id="kpiCleaningTodayCard">
   <div class="kpi-header">
     <span class="kpi-label">Ménages du jour</span>
   </div>
@@ -3710,6 +3710,43 @@ console.log('🔍 Start:', startDate, 'End:', endDate);
       </button>
     </div>
   </div>
+</div>
+<!-- Reservation Details Modal -->
+<div class="booking-modal" id="reservationDetailsModal">
+  ...
+</div>
+
+<!-- Cleaning Today Modal -->
+<div class="booking-modal" id="cleaningTodayModal">
+  <div class="modal-overlay" id="cleaningTodayOverlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Ménages du jour</h2>
+      <button class="modal-close" id="closeCleaningTodayModal">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div id="cleaningTodayContent" class="reservation-details">
+      <!-- Liste des départs à nettoyer aujourd’hui -->
+    </div>
+  </div>
+</div>
+
+<!-- Cleaning Today Modal -->
+<div class="booking-modal" id="cleaningTodayModal">
+  <div class="modal-overlay" id="cleaningTodayOverlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Ménages du jour</h2>
+      <button class="modal-close" id="closeCleaningTodayModal">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div id="cleaningTodayContent" class="reservation-details">
+      <!-- Liste des départs à nettoyer aujourd’hui -->
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- Edit Booking Modal -->
