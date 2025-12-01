@@ -58,11 +58,7 @@ async function saveProperty(event) {
     .map((input) => input.value.trim())
     .filter((url) => url.length > 0);
 
-  const address = document.getElementById("propertyAddress").value;
-const checkIn = document.getElementById("propertyCheckIn").value;
-const checkOut = document.getElementById("propertyCheckOut").value;
-const deposit = document.getElementById("propertyDeposit").value;
-const propertyData = { name, color, icalUrls, address, checkIn, checkOut, deposit };
+  const propertyData = { name, color, icalUrls };
 
   try {
     const token = localStorage.getItem("lcc_token");
@@ -238,7 +234,7 @@ function renderProperties() {
         </div>
         <div class="property-actions">
           <button class="btn-icon-action btn-edit" 
-                  onclick="openEditPropertyModal('${property.id}')"
+                  onclick="event.stopPropagation(); openEditPropertyModal('${property.id}')"
                   title="Modifier">
             <i class="fas fa-edit"></i>
           </button>
@@ -498,7 +494,7 @@ function renderProperties() {
       `;
 
       return `
-    <div class="property-card" style="border-left-color: ${property.color}">
+    <div class="property-card" style="border-left-color: ${property.color}" onclick="openEditPropertyModal('${property.id}')">
       <div class="property-header">
         <div class="property-info">
           <div class="property-name">
@@ -517,7 +513,7 @@ function renderProperties() {
             <i class="fas fa-edit"></i>
           </button>
           <button class="btn-icon-action btn-delete" 
-                  onclick="deleteProperty('${property.id}', '${(property.name || "").replace(/'/g, "\'")}')"
+                  onclick="event.stopPropagation(); deleteProperty('${property.id}', '${(property.name || "").replace(/'/g, "\'")}')"
                   title="Supprimer">
             <i class="fas fa-trash"></i>
           </button>
@@ -531,7 +527,7 @@ function renderProperties() {
         </div>
         <div class="ical-export-body">
           <span class="ical-export-url" title="${exportUrl}">${exportUrl}</span>
-          <button class="btn-copy-ical" type="button" onclick="copyIcalExportUrl('${exportUrl}')">
+          <button class="btn-copy-ical" type="button" onclick="event.stopPropagation(); copyIcalExportUrl('${exportUrl}')">
             <i class="fa-regular fa-copy"></i>
             Copier
           </button>
