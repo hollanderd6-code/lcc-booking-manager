@@ -1,31 +1,31 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bookingmanage – Mes logements</title>
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Global CSS -->
-  <link rel="stylesheet" href="/css/style.css" />
+  <!-- Global CSS de l'app -->
+  <link rel="stylesheet" href="/css/style.css">
 
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     .main-content {
-      padding-top: 24px;
+      padding-top: 24px !important;
     }
 
     .page-content {
-      margin-top: 0;
+      margin-top: 0 !important;
     }
 
     .settings-container {
@@ -51,9 +51,9 @@
       background: #ffffff;
       border-radius: 18px;
       box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
-      padding: 18px 20px 14px;
+      padding: 18px 20px;
       border-left: 4px solid var(--primary-color, #059669);
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
     }
 
     .property-card:hover {
@@ -65,8 +65,8 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 12px;
       margin-bottom: 10px;
+      gap: 12px;
     }
 
     .property-info {
@@ -89,7 +89,7 @@
       height: 18px;
       border-radius: 999px;
       border: 2px solid #fff;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, .12);
+      box-shadow: 0 0 0 1px rgba(15,23,42,.12);
       flex-shrink: 0;
     }
 
@@ -129,7 +129,7 @@
       border-radius: 999px;
       border: none;
       cursor: pointer;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -179,11 +179,11 @@
     .property-photo-placeholder {
       font-size: 22px;
       color: var(--text-secondary);
-      opacity: .6;
+      opacity: 0.6;
     }
 
     .ical-urls {
-      margin-top: 8px;
+      margin-top: 10px;
     }
 
     .ical-url-item {
@@ -223,12 +223,13 @@
       border-radius: 999px;
       font-size: 11px;
       font-weight: 500;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       white-space: nowrap;
     }
 
     .btn-test-url:hover {
-      background: rgba(5, 150, 105, .08);
+      background: rgba(5,150,105,.08);
+      color: var(--primary-color, #059669);
     }
 
     .btn-copy-ical {
@@ -239,16 +240,69 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(5, 150, 105, .08);
+      background: rgba(5, 150, 105, 0.08);
       color: var(--primary-color, #059669);
       cursor: pointer;
       white-space: nowrap;
-      transition: all .15s ease;
+      transition: var(--transition, all 0.15s ease);
     }
 
     .btn-copy-ical:hover {
       background: var(--primary-color, #059669);
       color: #ffffff;
+    }
+
+    .boostinghost-ical {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #fefce8;
+      border: 1px solid #facc15;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+
+    .boostinghost-ical-label {
+      font-weight: 600;
+      color: #854d0e;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .boostinghost-ical-url {
+      flex: 1;
+      min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      color: #713f12;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-copy-boostinghost {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fef3c7;
+      color: #b45309;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition, all 0.15s ease);
+    }
+
+    .btn-copy-boostinghost:hover {
+      background: #facc15;
+      color: #713f12;
     }
 
     .btn-add-property {
@@ -260,7 +314,7 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -277,13 +331,13 @@
       box-shadow: var(--shadow-md);
     }
 
-    /* MODAL */
+    /* Modal */
 
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, .55);
+      background: rgba(15,23,42,.55);
       z-index: 1000;
       align-items: center;
       justify-content: center;
@@ -298,7 +352,7 @@
       border-radius: 18px;
       max-width: 620px;
       width: 94%;
-      box-shadow: 0 24px 60px rgba(15, 23, 42, .35);
+      box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.35));
       overflow: hidden;
     }
 
@@ -376,7 +430,7 @@
       border-radius: 10px;
       font-size: 13px;
       font-family: inherit;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       background: var(--bg-secondary, #f9fafb);
     }
 
@@ -384,7 +438,7 @@
     .form-group textarea:focus {
       outline: none;
       border-color: var(--primary-color, #059669);
-      box-shadow: 0 0 0 1px rgba(5, 150, 105, .12);
+      box-shadow: 0 0 0 1px rgba(5,150,105,.12);
       background: #ffffff;
     }
 
@@ -441,7 +495,7 @@
     .photo-preview-placeholder {
       font-size: 22px;
       color: var(--text-secondary);
-      opacity: .6;
+      opacity: 0.6;
     }
 
     .photo-preview-text {
@@ -498,7 +552,7 @@
       height: 34px;
       border-radius: 999px;
       cursor: pointer;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -519,7 +573,7 @@
       cursor: pointer;
       font-weight: 500;
       font-size: 12px;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -547,7 +601,7 @@
       font-weight: 500;
       font-size: 13px;
       cursor: pointer;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
     }
 
     .btn-cancel:hover {
@@ -563,7 +617,7 @@
       font-weight: 600;
       font-size: 13px;
       cursor: pointer;
-      transition: all .15s ease;
+      transition: var(--transition, all .15s ease);
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -598,7 +652,7 @@
       max-width: 320px;
       padding: 10px 12px;
       border-radius: 12px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, .25);
+      box-shadow: 0 18px 40px rgba(15,23,42,.25);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -623,7 +677,7 @@
     .loading-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, .45);
+      background: rgba(15,23,42,.45);
       display: none;
       align-items: center;
       justify-content: center;
@@ -638,7 +692,7 @@
       background: var(--bg-primary, #fff);
       padding: 14px 16px;
       border-radius: 999px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, .25);
+      box-shadow: var(--shadow-lg, 0 18px 40px rgba(15,23,42,.25));
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -651,6 +705,10 @@
     }
 
     @media (max-width: 900px) {
+      .settings-container {
+        padding-top: 0;
+      }
+
       .form-grid-2 {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -666,7 +724,7 @@
     }
   </style>
 
-  <!-- Script auth / user / logout -->
+  <!-- Script auth + user + logout -->
   <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
@@ -732,8 +790,19 @@
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <div class="app-container">
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <i class="fas fa-calendar-check"></i>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Bookingmanage</span>
+            <span class="sidebar-logo-subtitle">Property Manager</span>
+          </div>
+        </a>
+      </div>
+
       <nav class="sidebar-nav">
         <!-- PRINCIPAL -->
         <div class="nav-section">
@@ -789,11 +858,11 @@
         <!-- FACTURATION -->
         <div class="nav-section">
           <div class="nav-section-title">Facturation</div>
-          <a href="/factures.html" class="nav-item" data-page="factures">
+          <a href="/factures.html" class="nav-item">
             <i class="fas fa-file-invoice"></i>
             <span>Factures clients</span>
           </a>
-          <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
+          <a href="/factures-proprietaires.html" class="nav-item">
             <i class="fas fa-file-invoice-dollar"></i>
             <span>Factures propriétaires</span>
           </a>
@@ -823,9 +892,7 @@
             <div class="user-email" id="sidebarUserCompany">Mon espace</div>
           </div>
 
-          <button class="btn btn-ghost btn-xs" id="logoutBtn">
-            <i class="fas fa-sign-out-alt"></i>
-          </button>
+          <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
         </div>
       </div>
     </aside>
@@ -850,7 +917,7 @@
       </header>
 
       <div class="page-content">
-        <section class="card">
+        <section class="card settings-container">
           <div class="properties-header">
             <h2 class="card-title" style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;">
               <i class="fas fa-home"></i>
@@ -859,7 +926,7 @@
           </div>
 
           <div class="properties-grid" id="propertiesGrid">
-            <!-- Logements injectés ici -->
+            <!-- Logements injectés ici par settings.js -->
           </div>
 
           <div class="empty-state" id="propertiesEmptyState" style="display:none;">
@@ -879,7 +946,7 @@
     </main>
   </div>
 
-  <!-- MODAL: Ajouter / Modifier un logement -->
+  <!-- MODAL: Éditer / Ajouter un logement -->
   <div class="modal" id="editPropertyModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -893,8 +960,8 @@
       </div>
       <div class="modal-body">
         <form class="modal-form" id="propertyForm" onsubmit="saveProperty(event)">
-          <input type="hidden" id="propertyId" />
-          <input type="hidden" id="propertyPhotoUrl" />
+          <input type="hidden" id="propertyId">
+          <input type="hidden" id="propertyPhotoUrl">
 
           <div class="form-grid-2">
             <div class="form-group">
@@ -902,7 +969,7 @@
                 <i class="fas fa-home"></i>
                 <span>Nom du logement</span>
               </label>
-              <input type="text" id="propertyName" required placeholder="Ex: Saint-Gratien - RDC" />
+              <input type="text" id="propertyName" required placeholder="Ex: Saint-Gratien - RDC">
             </div>
 
             <div class="form-group">
@@ -910,7 +977,7 @@
                 <i class="fas fa-location-dot"></i>
                 <span>Adresse</span>
               </label>
-              <input type="text" id="propertyAddress" placeholder="Ex : 25 boulevard de la République, Saint-Gratien" />
+              <input type="text" id="propertyAddress" placeholder="Ex : 25 boulevard de la République, Saint-Gratien">
             </div>
           </div>
 
@@ -920,7 +987,7 @@
                 <i class="fas fa-sign-in-alt"></i>
                 <span>Heure d’arrivée</span>
               </label>
-              <input type="time" id="propertyArrivalTime" placeholder="16:00" />
+              <input type="time" id="propertyArrivalTime" placeholder="16:00">
             </div>
 
             <div class="form-group">
@@ -928,7 +995,7 @@
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Heure de départ</span>
               </label>
-              <input type="time" id="propertyDepartureTime" placeholder="11:00" />
+              <input type="time" id="propertyDepartureTime" placeholder="11:00">
             </div>
           </div>
 
@@ -939,7 +1006,7 @@
                 <span>Montant de la caution</span>
               </label>
               <div class="input-with-suffix">
-                <input type="number" id="propertyDeposit" min="0" step="1" placeholder="Laisser vide si aucune" />
+                <input type="number" id="propertyDeposit" min="0" step="1" placeholder="Laisser vide si aucune">
                 <span>€</span>
               </div>
             </div>
@@ -950,7 +1017,7 @@
                 <span>Couleur</span>
               </label>
               <div class="color-picker-wrapper">
-                <input type="color" id="propertyColor" class="color-picker" value="#E67E50" />
+                <input type="color" id="propertyColor" class="color-picker" value="#E67E50">
                 <div class="color-preview" id="colorPreview">#E67E50</div>
               </div>
             </div>
@@ -968,7 +1035,7 @@
                 </span>
               </div>
               <div>
-                <input type="file" id="propertyPhoto" accept="image/*" />
+                <input type="file" id="propertyPhoto" accept="image/*">
                 <div class="photo-preview-text">
                   Ajoutez une photo pour la vignette de la carte logement.
                 </div>
@@ -979,10 +1046,10 @@
           <div class="form-group">
             <label>
               <i class="fas fa-link"></i>
-              <span>URLs iCal</span>
+              <span>URLs iCal (Airbnb, Booking, etc.)</span>
             </label>
             <div class="url-list" id="urlList">
-              <!-- URLs iCal ajoutées ici -->
+              <!-- URLs ajoutées ici via JS -->
             </div>
             <button type="button" class="btn-add-url" onclick="addUrlField()">
               <i class="fas fa-plus"></i>
@@ -1015,7 +1082,7 @@
   <!-- JS page -->
   <script src="/js/settings.js"></script>
 
-  <!-- MOBILE MENU SCRIPT + activation nav -->
+  <!-- MOBILE MENU SCRIPT + nav active -->
   <script>
     (function() {
       const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1059,13 +1126,14 @@
 
     (function() {
       const currentPage = document.body.getAttribute('data-page');
-      if (!currentPage) return;
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-      });
-      const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
-      if (activeLink) {
-        activeLink.classList.add('active');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
       }
     })();
   </script>
