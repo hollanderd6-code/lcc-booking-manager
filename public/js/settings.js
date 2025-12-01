@@ -2,6 +2,7 @@
 // CONFIGURATION & STATE
 // ========================================
 const API_URL = "https://lcc-booking-manager.onrender.com";
+const BOOSTINGHOST_ICAL_BASE = window.location.origin; // à adapter si besoin
 let properties = [];
 let currentEditingProperty = null;
 
@@ -13,9 +14,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   setupColorPicker();
   setupPhotoPreview();
-  setupModalCloseOnEsc();
-
   await loadProperties();
+
+  // Fermer le modal sur ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeEditModal();
+    }
+  });
+
+  // Fermer le modal en cliquant sur le fond
+  const modal = document.getElementById("editPropertyModal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeEditModal();
+      }
+    });
+  }
 });
 
 // ========================================
@@ -36,7 +52,7 @@ function showToast(message, type = "success") {
   if (!container) return;
 
   const toast = document.createElement("div");
-  toast.className = "toast " + (type === "error" ? "toast-error" : "toast-success");
+  toast.className = `toast toast-${type === "error" ? "error" : "success"}`;
 
   const icon = document.createElement("i");
   icon.className = type === "error" ? "fas fa-circle-xmark" : "fas fa-circle-check";
@@ -82,7 +98,7 @@ function setupPhotoPreview() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = function (e) {
       box.innerHTML = "";
       const img = document.createElement("img");
       img.src = e.target.result;
@@ -92,21 +108,13 @@ function setupPhotoPreview() {
   });
 }
 
-function setupModalCloseOnEsc() {
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeEditModal();
-    }
-  });
-
-  const modal = document.getElementById("editPropertyModal");
-  if (modal) {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        closeEditModal();
-      }
-    });
-  }
+// Petite utilitaire pour éviter l'injection dans le HTML
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 // ========================================
@@ -117,12 +125,10 @@ async function loadProperties() {
   try {
     const token = localStorage.getItem("lcc_token");
     const response = await fetch(`${API_URL}/api/properties`, {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
+      headers: { Authorization: "Bearer " + token },
     });
     const data = await response.json();
-    properties = Array.isArray(data.properties) ? data.properties : [];
+    properties = data.properties || [];
     renderProperties();
   } catch (error) {
     console.error("Erreur lors du chargement des logements:", error);
@@ -149,10 +155,11 @@ async function saveProperty(event) {
       : null;
 
   const color = document.getElementById("propertyColor").value;
-  const existingPhotoUrl = document.getElementById("propertyPhotoUrl").value || null;
+  const existingPhotoUrl =
+    document.getElementById("propertyPhotoUrl").value || null;
   const photoInput = document.getElementById("propertyPhoto");
 
-  // URLs iCal
+  // URLs iCal avec plateforme
   const urlGroups = document.querySelectorAll(".url-input-group");
   const icalUrls = Array.from(urlGroups)
     .map((group) => {
@@ -161,10 +168,7 @@ async function saveProperty(event) {
       const platform = platformInput ? platformInput.value.trim() : "";
       const url = urlInput ? urlInput.value.trim() : "";
       if (!url) return null;
-      return {
-        platform: platform || "iCal",
-        url,
-      };
+      return { platform: platform || "iCal", url };
     })
     .filter(Boolean);
 
@@ -175,7 +179,7 @@ async function saveProperty(event) {
     departureTime,
     depositAmount,
     color,
-    photoUrl: existingPhotoUrl,
+    photoUrl: existingPhotoUrl, // gardée si pas de nouveau fichier
     icalUrls,
   };
 
@@ -190,13 +194,14 @@ async function saveProperty(event) {
     formData.append("data", JSON.stringify(propertyData));
 
     if (photoInput && photoInput.files && photoInput.files[0]) {
-      formData.append("photo", photoInput.files[0]);
+      formData.append("photo", photoInput.files[0]); // géré par Multer côté backend
     }
 
     const response = await fetch(url, {
       method,
       headers: {
         Authorization: "Bearer " + token,
+        // pas de Content-Type ici, c'est géré par le navigateur pour FormData
       },
       body: formData,
     });
@@ -233,11 +238,10 @@ async function deleteProperty(propertyId) {
     const token = localStorage.getItem("lcc_token");
     const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
       method: "DELETE",
-      headers: {
-        Authorization: "Bearer " + token,
-      },
+      headers: { Authorization: "Bearer " + token },
     });
     const result = await response.json();
+
     if (response.ok) {
       showToast(result.message || "Logement supprimé", "success");
       await loadProperties();
@@ -255,8 +259,7 @@ async function deleteProperty(propertyId) {
   }
 }
 
-async function testIcalUrl(encodedUrl, buttonElement) {
-  const url = decodeURIComponent(encodedUrl || "");
+async function testIcalUrl(url, buttonElement) {
   if (!url || url.trim().length === 0) {
     showToast("Veuillez entrer une URL", "error");
     return;
@@ -280,7 +283,10 @@ async function testIcalUrl(encodedUrl, buttonElement) {
     if (response.ok) {
       showToast("URL iCal valide et accessible", "success");
     } else {
-      showToast(result.error || "Erreur lors du test de l'URL iCal", "error");
+      showToast(
+        result.error || "Erreur lors du test de l'URL iCal",
+        "error"
+      );
     }
   } catch (error) {
     console.error("Erreur test iCal:", error);
@@ -293,7 +299,6 @@ async function testIcalUrl(encodedUrl, buttonElement) {
 
 function copyIcalUrl(url) {
   if (!url) return;
-
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard
       .writeText(url)
@@ -313,48 +318,36 @@ function copyIcalUrl(url) {
 // ========================================
 function resetPropertyForm() {
   currentEditingProperty = null;
+  document.getElementById("propertyId").value = "";
+  document.getElementById("propertyPhotoUrl").value = "";
+  document.getElementById("propertyName").value = "";
+  document.getElementById("propertyAddress").value = "";
+  document.getElementById("propertyArrivalTime").value = "";
+  document.getElementById("propertyDepartureTime").value = "";
+  document.getElementById("propertyDeposit").value = "";
+  document.getElementById("propertyColor").value = "#E67E50";
 
-  const idInput = document.getElementById("propertyId");
-  const photoUrlInput = document.getElementById("propertyPhotoUrl");
-  const nameInput = document.getElementById("propertyName");
-  const addressInput = document.getElementById("propertyAddress");
-  const arrInput = document.getElementById("propertyArrivalTime");
-  const depInput = document.getElementById("propertyDepartureTime");
-  const depositInput = document.getElementById("propertyDeposit");
-  const colorInput = document.getElementById("propertyColor");
-  const photoInput = document.getElementById("propertyPhoto");
   const colorPreview = document.getElementById("colorPreview");
-  const photoBox = document.getElementById("photoPreviewBox");
-  const urlList = document.getElementById("urlList");
-
-  if (idInput) idInput.value = "";
-  if (photoUrlInput) photoUrlInput.value = "";
-  if (nameInput) nameInput.value = "";
-  if (addressInput) addressInput.value = "";
-  if (arrInput) arrInput.value = "";
-  if (depInput) depInput.value = "";
-  if (depositInput) depositInput.value = "";
-  if (colorInput) colorInput.value = "#E67E50";
   if (colorPreview) colorPreview.textContent = "#E67E50";
+
+  const photoInput = document.getElementById("propertyPhoto");
   if (photoInput) photoInput.value = "";
+
+  const photoBox = document.getElementById("photoPreviewBox");
   if (photoBox) {
     photoBox.innerHTML =
       '<span class="photo-preview-placeholder"><i class="fas fa-image"></i></span>';
   }
-  if (urlList) {
-    urlList.innerHTML = "";
-    addUrlField(); // on ajoute une ligne vide par défaut
-  }
+
+  const urlList = document.getElementById("urlList");
+  if (urlList) urlList.innerHTML = "";
 }
 
 function openAddPropertyModal() {
   resetPropertyForm();
   const modal = document.getElementById("editPropertyModal");
   const titleEl = document.getElementById("modalTitle");
-  if (titleEl) {
-    const span = titleEl.querySelector("span");
-    if (span) span.textContent = "Ajouter un logement";
-  }
+  if (titleEl) titleEl.querySelector("span").textContent = "Ajouter un logement";
   if (modal) modal.classList.add("active");
 }
 
@@ -362,44 +355,31 @@ function openEditPropertyModal(propertyId) {
   resetPropertyForm();
   const modal = document.getElementById("editPropertyModal");
   const titleEl = document.getElementById("modalTitle");
-  if (titleEl) {
-    const span = titleEl.querySelector("span");
-    if (span) span.textContent = "Modifier le logement";
-  }
+  if (titleEl) titleEl.querySelector("span").textContent = "Modifier le logement";
 
-  const property =
-    properties.find((p) => p._id === propertyId) ||
-    properties.find((p) => p.id === propertyId);
-
+  const property = properties.find((p) => p._id === propertyId || p.id === propertyId);
   if (!property) {
     showToast("Logement introuvable", "error");
     return;
   }
 
   currentEditingProperty = property;
-
-  document.getElementById("propertyId").value =
-    property._id || property.id || "";
-  document.getElementById("propertyPhotoUrl").value = property.photoUrl || property.photo || "";
-
+  document.getElementById("propertyId").value = property._id || property.id || "";
   document.getElementById("propertyName").value = property.name || "";
   document.getElementById("propertyAddress").value = property.address || "";
-  document.getElementById("propertyArrivalTime").value =
-    property.arrivalTime || "";
-  document.getElementById("propertyDepartureTime").value =
-    property.departureTime || "";
+  document.getElementById("propertyArrivalTime").value = property.arrivalTime || "";
+  document.getElementById("propertyDepartureTime").value = property.departureTime || "";
   document.getElementById("propertyDeposit").value =
     property.depositAmount != null ? property.depositAmount : "";
 
   const colorInput = document.getElementById("propertyColor");
-  const colorPreview = document.getElementById("colorPreview");
-  const color = property.color || "#E67E50";
-  if (colorInput) colorInput.value = color;
-  if (colorPreview) colorPreview.textContent = color.toUpperCase();
+  const preview = document.getElementById("colorPreview");
+  if (colorInput) colorInput.value = property.color || "#E67E50";
+  if (preview) preview.textContent = (property.color || "#E67E50").toUpperCase();
 
-  // Photo
+  const photoUrl = property.photoUrl || property.photo || null;
+  document.getElementById("propertyPhotoUrl").value = photoUrl || "";
   const photoBox = document.getElementById("photoPreviewBox");
-  const photoUrl = property.photoUrl || property.photo || "";
   if (photoBox) {
     if (photoUrl) {
       photoBox.innerHTML = "";
@@ -412,15 +392,11 @@ function openEditPropertyModal(propertyId) {
     }
   }
 
-  // URLs iCal
   const urlList = document.getElementById("urlList");
   if (urlList) {
     urlList.innerHTML = "";
     let urls = property.icalUrls || [];
-    if (!Array.isArray(urls)) urls = [];
-    if (urls.length === 0) {
-      addUrlField();
-    } else {
+    if (Array.isArray(urls)) {
       urls.forEach((item) => {
         if (typeof item === "string") {
           addUrlField("iCal", item);
@@ -440,22 +416,8 @@ function closeEditModal() {
 }
 
 // ========================================
-// URL FIELDS HELPERS
+// URL FIELDS
 // ========================================
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function escapeForJs(str) {
-  return String(str)
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'");
-}
-
 function addUrlField(initialPlatform = "", initialUrl = "") {
   const urlList = document.getElementById("urlList");
   if (!urlList) return;
@@ -468,13 +430,13 @@ function addUrlField(initialPlatform = "", initialUrl = "") {
       type="text"
       class="platform-input"
       placeholder="Plateforme (Airbnb, Booking...)"
-      value="${escapeHtml(initialPlatform)}"
+      value="${initialPlatform ? escapeHtml(initialPlatform) : ""}"
     />
     <input
       type="text"
       class="url-input"
       placeholder="URL iCal"
-      value="${escapeHtml(initialUrl)}"
+      value="${initialUrl ? escapeHtml(initialUrl) : ""}"
     />
     <button type="button" class="btn-remove-url" title="Supprimer cette URL">
       <i class="fas fa-times"></i>
@@ -487,6 +449,16 @@ function addUrlField(initialPlatform = "", initialUrl = "") {
   }
 
   urlList.appendChild(group);
+}
+
+// ========================================
+// BOOSTINGHOST ICAL URL
+// ========================================
+function buildBoostinghostIcalUrl(property) {
+  const id = property._id || property.id;
+  if (!id) return null;
+  // Modèle à adapter si ton endpoint iCal est différent
+  return `${BOOSTINGHOST_ICAL_BASE}/ical/${id}.ics`;
 }
 
 // ========================================
@@ -505,7 +477,7 @@ function renderProperties() {
 
   emptyState.style.display = "none";
 
-  const html = properties
+  const cardsHtml = properties
     .map((p) => {
       const id = p._id || p.id || "";
       const color = p.color || "#059669";
@@ -517,24 +489,22 @@ function renderProperties() {
         p.depositAmount != null && p.depositAmount !== ""
           ? `Caution ${p.depositAmount} €`
           : "Pas de caution";
-      const photoUrl = p.photoUrl || p.photo || "";
+
+      const photoUrl = p.photoUrl || p.photo || null;
 
       let urls = p.icalUrls || [];
       if (!Array.isArray(urls)) urls = [];
 
+      const normalizedUrls = urls.map((item) => {
+        if (typeof item === "string") {
+          return { platform: "iCal", url: item };
+        }
+        return { platform: item.platform || "iCal", url: item.url || "" };
+      }).filter((u) => u.url);
+
       const icalListHtml =
-        urls.length > 0
-          ? urls
-              .map((item) => {
-                if (typeof item === "string") {
-                  return { platform: "iCal", url: item };
-                }
-                return {
-                  platform: item.platform || "iCal",
-                  url: item.url || "",
-                };
-              })
-              .filter((u) => u.url)
+        normalizedUrls.length > 0
+          ? normalizedUrls
               .map(
                 (u) => `
           <div class="ical-url-item">
@@ -545,14 +515,14 @@ function renderProperties() {
             <button
               type="button"
               class="btn-test-url"
-              onclick="testIcalUrl('${encodeURIComponent(u.url)}', this)"
+              data-url="${escapeHtml(u.url)}"
             >
               Tester
             </button>
             <button
               type="button"
               class="btn-copy-ical"
-              onclick="copyIcalUrl('${escapeForJs(u.url)}')"
+              data-url="${escapeHtml(u.url)}"
             >
               <i class="fas fa-copy"></i>
               Copier
@@ -562,9 +532,9 @@ function renderProperties() {
               )
               .join("")
           : `
-        <div style="padding:10px;background:var(--bg-secondary,#f3f4f6);border-radius:10px;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;">
+        <div style="padding: 10px; background: var(--bg-secondary,#f3f4f6); border-radius: 10px; font-size: 12px; color: var(--text-secondary);">
           <i class="fas fa-exclamation-triangle"></i>
-          <span>Aucune URL iCal configurée</span>
+          <span style="margin-left:6px;">Aucune URL iCal configurée</span>
         </div>
       `;
 
@@ -596,6 +566,31 @@ function renderProperties() {
           <i class="fas fa-shield-alt"></i>${depositLabel}
         </span>`;
 
+      const boostinghostUrl = buildBoostinghostIcalUrl(p);
+      const boostinghostHtml = boostinghostUrl
+        ? `
+        <div class="boostinghost-ical">
+          <div class="boostinghost-ical-label">
+            <i class="fas fa-link"></i>
+            <span>Lien iCal Boostinghost</span>
+          </div>
+          <div class="boostinghost-ical-url" title="${escapeHtml(
+            boostinghostUrl
+          )}">
+            ${escapeHtml(boostinghostUrl)}
+          </div>
+          <button
+            type="button"
+            class="btn-copy-boostinghost"
+            data-url="${escapeHtml(boostinghostUrl)}"
+          >
+            <i class="fas fa-copy"></i>
+            Copier
+          </button>
+        </div>
+      `
+        : "";
+
       return `
         <div class="property-card">
           <div class="property-header">
@@ -613,9 +608,7 @@ function renderProperties() {
             <div class="property-photo-wrapper">
               ${
                 photoUrl
-                  ? `<img src="${escapeHtml(
-                      photoUrl
-                    )}" alt="Photo logement" />`
+                  ? `<img src="${escapeHtml(photoUrl)}" alt="Photo logement" />`
                   : `<span class="property-photo-placeholder"><i class="fas fa-image"></i></span>`
               }
             </div>
@@ -625,14 +618,14 @@ function renderProperties() {
             <button
               type="button"
               class="btn-icon-action btn-edit"
-              onclick="openEditPropertyModal('${id}')"
+              data-id="${escapeHtml(id)}"
             >
               <i class="fas fa-pen"></i>
             </button>
             <button
               type="button"
               class="btn-icon-action btn-delete"
-              onclick="deleteProperty('${id}')"
+              data-id="${escapeHtml(id)}"
             >
               <i class="fas fa-trash"></i>
             </button>
@@ -641,10 +634,48 @@ function renderProperties() {
           <div class="ical-urls">
             ${icalListHtml}
           </div>
+
+          ${boostinghostHtml}
         </div>
       `;
     })
     .join("");
 
-  grid.innerHTML = html;
+  grid.innerHTML = cardsHtml;
+
+  // Rattacher les événements après injection HTML
+  grid.querySelectorAll(".btn-edit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      openEditPropertyModal(id);
+    });
+  });
+
+  grid.querySelectorAll(".btn-delete").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      deleteProperty(id);
+    });
+  });
+
+  grid.querySelectorAll(".btn-test-url").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.getAttribute("data-url");
+      testIcalUrl(url, btn);
+    });
+  });
+
+  grid.querySelectorAll(".btn-copy-ical").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.getAttribute("data-url");
+      copyIcalUrl(url);
+    });
+  });
+
+  grid.querySelectorAll(".btn-copy-boostinghost").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.getAttribute("data-url");
+      copyIcalUrl(url);
+    });
+  });
 }
