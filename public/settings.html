@@ -745,6 +745,68 @@
       }
     }
 
+
+    /* Bloc d'infos visuelles sous chaque logement (photo + chips) */
+    .property-extra-ux {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .property-extra-photo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--bg-secondary, #f3f4f6);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .property-extra-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .property-extra-photo-placeholder {
+      font-size: 18px;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    .property-extra-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .property-extra-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--bg-secondary, #f9fafb);
+    }
+
+    .property-extra-tag i {
+      font-size: 11px;
+    }
+
+    .property-extra-tag-strong {
+      background: rgba(5, 150, 105, 0.08);
+      color: var(--primary-color, #059669);
+    }
+
+
     @media (max-width: 900px) {
       .settings-container {
         padding-top: 0;
@@ -1109,8 +1171,39 @@
   <!-- JS Mes logements – UX (complément, n'altère pas /js/settings.js) -->
   <script>
     (function() {
+      const STORAGE_KEY = 'lcc_property_meta_v1';
+
       const photoInputEl = document.getElementById('propertyPhoto');
       const photoPreviewEl = document.getElementById('photoPreview');
+      const addressEl = document.getElementById('propertyAddress');
+      const checkInEl = document.getElementById('propertyCheckIn');
+      const checkOutEl = document.getElementById('propertyCheckOut');
+      const depositEl = document.getElementById('propertyDeposit');
+      const nameEl = document.getElementById('propertyName');
+
+      let currentPhotoDataUrl = null;
+
+      function normalizeName(name) {
+        return (name || '').trim().toLowerCase();
+      }
+
+      function loadMeta() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+          console.error('Erreur lors du chargement des métadonnées logements', e);
+          return {};
+        }
+      }
+
+      function saveMeta(meta) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(meta));
+        } catch (e) {
+          console.error('Erreur lors de la sauvegarde des métadonnées logements', e);
+        }
+      }
 
       function updatePhotoPreview(url) {
         if (!photoPreviewEl) return;
@@ -1128,29 +1221,232 @@
         }
       }
 
+      function readFileAsDataUrl(file, cb) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          cb(e.target && e.target.result ? e.target.result : null);
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function buildTag(iconClass, label, strong) {
+        const span = document.createElement('span');
+        span.className = 'property-extra-tag' + (strong ? ' property-extra-tag-strong' : '');
+        span.innerHTML = '<i class="' + iconClass + '"></i><span>' + label + '</span>';
+        return span;
+      }
+
+      function formatDeposit(value) {
+        if (value == null || value === '' || isNaN(Number(value)) || Number(value) <= 0) return '';
+        try {
+          return Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €';
+        } catch (e) {
+          return value + ' €';
+        }
+      }
+
+      function enhancePropertyCards() {
+        const grid = document.getElementById('propertiesGrid');
+        if (!grid) return;
+
+        const meta = loadMeta();
+        const cards = grid.querySelectorAll('.property-card');
+        if (!cards.length) return;
+
+        cards.forEach(function(card) {
+          let nameText = '';
+          const nameNode = card.querySelector('.property-name');
+          if (nameNode) {
+            nameText = (nameNode.textContent || '').trim();
+          }
+          if (!nameText) return;
+
+          const key = normalizeName(nameText);
+          const data = meta[key];
+          if (!data) return;
+
+          let extra = card.querySelector('.property-extra-ux');
+          if (!extra) {
+            extra = document.createElement('div');
+            extra.className = 'property-extra-ux';
+
+            // On insère le bloc après les URLs iCal si possible
+            const icalBlock = card.querySelector('.property-ical-export, .ical-urls');
+            if (icalBlock && icalBlock.parentNode === card) {
+              if (icalBlock.nextSibling) {
+                card.insertBefore(extra, icalBlock.nextSibling);
+              } else {
+                card.appendChild(extra);
+              }
+            } else {
+              card.appendChild(extra);
+            }
+          }
+
+          extra.innerHTML = '';
+
+          const photoWrapper = document.createElement('div');
+          photoWrapper.className = 'property-extra-photo';
+
+          if (data.photo) {
+            const img = document.createElement('img');
+            img.src = data.photo;
+            img.alt = 'Photo ' + nameText;
+            photoWrapper.appendChild(img);
+          } else {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'property-extra-photo-placeholder';
+            placeholder.innerHTML = '<i class="fas fa-image"></i>';
+            photoWrapper.appendChild(placeholder);
+          }
+
+          const tags = document.createElement('div');
+          tags.className = 'property-extra-tags';
+
+          if (data.address) {
+            tags.appendChild(buildTag('fas fa-map-marker-alt', data.address, false));
+          }
+
+          const timeParts = [];
+          if (data.checkIn) timeParts.push('Arrivée ' + data.checkIn);
+          if (data.checkOut) timeParts.push('Départ ' + data.checkOut);
+          if (timeParts.length) {
+            tags.appendChild(buildTag('far fa-clock', timeParts.join(' · '), false));
+          }
+
+          const depositText = formatDeposit(data.deposit);
+          if (depositText) {
+            tags.appendChild(buildTag('fas fa-shield-alt', 'Caution ' + depositText, true));
+          }
+
+          if (!tags.childElementCount) {
+            const info = document.createElement('span');
+            info.className = 'property-extra-tag';
+            info.innerHTML = '<i class="far fa-circle"></i><span>Aucune info complémentaire</span>';
+            tags.appendChild(info);
+          }
+
+          extra.appendChild(photoWrapper);
+          extra.appendChild(tags);
+        });
+      }
+
+      function fillMetaInModalFromName() {
+        if (!nameEl) return;
+        const key = normalizeName(nameEl.value);
+        const meta = loadMeta();
+        const data = key ? meta[key] : null;
+
+        if (!data) {
+          if (addressEl) addressEl.value = '';
+          if (checkInEl) checkInEl.value = '';
+          if (checkOutEl) checkOutEl.value = '';
+          if (depositEl) depositEl.value = '';
+          currentPhotoDataUrl = null;
+          updatePhotoPreview(null);
+          return;
+        }
+
+        if (addressEl) addressEl.value = data.address || '';
+        if (checkInEl) checkInEl.value = data.checkIn || '';
+        if (checkOutEl) checkOutEl.value = data.checkOut || '';
+        if (depositEl) depositEl.value = (data.deposit !== undefined && data.deposit !== null && data.deposit !== '') ? data.deposit : '';
+        currentPhotoDataUrl = data.photo || null;
+        updatePhotoPreview(currentPhotoDataUrl);
+      }
+
       if (photoInputEl && photoPreviewEl) {
         updatePhotoPreview(null);
         photoInputEl.addEventListener('change', function() {
           const file = this.files && this.files[0];
           if (!file) {
+            currentPhotoDataUrl = null;
             updatePhotoPreview(null);
             return;
           }
           if (!file.type || file.type.indexOf('image/') !== 0) {
             alert('Merci de sélectionner une image.');
             this.value = '';
+            currentPhotoDataUrl = null;
             updatePhotoPreview(null);
             return;
           }
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            updatePhotoPreview(e.target && e.target.result);
-          };
-          reader.readAsDataURL(file);
+          readFileAsDataUrl(file, function(dataUrl) {
+            currentPhotoDataUrl = dataUrl;
+            updatePhotoPreview(currentPhotoDataUrl);
+          });
         });
+      }
+
+      function wrapFunction(name, wrapper) {
+        const original = window[name];
+        if (typeof original !== 'function') return;
+        window[name] = wrapper(original);
+      }
+
+      wrapFunction('openAddPropertyModal', function(original) {
+        return function() {
+          original.apply(this, arguments);
+          setTimeout(function() {
+            if (addressEl) addressEl.value = '';
+            if (checkInEl) checkInEl.value = '';
+            if (checkOutEl) checkOutEl.value = '';
+            if (depositEl) depositEl.value = '';
+            currentPhotoDataUrl = null;
+            updatePhotoPreview(null);
+          }, 0);
+        };
+      });
+
+      wrapFunction('openEditPropertyModal', function(original) {
+        return function(id) {
+          original.apply(this, arguments);
+          setTimeout(function() {
+            fillMetaInModalFromName();
+          }, 0);
+        };
+      });
+
+      wrapFunction('saveProperty', function(original) {
+        return function(event) {
+          const result = original.apply(this, arguments);
+
+          if (!nameEl) return result;
+          const key = normalizeName(nameEl.value);
+          if (!key) return result;
+
+          const meta = loadMeta();
+          meta[key] = {
+            address: addressEl && addressEl.value ? addressEl.value.trim() : '',
+            checkIn: checkInEl && checkInEl.value ? checkInEl.value : '',
+            checkOut: checkOutEl && checkOutEl.value ? checkOutEl.value : '',
+            deposit: (depositEl && depositEl.value !== '') ? Number(depositEl.value.replace(',', '.')) : '',
+            photo: currentPhotoDataUrl || (meta[key] && meta[key].photo) || null
+          };
+          saveMeta(meta);
+
+          // On redécore les cartes après mise à jour
+          setTimeout(enhancePropertyCards, 300);
+          return result;
+        };
+      });
+
+      const grid = document.getElementById('propertiesGrid');
+      if (grid && 'MutationObserver' in window) {
+        const observer = new MutationObserver(function() {
+          enhancePropertyCards();
+        });
+        observer.observe(grid, { childList: true, subtree: true });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', enhancePropertyCards);
+      } else {
+        enhancePropertyCards();
       }
     })();
   </script>
+
 
 
   <!-- MOBILE MENU SCRIPT -->
