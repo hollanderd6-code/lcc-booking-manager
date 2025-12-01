@@ -22,17 +22,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ========================================
 async function loadProperties() {
   showLoading();
+
   try {
     const token = localStorage.getItem("lcc_token");
+
     const response = await fetch(`${API_URL}/api/properties`, {
       headers: {
         Authorization: "Bearer " + token,
       },
     });
+
     const data = await response.json();
-    console.log("Données reçues :", data); // Affiche les données dans la console
     properties = data.properties || [];
     renderProperties();
+
+    console.log(`📦 ${properties.length} logement(s) chargé(s)`);
   } catch (error) {
     console.error("Erreur chargement logements:", error);
     showToast("Erreur lors du chargement des logements", "error");
@@ -40,7 +44,6 @@ async function loadProperties() {
     hideLoading();
   }
 }
-
 
 async function saveProperty(event) {
   event.preventDefault();
@@ -50,17 +53,14 @@ async function saveProperty(event) {
   const name = document.getElementById("propertyName").value;
   const color = document.getElementById("propertyColor").value;
 
-  // Récupère uniquement les champs obligatoires pour tester
   const urlInputs = document.querySelectorAll(".url-input");
   const icalUrls = Array.from(urlInputs)
     .map((input) => input.value.trim())
     .filter((url) => url.length > 0);
 
-  // Crée un objet minimal pour éviter les erreurs
   const propertyData = { name, color, icalUrls };
 
   try {
-    console.log("Données envoyées :", propertyData); // Affiche les données dans la console
     const token = localStorage.getItem("lcc_token");
     let response;
 
@@ -84,17 +84,22 @@ async function saveProperty(event) {
       });
     }
 
-    if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
-    await loadProperties();
-    showToast("Logement sauvegardé avec succès", "success");
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast(result.message || "Logement enregistré", "success");
+      closeEditModal();
+      await loadProperties();
+    } else {
+      showToast(result.error || "Erreur lors de l'enregistrement", "error");
+    }
   } catch (error) {
-    console.error("Erreur :", error);
-    showToast("Erreur lors de la sauvegarde", "error");
+    console.error("Erreur sauvegarde:", error);
+    showToast("Erreur lors de l'enregistrement", "error");
   } finally {
     hideLoading();
   }
 }
-
 
 async function deleteProperty(propertyId, propertyName) {
   if (
@@ -229,7 +234,7 @@ function renderProperties() {
         </div>
         <div class="property-actions">
           <button class="btn-icon-action btn-edit" 
-                  onclick="openEditPropertyModal('${property.id}')"
+                  onclick="event.stopPropagation(); openEditPropertyModal('${property.id}')"
                   title="Modifier">
             <i class="fas fa-edit"></i>
           </button>
@@ -489,7 +494,7 @@ function renderProperties() {
       `;
 
       return `
-    <div class="property-card" style="border-left-color: ${property.color}">
+    <div class="property-card" style="border-left-color: ${property.color}" onclick="openEditPropertyModal('${property.id}')">
       <div class="property-header">
         <div class="property-info">
           <div class="property-name">
@@ -508,7 +513,7 @@ function renderProperties() {
             <i class="fas fa-edit"></i>
           </button>
           <button class="btn-icon-action btn-delete" 
-                  onclick="deleteProperty('${property.id}', '${(property.name || "").replace(/'/g, "\'")}')"
+                  onclick="event.stopPropagation(); deleteProperty('${property.id}', '${(property.name || "").replace(/'/g, "\'")}')"
                   title="Supprimer">
             <i class="fas fa-trash"></i>
           </button>
@@ -522,7 +527,7 @@ function renderProperties() {
         </div>
         <div class="ical-export-body">
           <span class="ical-export-url" title="${exportUrl}">${exportUrl}</span>
-          <button class="btn-copy-ical" type="button" onclick="copyIcalExportUrl('${exportUrl}')">
+          <button class="btn-copy-ical" type="button" onclick="event.stopPropagation(); copyIcalExportUrl('${exportUrl}')">
             <i class="fa-regular fa-copy"></i>
             Copier
           </button>
@@ -555,3 +560,4 @@ function copyIcalExportUrl(url) {
     window.prompt("Copiez ce lien iCal :", url);
   }
 }
+
