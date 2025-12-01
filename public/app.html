@@ -1541,15 +1541,17 @@
 
         <!-- KPI PRINCIPAUX -->
         <section class="kpi-grid">
-          <!-- KPI 1 : Taux d'occupation -->
-          <article class="kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Taux d'occupation</span>
-              <span class="kpi-pill kpi-pill-success">
-                <i class="fas fa-arrow-up"></i>
-                <span id="kpiOccupancyDelta">+8% vs mois dernier</span>
-              </span>
-            </div>
+        <!-- KPI 1 : Taux d'occupation -->
+<article class="kpi-card" id="kpiOccupancyCard">
+  <div class="kpi-header">
+    <span class="kpi-label">Taux d'occupation</span>
+  </div>
+  <div class="kpi-main">
+    <span class="kpi-value" id="kpiOccupancyValue">82%</span>
+    <span class="kpi-sub">sur le mois en cours</span>
+  </div>
+</article>
+
             <div class="kpi-main">
               <span class="kpi-value" id="kpiOccupancyValue">82%</span>
               <span class="kpi-sub">sur le mois en cours</span>
@@ -4975,6 +4977,165 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 kpiCard.addEventListener('click', openModal);
       modalOverlay.addEventListener('click', closeModal);
       modalClose.addEventListener('click', closeModal);
+    });
+  })();
+<script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', function () {
+      const valueEl = document.getElementById('kpiOccupancyValue');
+      if (!valueEl) return;
+
+      const kpiCard = document.getElementById('kpiOccupancyCard') || valueEl.closest('.kpi-card') || valueEl;
+
+      // 🔧 Création du modal en JS s'il n'existe pas déjà
+      let modal = document.getElementById('occupancyDetailsModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'occupancyDetailsModal';
+        modal.className = 'booking-modal';
+        modal.innerHTML = `
+          <div class="modal-overlay" id="occupancyDetailsOverlay"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Détail du taux d'occupation</h2>
+              <button class="modal-close" id="closeOccupancyDetailsModal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div id="occupancyDetailsContent" class="reservation-details">
+              <p class="detail-value">Chargement...</p>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      const overlay = document.getElementById('occupancyDetailsOverlay');
+      const closeBtn = document.getElementById('closeOccupancyDetailsModal');
+      const contentEl = document.getElementById('occupancyDetailsContent');
+
+      if (!kpiCard || !overlay || !closeBtn || !contentEl) return;
+
+      function getStored(resKey) {
+        try {
+          const raw = localStorage.getItem(resKey);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+          console.warn('Erreur lecture localStorage pour', resKey, e);
+          return [];
+        }
+      }
+
+      function getReservationPropertyId(r) {
+        if (!r) return null;
+        if (r.propertyId != null) return String(r.propertyId);
+        if (r.property && r.property.id != null) return String(r.property.id);
+        if (r.property_id != null) return String(r.property_id);
+        return null;
+      }
+
+      function openModal() {
+        const reservations = Array.isArray(window.LCC_RESERVATIONS)
+          ? window.LCC_RESERVATIONS
+          : getStored('LCC_RESERVATIONS');
+        const properties = getStored('LCC_PROPERTIES');
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0);
+        const daysInMonth = monthEnd.getDate() || 1;
+
+        const detailed = [];
+
+        properties.forEach((p, idx) => {
+          const pid =
+            p.id != null ? String(p.id)
+            : p.propertyId != null ? String(p.propertyId)
+            : null;
+
+          if (!pid) return;
+
+          let nightsBooked = 0;
+
+          (reservations || []).forEach((r) => {
+            if (!r.start || !r.end) return;
+
+            const rPid = getReservationPropertyId(r);
+            if (!rPid || rPid !== pid) return;
+
+            const start = new Date(r.start);
+            const end = new Date(r.end);
+
+            const startClamped = start < monthStart ? monthStart : start;
+            const endClamped = end > monthEnd ? monthEnd : end;
+
+            if (endClamped > startClamped) {
+              const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+              nightsBooked += d;
+            }
+          });
+
+          let occupancy = Math.round((nightsBooked / daysInMonth) * 100);
+          if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
+          if (occupancy > 100) occupancy = 100;
+
+          const name =
+            p.name ||
+            p.title ||
+            p.label ||
+            ('Logement ' + (idx + 1));
+
+          detailed.push({
+            name,
+            occupancy,
+            nightsBooked
+          });
+        });
+
+        detailed.sort((a, b) => b.occupancy - a.occupancy);
+
+        if (!detailed.length) {
+          contentEl.innerHTML = `
+            <p class="detail-value">
+              Aucun logement actif trouvé pour calculer le taux d'occupation.
+            </p>
+          `;
+        } else {
+          const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+          let html = `
+            <div class="detail-group">
+              <label>Occupation par logement – ${monthLabel}</label>
+              <div class="detail-value">
+          `;
+
+          detailed.forEach((item) => {
+            html += `
+              <div style="margin-bottom:6px;">
+                <strong>${item.name}</strong>
+                – ${item.occupancy}% (${item.nightsBooked} nuit${item.nightsBooked > 1 ? 's' : ''} réservée${item.nightsBooked > 1 ? 's' : ''})
+              </div>
+            `;
+          });
+
+          html += '</div></div>';
+          contentEl.innerHTML = html;
+        }
+
+        modal.classList.add('active');
+      }
+
+      function closeModal() {
+        modal.classList.remove('active');
+      }
+
+      // 🎯 Interaction + effet hover (via ta classe CSS)
+      kpiCard.classList.add('kpi-card--clickable');
+      kpiCard.addEventListener('click', openModal);
+      overlay.addEventListener('click', closeModal);
+      closeBtn.addEventListener('click', closeModal);
     });
   })();
 </script>
