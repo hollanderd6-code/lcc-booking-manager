@@ -195,6 +195,7 @@ async function testIcalUrl(url, buttonElement) {
 // ========================================
 
 function renderProperties() {
+  console.log("Rendu des logements...", properties);
   const grid = document.getElementById("propertiesGrid");
 
   if (!properties.length) {
