@@ -1,2927 +1,971 @@
-// ========================================
-// CONFIGURATION & STATE
-// ========================================
-const API_URL = "https://lcc-booking-manager.onrender.com";
-let properties = [];
-let currentEditingProperty = null;
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boostinghost – Mes logements</title>
 
-// ========================================
-// INITIALIZATION
-// ========================================
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🔧 Paramètres - Initialisation...");
+  <!-- Fonts (même que le reste de l'app) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  setupColorPicker();
-  await loadProperties();
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  console.log("✅ Paramètres initialisés");
+  <!-- CSS plateforme -->
+  <link rel="stylesheet" href="/css/style.css">
 
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
 
-});
+    .main-content {
+      padding-top: 24px !important;
+    }
 
-// ========================================
-// API CALLS
-// ========================================
-async function loadProperties() {
-  showLoading();
+    .page-content {
+      margin-top: 0 !important;
+    }
 
-  try {
-    const token = localStorage.getItem("lcc_token");
+    .settings-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0;
+    }
 
-    const response = await fetch(`${API_URL
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    .properties-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
 
-}/api/properties`, {
-      headers: {
-        Authorization: "Bearer " + token,
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    .properties-grid {
+      display: grid;
+      gap: 16px;
+    }
 
-},
+    .property-card {
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+      padding: 18px 20px;
+      border-left: 4px solid var(--primary-color, #059669);
+      transition: var(--transition, all .15s ease);
+      cursor: pointer;
+    }
+
+    .property-card:hover {
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .property-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+
+    .property-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .property-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-badge {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px rgba(15,23,42,.12);
+      flex-shrink: 0;
+    }
+
+    .property-meta {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .property-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-icon-action {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .btn-edit {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--primary-color, #059669);
+    }
+
+    .btn-edit:hover {
+      background: var(--primary-color, #059669);
+      color: #fff;
+    }
+
+    .btn-delete {
+      background: var(--bg-secondary, #f3f4f6);
+      color: #e11d48;
+    }
+
+    .btn-delete:hover {
+      background: #e11d48;
+      color: #fff;
+    }
+
+    .ical-urls {
+      margin-top: 8px;
+    }
+
+    .ical-url-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--bg-secondary, #f9fafb);
+      border-radius: 12px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .ical-url-item i {
+      color: var(--primary-color, #059669);
+      font-size: 12px;
+    }
+
+    .ical-source {
+      font-weight: 600;
+      color: var(--text-primary);
+      min-width: 80px;
+      font-size: 12px;
+    }
+
+    .ical-url-text {
+      flex: 1;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+    }
+
     
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-    const data = await response.json();
-    properties = data.properties || [];
-    renderProperties();
-
-    console.log(`📦 ${properties.length
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} logement(s) chargé(s)`);
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} catch (error) {
-    console.error("Erreur chargement logements:", error);
-    showToast("Erreur lors du chargement des logements", "error");
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} finally {
-    hideLoading();
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-async function saveProperty(event) {
-  event.preventDefault();
-  showLoading();
-
-  const propertyId = document.getElementById("propertyId").value;
-  const name = document.getElementById("propertyName").value;
-  const color = document.getElementById("propertyColor").value;
-
-  const urlInputs = document.querySelectorAll(".url-input");
-  const icalUrls = Array.from(urlInputs)
-    .map((input) => input.value.trim())
-    .filter((url) => url.length > 0);
-
-  const address = document.getElementById("propertyAddress").value;
-const checkIn = document.getElementById("propertyCheckIn").value;
-const checkOut = document.getElementById("propertyCheckOut").value;
-const deposit = document.getElementById("propertyDeposit").value;
-const propertyData = { name, color, icalUrls, address, checkIn, checkOut, deposit 
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-};
-
-  try {
-    const token = localStorage.getItem("lcc_token");
-    let response;
-
-    if (propertyId) {
-      response = await fetch(`${API_URL
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}/api/properties/${propertyId
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-},
-        body: JSON.stringify(propertyData),
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} else {
-      response = await fetch(`${API_URL
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}/api/properties`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-},
-        body: JSON.stringify(propertyData),
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-    const result = await response.json();
-
-    if (response.ok) {
-      showToast(result.message || "Logement enregistré", "success");
-      closeEditModal();
-      await loadProperties();
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} else {
-      showToast(result.error || "Erreur lors de l'enregistrement", "error");
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} catch (error) {
-    console.error("Erreur sauvegarde:", error);
-    showToast("Erreur lors de l'enregistrement", "error");
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} finally {
-    hideLoading();
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-async function deleteProperty(propertyId, propertyName) {
-  if (
-    !confirm(
-      `Êtes-vous sûr de vouloir supprimer "${propertyName
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}" ?\n\nToutes les réservations associées seront également supprimées.`
-    )
-  ) {
-    return;
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-  showLoading();
-
-  try {
-    const token = localStorage.getItem("lcc_token");
-
-    const response = await fetch(`${API_URL
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}/api/properties/${propertyId
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer " + token,
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-},
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-    const result = await response.json();
-
-    if (response.ok) {
-      showToast(result.message || "Logement supprimé", "success");
-      await loadProperties();
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} else {
-      showToast(result.error || "Erreur lors de la suppression", "error");
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} catch (error) {
-    console.error("Erreur suppression:", error);
-    showToast("Erreur lors de la suppression", "error");
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} finally {
-    hideLoading();
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-async function testIcalUrl(url, buttonElement) {
-  if (!url || url.trim().length === 0) {
-    showToast("Veuillez entrer une URL", "error");
-    return;
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-  const originalText = buttonElement.innerHTML;
-  buttonElement.innerHTML =
-    '<i class="fas fa-spinner fa-spin"></i> Test...';
-  buttonElement.disabled = true;
-
-  try {
-    const token = localStorage.getItem("lcc_token");
-
-    const response = await fetch(`${API_URL
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}/api/properties/test-ical`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-},
-      body: JSON.stringify({ url: url.trim() 
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}),
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-    const result = await response.json();
-
-    const resultDiv = document.createElement("div");
-    resultDiv.className = `test-result ${
-      result.success ? "success" : "error"
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}`;
-
-    if (result.success) {
-      resultDiv.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        URL valide ! ${result.reservationCount
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} réservation(s) trouvée(s)
-      `;
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} else {
-      resultDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i>
-        ${result.error || "URL invalide"
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-      `;
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-    const parent = buttonElement.parentElement;
-    const existingResult = parent.querySelector(".test-result");
-    if (existingResult) existingResult.remove();
-    parent.appendChild(resultDiv);
-
-    setTimeout(() => resultDiv.remove(), 5000);
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} catch (error) {
-    console.error("Erreur test URL:", error);
-    showToast("Erreur lors du test de l'URL", "error");
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} finally {
-    buttonElement.innerHTML = originalText;
-    buttonElement.disabled = false;
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-// ========================================
-// UI RENDERING
-// ========================================
-
-function renderProperties() {
-  const grid = document.getElementById("propertiesGrid");
-
-  if (!properties.length) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-home"></i>
-        <p>Aucun logement configuré</p>
-        <p style="font-size: 14px; margin-top: 8px;">Cliquez sur "Ajouter un logement" pour commencer</p>
-      </div>
-    `;
-    return;
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-  grid.innerHTML = properties
-    .map(
-      (property) => `
-    <div class="property-card" style="border-left-color: ${
-      property.color
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}">
-      <div class="property-header">
-        <div class="property-info">
-          <div class="property-name">
-            <div class="color-badge" style="background-color: ${
-              property.color
-            
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}"></div>
-            ${property.name
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-          </div>
-          <div class="property-meta">
-            ${property.reservationCount || 0
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} réservation(s) • 
-            ${property.icalUrls.length
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} source(s) iCal
-          </div>
-        </div>
-        <div class="property-actions">
-          <button class="btn-icon-action btn-edit" 
-                  onclick="openEditPropertyModal('${property.id
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}')"
-                  title="Modifier">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="btn-icon-action btn-delete" 
-                  onclick="deleteProperty('${property.id
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}', '${property.name.replace(
-                    /'/g,
-                    "\\'"
-                  )
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}')"
-                  title="Supprimer">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      </div>
-      
-      ${
-        property.icalUrls.length > 0
-          ? `
-        <div class="ical-urls">
-          ${property.icalUrls
-            .map(
-              (urlData) => `
-            <div class="ical-url-item">
-              <i class="fas fa-link"></i>
-              <span class="ical-source">${urlData.source || "URL"
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}</span>
-              <span class="ical-url-text" title="${urlData.url
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}">${urlData.url
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}</span>
-            </div>
-          `
-            )
-            .join("")
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-        </div>
-      `
-          : `
-        <div style="padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-sm); text-align: center; color: var(--text-secondary); font-size: 14px;">
-          <i class="fas fa-exclamation-triangle"></i>
-          Aucune URL iCal configurée
-        </div>
-      `
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-    </div>
-  `
-    )
-    .join("");
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-// ========================================
-// MODAL MANAGEMENT
-// ========================================
-
-function openAddPropertyModal() {
-  currentEditingProperty = null;
-
-  document.getElementById("modalTitle").textContent =
-    "Ajouter un logement";
-  document.getElementById("propertyId").value = "";
-  document.getElementById("propertyName").value = "";
-  document.getElementById("propertyColor").value = "#E67E50";
-  document.getElementById("colorPreview").textContent = "#E67E50";
-
-  const urlList = document.getElementById("urlList");
-  urlList.innerHTML = "";
-  addUrlField();
-
-  document
-    .getElementById("editPropertyModal")
-    .classList.add("active");
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function openEditPropertyModal(propertyId) {
-  const property = properties.find((p) => p.id === propertyId);
-  if (!property) return;
-
-  currentEditingProperty = property;
-
-  document.getElementById("modalTitle").textContent =
-    "Modifier le logement";
-  document.getElementById("propertyId").value = property.id;
-  document.getElementById("propertyName").value = property.name;
-  document.getElementById("propertyColor").value = property.color;
-  document.getElementById("colorPreview").textContent = property.color;
-
-  const urlList = document.getElementById("urlList");
-  urlList.innerHTML = "";
-
-  (property.icalUrls || []).forEach((urlData) => {
-    addUrlField(urlData.url);
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-  if (!property.icalUrls || property.icalUrls.length === 0) {
-    addUrlField();
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-  document
-    .getElementById("editPropertyModal")
-    .classList.add("active");
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function closeEditModal() {
-  document
-    .getElementById("editPropertyModal")
-    .classList.remove("active");
-  currentEditingProperty = null;
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function setupColorPicker() {
-  const colorPicker = document.getElementById("propertyColor");
-  const colorPreview = document.getElementById("colorPreview");
-
-  colorPicker.addEventListener("input", (e) => {
-    colorPreview.textContent = e.target.value.toUpperCase();
-    colorPreview.style.color = e.target.value;
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function addUrlField(value = "") {
-  const urlList = document.getElementById("urlList");
-
-  const urlGroup = document.createElement("div");
-  urlGroup.className = "url-input-group";
-  urlGroup.innerHTML = `
-    <input type="url" 
-           class="url-input" 
-           placeholder="https://www.airbnb.fr/calendar/ical/..." 
-           value="${value
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}">
-    <button type="button" 
-            class="btn-test-url" 
-            onclick="testIcalUrl(this.previousElementSibling.value, this)"
-            title="Tester l'URL">
-      <i class="fas fa-check"></i> Tester
+    .property-ical-export {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--bg-secondary, #f3f4f6);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ical-export-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .ical-export-label i {
+      font-size: 13px;
+    }
+
+    .ical-export-body {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ical-export-url {
+      flex: 1;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px dashed rgba(148, 163, 184, 0.8);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-copy-ical {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(5, 150, 105, 0.08);
+      color: var(--primary-color, #059669);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition, all 0.15s ease);
+    }
+
+    .btn-copy-ical i {
+      font-size: 12px;
+    }
+
+    .btn-copy-ical:hover {
+      background: var(--primary-color, #059669);
+      color: #ffffff;
+    }
+
+.btn-test-url {
+      background: transparent;
+      border: none;
+      color: var(--primary-color, #059669);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      transition: var(--transition, all .15s ease);
+      white-space: nowrap;
+    }
+
+    .btn-test-url:hover {
+      background: rgba(5,150,105,.08);
+      color: var(--primary-color, #059669);
+    }
+
+    .btn-add-property {
+      background: linear-gradient(135deg, var(--primary-color, #059669) 0%, var(--accent-color, #0ea5e9) 100%);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+    }
+
+    .btn-add-property i {
+      font-size: 13px;
+    }
+
+    .btn-add-property:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Modal */
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-primary, #ffffff);
+      border-radius: 18px;
+      max-width: 520px;
+      width: 94%;
+      box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.35));
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color, #e5e7eb);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-body {
+      padding: 16px 18px 18px;
+    }
+
+    .modal-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-secondary, #6b7280);
+      padding: 4px;
+    }
+
+    .modal-close i {
+      font-size: 14px;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .form-group label {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-group label i {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: var(--transition, all .15s ease);
+      background: var(--bg-secondary, #f9fafb);
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color, #059669);
+      box-shadow: 0 0 0 1px rgba(5,150,105,.12);
+      background: #ffffff;
+    }
+
+    .color-picker-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .color-picker {
+      width: 52px;
+      height: 32px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .color-preview {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--bg-secondary, #f3f4f6);
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .url-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .url-input-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .url-input-group input {
+      flex: 1;
+    }
+
+    .btn-remove-url {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .btn-remove-url:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    .btn-add-url {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--primary-color, #059669);
+      border: none;
+      padding: 7px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12px;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .btn-add-url:hover {
+      background: var(--primary-color, #059669);
+      color: #ffffff;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .btn-cancel {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--text-primary);
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+    }
+
+    .btn-cancel:hover {
+      background: var(--border-color, #e5e7eb);
+    }
+
+    .btn-save {
+      background: var(--primary-color, #059669);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-save:hover {
+      background: #047857;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 12px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .empty-state i {
+      font-size: 40px;
+      opacity: 0.25;
+      margin-bottom: 8px;
+    }
+
+    .test-result {
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+
+    .test-result.success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #22c55e;
+    }
+
+    .test-result.error {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #f97373;
+    }
+
+    .toast-container {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 1200;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1100;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .loading-spinner {
+      background: var(--bg-primary, #fff);
+      padding: 14px 16px;
+      border-radius: 999px;
+      box-shadow: var(--shadow-lg, 0 18px 40px rgba(15,23,42,.25));
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .loading-spinner i {
+      font-size: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .settings-container {
+        padding-top: 0;
+      }
+    }
+  </style>
+
+  <!-- Script auth + user + logout -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        if (user) {
+          const nameEl = document.getElementById('sidebarUserName');
+          const companyEl = document.getElementById('sidebarUserCompany');
+          const avatarEl = document.getElementById('sidebarUserAvatar');
+
+          if (nameEl) {
+            nameEl.textContent = user.firstName
+              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+              : (user.email || 'Mon compte');
+          }
+
+          if (companyEl) {
+            companyEl.textContent = user.company || 'Mon espace';
+          }
+
+          if (avatarEl) {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
+        }
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function () {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = '/login.html';
+          });
+        }
+      });
+    })();
+  </script>
+</head>
+<body data-page="settings">
+  <!-- MOBILE HEADER -->
+  <div class="mobile-header">
+    <a href="/app.html" class="mobile-logo">
+      <i class="fas fa-calendar-check"></i>
+      <span class="mobile-logo-text">Bookingmanage</span>
+    </a>
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
     </button>
-    <button type="button" class="btn-remove-url" onclick="removeUrlField(this)">
-      <i class="fas fa-times"></i>
-    </button>
-  `;
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  urlList.appendChild(urlGroup);
+  <div class="app-container">
 
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function removeUrlField(button) {
-  const urlGroup = button.parentElement;
-  const urlList = document.getElementById("urlList");
-
-  if (urlList.children.length > 1) {
-    urlGroup.remove();
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} else {
-    showToast("Vous devez avoir au moins un champ URL", "error");
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-// ========================================
-// UTILITIES
-// ========================================
-
-function showLoading() {
-  document
-    .getElementById("loadingOverlay")
-    .classList.add("active");
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function hideLoading() {
-  document
-    .getElementById("loadingOverlay")
-    .classList.remove("active");
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function showToast(message, type = "info") {
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const icons = {
-    success: "fa-check-circle",
-    error: "fa-exclamation-circle",
-    info: "fa-info-circle",
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-};
-
-  const toast = document.createElement("div");
-  toast.className = `toast ${type
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}`;
-  toast.innerHTML = `
-    <i class="fas ${icons[type]
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}"></i>
-    <span>${message
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}</span>
-  `;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.animation =
-      "slideInRight 0.3s ease reverse";
-    setTimeout(() => toast.remove(), 300);
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}, 3000);
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-// Close modal on backdrop click
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains("modal")) {
-    e.target.classList.remove("active");
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-// ESC to close modals
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    document
-      .querySelectorAll(".modal.active")
-      .forEach((modal) =>
-        modal.classList.remove("active")
-      );
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-
-
-// ========================================
-// UI RENDERING (override with iCal export link)
-// ========================================
-function renderProperties() {
-  const grid = document.getElementById("propertiesGrid");
-
-  if (!properties.length) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-home"></i>
-        <p>Aucun logement configuré</p>
-        <p style="font-size: 14px; margin-top: 8px;">Cliquez sur "Ajouter un logement" pour commencer</p>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="sidebar-logo">
+          <i class="fas fa-calendar-check"></i>
+          <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">Bookingmanage</span>
+            <span class="sidebar-logo-subtitle">Property Manager</span>
+          </div>
+        </a>
       </div>
-    `;
-    return;
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
 
-}
+      <nav class="sidebar-nav">
+  <!-- PRINCIPAL -->
+  <div class="nav-section">
+    <div class="nav-section-title">Principal</div>
 
-  const baseApi = (typeof API_URL === "string" ? API_URL.replace(/\/$/, "") : "");
+    <a href="/app.html" class="nav-item" data-page="app">
+      <i class="fas fa-th-large"></i>
+      <span>Dashboard</span>
+    </a>
 
-  grid.innerHTML = properties
-    .map((property) => {
-      const exportUrl = baseApi
-        ? `${baseApi
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+      <i class="fas fa-calendar"></i>
+      <span>Calendrier</span>
+      <span class="nav-badge" id="navTotalReservations">0</span>
+    </a>
 
-}/ical/property/${property.id
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    <a href="/messages.html" class="nav-item" data-page="messages">
+      <i class="fas fa-comment-dots"></i>
+      <span>Messages</span>
+    </a>
+  </div>
 
-}.ics`
-        : `/ical/property/${property.id
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+  <!-- GESTION -->
+  <div class="nav-section">
+    <div class="nav-section-title">Gestion</div>
 
-}.ics`;
+    <a href="/settings.html" class="nav-item active" data-page="settings">
+      <i class="fas fa-home"></i>
+      <span>Mes logements</span>
+    </a>
 
-      const icalSourcesHtml =
-        property.icalUrls && property.icalUrls.length > 0
-          ? `
-        <div class="ical-urls">
-          ${property.icalUrls
-            .map(
-              (urlData) => `
-            <div class="ical-url-item">
-              <i class="fas fa-link"></i>
-              <span class="ical-source">${urlData.source || "URL"
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    <a href="/welcome.html" class="nav-item" data-page="welcome">
+      <i class="fas fa-book-open"></i>
+      <span>Livret d'accueil</span>
+    </a>
 
-}</span>
-              <span class="ical-url-text" title="${urlData.url
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+      <i class="fas fa-broom"></i>
+      <span>Gestion du ménage</span>
+      <span class="nav-badge">Nouveau</span>
+    </a>
 
-}">${urlData.url
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+    <div class="nav-section">
+  <div class="nav-section-title">Facturation</div>
+  <a href="/factures.html" class="nav-item">
+    <i class="fas fa-file-invoice"></i>
+    <span>Factures clients</span>
+  </a>
+  <a href="/factures-proprietaires.html" class="nav-item">
+    <i class="fas fa-file-invoice-dollar"></i>
+    <span>Factures propriétaires</span>
+  </a>
+</div>
 
-}</span>
+
+    <a href="/deposits.html" class="nav-item" data-page="deposits">
+      <i class="fas fa-shield-alt"></i>
+      <span>Cautions</span>
+    </a>
+
+    <a href="/notifications.html" class="nav-item" data-page="notifications">
+      <i class="fas fa-bell"></i>
+      <span>Notifications</span>
+    </a>
+  </div>
+
+  <!-- PARAMÈTRES -->
+  <div class="nav-section">
+    <div class="nav-section-title">Paramètres</div>
+
+    <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+      <i class="fas fa-cog"></i>
+      <span>Paramètres</span>
+    </a>
+
+    <a href="/help.html" class="nav-item" data-page="help">
+      <i class="fas fa-question-circle"></i>
+      <span>Aide</span>
+    </a>
+  </div>
+</nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="sidebarUserAvatar">C</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarUserName">Utilisateur</div>
+            <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+          </div>
+
+          <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <div class="page-kicker">Configuration</div>
+          <h1 class="page-title">Mes logements</h1>
+          <p class="page-subtitle">
+            Gérez les logements de votre conciergerie et leurs connexions iCal (Airbnb, Booking, etc.).
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="openAddPropertyModal()">
+            <i class="fas fa-plus"></i>
+            <span>Ajouter un logement</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <section class="card">
+          <div class="properties-header">
+            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;">
+              <i class="fas fa-home"></i>
+              <span>Logements configurés</span>
+            </h2>
+          </div>
+
+          <div class="properties-grid" id="propertiesGrid">
+            <!-- Les logements seront injectés ici par /js/settings.js -->
+          </div>
+
+          <div class="empty-state" id="propertiesEmptyState" style="display:none;">
+            <i class="fas fa-home"></i>
+            <p>Aucun logement configuré pour le moment.</p>
+            <p>Commencez par ajouter votre premier logement.</p>
+          </div>
+
+          <div style="margin-top:10px;">
+            <button class="btn-add-property" onclick="openAddPropertyModal()">
+              <i class="fas fa-plus"></i>
+              Ajouter un logement
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: Éditer / Ajouter un logement -->
+  <div class="modal" id="editPropertyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">
+          <i class="fas fa-home"></i>
+          <span>Modifier le logement</span>
+        </h2>
+        <button class="modal-close" onclick="closeEditModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form class="modal-form" id="propertyForm" onsubmit="saveProperty(event)">
+          <input type="hidden" id="propertyId">
+
+          <div class="form-group">
+            <label for="propertyName">
+              <i class="fas fa-home"></i>
+              <span>Nom du logement</span>
+            </label>
+            <input type="text" id="propertyName" required placeholder="Ex: Saint-Gratien - RDC">
+          </div>
+
+          <div class="form-group">
+            <label for="propertyColor">
+              <i class="fas fa-palette"></i>
+              <span>Couleur</span>
+            </label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="propertyColor" class="color-picker" value="#E67E50">
+              <div class="color-preview" id="colorPreview">#E67E50</div>
             </div>
-          `
-            )
-            .join("")
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-        </div>
-      `
-          : `
-        <div style="padding: 12px; background: var(--bg-secondary, #f3f4f6); border-radius: 12px; display:flex; align-items:center; gap:8px; font-size: 14px; color: var(--text-secondary);">
-          <i class="fas fa-exclamation-triangle"></i>
-          <span>Aucune URL iCal configurée</span>
-        </div>
-      `;
-
-      return `
-    <div class="property-card" style="border-left-color: ${property.color
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}">
-      <div class="property-header">
-        <div class="property-info">
-          <div class="property-name">
-            <div class="color-badge" style="background-color: ${property.color
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}"></div>
-            ${property.name
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
           </div>
-          <div class="property-meta">
-            ${property.reservationCount || 0
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
 
-} réservation(s) • 
-            ${(property.icalUrls && property.icalUrls.length) || 0
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} source(s) iCal importées
+          <div class="form-group">
+            <label>
+              <i class="fas fa-link"></i>
+              <span>URLs iCal</span>
+            </label>
+            <div class="url-list" id="urlList">
+              <!-- URLs ajoutées ici via JS -->
+            </div>
+            <button type="button" class="btn-add-url" onclick="addUrlField()">
+              <i class="fas fa-plus"></i>
+              <span>Ajouter une URL</span>
+            </button>
           </div>
-        </div>
-        <div class="property-actions">
-          <button class="btn-icon-action btn-edit" 
-                  onclick="openEditPropertyModal('${property.id
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
 
-}')"
-                  title="Modifier">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="btn-icon-action btn-delete" 
-                  onclick="deleteProperty('${property.id
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}', '${(property.name || "").replace(/'/g, "\'")
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}')"
-                  title="Supprimer">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+            <button type="submit" class="btn-save">
+              <i class="fas fa-save"></i>
+              <span>Enregistrer</span>
+            </button>
+          </div>
+        </form>
       </div>
-
-      <div class="property-ical-export">
-        <div class="ical-export-label">
-          <i class="fa-solid fa-calendar-days"></i>
-          <span>Lien iCal Boostinghost pour ce logement</span>
-        </div>
-        <div class="ical-export-body">
-          <span class="ical-export-url" title="${exportUrl
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}">${exportUrl
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}</span>
-          <button class="btn-copy-ical" type="button" onclick="copyIcalExportUrl('${exportUrl
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}')">
-            <i class="fa-regular fa-copy"></i>
-            Copier
-          </button>
-        </div>
-      </div>
-
-      ${icalSourcesHtml
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
     </div>
-  `;
-    
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+  </div>
 
-})
-    .join("");
+  <!-- Toast & Loading -->
+  <div class="toast-container" id="toastContainer"></div>
 
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement...</p>
+    </div>
+  </div>
 
-}
+  <!-- JS page -->
+  <script src="/js/settings.js"></script>
 
-// Copier le lien iCal export
-function copyIcalExportUrl(url) {
-  if (!url) return;
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        if (typeof showToast === "function") {
-          showToast("Lien iCal copié dans le presse-papiers", "success");
+  <!-- MOBILE MENU SCRIPT -->
+  <script>
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
         
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-})
-      .catch(() => {
-        window.prompt("Copiez ce lien iCal :", url);
-      
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-});
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-} else {
-    window.prompt("Copiez ce lien iCal :", url);
-  
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
-function renderProperties() {
-  console.log("Rendu des logements :", properties);
-  const container = document.getElementById("propertiesContainer");
-  if (!container) {
-    console.error("Le conteneur propertiesContainer n'existe pas dans le HTML.");
-    return;
-  }
-  container.innerHTML = properties.map(property => 
-    `<div class="property">
-      <h3>">${property.name}</h3>
-      <p>Adresse : ">${property.address || "Non spécifiée"}</p>
-      <p>Couleur : <span style="color: ">${property.color}">">${property.color}</span></p>
-      <p>Heure d'arrivée : ">${property.checkIn || "Non spécifiée"}</p>
-      <p>Heure de départ : ">${property.checkOut || "Non spécifiée"}</p>
-      <p>Caution : ">${property.deposit || "0"} €</p>
-    </div>`
-  ).join("".);
-}
-
-}
-
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+        
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+    
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="settings"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+    
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
+    });
+    
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
+    })();
+  </script>
+</body>
+</html>
