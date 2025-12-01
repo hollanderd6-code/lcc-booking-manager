@@ -5019,13 +5019,18 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
               + '<div class="detail-value">';
 
             detailed.forEach(function (item) {
-              html += ''
-                + '<div style="margin-bottom:6px;">'
-                +   '<strong>' + item.name + '</strong>'
-                +   ' – ' + item.occupancy + '%'
-                +   ' (' + item.nightsBooked + ' nuit' + (item.nightsBooked > 1 ? 's' : '') + ' réservée' + (item.nightsBooked > 1 ? 's' : '') + ')'
-                + '</div>';
-            });
+  // On arrondit le nombre de nuits pour l'affichage
+  var nights = Math.round(item.nightsBooked);
+  if (!isFinite(nights) || nights < 0) nights = 0;
+
+  html += ''
+    + '<div style="margin-bottom:6px;">'
+    +   '<strong>' + item.name + '</strong>'
+    +   ' – ' + item.occupancy + '%'
+    +   ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ' réservée' + (nights > 1 ? 's' : '') + ')'
+    + '</div>';
+});
+
 
             html += '</div></div>';
             contentEl.innerHTML = html;
