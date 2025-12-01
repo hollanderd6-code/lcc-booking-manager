@@ -630,6 +630,7 @@
     }
 
     .form-group-inline {
+      display: flex;
       flex-direction: row;
       gap: 10px;
     }
@@ -727,43 +728,6 @@
       font-size: 11px;
       background: rgba(5, 150, 105, 0.08);
       color: var(--primary-color, #059669);
-    }
-
-    .toast {
-      background: var(--bg-primary, #fff);
-      border-radius: 999px;
-      box-shadow: var(--shadow-lg, 0 18px 40px rgba(15,23,42,.25));
-      padding: 8px 12px;
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text-primary);
-      animation: toast-in 0.2s ease-out;
-    }
-
-    .toast-success {
-      border-left: 3px solid #16a34a;
-    }
-
-    .toast-error {
-      border-left: 3px solid #dc2626;
-    }
-
-    .toast i {
-      font-size: 13px;
-    }
-
-    @keyframes toast-in {
-      from {
-        opacity: 0;
-        transform: translateY(4px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
     }
 
     @media (max-width: 640px) {
@@ -1075,7 +1039,7 @@
               </div>
               <div class="photo-input-actions">
                 <input type="file" id="propertyPhoto" accept="image/*">
-                <small class="field-help-text">Format JPG ou PNG, taille raisonnable recommandée.</small>
+                <small class="field-help-text">Format JPG ou PNG, taille raisonnable recommandée (aperçu uniquement côté navigateur).</small>
               </div>
             </div>
           </div>
@@ -1085,7 +1049,7 @@
               <i class="fas fa-map-marker-alt"></i>
               <span>Adresse du logement</span>
             </label>
-            <input type="text" id="propertyAddress" placeholder="Ex: 25 boulevard de la République, 95210 Saint-Gratien">
+            <input type="text" id="propertyAddress" name="address" placeholder="Ex: 25 boulevard de la République, 95210 Saint-Gratien">
           </div>
 
           <div class="form-group form-group-inline">
@@ -1094,14 +1058,14 @@
                 <i class="fas fa-sign-in-alt"></i>
                 <span>Heure d'arrivée</span>
               </label>
-              <input type="time" id="propertyCheckIn" placeholder="16:00">
+              <input type="time" id="propertyCheckIn" name="checkIn" placeholder="16:00">
             </div>
             <div class="form-group-inner">
               <label for="propertyCheckOut">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Heure de départ</span>
               </label>
-              <input type="time" id="propertyCheckOut" placeholder="11:00">
+              <input type="time" id="propertyCheckOut" name="checkOut" placeholder="11:00">
             </div>
           </div>
 
@@ -1111,7 +1075,7 @@
               <span>Montant de la caution</span>
             </label>
             <div class="deposit-input-wrapper">
-              <input type="number" id="propertyDeposit" min="0" step="50" placeholder="Ex: 500">
+              <input type="number" id="propertyDeposit" name="deposit" min="0" step="50" placeholder="Ex: 500">
               <span class="deposit-suffix">€</span>
             </div>
             <small class="field-help-text">Laissez vide si aucune caution n'est demandée.</small>
@@ -1139,105 +1103,21 @@
     </div>
   </div>
 
-  <!-- JS page (logique Mes logements améliorée) -->
+  <!-- JS page -->
+  <script src="/js/settings.js"></script>
+
+  <!-- JS Mes logements – UX (complément, n'altère pas /js/settings.js) -->
   <script>
     (function() {
-      const STORAGE_KEY = 'bookingmanage_properties_v2';
-
-      let properties = [];
-      let currentPhotoDataUrl = null;
-
-      const gridEl = document.getElementById('propertiesGrid');
-      const emptyStateEl = document.getElementById('propertiesEmptyState');
-      const modalEl = document.getElementById('editPropertyModal');
-      const modalTitleEl = document.getElementById('modalTitle');
-      const formEl = document.getElementById('propertyForm');
-      const propertyIdEl = document.getElementById('propertyId');
-      const nameEl = document.getElementById('propertyName');
-      const colorEl = document.getElementById('propertyColor');
-      const colorPreviewEl = document.getElementById('colorPreview');
-      const urlListEl = document.getElementById('urlList');
-      const addressEl = document.getElementById('propertyAddress');
-      const checkInEl = document.getElementById('propertyCheckIn');
-      const checkOutEl = document.getElementById('propertyCheckOut');
-      const depositEl = document.getElementById('propertyDeposit');
       const photoInputEl = document.getElementById('propertyPhoto');
       const photoPreviewEl = document.getElementById('photoPreview');
-      const toastContainer = document.getElementById('toastContainer');
 
-      function escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      }
-
-      function createId(prefix) {
-        return prefix + '_' + Date.now().toString(36) + '_' + Math.floor(Math.random() * 1e6).toString(36);
-      }
-
-      function showToast(message, type) {
-        if (!toastContainer) return;
-        const toast = document.createElement('div');
-        toast.className = 'toast ' + (type === 'error' ? 'toast-error' : 'toast-success');
-        const iconClass = type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
-        toast.innerHTML = '<i class="' + iconClass + '"></i><span>' + escapeHtml(message) + '</span>';
-        toastContainer.appendChild(toast);
-        setTimeout(function() {
-          toast.style.opacity = '0';
-          toast.style.transform = 'translateY(4px)';
-          setTimeout(function() {
-            toast.remove();
-          }, 200);
-        }, 2800);
-      }
-
-      function savePropertiesToStorage() {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(properties));
-        } catch (e) {
-          console.error('Erreur lors de la sauvegarde des logements', e);
-        }
-      }
-
-      function loadPropertiesFromStorage() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          properties = raw ? JSON.parse(raw) : [];
-        } catch (e) {
-          console.error('Erreur lors du chargement des logements', e);
-          properties = [];
-        }
-      }
-
-      function formatDeposit(amount) {
-        if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) return '';
-        try {
-          return amount.toLocaleString('fr-FR', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-          }) + ' €';
-        } catch (e) {
-          return amount + ' €';
-        }
-      }
-
-      function formatTimes(checkIn, checkOut) {
-        const parts = [];
-        if (checkIn) parts.push('Arrivée ' + checkIn);
-        if (checkOut) parts.push('Départ ' + checkOut);
-        return parts.join(' · ');
-      }
-
-      function updatePhotoPreview() {
+      function updatePhotoPreview(url) {
         if (!photoPreviewEl) return;
         photoPreviewEl.innerHTML = '';
-        if (currentPhotoDataUrl) {
+        if (url) {
           const img = document.createElement('img');
-          img.src = currentPhotoDataUrl;
+          img.src = url;
           img.alt = 'Photo du logement';
           photoPreviewEl.appendChild(img);
         } else {
@@ -1248,422 +1128,30 @@
         }
       }
 
-      function renderPropertyCard(prop) {
-        const card = document.createElement('article');
-        card.className = 'property-card';
-        if (prop.color) {
-          card.style.setProperty('--primary-color', prop.color);
-        }
-
-        const addressHtml = prop.address
-          ? '<span class="property-meta-item"><i class="fas fa-map-marker-alt"></i><span>' +
-            escapeHtml(prop.address) + '</span></span>'
-          : '';
-
-        const timesLabel = formatTimes(prop.checkIn, prop.checkOut);
-        const timesHtml = timesLabel
-          ? '<span class="property-meta-item"><i class="far fa-clock"></i><span>' +
-            escapeHtml(timesLabel) + '</span></span>'
-          : '';
-
-        const hasDeposit = typeof prop.deposit === 'number' && !isNaN(prop.deposit) && prop.deposit > 0;
-        const depositLabel = hasDeposit ? formatDeposit(prop.deposit) : '';
-        const depositHtml = hasDeposit
-          ? '<span class="property-meta-item badge-deposit"><i class="fas fa-shield-alt"></i><span>Caution ' +
-            escapeHtml(depositLabel) + '</span></span>'
-          : '<span class="property-meta-item badge-no-deposit"><i class="far fa-circle"></i><span>Pas de caution</span></span>';
-
-        const photoHtml = prop.photoDataUrl
-          ? '<div class="property-photo"><img src="' + prop.photoDataUrl + '" alt="Photo du logement ' +
-            escapeHtml(prop.name || '') + '"></div>'
-          : '<div class="property-photo"><span class="photo-placeholder"><i class="fas fa-image"></i></span></div>';
-
-        let icalHtml = '';
-        if (prop.icals && prop.icals.length) {
-          icalHtml = prop.icals.map(function(entry) {
-            const source = entry.source && entry.source.trim() ? entry.source : 'iCal';
-            const url = entry.url || '';
-            return (
-              '<div class="ical-url-item">' +
-                '<i class="fas fa-calendar-plus"></i>' +
-                '<div class="ical-source">' + escapeHtml(source) + '</div>' +
-                '<div class="ical-url-text" title="' + escapeHtml(url) + '">' + escapeHtml(url) + '</div>' +
-                '<button type="button" class="btn-test-url">Tester</button>' +
-                '<button type="button" class="btn-copy-ical"><i class="far fa-copy"></i>Copier</button>' +
-              '</div>'
-            );
-          }).join('');
-        } else {
-          icalHtml =
-            '<div class="ical-url-item">' +
-              '<i class="fas fa-info-circle"></i>' +
-              '<div class="ical-url-text">Aucune URL iCal configurée pour ce logement.</div>' +
-            '</div>';
-        }
-
-        card.innerHTML =
-          '<div class="property-header">' +
-            '<div class="property-info">' +
-              '<div class="property-name">' +
-                '<span class="color-badge" style="background:' + escapeHtml(prop.color || '#059669') + ';"></span>' +
-                '<span>' + escapeHtml(prop.name || 'Sans nom') + '</span>' +
-              '</div>' +
-              '<div class="property-meta">' +
-                addressHtml +
-                timesHtml +
-                depositHtml +
-              '</div>' +
-            '</div>' +
-            '<div class="property-header-right">' +
-              photoHtml +
-              '<div class="property-actions">' +
-                '<button class="btn-icon-action btn-edit" type="button" title="Modifier">' +
-                  '<i class="fas fa-pen"></i>' +
-                '</button>' +
-                '<button class="btn-icon-action btn-delete" type="button" title="Supprimer">' +
-                  '<i class="fas fa-trash"></i>' +
-                '</button>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="ical-urls">' + icalHtml + '</div>';
-
-        const editBtn = card.querySelector('.btn-edit');
-        const deleteBtn = card.querySelector('.btn-delete');
-        if (editBtn) {
-          editBtn.addEventListener('click', function() {
-            openEditPropertyModalInternal(prop.id);
-          });
-        }
-        if (deleteBtn) {
-          deleteBtn.addEventListener('click', function() {
-            deletePropertyInternal(prop.id);
-          });
-        }
-
-        const testButtons = card.querySelectorAll('.btn-test-url');
-        const copyButtons = card.querySelectorAll('.btn-copy-ical');
-
-        testButtons.forEach(function(btn, index) {
-          btn.addEventListener('click', function() {
-            if (prop.icals && prop.icals[index] && prop.icals[index].url) {
-              testIcalUrlInternal(prop.icals[index].url);
-            }
-          });
-        });
-
-        copyButtons.forEach(function(btn, index) {
-          btn.addEventListener('click', function() {
-            if (prop.icals && prop.icals[index] && prop.icals[index].url) {
-              copyIcalUrlInternal(prop.icals[index].url);
-            }
-          });
-        });
-
-        return card;
-      }
-
-      function renderProperties() {
-        if (!gridEl || !emptyStateEl) return;
-        gridEl.innerHTML = '';
-        if (!properties.length) {
-          emptyStateEl.style.display = 'block';
-          return;
-        }
-        emptyStateEl.style.display = 'none';
-        properties.forEach(function(prop) {
-          const card = renderPropertyCard(prop);
-          gridEl.appendChild(card);
-        });
-      }
-
-      function resetForm() {
-        if (!formEl) return;
-        formEl.reset();
-        propertyIdEl.value = '';
-        currentPhotoDataUrl = null;
-        updatePhotoPreview();
-        if (urlListEl) {
-          urlListEl.innerHTML = '';
-          addUrlField();
-        }
-        if (colorEl && colorPreviewEl) {
-          colorPreviewEl.textContent = colorEl.value || '#E67E50';
-          colorPreviewEl.style.background = colorEl.value || '#E67E50';
-        }
-      }
-
-      function openAddPropertyModalInternal() {
-        if (!modalEl) return;
-        if (modalTitleEl) {
-          const span = modalTitleEl.querySelector('span');
-          if (span) span.textContent = 'Ajouter un logement';
-        }
-        resetForm();
-        modalEl.classList.add('active');
-        if (nameEl) {
-          setTimeout(function() {
-            nameEl.focus();
-          }, 60);
-        }
-      }
-
-      function openEditPropertyModalInternal(id) {
-        if (!modalEl) return;
-        const prop = properties.find(function(p) { return p.id === id; });
-        if (!prop) return;
-
-        if (modalTitleEl) {
-          const span = modalTitleEl.querySelector('span');
-          if (span) span.textContent = 'Modifier le logement';
-        }
-
-        propertyIdEl.value = prop.id || '';
-        nameEl.value = prop.name || '';
-        addressEl.value = prop.address || '';
-        checkInEl.value = prop.checkIn || '';
-        checkOutEl.value = prop.checkOut || '';
-        if (typeof prop.deposit === 'number' && !isNaN(prop.deposit) && prop.deposit > 0) {
-          depositEl.value = prop.deposit;
-        } else {
-          depositEl.value = '';
-        }
-        colorEl.value = prop.color || '#E67E50';
-        if (colorPreviewEl) {
-          colorPreviewEl.textContent = colorEl.value;
-          colorPreviewEl.style.background = colorEl.value;
-        }
-
-        currentPhotoDataUrl = prop.photoDataUrl || null;
-        updatePhotoPreview();
-
-        if (urlListEl) {
-          urlListEl.innerHTML = '';
-          if (prop.icals && prop.icals.length) {
-            prop.icals.forEach(function(entry) {
-              addUrlField(entry);
-            });
-          } else {
-            addUrlField();
-          }
-        }
-
-        modalEl.classList.add('active');
-      }
-
-      function closeEditModalInternal() {
-        if (!modalEl) return;
-        modalEl.classList.remove('active');
-      }
-
-      function addUrlField(data) {
-        if (!urlListEl) return;
-        const sourceVal = data && data.source ? data.source : '';
-        const urlVal = data && data.url ? data.url : '';
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'url-input-group';
-
-        const sourceInput = document.createElement('input');
-        sourceInput.type = 'text';
-        sourceInput.className = 'url-source-input';
-        sourceInput.placeholder = 'Plateforme (Airbnb, Booking, etc.)';
-        sourceInput.value = sourceVal;
-
-        const urlInput = document.createElement('input');
-        urlInput.type = 'url';
-        urlInput.className = 'url-value-input';
-        urlInput.placeholder = 'URL iCal (https://...)';
-        urlInput.value = urlVal;
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn-remove-url';
-        removeBtn.title = 'Supprimer cette URL';
-        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        removeBtn.addEventListener('click', function() {
-          urlListEl.removeChild(wrapper);
-          if (!urlListEl.children.length) {
-            addUrlField();
-          }
-        });
-
-        wrapper.appendChild(sourceInput);
-        wrapper.appendChild(urlInput);
-        wrapper.appendChild(removeBtn);
-
-        urlListEl.appendChild(wrapper);
-      }
-
-      function savePropertyInternal(event) {
-        if (event && event.preventDefault) event.preventDefault();
-        if (!nameEl || !colorEl) return;
-
-        const name = nameEl.value.trim();
-        if (!name) {
-          showToast('Merci de renseigner un nom de logement.', 'error');
-          nameEl.focus();
-          return false;
-        }
-
-        const icals = [];
-        if (urlListEl) {
-          const groups = urlListEl.querySelectorAll('.url-input-group');
-          groups.forEach(function(group) {
-            const sourceInput = group.querySelector('.url-source-input');
-            const urlInput = group.querySelector('.url-value-input');
-            const url = urlInput && urlInput.value ? urlInput.value.trim() : '';
-            const source = sourceInput && sourceInput.value ? sourceInput.value.trim() : '';
-            if (url) {
-              icals.push({
-                source: source,
-                url: url
-              });
-            }
-          });
-        }
-
-        const depositRaw = depositEl && depositEl.value ? depositEl.value.trim() : '';
-        let deposit = null;
-        if (depositRaw) {
-          const normalized = depositRaw.replace(',', '.');
-          const parsed = Number(normalized);
-          if (!isNaN(parsed) && parsed > 0) {
-            deposit = parsed;
-          }
-        }
-
-        const data = {
-          id: propertyIdEl && propertyIdEl.value ? propertyIdEl.value : createId('property'),
-          name: name,
-          color: colorEl.value || '#E67E50',
-          address: addressEl && addressEl.value ? addressEl.value.trim() : '',
-          checkIn: checkInEl && checkInEl.value ? checkInEl.value : '',
-          checkOut: checkOutEl && checkOutEl.value ? checkOutEl.value : '',
-          deposit: deposit,
-          photoDataUrl: currentPhotoDataUrl,
-          icals: icals
-        };
-
-        const existingIndex = properties.findIndex(function(p) { return p.id === data.id; });
-        if (existingIndex >= 0) {
-          properties[existingIndex] = data;
-        } else {
-          properties.push(data);
-        }
-
-        savePropertiesToStorage();
-        renderProperties();
-        closeEditModalInternal();
-        showToast('Logement enregistré.');
-        return false;
-      }
-
-      function deletePropertyInternal(id) {
-        const prop = properties.find(function(p) { return p.id === id; });
-        const label = prop && prop.name ? '"' + prop.name + '"' : 'ce logement';
-        if (!window.confirm('Supprimer ' + label + ' ?')) return;
-        properties = properties.filter(function(p) { return p.id !== id; });
-        savePropertiesToStorage();
-        renderProperties();
-        showToast('Logement supprimé.');
-      }
-
-      function testIcalUrlInternal(url) {
-        if (!url) return;
-        try {
-          const finalUrl = url.trim();
-          if (!finalUrl) return;
-          window.open(finalUrl, '_blank', 'noopener');
-        } catch (e) {
-          console.error('Erreur lors de l\'ouverture de l\'URL iCal', e);
-        }
-      }
-
-      function copyIcalUrlInternal(url) {
-        if (!url) return;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url)
-            .then(function() {
-              showToast('URL copiée dans le presse-papiers.');
-            })
-            .catch(function() {
-              showToast('Impossible de copier l\'URL.', 'error');
-            });
-        } else {
-          const textarea = document.createElement('textarea');
-          textarea.value = url;
-          document.body.appendChild(textarea);
-          textarea.select();
-          try {
-            document.execCommand('copy');
-            showToast('URL copiée dans le presse-papiers.');
-          } catch (e) {
-            showToast('Impossible de copier l\'URL.', 'error');
-          }
-          document.body.removeChild(textarea);
-        }
-      }
-
-      // Expose required functions to the global scope for HTML handlers
-      window.openAddPropertyModal = openAddPropertyModalInternal;
-      window.openEditPropertyModal = openEditPropertyModalInternal;
-      window.closeEditModal = closeEditModalInternal;
-      window.addUrlField = addUrlField;
-      window.saveProperty = savePropertyInternal;
-      window.deleteProperty = deletePropertyInternal;
-      window.testIcalUrl = testIcalUrlInternal;
-      window.copyIcalUrl = copyIcalUrlInternal;
-
-      if (colorEl && colorPreviewEl) {
-        colorPreviewEl.textContent = colorEl.value || '#E67E50';
-        colorPreviewEl.style.background = colorEl.value || '#E67E50';
-        colorEl.addEventListener('input', function() {
-          colorPreviewEl.textContent = colorEl.value;
-          colorPreviewEl.style.background = colorEl.value;
-        });
-      }
-
-      if (photoInputEl) {
+      if (photoInputEl && photoPreviewEl) {
+        updatePhotoPreview(null);
         photoInputEl.addEventListener('change', function() {
           const file = this.files && this.files[0];
-          if (!file) return;
+          if (!file) {
+            updatePhotoPreview(null);
+            return;
+          }
           if (!file.type || file.type.indexOf('image/') !== 0) {
-            showToast('Merci de sélectionner une image.', 'error');
+            alert('Merci de sélectionner une image.');
             this.value = '';
+            updatePhotoPreview(null);
             return;
           }
           const reader = new FileReader();
           reader.onload = function(e) {
-            currentPhotoDataUrl = e.target && e.target.result ? e.target.result : null;
-            updatePhotoPreview();
+            updatePhotoPreview(e.target && e.target.result);
           };
           reader.readAsDataURL(file);
         });
       }
-
-      if (modalEl) {
-        modalEl.addEventListener('click', function(event) {
-          if (event.target === modalEl) {
-            closeEditModalInternal();
-          }
-        });
-      }
-
-      document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape' && modalEl && modalEl.classList.contains('active')) {
-          closeEditModalInternal();
-        }
-      });
-
-      // Initialisation
-      loadPropertiesFromStorage();
-      renderProperties();
-      if (urlListEl && !urlListEl.children.length) {
-        addUrlField();
-      }
     })();
   </script>
+
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
