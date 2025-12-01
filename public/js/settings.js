@@ -58,7 +58,11 @@ async function saveProperty(event) {
     .map((input) => input.value.trim())
     .filter((url) => url.length > 0);
 
-  const propertyData = { name, color, icalUrls };
+  const address = document.getElementById("propertyAddress").value;
+const checkIn = document.getElementById("propertyCheckIn").value;
+const checkOut = document.getElementById("propertyCheckOut").value;
+const deposit = document.getElementById("propertyDeposit").value;
+const propertyData = { name, color, icalUrls, address, checkIn, checkOut, deposit };
 
   try {
     const token = localStorage.getItem("lcc_token");
