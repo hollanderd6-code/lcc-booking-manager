@@ -1070,6 +1070,7 @@ async function getUserFromRequest(req) {
 // ============================================
 
 // PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
+// PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
   try {
     const result = await pool.query(`
@@ -1088,9 +1089,28 @@ async function loadProperties() {
       ORDER BY created_at ASC
     `);
 
-    PROPERTIES = result.rows.map(row => {
-      const raw = row.ical_urls || [];
-      let icalUrls = [];
+    PROPERTIES = result.rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      color: row.color,
+
+      // 🔴 IMPORTANT : on garde le JSON tel quel (strings OU objets)
+      icalUrls: row.ical_urls || [],
+
+      address: row.address,
+      arrival_time: row.arrival_time,
+      departure_time: row.departure_time,
+      deposit_amount: row.deposit_amount,
+      photo_url: row.photo_url
+    }));
+
+    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
+  } catch (error) {
+    console.error('❌ Erreur loadProperties :', error);
+    PROPERTIES = [];
+  }
+}
 
       // Compat : on accepte ancien format (array de strings)
       // ou nouveau (array d'objets { url, source } dans le futur)
@@ -2886,17 +2906,39 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
     }
 
     // normaliser les URLs iCal : on accepte strings ou objets {platform,url}
-    const normalizedIcal = Array.isArray(icalUrls)
-      ? icalUrls.map(item => {
-          if (typeof item === 'string') {
-            return item; // on stocke la string brute en DB comme avant
-          }
-          if (item && item.url) {
-            return item.url; // on ne garde que l’URL en DB pour rester simple
-          }
-          return null;
-        }).filter(Boolean)
-      : [];
+    // normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
+let normalizedIcal = [];
+if (Array.isArray(icalUrls)) {
+  normalizedIcal = icalUrls
+    .map(item => {
+      // Ancien cas : juste une string
+      if (typeof item === 'string') {
+        return {
+          url: item,
+          platform:
+            icalService && icalService.extractSource
+              ? icalService.extractSource(item)
+              : 'iCal'
+        };
+      }
+
+      // Nouveau cas : objet { platform, url }
+      if (item && typeof item === 'object' && item.url) {
+        const url = item.url;
+        const platform =
+          item.platform && item.platform.trim().length > 0
+            ? item.platform.trim()
+            : (icalService && icalService.extractSource
+                ? icalService.extractSource(url)
+                : 'iCal');
+
+        return { url, platform };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+}
 
     await pool.query(
       `INSERT INTO properties (
@@ -2986,17 +3028,37 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
     }
 
     let newIcalUrls;
-    if (icalUrls !== undefined) {
-      newIcalUrls = Array.isArray(icalUrls)
-        ? icalUrls.map(item => {
-            if (typeof item === 'string') return item;
-            if (item && item.url) return item.url;
-            return null;
-          }).filter(Boolean)
-        : [];
-    } else {
-      newIcalUrls = property.icalUrls || property.ical_urls || [];
-    }
+if (icalUrls !== undefined) {
+  newIcalUrls = Array.isArray(icalUrls)
+    ? icalUrls
+        .map(item => {
+          if (typeof item === 'string') {
+            return {
+              url: item,
+              platform:
+                icalService && icalService.extractSource
+                  ? icalService.extractSource(item)
+                  : 'iCal'
+            };
+          }
+          if (item && typeof item === 'object' && item.url) {
+            const url = item.url;
+            const platform =
+              item.platform && item.platform.trim().length > 0
+                ? item.platform.trim()
+                : (icalService && icalService.extractSource
+                    ? icalService.extractSource(url)
+                    : 'iCal');
+            return { url, platform };
+          }
+          return null;
+        })
+        .filter(Boolean)
+    : [];
+} else {
+  // on garde ce qui est en base
+  newIcalUrls = property.icalUrls || property.ical_urls || [];
+}
 
     await pool.query(
       `UPDATE properties
