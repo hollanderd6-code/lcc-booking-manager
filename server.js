@@ -1766,8 +1766,10 @@ function buildPhotoUrl(req, filename) {
 // ROUTES API - PROFIL UTILISATEUR ÉTENDU
 // ============================================
 // À ajouter dans server.js après les routes existantes
+// ============================================
+// ROUTES API - PROFIL UTILISATEUR ÉTENDU
+// ============================================
 
-// GET - Récupérer le profil complet de l'utilisateur
 app.get('/api/user/profile', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -1775,7 +1777,6 @@ app.get('/api/user/profile', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    // Récupérer les infos complètes depuis la base
     const result = await pool.query(
       `SELECT 
         id, 
@@ -1793,56 +1794,32 @@ app.get('/api/user/profile', async (req, res) => {
        WHERE id = $1`,
       [user.id]
     );
-// 👇 nouveaux champs qu'on s'attend à avoir dans PROPERTIES
-      address: p.address || null,
-      arrivalTime: p.arrival_time || p.arrivalTime || null,
-      departureTime: p.departure_time || p.departureTime || null,
-      depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
-      photoUrl: p.photo_url || p.photoUrl || null,
 
-      // iCal : on garde compat avec ton ancien format (array de strings)
-      icalUrls: (p.icalUrls || p.ical_urls || []).map(urlObj => {
-        if (typeof urlObj === 'string') {
-          return {
-            url: urlObj,
-            platform: icalService.extractSource
-              ? icalService.extractSource(urlObj)
-              : 'Inconnu'
-          };
-        }
-        // si déjà un objet, on garde
-        return urlObj;
-      }),
-
-      reservationCount: (reservationsStore.properties[p.id] || []).length
-    }))
-  });
-});
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    const userProfile = result.rows[0];
-    
-    res.json({
-      id: userProfile.id,
-      email: userProfile.email,
-      firstName: userProfile.first_name,
-      lastName: userProfile.last_name,
-      company: userProfile.company,
-      accountType: userProfile.account_type || 'individual',
-      address: userProfile.address || '',
-      postalCode: userProfile.postal_code || '',
-      city: userProfile.city || '',
-      siret: userProfile.siret || '',
-      createdAt: userProfile.created_at
-    });
+    const row = result.rows[0];
 
-  } catch (err) {
-    console.error('Erreur récupération profil:', err);
+    res.json({
+      id: row.id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      company: row.company,
+      accountType: row.account_type,
+      address: row.address,
+      postalCode: row.postal_code,
+      city: row.city,
+      siret: row.siret,
+      createdAt: row.created_at
+    });
+  } catch (error) {
+    console.error('Erreur profil utilisateur:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 // PUT - Mettre à jour le profil complet de l'utilisateur
 app.put('/api/user/profile', async (req, res) => {
