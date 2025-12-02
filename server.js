@@ -56,8 +56,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ============================================
 
 const pool = new Pool({
-  connectionString: process.e
-    nv.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production'
     ? { rejectUnauthorized: false }
     : false
