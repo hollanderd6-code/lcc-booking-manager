@@ -17,14 +17,48 @@ const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
+const multer = require('multer');
 
+// Dossier d'upload pour les photos de logements
+const UPLOAD_DIR = path.join(__dirname, 'uploads', 'properties');
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e6);
+    cb(null, `${base}-${unique}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!ok.includes(file.mimetype)) {
+      return cb(new Error('Type de fichier non supporté'), false);
+    }
+    cb(null, true);
+  }
+});
+
+// servir les fichiers uploadés
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ============================================
 // CONNEXION POSTGRES
 // ============================================
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.e
+    nv.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production'
     ? { rejectUnauthorized: false }
     : false
@@ -1018,6 +1052,19 @@ async function loadProperties() {
 
     PROPERTIES = result.rows.map(row => {
       const raw = row.ical_urls || [];
+      PROPERTIES = result.rows.map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    color: row.color,
+    icalUrls: row.ical_urls || [],
+    address: row.address,
+    arrival_time: row.arrival_time,
+    departure_time: row.departure_time,
+    deposit_amount: row.deposit_amount,
+    photo_url: row.photo_url
+  }));
+}
       let icalUrls = [];
 
       if (Array.isArray(raw)) {
@@ -1695,6 +1742,24 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
     count: reservations.length
   });
 });
+function parsePropertyBody(req) {
+  // si on reçoit du FormData : body.data = string JSON
+  if (req.body && typeof req.body.data === 'string') {
+    try {
+      return JSON.parse(req.body.data);
+    } catch (e) {
+      throw new Error('Payload data invalide');
+    }
+  }
+  // fallback si jamais on envoie directement du JSON
+  return req.body || {};
+}
+
+function buildPhotoUrl(req, filename) {
+  if (!filename) return null;
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  return `${baseUrl}/uploads/properties/${filename}`;
+}
 
 // ============================================
 // ROUTES API - PROFIL UTILISATEUR ÉTENDU
@@ -1727,7 +1792,31 @@ app.get('/api/user/profile', async (req, res) => {
        WHERE id = $1`,
       [user.id]
     );
+// 👇 nouveaux champs qu'on s'attend à avoir dans PROPERTIES
+      address: p.address || null,
+      arrivalTime: p.arrival_time || p.arrivalTime || null,
+      departureTime: p.departure_time || p.departureTime || null,
+      depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
+      photoUrl: p.photo_url || p.photoUrl || null,
 
+      // iCal : on garde compat avec ton ancien format (array de strings)
+      icalUrls: (p.icalUrls || p.ical_urls || []).map(urlObj => {
+        if (typeof urlObj === 'string') {
+          return {
+            url: urlObj,
+            platform: icalService.extractSource
+              ? icalService.extractSource(urlObj)
+              : 'Inconnu'
+          };
+        }
+        // si déjà un objet, on garde
+        return urlObj;
+      }),
+
+      reservationCount: (reservationsStore.properties[p.id] || []).length
+    }))
+  });
+});
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
@@ -2691,19 +2780,41 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     id: property.id,
     name: property.name,
     color: property.color,
-    icalUrls: property.icalUrls,
+    address: property.address || null,
+    arrivalTime: property.arrival_time || property.arrivalTime || null,
+    departureTime: property.departure_time || property.departureTime || null,
+    depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
+    photoUrl: property.photo_url || property.photoUrl || null,
+    icalUrls: property.icalUrls || property.ical_urls || [],
     reservationCount: (reservationsStore.properties[property.id] || []).length
   });
 });
 
-app.post('/api/properties', async (req, res) => {
+
+app.post('/api/properties', upload.single('photo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { name, color, icalUrls } = req.body;
+    let body;
+    try {
+      body = parsePropertyBody(req);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+
+    const {
+      name,
+      color,
+      icalUrls,
+      address,
+      arrivalTime,
+      departureTime,
+      depositAmount,
+      photoUrl: existingPhotoUrl
+    } = body;
 
     if (!name || !color) {
       return res.status(400).json({ error: 'Nom et couleur requis' });
@@ -2716,10 +2827,44 @@ app.post('/api/properties', async (req, res) => {
 
     const id = `${user.id}-${baseId}`;
 
+    // photo : si un fichier est uploadé on l’utilise, sinon on garde l’éventuelle valeur existante
+    let photoUrl = existingPhotoUrl || null;
+    if (req.file) {
+      photoUrl = buildPhotoUrl(req, req.file.filename);
+    }
+
+    // normaliser les URLs iCal : on accepte strings ou objets {platform,url}
+    const normalizedIcal = Array.isArray(icalUrls)
+      ? icalUrls.map(item => {
+          if (typeof item === 'string') {
+            return item; // on stocke la string brute en DB comme avant
+          }
+          if (item && item.url) {
+            return item.url; // on ne garde que l’URL en DB pour rester simple
+          }
+          return null;
+        }).filter(Boolean)
+      : [];
+
     await pool.query(
-      `INSERT INTO properties (id, user_id, name, color, ical_urls, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [id, user.id, name, color, JSON.stringify(icalUrls || [])]
+      `INSERT INTO properties (
+         id, user_id, name, color, ical_urls,
+         address, arrival_time, departure_time, deposit_amount, photo_url,
+         created_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+      [
+        id,
+        user.id,
+        name,
+        color,
+        JSON.stringify(normalizedIcal),
+        address || null,
+        arrivalTime || null,
+        departureTime || null,
+        depositAmount === '' || depositAmount == null ? null : Number(depositAmount),
+        photoUrl
+      ]
     );
 
     await loadProperties();
@@ -2736,7 +2881,8 @@ app.post('/api/properties', async (req, res) => {
   }
 });
 
-app.put('/api/properties/:propertyId', async (req, res) => {
+
+app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2744,7 +2890,24 @@ app.put('/api/properties/:propertyId', async (req, res) => {
     }
 
     const { propertyId } = req.params;
-    const { name, color, icalUrls } = req.body;
+
+    let body;
+    try {
+      body = parsePropertyBody(req);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+
+    const {
+      name,
+      color,
+      icalUrls,
+      address,
+      arrivalTime,
+      departureTime,
+      depositAmount,
+      photoUrl: existingPhotoUrl
+    } = body;
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
@@ -2753,15 +2916,59 @@ app.put('/api/properties/:propertyId', async (req, res) => {
 
     const newName = name || property.name;
     const newColor = color || property.color;
-    const newIcalUrls = (icalUrls !== undefined) ? icalUrls : property.icalUrls;
+
+    const newAddress = address !== undefined ? address : property.address || null;
+    const newArrivalTime = arrivalTime !== undefined ? arrivalTime : property.arrival_time || property.arrivalTime || null;
+    const newDepartureTime = departureTime !== undefined ? departureTime : property.departure_time || property.departureTime || null;
+    const newDepositAmount =
+      depositAmount !== undefined
+        ? (depositAmount === '' || depositAmount == null ? null : Number(depositAmount))
+        : (property.deposit_amount ?? property.depositAmount ?? null);
+
+    let newPhotoUrl = existingPhotoUrl !== undefined
+      ? (existingPhotoUrl || null)
+      : (property.photo_url || property.photoUrl || null);
+
+    if (req.file) {
+      newPhotoUrl = buildPhotoUrl(req, req.file.filename);
+    }
+
+    let newIcalUrls;
+    if (icalUrls !== undefined) {
+      newIcalUrls = Array.isArray(icalUrls)
+        ? icalUrls.map(item => {
+            if (typeof item === 'string') return item;
+            if (item && item.url) return item.url;
+            return null;
+          }).filter(Boolean)
+        : [];
+    } else {
+      newIcalUrls = property.icalUrls || property.ical_urls || [];
+    }
 
     await pool.query(
       `UPDATE properties
        SET name = $1,
            color = $2,
-           ical_urls = $3
-       WHERE id = $4 AND user_id = $5`,
-      [newName, newColor, JSON.stringify(newIcalUrls), propertyId, user.id]
+           ical_urls = $3,
+           address = $4,
+           arrival_time = $5,
+           departure_time = $6,
+           deposit_amount = $7,
+           photo_url = $8
+       WHERE id = $9 AND user_id = $10`,
+      [
+        newName,
+        newColor,
+        JSON.stringify(newIcalUrls),
+        newAddress,
+        newArrivalTime,
+        newDepartureTime,
+        newDepositAmount,
+        newPhotoUrl,
+        propertyId,
+        user.id
+      ]
     );
 
     await loadProperties();
@@ -2777,6 +2984,7 @@ app.put('/api/properties/:propertyId', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 app.delete('/api/properties/:propertyId', async (req, res) => {
   try {
