@@ -1141,7 +1141,8 @@ async function loadProperties() {
         departure_time: row.departure_time,
         deposit_amount: row.deposit_amount,
         photo_url: row.photo_url
-      };
+      }
+});
 
     console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
   } catch (error) {
