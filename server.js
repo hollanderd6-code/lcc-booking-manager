@@ -1101,24 +1101,6 @@ async function loadProperties() {
   }
 }
 
-
-      return {
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        color: row.color,
-        // Toujours un tableau de STRING en interne
-        icalUrls
-      };
-    });
-
-    console.log(`✅ ${PROPERTIES.length} logements chargés depuis Postgres`);
-  } catch (error) {
-    console.error('❌ Erreur lors du chargement des logements:', error.message);
-    PROPERTIES = [];
-  }
-}
-
 function getUserProperties(userId) {
   return PROPERTIES.filter(p => p.userId === userId);
 }
