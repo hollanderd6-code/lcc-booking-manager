@@ -1095,7 +1095,8 @@ async function loadProperties() {
       name: row.name,
       color: row.color,
 
-      // 🔴 On garde le JSON tel quel (strings OU objets { platform, url })
+      // Pour l'instant on garde ical_urls tel quel (strings ou objets),
+      // on le transformera au moment de la réponse API si besoin.
       icalUrls: row.ical_urls || [],
 
       // Champs supplémentaires
@@ -1105,45 +1106,6 @@ async function loadProperties() {
       deposit_amount: row.deposit_amount,
       photo_url: row.photo_url
     }));
-
-    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
-  } catch (error) {
-    console.error('❌ Erreur loadProperties :', error);
-    PROPERTIES = [];
-  }
-}
-
-      // Compat : on accepte ancien format (array de strings)
-      // ou nouveau (array d'objets { url, source } dans le futur)
-      if (Array.isArray(raw)) {
-        icalUrls = raw
-          .map(item => {
-            if (typeof item === 'string') {
-              return item;
-            }
-            if (item && typeof item === 'object' && item.url) {
-              return item.url;
-            }
-            return null;
-          })
-          .filter(url => typeof url === 'string' && url.trim().length > 0);
-      }
-
-      return {
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        color: row.color,
-        icalUrls,               // array de strings d'URL iCal
-
-        // nouveaux champs utilisés par le front
-        address: row.address,
-        arrival_time: row.arrival_time,
-        departure_time: row.departure_time,
-        deposit_amount: row.deposit_amount,
-        photo_url: row.photo_url
-      }
-});
 
     console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
   } catch (error) {
