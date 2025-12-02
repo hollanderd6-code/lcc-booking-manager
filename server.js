@@ -20,9 +20,36 @@ const { Pool } = require('pg');
 const axios = require('axios');
 
 // Dossier d'upload pour les photos de logements
-const UPLOAD_DIR = path.join(__dirname, 'uploads', 'properties');
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// En local : /.../lcc-booking-manager/uploads/properties
+// Sur Render : on préfère /tmp qui est writable
+const isRenderEnv =
+  process.env.RENDER === 'true' ||
+  !!process.env.RENDER_EXTERNAL_URL ||
+  process.env.NODE_ENV === 'production';
+
+let UPLOAD_DIR = isRenderEnv
+  ? path.join('/tmp', 'uploads', 'properties')
+  : path.join(__dirname, 'uploads', 'properties');
+
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+  console.log('📁 Dossier uploads initialisé :', UPLOAD_DIR);
+} catch (err) {
+  console.error('❌ Impossible de créer le dossier uploads :', UPLOAD_DIR, err);
+  // On essaie un dernier fallback dans /tmp
+  if (UPLOAD_DIR !== path.join('/tmp', 'uploads', 'properties')) {
+    UPLOAD_DIR = path.join('/tmp', 'uploads', 'properties');
+    try {
+      if (!fs.existsSync(UPLOAD_DIR)) {
+        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      }
+      console.log('📁 Dossier uploads fallback :', UPLOAD_DIR);
+    } catch (e2) {
+      console.error('❌ Échec du fallback pour le dossier uploads :', e2);
+    }
+  }
 }
 
 const storage = multer.diskStorage({
@@ -40,7 +67,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!ok.includes(file.mimetype)) {
@@ -50,8 +77,6 @@ const upload = multer({
   }
 });
 
-// servir les fichiers uploadés
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ============================================
 // CONNEXION POSTGRES
 // ============================================
