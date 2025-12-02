@@ -51,11 +51,9 @@ try {
     }
   }
 }
+
 // UPLOAD_DIR = .../uploads/properties (ou /tmp/uploads/properties en prod)
 const UPLOAD_ROOT = path.dirname(UPLOAD_DIR);
-
-// Sert /uploads/... depuis le bon dossier (parent de "properties")
-app.use('/uploads', express.static(UPLOAD_ROOT));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -940,6 +938,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // ============================================
 
 const app = express();
+app.use('/uploads', express.static(UPLOAD_ROOT));
 const PORT = process.env.PORT || 3000;
 
 // Stripe
