@@ -1766,9 +1766,6 @@ function buildPhotoUrl(req, filename) {
 // ROUTES API - PROFIL UTILISATEUR ÉTENDU
 // ============================================
 // À ajouter dans server.js après les routes existantes
-// ============================================
-// ROUTES API - PROFIL UTILISATEUR ÉTENDU
-// ============================================
 
 app.get('/api/user/profile', async (req, res) => {
   try {
@@ -2720,26 +2717,73 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 // ============================================
 
 app.get('/api/properties', async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const userProps = getUserProperties(user.id);
+
+    const properties = userProps.map(p => {
+      const rawIcal = p.icalUrls || p.ical_urls || [];
+
+      // On reconstruit un tableau d'objets { url, platform }
+      const icalUrls = Array.isArray(rawIcal)
+        ? rawIcal
+            .map(item => {
+              // Ancien format : tableau de strings
+              if (typeof item === 'string') {
+                return {
+                  url: item,
+                  platform:
+                    icalService && icalService.extractSource
+                      ? icalService.extractSource(item)
+                      : 'Inconnu'
+                };
+              }
+
+              // Nouveau format éventuel : déjà un objet
+              if (item && typeof item === 'object' && item.url) {
+                return {
+                  url: item.url,
+                  platform:
+                    item.platform ||
+                    (icalService && icalService.extractSource
+                      ? icalService.extractSource(item.url)
+                      : 'Inconnu')
+                };
+              }
+
+              return null;
+            })
+            .filter(Boolean)
+        : [];
+
+      return {
+        id: p.id,
+        name: p.name,
+        color: p.color,
+
+        // 👇 nouveaux champs que le front attend
+        address: p.address || null,
+        arrivalTime: p.arrival_time || p.arrivalTime || null,
+        departureTime: p.departure_time || p.departureTime || null,
+        depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
+        photoUrl: p.photo_url || p.photoUrl || null,
+
+        icalUrls,
+        reservationCount: (reservationsStore.properties[p.id] || []).length
+      };
+    });
+
+    res.json({ properties });
+  } catch (err) {
+    console.error('Erreur /api/properties :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-
-  const userProps = getUserProperties(user.id);
-
-  res.json({
-    properties: userProps.map(p => ({
-      id: p.id,
-      name: p.name,
-      color: p.color,
-      icalUrls: p.icalUrls.map(url => ({
-        url,
-        source: icalService.extractSource ? icalService.extractSource(url) : 'Inconnu'
-      })),
-      reservationCount: (reservationsStore.properties[p.id] || []).length
-    }))
-  });
 });
+
 
 app.get('/api/properties/:propertyId', async (req, res) => {
   const user = await getUserFromRequest(req);
