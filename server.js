@@ -1043,36 +1043,33 @@ async function getUserFromRequest(req) {
 async function loadProperties() {
   try {
     const result = await pool.query(`
-      SELECT id, user_id, name, color, ical_urls
+      SELECT
+        id,
+        user_id,
+        name,
+        color,
+        ical_urls,
+        address,
+        arrival_time,
+        departure_time,
+        deposit_amount,
+        photo_url
       FROM properties
       ORDER BY created_at ASC
     `);
 
     PROPERTIES = result.rows.map(row => {
       const raw = row.ical_urls || [];
-      PROPERTIES = result.rows.map(row => ({
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    color: row.color,
-    icalUrls: row.ical_urls || [],
-    address: row.address,
-    arrival_time: row.arrival_time,
-    departure_time: row.departure_time,
-    deposit_amount: row.deposit_amount,
-    photo_url: row.photo_url
-  }));
-}
       let icalUrls = [];
 
+      // Compat : on accepte ancien format (array de strings)
+      // ou nouveau (array d'objets { url, source } dans le futur)
       if (Array.isArray(raw)) {
         icalUrls = raw
           .map(item => {
-            // Cas ancien : tableau de chaînes
             if (typeof item === 'string') {
               return item;
             }
-            // Cas nouveau : tableau d'objets { url, source }
             if (item && typeof item === 'object' && item.url) {
               return item.url;
             }
@@ -1080,6 +1077,30 @@ async function loadProperties() {
           })
           .filter(url => typeof url === 'string' && url.trim().length > 0);
       }
+
+      return {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        color: row.color,
+        icalUrls,               // array de strings d'URL iCal
+
+        // nouveaux champs utilisés par le front
+        address: row.address,
+        arrival_time: row.arrival_time,
+        departure_time: row.departure_time,
+        deposit_amount: row.deposit_amount,
+        photo_url: row.photo_url
+      };
+    });
+
+    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
+  } catch (error) {
+    console.error('❌ Erreur loadProperties :', error);
+    PROPERTIES = [];
+  }
+}
+
 
       return {
         id: row.id,
