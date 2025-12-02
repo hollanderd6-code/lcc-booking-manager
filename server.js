@@ -3075,45 +3075,6 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-    await pool.query(
-      `UPDATE properties
-       SET name = $1,
-           color = $2,
-           ical_urls = $3,
-           address = $4,
-           arrival_time = $5,
-           departure_time = $6,
-           deposit_amount = $7,
-           photo_url = $8
-       WHERE id = $9 AND user_id = $10`,
-      [
-        newName,
-        newColor,
-        JSON.stringify(newIcalUrls),
-        newAddress,
-        newArrivalTime,
-        newDepartureTime,
-        newDepositAmount,
-        newPhotoUrl,
-        propertyId,
-        user.id
-      ]
-    );
-
-    await loadProperties();
-
-    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-
-    res.json({
-      message: 'Logement modifié avec succès',
-      property: updated
-    });
-  } catch (err) {
-    console.error('Erreur modification logement:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 
 app.delete('/api/properties/:propertyId', async (req, res) => {
   try {
