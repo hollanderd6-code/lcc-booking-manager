@@ -1069,7 +1069,7 @@ async function getUserFromRequest(req) {
 // PROPERTIES (logements) - stockées en base
 // ============================================
 
-// PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
+
 // PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
   try {
@@ -1095,9 +1095,10 @@ async function loadProperties() {
       name: row.name,
       color: row.color,
 
-      // 🔴 IMPORTANT : on garde le JSON tel quel (strings OU objets)
+      // 🔴 On garde le JSON tel quel (strings OU objets { platform, url })
       icalUrls: row.ical_urls || [],
 
+      // Champs supplémentaires
       address: row.address,
       arrival_time: row.arrival_time,
       departure_time: row.departure_time,
