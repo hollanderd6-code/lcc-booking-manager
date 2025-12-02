@@ -2974,54 +2974,108 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
     const newName = name || property.name;
     const newColor = color || property.color;
 
-    const newAddress = address !== undefined ? address : property.address || null;
-    const newArrivalTime = arrivalTime !== undefined ? arrivalTime : property.arrival_time || property.arrivalTime || null;
-    const newDepartureTime = departureTime !== undefined ? departureTime : property.departure_time || property.departureTime || null;
+    const newAddress =
+      address !== undefined ? address : (property.address || null);
+
+    const newArrivalTime =
+      arrivalTime !== undefined
+        ? arrivalTime
+        : (property.arrival_time || property.arrivalTime || null);
+
+    const newDepartureTime =
+      departureTime !== undefined
+        ? departureTime
+        : (property.departure_time || property.departureTime || null);
+
     const newDepositAmount =
       depositAmount !== undefined
-        ? (depositAmount === '' || depositAmount == null ? null : Number(depositAmount))
+        ? (depositAmount === '' || depositAmount == null
+            ? null
+            : Number(depositAmount))
         : (property.deposit_amount ?? property.depositAmount ?? null);
 
-    let newPhotoUrl = existingPhotoUrl !== undefined
-      ? (existingPhotoUrl || null)
-      : (property.photo_url || property.photoUrl || null);
+    let newPhotoUrl =
+      existingPhotoUrl !== undefined
+        ? (existingPhotoUrl || null)
+        : (property.photo_url || property.photoUrl || null);
 
     if (req.file) {
       newPhotoUrl = buildPhotoUrl(req, req.file.filename);
     }
 
     let newIcalUrls;
-if (icalUrls !== undefined) {
-  newIcalUrls = Array.isArray(icalUrls)
-    ? icalUrls
-        .map(item => {
-          if (typeof item === 'string') {
-            return {
-              url: item,
-              platform:
-                icalService && icalService.extractSource
-                  ? icalService.extractSource(item)
-                  : 'iCal'
-            };
-          }
-          if (item && typeof item === 'object' && item.url) {
-            const url = item.url;
-            const platform =
-              item.platform && item.platform.trim().length > 0
-                ? item.platform.trim()
-                : (icalService && icalService.extractSource
-                    ? icalService.extractSource(url)
-                    : 'iCal');
-            return { url, platform };
-          }
-          return null;
-        })
-        .filter(Boolean)
-    : [];
-} else {
-  // on garde ce qui est en base
-  newIcalUrls = property.icalUrls || property.ical_urls || [];
-}
+    if (icalUrls !== undefined) {
+      newIcalUrls = Array.isArray(icalUrls)
+        ? icalUrls
+            .map(item => {
+              if (typeof item === 'string') {
+                return {
+                  url: item,
+                  platform:
+                    icalService && icalService.extractSource
+                      ? icalService.extractSource(item)
+                      : 'iCal'
+                };
+              }
+              if (item && typeof item === 'object' && item.url) {
+                const url = item.url;
+                const platform =
+                  item.platform && item.platform.trim().length > 0
+                    ? item.platform.trim()
+                    : (icalService && icalService.extractSource
+                        ? icalService.extractSource(url)
+                        : 'iCal');
+                return { url, platform };
+              }
+              return null;
+            })
+            .filter(Boolean)
+        : [];
+    } else {
+      // on garde ce qui est en base
+      newIcalUrls = property.icalUrls || property.ical_urls || [];
+    }
+
+    await pool.query(
+      `UPDATE properties
+       SET
+         name = $1,
+         color = $2,
+         ical_urls = $3,
+         address = $4,
+         arrival_time = $5,
+         departure_time = $6,
+         deposit_amount = $7,
+         photo_url = $8
+       WHERE id = $9 AND user_id = $10`,
+      [
+        newName,
+        newColor,
+        JSON.stringify(newIcalUrls || []),
+        newAddress,
+        newArrivalTime,
+        newDepartureTime,
+        newDepositAmount,
+        newPhotoUrl,
+        propertyId,
+        user.id
+      ]
+    );
+
+    await loadProperties();
+
+    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+
+    res.json({
+      message: 'Logement modifié avec succès',
+      property: updated
+    });
+  } catch (err) {
+    console.error('Erreur modification logement:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 
     await pool.query(
       `UPDATE properties
