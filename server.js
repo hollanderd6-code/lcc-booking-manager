@@ -17,7 +17,6 @@ const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
-const multer = require('multer');
 
 // Dossier d'upload pour les photos de logements
 const UPLOAD_DIR = path.join(__dirname, 'uploads', 'properties');
