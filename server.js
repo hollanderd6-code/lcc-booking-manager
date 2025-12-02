@@ -1757,7 +1757,7 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   });
 });
 function parsePropertyBody(req) {
-  // si on reçoit du FormData : body.data = string JSON
+  // Si on reçoit du FormData : body.data = string JSON
   if (req.body && typeof req.body.data === 'string') {
     try {
       return JSON.parse(req.body.data);
@@ -1771,7 +1771,9 @@ function parsePropertyBody(req) {
 
 function buildPhotoUrl(req, filename) {
   if (!filename) return null;
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const baseUrl =
+    process.env.RENDER_EXTERNAL_URL ||
+    `${req.protocol}://${req.get('host')}`;
   return `${baseUrl}/uploads/properties/${filename}`;
 }
 
@@ -2826,12 +2828,14 @@ app.get('/api/properties/:propertyId', async (req, res) => {
 });
 
 
-app.post('/api/properties', upload.single('photo'), async (req, res) => {
+app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
+
+    const { propertyId } = req.params;
 
     let body;
     try {
@@ -2851,39 +2855,87 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
       photoUrl: existingPhotoUrl
     } = body;
 
-    if (!name || !color) {
-      return res.status(400).json({ error: 'Nom et couleur requis' });
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
-    const baseId = name.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    const newName = name || property.name;
+    const newColor = color || property.color;
 
-    const id = `${user.id}-${baseId}`;
+    const newAddress =
+      address !== undefined ? address : (property.address || null);
 
-    // photo : si un fichier est uploadé on l’utilise, sinon on garde l’éventuelle valeur existante
-    let photoUrl = existingPhotoUrl || null;
+    const newArrivalTime =
+      arrivalTime !== undefined
+        ? arrivalTime
+        : (property.arrival_time || property.arrivalTime || null);
+
+    const newDepartureTime =
+      departureTime !== undefined
+        ? departureTime
+        : (property.departure_time || property.departureTime || null);
+
+    const newDepositAmount =
+      depositAmount !== undefined
+        ? (depositAmount === '' || depositAmount == null
+            ? null
+            : Number(depositAmount))
+        : (property.deposit_amount ?? property.depositAmount ?? null);
+
+    let newPhotoUrl =
+      existingPhotoUrl !== undefined
+        ? (existingPhotoUrl || null)
+        : (property.photo_url || property.photoUrl || null);
+
     if (req.file) {
-      photoUrl = buildPhotoUrl(req, req.file.filename);
+      newPhotoUrl = buildPhotoUrl(req, req.file.filename);
     }
 
-    // normaliser les URLs iCal : on accepte strings ou objets {platform,url}
-    // normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
-let normalizedIcal = [];
-if (Array.isArray(icalUrls)) {
-  normalizedIcal = icalUrls
-    .map(item => {
-      // Ancien cas : juste une string
-      if (typeof item === 'string') {
-        return {
-          url: item,
-          platform:
-            icalService && icalService.extractSource
-              ? icalService.extractSource(item)
-              : 'iCal'
-        };
-      }
+    const newIcalUrls =
+      icalUrls !== undefined
+        ? (Array.isArray(icalUrls) ? icalUrls : [])
+        : (property.icalUrls || property.ical_urls || []);
+
+    await pool.query(
+      `UPDATE properties
+       SET
+         name = $1,
+         color = $2,
+         ical_urls = $3,
+         address = $4,
+         arrival_time = $5,
+         departure_time = $6,
+         deposit_amount = $7,
+         photo_url = $8
+       WHERE id = $9 AND user_id = $10`,
+      [
+        newName,
+        newColor,
+        JSON.stringify(newIcalUrls || []),
+        newAddress,
+        newArrivalTime,
+        newDepartureTime,
+        newDepositAmount,
+        newPhotoUrl,
+        propertyId,
+        user.id
+      ]
+    );
+
+    await loadProperties();
+
+    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+
+    res.json({
+      message: 'Logement modifié avec succès',
+      property: updated
+    });
+  } catch (err) {
+    console.error('Erreur modification logement:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
       // Nouveau cas : objet { platform, url }
       if (item && typeof item === 'object' && item.url) {
