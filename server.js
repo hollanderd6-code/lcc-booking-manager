@@ -4,7 +4,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const cron = require('node-cron');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsp = require('fs').promises;
 const icalService = require('./services/icalService');
 const notificationService = require('./services/notificationService');
 const messagingService = require('./services/messagingService');
@@ -942,7 +943,7 @@ let DEPOSITS = [];               // { id, reservationUid, amountCents, ... }
 
 async function loadManualReservations() {
   try {
-    const data = await fs.readFile(MANUAL_RES_FILE, 'utf8');
+    const data = await fsp.readFile(MANUAL_RES_FILE, 'utf8');
     MANUAL_RESERVATIONS = JSON.parse(data);
     console.log('✅ Réservations manuelles chargées depuis manual-reservations.json');
   } catch (error) {
@@ -953,7 +954,7 @@ async function loadManualReservations() {
 
 async function saveManualReservations() {
   try {
-    await fs.writeFile(MANUAL_RES_FILE, JSON.stringify(MANUAL_RESERVATIONS, null, 2));
+    await fsp.writeFile(MANUAL_RES_FILE, JSON.stringify(MANUAL_RESERVATIONS, null, 2));
     console.log('✅ Réservations manuelles sauvegardées');
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde des réservations manuelles:', error.message);
@@ -962,7 +963,7 @@ async function saveManualReservations() {
 
 async function loadDeposits() {
   try {
-    const data = await fs.readFile(DEPOSITS_FILE, 'utf8');
+    const data = await fsp.readFile(DEPOSITS_FILE, 'utf8');
     DEPOSITS = JSON.parse(data);
     console.log('✅ Cautions chargées depuis deposits-config.json');
   } catch (error) {
@@ -973,7 +974,7 @@ async function loadDeposits() {
 
 async function saveDeposits() {
   try {
-    await fs.writeFile(DEPOSITS_FILE, JSON.stringify(DEPOSITS, null, 2));
+    await fsp.writeFile(DEPOSITS_FILE, JSON.stringify(DEPOSITS, null, 2));
     console.log('✅ Cautions sauvegardées');
   } catch (error) {
     console.error('❌ Erreur lors de la sauvegarde des cautions:', error.message);
