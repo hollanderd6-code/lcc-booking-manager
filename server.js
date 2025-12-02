@@ -3075,8 +3075,6 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-
     await pool.query(
       `UPDATE properties
        SET name = $1,
