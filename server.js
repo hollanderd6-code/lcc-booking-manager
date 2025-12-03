@@ -1064,6 +1064,137 @@ async function getUserFromRequest(req) {
     return null;
   }
 }
+// ============================================
+// MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
+// À COPIER-COLLER APRÈS LA FONCTION getUserFromRequest
+// ============================================
+
+async function authenticateUser(req, res, next) {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token manquant', code: 'NO_TOKEN' });
+  }
+
+  try {
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const payload = jwt.verify(token, secret);
+
+    const result = await pool.query(
+      `SELECT id, company, first_name, last_name, email, created_at, stripe_account_id
+       FROM users
+       WHERE id = $1`,
+      [payload.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur introuvable', code: 'USER_NOT_FOUND' });
+    }
+
+    const row = result.rows[0];
+    req.user = {
+      id: row.id,
+      company: row.company,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      email: row.email,
+      createdAt: row.created_at,
+      stripeAccountId: row.stripe_account_id
+    };
+
+    next();
+  } catch (err) {
+    console.error('Erreur authenticateUser:', err);
+    return res.status(401).json({ error: 'Token invalide', code: 'INVALID_TOKEN' });
+  }
+}
+
+async function checkSubscription(req, res, next) {
+  try {
+    const user = req.user;
+    
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Non autorise', code: 'UNAUTHORIZED' });
+    }
+
+    const result = await pool.query(
+      `SELECT id, status, trial_end_date, current_period_end, plan_type
+      FROM subscriptions WHERE user_id = $1`,
+      [user.id]
+    );
+
+    if (result.rows.length === 0) {
+      console.error('User sans abonnement:', user.id);
+      return res.status(403).json({ error: 'Pas abonnement', code: 'NO_SUBSCRIPTION' });
+    }
+
+    const subscription = result.rows[0];
+    const now = new Date();
+
+    if (subscription.status === 'trial') {
+      const trialEnd = new Date(subscription.trial_end_date);
+      if (now > trialEnd) {
+        await pool.query(`UPDATE subscriptions SET status = 'expired' WHERE id = $1`, [subscription.id]);
+        return res.status(402).json({ error: 'Trial expire', code: 'TRIAL_EXPIRED' });
+      }
+      const days = Math.ceil((trialEnd - now) / 86400000);
+      req.subscription = { status: 'trial', days_remaining: days };
+      return next();
+    }
+
+    if (subscription.status === 'active') {
+      req.subscription = { status: 'active', plan_type: subscription.plan_type };
+      return next();
+    }
+
+    return res.status(402).json({ error: 'Abonnement inactif', code: 'SUBSCRIPTION_INACTIVE' });
+
+  } catch (error) {
+    console.error('Erreur checkSubscription:', error);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+async function getSubscriptionInfo(req, res, next) {
+  try {
+    const user = req.user;
+    if (!user || !user.id) {
+      req.subscription = null;
+      return next();
+    }
+
+    const result = await pool.query(
+      `SELECT status, trial_end_date, plan_type FROM subscriptions WHERE user_id = $1`,
+      [user.id]
+    );
+
+    if (result.rows.length === 0) {
+      req.subscription = null;
+      return next();
+    }
+
+    const sub = result.rows[0];
+    let days = null;
+    
+    if (sub.status === 'trial') {
+      const end = new Date(sub.trial_end_date);
+      days = Math.ceil((end - new Date()) / 86400000);
+    }
+
+    req.subscription = {
+      status: sub.status,
+      days_remaining: days,
+      plan_type: sub.plan_type
+    };
+
+    next();
+  } catch (error) {
+    console.error('Erreur getSubscriptionInfo:', error);
+    req.subscription = null;
+    next();
+  }
+}
 
 // ============================================
 // PROPERTIES (logements) - stockées en base
