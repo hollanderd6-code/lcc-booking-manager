@@ -1063,6 +1063,7 @@ async function getUserFromRequest(req) {
   } catch (err) {
     return null;
   }
+  }
 
 // ============================================
 // MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
