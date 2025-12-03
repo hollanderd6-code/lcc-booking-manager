@@ -2587,84 +2587,85 @@ function populateEditBookingProperties(selectedPropertyId) {
 
       if (newReservationForm) {
   newReservationForm.addEventListener('submit', async function (e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!nrPropertySelect || !nrPropertySelect.value) {
-      alert('Merci de sélectionner un logement.');
-      return;
+  if (!nrPropertySelect || !nrPropertySelect.value) {
+    alert('Merci de sélectionner un logement.');
+    return;
+  }
+
+  // ⚠️ On garde l’ID tel qu’il est (string)
+  const propertyId = nrPropertySelect.value;
+
+  const guestNameInput = document.getElementById('nrGuestName');
+  const startDateInput = document.getElementById('nrStartDate');
+  const endDateInput = document.getElementById('nrEndDate');
+  const notesInput = document.getElementById('nrNotes');
+
+  const guestName = guestNameInput ? guestNameInput.value.trim() : '';
+  const startDate = startDateInput ? startDateInput.value : '';
+  const endDate = endDateInput ? endDateInput.value : '';
+  const notes = notesInput ? notesInput.value.trim() : '';
+
+  if (!startDate || !endDate) {
+    alert("Merci de renseigner les dates d'arrivée et de départ.");
+    return;
+  }
+
+  console.log('Payload nouvelle réservation :', {
+    propertyId,
+    start: startDate,
+    end: endDate,
+    guestName,
+    notes
+  });
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
     }
 
-    // ⚠️ On garde l’ID tel qu’il est (string), pas de parseInt
-    const propertyId = nrPropertySelect.value;
-
-    const guestNameInput = document.getElementById('nrGuestName');
-    const startDateInput = document.getElementById('nrStartDate');
-    const endDateInput = document.getElementById('nrEndDate');
-    const notesInput = document.getElementById('nrNotes');
-
-    const guestName = guestNameInput ? guestNameInput.value.trim() : '';
-    const startDate = startDateInput ? startDateInput.value : '';
-    const endDate = endDateInput ? endDateInput.value : '';
-    const notes = notesInput ? notesInput.value.trim() : '';
-
-    if (!startDate || !endDate) {
-      alert("Merci de renseigner les dates d'arrivée et de départ.");
-      return;
-    }
-
-    // Juste pour vérifier dans la console si besoin
-    console.log('Payload nouvelle réservation :', {
-      propertyId,
-      start: startDate,
-      end: endDate,
-      guestName,
-      notes
+    const response = await fetch('/api/reservations/manual', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        propertyId: propertyId,
+        start: startDate,
+        end: endDate,
+        guestName: guestName,
+        notes: notes
+      })
     });
 
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      if (token) {
-        headers['Authorization'] = 'Bearer ' + token;
-      }
+    const data = await response.json();
+    console.log('Réponse création réservation manuelle :', data);
 
-      // 🔥 IMPORTANT : on envoie bien start et end (pas startDate / endDate)
-      const response = await fetch('/api/reservations/manual', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-  propertyId: propertyId,
-  start: startDate,
-  end: endDate,
-  guestName: guestName,
-  notes: notes
-})
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(function () { return {}; });
-        throw new Error(err.error || 'Erreur lors de la création de la réservation.');
-      }
-
-      // Recharger les réservations pour mettre à jour les calendriers
-      if (typeof loadReservations === 'function') {
-        try {
-          await loadReservations();
-        } catch (e) {
-          console.warn('Impossible de recharger les réservations après la création', e);
-        }
-      }
-
-      alert('Réservation enregistrée.');
-      closeNewReservationModal();
-    } catch (err) {
-      console.error('Erreur création réservation manuelle', err);
-      alert(err.message || 'Erreur lors de la création de la réservation.');
+    if (!response.ok) {
+      const message = data && data.error
+        ? data.error
+        : 'Erreur lors de la création de la réservation (code ' + response.status + ')';
+      throw new Error(message);
     }
-  });
-}
+
+    // Recharger les réservations pour mettre à jour les calendriers
+    if (typeof loadReservations === 'function') {
+      try {
+        await loadReservations();
+      } catch (e) {
+        console.warn('Impossible de recharger les réservations après la création', e);
+      }
+    }
+
+    alert('Réservation enregistrée.');
+    closeNewReservationModal();
+  } catch (err) {
+    console.error('Erreur création réservation manuelle', err);
+    alert(err.message || 'Erreur lors de la création de la réservation.');
+  }
+});
+
 
 
       /* Notifications */
