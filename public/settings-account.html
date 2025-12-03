@@ -1530,6 +1530,11 @@ async function openStripePortal() {
         const companyEl = document.getElementById('sidebarUserCompany');
         if (companyEl) companyEl.textContent = user.company;
       }
+      // Charger le statut si on est sur l'onglet subscription
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('tab') === 'subscription') {
+        setTimeout(() => loadSubscriptionStatus(), 100);
+      }
     })();
   </script>
 </body>
