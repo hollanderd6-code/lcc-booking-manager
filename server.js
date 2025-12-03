@@ -1278,8 +1278,6 @@ async function getSubscriptionInfo(req, res, next) {
   }
 }
 
-}
-
 
 
 async function loadProperties() {
