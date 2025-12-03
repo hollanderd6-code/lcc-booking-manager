@@ -1600,7 +1600,7 @@ app.post('/api/reservations/manual', async (req, res) => {
   }
 });
 // GET - Toutes les réservations du user
-app.get('/api/reservations', async (req, res) => {
+app.get('/api/reservations', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
@@ -2631,7 +2631,7 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', async (req, res) => {
+app.get('/api/cleaners', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2860,7 +2860,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 // ============================================
 
-app.get('/api/properties', async (req, res) => {
+app.get('/api/properties', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
