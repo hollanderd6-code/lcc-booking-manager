@@ -824,6 +824,370 @@
           }
         });
       }
+// ============================================
+// Section "Mon abonnement"
+// ============================================
+      <div class="settings-section" id="subscriptionSection">
+  <div class="section-header">
+    <div>
+      <h2>Mon abonnement</h2>
+      <p>Gérez votre plan et vos paiements</p>
+    </div>
+  </div>
+
+  <div class="subscription-card" id="subscriptionCard">
+    <div class="subscription-loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      Chargement...
+    </div>
+  </div>
+</div>
+*/
+
+// 2. CSS À AJOUTER
+/*
+<style>
+.subscription-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.subscription-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.subscription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.subscription-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.subscription-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-badge.trial {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.status-badge.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.status-badge.expired {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.days-remaining {
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.days-remaining i {
+  color: var(--primary-color);
+}
+
+.subscription-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.subscription-details {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.detail-label {
+  color: var(--text-secondary);
+}
+
+.detail-value {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.alert-warning {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  color: #92400e;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.alert-warning i {
+  font-size: 18px;
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+</style>
+*/
+
+// 3. JAVASCRIPT À AJOUTER
+
+const API_URL = window.location.origin;
+
+async function loadSubscriptionStatus() {
+  const token = localStorage.getItem('lcc_token');
+  const subscriptionCard = document.getElementById('subscriptionCard');
+
+  if (!token) {
+    subscriptionCard.innerHTML = `
+      <div class="alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+          <strong>Non connecté</strong><br>
+          Veuillez vous connecter pour voir votre abonnement.
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/subscription/status`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error('Erreur lors de la récupération du statut');
+    }
+
+    const data = await res.json();
+
+    if (!data.hasSubscription) {
+      subscriptionCard.innerHTML = `
+        <div class="subscription-header">
+          <div class="subscription-info">
+            <h3>Aucun abonnement actif</h3>
+            <p style="color: var(--text-secondary); margin-top: 8px;">
+              Choisissez un plan pour continuer à utiliser Boostinghost.
+            </p>
+          </div>
+        </div>
+        <div class="subscription-actions" style="margin-top: 20px;">
+          <a href="/pricing.html" class="btn btn-primary">
+            <i class="fas fa-arrow-right"></i>
+            Choisir un plan
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    // Construire l'affichage selon le statut
+    let statusBadgeClass = 'trial';
+    let statusBadgeText = 'Essai gratuit';
+    let statusIcon = 'fa-gift';
+
+    if (data.status === 'active') {
+      statusBadgeClass = 'active';
+      statusBadgeText = data.planType === 'pro' ? 'Pro' : 'Basic';
+      statusIcon = 'fa-check-circle';
+    } else if (data.status === 'expired' || data.status === 'canceled') {
+      statusBadgeClass = 'expired';
+      statusBadgeText = 'Expiré';
+      statusIcon = 'fa-times-circle';
+    }
+
+    let daysRemainingHTML = '';
+    if (data.daysRemaining !== null && data.status === 'trial') {
+      daysRemainingHTML = `
+        <div class="days-remaining">
+          <i class="fas fa-clock"></i>
+          <span><strong>${data.daysRemaining}</strong> jour${data.daysRemaining > 1 ? 's' : ''} restant${data.daysRemaining > 1 ? 's' : ''}</span>
+        </div>
+      `;
+    }
+
+    let warningHTML = '';
+    if (data.isExpiringSoon) {
+      warningHTML = `
+        <div class="alert-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div>
+            <strong>Votre essai expire bientôt !</strong><br>
+            Choisissez un plan pour continuer sans interruption.
+          </div>
+        </div>
+      `;
+    }
+
+    let actionsHTML = '';
+    if (data.status === 'trial') {
+      actionsHTML = `
+        <a href="/pricing.html" class="btn btn-primary">
+          <i class="fas fa-arrow-right"></i>
+          Choisir un plan
+        </a>
+      `;
+    } else if (data.status === 'active') {
+      actionsHTML = `
+        <button class="btn btn-ghost" onclick="openStripePortal()">
+          <i class="fas fa-cog"></i>
+          Gérer mon abonnement
+        </button>
+        ${data.planType === 'basic' ? `
+          <a href="/pricing.html" class="btn btn-primary">
+            <i class="fas fa-arrow-up"></i>
+            Passer à Pro
+          </a>
+        ` : ''}
+      `;
+    } else if (data.status === 'expired' || data.status === 'canceled') {
+      actionsHTML = `
+        <a href="/pricing.html" class="btn btn-primary">
+          <i class="fas fa-redo"></i>
+          Réactiver mon abonnement
+        </a>
+      `;
+    }
+
+    let detailsHTML = '';
+    if (data.status === 'active') {
+      const renewalDate = data.currentPeriodEnd 
+        ? new Date(data.currentPeriodEnd).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+        : 'N/A';
+      
+      detailsHTML = `
+        <div class="subscription-details">
+          <div class="detail-row">
+            <span class="detail-label">Plan</span>
+            <span class="detail-value">${data.planType === 'pro' ? 'Pro' : 'Basic'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Prix</span>
+            <span class="detail-value">${(data.planAmount / 100).toFixed(2)}€ / mois</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Prochain renouvellement</span>
+            <span class="detail-value">${renewalDate}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    subscriptionCard.innerHTML = `
+      <div class="subscription-header">
+        <div class="subscription-info">
+          <h3>${data.displayMessage}</h3>
+          <div class="subscription-status">
+            <div class="status-badge ${statusBadgeClass}">
+              <i class="fas ${statusIcon}"></i>
+              ${statusBadgeText}
+            </div>
+            ${daysRemainingHTML}
+          </div>
+        </div>
+        <div class="subscription-actions">
+          ${actionsHTML}
+        </div>
+      </div>
+      ${detailsHTML}
+      ${warningHTML}
+    `;
+
+  } catch (err) {
+    console.error('Erreur chargement abonnement:', err);
+    subscriptionCard.innerHTML = `
+      <div class="alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+          <strong>Erreur de chargement</strong><br>
+          Impossible de récupérer les informations d'abonnement.
+        </div>
+      </div>
+    `;
+  }
+}
+
+async function openStripePortal() {
+  const token = localStorage.getItem('lcc_token');
+  
+  try {
+    const res = await fetch(`${API_URL}/api/billing/create-portal-session`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error('Erreur création session portail');
+    }
+
+    const data = await res.json();
+    
+    if (data.url) {
+      window.location.href = data.url;
+    }
+  } catch (err) {
+    console.error('Erreur ouverture portail:', err);
+    alert('Impossible d\'ouvrir le portail de gestion. Réessayez plus tard.');
+  }
+}
+
+// Charger le statut au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  // Si on est sur l'onglet subscription
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('tab') === 'subscription' || document.getElementById('subscriptionSection')) {
+    loadSubscriptionStatus();
+  }
+});
 
       /* -------- PRÉFÉRENCES D’AFFICHAGE (THÈME) -------- */
 
