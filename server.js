@@ -2840,7 +2840,6 @@ const user = req.user;
       }))
     }))
   });
-});
 
     const userProps = getUserProperties(user.id);
 
