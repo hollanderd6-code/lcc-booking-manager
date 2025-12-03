@@ -309,6 +309,10 @@
             Notifications
           </button>
         </div>
+        <button class="settings-tab" data-tab="subscription">
+    <i class="fas fa-crown"></i>
+    Mon abonnement
+  </button>
 
         <!-- Onglet : Profil -->
         <div class="tab-pane active" id="tab-profile" data-tab="profile">
@@ -516,6 +520,25 @@
                 </button>
                 <span class="save-status-inline" id="notifSaveStatus"></span>
               </div>
+              <!-- Onglet : Mon abonnement -->
+        <div class="tab-pane" id="tab-subscription" data-tab="subscription">
+          <section class="card mb-lg">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fas fa-crown"></i>
+                Mon abonnement
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="subscription-card" id="subscriptionCard">
+                <div class="subscription-loading">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  Chargement...
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
             </div>
           </section>
         </div>
