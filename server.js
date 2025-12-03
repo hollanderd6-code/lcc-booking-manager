@@ -1065,14 +1065,7 @@ async function getUserFromRequest(req) {
     return null;
   }
 }
-// ============================================
-// MODIFICATION 1 : AJOUTER L'IMPORT DU MIDDLEWARE
-// ============================================
 
-// À ajouter après la ligne 17 (après les autres requires)
-// Juste après : const { Pool } = require('pg');
-
-const subscriptionMiddleware = require('./subscriptionMiddleware');
 
 
 // ============================================
