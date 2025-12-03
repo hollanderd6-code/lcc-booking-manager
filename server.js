@@ -18,6 +18,7 @@ const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Dossier d'upload pour les photos de logements
 // En local : /.../lcc-booking-manager/uploads/properties
