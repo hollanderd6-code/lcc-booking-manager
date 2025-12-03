@@ -18,7 +18,6 @@ const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
-const subscriptionMiddleware = require('./subscriptionMiddleware');
 
 // Dossier d'upload pour les photos de logements
 // En local : /.../lcc-booking-manager/uploads/properties
@@ -1066,59 +1065,6 @@ async function getUserFromRequest(req) {
   }
 }
 
-
-
-// ============================================
-// MODIFICATION 2 : CRÉER LA FONCTION authenticateUser
-// ============================================
-
-// À ajouter AVANT vos routes API, par exemple après la fonction getUserFromRequest
-// (cherchez la fonction getUserFromRequest dans votre fichier, elle est vers la ligne 200-300)
-
-/**
- * Middleware d'authentification
- * Vérifie le token JWT et ajoute req.user
- */
-async function authenticateUser(req, res, next) {
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token manquant', code: 'NO_TOKEN' });
-  }
-
-  try {
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    const payload = jwt.verify(token, secret);
-
-    const result = await pool.query(
-      `SELECT id, company, first_name, last_name, email, created_at, stripe_account_id
-       FROM users
-       WHERE id = $1`,
-      [payload.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Utilisateur introuvable', code: 'USER_NOT_FOUND' });
-    }
-
-    const row = result.rows[0];
-    req.user = {
-      id: row.id,
-      company: row.company,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      email: row.email,
-      createdAt: row.created_at,
-      stripeAccountId: row.stripe_account_id
-    };
-
-    next();
-  } catch (err) {
-    console.error('❌ Erreur authenticateUser:', err);
-    return res.status(401).json({ error: 'Token invalide ou expiré', code: 'INVALID_TOKEN' });
-  }
-}
 // ============================================
 // PROPERTIES (logements) - stockées en base
 // ============================================
@@ -1828,49 +1774,7 @@ function buildPhotoUrl(req, filename) {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   return `${baseUrl}/uploads/properties/${filename}`;
 }
-// ============================================
-// MODIFICATION 3 : AJOUTER LA ROUTE DE STATUT D'ABONNEMENT
-// ============================================
 
-// À ajouter avec vos autres routes API
-
-// Route pour récupérer le statut d'abonnement
-app.get('/api/subscription/status', authenticateUser, subscriptionMiddleware.getSubscriptionInfo, async (req, res) => {
-  try {
-    if (!req.subscription) {
-      return res.status(404).json({
-        error: 'Aucun abonnement trouvé'
-      });
-    }
-
-    // Calculer les infos supplémentaires
-    const now = new Date();
-    let displayMessage = '';
-    let isExpiringSoon = false;
-
-    if (req.subscription.status === 'trial') {
-      displayMessage = `Essai gratuit - ${req.subscription.days_remaining} jour(s) restant(s)`;
-      isExpiringSoon = req.subscription.days_remaining <= 3;
-    } else if (req.subscription.status === 'active') {
-      displayMessage = 'Abonnement actif';
-    } else if (req.subscription.status === 'expired') {
-      displayMessage = 'Abonnement expiré';
-    } else if (req.subscription.status === 'canceled') {
-      displayMessage = 'Abonnement annulé';
-    }
-
-    res.json({
-      subscription: {
-        ...req.subscription,
-        display_message: displayMessage,
-        is_expiring_soon: isExpiringSoon
-      }
-    });
-  } catch (error) {
-    console.error('❌ Erreur /api/subscription/status:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 // ============================================
 // ROUTES API - PROFIL UTILISATEUR ÉTENDU
 // ============================================
@@ -2825,21 +2729,12 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 // ============================================
 
-const user = req.user;
-
-  const userProps = getUserProperties(user.id);
-
-  res.json({
-    properties: userProps.map(p => ({
-      id: p.id,
-      name: p.name,
-      color: p.color,
-      icalUrls: p.icalUrls.map(url => ({
-        url,
-        source: icalService.extractSource ? icalService.extractSource(url) : 'Inconnu'
-      }))
-    }))
-  });
+app.get('/api/properties', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
     const userProps = getUserProperties(user.id);
 
