@@ -2635,15 +2635,12 @@ function populateEditBookingProperties(selectedPropertyId) {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          propertyId: propertyId,
-          start: startDate, 
-          end: endDate,
-          reason: reason, || 'Blocage manuel'
-          guestName: guestName,
-          notes: notes
-      console.log('🔍 Envoi blocage avec propertyId:', propertyId);
-console.log('🔍 Start:', startDate, 'End:', endDate);
-        })
+  propertyId: propertyId,
+  start: startDate,
+  end: endDate,
+  guestName: guestName,
+  notes: notes
+})
       });
 
       if (!response.ok) {
