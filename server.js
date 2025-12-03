@@ -18,7 +18,6 @@ const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
-const subscriptionMiddleware = require('./subscriptionMiddleware');
 
 // Dossier d'upload pour les photos de logements
 // En local : /.../lcc-booking-manager/uploads/properties
@@ -1064,21 +1063,11 @@ async function getUserFromRequest(req) {
   } catch (err) {
     return null;
   }
-}
-
-
 
 // ============================================
-// MODIFICATION 2 : CRÉER LA FONCTION authenticateUser
+// MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
 // ============================================
 
-// À ajouter AVANT vos routes API, par exemple après la fonction getUserFromRequest
-// (cherchez la fonction getUserFromRequest dans votre fichier, elle est vers la ligne 200-300)
-
-/**
- * Middleware d'authentification
- * Vérifie le token JWT et ajoute req.user
- */
 async function authenticateUser(req, res, next) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -1119,12 +1108,179 @@ async function authenticateUser(req, res, next) {
     return res.status(401).json({ error: 'Token invalide ou expiré', code: 'INVALID_TOKEN' });
   }
 }
-// ============================================
-// PROPERTIES (logements) - stockées en base
-// ============================================
+
+async function checkSubscription(req, res, next) {
+  try {
+    const user = req.user;
+    
+    if (!user || !user.id) {
+      return res.status(401).json({
+        error: 'Non autorisé',
+        code: 'UNAUTHORIZED'
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id, status, trial_start_date, trial_end_date, 
+        is_trial_used, subscription_end_date, current_period_end, plan_type
+      FROM subscriptions
+      WHERE user_id = $1`,
+      [user.id]
+    );
+
+    if (result.rows.length === 0) {
+      console.error(`❌ Utilisateur ${user.id} sans abonnement`);
+      return res.status(403).json({
+        error: 'Aucun abonnement trouvé',
+        code: 'NO_SUBSCRIPTION',
+        message: 'Veuillez contacter le support'
+      });
+    }
+
+    const subscription = result.rows[0];
+    const now = new Date();
+
+    if (subscription.status === 'trial') {
+      const trialEndDate = new Date(subscription.trial_end_date);
+      
+      if (now > trialEndDate) {
+        await pool.query(
+          `UPDATE subscriptions 
+           SET status = 'expired', updated_at = NOW()
+           WHERE id = $1`,
+          [subscription.id]
+        );
+
+        await pool.query(
+          `INSERT INTO billing_events (id, user_id, subscription_id, event_type, event_data, created_at)
+           VALUES ($1, $2, $3, 'trial_ended', $4, NOW())`,
+          [
+            `evt_${user.id}_${Date.now()}`,
+            user.id,
+            subscription.id,
+            JSON.stringify({ expired_at: now })
+          ]
+        );
+
+        return res.status(402).json({
+          error: 'Période d\'essai expirée',
+          code: 'TRIAL_EXPIRED',
+          message: 'Votre période d\'essai de 14 jours est terminée. Veuillez souscrire à un abonnement pour continuer.',
+          trial_end_date: subscription.trial_end_date,
+          redirect: '/subscription-checkout.html'
+        });
+      }
+
+      const daysRemaining = Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24));
+      
+      req.subscription = {
+        status: 'trial',
+        days_remaining: daysRemaining,
+        trial_end_date: subscription.trial_end_date
+      };
+
+      return next();
+    }
+
+    if (subscription.status === 'active') {
+      const periodEnd = subscription.current_period_end 
+        ? new Date(subscription.current_period_end)
+        : null;
+
+      req.subscription = {
+        status: 'active',
+        plan_type: subscription.plan_type,
+        period_end: periodEnd
+      };
+
+      return next();
+    }
+
+    if (subscription.status === 'past_due') {
+      return res.status(402).json({
+        error: 'Paiement en retard',
+        code: 'PAYMENT_PAST_DUE',
+        message: 'Votre dernier paiement a échoué. Veuillez mettre à jour vos informations de paiement.',
+        redirect: '/subscription-manage.html'
+      });
+    }
+
+    if (subscription.status === 'expired' || subscription.status === 'canceled') {
+      return res.status(402).json({
+        error: 'Abonnement inactif',
+        code: 'SUBSCRIPTION_INACTIVE',
+        message: 'Votre abonnement est inactif. Veuillez souscrire à un nouvel abonnement pour continuer.',
+        status: subscription.status,
+        redirect: '/subscription-checkout.html'
+      });
+    }
+
+    console.error(`❌ Statut d\'abonnement inconnu: ${subscription.status}`);
+    return res.status(500).json({
+      error: 'Erreur système',
+      code: 'UNKNOWN_STATUS'
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur dans checkSubscription:', error);
+    return res.status(500).json({
+      error: 'Erreur serveur',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+}
+
+async function getSubscriptionInfo(req, res, next) {
+  try {
+    const user = req.user;
+    
+    if (!user || !user.id) {
+      req.subscription = null;
+      return next();
+    }
+
+    const result = await pool.query(
+      `SELECT id, status, trial_end_date, current_period_end, plan_type, plan_amount
+      FROM subscriptions WHERE user_id = $1`,
+      [user.id]
+    );
+
+    if (result.rows.length === 0) {
+      req.subscription = null;
+      return next();
+    }
+
+    const subscription = result.rows[0];
+    const now = new Date();
+
+    let daysRemaining = null;
+    if (subscription.status === 'trial') {
+      const trialEndDate = new Date(subscription.trial_end_date);
+      daysRemaining = Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24));
+    }
+
+    req.subscription = {
+      status: subscription.status,
+      trial_end_date: subscription.trial_end_date,
+      current_period_end: subscription.current_period_end,
+      plan_type: subscription.plan_type,
+      plan_amount: subscription.plan_amount,
+      days_remaining: daysRemaining
+    };
+
+    next();
+  } catch (error) {
+    console.error('❌ Erreur dans getSubscriptionInfo:', error);
+    req.subscription = null;
+    next();
+  }
+}
+
+}
 
 
-// PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
+
 async function loadProperties() {
   try {
     const result = await pool.query(`
@@ -1433,7 +1589,7 @@ app.get('/api/debug-users', async (req, res) => {
 // (appelé par le frontend)
 // ============================================
 
-app.post('/api/reservations/manual', async (req, res) => {
+app.post('/api/reservations/manual', authenticateUser, checkSubscription, async (req, res) => {
   console.log('📝 /api/reservations/manual appelé');
   
   try {
@@ -1523,7 +1679,7 @@ app.post('/api/reservations/manual', async (req, res) => {
   }
 });
 // GET - Toutes les réservations du user
-app.get('/api/reservations', async (req, res) => {
+app.get('/api/reservations', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
@@ -2596,7 +2752,7 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', async (req, res) => {
+app.get('/api/cleaners', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2621,7 +2777,7 @@ app.get('/api/cleaners', async (req, res) => {
 });
 
 // POST - Créer une nouvelle personne de ménage
-app.post('/api/cleaners', async (req, res) => {
+app.post('/api/cleaners', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2721,7 +2877,7 @@ app.delete('/api/cleaners/:id', async (req, res) => {
 // ============================================
 
 // GET - Liste des assignations de ménage
-app.get('/api/cleaning/assignments', async (req, res) => {
+app.get('/api/cleaning/assignments', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2754,7 +2910,7 @@ app.get('/api/cleaning/assignments', async (req, res) => {
 });
 
 // POST - Créer / mettre à jour / supprimer une assignation
-app.post('/api/cleaning/assignments', async (req, res) => {
+app.post('/api/cleaning/assignments', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2825,6 +2981,8 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 // ============================================
 
+app.get('/api/properties', authenticateUser, checkSubscription, async (req, res) => {
+  try {
 const user = req.user;
 
   const userProps = getUserProperties(user.id);
@@ -2841,7 +2999,6 @@ const user = req.user;
     }))
   });
 
-    const userProps = getUserProperties(user.id);
 
     const properties = userProps.map(p => {
       const rawIcal = p.icalUrls || p.ical_urls || [];
@@ -2903,7 +3060,7 @@ const user = req.user;
 });
 
 
-app.get('/api/properties/:propertyId', async (req, res) => {
+app.get('/api/properties/:propertyId', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
@@ -3181,7 +3338,7 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   }
 });
 
-app.delete('/api/properties/:propertyId', async (req, res) => {
+app.delete('/api/properties/:propertyId', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -3397,6 +3554,43 @@ app.get('/api/auth/me', async (req, res) => {
 
   if (!token) {
     return res.status(401).json({ error: 'Token manquant' });
+
+// Route pour récupérer le statut d'abonnement
+app.get('/api/subscription/status', authenticateUser, getSubscriptionInfo, async (req, res) => {
+  try {
+    if (!req.subscription) {
+      return res.status(404).json({ error: 'Aucun abonnement trouvé' });
+    }
+
+    const now = new Date();
+    let displayMessage = '';
+    let isExpiringSoon = false;
+
+    if (req.subscription.status === 'trial') {
+      displayMessage = `Essai gratuit - ${req.subscription.days_remaining} jour(s) restant(s)`;
+      isExpiringSoon = req.subscription.days_remaining <= 3;
+    } else if (req.subscription.status === 'active') {
+      displayMessage = 'Abonnement actif';
+    } else if (req.subscription.status === 'expired') {
+      displayMessage = 'Abonnement expiré';
+    } else if (req.subscription.status === 'canceled') {
+      displayMessage = 'Abonnement annulé';
+    }
+
+    res.json({
+      subscription: {
+        ...req.subscription,
+        display_message: displayMessage,
+        is_expiring_soon: isExpiringSoon
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur /api/subscription/status:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+
   }
 
   try {
