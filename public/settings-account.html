@@ -1396,7 +1396,31 @@
           `;
         }
       }
+async function openStripePortal() {
+        const token = localStorage.getItem('lcc_token');
+        
+        try {
+          const res = await fetch('/api/billing/create-portal-session', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
 
+          if (!res.ok) {
+            throw new Error('Erreur création session portail');
+          }
+
+          const data = await res.json();
+          
+          if (data.url) {
+            window.location.href = data.url;
+          }
+        } catch (err) {
+          console.error('Erreur ouverture portail:', err);
+          alert('Impossible d\'ouvrir le portail de gestion.');
+        }
+      }
       async function openStripePortal() {
         const token = localStorage.getItem('lcc_token');
         
