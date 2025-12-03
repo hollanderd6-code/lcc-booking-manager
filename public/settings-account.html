@@ -148,6 +148,132 @@
       color: #059669;
       min-height: 18px;
     }
+    /* ===== Onglet Abonnement ===== */
+    
+    .subscription-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      border: 1px solid var(--border-color);
+    }
+
+    .subscription-loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .subscription-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .subscription-info h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .subscription-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-badge.trial {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+    }
+
+    .status-badge.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .status-badge.expired {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .days-remaining {
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .days-remaining i {
+      color: var(--primary-color);
+    }
+
+    .subscription-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .subscription-details {
+      display: grid;
+      gap: 16px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .detail-label {
+      color: var(--text-secondary);
+    }
+
+    .detail-value {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .alert-warning {
+      background: #fffbeb;
+      border: 1px solid #fbbf24;
+      color: #92400e;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .alert-warning i {
+      font-size: 18px;
+      color: #f59e0b;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body data-page="settings-account">
