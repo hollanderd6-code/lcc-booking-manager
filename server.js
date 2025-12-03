@@ -1063,7 +1063,6 @@ async function getUserFromRequest(req) {
   } catch (err) {
     return null;
   }
-  }
 
 // ============================================
 // MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
@@ -1276,6 +1275,8 @@ async function getSubscriptionInfo(req, res, next) {
     req.subscription = null;
     next();
   }
+}
+
 }
 
 
@@ -1990,7 +1991,7 @@ function buildPhotoUrl(req, filename) {
 // À ajouter avec vos autres routes API
 
 // Route pour récupérer le statut d'abonnement
-app.get('/api/subscription/status', authenticateUser, getSubscriptionInfo, async (req, res) => {
+app.get('/api/subscription/status', authenticateUser, subscriptionMiddleware.getSubscriptionInfo, async (req, res) => {
   try {
     if (!req.subscription) {
       return res.status(404).json({
