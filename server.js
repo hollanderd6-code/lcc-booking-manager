@@ -19,7 +19,9 @@ const Stripe = require('stripe');
 const { Pool } = require('pg');
 const axios = require('axios');
 // Stripe Connect pour les cautions des utilisateurs
-const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY) 
+  : null;
 
 // Stripe Subscriptions pour les abonnements Boostinghost
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
