@@ -164,12 +164,34 @@
           body: JSON.stringify({ company, firstName, lastName, email, password })
         });
 
-        const data = await res.json();
+        // Dans le formulaire d'inscription, après le fetch réussi :
+const data = await response.json();
 
-        if (!res.ok) {
-          alert(data.error || "Impossible de créer le compte.");
-          return;
-        }
+if (response.ok && data.success) {
+  // Afficher le message de vérification email
+  document.querySelector('form').innerHTML = `
+    <div style="text-align: center; padding: 40px;">
+      <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-envelope" style="font-size: 40px; color: white;"></i>
+      </div>
+      <h2 style="margin-bottom: 16px; font-size: 24px; color: #111827;">Vérifiez votre email ! 📧</h2>
+      <p style="color: #6b7280; margin-bottom: 24px; font-size: 16px;">
+        Nous avons envoyé un email de vérification à<br>
+        <strong style="color: #10b981;">${data.email}</strong>
+      </p>
+      <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Cliquez sur le lien dans l'email pour activer votre compte.
+        <br><br>
+        <span style="font-size: 13px;">Vous ne l'avez pas reçu ? Vérifiez vos spams.</span>
+      </p>
+      <button onclick="window.location.href='/login.html'" style="margin-top: 24px; padding: 12px 24px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+        Retour à la connexion
+      </button>
+    </div>
+  `;
+} else {
+  alert(data.error || 'Erreur lors de l\'inscription');
+}
 
         // Stocker le token + user
         localStorage.setItem('lcc_token', data.token);
