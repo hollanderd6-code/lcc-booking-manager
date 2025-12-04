@@ -17,6 +17,7 @@ const multer = require('multer');
 const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
+const crypto = require('crypto');
 const axios = require('axios');
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -2542,6 +2543,103 @@ app.get('/ical/property/:propertyId.ics', async (req, res) => {
     res.status(500).send('Internal server error');
   }
 });
+// ============================================
+// ROUTES VÉRIFICATION EMAIL
+// À AJOUTER DANS server.js
+// ============================================
+
+const crypto = require('crypto');
+
+// ============================================
+// Fonction helper : Générer un token de vérification
+// ============================================
+function generateVerificationToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// ============================================
+// Fonction helper : Envoyer l'email de vérification
+// ============================================
+async function sendVerificationEmail(email, firstName, token) {
+  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+  const verificationUrl = `${appUrl}/verify-email.html?token=${token}`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '✅ Vérifiez votre adresse email - Boostinghost',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Bienvenue sur Boostinghost !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName || 'nouveau membre'},</p>
+            
+            <p>Merci de vous être inscrit sur <strong>Boostinghost</strong> !</p>
+            
+            <p>Pour activer votre compte et commencer à utiliser notre plateforme de gestion de locations courte durée, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
+            
+            <div style="text-align: center;">
+              <a href="${verificationUrl}" class="button">
+                ✅ Vérifier mon email
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 13px; margin-top: 20px;">
+              Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
+              <a href="${verificationUrl}" style="color: #10b981;">${verificationUrl}</a>
+            </p>
+            
+            <p style="margin-top: 30px;">
+              <strong>Ce lien est valide pendant 24 heures.</strong>
+            </p>
+            
+            <p>Une fois votre email vérifié, vous aurez accès à :</p>
+            <ul>
+              <li>✅ Calendrier unifié</li>
+              <li>✅ Synchronisation iCal (Airbnb, Booking)</li>
+              <li>✅ Gestion des messages</li>
+              <li>✅ Livret d'accueil personnalisé</li>
+              <li>✅ Gestion du ménage</li>
+              <li>✅ Et bien plus encore !</li>
+            </ul>
+            
+            <p>À très bientôt sur Boostinghost ! 🚀</p>
+          </div>
+          <div class="footer">
+            <p>Cet email a été envoyé automatiquement par Boostinghost.</p>
+            <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Email de vérification envoyé à:', email);
+    return true;
+  } catch (error) {
+    console.error('Erreur envoi email vérification:', error);
+    return false;
+  }
+}
 
 // ============================================
 // ROUTES API - LIVRET D'ACCUEIL (par user)
