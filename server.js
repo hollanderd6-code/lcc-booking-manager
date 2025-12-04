@@ -98,6 +98,27 @@ const upload = multer({
     cb(null, true);
   }
 });
+// ============================================
+// MIDDLEWARE D'AUTHENTIFICATION JWT
+// ============================================
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token manquant' });
+  }
+
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+
+  try {
+    const decoded = jwt.verify(token, secret);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: 'Token invalide' });
+  }
+}
 
 // ============================================
 // CONNEXION POSTGRES
