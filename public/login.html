@@ -144,6 +144,18 @@
         loginSubmit.disabled = false;
         loginSubmit.textContent = 'Se connecter';
       }
+      if (!res.ok) {
+  const errorData = await res.json();
+  
+  if (errorData.emailNotVerified) {
+    // Email non vérifié
+    alert('Veuillez vérifier votre email avant de vous connecter. Un email de vérification vous a été envoyé.');
+    // Optionnel : proposer de renvoyer l'email
+  } else {
+    alert(errorData.error || 'Erreur de connexion');
+  }
+  return;
+}
     });
   </script>
 
