@@ -3587,7 +3587,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id
+      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, email_verified
        FROM users
        WHERE LOWER(email) = LOWER($1)`,
       [email]
