@@ -1330,7 +1330,7 @@
 
         const data = await res.json();
 
-        if (!data.hasSubscription) {
+        if (!data.status) {
           subscriptionCard.innerHTML = `
             <div class="subscription-header">
               <div class="subscription-info">
