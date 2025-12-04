@@ -2131,9 +2131,7 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
       `SELECT 
         status, 
         plan_type, 
-        trial_end_date,
-        current_period_end,
-        cancel_at_period_end
+        trial_end_date
       FROM subscriptions 
       WHERE user_id = $1`,
       [userId]
@@ -2159,8 +2157,6 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
       planType: sub.plan_type,
       trialEndDate: sub.trial_end_date,
       daysRemaining: daysRemaining,
-      currentPeriodEnd: sub.current_period_end,
-      cancelAtPeriodEnd: sub.cancel_at_period_end,
       showAlert: sub.status === 'trial' && daysRemaining !== null && daysRemaining <= 3
     });
 
