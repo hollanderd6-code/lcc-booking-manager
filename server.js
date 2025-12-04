@@ -3429,14 +3429,33 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Vérifier si l'email existe déjà
-    const existing = await pool.query(
-      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
-      [email]
-    );
-    
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
-    }
+    // Créer l'abonnement trial (seulement s'il n'existe pas déjà)
+const existingSub = await pool.query(
+  'SELECT id FROM subscriptions WHERE user_id = $1',
+  [id]
+);
+
+if (existingSub.rows.length === 0) {
+  const trialStartDate = new Date();
+  const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+  await pool.query(
+    `INSERT INTO subscriptions (
+      id, user_id, status, plan_type, plan_amount,
+      trial_start_date, trial_end_date,
+      created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+    [
+      `sub_${Date.now()}`,
+      id,
+      'trial',
+      'trial',
+      0,
+      trialStartDate,
+      trialEndDate
+    ]
+  );
+}
 
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(password, 10);
