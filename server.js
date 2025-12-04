@@ -2101,7 +2101,53 @@ app.put('/api/user/profile', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur lors de la mise à jour' });
   }
 });
+// Route pour vérifier le statut de l'abonnement
+app.get('/api/subscription/status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
 
+    const result = await pool.query(
+      `SELECT 
+        status, 
+        plan_type, 
+        trial_end_date,
+        current_period_end,
+        cancel_at_period_end
+      FROM subscriptions 
+      WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Aucun abonnement trouvé' });
+    }
+
+    const sub = result.rows[0];
+    const now = new Date();
+
+    // Calculer les jours restants pour les trials
+    let daysRemaining = null;
+    if (sub.status === 'trial' && sub.trial_end_date) {
+      const trialEnd = new Date(sub.trial_end_date);
+      const diffTime = trialEnd - now;
+      daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    res.json({
+      status: sub.status,
+      planType: sub.plan_type,
+      trialEndDate: sub.trial_end_date,
+      daysRemaining: daysRemaining,
+      currentPeriodEnd: sub.current_period_end,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+      showAlert: sub.status === 'trial' && daysRemaining !== null && daysRemaining <= 3
+    });
+
+  } catch (err) {
+    console.error('Erreur subscription status:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // ============================================
 // EXEMPLE D'UTILISATION DEPUIS LE FRONTEND
 // ============================================
