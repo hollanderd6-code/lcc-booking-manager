@@ -3429,36 +3429,19 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Vérifier si l'email existe déjà
-    // Créer l'abonnement trial (seulement s'il n'existe pas déjà)
-const existingSub = await pool.query(
-  'SELECT id FROM subscriptions WHERE user_id = $1',
-  [id]
-);
-
-if (existingSub.rows.length === 0) {
-  const trialStartDate = new Date();
-  const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-
-  await pool.query(
-    `INSERT INTO subscriptions (
-      id, user_id, status, plan_type, plan_amount,
-      trial_start_date, trial_end_date,
-      created_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
-    [
-      `sub_${Date.now()}`,
-      id,
-      'trial',
-      'trial',
-      0,
-      trialStartDate,
-      trialEndDate
-    ]
-  );
-}
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
 
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Générer l'ID utilisateur
     const id = `u_${Date.now().toString(36)}`;
 
     // Générer le token de vérification
@@ -3476,26 +3459,33 @@ if (existingSub.rows.length === 0) {
       [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires]
     );
 
-    // Créer l'abonnement trial
-    const trialStartDate = new Date();
-    const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-
-    await pool.query(
-      `INSERT INTO subscriptions (
-        id, user_id, status, plan_type, plan_amount,
-        trial_start_date, trial_end_date,
-        created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
-      [
-        `sub_${Date.now()}`,
-        id,
-        'trial',
-        'trial',
-        0,
-        trialStartDate,
-        trialEndDate
-      ]
+    // Créer l'abonnement trial (seulement s'il n'existe pas déjà)
+    const existingSub = await pool.query(
+      'SELECT id FROM subscriptions WHERE user_id = $1',
+      [id]
     );
+
+    if (existingSub.rows.length === 0) {
+      const trialStartDate = new Date();
+      const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+      await pool.query(
+        `INSERT INTO subscriptions (
+          id, user_id, status, plan_type, plan_amount,
+          trial_start_date, trial_end_date,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+        [
+          `sub_${Date.now()}`,
+          id,
+          'trial',
+          'trial',
+          0,
+          trialStartDate,
+          trialEndDate
+        ]
+      );
+    }
 
     // Envoyer l'email de vérification
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
@@ -3565,7 +3555,7 @@ if (existingSub.rows.length === 0) {
       // On continue quand même
     }
 
-    // Ne pas retourner de token, obliger l'utilisateur à vérifier son email
+    // Retourner succès
     res.status(201).json({
       success: true,
       message: 'Compte créé ! Vérifiez votre email pour activer votre compte.',
@@ -3578,6 +3568,7 @@ if (existingSub.rows.length === 0) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
