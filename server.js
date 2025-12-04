@@ -950,7 +950,6 @@ const PORT = process.env.PORT || 3000;
 
 // Stripe
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
-const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
 
 // Middleware
 app.use(cors());
