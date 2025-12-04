@@ -2543,12 +2543,6 @@ app.get('/ical/property/:propertyId.ics', async (req, res) => {
     res.status(500).send('Internal server error');
   }
 });
-// ============================================
-// ROUTES VÉRIFICATION EMAIL
-// À AJOUTER DANS server.js
-// ============================================
-
-const crypto = require('crypto');
 
 // ============================================
 // Fonction helper : Générer un token de vérification
