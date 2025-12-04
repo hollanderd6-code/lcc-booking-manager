@@ -1289,6 +1289,15 @@
   </style>
 </head>
 <body data-page="app">
+  <div id="subscriptionAlert" style="display: none;">
+  <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px 24px; text-align: center; font-size: 15px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 9999;">
+    <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+    <span id="alertMessage"></span>
+    <button onclick="window.location.href='/pricing.html'" style="margin-left: 16px; background: white; color: #d97706; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+      Choisir un plan
+    </button>
+  </div>
+</div>
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
@@ -5110,6 +5119,45 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       })();
     });
   })();
+</script>
+  <script>
+  // Vérifier le statut de l'abonnement au chargement
+  async function checkSubscriptionStatus() {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/subscription/status', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+
+        if (data.showAlert && data.daysRemaining !== null) {
+          const alertDiv = document.getElementById('subscriptionAlert');
+          const messageSpan = document.getElementById('alertMessage');
+          
+          if (data.daysRemaining === 0) {
+            messageSpan.textContent = "⏰ Votre essai gratuit se termine aujourd'hui ! Choisissez votre abonnement pour continuer.";
+          } else if (data.daysRemaining === 1) {
+            messageSpan.textContent = "⏰ Plus qu'1 jour d'essai gratuit ! Choisissez votre abonnement pour continuer.";
+          } else {
+            messageSpan.textContent = `⏰ Plus que ${data.daysRemaining} jours d'essai gratuit ! Choisissez votre abonnement pour continuer.`;
+          }
+          
+          alertDiv.style.display = 'block';
+        }
+      }
+    } catch (err) {
+      console.error('Erreur vérification abonnement:', err);
+    }
+  }
+
+  // Appeler au chargement de la page
+  document.addEventListener('DOMContentLoaded', checkSubscriptionStatus);
 </script>
 </body>
 </html>
