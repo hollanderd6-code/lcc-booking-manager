@@ -3423,52 +3423,142 @@ app.get('/api/config', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { company, firstName, lastName, email, password } = req.body;
-
+    
     if (!company || !firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
     }
 
+    // Vérifier si l'email existe déjà
     const existing = await pool.query(
       'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
-
+    
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
     }
 
+    // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(password, 10);
     const id = `u_${Date.now().toString(36)}`;
 
+    // Générer le token de vérification
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
+
+    // Créer l'utilisateur avec email_verified = FALSE
     await pool.query(
-      `INSERT INTO users (id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL)`,
-      [id, company, firstName, lastName, email, passwordHash]
+      `INSERT INTO users (
+        id, company, first_name, last_name, email, password_hash, 
+        created_at, stripe_account_id,
+        email_verified, verification_token, verification_token_expires
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9)`,
+      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires]
     );
 
-    const user = {
-      id,
-      company,
-      firstName,
-      lastName,
-      email,
-      passwordHash,
-      createdAt: new Date().toISOString(),
-      stripeAccountId: null
+    // Créer l'abonnement trial
+    const trialStartDate = new Date();
+    const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      `INSERT INTO subscriptions (
+        id, user_id, status, plan_type, plan_amount,
+        trial_start_date, trial_end_date,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [
+        `sub_${Date.now()}`,
+        id,
+        'trial',
+        'trial',
+        0,
+        trialStartDate,
+        trialEndDate
+      ]
+    );
+
+    // Envoyer l'email de vérification
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const verificationUrl = `${appUrl}/verify-email.html?token=${verificationToken}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: '✅ Vérifiez votre adresse email - Boostinghost',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+            .button { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Bienvenue sur Boostinghost !</h1>
+            </div>
+            <div class="content">
+              <p>Bonjour ${firstName},</p>
+              
+              <p>Merci de vous être inscrit sur <strong>Boostinghost</strong> !</p>
+              
+              <p>Pour activer votre compte et commencer à utiliser notre plateforme, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
+              
+              <div style="text-align: center;">
+                <a href="${verificationUrl}" class="button">
+                  ✅ Vérifier mon email
+                </a>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 13px; margin-top: 20px;">
+                Si le bouton ne fonctionne pas, copiez ce lien :<br>
+                <a href="${verificationUrl}" style="color: #10b981;">${verificationUrl}</a>
+              </p>
+              
+              <p style="margin-top: 30px;">
+                <strong>Ce lien est valide pendant 24 heures.</strong>
+              </p>
+              
+              <p>À très bientôt sur Boostinghost ! 🚀</p>
+            </div>
+            <div class="footer">
+              <p>Cet email a été envoyé automatiquement par Boostinghost.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
     };
 
-    const token = generateToken(user);
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log('Email de vérification envoyé à:', email);
+    } catch (emailErr) {
+      console.error('Erreur envoi email:', emailErr);
+      // On continue quand même
+    }
 
-    res.json({
-      user: publicUser(user),
-      token
+    // Ne pas retourner de token, obliger l'utilisateur à vérifier son email
+    res.status(201).json({
+      success: true,
+      message: 'Compte créé ! Vérifiez votre email pour activer votre compte.',
+      emailSent: true,
+      email: email
     });
+
   } catch (err) {
     console.error('Erreur register:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -3493,7 +3583,14 @@ app.post('/api/auth/login', async (req, res) => {
     if (!ok) {
       return res.status(401).json({ error: 'Identifiants invalides' });
     }
-
+if (!row.email_verified) {
+  return res.status(403).json({ 
+    error: 'Email non vérifié',
+    emailNotVerified: true,
+    email: row.email,
+    message: 'Veuillez vérifier votre email avant de vous connecter.'
+  });
+}
     const user = {
       id: row.id,
       company: row.company,
