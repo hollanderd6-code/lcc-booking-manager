@@ -513,6 +513,57 @@
       }
     }
   </script>
+<script>
+  // Créer une session Stripe Checkout
+  async function startCheckout(plan) {
+    const token = localStorage.getItem('lcc_token');
+    
+    // Vérifier si l'utilisateur est connecté
+    if (!token) {
+      alert('Veuillez vous connecter pour souscrire à un abonnement.');
+      window.location.href = '/login.html';
+      return;
+    }
 
+    try {
+      // Désactiver le bouton pendant le chargement
+      const button = event.target;
+      button.disabled = true;
+      button.textContent = 'Redirection vers Stripe...';
+
+      // Appeler l'API pour créer la session Checkout
+      const res = await fetch('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ plan: plan })
+      });
+
+      if (!res.ok) {
+        throw new Error('Erreur lors de la création de la session');
+      }
+
+      const data = await res.json();
+
+      // Rediriger vers Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de paiement non reçue');
+      }
+
+    } catch (err) {
+      console.error('Erreur checkout:', err);
+      alert('Impossible de démarrer le paiement. Réessayez plus tard.');
+      
+      // Réactiver le bouton
+      const button = event.target;
+      button.disabled = false;
+      button.textContent = 'Essayer gratuitement';
+    }
+  }
+</script>
 </body>
 </html>
