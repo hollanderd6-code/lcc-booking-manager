@@ -739,7 +739,7 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 
   (newReservations || []).forEach(res => handleReservation(res, 'new'));
   (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
-}
+
 /**
  * Notifications ménage : pour chaque nouvelle réservation, si un logement a un cleaner assigné,
  * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
@@ -871,7 +871,7 @@ L'équipe Boostinghost`;
             })
         );
       }
-}
+
 /**
  * Envoie chaque jour un planning de ménage pour "demain"
  * à chaque cleaner assigné (email + WhatsApp si dispo).
@@ -1000,6 +1000,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
         console.error('❌ Erreur envoi planning ménage (email) :', err);
       })
   );
+  }
 
   console.log('✅ Planning ménage quotidien envoyé (si tâches détectées).');
 }
