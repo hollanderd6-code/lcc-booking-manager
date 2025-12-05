@@ -566,8 +566,45 @@
   </div>
 
   <!-- Scripts -->
-  <!-- Scripts -->
   <script>
+    (async function checkSubscriptionAccess() {
+    const token = localStorage.getItem('lcc_token');
+    
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/subscription/status', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('lcc_token');
+          localStorage.removeItem('lcc_user');
+          window.location.href = '/login.html';
+        }
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.status === 'expired' || data.status === 'canceled') {
+        window.location.href = '/subscription-expired.html';
+        return;
+      }
+
+      if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
+        window.location.href = '/subscription-expired.html';
+        return;
+      }
+
+    } catch (err) {
+      console.error('Erreur vérification abonnement:', err);
+    }
+  })();
     document.addEventListener('DOMContentLoaded', async function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
