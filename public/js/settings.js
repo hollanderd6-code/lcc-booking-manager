@@ -2,7 +2,7 @@
 // CONFIGURATION & STATE
 // ========================================
 const API_URL = "https://lcc-booking-manager.onrender.com";
-const BOOSTINGHOST_ICAL_BASE = window.location.origin; // à adapter si besoin
+const BOOSTINGHOST_ICAL_BASE = window.location.origin;
 let properties = [];
 let currentEditingProperty = null;
 
@@ -16,14 +16,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPhotoPreview();
   await loadProperties();
 
-  // Fermer le modal sur ESC
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeEditModal();
     }
   });
 
-  // Fermer le modal en cliquant sur le fond
   const modal = document.getElementById("editPropertyModal");
   if (modal) {
     modal.addEventListener("click", (e) => {
@@ -108,7 +106,6 @@ function setupPhotoPreview() {
   });
 }
 
-// Petite utilitaire pour éviter l'injection dans le HTML
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -149,7 +146,6 @@ async function saveProperty(event) {
   const arrivalTime = document.getElementById("propertyArrivalTime")?.value || null;
   const departureTime = document.getElementById("propertyDepartureTime")?.value || null;
   
-  // Gestion du montant de caution
   const depositRaw = document.getElementById("propertyDeposit")?.value || 
                      document.getElementById("propertyDepositAmount")?.value;
   const depositAmount = depositRaw && depositRaw.trim() !== ""
@@ -163,27 +159,19 @@ async function saveProperty(event) {
   const wifiPassword = document.getElementById('propertyWifiPassword')?.value?.trim() || null;
   const accessInstructions = document.getElementById('propertyAccessInstructions')?.value?.trim() || null;
 
-  // Photo existante (si modification sans nouveau fichier)
   const existingPhotoUrl = document.getElementById("propertyPhotoUrl")?.value || null;
   const photoInput = document.getElementById("propertyPhoto");
 
-  // Validation
   if (!name) {
     hideLoading();
     showToast('Veuillez saisir un nom de logement.', 'error');
     return;
   }
 
-  // ============================================
-  // RÉCUPÉRATION DES URLs iCal
-  // ============================================
-  
-  // Si vous avez des groupes avec plateforme
   const urlGroups = document.querySelectorAll(".url-input-group");
   let icalUrls = [];
   
   if (urlGroups.length > 0) {
-    // Format avec plateforme
     icalUrls = Array.from(urlGroups)
       .map((group) => {
         const platformInput = group.querySelector(".platform-input");
@@ -195,17 +183,12 @@ async function saveProperty(event) {
       })
       .filter(Boolean);
   } else {
-    // Format simple (juste URLs)
     const urlInputs = document.querySelectorAll('.ical-url-input');
     icalUrls = Array.from(urlInputs)
       .map(input => input.value.trim())
       .filter(Boolean);
   }
 
-  // ============================================
-  // CONSTRUCTION DU FORMDATA
-  // ============================================
-  
   const formData = new FormData();
   formData.append('name', name);
   formData.append('color', color);
@@ -224,15 +207,10 @@ async function saveProperty(event) {
   if (wifiPassword) formData.append('wifiPassword', wifiPassword);
   if (accessInstructions) formData.append('accessInstructions', accessInstructions);
 
-  // Photo (nouveau fichier)
   if (photoInput && photoInput.files && photoInput.files[0]) {
     formData.append('photo', photoInput.files[0]);
   }
 
-  // ============================================
-  // ENVOI DE LA REQUÊTE
-  // ============================================
-  
   try {
     const token = localStorage.getItem("lcc_token");
     const method = propertyId ? "PUT" : "POST";
@@ -244,7 +222,6 @@ async function saveProperty(event) {
       method,
       headers: {
         Authorization: "Bearer " + token,
-        // Pas de Content-Type pour FormData, géré automatiquement
       },
       body: formData,
     });
@@ -252,31 +229,44 @@ async function saveProperty(event) {
     const result = await response.json();
 
     if (response.ok) {
+      showToast(result.message || "Logement enregistré", "success");
+      closeEditModal();
+      await loadProperties();
+    } else {
+      showToast(
+        result.error || "Une erreur est survenue lors de l'enregistrement",
+        "error"
+      );
+    }
+  } catch (error) {
+    console.error("Erreur saveProperty:", error);
+    showToast("Erreur lors de l'enregistrement du logement", "error");
+  } finally {
+    hideLoading();
+  }
+}
 
 async function deleteProperty(propertyId) {
-  if (!propertyId) return;
-  const confirmDelete = window.confirm(
-    "Voulez-vous vraiment supprimer ce logement ?"
-  );
-  if (!confirmDelete) return;
+  if (!confirm("Êtes-vous sûr de vouloir supprimer ce logement ?")) {
+    return;
+  }
 
   showLoading();
   try {
     const token = localStorage.getItem("lcc_token");
     const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
       method: "DELETE",
-      headers: { Authorization: "Bearer " + token },
+      headers: {
+        Authorization: "Bearer " + token,
+      },
     });
-    const result = await response.json();
 
     if (response.ok) {
-      showToast(result.message || "Logement supprimé", "success");
+      showToast("Logement supprimé avec succès", "success");
       await loadProperties();
     } else {
-      showToast(
-        result.error || "Une erreur est survenue lors de la suppression",
-        "error"
-      );
+      const data = await response.json();
+      showToast(data.error || "Erreur lors de la suppression", "error");
     }
   } catch (error) {
     console.error("Erreur suppression:", error);
@@ -455,18 +445,20 @@ function openEditPropertyModal(propertyId) {
     }
   }
 
+  let urls = property.icalUrls || [];
+  if (!Array.isArray(urls)) urls = [];
+
   const urlList = document.getElementById("urlList");
   if (urlList) {
     urlList.innerHTML = "";
-    let urls = property.icalUrls || [];
-    if (Array.isArray(urls)) {
-      urls.forEach((item) => {
-        if (typeof item === "string") {
-          addUrlField("iCal", item);
-        } else if (item && typeof item === "object") {
-          addUrlField(item.platform || "iCal", item.url || "");
-        }
+    if (urls.length > 0) {
+      urls.forEach((u) => {
+        const platform = typeof u === "string" ? "iCal" : (u.platform || "iCal");
+        const url = typeof u === "string" ? u : (u.url || "");
+        addUrlField(platform, url);
       });
+    } else {
+      addUrlField();
     }
   }
 
@@ -478,16 +470,12 @@ function closeEditModal() {
   if (modal) modal.classList.remove("active");
 }
 
-// ========================================
-// URL FIELDS
-// ========================================
 function addUrlField(initialPlatform = "", initialUrl = "") {
   const urlList = document.getElementById("urlList");
   if (!urlList) return;
 
   const group = document.createElement("div");
   group.className = "url-input-group";
-
   group.innerHTML = `
     <input
       type="text"
@@ -514,13 +502,9 @@ function addUrlField(initialPlatform = "", initialUrl = "") {
   urlList.appendChild(group);
 }
 
-// ========================================
-// BOOSTINGHOST ICAL URL
-// ========================================
 function buildBoostinghostIcalUrl(property) {
   const id = property._id || property.id;
   if (!id) return null;
-  // Modèle à adapter si ton endpoint iCal est différent
   return `${BOOSTINGHOST_ICAL_BASE}/ical/${id}.ics`;
 }
 
@@ -706,7 +690,6 @@ function renderProperties() {
 
   grid.innerHTML = cardsHtml;
 
-  // Rattacher les événements après injection HTML
   grid.querySelectorAll(".btn-edit").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
