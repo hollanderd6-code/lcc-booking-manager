@@ -874,6 +874,8 @@ L'équipe Boostinghost`;
             })
         );
       }
+  await Promise.all(tasks);
+}
 
 
       // WhatsApp
