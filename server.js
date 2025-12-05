@@ -14,7 +14,6 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const nodemailer = require('nodemailer'); // 
 const multer = require('multer');
-const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const crypto = require('crypto');
@@ -273,8 +272,6 @@ async function initDb() {
     process.exit(1);
   }
 }
-
-
 
 // ============================================
 // NOTIFICATIONS PROPRIÉTAIRES – EMAIL
@@ -687,12 +684,10 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 
         // 2) WhatsApp au client (si configuré + activé)
         console.log(`🔍 Vérification WhatsApp pour user ${userId}:`);
-        console.log(`   - whatsappService.isConfigured(): ${whatsappService.isConfigured()}`);
         console.log(`   - settings.whatsappEnabled: ${settings?.whatsappEnabled}`);
         console.log(`   - settings.whatsappNumber: ${settings?.whatsappNumber}`);
         
         if (
-          whatsappService.isConfigured() &&
           settings &&
           settings.whatsappEnabled &&
           settings.whatsappNumber
@@ -716,7 +711,6 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
           console.log(`📝 Message: ${waText.substring(0, 100)}...`);
 
           try {
-            await whatsappService.sendWhatsAppText(settings.whatsappNumber, waText);
             console.log(
               `✅ WhatsApp "${type}" envoyé avec succès à ${settings.whatsappNumber} (user ${userId}, resa uid=${res.uid || res.id})`
             );
@@ -751,7 +745,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
   const useBrevo = !!process.env.BREVO_API_KEY;
   const transporter = useBrevo ? null : getEmailTransporter();
 
-  if (!useBrevo && !transporter && !whatsappService.isConfigured()) {
+  if (!useBrevo && !transporter) {
     console.log(
       '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, aucune notification ménage envoyée'
     );
@@ -874,32 +868,6 @@ L'équipe Boostinghost`;
             })
         );
       }
-  await Promise.all(tasks);
-}
-
-
-      // WhatsApp
-      if (whatsappService.isConfigured() && cleanerPhone) {
-        const waText =
-          `Nouveau ménage à prévoir:\n` +
-          `Logement: ${propertyName}\n` +
-          `Voyageur: ${guest}\n` +
-          `Séjour: du ${start} au ${end}\n` +
-          `Ménage à prévoir le ${end} après check-out.`;
-
-        tasks.push(
-          whatsappService
-            .sendWhatsAppText(cleanerPhone, waText)
-            .then(() => {
-              console.log(
-                `📱 Notification WhatsApp ménage envoyée à ${cleanerPhone} (resa uid=${res.uid || res.id})`
-              );
-            })
-            .catch((err) => {
-              console.error('❌ Erreur envoi WhatsApp notification ménage :', err);
-            })
-        );
-      }
     }
   }
 
@@ -913,13 +881,12 @@ async function sendDailyCleaningPlan() {
   const useBrevo = !!process.env.BREVO_API_KEY;
   const transporter = useBrevo ? null : getEmailTransporter();
 
-  if (!useBrevo && !transporter && !whatsappService.isConfigured()) {
+  if (!useBrevo && !transporter) {
     console.log(
       '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, planning ménage non envoyé'
     );
     return;
   }
-
 
   if (!PROPERTIES || !Array.isArray(PROPERTIES) || PROPERTIES.length === 0) {
     console.log('ℹ️ Aucun logement configuré, pas de planning ménage à envoyer.');
@@ -1035,32 +1002,12 @@ if ((useBrevo || transporter) && cleanerEmail) {
   );
   }
     // WhatsApp
-    if (whatsappService.isConfigured() && cleanerPhone) {
-      let waText = `Planning ménage de demain (${tomorrowIso}):\n`;
-      jobs.forEach((job, index) => {
-        waText += `${index + 1}. ${job.propertyName} – départ le ${job.end} (${job.guestName})\n`;
-      });
-
-      tasks.push(
-        whatsappService
-          .sendWhatsAppText(cleanerPhone, waText)
-          .then(() => {
-            console.log(
-              `📱 Planning ménage WhatsApp envoyé à ${cleanerPhone} pour ${tomorrowIso}`
-            );
-          })
-          .catch((err) => {
-            console.error('❌ Erreur WhatsApp planning ménage :', err);
-          })
-      );
-    }
   });
 
   await Promise.all(tasks);
 
   console.log('✅ Planning ménage quotidien envoyé (si tâches détectées).');
 }
-
 
 // ============================================
 // APP / STRIPE / STORE
@@ -1484,7 +1431,6 @@ async function getSubscriptionInfo(req, res, next) {
 // PROPERTIES (logements) - stockées en base
 // ============================================
 
-
 // PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
   try {
@@ -1656,7 +1602,6 @@ app.get('/api/test-whatsapp', async (req, res) => {
     console.log('🧪 Test WhatsApp demandé');
     
     // Vérifier si le service est configuré
-    const isConfigured = whatsappService.isConfigured();
     console.log('   - Service configuré:', isConfigured);
     
     if (!isConfigured) {
@@ -1673,7 +1618,6 @@ app.get('/api/test-whatsapp', async (req, res) => {
     console.log(`   - Envoi à: ${testNumber}`);
     console.log(`   - Message: ${testMessage}`);
     
-    const result = await whatsappService.sendWhatsAppText(testNumber, testMessage);
     
     console.log('✅ WhatsApp envoyé avec succès:', result);
     
@@ -1726,7 +1670,6 @@ app.get('/api/test-whatsapp-user', async (req, res) => {
     
     console.log(`   - Envoi à: ${settings.whatsappNumber}`);
     
-    await whatsappService.sendWhatsAppText(settings.whatsappNumber, testMessage);
     
     console.log('✅ Test WhatsApp envoyé avec succès');
     
@@ -2244,7 +2187,6 @@ app.get('/api/user/profile', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 
 // PUT - Mettre à jour le profil complet de l'utilisateur
 app.put('/api/user/profile', async (req, res) => {
@@ -3873,7 +3815,6 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
   }
 });
 
-
 app.get('/api/properties/:propertyId', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
@@ -3900,7 +3841,6 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     reservationCount: (reservationsStore.properties[property.id] || []).length
   });
 });
-
 
 app.post('/api/properties', upload.single('photo'), async (req, res) => {
   try {
@@ -4013,7 +3953,6 @@ if (Array.isArray(icalUrls)) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 
 app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) => {
   try {
