@@ -352,6 +352,24 @@ function resetPropertyForm() {
   document.getElementById("propertyArrivalTime").value = "";
   document.getElementById("propertyDepartureTime").value = "";
   document.getElementById("propertyDeposit").value = "";
+  
+  // ✅ RESET NOUVEAUX CHAMPS
+  if (document.getElementById("propertyWelcomeBookUrl")) {
+    document.getElementById("propertyWelcomeBookUrl").value = "";
+  }
+  if (document.getElementById("propertyAccessCode")) {
+    document.getElementById("propertyAccessCode").value = "";
+  }
+  if (document.getElementById("propertyWifiName")) {
+    document.getElementById("propertyWifiName").value = "";
+  }
+  if (document.getElementById("propertyWifiPassword")) {
+    document.getElementById("propertyWifiPassword").value = "";
+  }
+  if (document.getElementById("propertyAccessInstructions")) {
+    document.getElementById("propertyAccessInstructions").value = "";
+  }
+  
   document.getElementById("propertyColor").value = "#E67E50";
 
   const colorPreview = document.getElementById("colorPreview");
@@ -406,6 +424,24 @@ function openEditPropertyModal(propertyId) {
 
   const photoUrl = property.photoUrl || property.photo || null;
   document.getElementById("propertyPhotoUrl").value = photoUrl || "";
+  
+  // ✅ REMPLIR NOUVEAUX CHAMPS
+  if (document.getElementById("propertyWelcomeBookUrl")) {
+    document.getElementById("propertyWelcomeBookUrl").value = property.welcomeBookUrl || "";
+  }
+  if (document.getElementById("propertyAccessCode")) {
+    document.getElementById("propertyAccessCode").value = property.accessCode || "";
+  }
+  if (document.getElementById("propertyWifiName")) {
+    document.getElementById("propertyWifiName").value = property.wifiName || "";
+  }
+  if (document.getElementById("propertyWifiPassword")) {
+    document.getElementById("propertyWifiPassword").value = property.wifiPassword || "";
+  }
+  if (document.getElementById("propertyAccessInstructions")) {
+    document.getElementById("propertyAccessInstructions").value = property.accessInstructions || "";
+  }
+  
   const photoBox = document.getElementById("photoPreviewBox");
   if (photoBox) {
     if (photoUrl) {
