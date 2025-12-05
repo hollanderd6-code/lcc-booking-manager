@@ -3838,7 +3838,14 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
     photoUrl: property.photo_url || property.photoUrl || null,
     icalUrls: property.icalUrls || property.ical_urls || [],
-    reservationCount: (reservationsStore.properties[property.id] || []).length
+    reservationCount: (reservationsStore.properties[property.id] || []).length,
+    welcomeBookUrl: p.welcome_book_url || null,
+  accessCode: p.access_code || null,
+  wifiName: p.wifi_name || null,
+  wifiPassword: p.wifi_password || null,
+  accessInstructions: p.access_instructions || null,
+  icalUrls,
+  reservationCount: (reservationsStore.properties[p.id] || []).length
   });
 });
 
@@ -3864,7 +3871,12 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
       arrivalTime,
       departureTime,
       depositAmount,
-      photoUrl: existingPhotoUrl
+      photoUrl: existingPhotoUrl,
+      welcomeBookUrl,
+  accessCode,
+  wifiName,
+  wifiPassword,
+  accessInstructions
     } = body;
 
     if (!name || !color) {
@@ -3923,6 +3935,7 @@ if (Array.isArray(icalUrls)) {
       `INSERT INTO properties (
          id, user_id, name, color, ical_urls,
          address, arrival_time, departure_time, deposit_amount, photo_url,
+         welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
          created_at
        )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
@@ -3936,7 +3949,12 @@ if (Array.isArray(icalUrls)) {
         arrivalTime || null,
         departureTime || null,
         depositAmount === '' || depositAmount == null ? null : Number(depositAmount),
-        photoUrl
+        photoUrl,
+        welcomeBookUrl || null,
+    accessCode || null,
+    wifiName || null,
+    wifiPassword || null,
+    accessInstructions || null
       ]
     );
 
@@ -3978,7 +3996,12 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
       arrivalTime,
       departureTime,
       depositAmount,
-      photoUrl: existingPhotoUrl
+      photoUrl: existingPhotoUrl,
+      welcomeBookUrl,
+  accessCode,
+  wifiName,
+  wifiPassword,
+  accessInstructions
     } = body;
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
@@ -4008,7 +4031,31 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
             ? null
             : Number(depositAmount))
         : (property.deposit_amount ?? property.depositAmount ?? null);
+const newWelcomeBookUrl = 
+  welcomeBookUrl !== undefined 
+    ? (welcomeBookUrl || null) 
+    : (property.welcome_book_url || null);
 
+const newAccessCode = 
+  accessCode !== undefined 
+    ? (accessCode || null) 
+    : (property.access_code || null);
+
+const newWifiName = 
+  wifiName !== undefined 
+    ? (wifiName || null) 
+    : (property.wifi_name || null);
+
+const newWifiPassword = 
+  wifiPassword !== undefined 
+    ? (wifiPassword || null) 
+    : (property.wifi_password || null);
+
+const newAccessInstructions = 
+  accessInstructions !== undefined 
+    ? (accessInstructions || null) 
+    : (property.access_instructions || null);
+    
     let newPhotoUrl =
       existingPhotoUrl !== undefined
         ? (existingPhotoUrl || null)
