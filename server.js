@@ -1071,6 +1071,145 @@ const PORT = process.env.PORT || 3000;
 // Stripe
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 
+// ✅ WEBHOOK STRIPE (AVANT LES AUTRES MIDDLEWARES)
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET manquant');
+    return res.status(500).send('Webhook secret not configured');
+  }
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } catch (err) {
+    console.error('Erreur verification webhook:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log('✅ Webhook Stripe reçu:', event.type);
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const userId = session.client_reference_id || session.metadata?.userId;
+        const plan = session.metadata?.plan || 'basic';
+
+        if (!userId) {
+          console.error('userId manquant dans checkout.session.completed');
+          break;
+        }
+
+        const subscriptionId = session.subscription;
+        const customerId = session.customer;
+
+        await pool.query(
+          `UPDATE subscriptions 
+           SET 
+             stripe_subscription_id = $1,
+             stripe_customer_id = $2,
+             plan_type = $3,
+             status = 'active',
+             current_period_end = NOW() + INTERVAL '1 month',
+             updated_at = NOW()
+           WHERE user_id = $4`,
+          [subscriptionId, customerId, plan, userId]
+        );
+
+        console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        const subscriptionId = subscription.id;
+
+        let status = 'active';
+        if (subscription.status === 'trialing') status = 'trial';
+        else if (subscription.status === 'canceled') status = 'canceled';
+        else if (subscription.status === 'past_due') status = 'past_due';
+
+        await pool.query(
+          `UPDATE subscriptions 
+           SET 
+             status = $1,
+             current_period_end = to_timestamp($2),
+             updated_at = NOW()
+           WHERE stripe_subscription_id = $3`,
+          [status, subscription.current_period_end, subscriptionId]
+        );
+
+        console.log(`✅ Abonnement ${subscriptionId} mis à jour: ${status}`);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        const subscriptionId = subscription.id;
+
+        await pool.query(
+          `UPDATE subscriptions 
+           SET status = 'canceled', updated_at = NOW()
+           WHERE stripe_subscription_id = $1`,
+          [subscriptionId]
+        );
+
+        console.log(`✅ Abonnement ${subscriptionId} annulé`);
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+
+        if (!subscriptionId) break;
+
+        await pool.query(
+          `UPDATE subscriptions 
+           SET 
+             status = 'active',
+             updated_at = NOW()
+           WHERE stripe_subscription_id = $1`,
+          [subscriptionId]
+        );
+
+        console.log(`✅ Paiement réussi pour subscription ${subscriptionId}`);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+
+        if (!subscriptionId) break;
+
+        await pool.query(
+          `UPDATE subscriptions 
+           SET status = 'past_due', updated_at = NOW()
+           WHERE stripe_subscription_id = $1`,
+          [subscriptionId]
+        );
+
+        console.log(`❌ Paiement échoué pour subscription ${subscriptionId}`);
+        break;
+      }
+
+      default:
+        console.log(`Événement non géré: ${event.type}`);
+    }
+
+    res.json({ received: true });
+
+  } catch (err) {
+    console.error('❌ Erreur traitement webhook:', err);
+    res.status(500).json({ error: 'Erreur traitement webhook' });
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
@@ -4384,173 +4523,6 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
   } catch (err) {
     console.error('Erreur create-portal-session:', err);
     res.status(500).json({ error: 'Impossible de creer la session portail' });
-  }
-});
-
-// POST - Webhook Stripe (événements de paiement)
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET manquant');
-    return res.status(500).send('Webhook secret not configured');
-  }
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    console.error('Erreur verification webhook:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  console.log('Webhook Stripe recu:', event.type);
-
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-  const session = event.data.object;
-  const userId = session.client_reference_id || session.metadata?.userId;
-  const plan = session.metadata?.plan || 'basic';
-
-  if (!userId) {
-    console.error('userId manquant dans checkout.session.completed');
-    break;
-  }
-
-  // Récupérer la subscription Stripe
-  const subscriptionId = session.subscription;
-  const customerId = session.customer;
-
-  // ✅ METTRE À JOUR AVEC STATUS = 'ACTIVE'
-  await pool.query(
-    `UPDATE subscriptions 
-     SET 
-       stripe_subscription_id = $1,
-       stripe_customer_id = $2,
-       plan_type = $3,
-       status = 'active',
-       current_period_end = NOW() + INTERVAL '1 month',
-       updated_at = NOW()
-     WHERE user_id = $4`,
-    [subscriptionId, customerId, plan, userId]
-  );
-
-  console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
-  break;
-}
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const subscriptionId = subscription.id;
-
-        // Déterminer le statut
-        let status = 'active';
-        if (subscription.status === 'trialing') status = 'trial';
-        else if (subscription.status === 'canceled') status = 'canceled';
-        else if (subscription.status === 'past_due') status = 'past_due';
-
-        // Mettre à jour en base
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = $1,
-             current_period_end = to_timestamp($2),
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $3`,
-          [status, subscription.current_period_end, subscriptionId]
-        );
-
-        console.log(`Abonnement ${subscriptionId} mis a jour: ${status}`);
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const subscriptionId = subscription.id;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'canceled', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`Abonnement ${subscriptionId} annule`);
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        // Passer de trial à active si c'était le premier paiement
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = 'active',
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $1 AND status = 'trial'`,
-          [subscriptionId]
-        );
-
-        // Enregistrer l'événement de paiement
-        const userId = await pool.query(
-          'SELECT user_id FROM subscriptions WHERE stripe_subscription_id = $1',
-          [subscriptionId]
-        );
-
-        if (userId.rows.length > 0) {
-          await pool.query(
-            `INSERT INTO billing_events (id, user_id, subscription_id, event_type, event_data, created_at)
-             VALUES ($1, $2, $3, 'payment_succeeded', $4, NOW())`,
-            [
-              `evt_${Date.now()}`,
-              userId.rows[0].user_id,
-              subscriptionId,
-              JSON.stringify({
-                amount: invoice.amount_paid,
-                currency: invoice.currency,
-                invoice_id: invoice.id
-              })
-            ]
-          );
-        }
-
-        console.log(`Paiement reussi pour subscription ${subscriptionId}`);
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'past_due', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`Paiement echoue pour subscription ${subscriptionId}`);
-        break;
-      }
-
-      default:
-        console.log(`Evenement non gere: ${event.type}`);
-    }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.error('Erreur traitement webhook:', err);
-    res.status(500).json({ error: 'Erreur traitement webhook' });
   }
 });
 
