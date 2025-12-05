@@ -1119,11 +1119,28 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
            WHERE user_id = $4`,
           [subscriptionId, customerId, plan, userId]
         );
+const userResult = await pool.query(
+    'SELECT email, first_name FROM users WHERE id = $1',
+    [userId]
+  );
 
-        console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
-        break;
-      }
+  if (userResult.rows.length > 0) {
+    const userEmail = userResult.rows[0].email;
+    const userFirstName = userResult.rows[0].first_name;
+    const planAmount = plan === 'pro' ? 899 : 599;
 
+    await sendSubscriptionConfirmedEmail(
+      userEmail,
+      userFirstName || 'cher membre',
+      plan,
+      planAmount
+    );
+    await logEmailSent(userId, 'subscription_confirmed', { plan, planAmount });
+  }
+
+  console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
+  break;
+}
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const subscriptionId = subscription.id;
@@ -6072,6 +6089,169 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
 // ============================================
 // FIN DES ROUTES STRIPE
+// ============================================
+// ============================================
+// SCRIPT CRON : ENVOI AUTOMATIQUE DES EMAILS
+// À AJOUTER DANS server.js
+// ============================================
+
+// ============================================
+// CRON JOB : Vérifier et envoyer les emails automatiques
+// S'exécute toutes les heures
+// ============================================
+cron.schedule('0 * * * *', async () => {
+  console.log('🔄 Vérification des emails automatiques à envoyer...');
+  
+  try {
+    // Récupérer tous les utilisateurs avec leur abonnement
+    const result = await pool.query(`
+      SELECT 
+        u.id as user_id,
+        u.email,
+        u.first_name,
+        s.status,
+        s.plan_type,
+        s.trial_end_date,
+        s.current_period_end
+      FROM users u
+      LEFT JOIN subscriptions s ON u.id = s.user_id
+      WHERE u.email_verified = TRUE
+    `);
+
+    const users = result.rows;
+    const now = new Date();
+
+    for (const user of users) {
+      try {
+        // ============================================
+        // EMAIL 1 : BIENVENUE (si jamais envoyé)
+        // ============================================
+        const welcomeSent = await hasEmailBeenSent(user.user_id, 'welcome');
+        if (!welcomeSent && user.status === 'trial') {
+          await sendWelcomeEmail(user.email, user.first_name || 'cher membre');
+          await logEmailSent(user.user_id, 'welcome', { email: user.email });
+        }
+
+        // ============================================
+        // EMAILS DE RAPPEL D'EXPIRATION (seulement si trial)
+        // ============================================
+        if (user.status === 'trial' && user.trial_end_date) {
+          const trialEnd = new Date(user.trial_end_date);
+          const diffTime = trialEnd - now;
+          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          // RAPPEL J-7
+          if (daysRemaining === 7) {
+            const reminder7Sent = await hasEmailBeenSent(user.user_id, 'trial_reminder_7');
+            if (!reminder7Sent) {
+              await sendTrialReminder7Days(user.email, user.first_name || 'cher membre');
+              await logEmailSent(user.user_id, 'trial_reminder_7', { daysRemaining: 7 });
+            }
+          }
+
+          // RAPPEL J-3
+          if (daysRemaining === 3) {
+            const reminder3Sent = await hasEmailBeenSent(user.user_id, 'trial_reminder_3');
+            if (!reminder3Sent) {
+              await sendTrialReminder3Days(user.email, user.first_name || 'cher membre');
+              await logEmailSent(user.user_id, 'trial_reminder_3', { daysRemaining: 3 });
+            }
+          }
+
+          // RAPPEL J-1
+          if (daysRemaining === 1) {
+            const reminder1Sent = await hasEmailBeenSent(user.user_id, 'trial_reminder_1');
+            if (!reminder1Sent) {
+              await sendTrialReminder1Day(user.email, user.first_name || 'cher membre');
+              await logEmailSent(user.user_id, 'trial_reminder_1', { daysRemaining: 1 });
+            }
+          }
+        }
+
+        // ============================================
+        // EMAIL DE RAPPEL AVANT RENOUVELLEMENT
+        // ============================================
+        if (user.status === 'active' && user.current_period_end) {
+          const periodEnd = new Date(user.current_period_end);
+          const diffTime = periodEnd - now;
+          const daysUntilRenewal = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (daysUntilRenewal === 3) {
+            // Vérifier si un email de rappel a été envoyé pour cette période
+            const renewalKey = `renewal_reminder_${periodEnd.toISOString().split('T')[0]}`;
+            const renewalSent = await hasEmailBeenSent(user.user_id, renewalKey);
+            
+            if (!renewalSent) {
+              const planAmount = user.plan_type === 'pro' ? 899 : 599;
+              await sendRenewalReminderEmail(
+                user.email, 
+                user.first_name || 'cher membre',
+                user.plan_type,
+                planAmount,
+                user.current_period_end
+              );
+              await logEmailSent(user.user_id, renewalKey, { 
+                renewalDate: user.current_period_end,
+                planType: user.plan_type 
+              });
+            }
+          }
+        }
+
+      } catch (userErr) {
+        console.error(`Erreur traitement user ${user.user_id}:`, userErr);
+        // Continuer avec le prochain utilisateur
+      }
+    }
+
+    console.log('✅ Vérification des emails automatiques terminée');
+
+  } catch (err) {
+    console.error('❌ Erreur cron emails automatiques:', err);
+  }
+});
+
+console.log('⏰ Tâche CRON emails automatiques activée (toutes les heures)');
+
+// ============================================
+// MODIFIER LE WEBHOOK : ENVOYER EMAIL CONFIRMATION
+// ============================================
+// Dans le case 'checkout.session.completed' de votre webhook,
+// ajoutez ceci après la mise à jour de la base de données :
+
+/*
+case 'checkout.session.completed': {
+  // ... votre code existant ...
+  
+  await pool.query(...); // Mise à jour de la base
+
+  // ✅ AJOUTER ICI : Envoyer email de confirmation
+  const userResult = await pool.query(
+    'SELECT email, first_name FROM users WHERE id = $1',
+    [userId]
+  );
+
+  if (userResult.rows.length > 0) {
+    const userEmail = userResult.rows[0].email;
+    const userFirstName = userResult.rows[0].first_name;
+    const planAmount = plan === 'pro' ? 899 : 599;
+
+    await sendSubscriptionConfirmedEmail(
+      userEmail,
+      userFirstName || 'cher membre',
+      plan,
+      planAmount
+    );
+    await logEmailSent(userId, 'subscription_confirmed', { plan, planAmount });
+  }
+
+  console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
+  break;
+}
+*/
+
+// ============================================
+// FIN DU SCRIPT CRON
 // ============================================
 
 // ============================================
