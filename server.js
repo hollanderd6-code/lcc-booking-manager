@@ -4507,7 +4507,65 @@ app.get('/api/auth/me', async (req, res) => {
     return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
 });
+// Route de vérification d'email
+app.get('/api/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
 
+    if (!token) {
+      return res.status(400).json({ error: 'Token manquant' });
+    }
+
+    // Vérifier le token
+    const result = await pool.query(
+      `SELECT id, email, first_name, verification_token_expires
+       FROM users 
+       WHERE verification_token = $1`,
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Token invalide' });
+    }
+
+    const user = result.rows[0];
+
+    // Vérifier si le token est expiré
+    if (new Date() > new Date(user.verification_token_expires)) {
+      return res.status(400).json({ error: 'Token expiré' });
+    }
+
+    // Activer le compte
+    await pool.query(
+      `UPDATE users 
+       SET email_verified = TRUE,
+           verification_token = NULL,
+           verification_token_expires = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    console.log('✅ Email vérifié pour:', user.email);
+
+    // ✅ Envoyer email de bienvenue
+    await sendWelcomeEmail(user.email, user.first_name || 'nouveau membre');
+    await logEmailSent(user.id, 'welcome', { email: user.email });
+
+    res.json({
+      success: true,
+      message: 'Email vérifié avec succès !',
+      user: {
+        email: user.email,
+        firstName: user.first_name
+      }
+    });
+
+  } catch (err) {
+    console.error('Erreur verify-email:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // ============================================
 // ROUTES API - MESSAGES
 // ============================================
