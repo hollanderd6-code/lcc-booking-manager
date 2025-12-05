@@ -2357,7 +2357,9 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
       `SELECT 
         status, 
         plan_type, 
-        trial_end_date
+        trial_end_date,
+        current_period_end,
+        stripe_subscription_id
       FROM subscriptions 
       WHERE user_id = $1`,
       [userId]
@@ -2378,11 +2380,34 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
       daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
+    // ✅ AJOUTER LE PRIX
+    let planAmount = 0;
+    if (sub.plan_type === 'basic') {
+      planAmount = 599; // 5,99€ en centimes
+    } else if (sub.plan_type === 'pro') {
+      planAmount = 899; // 8,99€ en centimes
+    }
+
+    // ✅ AJOUTER LE DISPLAY MESSAGE
+    let displayMessage = 'Abonnement';
+    if (sub.status === 'trial') {
+      displayMessage = 'Essai gratuit';
+    } else if (sub.status === 'active') {
+      displayMessage = sub.plan_type === 'pro' ? 'Abonnement Pro' : 'Abonnement Basic';
+    } else if (sub.status === 'expired') {
+      displayMessage = 'Abonnement expiré';
+    } else if (sub.status === 'canceled') {
+      displayMessage = 'Abonnement annulé';
+    }
+
     res.json({
       status: sub.status,
       planType: sub.plan_type,
+      planAmount: planAmount,
       trialEndDate: sub.trial_end_date,
+      currentPeriodEnd: sub.current_period_end,
       daysRemaining: daysRemaining,
+      displayMessage: displayMessage,
       showAlert: sub.status === 'trial' && daysRemaining !== null && daysRemaining <= 3
     });
 
