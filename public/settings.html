@@ -1023,6 +1023,75 @@
             </div>
           </div>
 
+          <!-- ✅ SECTION : LIVRET D'ACCUEIL -->
+          <div class="form-group">
+            <label for="propertyWelcomeBookUrl">
+              <i class="fas fa-book"></i>
+              <span>URL du livret d'accueil</span>
+            </label>
+            <input 
+              type="url" 
+              id="propertyWelcomeBookUrl" 
+              placeholder="https://monsite.com/livret-appartement-paris">
+            <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+              Lien vers le livret d'accueil que vous avez créé pour vos voyageurs
+            </small>
+          </div>
+
+          <!-- ✅ SECTION : ACCÈS AU LOGEMENT -->
+          <div class="form-group">
+            <label for="propertyAccessCode">
+              <i class="fas fa-key"></i>
+              <span>Code d'accès</span>
+            </label>
+            <input 
+              type="text" 
+              id="propertyAccessCode" 
+              placeholder="Ex: 1234# ou code boîte à clés">
+            <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+              Code de la serrure connectée ou de la boîte à clés
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="propertyAccessInstructions">
+              <i class="fas fa-route"></i>
+              <span>Instructions d'accès</span>
+            </label>
+            <textarea 
+              id="propertyAccessInstructions" 
+              rows="3" 
+              placeholder="Ex: Prenez l'ascenseur jusqu'au 3ème étage, porte à droite..."></textarea>
+            <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+              Détails pour accéder au logement (étage, porte, etc.)
+            </small>
+          </div>
+
+          <!-- ✅ SECTION : WIFI -->
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="propertyWifiName">
+                <i class="fas fa-wifi"></i>
+                <span>Nom du réseau WiFi</span>
+              </label>
+              <input 
+                type="text" 
+                id="propertyWifiName" 
+                placeholder="Ex: FreeWiFi_Secure">
+            </div>
+
+            <div class="form-group">
+              <label for="propertyWifiPassword">
+                <i class="fas fa-lock"></i>
+                <span>Mot de passe WiFi</span>
+              </label>
+              <input 
+                type="text" 
+                id="propertyWifiPassword" 
+                placeholder="Ex: MonMotDePasse123">
+            </div>
+          </div>
+
           <div class="form-group">
             <label for="propertyPhoto">
               <i class="fas fa-image"></i>
