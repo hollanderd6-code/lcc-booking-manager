@@ -739,8 +739,6 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 
   (newReservations || []).forEach(res => handleReservation(res, 'new'));
   (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
-
-  await Promise.all(tasks);
 }
 /**
  * Notifications ménage : pour chaque nouvelle réservation, si un logement a un cleaner assigné,
@@ -873,8 +871,6 @@ L'équipe Boostinghost`;
             })
         );
       }
-
-  await Promise.all(tasks);
 }
 /**
  * Envoie chaque jour un planning de ménage pour "demain"
@@ -1005,8 +1001,6 @@ if ((useBrevo || transporter) && cleanerEmail) {
       })
   );
   }
-
-  await Promise.all(tasks);
 
   console.log('✅ Planning ménage quotidien envoyé (si tâches détectées).');
 }
