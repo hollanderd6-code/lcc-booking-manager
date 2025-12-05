@@ -2957,6 +2957,509 @@ async function sendVerificationEmail(email, firstName, token) {
     return false;
   }
 }
+// ============================================
+// SERVICE D'EMAILS AUTOMATIQUES
+// ============================================
+
+// ============================================
+// FONCTION : Vérifier si un email a déjà été envoyé
+// ============================================
+async function hasEmailBeenSent(userId, emailType) {
+  const result = await pool.query(
+    `SELECT id FROM email_logs 
+     WHERE user_id = $1 AND email_type = $2`,
+    [userId, emailType]
+  );
+  return result.rows.length > 0;
+}
+
+// ============================================
+// FONCTION : Enregistrer l'envoi d'un email
+// ============================================
+async function logEmailSent(userId, emailType, emailData = {}) {
+  await pool.query(
+    `INSERT INTO email_logs (id, user_id, email_type, email_data, sent_at, status)
+     VALUES ($1, $2, $3, $4, NOW(), 'sent')`,
+    [`email_${Date.now()}`, userId, emailType, JSON.stringify(emailData)]
+  );
+}
+
+// ============================================
+// EMAIL 1 : BIENVENUE APRÈS VÉRIFICATION
+// ============================================
+async function sendWelcomeEmail(email, firstName) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🎉 Bienvenue sur Boostinghost !',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .feature { padding: 12px 0; display: flex; align-items: start; }
+          .feature-icon { color: #10b981; margin-right: 12px; font-size: 20px; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 32px;">🎉 Bienvenue !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <p><strong>Votre compte Boostinghost est maintenant actif !</strong></p>
+            
+            <p>Vous avez accès à <strong>14 jours d'essai gratuit</strong> pour tester toutes les fonctionnalités de notre plateforme de gestion de locations courte durée.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
+                🚀 Accéder à mon espace
+              </a>
+            </div>
+            
+            <h3 style="color: #111827; margin-top: 30px;">✨ Ce que vous pouvez faire dès maintenant :</h3>
+            
+            <div class="feature">
+              <span class="feature-icon">📅</span>
+              <div>
+                <strong>Ajoutez vos logements</strong><br>
+                <span style="color: #6b7280; font-size: 14px;">Créez vos fiches de propriétés en quelques clics</span>
+              </div>
+            </div>
+            
+            <div class="feature">
+              <span class="feature-icon">🔗</span>
+              <div>
+                <strong>Synchronisez vos calendriers</strong><br>
+                <span style="color: #6b7280; font-size: 14px;">Connectez Airbnb et Booking.com via iCal</span>
+              </div>
+            </div>
+            
+            <div class="feature">
+              <span class="feature-icon">💬</span>
+              <div>
+                <strong>Gérez vos messages</strong><br>
+                <span style="color: #6b7280; font-size: 14px;">Centralisez toutes vos communications</span>
+              </div>
+            </div>
+            
+            <div class="feature">
+              <span class="feature-icon">🧹</span>
+              <div>
+                <strong>Organisez le ménage</strong><br>
+                <span style="color: #6b7280; font-size: 14px;">Planifiez et suivez les tâches de nettoyage</span>
+              </div>
+            </div>
+            
+            <p style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
+              💡 <strong>Besoin d'aide ?</strong><br>
+              Notre équipe est là pour vous accompagner : <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a>
+            </p>
+            
+            <p>À très bientôt sur Boostinghost ! 🚀</p>
+            
+            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
+              L'équipe Boostinghost
+            </p>
+          </div>
+          <div class="footer">
+            <p>Cet email a été envoyé automatiquement par Boostinghost.</p>
+            <p>© ${new Date().getFullYear()} Boostinghost. Tous droits réservés.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email de bienvenue envoyé à:', email);
+}
+
+// ============================================
+// EMAIL 2 : RAPPEL J-7
+// ============================================
+async function sendTrialReminder7Days(email, firstName) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '⏰ Plus qu\'une semaine d\'essai gratuit',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">⏰ Plus qu'une semaine !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <p>Il vous reste <strong>7 jours</strong> d'essai gratuit sur Boostinghost !</p>
+            
+            <p>C'est le moment idéal pour :</p>
+            <ul>
+              <li>Tester toutes les fonctionnalités</li>
+              <li>Synchroniser tous vos calendriers</li>
+              <li>Configurer vos messages automatiques</li>
+              <li>Organiser votre planning de ménage</li>
+            </ul>
+            
+            <p>Pour continuer à profiter de Boostinghost après votre essai, choisissez le plan qui vous convient :</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
+                Voir les plans
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              Pas encore convaincu ? Profitez au maximum de votre semaine restante !
+            </p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Boostinghost</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email rappel J-7 envoyé à:', email);
+}
+
+// ============================================
+// EMAIL 3 : RAPPEL J-3
+// ============================================
+async function sendTrialReminder3Days(email, firstName) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🔔 Plus que 3 jours d\'essai gratuit !',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">🔔 Plus que 3 jours !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <div class="alert">
+              <strong>⚠️ Attention !</strong><br>
+              Votre essai gratuit se termine dans <strong>3 jours</strong>.
+            </div>
+            
+            <p>Pour continuer à utiliser Boostinghost sans interruption, choisissez votre plan dès maintenant :</p>
+            
+            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0 0 10px 0;"><strong>Plan Basic - 5,99€/mois</strong></p>
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">Toutes les fonctionnalités essentielles</p>
+            </div>
+            
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; border: 2px solid #10b981; margin: 20px 0;">
+              <p style="margin: 0 0 10px 0;"><strong>Plan Pro - 8,99€/mois</strong></p>
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">+ Gestion des cautions Stripe (commission 2%)</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
+                Choisir mon plan
+              </a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Boostinghost</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email rappel J-3 envoyé à:', email);
+}
+// ============================================
+// SERVICE D'EMAILS AUTOMATIQUES (SUITE)
+// ============================================
+
+// ============================================
+// EMAIL 4 : RAPPEL J-1
+// ============================================
+async function sendTrialReminder1Day(email, firstName) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🚨 Dernier jour d\'essai gratuit !',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 16px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; font-size: 18px; }
+          .alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 32px;">🚨 Dernier jour !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <div class="alert">
+              <strong style="font-size: 18px;">⏰ Votre essai gratuit se termine demain !</strong><br><br>
+              Pour continuer à utiliser Boostinghost, souscrivez à un plan dès maintenant.
+            </div>
+            
+            <p style="font-size: 16px;">Sans abonnement actif, vous perdrez l'accès à :</p>
+            <ul style="font-size: 16px;">
+              <li>Votre calendrier unifié</li>
+              <li>La synchronisation iCal</li>
+              <li>La gestion des messages</li>
+              <li>Le suivi du ménage</li>
+              <li>Toutes vos données et réservations</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
+                🚀 Activer mon abonnement maintenant
+              </a>
+            </div>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px;">
+              Seulement 5,99€/mois pour le plan Basic<br>
+              ou 8,99€/mois pour le plan Pro
+            </p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Boostinghost</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email rappel J-1 envoyé à:', email);
+}
+
+// ============================================
+// EMAIL 5 : CONFIRMATION D'ABONNEMENT
+// ============================================
+async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAmount) {
+  const planName = planType === 'pro' ? 'Pro' : 'Basic';
+  const price = (planAmount / 100).toFixed(2);
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '✅ Abonnement confirmé - Merci !',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .card { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 32px;">✅ Abonnement confirmé !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <p><strong>Merci pour votre confiance ! 🎉</strong></p>
+            
+            <p>Votre abonnement Boostinghost est maintenant actif.</p>
+            
+            <div class="card">
+              <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Votre plan</p>
+              <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #10b981;">Plan ${planName}</p>
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                <strong style="font-size: 18px; color: #111827;">${price}€</strong> / mois
+              </p>
+            </div>
+            
+            <p>Vous avez maintenant accès à toutes les fonctionnalités de Boostinghost :</p>
+            <ul>
+              <li>✅ Calendrier unifié</li>
+              <li>✅ Synchronisation iCal (Airbnb, Booking)</li>
+              <li>✅ Gestion des messages</li>
+              <li>✅ Livret d'accueil personnalisé</li>
+              <li>✅ Gestion du ménage</li>
+              <li>✅ Statistiques & rapports</li>
+              ${planType === 'pro' ? '<li>✅ Gestion des cautions Stripe (2% commission)</li>' : ''}
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
+                Accéder à mon espace
+              </a>
+            </div>
+            
+            <p style="padding: 16px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #10b981; margin-top: 30px;">
+              💡 <strong>Gérer mon abonnement</strong><br>
+              Vous pouvez modifier ou annuler votre abonnement à tout moment depuis votre espace compte.
+            </p>
+            
+            <p style="margin-top: 30px;">Merci encore et bonne gestion ! 🚀</p>
+            
+            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
+              L'équipe Boostinghost
+            </p>
+          </div>
+          <div class="footer">
+            <p>Questions ? Contactez-nous : support@boostinghost.com</p>
+            <p>© ${new Date().getFullYear()} Boostinghost. Tous droits réservés.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email confirmation abonnement envoyé à:', email);
+}
+
+// ============================================
+// EMAIL 6 : RAPPEL AVANT RENOUVELLEMENT
+// ============================================
+async function sendRenewalReminderEmail(email, firstName, planType, planAmount, renewalDate) {
+  const planName = planType === 'pro' ? 'Pro' : 'Basic';
+  const price = (planAmount / 100).toFixed(2);
+  const formattedDate = new Date(renewalDate).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🔄 Prochain renouvellement dans 3 jours',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #3b82f6; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .card { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">🔄 Rappel de renouvellement</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <p>Votre abonnement Boostinghost <strong>Plan ${planName}</strong> sera automatiquement renouvelé dans <strong>3 jours</strong>.</p>
+            
+            <div class="card">
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">Prochain prélèvement</p>
+              <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #3b82f6;">${price}€</p>
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                Date : <strong>${formattedDate}</strong>
+              </p>
+            </div>
+            
+            <p>Aucune action n'est nécessaire de votre part. Le paiement sera effectué automatiquement.</p>
+            
+            <p style="padding: 16px; background: #f0f9ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
+              💡 Vous souhaitez modifier ou annuler votre abonnement ? Rendez-vous dans votre espace compte.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
+                Gérer mon abonnement
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
+              Merci de votre confiance !<br>
+              L'équipe Boostinghost
+            </p>
+          </div>
+          <div class="footer">
+            <p>Questions ? Contactez-nous : support@boostinghost.com</p>
+            <p>© ${new Date().getFullYear()} Boostinghost</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email rappel renouvellement envoyé à:', email);
+}
+
+// ============================================
+// FIN DU SERVICE D'EMAILS
+// ============================================
 
 // ============================================
 // ROUTES API - LIVRET D'ACCUEIL (par user)
