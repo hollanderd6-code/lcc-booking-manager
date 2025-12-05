@@ -4418,35 +4418,36 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object;
-        const userId = session.client_reference_id || session.metadata?.userId;
-        const plan = session.metadata?.plan || 'basic';
+  const session = event.data.object;
+  const userId = session.client_reference_id || session.metadata?.userId;
+  const plan = session.metadata?.plan || 'basic';
 
-        if (!userId) {
-          console.error('userId manquant dans checkout.session.completed');
-          break;
-        }
+  if (!userId) {
+    console.error('userId manquant dans checkout.session.completed');
+    break;
+  }
 
-        // Récupérer la subscription Stripe
-        const subscriptionId = session.subscription;
-        const customerId = session.customer;
+  // Récupérer la subscription Stripe
+  const subscriptionId = session.subscription;
+  const customerId = session.customer;
 
-        // Mettre à jour la base de données
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             stripe_subscription_id = $1,
-             stripe_customer_id = $2,
-             plan_type = $3,
-             status = 'trial',
-             updated_at = NOW()
-           WHERE user_id = $4`,
-          [subscriptionId, customerId, plan, userId]
-        );
+  // ✅ METTRE À JOUR AVEC STATUS = 'ACTIVE'
+  await pool.query(
+    `UPDATE subscriptions 
+     SET 
+       stripe_subscription_id = $1,
+       stripe_customer_id = $2,
+       plan_type = $3,
+       status = 'active',
+       current_period_end = NOW() + INTERVAL '1 month',
+       updated_at = NOW()
+     WHERE user_id = $4`,
+    [subscriptionId, customerId, plan, userId]
+  );
 
-        console.log(`Abonnement cree pour user ${userId} (plan: ${plan})`);
-        break;
-      }
+  console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
+  break;
+}
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
