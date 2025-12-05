@@ -119,6 +119,93 @@ function authenticateToken(req, res, next) {
     return res.status(403).json({ error: 'Token invalide' });
   }
 }
+// ============================================
+// MIDDLEWARE DE VÉRIFICATION D'ABONNEMENT
+// À AJOUTER DANS server.js APRÈS authenticateToken
+// ============================================
+
+async function checkSubscription(req, res, next) {
+  try {
+    const userId = req.user.id;
+
+    // Récupérer l'abonnement
+    const result = await pool.query(
+      `SELECT status, trial_end_date, current_period_end
+       FROM subscriptions 
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      // Pas d'abonnement trouvé
+      return res.status(403).json({ 
+        error: 'Aucun abonnement', 
+        subscriptionExpired: true 
+      });
+    }
+
+    const sub = result.rows[0];
+    const now = new Date();
+
+    // Vérifier si l'abonnement est expiré
+    if (sub.status === 'trial') {
+      const trialEnd = new Date(sub.trial_end_date);
+      if (now > trialEnd) {
+        return res.status(403).json({ 
+          error: 'Essai expiré', 
+          subscriptionExpired: true 
+        });
+      }
+    } else if (sub.status === 'active') {
+      // L'abonnement actif est valide (géré par Stripe)
+      // On pourrait vérifier current_period_end si besoin
+    } else if (sub.status === 'expired' || sub.status === 'canceled') {
+      return res.status(403).json({ 
+        error: 'Abonnement expiré', 
+        subscriptionExpired: true 
+      });
+    }
+
+    // Abonnement valide, continuer
+    next();
+
+  } catch (err) {
+    console.error('Erreur vérification abonnement:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// ============================================
+// COMMENT UTILISER CE MIDDLEWARE
+// ============================================
+
+/*
+Pour protéger une route, ajoutez le middleware après authenticateToken :
+
+AVANT :
+app.get('/api/properties', authenticateToken, async (req, res) => {
+  // ...
+});
+
+APRÈS :
+app.get('/api/properties', authenticateToken, checkSubscription, async (req, res) => {
+  // ...
+});
+
+Routes à protéger (exemples) :
+- /api/properties
+- /api/reservations
+- /api/cleaning
+- /api/messages
+- /api/statistics
+- etc.
+
+Routes à NE PAS protéger :
+- /api/auth/login
+- /api/auth/register
+- /api/subscription/status
+- /api/billing/* (routes Stripe)
+*/
 
 // ============================================
 // CONNEXION POSTGRES
