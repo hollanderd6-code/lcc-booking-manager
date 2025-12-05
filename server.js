@@ -3953,8 +3953,8 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
         }
       },
       customer_email: user.email,
-      success_url: `${appUrl}/pricing-success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/pricing-cancel.html`
+      success_url: `${appUrl}/app.html?session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${appUrl}/pricing.html`,
     });
 
     res.json({ url: session.url });
