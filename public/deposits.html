@@ -687,7 +687,7 @@ async function copyExistingDepositMessage(reservation) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
       await navigator.clipboard.writeText(message);
-      alert("Message de caution copié ! Vous pouvez le coller dans Airbnb, Booking, WhatsApp, email…");
+      alert("Message de caution copié ! Vous pouvez le coller dans Airbnb, Booking, email…");
     } catch (e) {
       alert("Impossible de copier automatiquement, copiez le message manuellement :\n\n" + message);
     }
@@ -977,7 +977,7 @@ Merci, et à très bientôt !
 
           try {
             await navigator.clipboard.writeText(message);
-            alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, WhatsApp, email…");
+            alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
           } catch {
             alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
           }
