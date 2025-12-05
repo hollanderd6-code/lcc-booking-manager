@@ -144,45 +144,95 @@ async function saveProperty(event) {
 
   const propertyId = document.getElementById("propertyId").value || null;
   const name = document.getElementById("propertyName").value.trim();
-  const address = document.getElementById("propertyAddress").value.trim();
-  const arrivalTime = document.getElementById("propertyArrivalTime").value;
-  const departureTime = document.getElementById("propertyDepartureTime").value;
-
-  const depositRaw = document.getElementById("propertyDeposit").value;
-  const depositAmount =
-    depositRaw && depositRaw.trim() !== ""
-      ? parseFloat(depositRaw.replace(",", "."))
-      : null;
-
   const color = document.getElementById("propertyColor").value;
-  const existingPhotoUrl =
-    document.getElementById("propertyPhotoUrl").value || null;
+  const address = document.getElementById("propertyAddress")?.value?.trim() || null;
+  const arrivalTime = document.getElementById("propertyArrivalTime")?.value || null;
+  const departureTime = document.getElementById("propertyDepartureTime")?.value || null;
+  
+  // Gestion du montant de caution
+  const depositRaw = document.getElementById("propertyDeposit")?.value || 
+                     document.getElementById("propertyDepositAmount")?.value;
+  const depositAmount = depositRaw && depositRaw.trim() !== ""
+    ? parseFloat(depositRaw.replace(",", "."))
+    : null;
+
+  // ✅ NOUVEAUX CHAMPS
+  const welcomeBookUrl = document.getElementById('propertyWelcomeBookUrl')?.value?.trim() || null;
+  const accessCode = document.getElementById('propertyAccessCode')?.value?.trim() || null;
+  const wifiName = document.getElementById('propertyWifiName')?.value?.trim() || null;
+  const wifiPassword = document.getElementById('propertyWifiPassword')?.value?.trim() || null;
+  const accessInstructions = document.getElementById('propertyAccessInstructions')?.value?.trim() || null;
+
+  // Photo existante (si modification sans nouveau fichier)
+  const existingPhotoUrl = document.getElementById("propertyPhotoUrl")?.value || null;
   const photoInput = document.getElementById("propertyPhoto");
 
-  // URLs iCal avec plateforme
+  // Validation
+  if (!name) {
+    hideLoading();
+    showToast('Veuillez saisir un nom de logement.', 'error');
+    return;
+  }
+
+  // ============================================
+  // RÉCUPÉRATION DES URLs iCal
+  // ============================================
+  
+  // Si vous avez des groupes avec plateforme
   const urlGroups = document.querySelectorAll(".url-input-group");
-  const icalUrls = Array.from(urlGroups)
-    .map((group) => {
-      const platformInput = group.querySelector(".platform-input");
-      const urlInput = group.querySelector(".url-input");
-      const platform = platformInput ? platformInput.value.trim() : "";
-      const url = urlInput ? urlInput.value.trim() : "";
-      if (!url) return null;
-      return { platform: platform || "iCal", url };
-    })
-    .filter(Boolean);
+  let icalUrls = [];
+  
+  if (urlGroups.length > 0) {
+    // Format avec plateforme
+    icalUrls = Array.from(urlGroups)
+      .map((group) => {
+        const platformInput = group.querySelector(".platform-input");
+        const urlInput = group.querySelector(".url-input");
+        const platform = platformInput ? platformInput.value.trim() : "";
+        const url = urlInput ? urlInput.value.trim() : "";
+        if (!url) return null;
+        return { platform: platform || "iCal", url };
+      })
+      .filter(Boolean);
+  } else {
+    // Format simple (juste URLs)
+    const urlInputs = document.querySelectorAll('.ical-url-input');
+    icalUrls = Array.from(urlInputs)
+      .map(input => input.value.trim())
+      .filter(Boolean);
+  }
 
-  const propertyData = {
-    name,
-    address,
-    arrivalTime,
-    departureTime,
-    depositAmount,
-    color,
-    photoUrl: existingPhotoUrl, // gardée si pas de nouveau fichier
-    icalUrls,
-  };
+  // ============================================
+  // CONSTRUCTION DU FORMDATA
+  // ============================================
+  
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('color', color);
+  formData.append('icalUrls', JSON.stringify(icalUrls));
+  
+  if (address) formData.append('address', address);
+  if (arrivalTime) formData.append('arrivalTime', arrivalTime);
+  if (departureTime) formData.append('departureTime', departureTime);
+  if (depositAmount !== null) formData.append('depositAmount', depositAmount);
+  if (existingPhotoUrl) formData.append('photoUrl', existingPhotoUrl);
 
+  // ✅ AJOUT DES NOUVEAUX CHAMPS
+  if (welcomeBookUrl) formData.append('welcomeBookUrl', welcomeBookUrl);
+  if (accessCode) formData.append('accessCode', accessCode);
+  if (wifiName) formData.append('wifiName', wifiName);
+  if (wifiPassword) formData.append('wifiPassword', wifiPassword);
+  if (accessInstructions) formData.append('accessInstructions', accessInstructions);
+
+  // Photo (nouveau fichier)
+  if (photoInput && photoInput.files && photoInput.files[0]) {
+    formData.append('photo', photoInput.files[0]);
+  }
+
+  // ============================================
+  // ENVOI DE LA REQUÊTE
+  // ============================================
+  
   try {
     const token = localStorage.getItem("lcc_token");
     const method = propertyId ? "PUT" : "POST";
@@ -190,18 +240,11 @@ async function saveProperty(event) {
       ? `${API_URL}/api/properties/${propertyId}`
       : `${API_URL}/api/properties`;
 
-    const formData = new FormData();
-    formData.append("data", JSON.stringify(propertyData));
-
-    if (photoInput && photoInput.files && photoInput.files[0]) {
-      formData.append("photo", photoInput.files[0]); // géré par Multer côté backend
-    }
-
     const response = await fetch(url, {
       method,
       headers: {
         Authorization: "Bearer " + token,
-        // pas de Content-Type ici, c'est géré par le navigateur pour FormData
+        // Pas de Content-Type pour FormData, géré automatiquement
       },
       body: formData,
     });
@@ -209,22 +252,6 @@ async function saveProperty(event) {
     const result = await response.json();
 
     if (response.ok) {
-      showToast(result.message || "Logement enregistré", "success");
-      closeEditModal();
-      await loadProperties();
-    } else {
-      showToast(
-        result.error || "Une erreur est survenue lors de l'enregistrement",
-        "error"
-      );
-    }
-  } catch (error) {
-    console.error("Erreur saveProperty:", error);
-    showToast("Erreur lors de l'enregistrement du logement", "error");
-  } finally {
-    hideLoading();
-  }
-}
 
 async function deleteProperty(propertyId) {
   if (!propertyId) return;
