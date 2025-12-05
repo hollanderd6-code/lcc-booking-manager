@@ -128,6 +128,40 @@
   </div>
 
   <script>
+    <script>
+  // Vérifier le statut de l'abonnement pour adapter les boutons
+  async function checkUserStatus() {
+    const token = localStorage.getItem('lcc_token');
+    
+    if (!token) return; // Non connecté, on garde "Essayer gratuitement"
+
+    try {
+      const res = await fetch('/api/subscription/status', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Si trial expiré ou abonnement expiré, changer le texte des boutons
+        if (data.status === 'expired' || data.status === 'canceled' || 
+            (data.status === 'trial' && data.daysRemaining < 0)) {
+          
+          // Changer tous les boutons
+          const buttons = document.querySelectorAll('button[onclick*="startCheckout"]');
+          buttons.forEach(btn => {
+            btn.innerHTML = btn.innerHTML.replace('Essayer gratuitement', 'S\'abonner maintenant');
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Erreur:', err);
+    }
+  }
+
+  // Appeler au chargement
+  document.addEventListener('DOMContentLoaded', checkUserStatus);
+</script>
     function selectPlan(plan) {
       // Stocker le plan choisi
       localStorage.setItem('selected_plan', plan);
