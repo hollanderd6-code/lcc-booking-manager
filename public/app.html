@@ -2292,33 +2292,37 @@
   </style>
 
   <!-- Script auth + user + logout -->
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-const sessionId = urlParams.get('session_id');
-
-if (sessionId) {
-  // Afficher un message de succès
-  const successBanner = document.createElement('div');
-  successBanner.innerHTML = `
-    <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px; text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 10000;">
-      <i class="fas fa-check-circle"></i>
-      <strong>Paiement réussi !</strong> Votre abonnement est maintenant actif.
-    </div>
-  `;
-  document.body.prepend(successBanner);
-  
-  // Masquer après 5 secondes
-  setTimeout(() => successBanner.remove(), 5000);
-  
-  // Nettoyer l'URL
-  window.history.replaceState({}, document.title, '/app.html');
-}
-    (async function checkSubscriptionAccess() {
+<script>
+  // Vérifier l'abonnement au chargement de la page
+  (async function checkSubscriptionAccess() {
     const token = localStorage.getItem('lcc_token');
     
     if (!token) {
       window.location.href = '/login.html';
       return;
+    }
+
+    // ✅ DÉTECTER SI ON VIENT DE STRIPE
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    
+    if (sessionId) {
+      // Afficher un message de succès
+      const successBanner = document.createElement('div');
+      successBanner.innerHTML = `
+        <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px; text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 10000;">
+          <i class="fas fa-check-circle"></i>
+          <strong>Paiement réussi !</strong> Votre abonnement est maintenant actif.
+        </div>
+      `;
+      document.body.prepend(successBanner);
+      
+      // Masquer après 5 secondes
+      setTimeout(() => successBanner.remove(), 5000);
+      
+      // ✅ ATTENDRE QUE LE WEBHOOK S'EXÉCUTE
+      console.log('⏳ Paiement détecté, attente de la confirmation...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     try {
@@ -2337,69 +2341,98 @@ if (sessionId) {
 
       const data = await res.json();
 
-      if (data.status === 'expired' || data.status === 'canceled') {
+      // ✅ SI ON VIENT DE STRIPE ET QUE C'EST TOUJOURS EXPIRÉ, RÉESSAYER
+      if (sessionId && (data.status === 'expired' || data.status === 'canceled' || 
+          (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0))) {
+        
+        console.log('⏳ Abonnement pas encore mis à jour, nouvelle tentative...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Réessayer une fois
+        const res2 = await fetch('/api/subscription/status', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (res2.ok) {
+          const data2 = await res2.json();
+          
+          // Si toujours expiré après 5 secondes, il y a un problème
+          if (data2.status === 'expired' || data2.status === 'canceled' || 
+              (data2.status === 'trial' && data2.daysRemaining !== null && data2.daysRemaining < 0)) {
+            window.location.href = '/subscription-expired.html';
+            return;
+          }
+        }
+        
+        // Nettoyer l'URL
+        window.history.replaceState({}, document.title, '/app.html');
+        return;
+      }
+
+      // Vérifier si l'abonnement est expiré (sans session_id)
+      if (!sessionId && (data.status === 'expired' || data.status === 'canceled' || 
+          (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0))) {
         window.location.href = '/subscription-expired.html';
         return;
       }
 
-      if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
-        window.location.href = '/subscription-expired.html';
-        return;
+      // Nettoyer l'URL si session_id présent et abonnement OK
+      if (sessionId) {
+        window.history.replaceState({}, document.title, '/app.html');
       }
 
     } catch (err) {
       console.error('Erreur vérification abonnement:', err);
     }
   })();
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
-        return;
-      }
 
-      const rawUser = localStorage.getItem('lcc_user');
-      let user = null;
-
-      try {
-        user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {
-        console.error('Impossible de lire lcc_user', e);
-      }
-
-      if (user) {
-        window.addEventListener('DOMContentLoaded', () => {
-          const nameEl = document.getElementById('sidebarUserName');
-          const companyEl = document.getElementById('sidebarUserCompany');
-          const avatarEl = document.getElementById('sidebarUserAvatar');
-
-          if (nameEl) {
-            nameEl.textContent = user.firstName
-              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-              : (user.email || 'Mon compte');
-          }
-
-          if (companyEl) {
-            companyEl.textContent = user.company || 'Mon espace';
-          }
-
-          if (avatarEl) {
-            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-            avatarEl.textContent = initial.toUpperCase();
-          }
-
-          const logoutBtn = document.getElementById('logoutBtn');
-          if (logoutBtn) {
-            logoutBtn.addEventListener('click', function () {
-              localStorage.removeItem('lcc_token');
-              localStorage.removeItem('lcc_user');
-              window.location.href = '/login.html';
-            });
-          }
-        });
-      }
-    })();
-  </script>
+  // Afficher les infos utilisateur dans la sidebar
+  (function () {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
+    
+    const rawUser = localStorage.getItem('lcc_user');
+    let user = null;
+    try {
+      user = rawUser ? JSON.parse(rawUser) : null;
+    } catch (e) {
+      console.error('Impossible de lire lcc_user', e);
+    }
+    
+    if (user) {
+      window.addEventListener('DOMContentLoaded', () => {
+        const nameEl = document.getElementById('sidebarUserName');
+        const companyEl = document.getElementById('sidebarUserCompany');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        
+        if (nameEl) {
+          nameEl.textContent = user.firstName
+            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+            : (user.email || 'Mon compte');
+        }
+        if (companyEl) {
+          companyEl.textContent = user.company || 'Mon espace';
+        }
+        if (avatarEl) {
+          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+          avatarEl.textContent = initial.toUpperCase();
+        }
+        
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function () {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = '/login.html';
+          });
+        }
+      });
+    }
+  })();
+</script>
 
   <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
   <script>
