@@ -14,7 +14,6 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const nodemailer = require('nodemailer'); // 
 const multer = require('multer');
-const whatsappService = require('./services/whatsappService');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const crypto = require('crypto');
@@ -753,7 +752,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
 
   if (!useBrevo && !transporter && !whatsappService.isConfigured()) {
     console.log(
-      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, aucune notification ménage envoyée'
+      '⚠️  Email non configuré (Brevo/SMTP) , aucune notification ménage envoyée'
     );
     return;
   }
@@ -875,32 +874,6 @@ L'équipe Boostinghost`;
         );
       }
 
-
-      // WhatsApp
-      if (whatsappService.isConfigured() && cleanerPhone) {
-        const waText =
-          `Nouveau ménage à prévoir:\n` +
-          `Logement: ${propertyName}\n` +
-          `Voyageur: ${guest}\n` +
-          `Séjour: du ${start} au ${end}\n` +
-          `Ménage à prévoir le ${end} après check-out.`;
-
-        tasks.push(
-          whatsappService
-            .sendWhatsAppText(cleanerPhone, waText)
-            .then(() => {
-              console.log(
-                `📱 Notification WhatsApp ménage envoyée à ${cleanerPhone} (resa uid=${res.uid || res.id})`
-              );
-            })
-            .catch((err) => {
-              console.error('❌ Erreur envoi WhatsApp notification ménage :', err);
-            })
-        );
-      }
-    }
-  }
-
   await Promise.all(tasks);
 }
 /**
@@ -913,7 +886,7 @@ async function sendDailyCleaningPlan() {
 
   if (!useBrevo && !transporter && !whatsappService.isConfigured()) {
     console.log(
-      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, planning ménage non envoyé'
+      '⚠️  Email non configuré (Brevo/SMTP) , planning ménage non envoyé'
     );
     return;
   }
@@ -1032,27 +1005,6 @@ if ((useBrevo || transporter) && cleanerEmail) {
       })
   );
   }
-    // WhatsApp
-    if (whatsappService.isConfigured() && cleanerPhone) {
-      let waText = `Planning ménage de demain (${tomorrowIso}):\n`;
-      jobs.forEach((job, index) => {
-        waText += `${index + 1}. ${job.propertyName} – départ le ${job.end} (${job.guestName})\n`;
-      });
-
-      tasks.push(
-        whatsappService
-          .sendWhatsAppText(cleanerPhone, waText)
-          .then(() => {
-            console.log(
-              `📱 Planning ménage WhatsApp envoyé à ${cleanerPhone} pour ${tomorrowIso}`
-            );
-          })
-          .catch((err) => {
-            console.error('❌ Erreur WhatsApp planning ménage :', err);
-          })
-      );
-    }
-  });
 
   await Promise.all(tasks);
 
