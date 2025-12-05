@@ -3803,6 +3803,13 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
         depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
         photoUrl: p.photo_url || p.photoUrl || null,
 
+        // ✅ NOUVEAUX CHAMPS ENRICHIS
+        welcomeBookUrl: p.welcome_book_url || null,
+        accessCode: p.access_code || null,
+        wifiName: p.wifi_name || null,
+        wifiPassword: p.wifi_password || null,
+        accessInstructions: p.access_instructions || null,
+
         icalUrls,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
@@ -3837,15 +3844,16 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     departureTime: property.departure_time || property.departureTime || null,
     depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
     photoUrl: property.photo_url || property.photoUrl || null,
+    
+    // ✅ NOUVEAUX CHAMPS ENRICHIS
+    welcomeBookUrl: property.welcome_book_url || null,
+    accessCode: property.access_code || null,
+    wifiName: property.wifi_name || null,
+    wifiPassword: property.wifi_password || null,
+    accessInstructions: property.access_instructions || null,
+    
     icalUrls: property.icalUrls || property.ical_urls || [],
-    reservationCount: (reservationsStore.properties[property.id] || []).length,
-    welcomeBookUrl: p.welcome_book_url || null,
-  accessCode: p.access_code || null,
-  wifiName: p.wifi_name || null,
-  wifiPassword: p.wifi_password || null,
-  accessInstructions: p.access_instructions || null,
-  icalUrls,
-  reservationCount: (reservationsStore.properties[p.id] || []).length
+    reservationCount: (reservationsStore.properties[property.id] || []).length
   });
 });
 
@@ -3938,7 +3946,7 @@ if (Array.isArray(icalUrls)) {
          welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
          created_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
       [
         id,
         user.id,
@@ -3951,10 +3959,10 @@ if (Array.isArray(icalUrls)) {
         depositAmount === '' || depositAmount == null ? null : Number(depositAmount),
         photoUrl,
         welcomeBookUrl || null,
-    accessCode || null,
-    wifiName || null,
-    wifiPassword || null,
-    accessInstructions || null
+        accessCode || null,
+        wifiName || null,
+        wifiPassword || null,
+        accessInstructions || null
       ]
     );
 
@@ -4108,8 +4116,13 @@ const newAccessInstructions =
          arrival_time = $5,
          departure_time = $6,
          deposit_amount = $7,
-         photo_url = $8
-       WHERE id = $9 AND user_id = $10`,
+         photo_url = $8,
+         welcome_book_url = $9,
+         access_code = $10,
+         wifi_name = $11,
+         wifi_password = $12,
+         access_instructions = $13
+       WHERE id = $14 AND user_id = $15`,
       [
         newName,
         newColor,
@@ -4119,6 +4132,11 @@ const newAccessInstructions =
         newDepartureTime,
         newDepositAmount,
         newPhotoUrl,
+        newWelcomeBookUrl,
+        newAccessCode,
+        newWifiName,
+        newWifiPassword,
+        newAccessInstructions,
         propertyId,
         user.id
       ]
