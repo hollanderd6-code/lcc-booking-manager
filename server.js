@@ -3919,44 +3919,37 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
     if (!stripe) {
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
-
     const { plan } = req.body || {};
     if (!plan) {
       return res.status(400).json({ error: 'Plan requis (basic ou pro)' });
     }
-
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
       return res.status(400).json({ error: 'Plan inconnu ou non configuré' });
     }
-
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
+    
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1
-        }
-      ],
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          userId: user.id,
-          plan
-        }
+      line_items: [{
+        price: priceId,
+        quantity: 1
+      }],
+      // ✅ AJOUTEZ LES METADATA ICI DIRECTEMENT
+      metadata: {
+        userId: user.id,
+        plan: plan
       },
       customer_email: user.email,
+      client_reference_id: user.id, // ✅ IMPORTANT pour le webhook
       success_url: `${appUrl}/app.html?session_id={CHECKOUT_SESSION_ID}`,
-  cancel_url: `${appUrl}/pricing.html`,
+      cancel_url: `${appUrl}/pricing.html`,
     });
-
+    
     res.json({ url: session.url });
   } catch (err) {
     console.error('Erreur /api/billing/create-checkout-session :', err);
