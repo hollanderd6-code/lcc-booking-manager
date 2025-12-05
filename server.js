@@ -1000,7 +1000,6 @@ if ((useBrevo || transporter) && cleanerEmail) {
         console.error('❌ Erreur envoi planning ménage (email) :', err);
       })
   );
-  }
 
   console.log('✅ Planning ménage quotidien envoyé (si tâches détectées).');
 }
