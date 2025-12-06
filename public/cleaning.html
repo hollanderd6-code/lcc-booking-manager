@@ -525,14 +525,6 @@
                 Assignation par réservation
               </div>
             </div>
-<div class="cleaning-filter-row" style="margin-bottom: 8px;">
-  <label for="reservationPropertyFilter" style="margin-right: 8px;">
-    Filtrer par logement :
-  </label>
-  <select id="reservationPropertyFilter">
-    <option value="">Tous les logements</option>
-  </select>
-</div>
 
             <p class="assign-hint">
               Assignez une personne de ménage à chaque départ de réservation. 
@@ -615,10 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let cleaners = [];
   let assignments = {};
-  
-  let selectedReservationPropertyFilter = '';
-let propertyFilterInitialized = false;
-
 
   const cleanerForm = document.getElementById('cleanerForm');
   const cleanerList = document.getElementById('cleanerList');
@@ -748,41 +736,6 @@ let propertyFilterInitialized = false;
   if (r.property_id != null) return String(r.property_id);
   return null;
 }
-function initReservationPropertyFilter() {
-  const select = document.getElementById('reservationPropertyFilter');
-  if (!select) return;
-
-  // Reset de base
-  select.innerHTML = '<option value="">Tous les logements</option>';
-
-  // Si PROPERTIES existe, on s’en sert
-  if (Array.isArray(PROPERTIES)) {
-    const alreadyAdded = new Set();
-
-    PROPERTIES.forEach((p) => {
-      const id = (p.id != null ? p.id : p.propertyId);
-      if (!id || alreadyAdded.has(String(id))) return;
-
-      alreadyAdded.add(String(id));
-
-      const opt = document.createElement('option');
-      opt.value = String(id);
-      opt.textContent = p.name || p.title || p.label || ('Logement ' + id);
-      select.appendChild(opt);
-    });
-  }
-
-  // Valeur actuelle
-  select.value = selectedReservationPropertyFilter || '';
-
-  // Listener changement
-  select.onchange = (e) => {
-    selectedReservationPropertyFilter = e.target.value || '';
-    renderAssignments(); // On re-rend la liste avec le filtre
-  };
-
-  propertyFilterInitialized = true;
-}
 
 
   function renderCleaners() {
@@ -817,9 +770,6 @@ function initReservationPropertyFilter() {
 
     function renderAssignments() {
     if (!assignContainer) return;
-if (!propertyFilterInitialized) {
-    initReservationPropertyFilter();
-  }
 
     if (!RESERVATIONS.length) {
       assignContainer.innerHTML = `
@@ -839,19 +789,7 @@ const upcoming = (RESERVATIONS || [])
 
     const propertyId = getReservationPropertyId(r);
     if (!propertyId) return false;
-if (selectedReservationPropertyFilter &&
-        String(propertyId) !== String(selectedReservationPropertyFilter)) {
-      return false;
-    }
 
-    const endStr = String(r.end).slice(0, 10);
-    return endStr >= todayStr;
-  })
-  .sort((a, b) => {
-    const aEnd = String(a.end).slice(0, 10);
-    const bEnd = String(b.end).slice(0, 10);
-    return aEnd.localeCompare(bEnd);
-  });
     const endStr = String(r.end).slice(0, 10);
     return endStr >= todayStr;
   })
