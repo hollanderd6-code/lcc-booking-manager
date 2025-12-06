@@ -2130,12 +2130,13 @@ function parsePropertyBody(req) {
 function buildPhotoUrl(req, filename) {
   if (!filename) return null;
   
-  // ✅ FORCER HTTPS en production
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+  // ✅ Utiliser le bon protocole (HTTPS sur Render via x-forwarded-proto)
+  const protocol = req.get('x-forwarded-proto') || req.protocol;
   const baseUrl = `${protocol}://${req.get('host')}`;
   
   return `${baseUrl}/uploads/properties/${filename}`;
 }
+
 // ============================================
 // ROUTES API - PROFIL UTILISATEUR ÉTENDU
 // ============================================
