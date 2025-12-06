@@ -3740,26 +3740,41 @@ function populateEditBookingProperties(selectedPropertyId) {
           }
 
           // Texte seulement sur le 1er jour
-          if (j === 0 || cells.length === 1) {
-            var iconEl;
-            if (platform === 'airbnb') {
-              iconEl = document.createElement('i');
-              iconEl.className = 'fab fa-airbnb platform-icon';
-            } else if (platform === 'booking') {
-              iconEl = document.createElement('span');
-              iconEl.className = 'platform-icon booking-letter';
-              iconEl.textContent = 'B.';
-            } else {
-              iconEl = document.createElement('i');
-              iconEl.className =
-                'fas platform-icon ' +
-                (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
-            }
-            block.appendChild(iconEl);
+if (j === 0 || cells.length === 1) {
+  var iconEl;
+  if (platform === 'airbnb') {
+    iconEl = document.createElement('i');
+    iconEl.className = 'fab fa-airbnb platform-icon';
+  } else if (platform === 'booking') {
+    iconEl = document.createElement('span');
+    iconEl.className = 'platform-icon booking-letter';
+    iconEl.textContent = 'B.';
+  } else {
+    iconEl = document.createElement('i');
+    iconEl.className =
+      'fas platform-icon ' +
+      (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
+  }
+  block.appendChild(iconEl);
 
-            var label = document.createTextNode(b.guestName || 'Réservation');
-            block.appendChild(label);
-          }
+  // Label invité
+  var guestLabel = b.guestName || 'Réservation';
+
+  // 🟣 Cas particulier Airbnb : l’iCal met souvent "Reserved"
+  if (platform === 'airbnb') {
+    if (!guestLabel || /^reserved$/i.test(guestLabel.trim())) {
+      guestLabel = 'Voyageur';
+    }
+  }
+
+  // (optionnel) Booking : si pas de nom, on met aussi "Voyageur"
+  if (platform === 'booking' && !guestLabel) {
+    guestLabel = 'Voyageur';
+  }
+
+  var label = document.createTextNode(guestLabel);
+  block.appendChild(label);
+}
 
           cellEl.appendChild(block);
         }
