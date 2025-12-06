@@ -755,19 +755,39 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
-  function getReservationKey(reservation) {
+    function getReservationKey(reservation) {
     if (!reservation) return null;
     if (reservation.uid) return reservation.uid;
     if (reservation.id != null) return String(reservation.id);
-    if (reservation.propertyId && reservation.start && reservation.end) {
+
+    const propertyId = getReservationPropertyId(reservation);
+    const start =
+      reservation.start ||
+      reservation.startDate ||
+      reservation.checkIn ||
+      reservation.checkin;
+    const end =
+      reservation.end ||
+      reservation.endDate ||
+      reservation.checkOut ||
+      reservation.checkout;
+
+    if (propertyId && start && end) {
       return (
-        reservation.propertyId +
+        propertyId +
         '::' +
-        String(reservation.start).slice(0, 10) +
+        String(start).slice(0, 10) +
         '>' +
-        String(reservation.end).slice(0, 10)
+        String(end).slice(0, 10)
       );
     }
+    return null;
+  }
+  function getReservationPropertyId(r) {
+    if (!r) return null;
+    if (r.propertyId != null) return String(r.propertyId);
+    if (r.property && r.property.id != null) return String(r.property.id);
+    if (r.property_id != null) return String(r.property_id);
     return null;
   }
 
@@ -825,17 +845,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const todayStr = new Date().toISOString().slice(0, 10);
 
     // Réservations avec départ aujourd’hui ou plus tard
+        const todayStr = new Date().toISOString().slice(0, 10);
+
     const upcoming = (RESERVATIONS || [])
+      .map((r) => {
+        const propertyId = getReservationPropertyId(r);
+        const end =
+          r.end ||
+          r.endDate ||
+          r.checkOut ||
+          r.checkout;
+
+        return {
+          ...r,
+          _cleaningPropertyId: propertyId,
+          _cleaningEnd: end
+        };
+      })
       .filter((r) => {
-        if (!r.end || !r.propertyId) return false;
-        const endStr = String(r.end).slice(0, 10);
+        if (!r._cleaningEnd || !r._cleaningPropertyId) return false;
+        const endStr = String(r._cleaningEnd).slice(0, 10);
         return endStr >= todayStr;
       })
       .sort((a, b) => {
-        const aEnd = String(a.end).slice(0, 10);
-        const bEnd = String(b.end).slice(0, 10);
+        const aEnd = String(a._cleaningEnd).slice(0, 10);
+        const bEnd = String(b._cleaningEnd).slice(0, 10);
         return aEnd.localeCompare(bEnd);
       });
+
 
     if (!upcoming.length) {
       assignContainer.innerHTML = `
@@ -862,9 +899,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const key = getReservationKey(r);
       const assignedId = key && assignments[key] ? assignments[key] : '';
       const propertyName =
-        r.propertyName || r.property || getPropertyNameById(r.propertyId);
-      const guestName = r.guestName || r.name || '';
-      const endStr = String(r.end).slice(0, 10);
+        r.propertyName ||
+        (typeof r.property === 'string'
+          ? r.property
+          : r.property && (r.property.name || r.property.title || r.property.label)) ||
+        getPropertyNameById(r._cleaningPropertyId);
+
+      const guestName =
+        r.guestName ||
+        r.guest_name ||
+        r.guest ||
+        r.name ||
+        '';
+
+      const endStr = String(r._cleaningEnd).slice(0, 10);
 
       html += `
         <tr>
@@ -874,7 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>
             <select class="assign-select"
                     data-reservation-key="${key || ''}"
-                    data-property-id="${r.propertyId || ''}">
+                    data-property-id="${r._cleaningPropertyId || ''}">
               <option value="">Aucun</option>
               ${cleaners
                 .map(
@@ -890,6 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </tr>
       `;
     });
+
 
     html += '</tbody></table>';
     assignContainer.innerHTML = html;
