@@ -517,7 +517,7 @@
             </div>
           </section>
 
-                    <!-- Colonne droite : assignation par réservation -->
+          <!-- Colonne droite : assignation par réservation -->
           <section class="card">
             <div class="card-header">
               <div class="card-title">
@@ -530,6 +530,16 @@
               Assignez une personne de ménage à chaque départ de réservation. 
               Ces assignations seront visibles dans le dashboard et dans le calendrier.
             </p>
+
+            <!-- Filtre par logement -->
+            <div class="cleaning-filter-row" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+              <label for="reservationPropertyFilter" style="font-size:13px;">
+                Filtrer par logement :
+              </label>
+              <select id="reservationPropertyFilter" class="assign-select" style="max-width:260px;">
+                <option value="">Tous les logements</option>
+              </select>
+            </div>
 
             <div id="assignContainer">
               <p class="text-secondary" style="font-size:13px;">
@@ -595,388 +605,439 @@
     })();
 
     // --------------------------
-// GESTION EQUIPE + ASSIGNATION + PLANNING
-// --------------------------
-document.addEventListener('DOMContentLoaded', () => {
-  const API_URL = 'https://lcc-booking-manager.onrender.com';
-  const STORAGE_CLEANERS = 'lcc_cleaners';
-  const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
+    // GESTION EQUIPE + ASSIGNATION + PLANNING
+    // --------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      const API_URL = 'https://lcc-booking-manager.onrender.com';
+      const STORAGE_CLEANERS = 'lcc_cleaners';
+      const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
 
-  let PROPERTIES = [];
-  let RESERVATIONS = [];
+      let PROPERTIES = [];
+      let RESERVATIONS = [];
 
-  let cleaners = [];
-  let assignments = {};
+      let cleaners = [];
+      let assignments = {};
 
-  const cleanerForm = document.getElementById('cleanerForm');
-  const cleanerList = document.getElementById('cleanerList');
-  const assignContainer = document.getElementById('assignContainer');
+      // Filtre logement
+      let selectedReservationPropertyFilter = '';
+      let propertyFilterInitialized = false;
 
-  function loadLocalData() {
-    try {
-      cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
-      assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
-    } catch (e) {
-      cleaners = [];
-      assignments = {};
-    }
-  }
+      const cleanerForm = document.getElementById('cleanerForm');
+      const cleanerList = document.getElementById('cleanerList');
+      const assignContainer = document.getElementById('assignContainer');
 
-  function saveLocalData() {
-    localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
-    localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
-  }
-   // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
-  async function loadAssignmentsFromApi() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) return;
-
-      const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      });
-
-      if (!res.ok) {
-        console.warn('Erreur lors du chargement des assignations ménage', res.status);
-        return;
-      }
-
-      const data = await res.json();
-      const map = {};
-
-      // ➜ On attend maintenant des lignes avec reservation_key / reservation_uid
-      (data.assignments || []).forEach((row) => {
-        const key =
-          row.reservation_key ||
-          row.reservation_uid ||
-          (row.reservationId != null ? String(row.reservationId) : null);
-
-        if (key && row.cleaner_id) {
-          map[key] = row.cleaner_id;
-        }
-      });
-
-      assignments = map;
-      saveLocalData();
-    } catch (e) {
-      console.error('Erreur loadAssignmentsFromApi()', e);
-    }
-  }
-
-
-  async function loadRemoteData() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) return;
-
-      const response = await fetch(`${API_URL}/api/reservations`, {
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      });
-
-      if (!response.ok) {
-        console.warn('Erreur lors du chargement des réservations pour le ménage', response.status);
-        return;
-      }
-
-      const data = await response.json().catch(() => ({}));
-
-      RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
-      PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
-
-      // Fallback de démo si aucune propriété
-      if (!PROPERTIES.length) {
-        PROPERTIES = [
-          { id: 'apt-demo-1', name: 'Appartement démo 1' },
-          { id: 'apt-demo-2', name: 'Appartement démo 2' }
-        ];
-      }
-    } catch (e) {
-      console.error('Erreur loadRemoteData()', e);
-      if (!PROPERTIES.length) {
-        PROPERTIES = [
-          { id: 'apt-demo-1', name: 'Appartement démo 1' },
-          { id: 'apt-demo-2', name: 'Appartement démo 2' }
-        ];
-      }
-    }
-  }
-  function getReservationKey(reservation) {
-    if (!reservation) return null;
-    if (reservation.uid) return reservation.uid;
-    if (reservation.id != null) return String(reservation.id);
-    if (reservation.propertyId && reservation.start && reservation.end) {
-      return (
-        reservation.propertyId +
-        '::' +
-        String(reservation.start).slice(0, 10) +
-        '>' +
-        String(reservation.end).slice(0, 10)
-      );
-    }
-    return null;
-  }
-
-  function getPropertyNameById(propertyId) {
-    if (!propertyId) return 'Logement';
-    const p = PROPERTIES.find(
-      (x) =>
-        String(x.id) === String(propertyId) ||
-        String(x.propertyId) === String(propertyId)
-    );
-    return p ? (p.name || p.title || p.label || propertyId) : propertyId;
-  }
-  function getReservationPropertyId(r) {
-  if (!r) return null;
-  if (r.propertyId != null) return String(r.propertyId);
-  if (r.property && r.property.id != null) return String(r.property.id);
-  if (r.property_id != null) return String(r.property_id);
-  return null;
-}
-
-
-  function renderCleaners() {
-    if (!cleanerList) return;
-    if (!cleaners.length) {
-      cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour l’instant. Ajoutez votre première personne de ménage.</p>';
-      return;
-    }
-
-    cleanerList.innerHTML = '';
-    cleaners.forEach((c) => {
-      const div = document.createElement('div');
-      div.className = 'cleaner-item';
-      div.innerHTML = `
-        <div class="cleaner-item-header">
-          <div>
-            <div class="cleaner-name">${c.name}</div>
-            <div class="cleaner-tags">
-              ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
-              ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
-            </div>
-          </div>
-          <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-        ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
-      `;
-      cleanerList.appendChild(div);
-    });
-  }
-
-    function renderAssignments() {
-    if (!assignContainer) return;
-
-    if (!RESERVATIONS.length) {
-      assignContainer.innerHTML = `
-        <p class="text-secondary" style="font-size:13px;">
-          Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
-        </p>`;
-      return;
-    }
-
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    // Réservations avec départ aujourd’hui ou plus tard
-    // Réservations avec départ aujourd’hui ou plus tard
-const upcoming = (RESERVATIONS || [])
-  .filter((r) => {
-    if (!r.end) return false;
-
-    const propertyId = getReservationPropertyId(r);
-    if (!propertyId) return false;
-
-    const endStr = String(r.end).slice(0, 10);
-    return endStr >= todayStr;
-  })
-  .sort((a, b) => {
-    const aEnd = String(a.end).slice(0, 10);
-    const bEnd = String(b.end).slice(0, 10);
-    return aEnd.localeCompare(bEnd);
-  });
-
-
-    if (!upcoming.length) {
-      assignContainer.innerHTML = `
-        <p class="text-secondary" style="font-size:13px;">
-          Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
-        </p>`;
-      return;
-    }
-
-    let html = `
-      <table class="assign-table">
-        <thead>
-          <tr>
-            <th>Départ le</th>
-            <th>Logement</th>
-            <th>Client</th>
-            <th>Personne en charge</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    upcoming.forEach((r) => {
-      const key = getReservationKey(r);
-const assignedId = key && assignments[key] ? assignments[key] : '';
-
-const propertyId = getReservationPropertyId(r);
-const propertyName =
-  r.propertyName ||
-  (r.property && (r.property.name || r.property.title || r.property.label)) ||
-  getPropertyNameById(propertyId);
-
-const guestName = r.guestName || r.name || '';
-const endStr = String(r.end).slice(0, 10);
-
-
-      html += `
-        <tr>
-          <td>${endStr}</td>
-          <td>${propertyName}</td>
-          <td>${guestName || '-'}</td>
-          <td>
-            <select class="assign-select"
-                    data-reservation-key="${key || ''}"
-                    data-property-id="${r.propertyId || ''}">
-              <option value="">Aucun</option>
-              ${cleaners
-                .map(
-                  (c) => `
-                <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
-                  ${c.name || c.email || c.phone || c.id}
-                </option>
-              `
-                )
-                .join('')}
-            </select>
-          </td>
-        </tr>
-      `;
-    });
-
-    html += '</tbody></table>';
-    assignContainer.innerHTML = html;
-
-    assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
-      sel.addEventListener('change', async (e) => {
-        const select = e.target;
-        const key = select.getAttribute('data-reservation-key');
-        const propertyId = select.getAttribute('data-property-id') || null;
-        const cleanerId = select.value;
-
-        if (!key) return;
-
-        if (cleanerId) {
-          assignments[key] = cleanerId;
-        } else {
-          delete assignments[key];
-        }
-        saveLocalData();
-
-        const token = localStorage.getItem('lcc_token');
-        if (!token) return;
-
+      function loadLocalData() {
         try {
-          await fetch(`${API_URL}/api/cleaning/assignments`, {
-            method: 'POST',
+          cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
+          assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
+        } catch (e) {
+          cleaners = [];
+          assignments = {};
+        }
+      }
+
+      function saveLocalData() {
+        localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
+        localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
+      }
+
+      // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
+      async function loadAssignmentsFromApi() {
+        try {
+          const token = localStorage.getItem('lcc_token');
+          if (!token) return;
+
+          const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
             headers: {
-              'Content-Type': 'application/json',
               Authorization: 'Bearer ' + token
-            },
-            body: JSON.stringify({
-              reservationKey: key,
-              propertyId,
-              cleanerId: cleanerId || null
-            })
+            }
           });
-        } catch (err) {
-          console.error('Erreur sauvegarde assignation ménage', err);
+
+          if (!res.ok) {
+            console.warn('Erreur lors du chargement des assignations ménage', res.status);
+            return;
+          }
+
+          const data = await res.json();
+          const map = {};
+
+          // ➜ On attend maintenant des lignes avec reservation_key / reservation_uid
+          (data.assignments || []).forEach((row) => {
+            const key =
+              row.reservation_key ||
+              row.reservation_uid ||
+              (row.reservationId != null ? String(row.reservationId) : null);
+
+            if (key && row.cleaner_id) {
+              map[key] = row.cleaner_id;
+            }
+          });
+
+          assignments = map;
+          saveLocalData();
+        } catch (e) {
+          console.error('Erreur loadAssignmentsFromApi()', e);
         }
-      });
-    });
-  }
+      }
 
+      async function loadRemoteData() {
+        try {
+          const token = localStorage.getItem('lcc_token');
+          if (!token) return;
 
+          const response = await fetch(`${API_URL}/api/reservations`, {
+            headers: {
+              Authorization: 'Bearer ' + token
+            }
+          });
 
-  // Ajout d’un membre
-  if (cleanerForm) {
-    cleanerForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = document.getElementById('cleanerName').value.trim();
-      const email = document.getElementById('cleanerEmail').value.trim();
-      const phone = document.getElementById('cleanerPhone').value.trim();
-      const notes = document.getElementById('cleanerNotes').value.trim();
+          if (!response.ok) {
+            console.warn('Erreur lors du chargement des réservations pour le ménage', response.status);
+            return;
+          }
 
-      if (!name) return;
+          const data = await response.json().catch(() => ({}));
 
-      cleaners.push({
-        id: 'c_' + Date.now(),
-        name,
-        email,
-        phone,
-        notes
-      });
+          RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
+          PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
 
-      cleanerForm.reset();
-      saveLocalData();
-      renderCleaners();
-      renderAssignments();
-    });
-  }
-
-  // Suppression d’un membre
-  if (cleanerList) {
-    cleanerList.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action="deleteCleaner"]');
-      if (!btn) return;
-
-      const id = btn.getAttribute('data-id');
-      cleaners = cleaners.filter((c) => c.id !== id);
-
-      // On enlève les assignations liées
-      Object.keys(assignments).forEach((pid) => {
-        if (assignments[pid] === id) {
-          delete assignments[pid];
+          // Fallback de démo si aucune propriété
+          if (!PROPERTIES.length) {
+            PROPERTIES = [
+              { id: 'apt-demo-1', name: 'Appartement démo 1' },
+              { id: 'apt-demo-2', name: 'Appartement démo 2' }
+            ];
+          }
+        } catch (e) {
+          console.error('Erreur loadRemoteData()', e);
+          if (!PROPERTIES.length) {
+            PROPERTIES = [
+              { id: 'apt-demo-1', name: 'Appartement démo 1' },
+              { id: 'apt-demo-2', name: 'Appartement démo 2' }
+            ];
+          }
         }
-      });
+      }
 
-      saveLocalData();
-      renderCleaners();
-      renderAssignments();
+      function getReservationKey(reservation) {
+        if (!reservation) return null;
+        if (reservation.uid) return reservation.uid;
+        if (reservation.id != null) return String(reservation.id);
+        if (reservation.propertyId && reservation.start && reservation.end) {
+          return (
+            reservation.propertyId +
+            '::' +
+            String(reservation.start).slice(0, 10) +
+            '>' +
+            String(reservation.end).slice(0, 10)
+          );
+        }
+        return null;
+      }
+
+      function getPropertyNameById(propertyId) {
+        if (!propertyId) return 'Logement';
+        const p = PROPERTIES.find(
+          (x) =>
+            String(x.id) === String(propertyId) ||
+            String(x.propertyId) === String(propertyId)
+        );
+        return p ? (p.name || p.title || p.label || propertyId) : propertyId;
+      }
+
+      function getReservationPropertyId(r) {
+        if (!r) return null;
+        if (r.propertyId != null) return String(r.propertyId);
+        if (r.property && r.property.id != null) return String(r.property.id);
+        if (r.property_id != null) return String(r.property_id);
+        return null;
+      }
+
+      function initReservationPropertyFilter() {
+        const select = document.getElementById('reservationPropertyFilter');
+        if (!select) return;
+
+        const previousValue = selectedReservationPropertyFilter;
+
+        // Reset de base
+        select.innerHTML = '<option value="">Tous les logements</option>';
+
+        const alreadyAdded = new Set();
+
+        // On se base sur PROPERTIES pour remplir la liste
+        if (Array.isArray(PROPERTIES)) {
+          PROPERTIES.forEach((p) => {
+            const id = p.id != null ? p.id : p.propertyId;
+            if (!id) return;
+            const idStr = String(id);
+            if (alreadyAdded.has(idStr)) return;
+            alreadyAdded.add(idStr);
+
+            const opt = document.createElement('option');
+            opt.value = idStr;
+            opt.textContent = p.name || p.title || p.label || ('Logement ' + idStr);
+            select.appendChild(opt);
+          });
+        }
+
+        // Restaure la sélection précédente si possible
+        if (previousValue) {
+          select.value = previousValue;
+        }
+
+        select.onchange = (e) => {
+          selectedReservationPropertyFilter = e.target.value || '';
+          renderAssignments();
+        };
+
+        propertyFilterInitialized = true;
+      }
+
+      function renderCleaners() {
+        if (!cleanerList) return;
+        if (!cleaners.length) {
+          cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour l’instant. Ajoutez votre première personne de ménage.</p>';
+          return;
+        }
+
+        cleanerList.innerHTML = '';
+        cleaners.forEach((c) => {
+          const div = document.createElement('div');
+          div.className = 'cleaner-item';
+          div.innerHTML = `
+            <div class="cleaner-item-header">
+              <div>
+                <div class="cleaner-name">${c.name}</div>
+                <div class="cleaner-tags">
+                  ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
+                  ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
+                </div>
+              </div>
+              <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
+          `;
+          cleanerList.appendChild(div);
+        });
+      }
+
+      function renderAssignments() {
+        if (!assignContainer) return;
+
+        // Initialisation du filtre logement (une seule fois, quand on a des données)
+        if (!propertyFilterInitialized) {
+          initReservationPropertyFilter();
+        }
+
+        if (!RESERVATIONS.length) {
+          assignContainer.innerHTML = `
+            <p class="text-secondary" style="font-size:13px;">
+              Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
+            </p>`;
+          return;
+        }
+
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        // Réservations avec départ aujourd’hui ou plus tard
+        const upcoming = (RESERVATIONS || [])
+          .filter((r) => {
+            if (!r.end) return false;
+
+            const propertyId = getReservationPropertyId(r);
+            if (!propertyId) return false;
+
+            // Si un logement est sélectionné, on ne garde que celui-là
+            if (
+              selectedReservationPropertyFilter &&
+              String(propertyId) !== String(selectedReservationPropertyFilter)
+            ) {
+              return false;
+            }
+
+            const endStr = String(r.end).slice(0, 10);
+            return endStr >= todayStr;
+          })
+          .sort((a, b) => {
+            const aEnd = String(a.end).slice(0, 10);
+            const bEnd = String(b.end).slice(0, 10);
+            return aEnd.localeCompare(bEnd);
+          });
+
+        if (!upcoming.length) {
+          assignContainer.innerHTML = `
+            <p class="text-secondary" style="font-size:13px;">
+              Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
+            </p>`;
+          return;
+        }
+
+        let html = `
+          <table class="assign-table">
+            <thead>
+              <tr>
+                <th>Départ le</th>
+                <th>Logement</th>
+                <th>Client</th>
+                <th>Personne en charge</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        upcoming.forEach((r) => {
+          const key = getReservationKey(r);
+          const assignedId = key && assignments[key] ? assignments[key] : '';
+
+          const propertyId = getReservationPropertyId(r);
+          const propertyName =
+            r.propertyName ||
+            (r.property && (r.property.name || r.property.title || r.property.label)) ||
+            getPropertyNameById(propertyId);
+
+          const guestName = r.guestName || r.name || '';
+          const endStr = String(r.end).slice(0, 10);
+
+          html += `
+            <tr>
+              <td>${endStr}</td>
+              <td>${propertyName}</td>
+              <td>${guestName || '-'}</td>
+              <td>
+                <select class="assign-select"
+                        data-reservation-key="${key || ''}"
+                        data-property-id="${propertyId || ''}">
+                  <option value="">Aucun</option>
+                  ${cleaners
+                    .map(
+                      (c) => `
+                    <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
+                      ${c.name || c.email || c.phone || c.id}
+                    </option>
+                  `
+                    )
+                    .join('')}
+                </select>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table>';
+        assignContainer.innerHTML = html;
+
+        assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
+          sel.addEventListener('change', async (e) => {
+            const select = e.target;
+            const key = select.getAttribute('data-reservation-key');
+            const propertyId = select.getAttribute('data-property-id') || null;
+            const cleanerId = select.value;
+
+            if (!key) return;
+
+            if (cleanerId) {
+              assignments[key] = cleanerId;
+            } else {
+              delete assignments[key];
+            }
+            saveLocalData();
+
+            const token = localStorage.getItem('lcc_token');
+            if (!token) return;
+
+            try:
+              await fetch(`${API_URL}/api/cleaning/assignments`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                  reservationKey: key,
+                  propertyId,
+                  cleanerId: cleanerId || null
+                })
+              });
+            } except Exception as err:
+              console.error('Erreur sauvegarde assignation ménage', err);
+          });
+        });
+      }
+
+      // Ajout d’un membre
+      if (cleanerForm) {
+        cleanerForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const name = document.getElementById('cleanerName').value.trim();
+          const email = document.getElementById('cleanerEmail').value.trim();
+          const phone = document.getElementById('cleanerPhone').value.trim();
+          const notes = document.getElementById('cleanerNotes').value.trim();
+
+          if (!name) return;
+
+          cleaners.push({
+            id: 'c_' + Date.now(),
+            name,
+            email,
+            phone,
+            notes
+          });
+
+          cleanerForm.reset();
+          saveLocalData();
+          renderCleaners();
+          renderAssignments();
+        });
+      }
+
+      // Suppression d’un membre
+      if (cleanerList) {
+        cleanerList.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-action="deleteCleaner"]');
+          if (!btn) return;
+
+          const id = btn.getAttribute('data-id');
+          cleaners = cleaners.filter((c) => c.id !== id);
+
+          // On enlève les assignations liées
+          Object.keys(assignments).forEach((pid) => {
+            if (assignments[pid] === id) {
+              delete assignments[pid];
+            }
+          });
+
+          saveLocalData();
+          renderCleaners();
+          renderAssignments();
+        });
+      }
+
+      // --------- PLANNING "IA" (brouillon) ---------
+      function normalizeDateString(dateStr) {
+        return dateStr ? dateStr.slice(0, 10) : null;
+      }
+
+      function getPropertyName(propertyId) {
+        const p = PROPERTIES.find((x) => x.id === propertyId || x.propertyId === propertyId);
+        return p ? p.name || p.title || p.label || propertyId : propertyId || 'Logement';
+      }
+
+      function getCleanerById(id) {
+        return cleaners.find((c) => c.id === id) || null;
+      }
+
+      // Init
+      (async function initCleaningPage() {
+        loadLocalData();
+        await loadRemoteData();
+        await loadAssignmentsFromApi();
+        renderCleaners();
+        renderAssignments();
+      })();
     });
-  }
-
-  // --------- PLANNING "IA" (brouillon) ---------
-  function normalizeDateString(dateStr) {
-    return dateStr ? dateStr.slice(0, 10) : null;
-  }
-
-  function getPropertyName(propertyId) {
-    const p = PROPERTIES.find((x) => x.id === propertyId || x.propertyId === propertyId);
-    return p ? p.name || p.title || p.label || propertyId : propertyId || 'Logement';
-  }
-
-  function getCleanerById(id) {
-    return cleaners.find((c) => c.id === id) || null;
-  }
-
-  // Init
-  (async function initCleaningPage() {
-    loadLocalData();
-    await loadRemoteData();
-    await loadAssignmentsFromApi();
-    renderCleaners();
-    renderAssignments();
-  })();
-});
-
-</script>
+  </script>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
