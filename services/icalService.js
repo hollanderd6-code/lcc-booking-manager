@@ -1,222 +1,190 @@
+// services/icalService.js
 const ical = require('node-ical');
-const axios = require('axios');
 const moment = require('moment-timezone');
 
-const timezone = process.env.TIMEZONE || 'Europe/Paris';
+const DEFAULT_TZ = process.env.APP_TIMEZONE || 'Europe/Paris';
 
 /**
- * Récupère et parse les réservations depuis les URLs iCal
+ * Devine la plateforme en fonction de l'URL iCal
  */
-async function fetchReservations(property) {
-  const allReservations = [];
-  const seenUids = new Set();
+function detectSourceFromUrl(url) {
+  const lower = (url || '').toLowerCase();
+  if (lower.includes('airbnb')) return 'AIRBNB';
+  if (lower.includes('booking')) return 'BOOKING';
+  return 'ICAL';
+}
+
+/**
+ * Extraire la plateforme depuis un objet ou string
+ */
+function extractSource(item) {
+  if (!item) return 'ICAL';
   
-  for (const icalUrl of property.icalUrls) {
-    if (!icalUrl) continue;
-    
-    try {
-      // Télécharger le fichier iCal
-      const response = await axios.get(icalUrl, {
-        timeout: 10000,
-        headers: {
-          'User-Agent': 'LCC-Booking-Manager/1.0'
-        }
-      });
-      
-      // Parser le contenu iCal
-      const events = await ical.async.parseICS(response.data);
-      
-      // Convertir en format exploitable
-      for (const event of Object.values(events)) {
-        if (event.type === 'VEVENT') {
-          const uid = event.uid || `${event.start.toISOString()}-${event.summary}`;
-          
-          // Éviter les doublons
-          if (seenUids.has(uid)) continue;
-          seenUids.add(uid);
-          
-          const reservation = {
-            uid,
-            title: event.summary || 'Réservation',
-            start: moment(event.start).tz(timezone).format(),
-            end: moment(event.end).tz(timezone).format(),
-            description: event.description || '',
-            location: event.location || '',
-            status: event.status || 'CONFIRMED',
-            created: event.created ? moment(event.created).format() : moment().format(),
-            source: extractSource(icalUrl),
-            nights: calculateNights(event.start, event.end),
-            propertyId: property.id,
-            propertyName: property.name,
-            propertyColor: property.color
-          };
-          
-          // Extraire des informations supplémentaires
-          reservation.guestName = extractGuestName(event.summary, event.description);
-          reservation.guestEmail = extractEmail(event.description);
-          reservation.guestPhone = extractPhone(event.description);
-          reservation.bookingId = extractBookingId(event.description, event.uid);
-          
-          allReservations.push(reservation);
-        }
-      }
-      
-    } catch (error) {
-      console.error(`Erreur lors de la récupération de ${icalUrl}:`, error.message);
-    }
+  if (typeof item === 'object' && item.platform) {
+    return item.platform.toUpperCase();
   }
   
-  // Trier par date de début
-  allReservations.sort((a, b) => new Date(a.start) - new Date(b.start));
+  if (typeof item === 'object' && item.url) {
+    return detectSourceFromUrl(item.url);
+  }
   
-  return allReservations;
+  if (typeof item === 'string') {
+    return detectSourceFromUrl(item);
+  }
+  
+  return 'ICAL';
 }
 
-/**
- * Calcule le nombre de nuits
- */
-function calculateNights(start, end) {
-  const startDate = moment(start).startOf('day');
-  const endDate = moment(end).startOf('day');
-  return endDate.diff(startDate, 'days');
+function extractGuestName(ev) {
+  const summary = (ev.summary || '').toString();
+  const description = (ev.description || '').toString();
+
+  let guestName = null;
+
+  let m = summary.match(/Réservation\s*:\s*(.+)$/i);
+  if (m) {
+    guestName = m[1].trim();
+  }
+
+  if (!guestName) {
+    m = description.match(/Guest:\s*([^\n]+)/i);
+    if (m) {
+      guestName = m[1].trim();
+    }
+  }
+
+  if (!guestName && summary) {
+    guestName = summary.trim();
+  }
+
+  return guestName;
 }
 
-/**
- * Extrait la source de la réservation depuis l'URL
- */
-function extractSource(url) {
-  if (!url) return 'Autre';
-  if (url.includes('airbnb')) return 'Airbnb';
-  if (url.includes('booking')) return 'Booking.com';
-  if (url.includes('vrbo')) return 'VRBO';
-  if (url.includes('abritel')) return 'Abritel';
-  return 'Autre';
-}
+function mapEventToReservation(ev, source) {
+  if (!ev.start || !ev.end) return null;
 
-/**
- * Extrait le nom du voyageur
- */
-function extractGuestName(summary, description) {
-  if (!summary) summary = '';
-  if (!description) description = '';
+  const summary = (ev.summary || '').toString();
+  const summaryLower = summary.toLowerCase();
   
-  // Airbnb format: "Réservation Airbnb (John Doe)"
-  const airbnbMatch = summary.match(/\(([^)]+)\)/);
-  if (airbnbMatch) return airbnbMatch[1];
+  let guestName = extractGuestName(ev);
   
-  // Booking format: chercher dans la description
-  const bookingMatch = description.match(/Guest name[:\s]+([^\n]+)/i);
-  if (bookingMatch) return bookingMatch[1].trim();
-  
-  // Format générique
-  const genericMatch = description.match(/Name[:\s]+([^\n]+)/i);
-  if (genericMatch) return genericMatch[1].trim();
-  
-  return 'Voyageur';
-}
+  if (source === 'BOOKING' && (summaryLower.includes('closed') || summaryLower.includes('not available'))) {
+    guestName = 'Voyageur Booking';
+  }
 
-/**
- * Extrait l'email du voyageur
- */
-function extractEmail(description) {
-  if (!description) return null;
-  
-  const emailRegex = /[\w.-]+@[\w.-]+\.\w+/;
-  const match = description.match(emailRegex);
-  return match ? match[0] : null;
-}
+  const start = moment(ev.start).tz(DEFAULT_TZ).toISOString();
+  const end   = moment(ev.end).tz(DEFAULT_TZ).toISOString();
 
-/**
- * Extrait le téléphone du voyageur
- */
-function extractPhone(description) {
-  if (!description) return null;
-  
-  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{2,3}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,4}[-.\s]?\d{2,4}/;
-  const match = description.match(phoneRegex);
-  return match ? match[0] : null;
-}
-
-/**
- * Extrait l'ID de réservation
- */
-function extractBookingId(description, uid) {
-  if (!description) description = '';
-  if (!uid) uid = '';
-  
-  // Airbnb
-  const airbnbMatch = description.match(/Confirmation code[:\s]+([A-Z0-9]+)/i);
-  if (airbnbMatch) return airbnbMatch[1];
-  
-  // Booking.com
-  const bookingMatch = description.match(/Booking ID[:\s]+([0-9]+)/i);
-  if (bookingMatch) return bookingMatch[1];
-  
-  // ID générique depuis l'UID
-  const uidMatch = uid.match(/[A-Z0-9]{8,}/);
-  if (uidMatch) return uidMatch[0];
-  
-  return null;
-}
-
-/**
- * Récupère les réservations à venir
- */
-function getUpcomingReservations(reservations, days = 30) {
-  const now = moment();
-  const futureDate = moment().add(days, 'days');
-  
-  return reservations.filter(r => {
-    const start = moment(r.start);
-    return start.isAfter(now) && start.isBefore(futureDate);
-  });
-}
-
-/**
- * Récupère les réservations en cours
- */
-function getCurrentReservations(reservations) {
-  const now = moment();
-  
-  return reservations.filter(r => {
-    const start = moment(r.start);
-    const end = moment(r.end);
-    return start.isSameOrBefore(now) && end.isSameOrAfter(now);
-  });
-}
-
-/**
- * Vérifie la disponibilité pour une période donnée
- */
-function checkAvailability(reservations, startDate, endDate) {
-  const start = moment(startDate);
-  const end = moment(endDate);
-  
-  const conflicts = reservations.filter(r => {
-    const rStart = moment(r.start);
-    const rEnd = moment(r.end);
-    
-    // Chevauchement si:
-    // - La réservation commence pendant la période
-    // - La réservation se termine pendant la période
-    // - La réservation englobe toute la période
-    return (
-      (rStart.isBetween(start, end, null, '[)')) ||
-      (rEnd.isBetween(start, end, null, '(]')) ||
-      (rStart.isSameOrBefore(start) && rEnd.isSameOrAfter(end))
-    );
-  });
-  
   return {
-    available: conflicts.length === 0,
-    conflicts
+    uid: ev.uid || ev.id || `${source}_${start}_${end}`,
+    start,
+    end,
+    source,
+    platform: source,
+    type: 'ical',
+    guestName,
+    rawSummary: ev.summary || '',
+    rawDescription: ev.description || ''
   };
+}
+
+function normalizeIcalUrls(icalUrls) {
+  console.log('🔍🔍🔍 normalizeIcalUrls APPELÉE avec:', typeof icalUrls, Array.isArray(icalUrls));
+  console.log('🔍🔍🔍 Contenu brut:', JSON.stringify(icalUrls));
+  
+  if (!Array.isArray(icalUrls)) {
+    console.log('❌ icalUrls n\'est PAS un array ! Type:', typeof icalUrls);
+    return [];
+  }
+  
+  const result = icalUrls
+    .map((item, index) => {
+      console.log(`🔍 Item ${index}:`, typeof item, JSON.stringify(item));
+      
+      if (!item) {
+        console.log(`  → Item ${index} est null/undefined`);
+        return null;
+      }
+      
+      if (typeof item === 'object' && item.url) {
+        console.log(`  → Item ${index} est un OBJET avec url:`, item.url);
+        return {
+          url: item.url,
+          platform: item.platform || detectSourceFromUrl(item.url)
+        };
+      }
+      
+      if (typeof item === 'string') {
+        console.log(`  → Item ${index} est une STRING:`, item);
+        return {
+          url: item,
+          platform: detectSourceFromUrl(item)
+        };
+      }
+      
+      console.log(`  → Item ${index} format inconnu !`);
+      return null;
+    })
+    .filter(Boolean);
+  
+  console.log('🔍🔍🔍 normalizeIcalUrls RÉSULTAT:', JSON.stringify(result));
+  return result;
+}
+
+async function fetchReservations(property) {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`🔵 fetchReservations pour: ${property?.name || 'INCONNU'}`);
+  console.log(`🔵 property.icalUrls TYPE:`, typeof property?.icalUrls);
+  console.log(`🔵 property.icalUrls IS ARRAY:`, Array.isArray(property?.icalUrls));
+  console.log(`🔵 property.icalUrls CONTENU:`, JSON.stringify(property?.icalUrls));
+  
+  const results = [];
+
+  if (!property || !Array.isArray(property.icalUrls) || property.icalUrls.length === 0) {
+    console.log(`⚠️ ${property?.name || 'Inconnu'}: Pas d'icalUrls valide`);
+    return results;
+  }
+
+  const normalizedUrls = normalizeIcalUrls(property.icalUrls);
+  
+  console.log(`🔵 URLs normalisées (${normalizedUrls.length}):`, JSON.stringify(normalizedUrls));
+
+  for (const item of normalizedUrls) {
+    if (!item || !item.url) {
+      console.log(`⚠️ Item invalide:`, item);
+      continue;
+    }
+    
+    const url = item.url;
+    const source = item.platform || 'ICAL';
+
+    console.log(`🔵 Fetch ${source}:`, url.substring(0, 80));
+
+    try {
+      const data = await ical.async.fromURL(url);
+      
+      console.log(`✅ Fetch OK pour ${source}`);
+      
+      Object.values(data).forEach(ev => {
+        if (!ev || ev.type !== 'VEVENT') return;
+        
+        const res = mapEventToReservation(ev, source);
+        if (res) {
+          results.push(res);
+        }
+      });
+    } catch (err) {
+      console.error(`❌ Erreur iCal pour ${property.name}:`, err.message);
+      console.error(`   URL problématique:`, url);
+    }
+  }
+
+  console.log(`🎯 ${property.name} - TOTAL: ${results.length} réservations`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  return results;
 }
 
 module.exports = {
   fetchReservations,
-  getUpcomingReservations,
-  getCurrentReservations,
-  checkAvailability,
-  calculateNights
+  extractSource
 };
