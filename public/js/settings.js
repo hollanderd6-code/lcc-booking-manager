@@ -5,6 +5,10 @@ const API_URL = "https://lcc-booking-manager.onrender.com";
 const BOOSTINGHOST_ICAL_BASE = window.location.origin;
 let properties = [];
 let currentEditingProperty = null;
+const API_URL = "https://lcc-booking-manager.onrender.com";
+const BOOSTINGHOST_ICAL_BASE = window.location.origin;
+let properties = [];
+let currentEditingProperty = null;
 
 // ========================================
 // INITIALIZATION
@@ -126,14 +130,19 @@ async function loadProperties() {
     });
     const data = await response.json();
     properties = data.properties || [];
+    // 🔁 On réinjecte les infos supplémentaires stockées en local (wifi, accès, livret...)
+    const extrasMap = loadPropertyExtras();
+    if (extrasMap && typeof extrasMap === "object") {
+      properties = properties.map((p) => {
+        const pid = p._id || p.id;
+        if (!pid) return p;
+        const extras = extrasMap[String(pid)];
+        if (!extras) return p;
+        return { ...p, ...extras };
+      });
+    }
+
     renderProperties();
-  } catch (error) {
-    console.error("Erreur lors du chargement des logements:", error);
-    showToast("Erreur lors du chargement des logements", "error");
-  } finally {
-    hideLoading();
-  }
-}
 
 async function saveProperty(event) {
   event.preventDefault();
@@ -229,22 +238,33 @@ async function saveProperty(event) {
     const result = await response.json();
 
     if (response.ok) {
-      showToast(result.message || "Logement enregistré", "success");
-      closeEditModal();
-      await loadProperties();
-    } else {
-      showToast(
-        result.error || "Une erreur est survenue lors de l'enregistrement",
-        "error"
-      );
+      let savedId = propertyId;
+    if (!savedId && result) {
+      if (result.property && (result.property._id || result.property.id)) {
+        savedId = result.property._id || result.property.id;
+      } else if (result._id || result.id) {
+        savedId = result._id || result.id;
+      }
     }
-  } catch (error) {
-    console.error("Erreur saveProperty:", error);
-    showToast("Erreur lors de l'enregistrement du logement", "error");
-  } finally {
-    hideLoading();
+    if (savedId) {
+      upsertPropertyExtras(savedId, {
+        welcomeBookUrl: welcomeBookUrl || "",
+        accessCode: accessCode || "",
+        wifiName: wifiName || "",
+        wifiPassword: wifiPassword || "",
+        accessInstructions: accessInstructions || "",
+      });
+    }
+
+    showToast(result.message || "Logement enregistré", "success");
+    closeEditModal();
+    await loadProperties();
+  } else {
+    showToast(
+      result.error || "Une erreur est survenue lors de l'enregistrement",
+      "error"
+    );
   }
-}
 
 async function deleteProperty(propertyId) {
   if (!confirm("Êtes-vous sûr de vouloir supprimer ce logement ?")) {
