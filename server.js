@@ -1474,23 +1474,36 @@ async function loadProperties() {
       ORDER BY created_at ASC
     `);
 
-    PROPERTIES = result.rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      name: row.name,
-      color: row.color,
+    PROPERTIES = result.rows.map(row => {
+      // ✅ Parser ical_urls si c'est une string JSON
+      let icalUrls = row.ical_urls || [];
+      if (typeof icalUrls === 'string') {
+        try {
+          icalUrls = JSON.parse(icalUrls);
+        } catch (e) {
+          console.error(`❌ Erreur parse ical_urls pour ${row.name}:`, e.message);
+          icalUrls = [];
+        }
+      }
+      
+      return {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        color: row.color,
 
-      // Pour l'instant on garde ical_urls tel quel (strings ou objets),
-      // on le transformera au moment de la réponse API si besoin.
-      icalUrls: row.ical_urls || [],
+        // Pour l'instant on garde ical_urls tel quel (strings ou objets),
+        // on le transformera au moment de la réponse API si besoin.
+        icalUrls,
 
-      // Champs supplémentaires
-      address: row.address,
-      arrival_time: row.arrival_time,
-      departure_time: row.departure_time,
-      deposit_amount: row.deposit_amount,
-      photo_url: row.photo_url
-    }));
+        // Champs supplémentaires
+        address: row.address,
+        arrival_time: row.arrival_time,
+        departure_time: row.departure_time,
+        deposit_amount: row.deposit_amount,
+        photo_url: row.photo_url
+      };
+    });
 
     console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
   } catch (error) {
