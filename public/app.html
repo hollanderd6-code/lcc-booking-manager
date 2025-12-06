@@ -4360,19 +4360,36 @@ function findReservationForBlock(bookingBlock) {
   }
 
   const idStr = String(bookingIdAttr);
+  let found = null;
 
-  const found = reservations.find((r) =>
-    String(r.id) === idStr ||
-    (r.uid != null && String(r.uid) === idStr) ||
-    (r.reservationKey != null && String(r.reservationKey) === idStr)
-  );
+  if (Array.isArray(reservations)) {
+    // 1) Correspondance par id / uid / reservationKey
+    found = reservations.find((r) => {
+      if (!r) return false;
+      const rid = r.id != null ? String(r.id) : null;
+      const uid = r.uid != null ? String(r.uid) : null;
+      const rkey = r.reservationKey != null ? String(r.reservationKey) : null;
+      return idStr === rid || idStr === uid || idStr === rkey;
+    });
+
+    // 2) Fallback : data-booking-id est juste l'INDEX dans le tableau
+    if (!found) {
+      const idx = parseInt(idStr, 10);
+      if (!Number.isNaN(idx) && reservations[idx]) {
+        found = reservations[idx];
+      }
+    }
+  }
 
   if (!found) {
     console.log('⚠️ Aucune réservation trouvée pour data-booking-id =', bookingIdAttr);
+  } else {
+    console.log('✅ Réservation trouvée pour data-booking-id =', bookingIdAttr, found);
   }
 
   return found || null;
 }
+
   
 function fixModalContent(bookingBlock) {
   const detailsContent = document.getElementById('reservationDetailsContent');
@@ -4393,39 +4410,98 @@ function fixModalContent(bookingBlock) {
       return;
     }
 
-    // 1️⃣ Correction du nom de logement ("Logement inconnu")
-    let propertyId = booking.propertyId;
-if (!propertyId && booking.property && booking.property.id != null) {
-  propertyId = booking.property.id;
-}
+        // 1️⃣ Correction du nom de logement ("Logement inconnu")
+    try {
+      function getReservationPropertyId(res) {
+        if (!res) return null;
+        if (res.propertyId != null) return String(res.propertyId);
+        if (res.property && res.property.id != null) return String(res.property.id);
+        if (res.property_id != null) return String(res.property_id);
+        return null;
+      }
 
-let propertyName =
-  booking.propertyName ||
-  (booking.property && (booking.property.name || booking.property.title || booking.property.label)) ||
-  '';
+      let propertyId = getReservationPropertyId(booking);
+      let propertyName = null;
 
-try {
-  if (!propertyName && propertyId) {
-    const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-    const property = properties.find(
-      (p) =>
-        String(p.id) === String(propertyId) ||
-        String(p.propertyId) === String(propertyId)
-    );
-    if (property) {
-      propertyName = property.name || property.title || property.label || '';
-      console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
+      // a) Priorité aux infos directement dans la réservation
+      if (booking.propertyName) {
+        propertyName = booking.propertyName;
+      } else if (booking.property) {
+        if (typeof booking.property === 'string') {
+          propertyName = booking.property;
+        } else {
+          propertyName =
+            booking.property.name ||
+            booking.property.title ||
+            booking.property.label ||
+            '';
+        }
+      }
+
+      // b) Fallback via LCC_PROPERTIES si nécessaire
+      if (!propertyName && propertyId) {
+        let properties = [];
+        try {
+          if (Array.isArray(window.LCC_PROPERTIES) && window.LCC_PROPERTIES.length) {
+            properties = window.LCC_PROPERTIES;
+          } else {
+            properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+          }
+        } catch (e) {
+          properties = [];
+        }
+
+        if (Array.isArray(properties) && properties.length) {
+          const p = properties.find(
+            (x) =>
+              String(x.id) === String(propertyId) ||
+              String(x.propertyId) === String(propertyId) ||
+              String(x.property_id) === String(propertyId)
+          );
+          if (p) {
+            propertyName = p.name || p.title || p.label || '';
+          }
+        }
+      }
+
+      console.log('🏠 propertyName calculé pour le modal :', {
+        propertyName,
+        propertyId,
+        booking
+      });
+
+      if (propertyName) {
+        // On essaie d'abord de trouver le groupe "Logement"
+        let logementGroup = null;
+        const groups = detailsContent.querySelectorAll('.detail-group');
+        groups.forEach((group) => {
+          const labelEl = group.querySelector('label');
+          if (labelEl && /logement/i.test(labelEl.textContent || '')) {
+            logementGroup = group;
+          }
+        });
+
+        if (logementGroup) {
+          const valueEl = logementGroup.querySelector('.detail-value') || logementGroup;
+          valueEl.textContent = propertyName;
+          console.log('✅ Logement corrigé via groupe <detail-group> :', propertyName);
+        } else {
+          // Fallback : remplacement texte brut "Logement inconnu"
+          const allText = detailsContent.innerText || '';
+          if (allText.includes('Logement inconnu')) {
+            const htmlContent = detailsContent.innerHTML;
+            detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
+            console.log('✅ Logement corrigé via remplacement de texte :', propertyName);
+          } else {
+            console.log("⚠️ Impossible de trouver où injecter le nom du logement dans le modal");
+          }
+        }
+      } else {
+        console.log('⚠️ Aucun propertyName trouvé pour cette réservation');
+      }
+    } catch (e) {
+      console.warn('Erreur lors de la correction du logement dans le modal', e);
     }
-  }
-
-  if (propertyName && allText.includes('Logement inconnu')) {
-    const htmlContent = detailsContent.innerHTML;
-    detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
-    console.log('✅ Logement corrigé dans le modal :', propertyName);
-  }
-} catch (e) {
-  console.warn('Erreur lors de la correction du logement dans le modal', e);
-}
 
     // 2️⃣ Gestion du ménage : on regarde les assignations stockées
     try {
