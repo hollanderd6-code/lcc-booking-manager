@@ -77,9 +77,20 @@ function extractGuestName(ev) {
 function mapEventToReservation(ev, source) {
   if (!ev.start || !ev.end) return null;
 
+  const summary = (ev.summary || '').toString();
+  const summaryLower = summary.toLowerCase();
+  
+  // ✅ Pour Booking : "CLOSED - Not available" = vraie réservation
+  // On garde ces événements et on les marque comme réservations Booking
+  let guestName = extractGuestName(ev);
+  
+  // Si c'est un blocage Booking, on met un nom générique
+  if (source === 'BOOKING' && (summaryLower.includes('closed') || summaryLower.includes('not available'))) {
+    guestName = 'Voyageur Booking';  // Nom générique car Booking cache les infos
+  }
+
   const start = moment(ev.start).tz(DEFAULT_TZ).toISOString();
   const end   = moment(ev.end).tz(DEFAULT_TZ).toISOString();
-  const guestName = extractGuestName(ev);
 
   return {
     uid: ev.uid || ev.id || `${source}_${start}_${end}`,
@@ -88,7 +99,7 @@ function mapEventToReservation(ev, source) {
     source,                // 'AIRBNB' / 'BOOKING' / 'ICAL'
     platform: source,
     type: 'ical',          // pour distinguer des MANUEL / BLOCK
-    guestName,             // 👈 c'est ce champ qui nous intéresse
+    guestName,
     rawSummary: ev.summary || '',
     rawDescription: ev.description || ''
   };
