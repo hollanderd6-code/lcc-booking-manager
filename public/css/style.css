@@ -1358,3 +1358,58 @@ body {
 .cleaning-messages-section {
   display: none;
 }
+/* Améliorations globales mobile */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: 60px; /* déjà présent, mais on renforce l'intention */
+  }
+
+  .page-content {
+    padding: 16px 12px;
+  }
+
+  .card {
+    border-radius: 16px;
+    padding: 14px 14px;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Le bloc calendrier prend toute la largeur */
+  #calendarSection {
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}
+
+/* Micro-ajustement du calendrier pour petit écran */
+@media (max-width: 768px) {
+  .calendar-wrapper {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .calendar-container {
+    flex-direction: column;
+  }
+
+  .calendar-grid-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* On s'assure que la grille est un peu plus large que l'écran,
+     pour que les cases restent lisibles */
+  .calendar-grid {
+    min-width: 720px;
+  }
+
+  .calendar-cell {
+    height: 32px;
+  }
+
+  .booking-block {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+}
