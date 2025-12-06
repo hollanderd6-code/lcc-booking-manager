@@ -402,8 +402,6 @@ function openEditPropertyModal(propertyId) {
   document.getElementById("propertyId").value = property._id || property.id || "";
   document.getElementById("propertyName").value = property.name || "";
   document.getElementById("propertyAddress").value = property.address || "";
-  document.getElementById('propertyWelcomeBookUrl').value = property.welcomeBookUrl || '';
-document.getElementById('propertyAccessCode').value = property.accessCode || '';
   document.getElementById("propertyArrivalTime").value = property.arrivalTime || "";
   document.getElementById("propertyDepartureTime").value = property.departureTime || "";
   document.getElementById("propertyDeposit").value =
