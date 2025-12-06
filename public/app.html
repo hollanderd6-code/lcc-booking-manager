@@ -4530,35 +4530,25 @@ try {
   }, 200);
 }
 
-
 // Listener sur les blocs de réservation dans le calendrier
 document.addEventListener('click', function(e) {
   const bookingBlock = e.target.closest('.booking-block');
   if (!bookingBlock) return;
 
-  const bookingIdAttr = bookingBlock.getAttribute('data-booking-id');
-const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+  const found = findReservationForBlock(bookingBlock);
 
-let found = null;
-if (bookingIdAttr) {
-  found = reservations.find((r) =>
-    String(r.id) === String(bookingIdAttr) ||
-    (r.uid != null && String(r.uid) === String(bookingIdAttr))
-  );
-}
-
-if (found) {
-  currentBookingData = found;
-  window.currentBookingData = found;
-  console.log('📦 currentBookingData défini au clic :', currentBookingData);
-} else {
-  console.log('⚠️ Impossible de trouver la réservation pour id', bookingIdAttr);
-  currentBookingData = null;
-}
+  if (found) {
+    currentBookingData = found;
+    window.currentBookingData = found;
+    console.log('📦 currentBookingData défini au clic (listener global) :', currentBookingData);
+  } else {
+    currentBookingData = null;
+  }
 
   // On laisse fixModalContent s'occuper de corriger l'affichage du modal
   fixModalContent(bookingBlock);
 });
+
 
 // Listener global pour les boutons du modal (Supprimer / Modifier)
 document.addEventListener('click', function(e) {
