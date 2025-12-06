@@ -2576,9 +2576,10 @@ function populateEditBookingProperties(selectedPropertyId) {
               const assignedId = key && assignments ? assignments[key] : null;
               const cleanerName = getCleanerNameById(assignedId, cleaners);
               const propName =
-                r.propertyName ||
-                r.property ||
-                getPropertyNameById(r.propertyId, properties);
+  r.propertyName ||
+  (r.property && (r.property.name || r.property.title || r.property.label)) ||
+  getPropertyNameById(propertyId, properties);
+
               const guestName = r.guestName || r.name || '';
               html += `
                 <div style="margin-bottom:8px;">
@@ -3206,9 +3207,10 @@ function populateEditBookingProperties(selectedPropertyId) {
 
               const cleanerName = getCleanerNameById(assignedId, cleaners);
               const propName =
-                r.propertyName ||
-                r.property ||
-                getPropertyNameById(propertyId, properties);
+  r.propertyName ||
+  (r.property && (r.property.name || r.property.title || r.property.label)) ||
+  getPropertyNameById(propertyId, properties);
+
               const guestName = r.guestName || r.name || 'Voyageur';
 
               html += `
