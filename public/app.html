@@ -4368,29 +4368,38 @@ function fixModalContent(bookingBlock) {
     }
 
     // 1️⃣ Correction du nom de logement ("Logement inconnu")
-    let propertyName = booking.propertyName;
-    try {
-      if (!propertyName && booking.propertyId) {
-        const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-        const property = properties.find(
-          (p) =>
-            String(p.id) === String(booking.propertyId) ||
-            String(p.propertyId) === String(booking.propertyId)
-        );
-        if (property) {
-          propertyName = property.name || property.title || property.label;
-          console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
-        }
-      }
+    let propertyId = booking.propertyId;
+if (!propertyId && booking.property && booking.property.id != null) {
+  propertyId = booking.property.id;
+}
 
-      if (propertyName && allText.includes('Logement inconnu')) {
-        const htmlContent = detailsContent.innerHTML;
-        detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
-        console.log('✅ Logement corrigé dans le modal :', propertyName);
-      }
-    } catch (e) {
-      console.warn('Erreur lors de la correction du logement dans le modal', e);
+let propertyName =
+  booking.propertyName ||
+  (booking.property && (booking.property.name || booking.property.title || booking.property.label)) ||
+  '';
+
+try {
+  if (!propertyName && propertyId) {
+    const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+    const property = properties.find(
+      (p) =>
+        String(p.id) === String(propertyId) ||
+        String(p.propertyId) === String(propertyId)
+    );
+    if (property) {
+      propertyName = property.name || property.title || property.label || '';
+      console.log('📍 Nom du logement récupéré depuis PROPERTIES:', propertyName);
     }
+  }
+
+  if (propertyName && allText.includes('Logement inconnu')) {
+    const htmlContent = detailsContent.innerHTML;
+    detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
+    console.log('✅ Logement corrigé dans le modal :', propertyName);
+  }
+} catch (e) {
+  console.warn('Erreur lors de la correction du logement dans le modal', e);
+}
 
     // 2️⃣ Gestion du ménage : on regarde les assignations stockées
     try {
