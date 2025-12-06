@@ -632,8 +632,7 @@
       }
     })();
 
-<script>
-  
+    // --------------------------
 // GESTION EQUIPE + ASSIGNATION + PLANNING
 // --------------------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -651,7 +650,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const cleanerList = document.getElementById('cleanerList');
   const assignContainer = document.getElementById('assignContainer');
 
-  // -------- LocalStorage --------
   function loadLocalData() {
     try {
       cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
@@ -666,65 +664,72 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
     localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
   }
+   async function loadAssignmentsFromApi() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
 
-  // -------- API : assignations --------
-  async function loadAssignmentsFromApi() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) return;
-
-      const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-
-      if (!res.ok) {
-        console.warn('Erreur lors du chargement des assignations ménage', res.status);
-        return;
+    const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
+      headers: {
+        Authorization: 'Bearer ' + token
       }
+    });
 
-      const data = await res.json();
-      const rows = data.assignments || [];
-
-      if (!rows.length) {
-        console.log('Aucune assignation reçue de l’API, on conserve le localStorage.');
-        return;
-      }
-
-      const map = {};
-      rows.forEach((row) => {
-        const key =
-          row.reservation_key ||
-          row.reservation_uid ||
-          row.reservationId ||
-          row.property_id;
-
-        if (key && row.cleaner_id) {
-          map[String(key)] = row.cleaner_id;
-        }
-      });
-
-      assignments = map;
-      saveLocalData();
-    } catch (e) {
-      console.error('Erreur loadAssignmentsFromApi()', e);
+    if (!res.ok) {
+      console.warn('Erreur lors du chargement des assignations ménage', res.status);
+      return;
     }
-  }
 
-  // -------- API : réservations / logements --------
+    const data = await res.json();
+    const rows = data.assignments || [];
+
+    // 🚫 TRÈS IMPORTANT :
+    // Si l'API ne renvoie rien, on NE touche PAS aux assignations déjà présentes
+    // (celles venant du localStorage).
+    if (!rows.length) {
+      console.log('Aucune assignation reçue de l’API, on conserve celles du localStorage.');
+      return;
+    }
+
+    const map = {};
+
+    rows.forEach((row) => {
+      // Si tu es passé en "par réservation", ton backend renvoie
+      // normalement reservation_key / reservation_uid…
+      const key =
+        row.reservation_key ||
+        row.reservation_uid ||
+        row.reservationId ||
+        row.property_id; // fallback "par logement" si besoin
+
+      if (key && row.cleaner_id) {
+        map[String(key)] = row.cleaner_id;
+      }
+    });
+
+    // Si on arrive ici, on a de vraies données venant du backend :
+    // on peut écraser en toute sécurité ce qu'on a localement.
+    assignments = map;
+    saveLocalData();
+  } catch (e) {
+    console.error('Erreur loadAssignmentsFromApi()', e);
+  }
+}
+
+
   async function loadRemoteData() {
     try {
       const token = localStorage.getItem('lcc_token');
       if (!token) return;
 
       const response = await fetch(`${API_URL}/api/reservations`, {
-        headers: { Authorization: 'Bearer ' + token }
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
       });
 
       if (!response.ok) {
-        console.warn(
-          'Erreur lors du chargement des réservations pour le ménage',
-          response.status
-        );
+        console.warn('Erreur lors du chargement des réservations pour le ménage', response.status);
         return;
       }
 
@@ -733,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
       RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
       PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
 
+      // Fallback de démo si aucune propriété
       if (!PROPERTIES.length) {
         PROPERTIES = [
           { id: 'apt-demo-1', name: 'Appartement démo 1' },
@@ -749,40 +755,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
-
-  // -------- Helpers réservation / logement --------
-  function getReservationPropertyId(r) {
-    if (!r) return null;
-    if (r.propertyId != null) return String(r.propertyId);
-    if (r.property && r.property.id != null) return String(r.property.id);
-    if (r.property_id != null) return String(r.property_id);
-    return null;
-  }
-
   function getReservationKey(reservation) {
     if (!reservation) return null;
     if (reservation.uid) return reservation.uid;
     if (reservation.id != null) return String(reservation.id);
-
-    const propertyId = getReservationPropertyId(reservation);
-    const start =
-      reservation.start ||
-      reservation.startDate ||
-      reservation.checkIn ||
-      reservation.checkin;
-    const end =
-      reservation.end ||
-      reservation.endDate ||
-      reservation.checkOut ||
-      reservation.checkout;
-
-    if (propertyId && start && end) {
+    if (reservation.propertyId && reservation.start && reservation.end) {
       return (
-        propertyId +
+        reservation.propertyId +
         '::' +
-        String(start).slice(0, 10) +
+        String(reservation.start).slice(0, 10) +
         '>' +
-        String(end).slice(0, 10)
+        String(reservation.end).slice(0, 10)
       );
     }
     return null;
@@ -795,20 +778,13 @@ document.addEventListener('DOMContentLoaded', () => {
         String(x.id) === String(propertyId) ||
         String(x.propertyId) === String(propertyId)
     );
-    return p ? (p.name || p.title || p.label || propertyId) : propertyId || 'Logement';
+    return p ? (p.name || p.title || p.label || propertyId) : propertyId;
   }
 
-  function getCleanerById(id) {
-    return cleaners.find((c) => c.id === id) || null;
-  }
-
-  // -------- Rendu équipe --------
   function renderCleaners() {
     if (!cleanerList) return;
-
     if (!cleaners.length) {
-      cleanerList.innerHTML =
-        '<p class="text-secondary" style="font-size:13px;">Aucune personne de ménage enregistrée pour l’instant. Ajoutez votre première personne de ménage.</p>';
+      cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour l’instant. Ajoutez votre première personne de ménage.</p>';
       return;
     }
 
@@ -821,11 +797,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <div>
             <div class="cleaner-name">${c.name}</div>
             <div class="cleaner-tags">
-              ${c.email ? `<span><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
-              ${c.phone ? `<span><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
+              ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
+              ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
             </div>
           </div>
-          <button class="btn-icon" data-action="deleteCleaner" data-id="${c.id}">
+          <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -835,12 +811,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // -------- Rendu assignations --------
-  function renderAssignments() {
+    function renderAssignments() {
     if (!assignContainer) return;
-
-    // si rien n’a encore été chargé, on garde "Chargement..."
-    if (!RESERVATIONS || !Array.isArray(RESERVATIONS)) return;
 
     if (!RESERVATIONS.length) {
       assignContainer.innerHTML = `
@@ -852,24 +824,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const todayStr = new Date().toISOString().slice(0, 10);
 
+    // Réservations avec départ aujourd’hui ou plus tard
     const upcoming = (RESERVATIONS || [])
-      .map((r) => {
-        const propertyId = getReservationPropertyId(r);
-        const end =
-          r.end ||
-          r.endDate ||
-          r.checkOut ||
-          r.checkout;
-        return { ...r, _propertyId: propertyId, _end: end };
-      })
       .filter((r) => {
-        if (!r._end || !r._propertyId) return false;
-        const endStr = String(r._end).slice(0, 10);
+        if (!r.end || !r.propertyId) return false;
+        const endStr = String(r.end).slice(0, 10);
         return endStr >= todayStr;
       })
       .sort((a, b) => {
-        const aEnd = String(a._end).slice(0, 10);
-        const bEnd = String(b._end).slice(0, 10);
+        const aEnd = String(a.end).slice(0, 10);
+        const bEnd = String(b.end).slice(0, 10);
         return aEnd.localeCompare(bEnd);
       });
 
@@ -897,22 +861,10 @@ document.addEventListener('DOMContentLoaded', () => {
     upcoming.forEach((r) => {
       const key = getReservationKey(r);
       const assignedId = key && assignments[key] ? assignments[key] : '';
-
       const propertyName =
-        r.propertyName ||
-        (typeof r.property === 'string'
-          ? r.property
-          : r.property && (r.property.name || r.property.title || r.property.label)) ||
-        getPropertyNameById(r._propertyId);
-
-      const guestName =
-        r.guestName ||
-        r.guest_name ||
-        r.guest ||
-        r.name ||
-        '';
-
-      const endStr = String(r._end).slice(0, 10);
+        r.propertyName || r.property || getPropertyNameById(r.propertyId);
+      const guestName = r.guestName || r.name || '';
+      const endStr = String(r.end).slice(0, 10);
 
       html += `
         <tr>
@@ -922,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>
             <select class="assign-select"
                     data-reservation-key="${key || ''}"
-                    data-property-id="${r._propertyId || ''}">
+                    data-property-id="${r.propertyId || ''}">
               <option value="">Aucun</option>
               ${cleaners
                 .map(
@@ -981,7 +933,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // -------- Ajout / suppression équipe --------
+
+
+  // Ajout d’un membre
   if (cleanerForm) {
     cleanerForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1007,6 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Suppression d’un membre
   if (cleanerList) {
     cleanerList.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="deleteCleaner"]');
@@ -1015,9 +970,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const id = btn.getAttribute('data-id');
       cleaners = cleaners.filter((c) => c.id !== id);
 
-      Object.keys(assignments).forEach((key) => {
-        if (assignments[key] === id) {
-          delete assignments[key];
+      // On enlève les assignations liées
+      Object.keys(assignments).forEach((pid) => {
+        if (assignments[pid] === id) {
+          delete assignments[pid];
         }
       });
 
@@ -1027,7 +983,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // -------- Init page --------
+  // --------- PLANNING "IA" (brouillon) ---------
+  function normalizeDateString(dateStr) {
+    return dateStr ? dateStr.slice(0, 10) : null;
+  }
+
+  function getPropertyName(propertyId) {
+    const p = PROPERTIES.find((x) => x.id === propertyId || x.propertyId === propertyId);
+    return p ? p.name || p.title || p.label || propertyId : propertyId || 'Logement';
+  }
+
+  function getCleanerById(id) {
+    return cleaners.find((c) => c.id === id) || null;
+  }
+
+  // Init
   (async function initCleaningPage() {
     loadLocalData();
     await loadRemoteData();
@@ -1036,8 +1006,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAssignments();
   })();
 });
-</script>
 
+</script>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
