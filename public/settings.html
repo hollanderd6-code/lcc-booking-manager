@@ -354,28 +354,15 @@
       width: 94%;
       box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.35));
       overflow: hidden;
-    }
-
-    .modal-header {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border-color, #e5e7eb);
+      max-height: 90vh;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
+      flex-direction: column;
     }
-
-    .modal-header h2 {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
+    
     .modal-body {
       padding: 16px 18px 18px;
+      overflow-y: auto;
+      flex: 1;
     }
 
     .modal-close {
@@ -590,6 +577,17 @@
       gap: 8px;
       justify-content: flex-end;
       margin-top: 10px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color, #e5e7eb);
+      background: var(--bg-primary, #ffffff);
+      position: sticky;
+      bottom: 0;
+      margin-left: -18px;
+      margin-right: -18px;
+      margin-bottom: -18px;
+      padding-left: 18px;
+      padding-right: 18px;
+      padding-bottom: 18px;
     }
 
     .btn-cancel {
