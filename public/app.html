@@ -4510,18 +4510,25 @@ document.addEventListener('click', function(e) {
   const bookingBlock = e.target.closest('.booking-block');
   if (!bookingBlock) return;
 
-  const bookingIndexAttr = bookingBlock.getAttribute('data-booking-id');
-  const bookingIndex = bookingIndexAttr ? parseInt(bookingIndexAttr, 10) : NaN;
-  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+  const bookingIdAttr = bookingBlock.getAttribute('data-booking-id');
+const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
 
-  if (!isNaN(bookingIndex) && reservations[bookingIndex]) {
-    currentBookingData = reservations[bookingIndex];
-    window.currentBookingData = currentBookingData;
-    console.log('📦 currentBookingData défini au clic :', currentBookingData);
-  } else {
-    console.log('⚠️ Impossible de trouver la réservation via index', bookingIndexAttr);
-    currentBookingData = null;
-  }
+let found = null;
+if (bookingIdAttr) {
+  found = reservations.find((r) =>
+    String(r.id) === String(bookingIdAttr) ||
+    (r.uid != null && String(r.uid) === String(bookingIdAttr))
+  );
+}
+
+if (found) {
+  currentBookingData = found;
+  window.currentBookingData = found;
+  console.log('📦 currentBookingData défini au clic :', currentBookingData);
+} else {
+  console.log('⚠️ Impossible de trouver la réservation pour id', bookingIdAttr);
+  currentBookingData = null;
+}
 
   // On laisse fixModalContent s'occuper de corriger l'affichage du modal
   fixModalContent(bookingBlock);
