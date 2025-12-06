@@ -135,7 +135,24 @@ async function fetchReservations(property) {
   if (!property || !Array.isArray(property.icalUrls) || property.icalUrls.length === 0) {
     return results;
   }
+// ✅ AJOUTEZ CES LOGS
+  console.log(`🔍 ${property.name} - icalUrls AVANT normalisation:`, JSON.stringify(property.icalUrls));
+  
+  const normalizedUrls = normalizeIcalUrls(property.icalUrls);
+  
+  console.log(`🔍 ${property.name} - URLs APRÈS normalisation:`, JSON.stringify(normalizedUrls));
 
+  for (const item of normalizedUrls) {
+    if (!item || !item.url) continue;
+    
+    const url = item.url;
+    const source = item.platform || 'ICAL';
+    
+    console.log(`🔍 ${property.name} - Tentative fetch:`, url);
+
+    try {
+      const data = await ical.async.fromURL(url)
+      
   // ✅ Normaliser les URLs (gérer objets ET strings)
   const normalizedUrls = normalizeIcalUrls(property.icalUrls);
 
