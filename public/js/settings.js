@@ -136,19 +136,15 @@ async function loadProperties() {
 }
 
 async function saveProperty(event) {
-  console.log('🔵 saveProperty: DÉBUT');
   event.preventDefault();
   showLoading();
 
-  console.log('🔵 saveProperty: Récupération des champs...');
   const propertyId = document.getElementById("propertyId").value || null;
   const name = document.getElementById("propertyName").value.trim();
   const color = document.getElementById("propertyColor").value;
   const address = document.getElementById("propertyAddress")?.value?.trim() || null;
   const arrivalTime = document.getElementById("propertyArrivalTime")?.value || null;
   const departureTime = document.getElementById("propertyDepartureTime")?.value || null;
-  
-  console.log('🔵 Données:', { propertyId, name, color });
   
   const depositRaw = document.getElementById("propertyDeposit")?.value || 
                      document.getElementById("propertyDepositAmount")?.value;
@@ -167,13 +163,11 @@ async function saveProperty(event) {
   const photoInput = document.getElementById("propertyPhoto");
 
   if (!name) {
-    console.log('❌ saveProperty: Nom manquant');
     hideLoading();
     showToast('Veuillez saisir un nom de logement.', 'error');
     return;
   }
 
-  console.log('🔵 saveProperty: Récupération URLs iCal...');
   const urlGroups = document.querySelectorAll(".url-input-group");
   let icalUrls = [];
   
@@ -194,8 +188,6 @@ async function saveProperty(event) {
       .map(input => input.value.trim())
       .filter(Boolean);
   }
-
-  console.log('🔵 URLs iCal:', icalUrls);
 
   const formData = new FormData();
   formData.append('name', name);
@@ -219,15 +211,12 @@ async function saveProperty(event) {
     formData.append('photo', photoInput.files[0]);
   }
 
-  console.log('🔵 saveProperty: Préparation requête...');
   try {
     const token = localStorage.getItem("lcc_token");
     const method = propertyId ? "PUT" : "POST";
     const url = propertyId
       ? `${API_URL}/api/properties/${propertyId}`
       : `${API_URL}/api/properties`;
-
-    console.log('🔵 saveProperty: Envoi requête', { method, url });
 
     const response = await fetch(url, {
       method,
@@ -237,11 +226,7 @@ async function saveProperty(event) {
       body: formData,
     });
 
-    console.log('🔵 saveProperty: Réponse reçue', response.status);
-
     const result = await response.json();
-
-    console.log('🔵 saveProperty: Résultat', result);
 
     if (response.ok) {
       showToast(result.message || "Logement enregistré", "success");
@@ -254,11 +239,10 @@ async function saveProperty(event) {
       );
     }
   } catch (error) {
-    console.error("❌ Erreur saveProperty:", error);
+    console.error("Erreur saveProperty:", error);
     showToast("Erreur lors de l'enregistrement du logement", "error");
   } finally {
     hideLoading();
-    console.log('🔵 saveProperty: FIN');
   }
 }
 
