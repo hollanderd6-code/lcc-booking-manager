@@ -713,62 +713,6 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
   );
   await Promise.all(tasks);
 }
-
-        // 2) WhatsApp au client (si configuré + activé)
-        console.log(`🔍 Vérification WhatsApp pour user ${userId}:`);
-        console.log(`   - settings.whatsappEnabled: ${settings?.whatsappEnabled}`);
-        console.log(`   - settings.whatsappNumber: ${settings?.whatsappNumber}`);
-        
-        if (
-          settings &&
-          settings.whatsappEnabled &&
-          settings.whatsappNumber
-        ) {
-          console.log(`✅ Toutes les conditions WhatsApp remplies, envoi en cours...`);
-          
-          const waText =
-            type === 'new'
-              ? `Nouvelle réservation\n` +
-                `Logement : ${propertyName}\n` +
-                `Voyageur : ${guest}\n` +
-                `Séjour : du ${start} au ${end}\n` +
-                `Source : ${source}`
-              : `Réservation annulée\n` +
-                `Logement : ${propertyName}\n` +
-                `Voyageur : ${guest}\n` +
-                `Séjour initial : du ${start} au ${end}\n` +
-                `Source : ${source}`;
-
-          console.log(`📲 Tentative d'envoi WhatsApp à: ${settings.whatsappNumber}`);
-          console.log(`📝 Message: ${waText.substring(0, 100)}...`);
-
-          try {
-            console.log(
-              `✅ WhatsApp "${type}" envoyé avec succès à ${settings.whatsappNumber} (user ${userId}, resa uid=${res.uid || res.id})`
-            );
-          } catch (waErr) {
-            console.error(
-              `❌ Erreur spécifique WhatsApp pour ${settings.whatsappNumber}:`,
-              waErr.message || waErr
-            );
-          }
-        } else {
-          console.log(`⏭️  WhatsApp non envoyé - au moins une condition non remplie`);
-        }
-      } catch (err) {
-        console.error(
-          '❌ Erreur envoi notification réservation (email/WhatsApp) :',
-          err
-        );
-      }
-    })());
-  };
-
-  (newReservations || []).forEach(res => handleReservation(res, 'new'));
-  (cancelledReservations || []).forEach(res => handleReservation(res, 'cancelled'));
-
-  await Promise.all(tasks);
-}
 /**
  * Notifications ménage : pour chaque nouvelle réservation, si un logement a un cleaner assigné,
  * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
