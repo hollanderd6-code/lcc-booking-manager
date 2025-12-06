@@ -536,7 +536,12 @@ function renderProperties() {
         p.depositAmount != null && p.depositAmount !== ""
           ? `Caution ${p.depositAmount} €`
           : "Pas de caution";
-
+      // Nouveaux champs : wifi / accès / livret
+      const wifiName = p.wifiName || "";
+      const wifiPassword = p.wifiPassword || "";
+      const accessCode = p.accessCode || "";
+      const hasAccessInfo = accessCode || p.accessInstructions;
+      const welcomeBookUrl = p.welcomeBookUrl || "";
       const photoUrl = p.photoUrl || p.photo || null;
 
       let urls = p.icalUrls || [];
@@ -612,6 +617,38 @@ function renderProperties() {
       const depositBadge = `<span class="meta-badge">
           <i class="fas fa-shield-alt"></i>${depositLabel}
         </span>`;
+      const wifiBadge =
+        wifiName || wifiPassword
+          ? `<span class="meta-badge">
+              <i class="fas fa-wifi"></i>
+              ${escapeHtml(wifiName || "WiFi")}
+              ${
+                wifiPassword
+                  ? " (" + escapeHtml(wifiPassword) + ")"
+                  : ""
+              }
+            </span>`
+          : "";
+
+      const accessBadge = hasAccessInfo
+        ? `<span class="meta-badge">
+            <i class="fas fa-key"></i>
+            ${
+              accessCode
+                ? "Code " + escapeHtml(accessCode)
+                : "Infos accès"
+            }
+          </span>`
+        : "";
+
+      const welcomeBookBadge = welcomeBookUrl
+        ? `<a href="${escapeHtml(
+            welcomeBookUrl
+          )}" target="_blank" class="meta-badge">
+            <i class="fas fa-book-open"></i>
+            Livret d'accueil
+          </a>`
+        : "";
 
       const boostinghostUrl = buildBoostinghostIcalUrl(p);
       const boostinghostHtml = boostinghostUrl
@@ -646,10 +683,13 @@ function renderProperties() {
                 <span class="color-badge" style="background:${color};"></span>
                 <span>${escapeHtml(name)}</span>
               </div>
-              <div class="property-meta">
+                            <div class="property-meta">
                 ${addressBadge}
                 ${timesBadge}
                 ${depositBadge}
+                ${wifiBadge}
+                ${accessBadge}
+                ${welcomeBookBadge}
               </div>
             </div>
             <div class="property-photo-wrapper">
