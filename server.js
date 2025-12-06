@@ -90,11 +90,35 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!ok.includes(file.mimetype)) {
-      return cb(new Error('Type de fichier non supporté'), false);
+    // ✅ Liste élargie des types MIME acceptés
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg',      // Parfois envoyé au lieu de image/jpeg
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'image/heic',     // Photos iPhone
+      'image/heif'      // Photos iPhone
+    ];
+    
+    // ✅ Vérifier aussi l'extension du fichier
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif'];
+    const fileExtension = file.originalname.toLowerCase().match(/\.[^.]+$/)?.[0];
+    
+    const mimeOk = allowedMimes.includes(file.mimetype.toLowerCase());
+    const extOk = fileExtension && allowedExtensions.includes(fileExtension);
+    
+    if (mimeOk || extOk) {
+      return cb(null, true);
     }
-    cb(null, true);
+    
+    console.log('❌ Fichier rejeté:', {
+      mimetype: file.mimetype,
+      extension: fileExtension,
+      filename: file.originalname
+    });
+    
+    return cb(new Error('Type de fichier non supporté. Formats acceptés: JPG, PNG, WEBP, GIF'), false);
   }
 });
 // ============================================
