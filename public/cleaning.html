@@ -729,6 +729,14 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     return p ? (p.name || p.title || p.label || propertyId) : propertyId;
   }
+  function getReservationPropertyId(r) {
+  if (!r) return null;
+  if (r.propertyId != null) return String(r.propertyId);
+  if (r.property && r.property.id != null) return String(r.property.id);
+  if (r.property_id != null) return String(r.property_id);
+  return null;
+}
+
 
   function renderCleaners() {
     if (!cleanerList) return;
@@ -774,17 +782,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const todayStr = new Date().toISOString().slice(0, 10);
 
     // Réservations avec départ aujourd’hui ou plus tard
-    const upcoming = (RESERVATIONS || [])
-      .filter((r) => {
-        if (!r.end || !r.propertyId) return false;
-        const endStr = String(r.end).slice(0, 10);
-        return endStr >= todayStr;
-      })
-      .sort((a, b) => {
-        const aEnd = String(a.end).slice(0, 10);
-        const bEnd = String(b.end).slice(0, 10);
-        return aEnd.localeCompare(bEnd);
-      });
+    // Réservations avec départ aujourd’hui ou plus tard
+const upcoming = (RESERVATIONS || [])
+  .filter((r) => {
+    if (!r.end) return false;
+
+    const propertyId = getReservationPropertyId(r);
+    if (!propertyId) return false;
+
+    const endStr = String(r.end).slice(0, 10);
+    return endStr >= todayStr;
+  })
+  .sort((a, b) => {
+    const aEnd = String(a.end).slice(0, 10);
+    const bEnd = String(b.end).slice(0, 10);
+    return aEnd.localeCompare(bEnd);
+  });
+
 
     if (!upcoming.length) {
       assignContainer.innerHTML = `
@@ -809,11 +823,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     upcoming.forEach((r) => {
       const key = getReservationKey(r);
-      const assignedId = key && assignments[key] ? assignments[key] : '';
-      const propertyName =
-        r.propertyName || r.property || getPropertyNameById(r.propertyId);
-      const guestName = r.guestName || r.name || '';
-      const endStr = String(r.end).slice(0, 10);
+const assignedId = key && assignments[key] ? assignments[key] : '';
+
+const propertyId = getReservationPropertyId(r);
+const propertyName =
+  r.propertyName ||
+  (r.property && (r.property.name || r.property.title || r.property.label)) ||
+  getPropertyNameById(propertyId);
+
+const guestName = r.guestName || r.name || '';
+const endStr = String(r.end).slice(0, 10);
+
 
       html += `
         <tr>
