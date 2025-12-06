@@ -4321,32 +4321,58 @@ function populateEditBookingProperties(selectedPropertyId) {
   let currentBookingData = null;
   
   document.addEventListener('DOMContentLoaded', function() {
-    // Intercepter les clics sur les booking-blocks
-    document.addEventListener('click', function(e) {
-  const bookingBlock = e.target.closest('.booking-block');
-  if (!bookingBlock) return;
+  // Intercepter les clics sur les booking-blocks
+  document.addEventListener('click', function(e) {
+    const bookingBlock = e.target.closest('.booking-block');
+    if (!bookingBlock) return;
 
-  // 1️⃣ On récupère TOUT DE SUITE la réservation via l'index
-  const bookingIndex = parseInt(bookingBlock.getAttribute('data-booking-id'), 10);
-  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+    const found = findReservationForBlock(bookingBlock);
 
-  if (!isNaN(bookingIndex) && reservations[bookingIndex]) {
-    currentBookingData = reservations[bookingIndex];
-    console.log('📦 currentBookingData défini au clic :', currentBookingData);
-  } else {
-    console.log('⚠️ Impossible de trouver la réservation via index', bookingIndex, reservations);
-    currentBookingData = null;
-  }
+    if (found) {
+      currentBookingData = found;
+      window.currentBookingData = found;
+      console.log('📦 currentBookingData défini au clic (DOM loaded) :', currentBookingData);
+    } else {
+      currentBookingData = null;
+    }
 
-  // 2️⃣ Ensuite seulement, on laisse le temps au modal de se remplir,
-  // et on appelle fixModalContent pour corriger l'affichage si besoin
-  if (reservations.length === 0) {
-    console.log('⚠️ Données non chargées, attente...');
-    setTimeout(() => fixModalContent(bookingBlock), 500);
-  } else {
+    // On laisse un peu de temps au modal pour se remplir, puis on le corrige
     setTimeout(() => fixModalContent(bookingBlock), 200);
-  }
+  });
 });
+
+function findReservationForBlock(bookingBlock) {
+  if (!bookingBlock) return null;
+
+  const bookingIdAttr = bookingBlock.getAttribute('data-booking-id');
+  if (!bookingIdAttr) return null;
+
+  // On récupère les réservations depuis window ou le localStorage
+  let reservations = [];
+  if (Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length) {
+    reservations = window.LCC_RESERVATIONS;
+  } else {
+    try {
+      reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+    } catch (e) {
+      reservations = [];
+    }
+  }
+
+  const idStr = String(bookingIdAttr);
+
+  const found = reservations.find((r) =>
+    String(r.id) === idStr ||
+    (r.uid != null && String(r.uid) === idStr) ||
+    (r.reservationKey != null && String(r.reservationKey) === idStr)
+  );
+
+  if (!found) {
+    console.log('⚠️ Aucune réservation trouvée pour data-booking-id =', bookingIdAttr);
+  }
+
+  return found || null;
+}
   
 function fixModalContent(bookingBlock) {
   const detailsContent = document.getElementById('reservationDetailsContent');
