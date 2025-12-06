@@ -1505,7 +1505,7 @@ async function loadProperties() {
       };
     });
 
-    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
+    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`); 
   } catch (error) {
     console.error('❌ Erreur loadProperties :', error);
     PROPERTIES = [];
