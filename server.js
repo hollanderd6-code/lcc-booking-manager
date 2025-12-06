@@ -2139,16 +2139,20 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   });
 });
 function parsePropertyBody(req) {
-  // si on reçoit du FormData : body.data = string JSON
-  if (req.body && typeof req.body.data === 'string') {
+  // ✅ FormData simple : les champs sont directement dans req.body
+  const body = req.body || {};
+  
+  // Si icalUrls est une string JSON, la parser
+  if (body.icalUrls && typeof body.icalUrls === 'string') {
     try {
-      return JSON.parse(req.body.data);
+      body.icalUrls = JSON.parse(body.icalUrls);
     } catch (e) {
-      throw new Error('Payload data invalide');
+      console.error('Erreur parse icalUrls:', e);
+      body.icalUrls = [];
     }
   }
-  // fallback si jamais on envoie directement du JSON
-  return req.body || {};
+  
+  return body;
 }
 
 function buildPhotoUrl(req, filename) {
