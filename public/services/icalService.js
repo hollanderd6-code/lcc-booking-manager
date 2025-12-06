@@ -1,5 +1,4 @@
 // services/icalService.js
-
 const ical = require('node-ical');
 const moment = require('moment-timezone');
 
@@ -17,12 +16,37 @@ function detectSourceFromUrl(url) {
 }
 
 /**
+ * ✅ NOUVEAU : Extraire la plateforme depuis un objet ou string
+ */
+function extractSource(item) {
+  if (!item) return 'ICAL';
+  
+  // Si c'est un objet avec platform
+  if (typeof item === 'object' && item.platform) {
+    return item.platform.toUpperCase();
+  }
+  
+  // Si c'est un objet avec url
+  if (typeof item === 'object' && item.url) {
+    return detectSourceFromUrl(item.url);
+  }
+  
+  // Si c'est une string
+  if (typeof item === 'string') {
+    return detectSourceFromUrl(item);
+  }
+  
+  return 'ICAL';
+}
+
+/**
  * Essaie d'extraire le nom du voyageur à partir
  * du SUMMARY / DESCRIPTION de l'événement iCal.
  */
 function extractGuestName(ev) {
   const summary = (ev.summary || '').toString();
   const description = (ev.description || '').toString();
+
   let guestName = null;
 
   // Exemple Booking : "Réservation : Jane Dupont"
@@ -71,6 +95,37 @@ function mapEventToReservation(ev, source) {
 }
 
 /**
+ * ✅ CORRIGÉ : Normaliser les URLs iCal (gérer objets ET strings)
+ */
+function normalizeIcalUrls(icalUrls) {
+  if (!Array.isArray(icalUrls)) return [];
+  
+  return icalUrls
+    .map(item => {
+      if (!item) return null;
+      
+      // ✅ Cas 1 : Objet {url: "...", platform: "..."}
+      if (typeof item === 'object' && item.url) {
+        return {
+          url: item.url,
+          platform: item.platform || detectSourceFromUrl(item.url)
+        };
+      }
+      
+      // ✅ Cas 2 : String simple "https://..."
+      if (typeof item === 'string') {
+        return {
+          url: item,
+          platform: detectSourceFromUrl(item)
+        };
+      }
+      
+      return null;
+    })
+    .filter(Boolean);
+}
+
+/**
  * Récupère toutes les réservations iCal d'un logement
  * en parcourant toutes ses URLs iCal.
  */
@@ -81,16 +136,21 @@ async function fetchReservations(property) {
     return results;
   }
 
-  for (const url of property.icalUrls) {
-    if (!url) continue;
+  // ✅ Normaliser les URLs (gérer objets ET strings)
+  const normalizedUrls = normalizeIcalUrls(property.icalUrls);
 
-    const source = detectSourceFromUrl(url);
+  for (const item of normalizedUrls) {
+    if (!item || !item.url) continue;
+    
+    const url = item.url;
+    const source = item.platform || 'ICAL';
 
     try {
       const data = await ical.async.fromURL(url);
-
+      
       Object.values(data).forEach(ev => {
         if (!ev || ev.type !== 'VEVENT') return;
+        
         const res = mapEventToReservation(ev, source);
         if (res) {
           results.push(res);
@@ -105,5 +165,6 @@ async function fetchReservations(property) {
 }
 
 module.exports = {
-  fetchReservations
+  fetchReservations,
+  extractSource  // ✅ Exporter pour utilisation dans server.js
 };
