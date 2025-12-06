@@ -562,85 +562,76 @@ async function getCleanerAssignmentsMapForUser(userId) {
  * VERSION CORRIGÉE AVEC LOGS DÉTAILLÉS POUR DEBUGGING WHATSAPP
  */
 async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
-  const useBrevo = !!process.env.BREVO_API_KEY;
-  const transporter = useBrevo ? null : getEmailTransporter();
-
-  if (!useBrevo && !transporter) {
+  const brevoKey = process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim();
+  if (!brevoKey) {
     console.log(
-      '⚠️  Transport email non configuré (ni Brevo ni SMTP), aucune notification propriétaire envoyée'
+      "⚠️ BREVO_API_KEY manquant : aucune notification propriétaire (nouvelle résa / annulation) ne sera envoyée."
     );
     return;
   }
 
-  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+  const from = process.env.EMAIL_FROM || "Boostinghost <no-reply@boostinghost.com>";
   const tasks = [];
 
   const handleReservation = (res, type) => {
     const userId = res.userId;
     if (!userId) {
-      console.log('⚠️  Réservation sans userId, notification ignorée :', res.uid || res.id);
+      console.log("⚠️  Réservation sans userId, notification ignorée :", res.uid || res.id);
       return;
     }
 
-    tasks.push((async () => {
-      const user = await getUserForNotifications(userId);
-      if (!user || !user.email) {
-        console.log(`⚠️  Aucun email trouvé pour user ${userId}, notification ignorée`);
-        return;
-      }
+    tasks.push(
+      (async () => {
+        const user = await getUserForNotifications(userId);
+        if (!user || !user.email) {
+          console.log(`⚠️  Aucun email trouvé pour user ${userId}, notification ignorée`);
+          return;
+        }
 
-      // 🔔 Récupérer les préférences de notifications
-      let settings;
-      try {
-        settings = await getNotificationSettings(userId);
-        console.log(`📋 Settings récupérés pour user ${userId}:`, JSON.stringify(settings, null, 2));
-      } catch (e) {
-        console.error(
-          'Erreur lors de la récupération des préférences de notifications pour user',
-          userId,
-          e
-        );
-        settings = { ...DEFAULT_NOTIFICATION_SETTINGS };
-      }
+        // 🔔 Récupérer les préférences de notifications
+        let settings;
+        try {
+          settings = await getNotificationSettings(userId);
+          console.log(
+            `📋 Settings récupérés pour user ${userId}:`,
+            JSON.stringify(settings, null, 2)
+          );
+        } catch (e) {
+          console.error(
+            "Erreur lors de la récupération des préférences de notifications pour user",
+            userId,
+            e
+          );
+          settings = { ...DEFAULT_NOTIFICATION_SETTINGS };
+        }
 
-      // Pour l'instant, on utilise la même option pour nouvelles résas & annulations
-      if (settings && settings.newReservation === false) {
-        console.log(
-          `ℹ️ Notifications de réservations désactivées pour user ${userId}, email non envoyé.`
-        );
-        return;
-      }
+        // Pour l'instant, on utilise la même option pour nouvelles résas & annulations
+        if (settings && settings.newReservation === false) {
+          console.log(
+            `ℹ️ Notifications de réservations désactivées pour user ${userId}, email non envoyé.`
+          );
+          return;
+        }
 
-      const propertyName =
-        res.propertyName ||
-        (res.property && res.property.name) ||
-        'Votre logement';
+        const propertyName =
+          res.propertyName || (res.property && res.property.name) || "Votre logement";
 
-      const guest =
-        res.guestName ||
-        res.guest_name ||
-        res.guest ||
-        res.name ||
-        'Un voyageur';
+        const guest = res.guestName || res.guest_name || res.guest || res.name || "Un voyageur";
 
-      const source = res.source || res.platform || 'une plateforme';
+        const source = res.source || res.platform || "une plateforme";
 
-      const start = formatDateForEmail(
-        res.start || res.startDate || res.checkIn || res.checkin
-      );
-      const end = formatDateForEmail(
-        res.end || res.endDate || res.checkOut || res.checkout
-      );
+        const start = formatDateForEmail(res.start || res.startDate || res.checkIn || res.checkin);
+        const end = formatDateForEmail(res.end || res.endDate || res.checkOut || res.checkout);
 
-      const hello = user.firstName ? `Bonjour ${user.firstName},` : 'Bonjour,';
+        const hello = user.firstName ? `Bonjour ${user.firstName},` : "Bonjour,";
 
-      let subject;
-      let textBody;
-      let htmlBody;
+        let subject;
+        let textBody;
+        let htmlBody;
 
-      if (type === 'new') {
-        subject = `🛎️ Nouvelle réservation – ${propertyName}`;
-        textBody = `${hello}
+        if (type === "new") {
+          subject = `🛎️ Nouvelle réservation – ${propertyName}`;
+          textBody = `${hello}
 
 Une nouvelle réservation vient d'être enregistrée via ${source}.
 
@@ -650,19 +641,19 @@ Séjour  : du ${start} au ${end}
 
 Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.`;
 
-        htmlBody = `
-          <p>${hello}</p>
-          <p>Une nouvelle réservation vient d'être enregistrée via <strong>${source}</strong>.</p>
-          <ul>
-            <li><strong>Logement :</strong> ${propertyName}</li>
-            <li><strong>Voyageur :</strong> ${guest}</li>
-            <li><strong>Séjour :</strong> du ${start} au ${end}</li>
-          </ul>
-          <p>Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.</p>
-        `;
-      } else {
-        subject = `⚠️ Réservation annulée – ${propertyName}`;
-        textBody = `${hello}
+          htmlBody = `
+            <p>${hello}</p>
+            <p>Une nouvelle réservation vient d'être enregistrée via <strong>${source}</strong>.</p>
+            <ul>
+              <li><strong>Logement :</strong> ${propertyName}</li>
+              <li><strong>Voyageur :</strong> ${guest}</li>
+              <li><strong>Séjour :</strong> du ${start} au ${end}</li>
+            </ul>
+            <p>Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.</p>
+          `;
+        } else {
+          subject = `⚠️ Réservation annulée – ${propertyName}`;
+          textBody = `${hello}
 
 Une réservation vient d'être annulée sur ${source}.
 
@@ -672,39 +663,56 @@ Séjour initial : du ${start} au ${end}
 
 Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 
-        htmlBody = `
-          <p>${hello}</p>
-          <p>Une réservation vient d'être <strong>annulée</strong> sur <strong>${source}</strong>.</p>
-          <ul>
-            <li><strong>Logement :</strong> ${propertyName}</li>
-            <li><strong>Voyageur :</strong> ${guest}</li>
-            <li><strong>Séjour initial :</strong> du ${start} au ${end}</li>
-          </ul>
-          <p>Pensez à vérifier votre calendrier et vos blocages si nécessaire.</p>
-        `;
-      }
+          htmlBody = `
+            <p>${hello}</p>
+            <p>Une réservation vient d'être <strong>annulée</strong> sur <strong>${source}</strong>.</p>
+            <ul>
+              <li><strong>Logement :</strong> ${propertyName}</li>
+              <li><strong>Voyageur :</strong> ${guest}</li>
+              <li><strong>Séjour initial :</strong> du ${start} au ${end}</li>
+            </ul>
+            <p>Pensez à vérifier votre calendrier et vos blocages si nécessaire.</p>
+          `;
+        }
 
-      try {
-        // 1) Email au propriétaire
-        if (useBrevo) {
+        try {
+          // 👉 Toujours via l'API Brevo
+          console.log("📧 [Brevo API] Envoi email", type, "à", user.email);
           await sendEmailViaBrevo({
             to: user.email,
             subject,
             text: textBody,
-            html: htmlBody
+            html: htmlBody,
           });
-        } else if (transporter) {
-          await transporter.sendMail({
-            from,
-            to: user.email,
-            subject,
-            text: textBody,
-            html: htmlBody
-          });
+
+          console.log(
+            `📧 Notification "${type}" envoyée à ${user.email} (resa uid=${res.uid || res.id})`
+          );
+        } catch (err) {
+          console.error(
+            `❌ Erreur envoi email de notification "${type}" à ${user.email} :`,
+            err
+          );
         }
-        console.log(
-          `📧 Notification "${type}" envoyée à ${user.email} (resa uid=${res.uid || res.id})`
-        );
+      })()
+    );
+  };
+
+  (newReservations || []).forEach((r) => handleReservation(r, "new"));
+  (cancelledReservations || []).forEach((r) => handleReservation(r, "cancelled"));
+
+  if (tasks.length === 0) {
+    console.log("ℹ️ Aucune notification propriétaire à envoyer (listes vides).");
+    return;
+  }
+
+  console.log(
+    `📧 Notifications à envoyer – nouvelles: ${newReservations.length || 0}, annulées: ${
+      cancelledReservations.length || 0
+    }`
+  );
+  await Promise.all(tasks);
+}
 
         // 2) WhatsApp au client (si configuré + activé)
         console.log(`🔍 Vérification WhatsApp pour user ${userId}:`);
