@@ -2,6 +2,10 @@
 <html lang="fr" data-theme="light">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boostinghost Manager – Dashboard</title>
   
@@ -15,7 +19,7 @@
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
   
   <!-- Platform CSS -->
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=3">
 
    <style>
     html, body {
@@ -1375,6 +1379,16 @@
   </style>
 </head>
 <body data-page="app">
+  <div style="
+    background:#10B981;
+    color:#fff;
+    padding:8px;
+    text-align:center;
+    font-weight:600;
+  ">
+    VERSION DEBUG 3 – si tu vois cette barre sur iPhone, le HTML est OK
+  </div>
+
   <div id="subscriptionAlert" style="display: none;">
   <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px 24px; text-align: center; font-size: 15px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 9999;">
     <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
@@ -1944,7 +1958,7 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=3"></script>
   
   <style>
     /* Styles spécifiques calendrier & UI complémentaire */
@@ -5481,6 +5495,6 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     }
   }
 </style>
-<script src="/js/calendar-dom-only.js?v=2"></script>
+<script src="/js/calendar-dom-only.js?v=3"></script>
 </body>
 </html>
