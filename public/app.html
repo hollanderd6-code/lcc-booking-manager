@@ -2710,44 +2710,61 @@
     }
   }
 </style>
-  <style>
-    /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
-    @media (max-width: 768px) {
-      /* On masque les blocs que tu ne veux pas sur mobile */
-      .status-grid,
-      .onboarding-section,
-      #upcomingSection,
-      #calendarFiltersSection,
-      .ai-section,
-      .email-messaging-section,
-      .cleaning-messages-section {
-        display: none !important;
-      }
+ <!-- CSS MOBILE RESPONSIVE -->
+<style>
+@media (max-width: 768px) {
+  /* Masquer éléments non prioritaires */
+  .status-grid, .onboarding-section, .overview-card,
+  #calendarFiltersSection, #upcomingSection,
+  .ai-section, .email-messaging-section,
+  .cleaning-messages-section {
+    display: none !important;
+  }
 
-      /* KPI plein écran en colonne */
-      .kpi-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 12px;
-        margin-bottom: 16px;
-      }
-
-      /* On s’assure que la carte calendrier est bien visible */
-      #calendarSection {
-        display: block !important;
-        margin-top: 8px;
-      }
-
-      .calendar-wrapper {
-        display: block !important;
-      }
-
-      .page-content {
-        padding-bottom: 80px;
-      }
-    }
-  </style>
+  /* Header compact */
+  .main-header { padding: 16px 12px; margin-bottom: 8px; }
+  .page-kicker { font-size: 11px; }
+  .page-title { font-size: 20px; margin-bottom: 4px; }
+  .page-subtitle { display: none; }
+  
+  /* KPI en colonne */
+  .kpi-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+    margin: 8px 0 12px;
+  }
+  
+  /* Calendrier pleine largeur */
+  #calendarSection {
+    display: block !important;
+    margin: 0 -12px;
+  }
+  
+  .calendar-wrapper {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+  
+  /* Navigation calendrier */
+  .view-tab span { display: none; }
+  .property-list-column { width: 120px; }
+  
+  @media (max-width: 480px) {
+    .property-list-column { display: none; }
+  }
+  
+  /* Grille scrollable */
+  .calendar-grid, .days-header { min-width: 800px; }
+  .calendar-cell { height: 40px; min-width: 40px; }
+  .booking-block { font-size: 9px; padding: 1px 4px; }
+  
+  /* Modals */
+  .booking-modal .modal-content { max-width: 95%; }
+  .booking-form .form-row { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body data-page="app">
   <div id="subscriptionAlert" style="display: none;">
@@ -10908,303 +10925,36 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       console.error('Erreur vérification abonnement:', err);
     }
   }
-// ============================================
-// AMÉLIORATIONS MOBILE POUR LE CALENDRIER
-// À ajouter à la fin de app-12.html avant </body>
-// ============================================
-
+<!-- SCRIPT MOBILE -->
+<script>
 (function() {
-  'use strict';
-
-  // Détection mobile
-  const isMobile = window.innerWidth <= 768;
+  if (window.innerWidth > 768) return;
   
-  if (!isMobile) return; // Ne s'active qu'en mobile
-
-  console.log('📱 Mode mobile détecté - Activation des améliorations');
-
-  // ============================================
-  // 1️⃣ SYNCHRONISATION DU SCROLL
-  // ============================================
+  // Sync scroll header/grid
+  const header = document.querySelector('.days-header');
+  const grid = document.querySelector('.calendar-grid');
   
-  function syncScroll() {
-    const header = document.querySelector('.days-header');
-    const grid = document.querySelector('.calendar-grid');
-    
-    if (!header || !grid) return;
-
-    let isScrolling = false;
-
-    // Quand on scroll la grille, synchroniser l'en-tête
-    grid.addEventListener('scroll', function() {
-      if (isScrolling) return;
-      isScrolling = true;
-      header.scrollLeft = grid.scrollLeft;
-      setTimeout(() => { isScrolling = false; }, 50);
-    });
-
-    // Quand on scroll l'en-tête, synchroniser la grille
-    header.addEventListener('scroll', function() {
-      if (isScrolling) return;
-      isScrolling = true;
-      grid.scrollLeft = header.scrollLeft;
-      setTimeout(() => { isScrolling = false; }, 50);
-    });
-
-    console.log('✅ Scroll synchronisé entre en-tête et grille');
-  }
-
-  // ============================================
-  // 2️⃣ SCROLL VERS AUJOURD'HUI AU CHARGEMENT
-  // ============================================
-  
-  function scrollToToday() {
-    setTimeout(() => {
-      const todayCell = document.querySelector('.day-header.today');
-      if (todayCell) {
-        const container = document.querySelector('.calendar-grid-wrapper');
-        if (container) {
-          const offset = todayCell.offsetLeft - (window.innerWidth / 2) + (todayCell.offsetWidth / 2);
-          container.scrollLeft = Math.max(0, offset);
-          console.log('📅 Scroll vers aujourd\'hui');
-        }
+  if (header && grid) {
+    let scrolling = false;
+    grid.addEventListener('scroll', () => {
+      if (!scrolling) {
+        scrolling = true;
+        header.scrollLeft = grid.scrollLeft;
+        setTimeout(() => scrolling = false, 50);
       }
-    }, 500);
-  }
-
-  // ============================================
-  // 3️⃣ AMÉLIORATION DU TOUCH POUR LES MODALS
-  // ============================================
-  
-  function improveTouchModals() {
-    const modals = document.querySelectorAll('.booking-modal');
-    
-    modals.forEach(modal => {
-      const content = modal.querySelector('.modal-content');
-      if (!content) return;
-
-      // Empêcher le scroll du body quand modal ouvert
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName === 'class') {
-            if (modal.classList.contains('active')) {
-              document.body.style.overflow = 'hidden';
-              document.body.style.position = 'fixed';
-              document.body.style.width = '100%';
-            } else {
-              document.body.style.overflow = '';
-              document.body.style.position = '';
-              document.body.style.width = '';
-            }
-          }
-        });
-      });
-
-      observer.observe(modal, { attributes: true });
     });
-
-    console.log('✅ Touch amélioré pour les modals');
   }
-
-  // ============================================
-  // 4️⃣ GESTION DU DOUBLE TAP SUR LES CELLULES
-  // ============================================
   
-  function handleDoubleTap() {
-    let lastTap = 0;
-    const calendar = document.querySelector('.calendar-grid');
-    
-    if (!calendar) return;
-
-    calendar.addEventListener('touchend', function(e) {
-      const currentTime = new Date().getTime();
-      const tapLength = currentTime - lastTap;
-      
-      if (tapLength < 300 && tapLength > 0) {
-        // Double tap détecté
-        const cell = e.target.closest('.calendar-cell');
-        if (cell && !e.target.closest('.booking-block')) {
-          // Ouvrir modal de nouvelle réservation
-          const addBtn = document.getElementById('addBookingBtn');
-          if (addBtn) {
-            addBtn.click();
-          }
-        }
-      }
-      
-      lastTap = currentTime;
-    });
-
-    console.log('✅ Double tap activé sur les cellules');
-  }
-
-  // ============================================
-  // 5️⃣ INDICATEUR DE SCROLL HORIZONTAL
-  // ============================================
-  
-  function addScrollIndicator() {
-    const wrapper = document.querySelector('.calendar-grid-wrapper');
-    if (!wrapper) return;
-
-    const indicator = document.createElement('div');
-    indicator.className = 'mobile-scroll-indicator';
-    indicator.innerHTML = '<i class="fas fa-chevron-right"></i>';
-    indicator.style.cssText = `
-      position: fixed;
-      bottom: 100px;
-      right: 20px;
-      width: 40px;
-      height: 40px;
-      background: var(--primary-color);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 50;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-    `;
-
-    document.body.appendChild(indicator);
-
-    // Montrer l'indicateur si on peut scroller à droite
-    function checkScroll() {
-      const canScrollRight = wrapper.scrollLeft < (wrapper.scrollWidth - wrapper.clientWidth - 10);
-      indicator.style.opacity = canScrollRight ? '0.7' : '0';
+  // Auto-scroll vers aujourd'hui
+  setTimeout(() => {
+    const today = document.querySelector('.day-header.today');
+    if (today) {
+      const offset = today.offsetLeft - (window.innerWidth / 2);
+      if (grid) grid.scrollLeft = Math.max(0, offset);
     }
-
-    wrapper.addEventListener('scroll', checkScroll);
-    checkScroll();
-
-    // Masquer après quelques secondes
-    setTimeout(() => {
-      indicator.style.opacity = '0';
-    }, 3000);
-
-    console.log('✅ Indicateur de scroll ajouté');
-  }
-
-  // ============================================
-  // 6️⃣ OPTIMISATION DU RENDU MOBILE
-  // ============================================
-  
-  function optimizeMobileRendering() {
-    // Lazy loading des cellules éloignées
-    const cells = document.querySelectorAll('.calendar-cell');
-    
-    const observerOptions = {
-      root: null,
-      rootMargin: '50px',
-      threshold: 0.01
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, observerOptions);
-
-    cells.forEach(cell => {
-      observer.observe(cell);
-    });
-
-    console.log('✅ Lazy loading des cellules activé');
-  }
-
-  // ============================================
-  // 7️⃣ GESTION DE L'ORIENTATION
-  // ============================================
-  
-  function handleOrientationChange() {
-    window.addEventListener('orientationchange', function() {
-      setTimeout(() => {
-        // Recalculer les dimensions
-        const grid = document.querySelector('.calendar-grid');
-        if (grid) {
-          grid.style.minWidth = window.innerWidth < 480 ? '600px' : '800px';
-        }
-        
-        // Re-scroller vers aujourd'hui si en portrait
-        if (window.orientation === 0 || window.orientation === 180) {
-          scrollToToday();
-        }
-        
-        console.log('📱 Orientation changée');
-      }, 300);
-    });
-  }
-
-  // ============================================
-  // 8️⃣ FEEDBACK TACTILE
-  // ============================================
-  
-  function addTouchFeedback() {
-    const clickableElements = document.querySelectorAll(`
-      .booking-block,
-      .property-item,
-      .view-tab,
-      .period-nav-btn,
-      .calendar-action-btn
-    `);
-
-    clickableElements.forEach(el => {
-      el.addEventListener('touchstart', function() {
-        this.style.opacity = '0.6';
-      });
-
-      el.addEventListener('touchend', function() {
-        setTimeout(() => {
-          this.style.opacity = '1';
-        }, 100);
-      });
-    });
-
-    console.log('✅ Feedback tactile ajouté');
-  }
-
-  // ============================================
-  // INITIALISATION
-  // ============================================
-  
-  function init() {
-    // Attendre que le calendrier soit rendu
-    const checkCalendar = setInterval(() => {
-      const grid = document.querySelector('.calendar-grid');
-      if (grid && grid.children.length > 0) {
-        clearInterval(checkCalendar);
-        
-        syncScroll();
-        scrollToToday();
-        improveTouchModals();
-        handleDoubleTap();
-        addScrollIndicator();
-        optimizeMobileRendering();
-        handleOrientationChange();
-        addTouchFeedback();
-        
-        console.log('🎉 Calendrier mobile totalement optimisé !');
-      }
-    }, 500);
-
-    // Timeout de sécurité
-    setTimeout(() => {
-      clearInterval(checkCalendar);
-    }, 10000);
-  }
-
-  // Démarrer après le chargement complet
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-
+  }, 500);
 })();
+</script>
 
 <script src="/js/calendar-dom-only.js?v=2"></script>
 </body>
