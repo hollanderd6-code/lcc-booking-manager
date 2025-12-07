@@ -1417,6 +1417,23 @@
       min-width: 52px !important; /* tu pourras ajuster à 48 / 56 si besoin */
     }
   }
+  /* === Fix largeur des jours & scroll horizontal propre === */
+.calendar-grid {
+  overflow-x: auto;
+}
+
+.days-header,
+.calendar-row {
+  width: auto;
+  min-width: max-content; /* la ligne s'étend autant qu'il y a de jours */
+}
+
+.day-header,
+.calendar-cell {
+  flex: 0 0 48px;        /* largeur fixe par jour */
+  min-width: 48px;
+}
+
 </style>
 
 </head>
@@ -1810,7 +1827,6 @@
           
           <!-- NOUVEAU CALENDRIER MODERNE -->
           <div class="calendar-wrapper">
-<p>TEST CALENDRIER</p>
 
             <!-- Calendar Header -->
             <div class="calendar-modern-header">
@@ -3416,6 +3432,7 @@ function populateEditBookingProperties(selectedPropertyId) {
         direct:  { icon: 'fa-user' }
       }
     };
+  var MS_PER_DAY = 24 * 60 * 60 * 1000;
 
     var state = {
       currentView: 'month',
@@ -3707,10 +3724,15 @@ function populateEditBookingProperties(selectedPropertyId) {
       renderGrid(range);
     }
 
-    function renderDaysHeader(range) {
+        function renderDaysHeader(range) {
       var header = document.getElementById('daysHeader');
       if (!header) return;
       header.innerHTML = '';
+
+      // nombre de jours dans la plage actuelle
+      var daysCount = Math.round((range.end - range.start) / MS_PER_DAY) + 1;
+      // chaque jour ~48px
+      header.style.minWidth = (daysCount * 48) + 'px';
 
       var d = new Date(range.start.getTime());
       while (d <= range.end) {
@@ -3736,7 +3758,8 @@ function populateEditBookingProperties(selectedPropertyId) {
       }
     }
 
-    function renderGrid(range) {
+
+        function renderGrid(range) {
       var grid = document.getElementById('calendarGrid');
       if (!grid) return;
       grid.innerHTML = '';
@@ -3755,11 +3778,18 @@ function populateEditBookingProperties(selectedPropertyId) {
         return;
       }
 
+      // même calcul que pour le header
+      var daysCount = Math.round((range.end - range.start) / MS_PER_DAY) + 1;
+      var rowWidth = (daysCount * 48) + 'px';
+
       for (var i = 0; i < state.properties.length; i++) {
         var p = state.properties[i];
         var row = document.createElement('div');
         row.className = 'calendar-row';
         row.setAttribute('data-property-id', p.id);
+
+        // largeur minimale identique au header
+        row.style.minWidth = rowWidth;
 
         var d = new Date(range.start.getTime());
         while (d <= range.end) {
