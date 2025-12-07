@@ -1413,3 +1413,18 @@ body {
     padding: 2px 6px;
   }
 }
+/* Empêche la page complète de glisser horizontalement */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* On s'assure aussi que le conteneur principal ne déborde pas */
+.app-container,
+.main-content,
+.page-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
