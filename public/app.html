@@ -337,7 +337,11 @@
       overflow-x: auto;
       overflow-y: hidden;
     }
-
+/* On évite que les enfants forcent le body à s'élargir */
+.days-header,
+.calendar-row {
+  box-sizing: border-box;
+}
 /* Mode année : on cache la colonne des logements et l'en-tête des jours */
     .calendar-container.year-view .property-list-column {
       display: none;
