@@ -56,34 +56,47 @@
 
     /* Responsive global dashboard layout */
     @media (max-width: 768px) {
-      .main-content {
-        padding: 16px 12px 24px;
-      }
-      .main-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-      .header-actions {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .status-grid,
-      .kpi-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      .status-card,
-      .kpi-card,
-      .overview-card,
-      .onboarding-section,
-      .card {
-        width: 100%;
-      }
-    }
+  .main-content {
+    padding: 16px 12px 24px;
+  }
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Sur mobile : on garde uniquement les KPI + le calendrier */
+  .kpi-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* On masque les cartes de connexions */
+  .status-grid {
+    display: none;
+  }
+
+  /* On masque la vue d'ensemble, l'onboarding et les filtres calendrier */
+  .overview-card,
+  .onboarding-section,
+  #calendarFiltersSection {
+    display: none;
+  }
+
+  /* Les cartes visibles (KPI + calendrier) prennent toute la largeur */
+  .status-card,
+  .kpi-card,
+  .card {
+    width: 100%;
+  }
+}
 
     /* KPI cliquables : effet hover pour montrer qu'on peut cliquer */
     .kpi-card--clickable {
