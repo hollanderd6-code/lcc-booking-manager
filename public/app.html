@@ -1381,6 +1381,27 @@
       }
     }
   </style>
+  <style>
+  /* Largeur fixe des colonnes du calendrier */
+  :root {
+    --day-column-width: 64px;
+  }
+
+  @media (max-width: 768px) {
+    :root {
+      --day-column-width: 52px; /* un peu plus compact sur mobile */
+    }
+  }
+
+  /* Chaque jour du header + chaque cellule prend cette largeur */
+  .days-header .day-header,
+  .calendar-grid .calendar-cell {
+    min-width: var(--day-column-width) !important;
+    flex: 0 0 var(--day-column-width) !important;
+    box-sizing: border-box;
+  }
+</style>
+
 </head>
 <body data-page="app">
   <div style="
