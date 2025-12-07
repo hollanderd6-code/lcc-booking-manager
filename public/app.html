@@ -3667,28 +3667,12 @@ function populateEditBookingProperties(selectedPropertyId) {
       yearEl.textContent = String(year);
     }
 
+        // On force toujours une vue "mois complet"
     function getCurrentRange() {
       var base = new Date(state.currentDate.getTime());
-      var start, end;
 
-      if (state.currentView === 'day') {
-        start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-        end = new Date(start.getTime());
-      } else if (state.currentView === 'week') {
-        var day = base.getDay(); // 0=dim
-        var delta = (day + 6) % 7; // lundi
-        start = new Date(base.getFullYear(), base.getMonth(), base.getDate() - delta);
-        end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-      } else if (state.currentView === 'month') {
-        start = new Date(base.getFullYear(), base.getMonth(), 1);
-        end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-      } else if (state.currentView === 'year') {
-        start = new Date(base.getFullYear(), 0, 1);
-        end = new Date(base.getFullYear(), 11, 31);
-      } else {
-        start = new Date(base.getFullYear(), base.getMonth(), 1);
-        end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-      }
+      var start = new Date(base.getFullYear(), base.getMonth(), 1);
+      var end   = new Date(base.getFullYear(), base.getMonth() + 1, 0);
 
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
@@ -3698,6 +3682,7 @@ function populateEditBookingProperties(selectedPropertyId) {
         end: end
       };
     }
+
 
     // ============================================
     // Rendu principal
