@@ -100,17 +100,6 @@
         margin-top: 16px;
       }
     }
-* Calendrier plus "flat" sur mobile */
-    #calendarSection .calendar-wrapper {
-      border-radius: 16px;
-      box-shadow: none;
-      border-width: 0;
-    }
-
-    .page-content {
-      padding-bottom: 80px;
-    }
-  }
     /* KPI cliquables : effet hover pour montrer qu'on peut cliquer */
     .kpi-card--clickable {
       cursor: pointer;
@@ -1313,6 +1302,40 @@
       display: block;
     }
   </style>
+  <!-- Simplification mobile : KPI + calendrier uniquement -->
+<style>
+  @media (max-width: 768px) {
+    /* On masque les cartes de connexions + overview + onboarding + filtres calendrier */
+    .status-grid,
+    .overview-card,
+    .onboarding-section,
+    #calendarFiltersSection {
+      display: none !important;
+    }
+
+    /* KPI en colonne */
+    .kpi-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+      margin-bottom: 16px;
+    }
+
+    /* On force le calendrier à être visible sous les KPI */
+    #calendarSection {
+      display: block !important;
+      margin-top: 8px;
+    }
+
+    #calendarSection .calendar-wrapper {
+      border-radius: 16px;
+      box-shadow: none;
+      border-width: 0;
+    }
+  }
+</style>
+
 </head>
 <body data-page="app">
   <div id="subscriptionAlert" style="display: none;">
