@@ -1381,24 +1381,41 @@
       }
     }
   </style>
-  <style>
-  /* Largeur fixe des colonnes du calendrier */
-  :root {
-    --day-column-width: 64px;
-  }
-
+<style>
+  /* Fix calendrier sur mobile : 
+     - la page ne "glisse" plus
+     - le header des jours et les réservations scrollent ensemble
+     - les jours ne sont plus collés ("LUNMAR...") */
   @media (max-width: 768px) {
-    :root {
-      --day-column-width: 52px; /* un peu plus compact sur mobile */
-    }
-  }
 
-  /* Chaque jour du header + chaque cellule prend cette largeur */
-  .days-header .day-header,
-  .calendar-grid .calendar-cell {
-    min-width: var(--day-column-width) !important;
-    flex: 0 0 var(--day-column-width) !important;
-    box-sizing: border-box;
+    /* Le conteneur général ne fait plus déborder la page */
+    .calendar-container {
+      overflow-x: hidden !important;
+    }
+
+    /* C’est ce wrapper qui gère le scroll horizontal */
+    .calendar-grid-wrapper {
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+
+    /* Le header des jours ne scrolle plus tout seul */
+    .days-header {
+      overflow-x: visible !important;
+    }
+
+    /* La grille scroll seulement en vertical,
+       l’horizontal est géré par .calendar-grid-wrapper */
+    .calendar-grid {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    /* On évite que les jours soient écrasés les uns sur les autres */
+    .days-header .day-header,
+    .calendar-grid .calendar-cell {
+      min-width: 52px !important; /* tu pourras ajuster à 48 / 56 si besoin */
+    }
   }
 </style>
 
