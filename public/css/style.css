@@ -1413,35 +1413,3 @@ body {
     padding: 2px 6px;
   }
 }
-/* ============================
-   Simplification du dashboard en mobile
-   ============================ */
-@media (max-width: 768px) {
-  /* 1) Masquer les cartes de connexions (Airbnb, Booking, Stripe, Messages auto) */
-  .status-grid {
-    display: none;
-  }
-
-  /* 2) Masquer le bloc d'onboarding "Bien démarrer avec Boostinghost" */
-  .onboarding-section {
-    display: none;
-  }
-
-  /* 3) Masquer la carte "Filtrer par logement" au-dessus du calendrier */
-  #calendarFiltersSection {
-    display: none;
-  }
-
-  /* Optionnel mais sympa : un peu plus de respiration pour les KPI + calendrier */
-  .page-content {
-    padding-top: 8px;
-  }
-
-  .kpi-grid {
-    margin-bottom: 16px;
-  }
-
-  #calendarSection {
-    margin-top: 8px;
-  }
-}
