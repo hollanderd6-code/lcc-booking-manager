@@ -5425,5 +5425,61 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
   // Appeler au chargement de la page
   document.addEventListener('DOMContentLoaded', checkSubscriptionStatus);
 </script>
+  <style>
+  /* Mode mobile : on garde seulement KPI + Calendrier */
+  @media (max-width: 768px) {
+
+    /* On masque tout ce qui n'est pas prioritaire */
+    .status-grid,              /* cartes Airbnb / Booking / Stripe / IA */
+    .onboarding-section,       /* bloc "Bien démarrer" */
+    .overview-card,            /* "Aujourd’hui & à venir" */
+    #calendarFiltersSection,   /* filtre par logement */
+    #upcomingSection,
+    .ai-section,
+    .email-messaging-section,
+    .cleaning-messages-section {
+      display: none !important;
+    }
+
+    /* Header plus compact */
+    .main-header {
+      margin-bottom: 8px;
+    }
+    .page-subtitle {
+      display: none;
+    }
+
+    /* KPI en colonne pleine largeur */
+    .kpi-grid {
+      display: flex !important;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+
+    .kpi-card {
+      width: 100%;
+    }
+
+    /* Calendrier bien visible sous les KPI */
+    #calendarSection {
+      display: block !important;
+      margin-top: 4px;
+    }
+
+    #calendarSection .calendar-wrapper {
+      border-radius: 16px;
+      box-shadow: none;
+      border: 0;
+    }
+
+    /* Un peu de marge en bas pour respirer */
+    .page-content {
+      padding-bottom: 80px;
+    }
+  }
+</style>
+
 </body>
 </html>
