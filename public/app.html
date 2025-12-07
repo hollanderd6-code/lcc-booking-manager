@@ -1335,7 +1335,44 @@
     }
   }
 </style>
+  <style>
+    /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
+    @media (max-width: 768px) {
+      /* On masque les blocs que tu ne veux pas sur mobile */
+      .status-grid,
+      .onboarding-section,
+      #upcomingSection,
+      #calendarFiltersSection,
+      .ai-section,
+      .email-messaging-section,
+      .cleaning-messages-section {
+        display: none !important;
+      }
 
+      /* KPI plein écran en colonne */
+      .kpi-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+        margin-bottom: 16px;
+      }
+
+      /* On s’assure que la carte calendrier est bien visible */
+      #calendarSection {
+        display: block !important;
+        margin-top: 8px;
+      }
+
+      .calendar-wrapper {
+        display: block !important;
+      }
+
+      .page-content {
+        padding-bottom: 80px;
+      }
+    }
+  </style>
 </head>
 <body data-page="app">
   <div id="subscriptionAlert" style="display: none;">
@@ -1711,7 +1748,7 @@
         </section>
         
         <!-- Calendar Card -->
-        <section class="card" id="calendarSection">
+        <section class="card" id="calendarSection" style="display:block !important;">
           <div class="section-header">
             <h2 class="section-title">
               <i class="fas fa-calendar-alt"></i>
