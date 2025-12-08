@@ -5930,5 +5930,87 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
     });
   </script>
+  // SOUMISSION DU FORMULAIRE (Version "Bulldozer")
+      const form = document.getElementById('newReservationForm');
+      
+      if (form) {
+        // On clone le formulaire pour supprimer tous les anciens écouteurs d'événements (reset total)
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+
+        // On attache notre écouteur sur le formulaire tout neuf
+        newForm.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          e.stopImmediatePropagation(); // On empêche tout autre script d'interférer
+          
+          console.log("🚀 Tentative d'enregistrement...");
+
+          // 1. On récupère les valeurs AU MOMENT DU CLIC (pour éviter les bugs de mémoire)
+          const propSelect = document.getElementById('nrProperty');
+          const guestInput = document.getElementById('nrGuestName');
+          const startInput = document.getElementById('nrStartDate');
+          const endInput = document.getElementById('nrEndDate');
+          const notesInput = document.getElementById('nrNotes');
+
+          const payload = {
+            propertyId: propSelect.value,
+            guestName: guestInput.value,
+            start: startInput.value,
+            end: endInput.value,
+            notes: notesInput.value
+          };
+
+          // 2. Vérifications de base
+          if (!payload.propertyId) {
+            alert("⚠️ Attention : Veuillez sélectionner un logement dans la liste.");
+            return;
+          }
+          if (!payload.start || !payload.end) {
+            alert("⚠️ Attention : Les dates sont obligatoires.");
+            return;
+          }
+
+          const token = localStorage.getItem('lcc_token');
+          console.log("📦 Envoi des données :", payload);
+
+          try {
+            // Utilisation de l'URL complète pour éviter les soucis de chemin
+            const res = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            console.log("📥 Retour serveur :", data);
+
+            if (res.ok) {
+              alert('✅ Réservation enregistrée avec succès !');
+              // On ferme le modal proprement
+              document.getElementById('newReservationModal').style.display = 'none';
+              document.getElementById('newReservationModal').classList.remove('active');
+              // On recharge pour afficher la réservation
+              location.reload(); 
+            } else {
+              alert("❌ Erreur serveur : " + (data.error || data.message || "Problème inconnu"));
+            }
+          } catch(err) {
+            console.error("Erreur Fetch:", err);
+            alert('❌ Erreur de connexion : Vérifiez votre internet.');
+          }
+        });
+        
+        // On remet les écouteurs pour le bouton Annuler sur le nouveau formulaire cloné
+        const cancelBtnClone = document.getElementById('newReservationCancel');
+        if(cancelBtnClone) {
+            cancelBtnClone.addEventListener('click', function() {
+                document.getElementById('newReservationModal').style.display = 'none';
+                document.getElementById('newReservationModal').classList.remove('active');
+            });
+        }
+      }
 </body>
 </html>
