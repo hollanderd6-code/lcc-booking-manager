@@ -1398,12 +1398,6 @@ body {
     overflow-x: auto;
   }
 
-  /* On s'assure que la grille est un peu plus large que l'écran,
-     pour que les cases restent lisibles */
-  .calendar-grid {
-    min-width: 720px;
-  }
-
   .calendar-cell {
     height: 32px;
   }
