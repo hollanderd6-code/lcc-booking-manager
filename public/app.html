@@ -1422,58 +1422,63 @@
     }
   </style>
 <style>
-  /* Fix calendrier sur mobile : 
-     - la page ne "glisse" plus
-     - le header des jours et les réservations scrollent ensemble
-     - les jours ne sont plus collés ("LUNMAR...") */
+  <style>
+  /* ✨ Fix calendrier MOBILE
+     - la page ne glisse plus en horizontal
+     - la colonne LOGEMENTS reste alignée avec les lignes de réservations
+     - les jours gardent une largeur fixe (plus de "LUNMAR..." collé) */
   @media (max-width: 768px) {
 
-    /* Le conteneur général ne fait plus déborder la page */
+    /* 1. Le conteneur général ne fait plus glisser toute la page */
     .calendar-container {
       overflow-x: hidden !important;
+      overflow-y: visible !important;
+      display: flex;
     }
 
-    /* C’est ce wrapper qui gère le scroll horizontal */
-    .calendar-grid-wrapper {
+    /* 2. Scroll horizontal UNIQUEMENT sur la partie droite (jours + résa) */
+    .calendar-container .calendar-grid-wrapper {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
       overflow-x: auto !important;
-      overflow-y: hidden !important;
+      overflow-y: visible !important; /* plus de scroll vertical interne */
     }
 
-    /* Le header des jours ne scrolle plus tout seul */
-    .days-header {
+    /* 3. Plus de scroll vertical séparé : 
+          c'est la page qui gère le vertical ⇒ LOGEMENTS + cellules restent alignés */
+    .calendar-container .calendar-grid,
+    .calendar-container .property-list-items {
+      overflow-y: visible !important;
+    }
+
+    /* 4. Le header des jours est accroché au scroll horizontal du wrapper */
+    .calendar-container .days-header {
       overflow-x: visible !important;
+      width: auto;
+      min-width: max-content;
     }
 
-    /* La grille scroll seulement en vertical,
-       l’horizontal est géré par .calendar-grid-wrapper */
-    .calendar-grid {
-      overflow-x: hidden !important;
-      overflow-y: auto !important;
+    /* 5. Largeur fixe pour chaque jour
+          ⇒ colonnes bien alignées et texte "LUN / MAR / ..." lisible */
+    .calendar-container .days-header .day-header,
+    .calendar-container .calendar-grid .calendar-cell {
+      flex: 0 0 48px;
+      min-width: 48px;
     }
 
-    /* On évite que les jours soient écrasés les uns sur les autres */
-    .days-header .day-header,
-    .calendar-grid .calendar-cell {
-      min-width: 52px !important; /* tu pourras ajuster à 48 / 56 si besoin */
+    /* 6. Colonne LOGEMENTS compacte mais lisible sur mobile */
+    .calendar-container .property-list-column {
+      width: 110px;
+      min-width: 110px;
+      flex-shrink: 0;
+    }
+
+    .calendar-container .property-item {
+      font-size: 11px;
+      padding: 4px 8px;
     }
   }
-  /* === Fix largeur des jours & scroll horizontal propre === */
-.calendar-grid {
-  overflow-x: auto;
-}
-
-.days-header,
-.calendar-row {
-  width: auto;
-  min-width: max-content; /* la ligne s'étend autant qu'il y a de jours */
-}
-
-.day-header,
-.calendar-cell {
-  flex: 0 0 48px;        /* largeur fixe par jour */
-  min-width: 48px;
-}
-
 </style>
 
 </head>
