@@ -1299,6 +1299,32 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       z-index: 10;
     }
+    /* === HOTFIX CALENDRIER MOBILE & DESKTOP === */
+/* On laisse le scroll horizontal au wrapper, 
+   et on NE coupe PLUS la grille à droite. */
+
+.calendar-container .calendar-grid-wrapper {
+  overflow-x: auto !important;   /* le scroll horizontal est ici */
+  overflow-y: hidden !important; /* pas de scroll vertical dans le wrapper */
+}
+
+.calendar-container .calendar-grid {
+  overflow-x: visible !important;   /* surtout pas hidden, sinon fin de mois coupée */
+  overflow-y: visible !important;
+}
+
+/* On force aussi la largeur cohérente des colonnes pour que tout s'aligne bien */
+.calendar-container .days-header {
+  display: flex;
+  min-width: calc(var(--days-count, 30) * 48px);
+}
+
+.calendar-container .days-header .day-header,
+.calendar-container .calendar-row .calendar-cell {
+  flex: 0 0 48px;
+  min-width: 48px;
+}
+
   </style>
 
 
