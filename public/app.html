@@ -3413,30 +3413,44 @@ function populateEditBookingProperties(selectedPropertyId) {
 
     document.addEventListener('DOMContentLoaded', function () {
       
-      // Onboarding progress + auto-hide when 100%
+      // ==========================================
+    // GESTION ONBOARDING (Masquage auto à 100%)
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
       const onboardingSection = document.getElementById('onboardingSection');
+      
       if (onboardingSection) {
+        // On récupère toutes les étapes
         const steps = onboardingSection.querySelectorAll('.onboarding-step');
-        let completed = 0;
+        let completedCount = 0;
 
+        // On compte celles qui ont la classe "done" sur le badge de statut
         steps.forEach(function(step) {
-          const status = step.querySelector('.onboarding-step-status');
-          if (status && status.classList.contains('done')) {
-            completed++;
+          const statusBadge = step.querySelector('.onboarding-step-status');
+          if (statusBadge && statusBadge.classList.contains('done')) {
+            completedCount++;
           }
         });
 
+        // Mise à jour du compteur visuel (ex: 2/4)
         const progressEl = document.getElementById('onboardingProgressValue');
         if (progressEl) {
-          progressEl.textContent = completed;
+          progressEl.textContent = completedCount;
         }
 
-        // Hide the whole card when all steps are done
-        if (completed === steps.length && steps.length > 0) {
-          onboardingSection.style.display = 'none';
+        // SI TOUT EST FINI (4/4) -> ON CACHE LA SECTION
+        if (completedCount >= steps.length && steps.length > 0) {
+          // Animation fluide avant de disparaître (optionnel, mais plus joli)
+          onboardingSection.style.transition = "opacity 0.5s ease, height 0.5s ease";
+          onboardingSection.style.opacity = "0";
+          
+          // On attend la fin de l'animation pour masquer complétement
+          setTimeout(() => {
+            onboardingSection.style.display = 'none';
+          }, 500);
         }
       }
-
+    });
 // WhatsApp UI (badge + alerte en haut)
       try {
         const raw = localStorage.getItem('lcc_notifications_settings');
