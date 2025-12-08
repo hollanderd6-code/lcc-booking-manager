@@ -59,7 +59,7 @@
     }
 
     /* Responsive global dashboard layout */
-    @media (max-width: 768px) {
+    @media  {
       .main-content {
         padding: 16px 12px 24px;
       }
@@ -1616,6 +1616,22 @@
     flex: 0 0 44px !important;
     height: auto !important;       
     min-height: 100% !important;   
+  }
+}
+  /* --- PATCH URGENT MOBILE --- */
+@media (max-width: 768px) {
+  /* Force les lignes à s'afficher en longueur et pas écrasées */
+  .calendar-row {
+    display: flex !important; 
+    align-items: stretch !important;
+    width: max-content !important; /* Force la largeur pour le scroll */
+  }
+  /* Force les cellules à prendre toute la hauteur */
+  .calendar-cell {
+    height: auto !important;
+    min-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 }
 </style>
@@ -6142,56 +6158,60 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      console.log("🚑 Application du correctif d'urgence...");
+      console.log("🔧 Script de réparation activé");
 
-      // 1. RÉPARATION DU BOUTON "+" (ADD)
-      // ----------------------------------------------------
-      const oldAddBtn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
-      
-      if (oldAddBtn) {
-        // On le remplace par un clone tout neuf pour tuer les anciens clics qui ne marchent pas
-        const newAddBtn = oldAddBtn.cloneNode(true);
-        oldAddBtn.parentNode.replaceChild(newAddBtn, oldAddBtn);
-        
-        // On lui donne la bonne instruction
-        newAddBtn.addEventListener('click', function(e) {
+      // 1. RÉPARATION DU BOUTON "+"
+      // ----------------------------
+      const addBtn = document.getElementById('addBookingBtn'); // Ton ID actuel
+      const newModal = document.getElementById('newReservationModal');
+      const closeBtns = document.querySelectorAll('#newReservationClose, #newReservationCancel');
+      const propSelect = document.getElementById('nrProperty');
+
+      if (addBtn && newModal) {
+        // On remplace le bouton pour tuer les anciens bugs
+        const newBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newBtn, addBtn);
+
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
-          e.stopPropagation();
-          console.log("✅ Clic sur le bouton + (Réparé)");
-          
-          const modal = document.getElementById('newReservationModal');
-          const select = document.getElementById('nrProperty');
+          console.log("➕ Clic sur Ajouter !");
           
           // Remplir la liste des logements
-          if (select && window.LCC_PROPERTIES) {
-             select.innerHTML = '<option value="">Choisir un logement...</option>';
-             window.LCC_PROPERTIES.forEach(p => {
-               const opt = document.createElement('option');
-               opt.value = p.id || p._id;
-               opt.textContent = p.name;
-               select.appendChild(opt);
-             });
+          if (propSelect && window.LCC_PROPERTIES) {
+            propSelect.innerHTML = '<option value="">Sélectionner...</option>';
+            window.LCC_PROPERTIES.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id || p._id;
+              opt.textContent = p.name;
+              propSelect.appendChild(opt);
+            });
           }
-          
           // Ouvrir le modal
-          if (modal) {
-            modal.style.display = 'flex';
-            modal.classList.add('active');
-          }
+          newModal.style.display = 'flex';
+          newModal.classList.add('active');
+        });
+
+        // Fermeture
+        closeBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            newModal.style.display = 'none';
+            newModal.classList.remove('active');
+          });
         });
       }
 
       // 2. RÉPARATION DE L'ENREGISTREMENT (SAVE)
-      // ----------------------------------------------------
-      const oldForm = document.getElementById('newReservationForm');
-      if (oldForm) {
-        const newForm = oldForm.cloneNode(true);
-        oldForm.parentNode.replaceChild(newForm, oldForm);
+      // ----------------------------------------
+      const form = document.getElementById('newReservationForm');
+      if (form) {
+        // Clone le formulaire pour supprimer les anciens écouteurs qui bloquent
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
 
         newForm.addEventListener('submit', async function(e) {
           e.preventDefault();
-          console.log("💾 Tentative de sauvegarde...");
-
+          
+          // Récupération des valeurs
           const payload = {
             propertyId: document.getElementById('nrProperty').value,
             guestName: document.getElementById('nrGuestName').value,
@@ -6200,8 +6220,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             notes: document.getElementById('nrNotes').value
           };
 
-          if(!payload.propertyId || !payload.start || !payload.end) {
-            alert("Merci de remplir le logement et les dates.");
+          if(!payload.propertyId || !payload.start) {
+            alert("Veuillez remplir le logement et les dates.");
             return;
           }
 
@@ -6214,90 +6234,59 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             });
 
             if (res.ok) {
-              alert("✅ Réservation créée !");
-              document.getElementById('newReservationModal').style.display = 'none';
-              location.reload();
+              alert("✅ Réservation enregistrée !");
+              window.location.reload();
             } else {
-              alert("Erreur lors de l'enregistrement.");
+              const err = await res.json();
+              alert("Erreur: " + (err.error || "Inconnue"));
             }
-          } catch(err) {
-            alert("Erreur de connexion.");
+          } catch(e) {
+            alert("Erreur de connexion serveur.");
           }
         });
-        
-        // Réactiver le bouton Annuler du formulaire
-        const cancelBtn = document.getElementById('newReservationCancel');
-        if(cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
-                document.getElementById('newReservationModal').style.display = 'none';
-            });
-        }
       }
 
-      // 3. RÉPARATION DES CLICS SUR LE CALENDRIER
-      // ----------------------------------------------------
-      // On s'assure que le modal de détails existe
-      let detailsModal = document.getElementById('reservationDetailsModal');
-      if (!detailsModal) {
-         // Si tu l'as supprimé par erreur, on le recrée vite fait
-         const div = document.createElement('div');
-         div.innerHTML = `
-           <div class="booking-modal" id="reservationDetailsModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center;">
-             <div class="modal-overlay" id="detailsOverlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.5);"></div>
-             <div class="modal-content" style="background:white; padding:20px; border-radius:12px; width:90%; max-width:400px; z-index:10;">
-               <h3>Détails</h3>
-               <div id="reservationDetailsContent"></div>
-               <button id="closeDetailsSimple" style="margin-top:10px; padding:8px 16px;">Fermer</button>
-             </div>
-           </div>`;
-         document.body.appendChild(div);
-         detailsModal = document.getElementById('reservationDetailsModal');
-         
-         // Clic pour fermer
-         document.getElementById('detailsOverlay').onclick = () => detailsModal.style.display = 'none';
-         document.getElementById('closeDetailsSimple').onclick = () => detailsModal.style.display = 'none';
+      // 3. RÉPARATION DES DÉTAILS (CLIC CALENDRIER)
+      // -------------------------------------------
+      // Création du modal détails s'il manque
+      let detModal = document.getElementById('reservationDetailsModal');
+      if (!detModal) {
+        document.body.insertAdjacentHTML('beforeend', `
+          <div class="booking-modal" id="reservationDetailsModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center;">
+            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5);" onclick="this.parentElement.style.display='none'"></div>
+            <div class="modal-content" style="background:white; padding:20px; border-radius:16px; width:90%; max-width:400px; position:relative;">
+              <h3 style="margin-top:0;">Détails</h3>
+              <div id="reservationDetailsContent"></div>
+              <button onclick="document.getElementById('reservationDetailsModal').style.display='none'" style="margin-top:20px; width:100%; padding:10px;">Fermer</button>
+            </div>
+          </div>
+        `);
+        detModal = document.getElementById('reservationDetailsModal');
       }
 
-      // Gestion des clics sur les barres bleues/rouges
+      // Gestion du clic
       document.body.addEventListener('click', function(e) {
         const block = e.target.closest('.booking-block');
         if (block) {
           const uid = block.getAttribute('data-booking-id');
-          console.log("📅 Clic réservation ID:", uid);
+          // Chercher la réservation
+          let booking = (window.LCC_RESERVATIONS || []).find(r => String(r.id) == String(uid));
           
-          // Récupération des données
-          let allRes = window.LCC_RESERVATIONS;
-          if(!allRes) { try { allRes = JSON.parse(localStorage.getItem('LCC_RESERVATIONS')); } catch(e){} }
-          
-          let booking = null;
-          if (allRes) {
-             booking = allRes.find(r => String(r.id) == String(uid));
-             if (!booking && !isNaN(uid)) booking = allRes[uid];
-          }
-
           if (booking) {
-             const content = document.getElementById('reservationDetailsContent');
-             if(content) {
-               content.innerHTML = `
-                 <p><strong>Client:</strong> ${booking.guestName || 'Inconnu'}</p>
-                 <p><strong>Arrivée:</strong> ${new Date(booking.start||booking.startDate).toLocaleDateString()}</p>
-                 <p><strong>Départ:</strong> ${new Date(booking.end||booking.endDate).toLocaleDateString()}</p>
-                 <p><strong>Source:</strong> ${booking.source || booking.platform || 'Direct'}</p>
-               `;
-             }
-             detailsModal.style.display = 'flex';
-             detailsModal.classList.add('active');
+            const content = document.getElementById('reservationDetailsContent');
+            content.innerHTML = `
+              <p><strong>Voyageur:</strong> ${booking.guestName || 'Inconnu'}</p>
+              <p><strong>Dates:</strong> ${new Date(booking.start||booking.startDate).toLocaleDateString()} - ${new Date(booking.end||booking.endDate).toLocaleDateString()}</p>
+              <p><strong>Source:</strong> ${booking.source || 'Direct'}</p>
+            `;
+            detModal.style.display = 'flex';
           }
         }
-      });
-      
-      // Fermeture croix modal détails existant
-      const closeDet = document.getElementById('closeDetailsModal');
-      if(closeDet) closeDet.addEventListener('click', () => { 
-          if(detailsModal) detailsModal.style.display = 'none'; 
       });
 
     });
   </script>
+</body>
+</html>
 </body>
 </html>
