@@ -528,6 +528,21 @@
     .calendar-cell.selected {
       background: rgba(16, 185, 129, 0.15);
     }
+    /* Scroll synchronisé jours + lignes */
+.calendar-grid-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.days-header {
+  overflow-x: visible;
+}
+
+.calendar-grid {
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
 /* Barre de recherche du calendrier */
 .calendar-search-panel {
   display: flex;
@@ -1397,6 +1412,14 @@
   }
 
   /* Largeur fixe suffisante pour pouvoir glisser sur tous les jours */
+  .days-header .day-header,
+  .calendar-grid .calendar-cell {
+    flex: 0 0 60px;
+    min-width: 60px !important;
+  }
+}
+/* Mobile : élargir les jours */
+@media (max-width: 768px) {
   .days-header .day-header,
   .calendar-grid .calendar-cell {
     flex: 0 0 60px;
