@@ -5774,12 +5774,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 </style>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      console.log("🔧 Démarrage du script de réparation des interactions...");
+      console.log("🔧 Démarrage du script de réparation V2...");
 
       // ---------------------------------------------------------
       // 1. GESTION DU BOUTON "+" (Nouvelle Réservation)
       // ---------------------------------------------------------
-      const addBtn = document.getElementById('addBookingBtn'); // Ton ID actuel
+      const addBtn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
       const newModal = document.getElementById('newReservationModal');
       const closeNewBtn = document.getElementById('newReservationClose');
       const cancelNewBtn = document.getElementById('newReservationCancel');
@@ -5787,17 +5787,38 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
       function openNewModal() {
         console.log("➕ Clic sur le bouton Nouveau !");
+        
         if (newModal) {
-          // Remplir le select des logements si vide
-          if (propertySelect && window.LCC_PROPERTIES) {
-            propertySelect.innerHTML = '<option value="">Sélectionner un logement...</option>';
-            window.LCC_PROPERTIES.forEach(p => {
-              const opt = document.createElement('option');
-              opt.value = p.id || p._id;
-              opt.textContent = p.name || ('Logement ' + p.id);
-              propertySelect.appendChild(opt);
-            });
+          // --- FIX LOGEMENTS VIDES ---
+          // On essaie de récupérer les logements de plusieurs endroits
+          let properties = window.LCC_PROPERTIES;
+          
+          // Si vide, on cherche dans le stockage local (mémoire du navigateur)
+          if (!properties || properties.length === 0) {
+            try {
+              properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+            } catch(e) { console.error(e); }
           }
+
+          // Remplissage du menu déroulant
+          if (propertySelect) {
+            propertySelect.innerHTML = '<option value="">Sélectionner un logement...</option>';
+            
+            if (properties && properties.length > 0) {
+              properties.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id || p._id;
+                opt.textContent = p.name || ('Logement ' + (p.id || '?'));
+                propertySelect.appendChild(opt);
+              });
+            } else {
+              // Si vraiment rien, on met une option d'erreur
+              const opt = document.createElement('option');
+              opt.textContent = "Aucun logement trouvé (vérifiez 'Mes logements')";
+              propertySelect.appendChild(opt);
+            }
+          }
+
           // Force l'affichage
           newModal.style.display = 'flex';
           newModal.classList.add('active');
@@ -5811,10 +5832,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
         }
       }
 
+      // Écouteurs Bouton +
       if (addBtn) addBtn.addEventListener('click', function(e) {
         e.preventDefault();
         openNewModal();
       });
+      // Écouteurs Fermeture (Croix + Annuler)
       if (closeNewBtn) closeNewBtn.addEventListener('click', closeNewModalFunc);
       if (cancelNewBtn) cancelNewBtn.addEventListener('click', closeNewModalFunc);
 
@@ -5824,8 +5847,11 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       // ---------------------------------------------------------
       const detailsModal = document.getElementById('reservationDetailsModal');
       const detailsContent = document.getElementById('reservationDetailsContent');
-      const closeDetailsBtn = document.getElementById('closeDetailsModal');
-      const detailsOverlay = document.getElementById('detailsModalOverlay');
+      
+      // Les boutons de fermeture
+      const closeDetailsX = document.getElementById('closeDetailsModal'); // La croix en haut
+      const closeDetailsBtn = document.getElementById('btnFermerDetails'); // Le bouton en bas
+      const detailsOverlay = document.getElementById('detailsModalOverlay'); // Le fond gris
 
       function closeDetailsFunc() {
         if (detailsModal) {
@@ -5834,71 +5860,70 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
         }
       }
 
+      // --- FIX BOUTONS FERMER ---
+      if (closeDetailsX) closeDetailsX.addEventListener('click', closeDetailsFunc);
       if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeDetailsFunc);
       if (detailsOverlay) detailsOverlay.addEventListener('click', closeDetailsFunc);
 
-      // On utilise la "délégation d'événements" pour capturer les clics
-      // sur les éléments créés dynamiquement par le calendrier
+      // Gestion du clic sur une réservation
       document.body.addEventListener('click', function(e) {
-        // On cherche si le clic vient d'un booking-block
         const block = e.target.closest('.booking-block');
         
         if (block) {
           console.log("📅 Clic sur une réservation détecté");
           const uid = block.getAttribute('data-booking-id');
           
-          // Récupérer les données depuis la mémoire globale
+          // Récupération des données (Mémoire ou LocalStorage)
+          let allReservations = window.LCC_RESERVATIONS;
+          if (!allReservations || allReservations.length === 0) {
+             try { allReservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]'); } catch(e){}
+          }
+
+          // Recherche de la réservation
           let booking = null;
-          if (window.LCC_RESERVATIONS) {
-            // Cherche par ID (string ou number)
-            booking = window.LCC_RESERVATIONS.find(r => String(r.id) == String(uid));
-            // Fallback : cherche par index si uid est un chiffre simple
-            if (!booking && !isNaN(uid)) {
-              booking = window.LCC_RESERVATIONS[uid];
-            }
+          if (allReservations) {
+            booking = allReservations.find(r => String(r.id) == String(uid));
+            if (!booking && !isNaN(uid)) booking = allReservations[uid];
           }
 
           if (booking) {
-            // Formater les dates
+            // Affichage dans le modal
             const start = new Date(booking.start || booking.startDate).toLocaleDateString('fr-FR');
             const end = new Date(booking.end || booking.endDate).toLocaleDateString('fr-FR');
             const guest = booking.guestName || booking.name || 'Client Inconnu';
             const platform = (booking.source || booking.platform || 'Direct').toUpperCase();
-            const propName = booking.propertyName || (booking.property ? booking.property.name : 'Logement');
-
-            // Remplir le HTML du modal
+            
+            // On essaie de trouver le nom du logement
+            let propName = "Logement";
+            if (booking.propertyName) propName = booking.propertyName;
+            else if (booking.property && booking.property.name) propName = booking.property.name;
+            
             if (detailsContent) {
               detailsContent.innerHTML = `
-                <div class="detail-group">
-                  <label>Logement</label>
-                  <div class="detail-value">${propName}</div>
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Voyageur</div>
+                  <div style="font-size:16px; font-weight:600; color:#111827;">${guest}</div>
                 </div>
-                <div class="detail-group">
-                  <label>Voyageur</label>
-                  <div class="detail-value" style="font-weight:700; font-size:16px;">${guest}</div>
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Logement</div>
+                  <div style="font-size:14px; color:#111827;">${propName}</div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
-                  <div><label>Arrivée</label><div class="detail-value">${start}</div></div>
-                  <div><label>Départ</label><div class="detail-value">${end}</div></div>
+                  <div><label style="font-size:12px; color:#6b7280; font-weight:600;">Arrivée</label><div style="font-size:14px; font-weight:500;">${start}</div></div>
+                  <div><label style="font-size:12px; color:#6b7280; font-weight:600;">Départ</label><div style="font-size:14px; font-weight:500;">${end}</div></div>
                 </div>
-                <div class="detail-group">
-                  <label>Plateforme</label>
-                  <div class="detail-value">
-                    <span style="padding:4px 12px; background:#eff6ff; color:#1d4ed8; border-radius:99px; font-size:12px; font-weight:700;">
-                      ${platform}
-                    </span>
-                  </div>
+                <div>
+                  <span style="background:#eff6ff; color:#1d4ed8; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:700;">
+                    ${platform}
+                  </span>
                 </div>
               `;
             }
 
-            // Ouvrir le modal
             if (detailsModal) {
               detailsModal.style.display = 'flex';
               detailsModal.classList.add('active');
             }
-          } else {
-            console.warn("⚠️ Données introuvables pour ID:", uid);
           }
         }
       });
