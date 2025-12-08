@@ -1422,64 +1422,134 @@
     }
   </style>
 <style>
-  <style>
-  /* ✨ Fix calendrier MOBILE
-     - la page ne glisse plus en horizontal
-     - la colonne LOGEMENTS reste alignée avec les lignes de réservations
-     - les jours gardent une largeur fixe (plus de "LUNMAR..." collé) */
+  /* ✨ Fix calendrier MOBILE - Version améliorée
+     - Colonne logements plus large et mieux lisible
+     - Scroll horizontal fluide sur la grille
+     - Alignement parfait entre logements et réservations */
   @media (max-width: 768px) {
 
-    /* 1. Le conteneur général ne fait plus glisser toute la page */
+    /* 1. Conteneur principal : pas de scroll horizontal global */
     .calendar-container {
       overflow-x: hidden !important;
       overflow-y: visible !important;
       display: flex;
+      background: var(--bg-primary);
     }
 
-    /* 2. Scroll horizontal UNIQUEMENT sur la partie droite (jours + résa) */
+    /* 2. Colonne LOGEMENTS : plus large pour être lisible */
+    .calendar-container .property-list-column {
+      width: 140px !important;
+      min-width: 140px !important;
+      max-width: 140px !important;
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      border-right: 2px solid var(--calendar-border);
+    }
+
+    /* 3. Items logements : padding et taille optimisés */
+    .calendar-container .property-item {
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+      height: var(--calendar-cell-height);
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid var(--calendar-border);
+    }
+
+    /* 4. Nom du logement : gestion du débordement */
+    .calendar-container .property-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* 5. Badge compteur : plus petit et discret */
+    .calendar-container .property-count {
+      font-size: 10px !important;
+      padding: 2px 6px !important;
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+
+    /* 6. Partie droite (jours + grille) : scroll horizontal */
     .calendar-container .calendar-grid-wrapper {
       flex: 1 1 auto;
       display: flex;
       flex-direction: column;
       overflow-x: auto !important;
-      overflow-y: visible !important; /* plus de scroll vertical interne */
+      overflow-y: visible !important;
+      -webkit-overflow-scrolling: touch;
     }
 
-    /* 3. Plus de scroll vertical séparé : 
-          c'est la page qui gère le vertical ⇒ LOGEMENTS + cellules restent alignés */
+    /* 7. Grille et liste : pas de scroll vertical interne */
     .calendar-container .calendar-grid,
     .calendar-container .property-list-items {
       overflow-y: visible !important;
     }
 
-    /* 4. Le header des jours est accroché au scroll horizontal du wrapper */
+    /* 8. Header des jours : suit le scroll horizontal */
     .calendar-container .days-header {
       overflow-x: visible !important;
       width: auto;
       min-width: max-content;
+      display: flex;
     }
 
-    /* 5. Largeur fixe pour chaque jour
-          ⇒ colonnes bien alignées et texte "LUN / MAR / ..." lisible */
+    /* 9. Largeur fixe pour chaque jour : colonnes alignées */
     .calendar-container .days-header .day-header,
     .calendar-container .calendar-grid .calendar-cell {
-      flex: 0 0 48px;
-      min-width: 48px;
+      flex: 0 0 50px !important;
+      min-width: 50px !important;
+      max-width: 50px !important;
     }
 
-    /* 6. Colonne LOGEMENTS compacte mais lisible sur mobile */
-    .calendar-container .property-list-column {
-      width: 110px;
-      min-width: 110px;
-      flex-shrink: 0;
+    /* 10. Blocs de réservation : texte plus petit */
+    .calendar-container .booking-block {
+      font-size: 9px !important;
+      padding: 1px 4px !important;
+      line-height: 1.2;
     }
 
+    /* 11. Icônes plateforme : encore plus petites */
+    .calendar-container .booking-block .platform-icon {
+      font-size: 9px !important;
+      margin-right: 2px;
+    }
+
+    /* 12. Hauteur des cellules : optimisée pour mobile */
+    .calendar-container .calendar-cell,
     .calendar-container .property-item {
-      font-size: 11px;
-      padding: 4px 8px;
+      height: 32px !important;
+    }
+
+    /* 13. Header logements : même style */
+    .calendar-container .property-list-header {
+      height: var(--day-header-height);
+      font-size: 11px !important;
+      padding: 0 10px;
+    }
+
+    /* 14. Scrollbar horizontale : plus visible */
+    .calendar-container .calendar-grid-wrapper::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .calendar-container .calendar-grid-wrapper::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    .calendar-container .calendar-grid-wrapper::-webkit-scrollbar-thumb {
+      background: var(--primary-color);
+      border-radius: 4px;
     }
   }
-</style>
 
 </head>
 <body data-page="app">
