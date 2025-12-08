@@ -1382,7 +1382,7 @@
     }
   </style>
 <style>
-  /* Fix calendrier sur mobile */
+  /* Fix calendrier sur mobile – version simplifiée */
 @media (max-width: 768px) {
   /* Le conteneur général gère le scroll horizontal */
   .calendar-container {
@@ -1390,23 +1390,17 @@
     overflow-y: hidden !important;
   }
 
-  /* Le wrapper interne ne force plus de scroll horizontal */
-  .calendar-grid-wrapper {
-    overflow-x: visible !important;
-    overflow-y: visible !important;
-  }
-
-  /* La grille ne scrolle qu’en vertical */
+  /* La grille scrolle seulement en vertical */
   .calendar-grid {
     overflow-x: hidden !important;
     overflow-y: auto !important;
   }
 
-  /* Largeur fixe des jours pour pouvoir glisser */
+  /* Largeur assez large pour bien voir les jours */
   .days-header .day-header,
   .calendar-grid .calendar-cell {
-    flex: 0 0 52px;
-    min-width: 52px !important;
+    flex: 0 0 60px;
+    min-width: 60px !important;
   }
 }
 
