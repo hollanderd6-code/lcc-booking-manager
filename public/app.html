@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Pragm</head>a" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1480,7 +1480,106 @@
     }
   }
 </style>
+<style>
+/* =================================================================
+   FIX MOBILE CALENDRIER - BOOSTINGHOST
+   À coller à la fin du <head> de app-15.html
+   ================================================================= */
 
+@media (max-width: 768px) {
+
+  /* 1. Conteneur principal : on le force en ligne (row) et on empêche le scroll global */
+  .calendar-container {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    overflow: hidden !important; /* C'est le wrapper interne qui scrollera */
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+  }
+
+  /* 2. Colonne de Gauche (Logements) : Fixe, visible et au-dessus */
+  .property-list-column {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 85px !important;      /* Largeur fixe compacte pour mobile */
+    min-width: 85px !important;
+    flex-shrink: 0 !important;   /* Ne rétrécit jamais */
+    background: #fff !important;
+    z-index: 20 !important;      /* Au-dessus du scroll */
+    box-shadow: 4px 0 8px rgba(0,0,0,0.05); /* Ombre pour séparer visuellement */
+    border-right: 1px solid #e5e7eb !important;
+  }
+
+  /* 3. Partie Droite (Grille) : Prend le reste de la place et scroll horizontalement */
+  .calendar-grid-wrapper {
+    flex: 1 !important;
+    width: 0 !important;  /* Astuce Flexbox pour forcer le scroll */
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #fff;
+  }
+
+  /* 4. ALIGNEMENT PARFAIT DES HAUTEURS */
+  
+  /* En-tête (LOGEMENTS vs Jours) */
+  .property-list-header, 
+  .days-header {
+    height: 50px !important; /* Hauteur fixe identique pour les deux */
+    min-height: 50px !important;
+    border-bottom: 2px solid #e5e7eb !important;
+  }
+  
+  /* Ajustement texte "LOGEMENTS" */
+  .property-list-header {
+    font-size: 10px !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    text-align: center;
+    background: #f9fafb !important;
+  }
+
+  /* Ajustement des jours (LUN 1, MAR 2...) */
+  .day-header {
+    height: 100% !important;
+    justify-content: center !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Lignes du corps (Nom du logement vs Ligne de cases) */
+  .property-item, 
+  .calendar-row {
+    height: 48px !important; /* Hauteur fixe identique pour les lignes */
+    min-height: 48px !important;
+    box-sizing: border-box !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+  }
+
+  /* Style des cellules logements sur mobile */
+  .property-item {
+    font-size: 11px !important;
+    padding: 0 4px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: normal !important; /* Permet au texte de passer à la ligne */
+    line-height: 1.2 !important;
+  }
+
+  /* On cache le badge "Nombre" sur mobile pour gagner de la place */
+  .property-item .property-count {
+    display: none !important;
+  }
+
+  /* Ajustement de la largeur des cases jours sur mobile */
+  .day-header, 
+  .calendar-cell {
+    min-width: 44px !important; /* Cases un peu plus étroites */
+    flex: 0 0 44px !important;
+  }
+}
+</style>
 </head>
 <body data-page="app">
   <div style="
