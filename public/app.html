@@ -894,11 +894,10 @@
     }
 
     @media (max-width: 480px) {
+  /* On ré-affiche la colonne des logements sur mobile */
   .property-list-column {
-    display: flex;          /* on la garde visible */
-    flex-direction: column;
+    display: flex;
   }
-}
 
   /* On garde le titre compact comme avant */
   .calendar-title-modern span {
@@ -1338,41 +1337,6 @@
 .calendar-container .calendar-row .calendar-cell {
   flex: 0 0 48px;
   min-width: 48px;
-}
-/* === FIX MOBILE CALENDRIER : logements fixes + scroll sur les jours === */
-@media (max-width: 768px) {
-
-  /* Le conteneur global ne scrolle plus horizontalement */
-  .calendar-container {
-    overflow-x: hidden;
-  }
-
-  /* C’est cette partie (jours + grille) qui scrolle horizontalement */
-  .calendar-grid-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  /* Largeur mini identique pour l'entête des jours et la grille
-     => pas de “trou” à partir du 15 du mois */
-  .calendar-grid-wrapper .days-header,
-  .calendar-grid-wrapper .calendar-grid {
-    min-width: 720px; /* ajuste si besoin : 720–900px en général */
-  }
-
-  /* Colonne logements compacte mais lisible sur mobile */
-  .property-list-column {
-    width: 110px;
-    flex-shrink: 0;
-  }
-
-  .property-item {
-    font-size: 11px;
-    padding: 0 6px;
-  }
 }
 
   </style>
