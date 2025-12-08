@@ -894,18 +894,20 @@
     }
 
     @media (max-width: 480px) {
-      .property-list-column {
-        display: none;
-      }
-      
-      .calendar-title-modern span {
-        display: none;
-      }
-      
-      .period-display {
-        font-size: 16px;
-      }
-    }
+  /* On ré-affiche la colonne des logements sur mobile */
+  .property-list-column {
+    display: flex;
+  }
+
+  /* On garde le titre compact comme avant */
+  .calendar-title-modern span {
+    display: none;
+  }
+
+  .period-display {
+    font-size: 16px;
+  }
+}
 
     /* ScrollBar Styling */
     .calendar-grid::-webkit-scrollbar,
