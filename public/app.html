@@ -425,37 +425,109 @@
     }
 
     /* Calendar Grid Wrapper */
-    /* Calendar Grid Wrapper */
-.calendar-grid-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  /* scroll horizontal commun */
-  overflow-x: auto;
-  overflow-y: hidden;
-}
+    .calendar-grid-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-/* Days Header */
-.days-header {
-  height: var(--day-header-height);
-  display: flex;
-  background: var(--bg-tertiary);
-  border-bottom: 2px solid var(--calendar-border);
-  /* ne scrolle plus tout seul en horizontal */
-  overflow-x: visible;
-  scrollbar-width: thin;
-}
+    /* Days Header */
+    .days-header {
+      height: var(--day-header-height);
+      display: flex;
+      background: var(--bg-tertiary);
+      border-bottom: 2px solid var(--calendar-border);
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
 
-/* Calendar Grid */
-.calendar-grid {
-  flex: 1;
-  /* horizontal géré par le wrapper, vertical ici */
-  overflow-x: visible;
-  overflow-y: auto;
-  background: white;
-}
+    .day-header {
+      min-width: 0;
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--calendar-border);
+      position: relative;
+    }
 
-    
+    .day-header.weekend {
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .day-header.today {
+      background: var(--primary-light);
+    }
+
+    .day-header.today::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--primary-color);
+    }
+
+    .day-header .day-name {
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .day-header .day-number {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 18px;
+      margin-top: 4px;
+    }
+
+    .day-header.today .day-number {
+      color: var(--primary-color);
+    }
+
+    /* Calendar Grid */
+    .calendar-grid {
+      flex: 1;
+      overflow: auto;
+      background: white;
+    }
+
+    .calendar-row {
+      display: flex;
+      border-bottom: 1px solid var(--calendar-border);
+    }
+
+    .calendar-cell {
+      min-width: 0;
+      height: var(--calendar-cell-height);
+      flex: 1 1 0;
+      border-right: 1px solid var(--calendar-border);
+      padding: 2px;
+      position: relative;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .calendar-cell:hover {
+      background: var(--cell-hover-bg);
+    }
+
+    .calendar-cell.weekend {
+      background: rgba(239, 68, 68, 0.02);
+    }
+
+    .calendar-cell.today {
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .calendar-cell.selected {
+      background: rgba(16, 185, 129, 0.15);
+    }
 /* Barre de recherche du calendrier */
 .calendar-search-panel {
   display: flex;
@@ -785,6 +857,17 @@
     }
 
     /* Responsive */
+    @media (max-width: 1024px) {
+      .property-list-column {
+        width: 140px;
+      }
+      
+      .day-header,
+      .calendar-cell {
+        min-width: 0;
+      }
+    }
+
     @media (max-width: 768px) {
       .view-tab span {
         display: none;
@@ -1299,19 +1382,56 @@
     }
   </style>
 <style>
+  /* Fix calendrier sur mobile : 
+     - la page ne "glisse" plus
+     - le header des jours et les réservations scrollent ensemble
+     - les jours ne sont plus collés ("LUNMAR...") */
+  @media (max-width: 768px) {
 
-  /* C'est la grille qui gère le scroll horizontal + vertical */
-  .calendar-grid {
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-  }
+    /* Le conteneur général ne fait plus déborder la page */
+    .calendar-container {
+      overflow-x: hidden !important;
+    }
 
-  /* Largeur fixe suffisante pour pouvoir glisser sur tous les jours */
-  .days-header .day-header,
-  .calendar-grid .calendar-cell {
-    flex: 0 0 60px;
-    min-width: 60px !important;
+    /* C’est ce wrapper qui gère le scroll horizontal */
+    .calendar-grid-wrapper {
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+
+    /* Le header des jours ne scrolle plus tout seul */
+    .days-header {
+      overflow-x: visible !important;
+    }
+
+    /* La grille scroll seulement en vertical,
+       l’horizontal est géré par .calendar-grid-wrapper */
+    .calendar-grid {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    /* On évite que les jours soient écrasés les uns sur les autres */
+    .days-header .day-header,
+    .calendar-grid .calendar-cell {
+      min-width: 52px !important; /* tu pourras ajuster à 48 / 56 si besoin */
+    }
   }
+  /* === Fix largeur des jours & scroll horizontal propre === */
+.calendar-grid {
+  overflow-x: auto;
+}
+
+.days-header,
+.calendar-row {
+  width: auto;
+  min-width: max-content; /* la ligne s'étend autant qu'il y a de jours */
+}
+
+.day-header,
+.calendar-cell {
+  flex: 0 0 48px;        /* largeur fixe par jour */
+  min-width: 48px;
 }
 
 </style>
