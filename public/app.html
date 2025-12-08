@@ -5772,5 +5772,138 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     }
   }
 </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("🔧 Démarrage du script de réparation des interactions...");
+
+      // ---------------------------------------------------------
+      // 1. GESTION DU BOUTON "+" (Nouvelle Réservation)
+      // ---------------------------------------------------------
+      const addBtn = document.getElementById('addBookingBtn'); // Ton ID actuel
+      const newModal = document.getElementById('newReservationModal');
+      const closeNewBtn = document.getElementById('newReservationClose');
+      const cancelNewBtn = document.getElementById('newReservationCancel');
+      const propertySelect = document.getElementById('nrProperty');
+
+      function openNewModal() {
+        console.log("➕ Clic sur le bouton Nouveau !");
+        if (newModal) {
+          // Remplir le select des logements si vide
+          if (propertySelect && window.LCC_PROPERTIES) {
+            propertySelect.innerHTML = '<option value="">Sélectionner un logement...</option>';
+            window.LCC_PROPERTIES.forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p.id || p._id;
+              opt.textContent = p.name || ('Logement ' + p.id);
+              propertySelect.appendChild(opt);
+            });
+          }
+          // Force l'affichage
+          newModal.style.display = 'flex';
+          newModal.classList.add('active');
+        }
+      }
+
+      function closeNewModalFunc() {
+        if (newModal) {
+          newModal.style.display = 'none';
+          newModal.classList.remove('active');
+        }
+      }
+
+      if (addBtn) addBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        openNewModal();
+      });
+      if (closeNewBtn) closeNewBtn.addEventListener('click', closeNewModalFunc);
+      if (cancelNewBtn) cancelNewBtn.addEventListener('click', closeNewModalFunc);
+
+
+      // ---------------------------------------------------------
+      // 2. GESTION DES CLICS SUR LE CALENDRIER (Détails)
+      // ---------------------------------------------------------
+      const detailsModal = document.getElementById('reservationDetailsModal');
+      const detailsContent = document.getElementById('reservationDetailsContent');
+      const closeDetailsBtn = document.getElementById('closeDetailsModal');
+      const detailsOverlay = document.getElementById('detailsModalOverlay');
+
+      function closeDetailsFunc() {
+        if (detailsModal) {
+          detailsModal.style.display = 'none';
+          detailsModal.classList.remove('active');
+        }
+      }
+
+      if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeDetailsFunc);
+      if (detailsOverlay) detailsOverlay.addEventListener('click', closeDetailsFunc);
+
+      // On utilise la "délégation d'événements" pour capturer les clics
+      // sur les éléments créés dynamiquement par le calendrier
+      document.body.addEventListener('click', function(e) {
+        // On cherche si le clic vient d'un booking-block
+        const block = e.target.closest('.booking-block');
+        
+        if (block) {
+          console.log("📅 Clic sur une réservation détecté");
+          const uid = block.getAttribute('data-booking-id');
+          
+          // Récupérer les données depuis la mémoire globale
+          let booking = null;
+          if (window.LCC_RESERVATIONS) {
+            // Cherche par ID (string ou number)
+            booking = window.LCC_RESERVATIONS.find(r => String(r.id) == String(uid));
+            // Fallback : cherche par index si uid est un chiffre simple
+            if (!booking && !isNaN(uid)) {
+              booking = window.LCC_RESERVATIONS[uid];
+            }
+          }
+
+          if (booking) {
+            // Formater les dates
+            const start = new Date(booking.start || booking.startDate).toLocaleDateString('fr-FR');
+            const end = new Date(booking.end || booking.endDate).toLocaleDateString('fr-FR');
+            const guest = booking.guestName || booking.name || 'Client Inconnu';
+            const platform = (booking.source || booking.platform || 'Direct').toUpperCase();
+            const propName = booking.propertyName || (booking.property ? booking.property.name : 'Logement');
+
+            // Remplir le HTML du modal
+            if (detailsContent) {
+              detailsContent.innerHTML = `
+                <div class="detail-group">
+                  <label>Logement</label>
+                  <div class="detail-value">${propName}</div>
+                </div>
+                <div class="detail-group">
+                  <label>Voyageur</label>
+                  <div class="detail-value" style="font-weight:700; font-size:16px;">${guest}</div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+                  <div><label>Arrivée</label><div class="detail-value">${start}</div></div>
+                  <div><label>Départ</label><div class="detail-value">${end}</div></div>
+                </div>
+                <div class="detail-group">
+                  <label>Plateforme</label>
+                  <div class="detail-value">
+                    <span style="padding:4px 12px; background:#eff6ff; color:#1d4ed8; border-radius:99px; font-size:12px; font-weight:700;">
+                      ${platform}
+                    </span>
+                  </div>
+                </div>
+              `;
+            }
+
+            // Ouvrir le modal
+            if (detailsModal) {
+              detailsModal.style.display = 'flex';
+              detailsModal.classList.add('active');
+            }
+          } else {
+            console.warn("⚠️ Données introuvables pour ID:", uid);
+          }
+        }
+      });
+
+    });
+  </script>
 </body>
 </html>
