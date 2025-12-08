@@ -1427,24 +1427,3 @@ html, body {
   overflow-x: hidden;
   box-sizing: border-box;
 }
-/* =================================================================
-   FIX : EMPÊCHER LE GROSSISSEMENT DES ICÔNES AU SURVOL
-   ================================================================= */
-.status-card:hover .status-icon {
-  transform: none !important;       /* Annule le zoom/scale */
-  width: 30px !important;           /* Force la taille d'origine */
-  height: 30px !important;          /* Force la taille d'origine */
-  opacity: 1 !important;            /* Empêche la transparence */
-  position: static !important;      /* Empêche le déplacement absolu */
-  filter: none !important;          /* Enlève d'éventuels filtres */
-  margin: 0 !important;             /* Garde les marges d'origine */
-}
-
-/* Sécurité supplémentaire pour l'image ou le SVG à l'intérieur */
-.status-card:hover .status-icon svg,
-.status-card:hover .status-icon img,
-.status-card:hover .status-icon i {
-  transform: none !important;
-  width: auto !important;
-  height: auto !important;
-}
