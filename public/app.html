@@ -1482,44 +1482,65 @@
 </style>
 <style>
 <style>
+<style>
 /* =================================================================
-   FIX CALENDRIER MOBILE (FINAL V2)
-   Ce bloc combine l'alignement et les lignes verticales.
-   Il ne touche QUE le mobile (max-width: 768px).
+   FIX CALENDRIER ULTRA-ROBUSTE (Mobile + Desktop)
    ================================================================= */
 
+/* --- 1. Correctif GLOBAL (Ordi + Mobile) pour les lignes verticales --- */
+/* On applique ça partout pour que les traits aillent jusqu'en bas */
+.calendar-row {
+  display: flex; /* S'assure que c'est flex partout */
+  align-items: stretch; /* Tire les traits vers le bas */
+}
+
+.calendar-cell {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+}
+
+/* --- 2. CONFIGURATION SPÉCIALE MOBILE (< 768px) --- */
 @media (max-width: 768px) {
 
-  /* --- 1. STRUCTURE GÉNÉRALE --- */
-  
-  /* Conteneur principal en mode ligne pour séparer Gauche/Droite */
+  /* A. Empêcher toute la page de glisser horizontalement */
+  html, body {
+    overflow-x: hidden !important;
+    position: relative;
+  }
+
+  /* B. Conteneur : Force la ligne (Logements | Grille) */
   .calendar-container {
     display: flex !important;
-    flex-direction: row !important;
+    flex-direction: row !important; /* Important : CÔTE À CÔTE */
+    align-items: flex-start !important;
     width: 100% !important;
-    overflow: hidden !important; 
+    max-width: 100vw !important;
+    overflow: hidden !important; /* Le scroll se fera DANS le wrapper */
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     background: #fff;
   }
 
-  /* Colonne de Gauche (Logements) : Fixe */
+  /* C. Colonne Gauche (Logements) : Fixe et solide */
   .property-list-column {
     display: flex !important;
     flex-direction: column !important;
     width: 85px !important;      
     min-width: 85px !important;
-    flex-shrink: 0 !important;   
+    max-width: 85px !important;
+    flex-shrink: 0 !important;   /* INTERDIT de rétrécir */
     background: #fff !important;
     z-index: 20 !important;      
     box-shadow: 4px 0 8px rgba(0,0,0,0.05); 
     border-right: 1px solid #e5e7eb !important;
   }
 
-  /* Partie Droite (Grille) : Scroll horizontal */
+  /* D. Partie Droite (Grille) : Scroll Horizontal */
   .calendar-grid-wrapper {
     flex: 1 !important;
-    width: 0 !important; 
+    width: 0 !important; /* Hack CSS vital pour forcer le scroll dans un flex */
+    min-width: 0 !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     display: flex !important;
@@ -1527,9 +1548,9 @@
     background: #fff;
   }
 
-  /* --- 2. HAUTEURS ET ALIGNEMENTS (Synchronisation Gauche/Droite) --- */
+  /* E. Synchronisation des hauteurs (50px header / 48px corps) */
   
-  /* En-tête (LOGEMENTS vs Jours) -> Hauteur 50px */
+  /* En-têtes */
   .property-list-header, 
   .days-header {
     height: 50px !important; 
@@ -1538,7 +1559,7 @@
     box-sizing: border-box !important;
   }
   
-  /* Style tête colonne gauche */
+  /* Tête colonne gauche */
   .property-list-header {
     font-size: 10px !important;
     justify-content: center !important;
@@ -1549,17 +1570,15 @@
     align-items: center !important;
   }
 
-  /* Style tête jours */
+  /* Tête jours */
   .day-header {
     height: 100% !important;
-    justify-content: center !important;
-    padding-bottom: 0 !important;
     min-width: 44px !important; 
     flex: 0 0 44px !important;
+    justify-content: center !important;
   }
 
-  /* --- 3. CORPS DU CALENDRIER (Lignes) -> Hauteur 48px --- */
-
+  /* Lignes du corps */
   .property-item, 
   .calendar-row {
     height: 48px !important; 
@@ -1568,7 +1587,7 @@
     border-bottom: 1px solid #f3f4f6 !important;
   }
 
-  /* Cellule Logement (Gauche) */
+  /* Cellule Logement */
   .property-item {
     font-size: 11px !important;
     padding: 0 4px !important;
@@ -1584,23 +1603,15 @@
     display: none !important;
   }
 
-  /* --- 4. CORRECTION LIGNES VERTICALES (Inclus ici pour ne pas casser l'ordi) --- */
-  
-  .calendar-row {
-    display: flex !important;
-    align-items: stretch !important; /* Tire les traits vers le bas */
-  }
-
+  /* Cellule Grille */
   .calendar-cell {
     min-width: 44px !important; 
     flex: 0 0 44px !important;
     height: auto !important;       
     min-height: 100% !important;   
-    border-right: 1px solid #e5e7eb !important;
-    display: flex !important;
-    flex-direction: column !important;
   }
 }
+</style>
 </style>
 </head>
 <body data-page="app">
