@@ -1579,6 +1579,27 @@
     flex: 0 0 44px !important;
   }
 }
+  /* =================================================================
+   FIX LIGNES VERTICALES & HAUTEUR
+   ================================================================= */
+.calendar-row {
+  align-items: stretch !important; /* Force les cellules à prendre 100% de la hauteur */
+}
+
+.calendar-cell {
+  height: auto !important;       /* Reset de la hauteur fixe */
+  min-height: 100% !important;   /* Force à remplir la ligne */
+  border-right: 1px solid #e5e7eb !important; /* Réaffirme la bordure */
+  display: flex;                 /* Aide au positionnement interne */
+  flex-direction: column;
+}
+
+/* Retouche spécifique mobile pour s'assurer que ça colle aux 48px */
+@media (max-width: 768px) {
+  .calendar-cell {
+    height: 100% !important;
+  }
+}
 </style>
 </head>
 <body data-page="app">
@@ -3831,12 +3852,33 @@ function populateEditBookingProperties(selectedPropertyId) {
         // On force toujours une vue "mois complet"
     function getCurrentRange() {
       var base = new Date(state.currentDate.getTime());
+      var start, end;
 
-      var start = new Date(base.getFullYear(), base.getMonth(), 1);
-      var end   = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+      // 1. VUE JOUR
+      if (state.currentView === 'day') {
+        start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        end = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+      } 
+      // 2. VUE SEMAINE (Commence le Lundi)
+      else if (state.currentView === 'week') {
+        var day = base.getDay(); // 0 (Dim) à 6 (Sam)
+        // Calcul du Lundi de la semaine courante
+        // Si on est dimanche (0), on recule de 6 jours. Sinon on recule de (day - 1).
+        var diff = base.getDate() - day + (day === 0 ? -6 : 1);
+        
+        start = new Date(base.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6); // Fin le dimanche (+6 jours)
+      } 
+      // 3. VUE MOIS (Défaut)
+      else {
+        start = new Date(base.getFullYear(), base.getMonth(), 1);
+        end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+      }
 
+      // Important : Heures précises pour inclure toutes les réservations
       start.setHours(0, 0, 0, 0);
-      end.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
 
       return {
         start: start,
