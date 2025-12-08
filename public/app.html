@@ -1346,7 +1346,27 @@
   flex: 0 0 48px;
   min-width: 48px;
 }
+/* =================================================================
+   FIX ICÔNES STATUTS (SVG)
+   Force la taille et l'alignement pour éviter la superposition
+   ================================================================= */
+.status-icon svg {
+  width: 16px !important;    /* Taille fixe pour l'icône blanche */
+  height: 16px !important;
+  display: block !important; /* Évite les décalages de ligne */
+  fill: white !important;    /* Force le blanc */
+}
 
+/* Sécurise le conteneur rond */
+.status-icon {
+  flex-shrink: 0 !important; /* Empêche le cercle de s'écraser */
+  z-index: 1;                /* Reste au-dessus */
+}
+
+/* Empêche le titre de remonter sur l'icône */
+.status-card-header {
+  min-height: 30px;          /* Hauteur min pour contenir l'icône */
+}
   </style>
 
 
