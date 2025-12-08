@@ -1367,41 +1367,7 @@
 .status-card-header {
   min-height: 30px;          /* Hauteur min pour contenir l'icône */
 }
-    /* =================================================================
-   FIX FINAL ICÔNES STATUTS (Layout)
-   ================================================================= */
-
-/* 1. On force l'en-tête à bien espacer les éléments */
-.status-card-header {
-  display: flex !important;
-  align-items: center !important;      /* Centre verticalement */
-  justify-content: space-between !important; /* Icône à gauche, Badge à droite */
-  margin-bottom: 12px !important;      /* Pousse le titre vers le bas */
-  min-height: 32px !important;         /* Hauteur min pour l'icône */
-}
-
-/* 2. On blinde le cercle de couleur */
-.status-icon {
-  position: relative !important;       /* Reste dans le flux normal */
-  width: 32px !important;              /* Largeur FIXE */
-  height: 32px !important;             /* Hauteur FIXE */
-  min-width: 32px !important;          /* Sécurité */
-  border-radius: 50% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;           /* INTERDIT de s'écraser */
-  margin-right: 10px !important;       /* Espace si jamais un texte colle */
-}
-
-/* 3. On centre le SVG à l'intérieur */
-.status-icon svg {
-  width: 16px !important;
-  height: 16px !important;
-  fill: white !important;
-  display: block !important;
-}
-  </style>
+<style>
 
 
   <style>
