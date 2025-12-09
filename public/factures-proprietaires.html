@@ -346,7 +346,7 @@
 <div class="modal-overlay" id="clientModal">
   <div class="modal-content">
     <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-      <h3 style="margin:0;">Nouveau Client</h3>
+      <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
       <button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
     </div>
     
@@ -495,20 +495,23 @@ window.editClient = function(clientId) {
 
     editingClientId = clientId;
 
-    // Pré-remplir le popup
-    document.getElementById("clientPopupTitle").textContent = "Modifier le client";
+    const titleEl = document.getElementById('clientModalTitle');
+    if (titleEl) titleEl.textContent = 'Modifier le client';
 
-    document.querySelector(`input[name="clientType"][value="${client.client_type}"]`).checked = true;
+    const type = client.client_type || (client.company_name ? 'business' : 'individual');
+    const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
+    if (radio) radio.checked = true;
+    toggleClientType();
 
-    document.getElementById("clientFirstName").value = client.first_name || "";
-    document.getElementById("clientLastName").value = client.last_name || "";
+    document.getElementById("clientFirstName").value   = client.first_name   || "";
+    document.getElementById("clientLastName").value    = client.last_name    || "";
     document.getElementById("clientCompanyName").value = client.company_name || "";
-    document.getElementById("clientEmail").value = client.email || "";
-    document.getElementById("clientAddress").value = client.address || "";
-    document.getElementById("clientPostalCode").value = client.postal_code || "";
-    document.getElementById("clientCity").value = client.city || "";
+    document.getElementById("clientEmail").value       = client.email        || "";
+    document.getElementById("clientAddress").value     = client.address      || "";
+    document.getElementById("clientPostalCode").value  = client.postal_code  || "";
+    document.getElementById("clientCity").value        = client.city         || "";
 
-    document.getElementById("clientPopup").style.display = "block";
+    document.getElementById("clientModal").classList.add("active");
 };
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
@@ -811,8 +814,28 @@ window.editClient = function(clientId) {
   };
 
   // --- CLIENT MODAL ---
-  window.openClientModal = function() { document.getElementById('clientModal').classList.add('active'); };
-  window.closeClientModal = function() { document.getElementById('clientModal').classList.remove('active'); };
+  window.openClientModal = function() {
+    editingClientId = null;
+
+    const titleEl = document.getElementById('clientModalTitle');
+    if (titleEl) titleEl.textContent = 'Nouveau client';
+
+    const radioInd = document.querySelector('input[name="clientType"][value="individual"]');
+    if (radioInd) radioInd.checked = true;
+    toggleClientType();
+
+    ['clientFirstName','clientLastName','clientCompanyName','clientEmail','clientAddress','clientPostalCode','clientCity']
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+
+    document.getElementById('clientModal').classList.add('active');
+  };
+  window.closeClientModal = function() {
+    document.getElementById('clientModal').classList.remove('active');
+    editingClientId = null;
+  };
   window.toggleClientType = function() {
     const t = document.querySelector('input[name="clientType"]:checked').value;
     document.getElementById('individualFields').style.display = t==='individual'?'block':'none';
@@ -856,10 +879,9 @@ window.editClient = function(clientId) {
         if (!res.ok) return alert(json.error || "Erreur serveur");
 
         alert(editingClientId ? "Client mis à jour !" : "Client ajouté !");
-        
-        editingClientId = null;
-        document.getElementById('clientPopup').style.display = 'none';
-        loadClients();
+
+        closeClientModal();
+        await loadClients();
     } catch (err) {
         console.error(err);
         alert("Erreur serveur");
