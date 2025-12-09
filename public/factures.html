@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/css/style.css">
 
   <style>
-    /* DESIGN SYSTEM "FACTURE" (Identique Factures Propriétaires) */
+    /* DESIGN SYSTEM "FACTURE" (Identique aux autres pages) */
     :root { --primary: #10B981; --primary-dark: #059669; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
     html, body { margin: 0; padding: 0; background: var(--bg-body); font-family: 'Inter', sans-serif; height: 100%; overflow-x: hidden; }
@@ -132,7 +132,7 @@
 
     <main class="main-content">
       <div class="dashboard-header">
-        <div><h1 class="page-title">Factures Clients</h1><p style="color:#6b7280; font-size:14px;">Éditez vos factures de séjour.</p></div>
+        <div><h1 class="page-title">Factures Clients</h1><p style="color:#6b7280; font-size:14px;">Éditez vos factures de séjour pour les voyageurs.</p></div>
       </div>
 
       <div class="invoice-editor-layout">
@@ -309,25 +309,50 @@
     // Date du jour
     document.getElementById('previewDateDisplay').textContent = new Date().toLocaleDateString('fr-FR');
 
-    await loadProperties();
+    // 🔴 CHARGEMENT ROBUSTE DES LOGEMENTS
+    await loadPropertiesSafely();
+    
     updatePreview(); // Initialiser l'aperçu vide
   });
 
-  // --- API ---
-  async function loadProperties() {
+  // --- API LOGEMENTS (AVEC FALLBACK LOCALSTORAGE) ---
+  async function loadPropertiesSafely() {
+    const select = document.getElementById('propertyName');
+    select.innerHTML = '<option value="">Sélectionner un logement...</option>';
+    
+    let props = [];
+
+    // 1. Essai via API
     try {
       const response = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
       if (response.ok) {
         const data = await response.json();
-        const select = document.getElementById('propertyName');
-        data.properties.forEach(prop => {
-          const option = document.createElement('option');
-          option.value = prop.name;
-          option.textContent = prop.name;
-          select.appendChild(option);
-        });
+        props = data.properties || [];
+        // Mise en cache pour la prochaine fois
+        localStorage.setItem('LCC_PROPERTIES', JSON.stringify(props));
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Erreur API properties:", err); }
+
+    // 2. Si API échoue ou vide, on prend le cache
+    if (props.length === 0) {
+      try {
+        const cached = localStorage.getItem('LCC_PROPERTIES');
+        if (cached) props = JSON.parse(cached);
+      } catch (e) {}
+    }
+
+    // 3. Remplissage du select
+    if (props.length > 0) {
+      props.forEach(prop => {
+        const option = document.createElement('option');
+        option.value = prop.name; // On garde le nom comme value pour l'affichage simple
+        option.textContent = prop.name;
+        select.appendChild(option);
+      });
+    } else {
+        // Optionnel : ajouter une option par défaut pour tester
+        // const opt = document.createElement('option'); opt.value="Logement Test"; opt.textContent="Logement Test"; select.appendChild(opt);
+    }
   }
 
   // --- LOGIQUE METIER ---
