@@ -4764,8 +4764,7 @@ function findReservationForBlock(bookingBlock) {
 
   return found || null;
 }
-
-  function fixModalContent(bookingBlock) {
+function fixModalContent(bookingBlock) {
   const detailsModal   = document.getElementById('reservationDetailsModal');
   const detailsContent = document.getElementById('reservationDetailsContent');
 
@@ -4774,7 +4773,7 @@ function findReservationForBlock(bookingBlock) {
     return;
   }
 
-  // On laisse le temps au reste du code de remplir currentBookingData
+  // On laisse un petit délai pour que currentBookingData soit bien défini
   setTimeout(function () {
     const booking = window.currentBookingData || currentBookingData;
     if (!booking) {
@@ -4782,7 +4781,7 @@ function findReservationForBlock(bookingBlock) {
       return;
     }
 
-    // 1) Récupération propertyId
+    // 1️⃣ Récupération du propertyId
     function getReservationPropertyId(res) {
       if (!res) return null;
       if (res.propertyId != null) return String(res.propertyId);
@@ -4801,7 +4800,7 @@ function findReservationForBlock(bookingBlock) {
       }
     }
 
-    // 2) Récupération propertyName
+    // 2️⃣ Récupération du nom de logement
     let propertyName = null;
 
     // a) Infos directement dans la réservation
@@ -4851,7 +4850,7 @@ function findReservationForBlock(bookingBlock) {
       booking,
     });
 
-    // 3) Mise en forme des autres infos
+    // 3️⃣ Mise en forme des autres infos de base
     const rawStart = booking.start || booking.startDate;
     const rawEnd   = booking.end   || booking.endDate;
 
@@ -4873,7 +4872,7 @@ function findReservationForBlock(bookingBlock) {
       booking.id ||
       '';
 
-    // 4) On reconstruit complètement le contenu du modal
+    // 4️⃣ On reconstruit complètement le contenu "de base" du modal
     detailsContent.innerHTML = `
       <div class="detail-group">
         <label>Voyageur</label>
@@ -4921,15 +4920,113 @@ function findReservationForBlock(bookingBlock) {
       </div>
     `;
 
-    // 5) On ouvre le modal (au cas où l’ancien code ne le fait plus)
+    // 5️⃣ Gestion du ménage (reprise / adaptation du code d’origine)
+    try {
+      let reservationAssignments = {};
+      let genericAssignments = {};
+      let cleaners = [];
+
+      try {
+        // Assignations par réservation
+        reservationAssignments = JSON.parse(
+          localStorage.getItem('lcc_cleaning_reservation_assignments') || '{}'
+        );
+      } catch (e) {}
+
+      try {
+        // Assignations par logement ou autres clés génériques
+        genericAssignments = JSON.parse(
+          localStorage.getItem('lcc_cleaning_assignments') || '{}'
+        );
+      } catch (e) {}
+
+      try {
+        cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
+      } catch (e) {
+        cleaners = [];
+      }
+
+      function getReservationKey(res) {
+        if (!res) return null;
+        // priorité à des clés explicites
+        if (res.reservationKey) return String(res.reservationKey);
+        if (res.uid) return String(res.uid);
+        if (res.id != null) return String(res.id);
+        if (res.propertyId && res.start && res.end) {
+          const startStr = String(res.start).slice(0, 10);
+          const endStr = String(res.end).slice(0, 10);
+          return res.propertyId + '::' + startStr + '>' + endStr;
+        }
+        return null;
+      }
+
+      function getCleanerNameById(cleanerId) {
+        if (!cleanerId || !Array.isArray(cleaners)) return null;
+        const strId = String(cleanerId);
+        const c = cleaners.find((x) => String(x.id) === strId);
+        return c ? (c.name || c.email || c.phone || strId) : null;
+      }
+
+      const reservationKey = getReservationKey(booking);
+      const propertyIdForCleaning = booking.propertyId
+        ? String(booking.propertyId)
+        : (propertyId ? String(propertyId) : null);
+
+      let assignedId = null;
+
+      // 1) Assignation par réservation (table dédiée)
+      if (reservationKey && reservationAssignments[reservationKey]) {
+        assignedId = reservationAssignments[reservationKey];
+      }
+
+      // 2) Fallback : assignation générique par logement
+      if (!assignedId && propertyIdForCleaning && genericAssignments[propertyIdForCleaning]) {
+        assignedId = genericAssignments[propertyIdForCleaning];
+      }
+
+      const cleanerName = getCleanerNameById(assignedId);
+      const statusText = cleanerName
+        ? 'Assigné à ' + cleanerName
+        : 'Pas encore assigné';
+
+      console.log('🧹 Statut ménage pour cette résa :', {
+        reservationKey,
+        propertyId: propertyIdForCleaning,
+        assignedId,
+        cleanerName,
+      });
+
+      // Injection / mise à jour du bloc "Ménage" dans le modal
+      let group = detailsContent.querySelector('[data-cleaning-info="1"]');
+      if (!group) {
+        group = document.createElement('div');
+        group.className = 'detail-group';
+        group.setAttribute('data-cleaning-info', '1');
+        group.innerHTML = `
+          <label><i class="fas fa-broom"></i> Ménage</label>
+          <div class="detail-value"></div>
+        `;
+        detailsContent.appendChild(group);
+      }
+
+      const valueEl = group.querySelector('.detail-value');
+      if (valueEl) {
+        valueEl.textContent = statusText;
+      }
+    } catch (e) {
+      console.warn("Erreur lors de l'injection des infos ménage dans le modal", e);
+    }
+
+    // 6️⃣ On ouvre le modal (au cas où)
     detailsModal.style.display = 'flex';
     detailsModal.classList.add('active');
 
-    // On pose aussi des data-* utiles pour Delete / Edit si besoin
+    // Dataset utiles pour supprimer / éditer
     detailsModal.dataset.propertyId = propertyId || '';
     detailsModal.dataset.reservationUid = booking.uid || '';
   }, 50);
 }
+
 
 
 function handleEditBooking() {
@@ -5982,6 +6079,50 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
     });
   </script>
-  
+  <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const detailsModal     = document.getElementById('reservationDetailsModal');
+  const closeDetailsX    = document.getElementById('closeDetailsModal');   // La croix en haut
+  const closeDetailsBtn  = document.getElementById('closeDetailsBtn');     // Le bouton "Fermer" en bas
+  const detailsOverlay   = document.getElementById('detailsModalOverlay'); // Le fond gris
+
+  function closeDetailsModalSafe() {
+    if (!detailsModal) return;
+    detailsModal.style.display = 'none';
+    detailsModal.classList.remove('active');
+  }
+
+  if (closeDetailsX) {
+    closeDetailsX.addEventListener('click', function (e) {
+      e.preventDefault();
+      closeDetailsModalSafe();
+    });
+  }
+
+  if (closeDetailsBtn) {
+    closeDetailsBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      closeDetailsModalSafe();
+    });
+  }
+
+  if (detailsOverlay) {
+    detailsOverlay.addEventListener('click', function (e) {
+      // on ferme si on clique sur le fond gris
+      if (e.target === detailsOverlay) {
+        closeDetailsModalSafe();
+      }
+    });
+  }
+
+  // Bonus : touche Echap pour fermer
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      closeDetailsModalSafe();
+    }
+  });
+});
+</script>
+
 </body>
 </html>
