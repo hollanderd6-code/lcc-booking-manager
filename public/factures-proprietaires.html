@@ -811,13 +811,14 @@ window.editClient = function(clientId) {
   };
 
   window.updatePrestation = function(id, key, val) {
-    const p = prestations.find(x => x.id === id);
-    if(p) {
-      p[key] = key==='description' ? val : parseFloat(val)||0;
-      renderEditorPrestations(); 
-      updatePreview();
-    }
-  };
+  const p = prestations.find(x => x.id === id);
+  if(p) {
+    p[key] = key==='description' ? val : parseFloat(val)||0;
+    // On ne re-render plus toute la liste ici pour éviter de perdre le focus
+    updatePreview();
+  }
+};
+
 
   window.removePrestation = function(id) {
     prestations = prestations.filter(x => x.id !== id);
