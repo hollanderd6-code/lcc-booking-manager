@@ -288,6 +288,54 @@ async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (user_id, property_id)
       );
+      // --- NOUVELLES TABLES FACTURATION ---
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS owner_clients (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        client_type TEXT CHECK (client_type IN ('individual', 'business')),
+        first_name TEXT, last_name TEXT, company_name TEXT,
+        email TEXT, phone TEXT, address TEXT, postal_code TEXT, city TEXT, country TEXT,
+        siret TEXT, vat_number TEXT,
+        default_commission_rate NUMERIC DEFAULT 20,
+        default_vat_rate NUMERIC DEFAULT 20,
+        vat_applicable BOOLEAN DEFAULT FALSE,
+        notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS owner_articles (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        article_type TEXT, name TEXT NOT NULL, description TEXT,
+        unit_price NUMERIC DEFAULT 0, commission_rate NUMERIC DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE
+      );
+
+      CREATE TABLE IF NOT EXISTS owner_invoices (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        client_id INTEGER REFERENCES owner_clients(id),
+        client_name TEXT, client_email TEXT, client_address TEXT,
+        invoice_number TEXT, status TEXT DEFAULT 'draft',
+        issue_date DATE, due_date DATE, period_start DATE, period_end DATE,
+        subtotal_ht NUMERIC DEFAULT 0, subtotal_debours NUMERIC DEFAULT 0,
+        vat_amount NUMERIC DEFAULT 0, total_ttc NUMERIC DEFAULT 0,
+        discount_type TEXT, discount_value NUMERIC DEFAULT 0, discount_amount NUMERIC DEFAULT 0,
+        vat_applicable BOOLEAN DEFAULT FALSE, vat_rate NUMERIC DEFAULT 20,
+        notes TEXT, internal_notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(), sent_at TIMESTAMPTZ, credit_note_id INTEGER
+      );
+
+      CREATE TABLE IF NOT EXISTS owner_invoice_items (
+        id SERIAL PRIMARY KEY,
+        invoice_id INTEGER REFERENCES owner_invoices(id) ON DELETE CASCADE,
+        item_type TEXT, description TEXT,
+        rental_amount NUMERIC DEFAULT 0, commission_rate NUMERIC DEFAULT 0,
+        quantity NUMERIC DEFAULT 1, unit_price NUMERIC DEFAULT 0,
+        total NUMERIC DEFAULT 0, is_debours BOOLEAN DEFAULT FALSE, order_index INTEGER DEFAULT 0
+      );
+    `);
+    console.log('✅ Tables Facturation Propriétaires initialisées');
     `);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings & cleaning_assignments OK dans Postgres');
