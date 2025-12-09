@@ -5270,7 +5270,11 @@ app.put('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
+const clientId = req.params.id;
+    const {
+      clientType, firstName, lastName, companyName,
+      email, address, postalCode, city, defaultCommissionRate
+    } = req.body;
   
 
     const result = await pool.query(`
