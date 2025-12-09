@@ -4764,7 +4764,7 @@ function findReservationForBlock(bookingBlock) {
 
   return found || null;
 }
-function fixModalContent(bookingBlock) {
+  function fixModalContent(bookingBlock) {
   const detailsModal   = document.getElementById('reservationDetailsModal');
   const detailsContent = document.getElementById('reservationDetailsContent');
 
@@ -4773,7 +4773,7 @@ function fixModalContent(bookingBlock) {
     return;
   }
 
-  // On laisse un petit délai pour que currentBookingData soit bien défini
+  // Petit délai pour laisser currentBookingData se mettre à jour par les autres scripts
   setTimeout(function () {
     const booking =
       window.currentBookingData ||
@@ -4796,7 +4796,7 @@ function fixModalContent(bookingBlock) {
 
     let propertyId = getReservationPropertyId(booking);
 
-    // Fallback : si rien dans la résa, on tente via la ligne du calendrier
+    // Fallback : depuis la ligne du calendrier si besoin
     if (!propertyId && bookingBlock) {
       const row = bookingBlock.closest('[data-property-id]');
       if (row) {
@@ -4807,7 +4807,6 @@ function fixModalContent(bookingBlock) {
     // 2️⃣ Récupération du nom de logement
     let propertyName = null;
 
-    // a) Infos directement dans la réservation
     if (booking.propertyName) {
       propertyName = booking.propertyName;
     } else if (booking.property) {
@@ -4822,7 +4821,7 @@ function fixModalContent(bookingBlock) {
       }
     }
 
-    // b) Fallback via LCC_PROPERTIES si nécessaire
+    // Fallback via LCC_PROPERTIES
     if (!propertyName && propertyId) {
       let properties = [];
       try {
@@ -4854,7 +4853,7 @@ function fixModalContent(bookingBlock) {
       booking,
     });
 
-    // 3️⃣ Mise en forme des autres infos de base
+    // 3️⃣ Infos de base
     const rawStart = booking.start || booking.startDate;
     const rawEnd   = booking.end   || booking.endDate;
 
@@ -4870,7 +4869,7 @@ function fixModalContent(bookingBlock) {
     const platformRaw = booking.source || booking.platform || 'Direct';
     const platform    = String(platformRaw).toUpperCase();
 
-    // 4️⃣ On reconstruit complètement le contenu "de base" du modal (SANS la référence)
+    // 4️⃣ Contenu "de base" du modal (sans la référence technique)
     detailsContent.innerHTML = `
       <div class="detail-group">
         <label>Voyageur</label>
@@ -4913,23 +4912,16 @@ function fixModalContent(bookingBlock) {
       </div>
     `;
 
-    // 5️⃣ Gestion du ménage (lecture depuis localStorage)
+    // 5️⃣ Gestion du ménage – alignée sur cleaning.html
     try {
-      let reservationAssignments = {};
-      let genericAssignments = {};
+      let assignments = {};
       let cleaners = [];
 
       try {
-        reservationAssignments = JSON.parse(
-          localStorage.getItem('lcc_cleaning_reservation_assignments') || '{}'
-        );
-      } catch (e) {}
-
-      try {
-        genericAssignments = JSON.parse(
-          localStorage.getItem('lcc_cleaning_assignments') || '{}'
-        );
-      } catch (e) {}
+        assignments = JSON.parse(localStorage.getItem('lcc_cleaning_assignments') || '{}');
+      } catch (e) {
+        assignments = {};
+      }
 
       try {
         cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
@@ -4937,15 +4929,19 @@ function fixModalContent(bookingBlock) {
         cleaners = [];
       }
 
-      function getReservationKey(res) {
-        if (!res) return null;
-        if (res.reservationKey) return String(res.reservationKey);
-        if (res.uid) return String(res.uid);
-        if (res.id != null) return String(res.id);
-        if (res.propertyId && res.start && res.end) {
-          const startStr = String(res.start).slice(0, 10);
-          const endStr = String(res.end).slice(0, 10);
-          return res.propertyId + '::' + startStr + '>' + endStr;
+      // même logique que sur cleaning-5.html
+      function getReservationKey(reservation) {
+        if (!reservation) return null;
+        if (reservation.uid) return reservation.uid;
+        if (reservation.id != null) return String(reservation.id);
+        if (reservation.propertyId && reservation.start && reservation.end) {
+          return (
+            reservation.propertyId +
+            '::' +
+            String(reservation.start).slice(0, 10) +
+            '>' +
+            String(reservation.end).slice(0, 10)
+          );
         }
         return null;
       }
@@ -4958,35 +4954,23 @@ function fixModalContent(bookingBlock) {
       }
 
       const reservationKey = getReservationKey(booking);
-      const propertyIdForCleaning = booking.propertyId
-        ? String(booking.propertyId)
-        : (propertyId ? String(propertyId) : null);
-
-      let assignedId = null;
-
-      // 1) Assignation par réservation
-      if (reservationKey && reservationAssignments[reservationKey]) {
-        assignedId = reservationAssignments[reservationKey];
-      }
-
-      // 2) Fallback : assignation générique par logement
-      if (!assignedId && propertyIdForCleaning && genericAssignments[propertyIdForCleaning]) {
-        assignedId = genericAssignments[propertyIdForCleaning];
-      }
+      const assignedId =
+        reservationKey && assignments && assignments[reservationKey]
+          ? assignments[reservationKey]
+          : null;
 
       const cleanerName = getCleanerNameById(assignedId);
       const statusText = cleanerName
         ? 'Assigné à ' + cleanerName
         : 'Pas encore assigné';
 
-      console.log('🧹 Statut ménage pour cette résa :', {
+      console.log('🧹 Statut ménage (app.html) :', {
         reservationKey,
-        propertyId: propertyIdForCleaning,
         assignedId,
         cleanerName,
       });
 
-      // Injection / mise à jour du bloc "Ménage" dans le modal
+      // Injection / mise à jour du bloc "Ménage"
       let group = detailsContent.querySelector('[data-cleaning-info="1"]');
       if (!group) {
         group = document.createElement('div');
@@ -5007,11 +4991,10 @@ function fixModalContent(bookingBlock) {
       console.warn("Erreur lors de l'injection des infos ménage dans le modal", e);
     }
 
-    // 6️⃣ On ouvre le modal
+    // 6️⃣ Ouverture du modal et datasets utiles
     detailsModal.style.display = 'flex';
     detailsModal.classList.add('active');
 
-    // Dataset utiles pour supprimer / éditer (on garde l’UID, mais on ne l’affiche plus)
     const reservationUid =
       booking.uid ||
       booking.reservationKey ||
@@ -5022,6 +5005,7 @@ function fixModalContent(bookingBlock) {
     detailsModal.dataset.reservationUid = reservationUid;
   }, 50);
 }
+
 
 
 
