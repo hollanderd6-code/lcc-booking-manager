@@ -5465,13 +5465,14 @@ app.get('/api/owner-invoices', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(`
-      SELECT
+            SELECT
         i.id,
-        i.invoice_number,
+        COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
         i.issue_date,
         i.total_ttc,
         i.status,
         COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name
+
       FROM owner_invoices i
       JOIN owner_clients c ON c.id = i.client_id
       WHERE i.user_id = $1
