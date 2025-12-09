@@ -5206,56 +5206,66 @@ app.get('/api/owner-clients/:id', async (req, res) => {
 });
 
 // 3. CRÉER UN CLIENT
+// 3. CRÉER UN CLIENT
 app.post('/api/owner-clients', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const {
-      clientType, firstName, lastName, companyName,
-      email, phone, address, postalCode, city, country,
-      siret, vatNumber,
-      defaultCommissionRate, vatApplicable, defaultVatRate,
-      properties, notes
+      clientType,
+      firstName,
+      lastName,
+      companyName,
+      email,
+      address,
+      postalCode,
+      city,
+      defaultCommissionRate
     } = req.body;
 
-    // Validation
+    // Validation simple
     if (clientType === 'business' && !companyName) {
-      return res.status(400).json({ error: 'Nom d\'entreprise requis' });
+      return res.status(400).json({ error: "Nom d'entreprise requis" });
     }
     if (clientType === 'individual' && (!firstName || !lastName)) {
       return res.status(400).json({ error: 'Nom et prénom requis' });
     }
 
-    const result = await pool.query(`
-     const result = await pool.query(`
-  INSERT INTO owner_clients (
-    user_id, client_type, first_name, last_name, company_name,
-    email, address, postal_code, city,
-    default_commission_rate
-  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-  RETURNING *
-`, [
-  user.id,
-  clientType,
-  firstName || null,
-  lastName || null,
-  companyName || null,
-  email || null,
-  address || null,
-  postalCode || null,
-  city || null,
-  defaultCommissionRate || 20
-]);
+    const result = await pool.query(
+      `INSERT INTO owner_clients (
+        user_id,
+        client_type,
+        first_name,
+        last_name,
+        company_name,
+        email,
+        address,
+        postal_code,
+        city,
+        default_commission_rate
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      RETURNING *`,
+      [
+        user.id,
+        clientType,
+        firstName || null,
+        lastName || null,
+        companyName || null,
+        email || null,
+        address || null,
+        postalCode || null,
+        city || null,
+        defaultCommissionRate || 20
+      ]
+    );
 
     res.json({ client: result.rows[0] });
   } catch (err) {
     console.error('Erreur création client:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
-
-// 4. MODIFIER UN CLIENT
 app.put('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
