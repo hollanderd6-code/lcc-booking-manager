@@ -521,7 +521,8 @@
   }
 
   // --- FACTURES ---
-  async function loadInvoices() {
+  
+async function loadInvoices() {
   try {
     const res = await fetch('/api/owner-invoices', {
       headers: { Authorization: 'Bearer ' + token }
@@ -529,57 +530,69 @@
     const data = await res.json();
     const invs = data.invoices || [];
     const tbody = document.getElementById('invoicesTableBody');
-    
+
     if (invs.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="padding:40px; text-align:center;">Aucune facture.</td></tr>';
       document.getElementById('statsRevenue').textContent = '0.00 €';
       return;
     }
-    
+
     let totalRev = 0;
     tbody.innerHTML = invs.map(inv => {
       totalRev += parseFloat(inv.total_ttc || 0);
 
-      // numéro (déjà “Brouillon #id” côté backend si pas de numéro réel)
       const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
 
-      // statut lisible
       let statusLabel = inv.status;
-      if (inv.status === 'draft') statusLabel = 'Brouillon';
-        else if (inv.status === 'invoiced') statusLabel = 'Facturée';
-      else if (inv.status === 'sent') statusLabel = 'Envoyée';
-      else if (inv.status === 'paid') statusLabel = 'Payée';
+      if (inv.is_credit_note) {
+        statusLabel = 'Avoir';
+      } else if (inv.status === 'draft') {
+        statusLabel = 'Brouillon';
+      } else if (inv.status === 'invoiced') {
+        statusLabel = 'Facturée';
+      } else if (inv.status === 'sent') {
+        statusLabel = 'Envoyée';
+      } else if (inv.status === 'paid') {
+        statusLabel = 'Payée';
+      }
 
       return `
-  <tr style="border-bottom:1px solid #f3f4f6;">
-    <td style="padding:16px; font-weight:700; color:#10B981;">${numberDisplay}</td>
-    <td style="padding:16px;">${inv.client_name}</td>
-    <td style="padding:16px;">${new Date(inv.issue_date).toLocaleDateString()}</td>
-    <td style="padding:16px; font-weight:600;">${parseFloat(inv.total_ttc).toFixed(2)} €</td>
-    <td style="padding:16px;">${statusLabel}</td>
-    <td style="padding:16px; text-align:right;">
-      <div class="invoice-row-actions">
-        <button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(${inv.id}, this)">...</button>
-        <div class="invoice-actions-menu" id="invoice-actions-${inv.id}">
-          <button type="button" onclick="viewOwnerInvoice(${inv.id})">Voir la facture</button>
-          ${
-            inv.status === 'draft'
-              ? `
-                <button type="button" onclick="finalizeOwnerInvoice(${inv.id})">Passer en “Facturée”</button>
-                <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer le brouillon</button>
-              `
-              : `
-                <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
-                <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
-              `
-          }
-        </div>
-      </div>
-    </td>
-  </tr>`;
-
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:16px; font-weight:700; color:#10B981;">${numberDisplay}</td>
+          <td style="padding:16px;">${inv.client_name}</td>
+          <td style="padding:16px;">${new Date(inv.issue_date).toLocaleDateString()}</td>
+          <td style="padding:16px; font-weight:600;">${parseFloat(inv.total_ttc).toFixed(2)} €</td>
+          <td style="padding:16px;">${statusLabel}</td>
+          <td style="padding:16px; text-align:right;">
+            <div class="invoice-row-actions">
+              <button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(${inv.id}, this)">...</button>
+              <div class="invoice-actions-menu" id="invoice-actions-${inv.id}">
+                <button type="button" onclick="viewOwnerInvoice(${inv.id})">Voir la facture</button>
+                ${
+                  inv.is_credit_note
+                    ? `
+                      <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
+                      <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
+                      <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
+                    `
+                    : inv.status === 'draft'
+                      ? `
+                        <button type="button" onclick="finalizeOwnerInvoice(${inv.id})">Passer en Facturée</button>
+                        <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
+                        <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer le brouillon</button>
+                      `
+                      : `
+                        <button type="button" onclick="createOwnerCreditNote(${inv.id})">Créer un avoir</button>
+                        <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
+                        <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
+                        <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
+                      `
+                }
+              </div>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
 
     document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
   } catch (e) {
@@ -588,6 +601,7 @@
 }
 
 let editingClientId = null;
+ = null;
 window.toggleInvoiceActions = function (id, btn) {
   const menu = document.getElementById('invoice-actions-' + id);
   if (!menu) return;
