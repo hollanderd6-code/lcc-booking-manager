@@ -4775,7 +4775,11 @@ function fixModalContent(bookingBlock) {
 
   // On laisse un petit délai pour que currentBookingData soit bien défini
   setTimeout(function () {
-    const booking = window.currentBookingData || currentBookingData;
+    const booking =
+      window.currentBookingData ||
+      window.currentBooking ||
+      (typeof currentBookingData !== 'undefined' ? currentBookingData : null);
+
     if (!booking) {
       console.log('⚠️ Pas de currentBookingData dans fixModalContent, on sort');
       return;
@@ -4866,8 +4870,7 @@ function fixModalContent(bookingBlock) {
     const platformRaw = booking.source || booking.platform || 'Direct';
     const platform    = String(platformRaw).toUpperCase();
 
-
-    // 4️⃣ On reconstruit complètement le contenu "de base" du modal
+    // 4️⃣ On reconstruit complètement le contenu "de base" du modal (SANS la référence)
     detailsContent.innerHTML = `
       <div class="detail-group">
         <label>Voyageur</label>
@@ -4908,23 +4911,21 @@ function fixModalContent(bookingBlock) {
           </span>
         </div>
       </div>
+    `;
 
-
-    // 5️⃣ Gestion du ménage (reprise / adaptation du code d’origine)
+    // 5️⃣ Gestion du ménage (lecture depuis localStorage)
     try {
       let reservationAssignments = {};
       let genericAssignments = {};
       let cleaners = [];
 
       try {
-        // Assignations par réservation
         reservationAssignments = JSON.parse(
           localStorage.getItem('lcc_cleaning_reservation_assignments') || '{}'
         );
       } catch (e) {}
 
       try {
-        // Assignations par logement ou autres clés génériques
         genericAssignments = JSON.parse(
           localStorage.getItem('lcc_cleaning_assignments') || '{}'
         );
@@ -4938,7 +4939,6 @@ function fixModalContent(bookingBlock) {
 
       function getReservationKey(res) {
         if (!res) return null;
-        // priorité à des clés explicites
         if (res.reservationKey) return String(res.reservationKey);
         if (res.uid) return String(res.uid);
         if (res.id != null) return String(res.id);
@@ -4964,7 +4964,7 @@ function fixModalContent(bookingBlock) {
 
       let assignedId = null;
 
-      // 1) Assignation par réservation (table dédiée)
+      // 1) Assignation par réservation
       if (reservationKey && reservationAssignments[reservationKey]) {
         assignedId = reservationAssignments[reservationKey];
       }
@@ -5007,15 +5007,22 @@ function fixModalContent(bookingBlock) {
       console.warn("Erreur lors de l'injection des infos ménage dans le modal", e);
     }
 
-    // 6️⃣ On ouvre le modal (au cas où)
+    // 6️⃣ On ouvre le modal
     detailsModal.style.display = 'flex';
     detailsModal.classList.add('active');
 
-    // Dataset utiles pour supprimer / éditer
+    // Dataset utiles pour supprimer / éditer (on garde l’UID, mais on ne l’affiche plus)
+    const reservationUid =
+      booking.uid ||
+      booking.reservationKey ||
+      booking.id ||
+      '';
+
     detailsModal.dataset.propertyId = propertyId || '';
-    detailsModal.dataset.reservationUid = booking.uid || '';
+    detailsModal.dataset.reservationUid = reservationUid;
   }, 50);
 }
+
 
 
 
