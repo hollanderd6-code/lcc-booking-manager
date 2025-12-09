@@ -353,10 +353,13 @@ input[type="number"].form-control {
             <div class="editor-section">
               <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                  <input type="checkbox" id="invoiceVatApplicable" onchange="toggleVat(); updatePreview();"> TVA (20%)
-                </label>
-                <input type="number" id="invoiceVatRate" value="20" style="width:50px; display:none;" onchange="updatePreview()">
-              </div>
+                  <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()"> TVA
+<select id="invoiceVatRate" class="form-control" style="width:90px; display:none;" onchange="updatePreview()">
+  <option value="20">20 %</option>
+  <option value="10">10 %</option>
+  <option value="5.5">5,5 %</option>
+</select>
+
               <div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
                 <div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
                 <div style="display:flex; justify-content:space-between; margin-top:4px;"><span>TVA</span><strong id="displayTotalVAT">0.00 €</strong></div>
