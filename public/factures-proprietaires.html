@@ -484,6 +484,32 @@
       document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
     } catch(e) {}
   }
+let editingClientId = null;
+
+window.editClient = function(clientId) {
+    const client = clients.find(c => c.id == clientId);
+    if (!client) {
+        alert("Client introuvable.");
+        return;
+    }
+
+    editingClientId = clientId;
+
+    // Pré-remplir le popup
+    document.getElementById("clientPopupTitle").textContent = "Modifier le client";
+
+    document.querySelector(`input[name="clientType"][value="${client.client_type}"]`).checked = true;
+
+    document.getElementById("clientFirstName").value = client.first_name || "";
+    document.getElementById("clientLastName").value = client.last_name || "";
+    document.getElementById("clientCompanyName").value = client.company_name || "";
+    document.getElementById("clientEmail").value = client.email || "";
+    document.getElementById("clientAddress").value = client.address || "";
+    document.getElementById("clientPostalCode").value = client.postal_code || "";
+    document.getElementById("clientCity").value = client.city || "";
+
+    document.getElementById("clientPopup").style.display = "block";
+};
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
   window.addPrestation = function(type) {
@@ -795,31 +821,50 @@
 
   window.saveClient = async function() {
     const type = document.querySelector('input[name="clientType"]:checked').value;
+
     const payload = {
-      clientType: type,
-      firstName: document.getElementById('clientFirstName').value,
-      lastName: document.getElementById('clientLastName').value,
-      companyName: document.getElementById('clientCompanyName').value,
-      email: document.getElementById('clientEmail').value,
-      address: document.getElementById('clientAddress').value,
-      postalCode: document.getElementById('clientPostalCode').value,
-      city: document.getElementById('clientCity').value,
-      defaultCommissionRate: 20
+        clientType: type,
+        firstName: document.getElementById('clientFirstName').value,
+        lastName: document.getElementById('clientLastName').value,
+        companyName: document.getElementById('clientCompanyName').value,
+        email: document.getElementById('clientEmail').value,
+        address: document.getElementById('clientAddress').value,
+        postalCode: document.getElementById('clientPostalCode').value,
+        city: document.getElementById('clientCity').value,
+        defaultCommissionRate: 20
     };
-    
+
+    let url = "/api/owner-clients";
+    let method = "POST";
+
+    if (editingClientId !== null) {
+        url = `/api/owner-clients/${editingClientId}`;
+        method = "PUT";
+    }
+
     try {
-      const res = await fetch('/api/owner-clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(payload)
-      });
-      if(res.ok) {
-        alert("Client créé !");
-        closeClientModal();
+        const res = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (!res.ok) return alert(json.error || "Erreur serveur");
+
+        alert(editingClientId ? "Client mis à jour !" : "Client ajouté !");
+        
+        editingClientId = null;
+        document.getElementById('clientPopup').style.display = 'none';
         loadClients();
-      } else { alert("Erreur création client"); }
-    } catch(e) { alert("Erreur connexion"); }
-  };
+    } catch (err) {
+        console.error(err);
+        alert("Erreur serveur");
+    }
+};
 
   window.logout = function() {
     localStorage.removeItem('lcc_token');
