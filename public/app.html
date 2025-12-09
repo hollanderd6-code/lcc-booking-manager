@@ -6266,6 +6266,163 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  console.log('🔁 Correctif bouton + chargé');
+
+  const addBtn        = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
+  const modal         = document.getElementById('newReservationModal');
+  const form          = document.getElementById('newReservationForm');
+  const closeBtn      = document.getElementById('newReservationClose');
+  const cancelBtn     = document.getElementById('newReservationCancel');
+
+  const propertySelect = document.getElementById('nrProperty');
+  const startInput     = document.getElementById('nrStartDate');
+  const endInput       = document.getElementById('nrEndDate');
+  const guestInput     = document.getElementById('nrGuestName');
+  const notesInput     = document.getElementById('nrNotes');
+
+  // Charge la liste des logements dans le select
+  function fillProperties() {
+    if (!propertySelect) return;
+
+    let properties = [];
+
+    // 1) D'abord depuis la variable globale
+    if (Array.isArray(window.LCC_PROPERTIES) && window.LCC_PROPERTIES.length) {
+      properties = window.LCC_PROPERTIES;
+    } else {
+      // 2) Sinon depuis le localStorage
+      try {
+        properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      } catch (e) {
+        console.error('Erreur parsing LCC_PROPERTIES', e);
+        properties = [];
+      }
+    }
+
+    propertySelect.innerHTML = '<option value="">Sélectionner un logement...</option>';
+
+    if (properties && properties.length) {
+      properties.forEach(function (p) {
+        const opt = document.createElement('option');
+        opt.value = p.id || p._id || p.propertyId || '';
+        opt.textContent = p.name || p.title || ('Logement ' + (p.id || '?'));
+        propertySelect.appendChild(opt);
+      });
+    } else {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = "Aucun logement trouvé (vérifiez 'Mes logements')";
+      propertySelect.appendChild(opt);
+    }
+  }
+
+  function openNewReservationModal() {
+    if (!modal) return;
+
+    console.log('➕ Clic sur + (correctif)');
+    fillProperties();
+
+    // Dates par défaut : aujourd'hui si vide
+    const today = new Date().toISOString().slice(0, 10);
+    if (startInput && !startInput.value) startInput.value = today;
+    if (endInput && !endInput.value) endInput.value = today;
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+  }
+
+  function closeNewReservationModal() {
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.classList.remove('active');
+  }
+
+  // Clic sur le bouton +
+  if (addBtn) {
+    addBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openNewReservationModal();
+    });
+  }
+
+  // Fermeture (croix + bouton Annuler)
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      closeNewReservationModal();
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      closeNewReservationModal();
+    });
+  }
+
+  // Soumission du formulaire "Nouvelle réservation"
+  if (form) {
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (!propertySelect || !startInput || !endInput) return;
+
+      const payload = {
+        propertyId: propertySelect.value,
+        start:      startInput.value,
+        end:        endInput.value,
+        guestName:  guestInput ? guestInput.value : '',
+        notes:      notesInput ? notesInput.value : ''
+      };
+
+      // Vérifs basiques
+      if (!payload.propertyId) {
+        alert("⚠️ Attention : veuillez sélectionner un logement.");
+        return;
+      }
+      if (!payload.start || !payload.end) {
+        alert("⚠️ Attention : les dates sont obligatoires.");
+        return;
+      }
+
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        alert("⚠️ Impossible d'enregistrer : vous n'êtes pas authentifié (token manquant).");
+        return;
+      }
+
+      console.log('📦 Envoi nouvelle réservation manuelle :', payload);
+
+      try {
+        const res = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        console.log('📥 Réponse réservation manuelle :', data);
+
+        if (res.ok) {
+          alert('✅ Réservation enregistrée avec succès');
+          closeNewReservationModal();
+          location.reload();
+        } else {
+          alert("❌ Erreur serveur : " + (data.error || data.message || 'Problème inconnu'));
+        }
+      } catch (err) {
+        console.error('❌ Erreur réseau sur /reservations/manual', err);
+        alert("❌ Erreur réseau lors de l'enregistrement : " + err.message);
+      }
+    });
+  }
+});
+</script>
 
 </body>
 </html>
