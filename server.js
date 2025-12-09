@@ -5206,7 +5206,6 @@ app.get('/api/owner-clients/:id', async (req, res) => {
 });
 
 // 3. CRÉER UN CLIENT
-// 3. CRÉER UN CLIENT
 app.post('/api/owner-clients', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -5302,6 +5301,40 @@ const clientId = req.params.id;
     res.json({ client: result.rows[0] });
   } catch (err) {
     console.error('Erreur modification client:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+app.delete('/api/owner-clients/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const clientId = req.params.id;
+
+    // OPTIONNEL : bloquer si des factures existent déjà pour ce client
+    const invRes = await pool.query(
+      'SELECT COUNT(*) FROM owner_invoices WHERE client_id = $1 AND user_id = $2',
+      [clientId, user.id]
+    );
+    const invCount = parseInt(invRes.rows[0].count, 10) || 0;
+    if (invCount > 0) {
+      return res.status(400).json({
+        error: 'Impossible de supprimer un client qui a déjà des factures.'
+      });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [clientId, user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Client introuvable' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erreur suppression client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
