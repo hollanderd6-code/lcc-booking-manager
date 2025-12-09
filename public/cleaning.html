@@ -868,7 +868,22 @@
               return false;
             }
 
-            const endStr = String(r.end).slice(0, 10);
+          let endStr = '';
+
+if (r.end) {
+  const d = new Date(r.end);
+  if (!isNaN(d)) {
+    // Format français : 12/12/2025
+    endStr = d.toLocaleDateString('fr-FR');
+  } else {
+    // Fallback si jamais r.end est déjà une string du type "2025-12-12"
+    const raw = String(r.end).slice(0, 10).split('-'); // [aaaa, mm, jj]
+    if (raw.length === 3) {
+      endStr = `${raw[2]}/${raw[1]}/${raw[0]}`; // jj/mm/aaaa
+    }
+  }
+}
+
             return endStr >= todayStr;
           })
           .sort((a, b) => {
