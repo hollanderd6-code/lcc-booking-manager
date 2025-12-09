@@ -104,6 +104,44 @@
       .menu-toggle { display: block; font-size: 20px; background: none; border: none; cursor: pointer; margin-right: 16px; }
     }
     @media (min-width: 1025px) { .menu-toggle { display: none; } }
+    .invoice-row-actions {
+  position: relative;
+  display: inline-block;
+}
+/* LES 3 PETITS POINTS*/
+.invoice-actions-menu {
+  position: absolute;
+  right: 0;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(15,23,42,0.15);
+  padding: 4px;
+  min-width: 180px;
+  display: none;
+  z-index: 40;
+}
+
+.invoice-actions-menu.open {
+  display: block;
+}
+
+.invoice-actions-menu button {
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.invoice-actions-menu button:hover {
+  background: #f3f4f6;
+}
+
   </style>
 </head>
 <body>
