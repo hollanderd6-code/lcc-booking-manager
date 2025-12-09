@@ -59,7 +59,7 @@
     }
 
     /* Responsive global dashboard layout */
-    @media  {
+    @media (max-width: 768px) {
       .main-content {
         padding: 16px 12px 24px;
       }
@@ -1616,22 +1616,6 @@
     flex: 0 0 44px !important;
     height: auto !important;       
     min-height: 100% !important;   
-  }
-}
-  /* --- PATCH URGENT MOBILE --- */
-@media (max-width: 768px) {
-  /* Force les lignes à s'afficher en longueur et pas écrasées */
-  .calendar-row {
-    display: flex !important; 
-    align-items: stretch !important;
-    width: max-content !important; /* Force la largeur pour le scroll */
-  }
-  /* Force les cellules à prendre toute la hauteur */
-  .calendar-cell {
-    height: auto !important;
-    min-height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
   }
 }
 </style>
@@ -3415,6 +3399,7 @@ function populateEditBookingProperties(selectedPropertyId) {
             localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
             localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
             window.LCC_RESERVATIONS = reservations;
+            window.LCC_PROPERTIES   = properties;
           }
         } else {
           // fallback : données déjà en localStorage
@@ -4443,10 +4428,6 @@ if (j === 0 || cells.length === 1) {
     </div>
   </div>
 </div>
-<!-- Reservation Details Modal -->
-<div class="booking-modal" id="reservationDetailsModal">
-  ...
-</div>
 
 <!-- Cleaning Today Modal -->
 <div class="booking-modal" id="cleaningTodayModal">
@@ -4464,22 +4445,6 @@ if (j === 0 || cells.length === 1) {
   </div>
 </div>
 
-<!-- Cleaning Today Modal -->
-<div class="booking-modal" id="cleaningTodayModal">
-  <div class="modal-overlay" id="cleaningTodayOverlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Ménages du jour</h2>
-      <button class="modal-close" id="closeCleaningTodayModal">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="cleaningTodayContent" class="reservation-details">
-      <!-- Liste des départs à nettoyer aujourd’hui -->
-    </div>
-  </div>
-</div>
-</div>
 
 <!-- Edit Booking Modal -->
 <div class="booking-modal" id="editBookingModal">
@@ -6156,137 +6121,6 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
     });
   </script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log("🔧 Script de réparation activé");
-
-      // 1. RÉPARATION DU BOUTON "+"
-      // ----------------------------
-      const addBtn = document.getElementById('addBookingBtn'); // Ton ID actuel
-      const newModal = document.getElementById('newReservationModal');
-      const closeBtns = document.querySelectorAll('#newReservationClose, #newReservationCancel');
-      const propSelect = document.getElementById('nrProperty');
-
-      if (addBtn && newModal) {
-        // On remplace le bouton pour tuer les anciens bugs
-        const newBtn = addBtn.cloneNode(true);
-        addBtn.parentNode.replaceChild(newBtn, addBtn);
-
-        newBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          console.log("➕ Clic sur Ajouter !");
-          
-          // Remplir la liste des logements
-          if (propSelect && window.LCC_PROPERTIES) {
-            propSelect.innerHTML = '<option value="">Sélectionner...</option>';
-            window.LCC_PROPERTIES.forEach(p => {
-              const opt = document.createElement('option');
-              opt.value = p.id || p._id;
-              opt.textContent = p.name;
-              propSelect.appendChild(opt);
-            });
-          }
-          // Ouvrir le modal
-          newModal.style.display = 'flex';
-          newModal.classList.add('active');
-        });
-
-        // Fermeture
-        closeBtns.forEach(btn => {
-          btn.addEventListener('click', () => {
-            newModal.style.display = 'none';
-            newModal.classList.remove('active');
-          });
-        });
-      }
-
-      // 2. RÉPARATION DE L'ENREGISTREMENT (SAVE)
-      // ----------------------------------------
-      const form = document.getElementById('newReservationForm');
-      if (form) {
-        // Clone le formulaire pour supprimer les anciens écouteurs qui bloquent
-        const newForm = form.cloneNode(true);
-        form.parentNode.replaceChild(newForm, form);
-
-        newForm.addEventListener('submit', async function(e) {
-          e.preventDefault();
-          
-          // Récupération des valeurs
-          const payload = {
-            propertyId: document.getElementById('nrProperty').value,
-            guestName: document.getElementById('nrGuestName').value,
-            start: document.getElementById('nrStartDate').value,
-            end: document.getElementById('nrEndDate').value,
-            notes: document.getElementById('nrNotes').value
-          };
-
-          if(!payload.propertyId || !payload.start) {
-            alert("Veuillez remplir le logement et les dates.");
-            return;
-          }
-
-          try {
-            const token = localStorage.getItem('lcc_token');
-            const res = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-              body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-              alert("✅ Réservation enregistrée !");
-              window.location.reload();
-            } else {
-              const err = await res.json();
-              alert("Erreur: " + (err.error || "Inconnue"));
-            }
-          } catch(e) {
-            alert("Erreur de connexion serveur.");
-          }
-        });
-      }
-
-      // 3. RÉPARATION DES DÉTAILS (CLIC CALENDRIER)
-      // -------------------------------------------
-      // Création du modal détails s'il manque
-      let detModal = document.getElementById('reservationDetailsModal');
-      if (!detModal) {
-        document.body.insertAdjacentHTML('beforeend', `
-          <div class="booking-modal" id="reservationDetailsModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center;">
-            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5);" onclick="this.parentElement.style.display='none'"></div>
-            <div class="modal-content" style="background:white; padding:20px; border-radius:16px; width:90%; max-width:400px; position:relative;">
-              <h3 style="margin-top:0;">Détails</h3>
-              <div id="reservationDetailsContent"></div>
-              <button onclick="document.getElementById('reservationDetailsModal').style.display='none'" style="margin-top:20px; width:100%; padding:10px;">Fermer</button>
-            </div>
-          </div>
-        `);
-        detModal = document.getElementById('reservationDetailsModal');
-      }
-
-      // Gestion du clic
-      document.body.addEventListener('click', function(e) {
-        const block = e.target.closest('.booking-block');
-        if (block) {
-          const uid = block.getAttribute('data-booking-id');
-          // Chercher la réservation
-          let booking = (window.LCC_RESERVATIONS || []).find(r => String(r.id) == String(uid));
-          
-          if (booking) {
-            const content = document.getElementById('reservationDetailsContent');
-            content.innerHTML = `
-              <p><strong>Voyageur:</strong> ${booking.guestName || 'Inconnu'}</p>
-              <p><strong>Dates:</strong> ${new Date(booking.start||booking.startDate).toLocaleDateString()} - ${new Date(booking.end||booking.endDate).toLocaleDateString()}</p>
-              <p><strong>Source:</strong> ${booking.source || 'Direct'}</p>
-            `;
-            detModal.style.display = 'flex';
-          }
-        }
-      });
-
-    });
-  </script>
-</body>
-</html>
+  
 </body>
 </html>
