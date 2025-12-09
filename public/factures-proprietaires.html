@@ -110,9 +110,10 @@
 }
 /* LES 3 PETITS POINTS*/
 .invoice-actions-menu {
-  position: absolute;
+  position: fixed;              /* au lieu de absolute */
   right: 0;
-  margin-top: 4px;
+  top: 0;
+  margin-top: 0;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -120,8 +121,9 @@
   padding: 4px;
   min-width: 180px;
   display: none;
-  z-index: 40;
+  z-index: 9999;                /* passe au-dessus de la carte */
 }
+
 
 .invoice-actions-menu.open {
   display: block;
@@ -560,14 +562,28 @@ window.toggleInvoiceActions = function (id, btn) {
   const menu = document.getElementById('invoice-actions-' + id);
   if (!menu) return;
 
-  const isOpen = menu.classList.contains('open');
-  // fermer les autres
-  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
+  const wasOpen = menu.classList.contains('open');
 
-  if (!isOpen) {
-    menu.classList.add('open');
+  // Fermer tous les autres menus ouverts
+  document.querySelectorAll('.invoice-actions-menu.open')
+    .forEach(m => m.classList.remove('open'));
+
+  if (wasOpen) {
+    // si celui-là était déjà ouvert, on le referme et basta
+    return;
   }
+
+  // On calcule la position du bouton dans la fenêtre
+  const rect = btn.getBoundingClientRect();
+
+  // Positionner le menu juste sous le bouton, aligné à droite
+  const approxWidth = 200; // largeur approximative du menu
+  menu.style.top = (rect.bottom + 8) + 'px';
+  menu.style.left = (rect.right - approxWidth) + 'px';
+
+  menu.classList.add('open');
 };
+
 
 // Envoyer la facture (brouillon -> envoyée)
 window.sendOwnerInvoice = async function (id) {
