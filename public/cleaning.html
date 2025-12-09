@@ -854,43 +854,29 @@
 
         // Réservations avec départ aujourd’hui ou plus tard
         const upcoming = (RESERVATIONS || [])
-          .filter((r) => {
-            if (!r.end) return false;
+  .filter((r) => {
+    if (!r.end) return false;
 
-            const propertyId = getReservationPropertyId(r);
-            if (!propertyId) return false;
+    const propertyId = getReservationPropertyId(r);
+    if (!propertyId) return false;
 
-            // Si un logement est sélectionné, on ne garde que celui-là
-            if (
-              selectedReservationPropertyFilter &&
-              String(propertyId) !== String(selectedReservationPropertyFilter)
-            ) {
-              return false;
-            }
-
-          let endStr = '';
-
-if (r.end) {
-  const d = new Date(r.end);
-  if (!isNaN(d)) {
-    // Format français : 12/12/2025
-    endStr = d.toLocaleDateString('fr-FR');
-  } else {
-    // Fallback si jamais r.end est déjà une string du type "2025-12-12"
-    const raw = String(r.end).slice(0, 10).split('-'); // [aaaa, mm, jj]
-    if (raw.length === 3) {
-      endStr = `${raw[2]}/${raw[1]}/${raw[0]}`; // jj/mm/aaaa
+    // Si un logement est sélectionné, on ne garde que celui-là
+    if (
+      selectedReservationPropertyFilter &&
+      String(propertyId) !== String(selectedReservationPropertyFilter)
+    ) {
+      return false;
     }
-  }
-}
 
-            return endStr >= todayStr;
-          })
-          .sort((a, b) => {
-            const aEnd = String(a.end).slice(0, 10);
-            const bEnd = String(b.end).slice(0, 10);
-            return aEnd.localeCompare(bEnd);
-          });
+    const endStr = String(r.end).slice(0, 10); // ⚠️ on garde le format AAAA-MM-JJ pour filtrer
+    return endStr >= todayStr;
+  })
+  .sort((a, b) => {
+    const aEnd = String(a.end).slice(0, 10);
+    const bEnd = String(b.end).slice(0, 10);
+    return aEnd.localeCompare(bEnd);
+  });
+
 
         if (!upcoming.length) {
           assignContainer.innerHTML = `
