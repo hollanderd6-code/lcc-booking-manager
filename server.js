@@ -5471,6 +5471,7 @@ app.get('/api/owner-invoices', async (req, res) => {
         i.issue_date,
         i.total_ttc,
         i.status,
+        i.is_credit_note,
         COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name
 
       FROM owner_invoices i
@@ -5670,6 +5671,151 @@ app.get('/api/owner-invoices/:id', async (req, res) => {
   } catch (err) {
     console.error('Erreur lecture facture propriétaire:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+// CRÉER UN AVOIR SUR UNE FACTURE EXISTANTE
+app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const invoiceId = req.params.id;
+
+    // Récupérer la facture d'origine
+    const origResult = await client.query(
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [invoiceId, user.id]
+    );
+
+    if (origResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    const orig = origResult.rows[0];
+
+    if (orig.is_credit_note) {
+      return res.status(400).json({ error: 'Impossible de créer un avoir sur un avoir.' });
+    }
+    if (orig.status === 'draft') {
+      return res.status(400).json({ error: 'On ne peut créer un avoir que sur une facture facturée.' });
+    }
+
+    await client.query('BEGIN');
+
+    // Totaux négatifs pour l'avoir
+    const creditSubtotalHt     = -Number(orig.subtotal_ht     || 0);
+    const creditSubtotalDebours = -Number(orig.subtotal_debours || 0);
+    const creditVatAmount      = -Number(orig.vat_amount      || 0);
+    const creditTotalTtc       = -Number(orig.total_ttc       || 0);
+    const creditDiscountAmount = -Number(orig.discount_amount || 0);
+
+    // Créer la facture d'avoir (statut "invoiced" directement)
+    const insertResult = await client.query(`
+      INSERT INTO owner_invoices (
+        user_id,
+        client_id,
+        period_start,
+        period_end,
+        issue_date,
+        due_date,
+        vat_applicable,
+        vat_rate,
+        discount_type,
+        discount_value,
+        discount_amount,
+        subtotal_ht,
+        subtotal_debours,
+        vat_amount,
+        total_ttc,
+        notes,
+        internal_notes,
+        status,
+        is_credit_note,
+        original_invoice_id,
+        created_at
+      )
+      VALUES (
+        $1,$2,$3,$4,
+        CURRENT_DATE,
+        $5,
+        $6,$7,
+        $8,$9,$10,
+        $11,$12,$13,$14,
+        $15,$16,
+        'invoiced',
+        TRUE,
+        $17,
+        NOW()
+      )
+      RETURNING *
+    `, [
+      orig.user_id,
+      orig.client_id,
+      orig.period_start,
+      orig.period_end,
+      orig.due_date,
+      orig.vat_applicable,
+      orig.vat_rate,
+      orig.discount_type,
+      orig.discount_value,
+      creditDiscountAmount,
+      creditSubtotalHt,
+      creditSubtotalDebours,
+      creditVatAmount,
+      creditTotalTtc,
+      orig.notes,
+      orig.internal_notes,
+      orig.id
+    ]);
+
+    const credit = insertResult.rows[0];
+    const creditId = credit.id;
+
+    // Générer un numéro d'avoir type A-2025-0007
+    const year = new Date().getFullYear();
+    const creditNumber = `A-${year}-${String(creditId).padStart(4, '0')}`;
+
+    await client.query(
+      'UPDATE owner_invoices SET invoice_number = $1 WHERE id = $2',
+      [creditNumber, creditId]
+    );
+
+    // Copier les lignes en négatif
+    await client.query(`
+      INSERT INTO owner_invoice_items (
+        invoice_id, item_type, description,
+        rental_amount, commission_rate,
+        quantity, unit_price, total,
+        order_index, is_debours
+      )
+      SELECT
+        $1,
+        item_type,
+        description,
+        -rental_amount,
+        commission_rate,
+        -quantity,
+        -unit_price,
+        -total,
+        order_index,
+        is_debours
+      FROM owner_invoice_items
+      WHERE invoice_id = $2
+    `, [creditId, invoiceId]);
+
+    await client.query('COMMIT');
+
+    // Renvoie l'avoir créé
+    res.json({ invoice: { ...credit, invoice_number: creditNumber } });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erreur création avoir propriétaire:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
   }
 });
 
