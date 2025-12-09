@@ -437,8 +437,16 @@
     </div>
     
     <button onclick="saveClient()" class="btn btn-primary" style="width:100%;">Enregistrer</button>
+      <button
+      onclick="deleteOwnerClient()"
+      id="clientDeleteBtn"
+      class="btn"
+      style="width:100%; margin-top:8px; background:#dc2626; color:white; display:none;">
+      Supprimer ce client
+    </button>
   </div>
 </div>
+
 
 
 <script>
@@ -738,31 +746,35 @@ window.createOwnerCreditNote = async function (id) {
 };
 
 window.editClient = function(clientId) {
-    const client = clients.find(c => c.id == clientId);
-    if (!client) {
-        alert("Client introuvable.");
-        return;
-    }
+  const client = clients.find(c => c.id == clientId);
+  if (!client) {
+      alert("Client introuvable.");
+      return;
+  }
 
-    editingClientId = clientId;
+  editingClientId = clientId;
 
-    const titleEl = document.getElementById('clientModalTitle');
-    if (titleEl) titleEl.textContent = 'Modifier le client';
+  const titleEl = document.getElementById('clientModalTitle');
+  if (titleEl) titleEl.textContent = 'Modifier le client';
 
-    const type = client.client_type || (client.company_name ? 'business' : 'individual');
-    const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
-    if (radio) radio.checked = true;
-    toggleClientType();
+  const type = client.client_type || (client.company_name ? 'business' : 'individual');
+  const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
+  if (radio) radio.checked = true;
+  toggleClientType();
 
-    document.getElementById("clientFirstName").value   = client.first_name   || "";
-    document.getElementById("clientLastName").value    = client.last_name    || "";
-    document.getElementById("clientCompanyName").value = client.company_name || "";
-    document.getElementById("clientEmail").value       = client.email        || "";
-    document.getElementById("clientAddress").value     = client.address      || "";
-    document.getElementById("clientPostalCode").value  = client.postal_code  || "";
-    document.getElementById("clientCity").value        = client.city         || "";
+  document.getElementById("clientFirstName").value   = client.first_name   || "";
+  document.getElementById("clientLastName").value    = client.last_name    || "";
+  document.getElementById("clientCompanyName").value = client.company_name || "";
+  document.getElementById("clientEmail").value       = client.email        || "";
+  document.getElementById("clientAddress").value     = client.address      || "";
+  document.getElementById("clientPostalCode").value  = client.postal_code  || "";
+  document.getElementById("clientCity").value        = client.city         || "";
 
-    document.getElementById("clientModal").classList.add("active");
+  // bouton supprimer visible en édition
+  const delBtn = document.getElementById('clientDeleteBtn');
+  if (delBtn) delBtn.style.display = 'block';
+
+  document.getElementById("clientModal").classList.add("active");
 };
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
@@ -1134,23 +1146,28 @@ window.viewOwnerInvoice = async function(id) {
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() {
-    editingClientId = null;
+  editingClientId = null;
 
-    const titleEl = document.getElementById('clientModalTitle');
-    if (titleEl) titleEl.textContent = 'Nouveau client';
+  const titleEl = document.getElementById('clientModalTitle');
+  if (titleEl) titleEl.textContent = 'Nouveau client';
 
-    const radioInd = document.querySelector('input[name="clientType"][value="individual"]');
-    if (radioInd) radioInd.checked = true;
-    toggleClientType();
+  const radioInd = document.querySelector('input[name="clientType"][value="individual"]');
+  if (radioInd) radioInd.checked = true;
+  toggleClientType();
 
-    ['clientFirstName','clientLastName','clientCompanyName','clientEmail','clientAddress','clientPostalCode','clientCity']
-      .forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
+  ['clientFirstName','clientLastName','clientCompanyName','clientEmail','clientAddress','clientPostalCode','clientCity']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
 
-    document.getElementById('clientModal').classList.add('active');
-  };
+  // bouton supprimer caché en création
+  const delBtn = document.getElementById('clientDeleteBtn');
+  if (delBtn) delBtn.style.display = 'none';
+
+  document.getElementById('clientModal').classList.add('active');
+};
+
   window.closeClientModal = function() {
     document.getElementById('clientModal').classList.remove('active');
     editingClientId = null;
@@ -1205,6 +1222,33 @@ window.viewOwnerInvoice = async function(id) {
         console.error(err);
         alert("Erreur serveur");
     }
+};
+window.deleteOwnerClient = async function() {
+  if (editingClientId === null) return;
+
+  if (!confirm('Supprimer ce client ?')) return;
+
+  try {
+    const res = await fetch('/api/owner-clients/' + editingClientId, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    const json = await res.json();
+
+    if (!res.ok) {
+      console.error(json);
+      return alert(json.error || 'Erreur serveur');
+    }
+
+    alert('Client supprimé.');
+    closeClientModal();
+    await loadClients();
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur');
+  }
 };
 
   window.logout = function() {
