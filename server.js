@@ -5228,21 +5228,25 @@ app.post('/api/owner-clients', async (req, res) => {
     }
 
     const result = await pool.query(`
-      INSERT INTO owner_clients (
-        user_id, client_type, first_name, last_name, company_name,
-        email, phone, address, postal_code, city, country,
-        siret, vat_number,
-        default_commission_rate, vat_applicable, default_vat_rate,
-        properties, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-      RETURNING *
-    `, [
-      user.id, clientType, firstName, lastName, companyName,
-      email, phone, address, postalCode, city, country || 'France',
-      siret, vatNumber,
-      defaultCommissionRate || 20, vatApplicable || false, defaultVatRate || 20,
-      JSON.stringify(properties || []), notes
-    ]);
+     const result = await pool.query(`
+  INSERT INTO owner_clients (
+    user_id, client_type, first_name, last_name, company_name,
+    email, address, postal_code, city,
+    default_commission_rate
+  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  RETURNING *
+`, [
+  user.id,
+  clientType,
+  firstName || null,
+  lastName || null,
+  companyName || null,
+  email || null,
+  address || null,
+  postalCode || null,
+  city || null,
+  defaultCommissionRate || 20
+]);
 
     res.json({ client: result.rows[0] });
   } catch (err) {
@@ -5257,13 +5261,7 @@ app.put('/api/owner-clients/:id', async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const {
-      clientType, firstName, lastName, companyName,
-      email, phone, address, postalCode, city, country,
-      siret, vatNumber,
-      defaultCommissionRate, vatApplicable, defaultVatRate,
-      properties, notes
-    } = req.body;
+  
 
     const result = await pool.query(`
       UPDATE owner_clients SET
