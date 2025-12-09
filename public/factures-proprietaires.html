@@ -216,50 +216,48 @@
             </div>
 
             <div class="editor-section">
-  <div class="editor-section-title">Profil émetteur</div>
+                            <div class="editor-section-title">Profil émetteur</div>
 
-  <div class="form-group">
-    <label>Nom de l'entreprise</label>
-    <input type="text" id="emitterCompany" class="form-control" placeholder="La conciergerie de Charles" oninput="updateEmitterProfile()">
-  </div>
+              <div class="form-group">
+                <label>Nom de l'entreprise</label>
+                <input type="text" id="emitterCompany" class="form-control" placeholder="La conciergerie de Charles" oninput="updateEmitterProfile()">
+              </div>
 
-  <div class="form-group">
-    <label>Adresse</label>
-    <input type="text" id="emitterAddress" class="form-control" placeholder="25 boulevard de la République" oninput="updateEmitterProfile()">
-  </div>
+              <div class="form-group">
+                <label>Adresse</label>
+                <input type="text" id="emitterAddress" class="form-control" placeholder="25 boulevard de la République" oninput="updateEmitterProfile()">
+              </div>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-    <div class="form-group">
-      <label>Code postal</label>
-      <input type="text" id="emitterPostalCode" class="form-control" placeholder="95210" oninput="updateEmitterProfile()">
-    </div>
-    <div class="form-group">
-      <label>Ville</label>
-      <input type="text" id="emitterCity" class="form-control" placeholder="Saint-Gratien" oninput="updateEmitterProfile()">
-    </div>
-  </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="form-group">
+                  <label>Code postal</label>
+                  <input type="text" id="emitterPostalCode" class="form-control" placeholder="95210" oninput="updateEmitterProfile()">
+                </div>
+                <div class="form-group">
+                  <label>Ville</label>
+                  <input type="text" id="emitterCity" class="form-control" placeholder="Saint-Gratien" oninput="updateEmitterProfile()">
+                </div>
+              </div>
 
-  <div class="form-group">
-    <label>SIRET</label>
-    <input type="text" id="emitterSiret" class="form-control" placeholder="534 392 600 00000" oninput="updateEmitterProfile()">
-  </div>
+              <div class="form-group">
+                <label>SIRET</label>
+                <input type="text" id="emitterSiret" class="form-control" placeholder="534 392 600" oninput="updateEmitterProfile()">
+              </div>
 
-  <div class="form-group">
-    <label>Logo entreprise (optionnel)</label>
-    <input type="file" id="logoInput" accept="image/*" class="form-control" onchange="updateLogoPreview()">
-  </div>
+              <div class="form-group">
+                <label>Logo entreprise (optionnel)</label>
+                <input type="file" id="logoInput" accept="image/*" class="form-control" onchange="updateLogoPreview()">
+              </div>
 
-  <div class="form-group">
-    <label>Adresse affichée sur la facture</label>
-    <textarea id="senderAddressInput" rows="2" class="form-control" placeholder="Votre adresse..." oninput="updatePreview()"></textarea>
-    <div style="font-size:11px; color:#6b7280; margin-top:4px;">
-      Elle est pré-remplie automatiquement avec les champs ci-dessus, mais vous pouvez la modifier pour une facture précise.
-    </div>
-  </div>
-</div>
-
-
-            <div class="editor-section">
+              <div class="form-group">
+                <label>Adresse affichée sur la facture</label>
+                <textarea id="senderAddressInput" rows="2" class="form-control" placeholder="Votre adresse..." oninput="updatePreview()"></textarea>
+                <div style="font-size:11px; color:#6b7280; margin-top:4px;">
+                  Elle est pré-remplie automatiquement avec les champs ci-dessus, mais vous pouvez la modifier pour une facture précise.
+                </div>
+              </div>
+            </div>
+<div class="editor-section">
               <div class="editor-section-title">Prestations</div>
               <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:12px;">
                 <button class="btn-xs btn-secondary" onclick="addPrestation('commission')">% Com</button>
@@ -385,7 +383,7 @@
   let prestations = [];
   let prestationCounter = 0;
   let editingInvoiceId = null;
-    let emitterProfile = {
+  let emitterProfile = {
     company: '',
     address: '',
     postalCode: '',
@@ -398,15 +396,15 @@
 
   // --- INIT ---
   document.addEventListener('DOMContentLoaded', async () => {
-    if (!token) return window.location.href = '/login.html';
+    if(!token) return window.location.href='/login.html';
     
     // User Info
     currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    if (currentUser.firstName) {
+    if(currentUser.firstName) {
       document.getElementById('userName').textContent = currentUser.firstName;
     }
 
-    // Charger profil émetteur (avant de mettre à jour le preview)
+    // Profil émetteur
     loadEmitterProfile();
 
     // Dates defaut
@@ -418,73 +416,6 @@
     await Promise.all([loadClients(), loadInvoices()]);
     // Ajout d'une ligne par défaut pour pas que ce soit vide
     addPrestation('commission');
-      function loadEmitterProfile() {
-    try {
-      const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
-      emitterProfile = { ...emitterProfile, ...saved };
-
-      // Remplir les champs
-      document.getElementById('emitterCompany').value = emitterProfile.company || '';
-      document.getElementById('emitterAddress').value = emitterProfile.address || '';
-      document.getElementById('emitterPostalCode').value = emitterProfile.postalCode || '';
-      document.getElementById('emitterCity').value = emitterProfile.city || '';
-      document.getElementById('emitterSiret').value = emitterProfile.siret || '';
-
-      // Reconstituer l'adresse affichée
-      updateSenderAddressFromProfile();
-
-      // Logo par défaut
-      if (emitterProfile.logoDataUrl) {
-        document.getElementById('paperLogoContainer').innerHTML =
-          `<img src="${emitterProfile.logoDataUrl}" class="paper-logo-img">`;
-      }
-
-      updateSenderPreviewOnly();
-    } catch (e) {
-      console.warn('Impossible de charger le profil émetteur', e);
-    }
-  }
-
-  function saveEmitterProfile() {
-    localStorage.setItem('lcc_owner_emitter_profile', JSON.stringify(emitterProfile));
-  }
-
-  window.updateEmitterProfile = function () {
-    emitterProfile.company = document.getElementById('emitterCompany').value.trim();
-    emitterProfile.address = document.getElementById('emitterAddress').value.trim();
-    emitterProfile.postalCode = document.getElementById('emitterPostalCode').value.trim();
-    emitterProfile.city = document.getElementById('emitterCity').value.trim();
-    emitterProfile.siret = document.getElementById('emitterSiret').value.trim();
-
-    updateSenderAddressFromProfile();
-    saveEmitterProfile();
-    updateSenderPreviewOnly();
-    updatePreview(); // pour recalculer si besoin
-  };
-
-  function updateSenderAddressFromProfile() {
-    const parts = [];
-    if (emitterProfile.address) parts.push(emitterProfile.address);
-    const cityLine = `${emitterProfile.postalCode || ''} ${emitterProfile.city || ''}`.trim();
-    if (cityLine) parts.push(cityLine);
-    if (emitterProfile.siret) parts.push('SIRET : ' + emitterProfile.siret);
-
-    const text = parts.join('\n');
-    document.getElementById('senderAddressInput').value = text;
-  }
-
-  function updateSenderPreviewOnly() {
-    const name =
-      emitterProfile.company ||
-      (currentUser && (currentUser.company || (currentUser.firstName + ' ' + (currentUser.last_name || '')))) ||
-      'Votre Entreprise';
-
-    document.getElementById('previewSenderName').textContent = name;
-
-    const addr = document.getElementById('senderAddressInput').value || 'Adresse...';
-    document.getElementById('previewSenderAddress').innerText = addr;
-  }
-
     updatePreview(); 
   });
 
@@ -627,39 +558,110 @@
     if(p.type === 'commission') return p.rentalAmount * (p.commissionRate/100);
     return p.quantity * p.unitPrice;
   }
-function updateSenderPreviewOnly() {
-  // Nom émetteur
-  const name =
-    emitterProfile.company ||
-    (currentUser &&
-      (currentUser.company ||
-        `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim())) ||
-    'Votre Entreprise';
 
-  const senderNameEl = document.getElementById('previewSenderName');
-  if (senderNameEl) senderNameEl.textContent = name;
 
-  // Adresse émetteur
-  const addrTextarea = document.getElementById('senderAddressInput');
-  const addr = (addrTextarea && addrTextarea.value) || 'Adresse...';
+  function loadEmitterProfile() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
+      emitterProfile = { ...emitterProfile, ...saved };
 
-  const senderAddrEl = document.getElementById('previewSenderAddress');
-  if (senderAddrEl) senderAddrEl.innerText = addr;
-}
+      const companyInput = document.getElementById('emitterCompany');
+      const addressInput = document.getElementById('emitterAddress');
+      const postalInput = document.getElementById('emitterPostalCode');
+      const cityInput = document.getElementById('emitterCity');
+      const siretInput = document.getElementById('emitterSiret');
+
+      if (companyInput) companyInput.value = emitterProfile.company || '';
+      if (addressInput) addressInput.value = emitterProfile.address || '';
+      if (postalInput) postalInput.value = emitterProfile.postalCode || '';
+      if (cityInput) cityInput.value = emitterProfile.city || '';
+      if (siretInput) siretInput.value = emitterProfile.siret || '';
+
+      updateSenderAddressFromProfile();
+      updateSenderPreviewOnly();
+
+      // Logo par défaut si déjà enregistré
+      if (emitterProfile.logoDataUrl) {
+        const logoContainer = document.getElementById('paperLogoContainer');
+        if (logoContainer) {
+          logoContainer.innerHTML = '<img src="' + emitterProfile.logoDataUrl + '" class="paper-logo-img">';
+        }
+      }
+    } catch (e) {
+      console.warn('Impossible de charger le profil émetteur', e);
+    }
+  }
+
+  function saveEmitterProfile() {
+    try {
+      localStorage.setItem('lcc_owner_emitter_profile', JSON.stringify(emitterProfile));
+    } catch (e) {
+      console.warn('Impossible d\'enregistrer le profil émetteur', e);
+    }
+  }
+
+  window.updateEmitterProfile = function () {
+    const companyInput = document.getElementById('emitterCompany');
+    const addressInput = document.getElementById('emitterAddress');
+    const postalInput = document.getElementById('emitterPostalCode');
+    const cityInput = document.getElementById('emitterCity');
+    const siretInput = document.getElementById('emitterSiret');
+
+    emitterProfile.company = companyInput ? companyInput.value.trim() : '';
+    emitterProfile.address = addressInput ? addressInput.value.trim() : '';
+    emitterProfile.postalCode = postalInput ? postalInput.value.trim() : '';
+    emitterProfile.city = cityInput ? cityInput.value.trim() : '';
+    emitterProfile.siret = siretInput ? siretInput.value.trim() : '';
+
+    updateSenderAddressFromProfile();
+    saveEmitterProfile();
+    updateSenderPreviewOnly();
+    updatePreview();
+  };
+
+  function updateSenderAddressFromProfile() {
+    const parts = [];
+    if (emitterProfile.address) parts.push(emitterProfile.address);
+    const cityLine = (emitterProfile.postalCode || '') + ' ' + (emitterProfile.city || '');
+    if (cityLine.trim()) parts.push(cityLine.trim());
+    if (emitterProfile.siret) parts.push('SIRET : ' + emitterProfile.siret);
+
+    const textarea = document.getElementById('senderAddressInput');
+    if (textarea) {
+      textarea.value = parts.join('\n');
+    }
+  }
+
+  function updateSenderPreviewOnly() {
+    let name = emitterProfile.company;
+    if (!name && currentUser) {
+      if (currentUser.company) name = currentUser.company;
+      else {
+        const first = currentUser.firstName || '';
+        const last = currentUser.last_name || currentUser.lastName || '';
+        name = (first + ' ' + last).trim();
+      }
+    }
+    if (!name) name = 'Votre Entreprise';
+
+    const senderNameEl = document.getElementById('previewSenderName');
+    if (senderNameEl) senderNameEl.textContent = name;
+
+    const addrTextarea = document.getElementById('senderAddressInput');
+    const addr = (addrTextarea && addrTextarea.value) || '';
+    const senderAddrEl = document.getElementById('previewSenderAddress');
+    if (senderAddrEl) senderAddrEl.innerText = addr || 'Adresse...';
+  }
 
   // --- PREVIEW ---
-    window.updatePreview = function() {
+  window.updatePreview = function() {
     // Client
     const cliId = document.getElementById('invoiceClientId').value;
     const client = clients.find(c => String(c.id) === cliId);
-    if (client) {
+    if(client) {
       const name = client.company_name || `${client.first_name} ${client.last_name}`;
       document.getElementById('previewClientName').textContent = name;
-      document.getElementById('previewClientDetails').innerHTML =
-        `${client.address || ''}<br>${client.postal_code || ''} ${client.city || ''}`;
-    } else {
-      document.getElementById('previewClientName').textContent = 'Sélectionnez un client...';
-      document.getElementById('previewClientDetails').innerHTML = '';
+      document.getElementById('previewClientDetails').innerHTML = `${client.address || ''}<br>${client.postal_code || ''} ${client.city || ''}`;
     }
 
     // Dates
@@ -667,18 +669,14 @@ function updateSenderPreviewOnly() {
     const dStart = document.getElementById('invoicePeriodStart').valueAsDate;
     const dEnd = document.getElementById('invoicePeriodEnd').valueAsDate;
     
-    if (dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
-    if (dStart && dEnd) {
-      document.getElementById('previewPeriod').textContent =
-        `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
-    } else {
-      document.getElementById('previewPeriod').textContent = '-';
-    }
+    if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
+    if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
 
-    // Émetteur (nom + adresse)
-    updateSenderPreviewOnly();
+    // Sender
+    const sender = document.getElementById('senderAddressInput').value;
+    if(sender) document.getElementById('previewSenderAddress').textContent = sender;
 
-    // Lignes + totaux (inchangé sauf qu’on laisse la logique existante)
+    // Totaux
     const tbody = document.getElementById('previewBody');
     tbody.innerHTML = '';
     let totalHT = 0;
@@ -687,8 +685,8 @@ function updateSenderPreviewOnly() {
       const lineTotal = calculateLineTotal(p);
       totalHT += lineTotal;
       
-      const qtyDisplay = p.type === 'commission' ? `${p.rentalAmount}€` : p.quantity;
-      const priceDisplay = p.type === 'commission' ? `${p.commissionRate}%` : `${p.unitPrice}€`;
+      let qtyDisplay = p.type === 'commission' ? `${p.rentalAmount}€` : p.quantity;
+      let priceDisplay = p.type === 'commission' ? `${p.commissionRate}%` : `${p.unitPrice}€`;
 
       tbody.innerHTML += `
         <tr>
@@ -700,39 +698,34 @@ function updateSenderPreviewOnly() {
     });
 
     const hasVat = document.getElementById('invoiceVatApplicable').checked;
-    document.getElementById('invoiceVatRate').style.display = hasVat ? 'inline-block' : 'none';
+    if(hasVat) document.getElementById('invoiceVatRate').style.display = 'inline-block';
+    else document.getElementById('invoiceVatRate').style.display = 'none';
 
-    const vatRate = hasVat
-      ? (parseFloat(document.getElementById('invoiceVatRate').value) || 20) / 100
-      : 0;
-
+    const vatRate = hasVat ? (parseFloat(document.getElementById('invoiceVatRate').value)||20)/100 : 0;
     const vatAmount = totalHT * vatRate;
     const totalTTC = totalHT + vatAmount;
 
+    // MAJ UI
     const strHT = totalHT.toFixed(2) + ' €';
-    const strTVA = vatAmount.toFixed(2) + ' €';
     const strTTC = totalTTC.toFixed(2) + ' €';
     
     document.getElementById('displayTotalHT').textContent = strHT;
-    document.getElementById('displayTotalVAT').textContent = strTVA;
     document.getElementById('displayTotalTTC').textContent = strTTC;
-
     document.getElementById('previewTotalHT').textContent = strHT;
-    document.getElementById('previewTotalVAT').textContent = strTVA;
     document.getElementById('previewTotalTTC').textContent = strTTC;
   };
 
-
   // --- LOGO ---
-    window.updateLogoPreview = function() {
+  window.updateLogoPreview = function() {
     const file = document.getElementById('logoInput').files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = function(e) {
         const dataUrl = e.target.result;
-        document.getElementById('paperLogoContainer').innerHTML =
-          `<img src="${dataUrl}" class="paper-logo-img">`;
-
+        const cont = document.getElementById('paperLogoContainer');
+        if (cont) {
+          cont.innerHTML = `<img src="${dataUrl}" class="paper-logo-img">`;
+        }
         emitterProfile.logoDataUrl = dataUrl;
         saveEmitterProfile();
       };
@@ -740,22 +733,21 @@ function updateSenderPreviewOnly() {
     }
   };
 
-
   // --- SAVE ---
-    window.createInvoice = async function(send) {
+  window.createInvoice = async function(send) {
     const clientId = document.getElementById('invoiceClientId').value;
-    if (!clientId) return alert('Veuillez sélectionner un client');
+    if(!clientId) return alert('Veuillez sélectionner un client');
 
     const data = {
       clientId: parseInt(clientId),
-      periodStart: document.getElementById('invoicePeriodStart').value || null,
-      periodEnd: document.getElementById('invoicePeriodEnd').value || null,
+      periodStart: document.getElementById('invoicePeriodStart').value,
+      periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate: document.getElementById('invoiceIssueDate').value,
       dueDate: document.getElementById('invoiceDueDate').value,
       items: prestations.map(p => ({
         itemType: p.type,
         description: p.description,
-        rentalAmount: p.rentalAmount,
+        rentalAmount: p.rentalAmount, // Important pour commission
         commissionRate: p.commissionRate,
         quantity: p.quantity,
         unitPrice: p.unitPrice,
@@ -763,74 +755,34 @@ function updateSenderPreviewOnly() {
         isDebours: p.isDebours
       })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
-      vatRate: parseFloat(document.getElementById('invoiceVatRate').value) || 20,
-      // éventuellement on envoie aussi les infos émetteur au backend
-      emitter: {
-        company: emitterProfile.company,
-        address: emitterProfile.address,
-        postalCode: emitterProfile.postalCode,
-        city: emitterProfile.city,
-        siret: emitterProfile.siret
-      }
+      vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
+      sendEmail: send
     };
 
     try {
-      const res = await fetch('/api/owner-invoices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
+      const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
+      const method = editingInvoiceId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify(data)
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        return alert('Erreur : ' + (json.error || 'Impossible de créer la facture'));
-      }
-
-      const created = json.invoice;
-      if (!created) {
-        return alert('Facture créée mais réponse inattendue du serveur');
-      }
-
-      // Si on a cliqué sur "Envoyer", on enchaîne avec la route d'envoi
-      if (send) {
-        const sendRes = await fetch(`/api/owner-invoices/${created.id}/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          }
-        });
-        const sendJson = await sendRes.json();
-
-        if (!sendRes.ok) {
-          return alert('Facture créée mais erreur à l\'envoi : ' + (sendJson.error || 'Erreur inconnue'));
-        }
-
-        alert('✅ Facture envoyée !');
+      if (res.ok) {
+        alert('✅ Facture enregistrée !');
+        prestations = [];
+        prestationCounter = 0;
+        renderEditorPrestations();
+        switchTab('dashboard');
+        loadInvoices();
       } else {
-        alert('✅ Facture enregistrée en brouillon !');
+        const err = await res.json();
+        alert('Erreur : ' + err.error);
       }
-
-      // Reset éditeur
-      prestations = [];
-      prestationCounter = 0;
-      renderEditorPrestations();
-      addPrestation('commission');
-      updatePreview();
-
-      switchTab('dashboard');
-      loadInvoices();
-
     } catch (err) {
       console.error(err);
       alert('Erreur serveur');
     }
   };
-
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() { document.getElementById('clientModal').classList.add('active'); };
