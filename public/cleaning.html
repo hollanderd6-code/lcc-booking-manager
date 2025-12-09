@@ -643,42 +643,53 @@
 
       // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
       async function loadAssignmentsFromApi() {
-        try {
-          const token = localStorage.getItem('lcc_token');
-          if (!token) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
 
-          const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
-            headers: {
-              Authorization: 'Bearer ' + token
-            }
-          });
-
-          if (!res.ok) {
-            console.warn('Erreur lors du chargement des assignations ménage', res.status);
-            return;
-          }
-
-          const data = await res.json();
-          const map = {};
-
-          // ➜ On attend maintenant des lignes avec reservation_key / reservation_uid
-          (data.assignments || []).forEach((row) => {
-            const key =
-              row.reservation_key ||
-              row.reservation_uid ||
-              (row.reservationId != null ? String(row.reservationId) : null);
-
-            if (key && row.cleaner_id) {
-              map[key] = row.cleaner_id;
-            }
-          });
-
-          assignments = map;
-          saveLocalData();
-        } catch (e) {
-          console.error('Erreur loadAssignmentsFromApi()', e);
-        }
+    const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
+      headers: {
+        Authorization: 'Bearer ' + token
       }
+    });
+
+    if (!res.ok) {
+      console.warn('Erreur lors du chargement des assignations ménage', res.status);
+      return;
+    }
+
+    const data = await res.json();
+    const apiMap = {};
+
+    // On reconstruit une map à partir de ce que renvoie l’API
+    (data.assignments || []).forEach((row) => {
+      const key =
+        row.reservation_key ||
+        row.reservation_uid ||
+        (row.reservationId != null ? String(row.reservationId) : null);
+
+      if (key && row.cleaner_id) {
+        apiMap[key] = row.cleaner_id;
+      }
+    });
+
+    const apiKeys = Object.keys(apiMap);
+
+    if (apiKeys.length > 0) {
+      // ✅ On FUSIONNE les assignations API avec les locales
+      // Les données API prennent le dessus si conflit
+      assignments = Object.assign({}, assignments, apiMap);
+      saveLocalData();
+    } else {
+      // ✅ Aucune assignation retournée → on NE TOUCHE PAS aux assignations locales
+      console.log("ℹ️ Aucune assignation ménage renvoyée par l’API, on garde les assignations locales.");
+    }
+  } catch (e) {
+    console.error('Erreur loadAssignmentsFromApi()', e);
+    // En cas d'erreur réseau, on ne touche pas non plus aux assignations locales
+  }
+}
+
 
       async function loadRemoteData() {
         try {
