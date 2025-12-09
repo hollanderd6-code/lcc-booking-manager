@@ -645,39 +645,76 @@
     document.getElementById('businessFields').style.display = t==='business'?'block':'none';
   };
 
+  // --- SAUVEGARDE CLIENT (CORRIGÉE & COMPLÈTE) ---
   window.saveClient = async function() {
-    const type = document.querySelector('input[name="clientType"]:checked').value;
+    // 1. Récupération du type
+    const typeRadio = document.querySelector('input[name="clientType"]:checked');
+    const clientType = typeRadio ? typeRadio.value : 'individual';
+
+    // 2. Construction de l'objet complet (comme dans ton ancien fichier)
     const payload = {
-      clientType: type,
+      clientType: clientType,
       firstName: document.getElementById('clientFirstName').value,
       lastName: document.getElementById('clientLastName').value,
       companyName: document.getElementById('clientCompanyName').value,
+      siret: document.getElementById('clientSiret').value,       // Ajouté
+      vatNumber: document.getElementById('clientVatNumber').value, // Ajouté
       email: document.getElementById('clientEmail').value,
+      phone: document.getElementById('clientPhone').value,       // Ajouté
       address: document.getElementById('clientAddress').value,
       postalCode: document.getElementById('clientPostalCode').value,
       city: document.getElementById('clientCity').value,
-      defaultCommissionRate: 20
+      country: document.getElementById('clientCountry').value || 'France',
+      
+      // Valeurs numériques et cases à cocher
+      defaultCommissionRate: parseFloat(document.getElementById('clientDefaultCommission').value) || 20,
+      defaultVatRate: parseFloat(document.getElementById('clientDefaultVatRate').value) || 20,
+      vatApplicable: document.getElementById('clientVatApplicable').checked,
+      notes: document.getElementById('clientNotes').value
     };
-    
+
+    // 3. Validation basique avant envoi
+    if (clientType === 'business' && !payload.companyName) {
+      alert('Erreur : La raison sociale est obligatoire pour une entreprise.');
+      return;
+    }
+    if (clientType === 'individual' && (!payload.firstName || !payload.lastName)) {
+      alert('Erreur : Nom et Prénom obligatoires.');
+      return;
+    }
+    if (!payload.email) {
+      alert('Erreur : L\'email est obligatoire.');
+      return;
+    }
+
+    console.log("📤 Envoi nouveau client :", payload);
+
     try {
       const res = await fetch('/api/owner-clients', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': 'Bearer ' + token 
+        },
         body: JSON.stringify(payload)
       });
-      if(res.ok) {
-        alert("Client créé !");
-        closeClientModal();
-        loadClients();
-      } else { alert("Erreur création client"); }
-    } catch(e) { alert("Erreur connexion"); }
-  };
+      
+      const data = await res.json();
 
-  window.logout = function() {
-    localStorage.removeItem('lcc_token');
-    window.location.href = '/login.html';
+      if(res.ok) {
+        alert("✅ Client créé avec succès !");
+        closeClientModal();
+        loadClients(); // Rafraîchit la liste
+      } else {
+        // Affiche l'erreur précise du serveur
+        console.error("Erreur serveur:", data);
+        alert("❌ Erreur : " + (data.error || data.message || "Impossible de créer le client."));
+      }
+    } catch(e) { 
+      console.error(e);
+      alert("❌ Erreur de connexion au serveur."); 
+    }
   };
-</script>
 
 </body>
 </html>
