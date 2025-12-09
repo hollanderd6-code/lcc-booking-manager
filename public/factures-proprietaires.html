@@ -76,24 +76,6 @@
     .totals-box { width: 260px; }
     .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #4b5563; }
     .total-row.final { font-size: 16px; font-weight: 700; color: var(--primary); border-top: 2px solid #e5e7eb; margin-top: 8px; padding-top: 12px; }
-/* Désactiver les petites flèches des inputs de type number */
-
-/* Chrome, Edge, Safari */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Firefox */
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-
-/* Optionnel : pour forcer un look "texte" partout */
-input[type="number"].form-control {
-  appearance: textfield;
-}
 
     /* PRESTATIONS MINI-CARDS (Style Éditeur) */
     .prestation-mini-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 8px; position: relative; }
@@ -354,12 +336,13 @@ input[type="number"].form-control {
               <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                   <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()"> TVA
-<select id="invoiceVatRate" class="form-control" style="width:90px; display:none;" onchange="updatePreview()">
-  <option value="20">20 %</option>
-  <option value="10">10 %</option>
-  <option value="5.5">5,5 %</option>
-</select>
-
+                </label>
+                <select id="invoiceVatRate" class="form-control" style="width:90px; display:none;" onchange="updatePreview()">
+                  <option value="20">20 %</option>
+                  <option value="10">10 %</option>
+                  <option value="5.5">5,5 %</option>
+                </select>
+              </div>
               <div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
                 <div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
                 <div style="display:flex; justify-content:space-between; margin-top:4px;"><span>TVA</span><strong id="displayTotalVAT">0.00 €</strong></div>
@@ -458,16 +441,8 @@ input[type="number"].form-control {
     </div>
     
     <button onclick="saveClient()" class="btn btn-primary" style="width:100%;">Enregistrer</button>
-      <button
-      onclick="deleteOwnerClient()"
-      id="clientDeleteBtn"
-      class="btn"
-      style="width:100%; margin-top:8px; background:#dc2626; color:white; display:none;">
-      Supprimer ce client
-    </button>
   </div>
 </div>
-
 
 
 <script>
@@ -549,8 +524,7 @@ input[type="number"].form-control {
   }
 
   // --- FACTURES ---
-  
-async function loadInvoices() {
+  async function loadInvoices() {
   try {
     const res = await fetch('/api/owner-invoices', {
       headers: { Authorization: 'Bearer ' + token }
@@ -569,19 +543,15 @@ async function loadInvoices() {
     tbody.innerHTML = invs.map(inv => {
       totalRev += parseFloat(inv.total_ttc || 0);
 
+      // numéro (déjà “Brouillon #id” côté backend si pas de numéro réel)
       const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
-let statusLabel = inv.status;
-if (inv.is_credit_note) {
-  statusLabel = 'Avoir';
-} else if (inv.status === 'draft') {
-  statusLabel = 'Brouillon';
-} else if (inv.status === 'invoiced') {
-  statusLabel = 'Facturée';
-} else if (inv.status === 'sent') {
-  statusLabel = 'Envoyée';
-} else if (inv.status === 'paid') {
-  statusLabel = 'Payée';
-}
+
+      // statut lisible
+      let statusLabel = inv.status;
+      if (inv.status === 'draft') statusLabel = 'Brouillon';
+        else if (inv.status === 'invoiced') statusLabel = 'Facturée';
+      else if (inv.status === 'sent') statusLabel = 'Envoyée';
+      else if (inv.status === 'paid') statusLabel = 'Payée';
 
       return `
   <tr style="border-bottom:1px solid #f3f4f6;">
@@ -596,38 +566,29 @@ if (inv.is_credit_note) {
         <div class="invoice-actions-menu" id="invoice-actions-${inv.id}">
           <button type="button" onclick="viewOwnerInvoice(${inv.id})">Voir la facture</button>
           ${
-            inv.is_credit_note
+            inv.status === 'draft'
               ? `
+                <button type="button" onclick="finalizeOwnerInvoice(${inv.id})">Passer en “Facturée”</button>
+                <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
+                <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer le brouillon</button>
+              `
+              : `
                 <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
                 <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
                 <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
               `
-              : inv.status === 'draft'
-                ? `
-                  <button type="button" onclick="finalizeOwnerInvoice(${inv.id})">Passer en “Facturée”</button>
-                  <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                  <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer le brouillon</button>
-                `
-                : `
-                  <button type="button" onclick="createOwnerCreditNote(${inv.id})">Créer un avoir</button>
-                  <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
-                  <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                  <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
-                `
           }
         </div>
       </div>
     </td>
   </tr>`;
 
-    }).join('');
 
     document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
   } catch (e) {
     console.error('Erreur chargement factures propriétaires:', e);
   }
 }
-
 
 let editingClientId = null;
 window.toggleInvoiceActions = function (id, btn) {
@@ -734,68 +695,33 @@ window.finalizeOwnerInvoice = async function (id) {
     alert('Erreur serveur');
   }
 };
-window.createOwnerCreditNote = async function (id) {
-  if (!confirm('Créer un avoir pour cette facture ?')) return;
-
-  try {
-    const res = await fetch('/api/owner-invoices/' + id + '/credit-note', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
-
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur lors de la création de l\'avoir');
-    }
-
-    alert('Avoir créé avec succès ✅');
-
-    // On recharge la liste
-    await loadInvoices();
-
-    // Et on ouvre l’avoir dans l’éditeur pour le voir / le télécharger
-    if (json.invoice && json.invoice.id) {
-      await viewOwnerInvoice(json.invoice.id);
-      switchTab('create');
-    }
-
-  } catch (e) {
-    console.error(e);
-    alert('Erreur serveur');
-  }
-};
 
 window.editClient = function(clientId) {
-  const client = clients.find(c => c.id == clientId);
-  if (!client) {
-      alert("Client introuvable.");
-      return;
-  }
+    const client = clients.find(c => c.id == clientId);
+    if (!client) {
+        alert("Client introuvable.");
+        return;
+    }
 
-  editingClientId = clientId;
+    editingClientId = clientId;
 
-  const titleEl = document.getElementById('clientModalTitle');
-  if (titleEl) titleEl.textContent = 'Modifier le client';
+    const titleEl = document.getElementById('clientModalTitle');
+    if (titleEl) titleEl.textContent = 'Modifier le client';
 
-  const type = client.client_type || (client.company_name ? 'business' : 'individual');
-  const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
-  if (radio) radio.checked = true;
-  toggleClientType();
+    const type = client.client_type || (client.company_name ? 'business' : 'individual');
+    const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
+    if (radio) radio.checked = true;
+    toggleClientType();
 
-  document.getElementById("clientFirstName").value   = client.first_name   || "";
-  document.getElementById("clientLastName").value    = client.last_name    || "";
-  document.getElementById("clientCompanyName").value = client.company_name || "";
-  document.getElementById("clientEmail").value       = client.email        || "";
-  document.getElementById("clientAddress").value     = client.address      || "";
-  document.getElementById("clientPostalCode").value  = client.postal_code  || "";
-  document.getElementById("clientCity").value        = client.city         || "";
+    document.getElementById("clientFirstName").value   = client.first_name   || "";
+    document.getElementById("clientLastName").value    = client.last_name    || "";
+    document.getElementById("clientCompanyName").value = client.company_name || "";
+    document.getElementById("clientEmail").value       = client.email        || "";
+    document.getElementById("clientAddress").value     = client.address      || "";
+    document.getElementById("clientPostalCode").value  = client.postal_code  || "";
+    document.getElementById("clientCity").value        = client.city         || "";
 
-  // bouton supprimer visible en édition
-  const delBtn = document.getElementById('clientDeleteBtn');
-  if (delBtn) delBtn.style.display = 'block';
-
-  document.getElementById("clientModal").classList.add("active");
+    document.getElementById("clientModal").classList.add("active");
 };
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
@@ -814,14 +740,13 @@ window.editClient = function(clientId) {
   };
 
   window.updatePrestation = function(id, key, val) {
-  const p = prestations.find(x => x.id === id);
-  if(p) {
-    p[key] = key==='description' ? val : parseFloat(val)||0;
-    // On ne re-render plus toute la liste ici pour éviter de perdre le focus
-    updatePreview();
-  }
-};
-
+    const p = prestations.find(x => x.id === id);
+    if(p) {
+      p[key] = key==='description' ? val : parseFloat(val)||0;
+      // On ne re-render plus toute la liste ici pour éviter de perdre le focus
+      updatePreview();
+    }
+  };
 
   window.removePrestation = function(id) {
     prestations = prestations.filter(x => x.id !== id);
@@ -1168,28 +1093,23 @@ window.viewOwnerInvoice = async function(id) {
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() {
-  editingClientId = null;
+    editingClientId = null;
 
-  const titleEl = document.getElementById('clientModalTitle');
-  if (titleEl) titleEl.textContent = 'Nouveau client';
+    const titleEl = document.getElementById('clientModalTitle');
+    if (titleEl) titleEl.textContent = 'Nouveau client';
 
-  const radioInd = document.querySelector('input[name="clientType"][value="individual"]');
-  if (radioInd) radioInd.checked = true;
-  toggleClientType();
+    const radioInd = document.querySelector('input[name="clientType"][value="individual"]');
+    if (radioInd) radioInd.checked = true;
+    toggleClientType();
 
-  ['clientFirstName','clientLastName','clientCompanyName','clientEmail','clientAddress','clientPostalCode','clientCity']
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
+    ['clientFirstName','clientLastName','clientCompanyName','clientEmail','clientAddress','clientPostalCode','clientCity']
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
 
-  // bouton supprimer caché en création
-  const delBtn = document.getElementById('clientDeleteBtn');
-  if (delBtn) delBtn.style.display = 'none';
-
-  document.getElementById('clientModal').classList.add('active');
-};
-
+    document.getElementById('clientModal').classList.add('active');
+  };
   window.closeClientModal = function() {
     document.getElementById('clientModal').classList.remove('active');
     editingClientId = null;
@@ -1244,33 +1164,6 @@ window.viewOwnerInvoice = async function(id) {
         console.error(err);
         alert("Erreur serveur");
     }
-};
-window.deleteOwnerClient = async function() {
-  if (editingClientId === null) return;
-
-  if (!confirm('Supprimer ce client ?')) return;
-
-  try {
-    const res = await fetch('/api/owner-clients/' + editingClientId, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
-    });
-    const json = await res.json();
-
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur serveur');
-    }
-
-    alert('Client supprimé.');
-    closeClientModal();
-    await loadClients();
-  } catch (err) {
-    console.error(err);
-    alert('Erreur serveur');
-  }
 };
 
   window.logout = function() {
