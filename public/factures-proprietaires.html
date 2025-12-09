@@ -535,7 +535,7 @@
             <div class="invoice-row-actions">
               <button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(${inv.id}, this)">...</button>
               <div class="invoice-actions-menu" id="invoice-actions-${inv.id}">
-                <button type="button" onclick="alert('La prévisualisation détaillée arrive bientôt 😄');">Voir la facture</button>
+                <button type="button" onclick="viewOwnerInvoice(${inv.id})">Voir la facture</button>
                 ${inv.status === 'draft'
                   ? `
                     <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer</button>
@@ -954,6 +954,74 @@ window.editClient = function(clientId) {
       alert('Erreur serveur');
     }
   };
+window.viewOwnerInvoice = async function(id) {
+  try {
+    const res = await fetch('/api/owner-invoices/' + id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+
+    if (!res.ok) {
+      console.error(json);
+      return alert(json.error || 'Erreur lors du chargement de la facture');
+    }
+
+    const inv = json.invoice;
+    const items = json.items || [];
+
+    // On passe en mode "édition de cette facture"
+    editingInvoiceId = inv.id;
+
+    // Remplir les champs de l'éditeur
+    const clientSelect = document.getElementById('invoiceClientId');
+    if (clientSelect) clientSelect.value = inv.client_id;
+
+    if (inv.issue_date) {
+      document.getElementById('invoiceIssueDate').value = inv.issue_date.slice(0,10);
+    }
+    if (inv.due_date) {
+      document.getElementById('invoiceDueDate').value = inv.due_date.slice(0,10);
+    }
+    if (inv.period_start) {
+      document.getElementById('invoicePeriodStart').value = inv.period_start.slice(0,10);
+    }
+    if (inv.period_end) {
+      document.getElementById('invoicePeriodEnd').value = inv.period_end.slice(0,10);
+    }
+
+    document.getElementById('invoiceVatApplicable').checked = !!inv.vat_applicable;
+    document.getElementById('invoiceVatRate').value = inv.vat_rate || 20;
+
+    // Recréer les prestations à partir des lignes
+    prestations = [];
+    prestationCounter = 0;
+
+    items.forEach(item => {
+      prestationCounter++;
+      prestations.push({
+        id: 'p' + prestationCounter,
+        type: item.item_type, // 'commission', 'cleaning', 'debours', etc.
+        description: item.description || '',
+        rentalAmount: parseFloat(item.rental_amount) || 0,
+        commissionRate: parseFloat(item.commission_rate) || 0,
+        quantity: parseFloat(item.quantity) || 0,
+        unitPrice: parseFloat(item.unit_price) || 0,
+        isDebours: item.is_debours
+      });
+    });
+
+    // Rafraîchir l’éditeur + aperçu
+    renderEditorPrestations();
+    updatePreview();
+
+    // Aller sur l’onglet "Éditeur"
+    switchTab('create');
+
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur lors du chargement de la facture');
+  }
+};
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() {
