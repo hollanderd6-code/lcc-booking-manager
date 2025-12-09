@@ -4765,342 +4765,172 @@ function findReservationForBlock(bookingBlock) {
   return found || null;
 }
 
-  
-function fixModalContent(bookingBlock) {
+  function fixModalContent(bookingBlock) {
+  const detailsModal   = document.getElementById('reservationDetailsModal');
   const detailsContent = document.getElementById('reservationDetailsContent');
-  if (!detailsContent) {
-    console.log('⚠️ Pas de reservationDetailsContent, on ne touche à rien');
+
+  if (!detailsModal || !detailsContent) {
+    console.log('⚠️ Modal de détails introuvable (#reservationDetailsModal)');
     return;
   }
 
-  // On laisse un petit délai pour que le HTML du modal soit rempli,
-  // puis on corrige / complète son contenu.
+  // On laisse le temps au reste du code de remplir currentBookingData
   setTimeout(function () {
-    const allText = detailsContent.innerText || '';
-
-    // On récupère la réservation depuis window OU depuis la closure
     const booking = window.currentBookingData || currentBookingData;
     if (!booking) {
       console.log('⚠️ Pas de currentBookingData dans fixModalContent, on sort');
       return;
     }
 
-        // 1️⃣ Correction du nom de logement ("Logement inconnu")
-    try {
-      function getReservationPropertyId(res) {
-        if (!res) return null;
-        if (res.propertyId != null) return String(res.propertyId);
-        if (res.property && res.property.id != null) return String(res.property.id);
-        if (res.property_id != null) return String(res.property_id);
-        return null;
+    // 1) Récupération propertyId
+    function getReservationPropertyId(res) {
+      if (!res) return null;
+      if (res.propertyId != null) return String(res.propertyId);
+      if (res.property && res.property.id != null) return String(res.property.id);
+      if (res.property_id != null) return String(res.property_id);
+      return null;
+    }
+
+    let propertyId = getReservationPropertyId(booking);
+
+    // Fallback : si rien dans la résa, on tente via la ligne du calendrier
+    if (!propertyId && bookingBlock) {
+      const row = bookingBlock.closest('[data-property-id]');
+      if (row) {
+        propertyId = row.getAttribute('data-property-id');
       }
+    }
 
-      let propertyId = getReservationPropertyId(booking);
-      let propertyName = null;
+    // 2) Récupération propertyName
+    let propertyName = null;
 
-      // a) Priorité aux infos directement dans la réservation
-      if (booking.propertyName) {
-        propertyName = booking.propertyName;
-      } else if (booking.property) {
-        if (typeof booking.property === 'string') {
-          propertyName = booking.property;
-        } else {
-          propertyName =
-            booking.property.name ||
-            booking.property.title ||
-            booking.property.label ||
-            '';
-        }
-      }
-
-      // b) Fallback via LCC_PROPERTIES si nécessaire
-      if (!propertyName && propertyId) {
-        let properties = [];
-        try {
-          if (Array.isArray(window.LCC_PROPERTIES) && window.LCC_PROPERTIES.length) {
-            properties = window.LCC_PROPERTIES;
-          } else {
-            properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-          }
-        } catch (e) {
-          properties = [];
-        }
-
-        if (Array.isArray(properties) && properties.length) {
-          const p = properties.find(
-            (x) =>
-              String(x.id) === String(propertyId) ||
-              String(x.propertyId) === String(propertyId) ||
-              String(x.property_id) === String(propertyId)
-          );
-          if (p) {
-            propertyName = p.name || p.title || p.label || '';
-          }
-        }
-      }
-
-      console.log('🏠 propertyName calculé pour le modal :', {
-        propertyName,
-        propertyId,
-        booking
-      });
-
-      if (propertyName) {
-        // On essaie d'abord de trouver le groupe "Logement"
-        let logementGroup = null;
-        const groups = detailsContent.querySelectorAll('.detail-group');
-        groups.forEach((group) => {
-          const labelEl = group.querySelector('label');
-          if (labelEl && /logement/i.test(labelEl.textContent || '')) {
-            logementGroup = group;
-          }
-        });
-
-        if (logementGroup) {
-          const valueEl = logementGroup.querySelector('.detail-value') || logementGroup;
-          valueEl.textContent = propertyName;
-          console.log('✅ Logement corrigé via groupe <detail-group> :', propertyName);
-        } else {
-          // Fallback : remplacement texte brut "Logement inconnu"
-          const allText = detailsContent.innerText || '';
-          if (allText.includes('Logement inconnu')) {
-            const htmlContent = detailsContent.innerHTML;
-            detailsContent.innerHTML = htmlContent.replace(/Logement inconnu/g, propertyName);
-            console.log('✅ Logement corrigé via remplacement de texte :', propertyName);
-          } else {
-            console.log("⚠️ Impossible de trouver où injecter le nom du logement dans le modal");
-          }
-        }
+    // a) Infos directement dans la réservation
+    if (booking.propertyName) {
+      propertyName = booking.propertyName;
+    } else if (booking.property) {
+      if (typeof booking.property === 'string') {
+        propertyName = booking.property;
       } else {
-        console.log('⚠️ Aucun propertyName trouvé pour cette réservation');
+        propertyName =
+          booking.property.name ||
+          booking.property.title ||
+          booking.property.label ||
+          '';
       }
-    } catch (e) {
-      console.warn('Erreur lors de la correction du logement dans le modal', e);
     }
 
-    // 2️⃣ Gestion du ménage : on regarde les assignations stockées
-    try {
-      let reservationAssignments = {};
-      let genericAssignments = {};
-      let cleaners = [];
-
+    // b) Fallback via LCC_PROPERTIES si nécessaire
+    if (!propertyName && propertyId) {
+      let properties = [];
       try {
-        // Assignations par réservation (si tu les utilises)
-        reservationAssignments = JSON.parse(
-          localStorage.getItem('lcc_cleaning_reservation_assignments') || '{}'
-        );
-      } catch (e) {}
-
-      try {
-        // Assignations par logement ou autres clés génériques
-        genericAssignments = JSON.parse(
-          localStorage.getItem('lcc_cleaning_assignments') || '{}'
-        );
-      } catch (e) {}
-
-      try {
-        cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
-      } catch (e) {
-        cleaners = [];
-      }
-
-      function getReservationKey(res) {
-        if (!res) return null;
-        // priorité à uid (Airbnb / Booking)
-        if (res.reservationKey) return String(res.reservationKey);
-        if (res.uid) return String(res.uid);
-        if (res.id != null) return String(res.id);
-        if (res.propertyId && res.start && res.end) {
-          const startStr = String(res.start).slice(0, 10);
-          const endStr = String(res.end).slice(0, 10);
-          return res.propertyId + '::' + startStr + '>' + endStr;
+        if (Array.isArray(window.LCC_PROPERTIES) && window.LCC_PROPERTIES.length) {
+          properties = window.LCC_PROPERTIES;
+        } else {
+          properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
         }
-        return null;
+      } catch (e) {
+        properties = [];
       }
 
-      function getCleanerNameById(cleanerId) {
-        if (!cleanerId || !Array.isArray(cleaners)) return null;
-        const strId = String(cleanerId);
-        const c = cleaners.find((x) => String(x.id) === strId);
-        return c ? (c.name || c.email || c.phone || strId) : null;
+      if (Array.isArray(properties) && properties.length) {
+        const p = properties.find(
+          (x) =>
+            String(x.id) === String(propertyId) ||
+            String(x.propertyId) === String(propertyId) ||
+            String(x.property_id) === String(propertyId)
+        );
+        if (p) {
+          propertyName = p.name || p.title || p.label || '';
+        }
       }
-
-      const reservationKey = getReservationKey(booking);
-      const propertyId = booking.propertyId ? String(booking.propertyId) : null;
-
-      let assignedId = null;
-
-      // 1) Assignation par réservation (table dédiée)
-      if (reservationKey && reservationAssignments[reservationKey]) {
-        assignedId = reservationAssignments[reservationKey];
-      }
-
-      // 2) Certains setups peuvent aussi avoir stocké la clé de résa
-      //    dans l'objet générique
-      if (!assignedId && reservationKey && genericAssignments[reservationKey]) {
-        assignedId = genericAssignments[reservationKey];
-      }
-
-      // 3) Fallback : assignation par logement
-      if (!assignedId && propertyId && genericAssignments[propertyId]) {
-        assignedId = genericAssignments[propertyId];
-      }
-
-      const cleanerName = getCleanerNameById(assignedId);
-      const statusText = cleanerName
-        ? 'Assigné à ' + cleanerName
-        : 'Pas encore assigné';
-
-      console.log('🧹 Statut ménage pour cette résa :', {
-        reservationKey,
-        propertyId,
-        assignedId,
-        cleanerName,
-      });
-
-      // 3️⃣ Injection (ou mise à jour) du bloc "Ménage" dans le modal
-      let group = detailsContent.querySelector('[data-cleaning-info="1"]');
-      if (!group) {
-        group = document.createElement('div');
-        group.className = 'detail-group';
-        group.setAttribute('data-cleaning-info', '1');
-        group.innerHTML = `
-          <label><i class="fas fa-broom"></i> Ménage</label>
-          <div class="detail-value"></div>
-        `;
-        detailsContent.appendChild(group);
-      }
-
-      const valueEl = group.querySelector('.detail-value');
-      if (valueEl) {
-        valueEl.textContent = statusText;
-      }
-    } catch (e) {
-      console.warn("Erreur lors de l'injection des infos ménage dans le modal", e);
     }
-  }, 200);
-}
 
-// Listener sur les blocs de réservation dans le calendrier
-document.addEventListener('click', function(e) {
-  const bookingBlock = e.target.closest('.booking-block');
-  if (!bookingBlock) return;
-
-  const found = findReservationForBlock(bookingBlock);
-
-  if (found) {
-    currentBookingData = found;
-    window.currentBookingData = found;
-    console.log('📦 currentBookingData défini au clic (listener global) :', currentBookingData);
-  } else {
-    currentBookingData = null;
-  }
-
-  // On laisse fixModalContent s'occuper de corriger l'affichage du modal
-  fixModalContent(bookingBlock);
-});
-
-
-// Listener global pour les boutons du modal (Supprimer / Modifier)
-document.addEventListener('click', function(e) {
-  const deleteBtn = e.target.closest('#deleteBookingBtn');
-  if (deleteBtn) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('🟥 Click sur deleteBookingBtn', e.target);
-    handleDeleteBooking();
-    return;
-  }
-
-  const editBtn = e.target.closest('#editBookingBtn');
-  if (editBtn) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('🟦 Click sur editBookingBtn', e.target);
-    handleEditBooking();
-    return;
-  }
-});
-
-function handleDeleteBooking() {
-  if (window.deletingInProgress) {
-    console.log('⚠️ Suppression déjà en cours, ignoré');
-    return;
-  }
-  window.deletingInProgress = true;
-
-  console.log('🧨 handleDeleteBooking avec currentBookingData =', currentBookingData);
-
-  if (!currentBookingData) {
-    window.deletingInProgress = false;
-    alert('Impossible de trouver les données de la réservation');
-    return;
-  }
-
-  const isBlock =
-    currentBookingData.type === 'block' ||
-    currentBookingData.source === 'BLOCK';
-
-  const isFromIcal =
-    currentBookingData.source === 'Airbnb' ||
-    currentBookingData.source === 'Booking.com';
-
-  if (isFromIcal) {
-    window.deletingInProgress = false;
-    alert(
-      "Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking. Supprimez-la sur la plateforme source."
-    );
-    return;
-  }
-
-  const message = isBlock
-    ? 'Êtes-vous sûr de vouloir supprimer ce blocage ?'
-    : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
-
-  if (!confirm(message)) {
-    window.deletingInProgress = false;
-    return;
-  }
-
-  const token = localStorage.getItem('lcc_token');
-  const payload = {
-    propertyId: currentBookingData.propertyId,
-    uid: currentBookingData.uid
-  };
-
-  console.log('📤 Envoi suppression :', payload);
-
-  fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + token,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
-    .then(res => {
-      console.log('📥 Réponse /manual-reservations/delete status =', res.status);
-      if (!res.ok) {
-        throw new Error('Erreur ' + res.status);
-      }
-      return res.json();
-    })
-    .then(data => {
-      console.log('✅ Suppression backend OK :', data);
-      alert('Suppression réussie !');
-      const detailsModal = document.getElementById('reservationDetailsModal');
-      if (detailsModal) {
-        detailsModal.style.display = 'none';
-      }
-      window.deletingInProgress = false;
-      location.reload();
-    })
-    .catch(err => {
-      window.deletingInProgress = false;
-      console.error('Erreur suppression :', err);
-      alert('Erreur : ' + err.message);
+    console.log('🏠 propertyName calculé pour le modal :', {
+      propertyName,
+      propertyId,
+      booking,
     });
+
+    // 3) Mise en forme des autres infos
+    const rawStart = booking.start || booking.startDate;
+    const rawEnd   = booking.end   || booking.endDate;
+
+    const start = rawStart ? new Date(rawStart).toLocaleDateString('fr-FR') : '';
+    const end   = rawEnd   ? new Date(rawEnd).toLocaleDateString('fr-FR')   : '';
+
+    const guest =
+      booking.guestName ||
+      booking.name ||
+      booking.customerName ||
+      'Client inconnu';
+
+    const platformRaw = booking.source || booking.platform || 'Direct';
+    const platform    = String(platformRaw).toUpperCase();
+
+    const ref =
+      booking.uid ||
+      booking.reservationKey ||
+      booking.id ||
+      '';
+
+    // 4) On reconstruit complètement le contenu du modal
+    detailsContent.innerHTML = `
+      <div class="detail-group">
+        <label>Voyageur</label>
+        <div class="detail-value" style="font-weight:700;">${guest}</div>
+      </div>
+
+      <div class="detail-group">
+        <label>Logement</label>
+        <div class="detail-value">${propertyName || 'Logement inconnu'}</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+        <div>
+          <label>Arrivée</label>
+          <div class="detail-value">${start}</div>
+        </div>
+        <div>
+          <label>Départ</label>
+          <div class="detail-value">${end}</div>
+        </div>
+      </div>
+
+      <div class="detail-group">
+        <label>Source</label>
+        <div class="detail-value">
+          <span style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            padding:4px 10px;
+            border-radius:999px;
+            min-width:80px;
+            font-size:11px;
+            font-weight:700;
+            text-transform:uppercase;
+          ">
+            ${platform}
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-group">
+        <label>Référence</label>
+        <div class="detail-value">${ref}</div>
+      </div>
+    `;
+
+    // 5) On ouvre le modal (au cas où l’ancien code ne le fait plus)
+    detailsModal.style.display = 'flex';
+    detailsModal.classList.add('active');
+
+    // On pose aussi des data-* utiles pour Delete / Edit si besoin
+    detailsModal.dataset.propertyId = propertyId || '';
+    detailsModal.dataset.reservationUid = booking.uid || '';
+  }, 50);
 }
+
 
 function handleEditBooking() {
   if (!currentBookingData) {
