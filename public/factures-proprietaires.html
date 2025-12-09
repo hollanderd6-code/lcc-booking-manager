@@ -556,6 +556,61 @@
 }
 
 let editingClientId = null;
+window.toggleInvoiceActions = function (id, btn) {
+  const menu = document.getElementById('invoice-actions-' + id);
+  if (!menu) return;
+
+  const isOpen = menu.classList.contains('open');
+  // fermer les autres
+  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
+
+  if (!isOpen) {
+    menu.classList.add('open');
+  }
+};
+
+// Envoyer la facture (brouillon -> envoyée)
+window.sendOwnerInvoice = async function (id) {
+  if (!confirm('Envoyer cette facture au client ?')) return;
+
+  try {
+    const res = await fetch('/api/owner-invoices/' + id + '/send', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error(json);
+      return alert(json.error || 'Erreur lors de l\'envoi');
+    }
+    alert('Facture envoyée ✅');
+    loadInvoices();
+  } catch (e) {
+    console.error(e);
+    alert('Erreur serveur');
+  }
+};
+
+// Supprimer un brouillon
+window.deleteOwnerInvoice = async function (id) {
+  if (!confirm('Supprimer cette facture ?')) return;
+
+  try {
+    const res = await fetch('/api/owner-invoices/' + id, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error(json);
+      return alert(json.error || 'Erreur lors de la suppression');
+    }
+    loadInvoices();
+  } catch (e) {
+    console.error(e);
+    alert('Erreur serveur');
+  }
+};
 
 window.editClient = function(clientId) {
     const client = clients.find(c => c.id == clientId);
