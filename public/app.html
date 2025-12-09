@@ -4866,11 +4866,6 @@ function fixModalContent(bookingBlock) {
     const platformRaw = booking.source || booking.platform || 'Direct';
     const platform    = String(platformRaw).toUpperCase();
 
-    const ref =
-      booking.uid ||
-      booking.reservationKey ||
-      booking.id ||
-      '';
 
     // 4️⃣ On reconstruit complètement le contenu "de base" du modal
     detailsContent.innerHTML = `
@@ -4914,11 +4909,6 @@ function fixModalContent(bookingBlock) {
         </div>
       </div>
 
-      <div class="detail-group">
-        <label>Référence</label>
-        <div class="detail-value">${ref}</div>
-      </div>
-    `;
 
     // 5️⃣ Gestion du ménage (reprise / adaptation du code d’origine)
     try {
