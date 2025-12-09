@@ -5636,6 +5636,42 @@ app.post('/api/owner-invoices', async (req, res) => {
     client.release();
   }
 });
+// 2bis. RÉCUPÉRER UNE FACTURE PROPRIÉTAIRE PAR ID
+app.get('/api/owner-invoices/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const invoiceId = req.params.id;
+
+    // Facture
+    const invResult = await pool.query(
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [invoiceId, user.id]
+    );
+
+    if (invResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    const invoice = invResult.rows[0];
+
+    // Lignes
+    const itemsResult = await pool.query(
+      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index, id',
+      [invoiceId]
+    );
+
+    res.json({
+      invoice,
+      items: itemsResult.rows
+    });
+
+  } catch (err) {
+    console.error('Erreur lecture facture propriétaire:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ============================================
 // FACTURES - ROUTES MODIFIÉES (AVEC RÉDUCTIONS)
