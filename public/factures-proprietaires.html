@@ -627,6 +627,25 @@
     if(p.type === 'commission') return p.rentalAmount * (p.commissionRate/100);
     return p.quantity * p.unitPrice;
   }
+function updateSenderPreviewOnly() {
+  // Nom émetteur
+  const name =
+    emitterProfile.company ||
+    (currentUser &&
+      (currentUser.company ||
+        `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim())) ||
+    'Votre Entreprise';
+
+  const senderNameEl = document.getElementById('previewSenderName');
+  if (senderNameEl) senderNameEl.textContent = name;
+
+  // Adresse émetteur
+  const addrTextarea = document.getElementById('senderAddressInput');
+  const addr = (addrTextarea && addrTextarea.value) || 'Adresse...';
+
+  const senderAddrEl = document.getElementById('previewSenderAddress');
+  if (senderAddrEl) senderAddrEl.innerText = addr;
+}
 
   // --- PREVIEW ---
     window.updatePreview = function() {
