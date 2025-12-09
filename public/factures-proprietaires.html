@@ -386,7 +386,10 @@
                   <div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
                   <div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
                   <div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
-                  <div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">TVA non applicable, art. 293 B du CGI</div>
+                  <div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
+  TVA non applicable, art. 293 B du CGI
+</div>
+
                 </div>
               </div>
             </div>
@@ -538,12 +541,15 @@ async function loadInvoices() {
     }
 
     let totalRev = 0;
-    tbody.innerHTML = invs.map(inv => {
-      totalRev += parseFloat(inv.total_ttc || 0);
+    tbody.innerHTML = '';
+
+    invs.forEach(function (inv) {
+      const total = parseFloat(inv.total_ttc || 0);
+      totalRev += total;
 
       const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
 
-      let statusLabel = inv.status;
+      let statusLabel = inv.status || '';
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
       } else if (inv.status === 'draft') {
@@ -556,49 +562,60 @@ async function loadInvoices() {
         statusLabel = 'Payée';
       }
 
-      return `
-        <tr style="border-bottom:1px solid #f3f4f6;">
-          <td style="padding:16px; font-weight:700; color:#10B981;">${numberDisplay}</td>
-          <td style="padding:16px;">${inv.client_name}</td>
-          <td style="padding:16px;">${new Date(inv.issue_date).toLocaleDateString()}</td>
-          <td style="padding:16px; font-weight:600;">${parseFloat(inv.total_ttc).toFixed(2)} €</td>
-          <td style="padding:16px;">${statusLabel}</td>
-          <td style="padding:16px; text-align:right;">
-            <div class="invoice-row-actions">
-              <button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(${inv.id}, this)">...</button>
-              <div class="invoice-actions-menu" id="invoice-actions-${inv.id}">
-                <button type="button" onclick="viewOwnerInvoice(${inv.id})">Voir la facture</button>
-                ${
-                  inv.is_credit_note
-                    ? `
-                      <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
-                      <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                      <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
-                    `
-                    : inv.status === 'draft'
-                      ? `
-                        <button type="button" onclick="finalizeOwnerInvoice(${inv.id})">Passer en Facturée</button>
-                        <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                        <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer le brouillon</button>
-                      `
-                      : `
-                        <button type="button" onclick="createOwnerCreditNote(${inv.id})">Créer un avoir</button>
-                        <button type="button" onclick="downloadOwnerInvoice(${inv.id})">Télécharger (PDF)</button>
-                        <button type="button" onclick="sendOwnerInvoice(${inv.id})">Envoyer par email</button>
-                        <button type="button" onclick="deleteOwnerInvoice(${inv.id})" style="color:#b91c1c;">Supprimer</button>
-                      `
-                }
-              </div>
-            </div>
-          </td>
-        </tr>`;
-    }).join('');
+      let actionsHtml = '';
+
+      if (inv.is_credit_note) {
+        // Menu pour un avoir
+        actionsHtml =
+          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
+          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
+          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
+      } else if (inv.status === 'draft') {
+        // Menu pour un brouillon
+        actionsHtml =
+          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="finalizeOwnerInvoice(' + inv.id + ')">Passer en “Facturée”</button>' +
+          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
+          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer le brouillon</button>';
+      } else {
+        // Facture normale
+        actionsHtml =
+          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="createOwnerCreditNote(' + inv.id + ')">Créer un avoir</button>' +
+          '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
+          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
+          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
+      }
+
+      const issueDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
+
+      const rowHtml =
+        '<tr style="border-bottom:1px solid #f3f4f6;">' +
+          '<td style="padding:16px; font-weight:700; color:#10B981;">' + numberDisplay + '</td>' +
+          '<td style="padding:16px;">' + (inv.client_name || '') + '</td>' +
+          '<td style="padding:16px;">' + issueDate + '</td>' +
+          '<td style="padding:16px; font-weight:600;">' + total.toFixed(2) + ' €</td>' +
+          '<td style="padding:16px;">' + statusLabel + '</td>' +
+          '<td style="padding:16px; text-align:right;">' +
+            '<div class="invoice-row-actions">' +
+              '<button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(' + inv.id + ', this)">...</button>' +
+              '<div class="invoice-actions-menu" id="invoice-actions-' + inv.id + '">' +
+                actionsHtml +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+
+      tbody.innerHTML += rowHtml;
+    });
 
     document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
   } catch (e) {
     console.error('Erreur chargement factures propriétaires:', e);
   }
 }
+
 
 let editingClientId = null;
  = null;
@@ -948,35 +965,40 @@ window.editClient = function(clientId) {
     });
 
     const hasVat = document.getElementById('invoiceVatApplicable').checked;
-    const vatRateSelect = document.getElementById('invoiceVatRate');
-    if (hasVat) {
-      if (vatRateSelect) vatRateSelect.style.display = 'inline-block';
-    } else {
-      if (vatRateSelect) vatRateSelect.style.display = 'none';
-    }
+const vatRateInput = document.getElementById('invoiceVatRate');
 
-    const rateValue = vatRateSelect ? parseFloat(vatRateSelect.value) : 20;
-    const vatRate = hasVat ? (rateValue || 20) / 100 : 0;
-    const vatAmount = totalHT * vatRate;
-    const totalTTC = totalHT + vatAmount;
+// Affichage / masquage du champ de taux
+if (vatRateInput) {
+  vatRateInput.style.display = hasVat ? 'inline-block' : 'none';
+}
 
-    // MAJ UI
-    const strHT = totalHT.toFixed(2) + ' €';
-    const strVAT = vatAmount.toFixed(2) + ' €';
-    const strTTC = totalTTC.toFixed(2) + ' €';
+// Taux de TVA choisi (5.5, 10, 20...)
+const rateValue = vatRateInput ? parseFloat(vatRateInput.value) : 20;
+const vatRate = hasVat ? (rateValue || 20) / 100 : 0;
 
-    document.getElementById('displayTotalHT').textContent = strHT;
-    document.getElementById('displayTotalVAT').textContent = strVAT;
-    document.getElementById('displayTotalTTC').textContent = strTTC;
-    document.getElementById('previewTotalHT').textContent = strHT;
-    document.getElementById('previewTotalVAT').textContent = strVAT;
-    document.getElementById('previewTotalTTC').textContent = strTTC;
+// Calculs
+const vatAmount = totalHT * vatRate;
+const totalTTC = totalHT + vatAmount;
 
-    const mentionEl = document.getElementById('previewVatLegalMention');
-    if (mentionEl) {
-      mentionEl.style.display = hasVat ? 'none' : 'block';
-    }
-  };
+// MAJ UI
+const strHT  = totalHT.toFixed(2) + ' €';
+const strVAT = vatAmount.toFixed(2) + ' €';
+const strTTC = totalTTC.toFixed(2) + ' €';
+
+document.getElementById('displayTotalHT').textContent  = strHT;
+document.getElementById('displayTotalVAT').textContent = strVAT;
+document.getElementById('displayTotalTTC').textContent = strTTC;
+
+document.getElementById('previewTotalHT').textContent  = strHT;
+document.getElementById('previewTotalVAT').textContent = strVAT;
+document.getElementById('previewTotalTTC').textContent = strTTC;
+
+// Mention TVA non applicable
+const mentionEl = document.getElementById('previewVatLegalMention');
+if (mentionEl) {
+  mentionEl.style.display = hasVat ? 'none' : 'block';
+}
+
 
   // --- LOGO ---
   window.updateLogoPreview = function() {
