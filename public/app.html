@@ -5147,6 +5147,152 @@ document.addEventListener('click', function(e) {
     return;
   }
 });
+  function handleDeleteBooking() {
+  // Empêcher les doubles clics sur "Supprimer"
+  if (window.deletingInProgress) {
+    console.log('⚠️ Suppression déjà en cours, ignorée');
+    return;
+  }
+  window.deletingInProgress = true;
+
+  // On récupère les données de la réservation/blocage
+  const booking =
+    window.currentBookingData ||
+    window.currentBooking ||
+    (typeof currentBookingData !== 'undefined' ? currentBookingData : null);
+
+  console.log('🧨 handleDeleteBooking avec booking =', booking);
+
+  if (!booking) {
+    window.deletingInProgress = false;
+    alert('Impossible de trouver les données de la réservation');
+    return;
+  }
+
+  // Est-ce un blocage manuel ?
+  const isBlock =
+    booking.type === 'block' ||
+    booking.source === 'BLOCK';
+
+  // Est-ce une réservation venant d’un iCal (Airbnb / Booking.com) ?
+  const rawSource = (booking.source || booking.platform || '').toLowerCase();
+  const isFromIcal =
+    rawSource.includes('airbnb') ||
+    rawSource.includes('booking.com');
+
+  if (isFromIcal) {
+    window.deletingInProgress = false;
+    alert(
+      "Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking.\n" +
+      "Supprime-la directement sur la plateforme source."
+    );
+    return;
+  }
+
+  const message = isBlock
+    ? 'Êtes-vous sûr de vouloir supprimer ce BLOCAGE ?'
+    : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
+
+  if (!confirm(message)) {
+    window.deletingInProgress = false;
+    return;
+  }
+
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    window.deletingInProgress = false;
+    alert("Impossible de supprimer : jeton d'authentification introuvable. Reconnecte-toi.");
+    return;
+  }
+
+  // 🔎 On récupère un propertyId fiable
+  let propertyId = null;
+
+  if (booking.propertyId != null) {
+    propertyId = String(booking.propertyId);
+  } else if (booking.property && booking.property.id != null) {
+    propertyId = String(booking.property.id);
+  } else if (booking.property_id != null) {
+    propertyId = String(booking.property_id);
+  }
+
+  // Fallback : dataset du modal (fixModalContent le remplit)
+  const detailsModal = document.getElementById('reservationDetailsModal');
+  if (!propertyId && detailsModal && detailsModal.dataset.propertyId) {
+    propertyId = detailsModal.dataset.propertyId;
+  }
+
+  // 🔎 On récupère un identifiant unique pour la résa / le bloc
+  let uid = null;
+
+  if (booking.uid != null) {
+    uid = String(booking.uid);
+  } else if (booking.reservationKey != null) {
+    uid = String(booking.reservationKey);
+  } else if (booking.id != null) {
+    uid = String(booking.id);
+  }
+
+  // Fallback : dataset du modal
+  if (!uid && detailsModal && detailsModal.dataset.reservationUid) {
+    uid = detailsModal.dataset.reservationUid;
+  }
+
+  if (!propertyId || !uid) {
+    console.error('❌ Impossible de préparer la suppression :', {
+      propertyId,
+      uid,
+      booking
+    });
+    alert(
+      "Impossible de supprimer ce blocage / cette réservation : identifiant manquant.\n" +
+      "Regarde la console pour plus de détails."
+    );
+    window.deletingInProgress = false;
+    return;
+  }
+
+  const payload = { propertyId, uid };
+
+  console.log('📤 Envoi suppression :', payload);
+
+  fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+    .then(res => {
+      console.log('📥 Réponse /manual-reservations/delete status =', res.status);
+      if (!res.ok) {
+        throw new Error('Erreur ' + res.status);
+      }
+      return res.json();
+    })
+    .then(data => {
+      console.log('✅ Suppression backend OK :', data);
+      alert('Suppression réussie !');
+
+      // On ferme le modal
+      if (detailsModal) {
+        detailsModal.style.display = 'none';
+        detailsModal.classList.remove('active');
+      }
+
+      window.deletingInProgress = false;
+
+      // On recharge pour mettre à jour le calendrier
+      location.reload();
+    })
+    .catch(err => {
+      window.deletingInProgress = false;
+      console.error('❌ Erreur lors de la suppression :', err);
+      alert('Erreur lors de la suppression : ' + err.message);
+    });
+}
+
 function closeEditBookingModal() {
   const editModal = document.getElementById('editBookingModal');
   if (editModal) {
