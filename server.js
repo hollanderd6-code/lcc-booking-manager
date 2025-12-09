@@ -5252,6 +5252,8 @@ app.post('/api/owner-clients', async (req, res) => {
   } catch (err) {
     console.error('Erreur création client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+    error: 'Erreur serveur',
+    details: err.message
   }
 });
 
