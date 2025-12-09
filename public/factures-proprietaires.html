@@ -723,20 +723,20 @@
 
 
   // --- SAVE ---
-  window.createInvoice = async function(send) {
+    window.createInvoice = async function(send) {
     const clientId = document.getElementById('invoiceClientId').value;
-    if(!clientId) return alert('Veuillez sélectionner un client');
+    if (!clientId) return alert('Veuillez sélectionner un client');
 
     const data = {
       clientId: parseInt(clientId),
-      periodStart: document.getElementById('invoicePeriodStart').value,
-      periodEnd: document.getElementById('invoicePeriodEnd').value,
+      periodStart: document.getElementById('invoicePeriodStart').value || null,
+      periodEnd: document.getElementById('invoicePeriodEnd').value || null,
       issueDate: document.getElementById('invoiceIssueDate').value,
       dueDate: document.getElementById('invoiceDueDate').value,
       items: prestations.map(p => ({
         itemType: p.type,
         description: p.description,
-        rentalAmount: p.rentalAmount, // Important pour commission
+        rentalAmount: p.rentalAmount,
         commissionRate: p.commissionRate,
         quantity: p.quantity,
         unitPrice: p.unitPrice,
@@ -744,34 +744,74 @@
         isDebours: p.isDebours
       })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
-      vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
-      sendEmail: send
+      vatRate: parseFloat(document.getElementById('invoiceVatRate').value) || 20,
+      // éventuellement on envoie aussi les infos émetteur au backend
+      emitter: {
+        company: emitterProfile.company,
+        address: emitterProfile.address,
+        postalCode: emitterProfile.postalCode,
+        city: emitterProfile.city,
+        siret: emitterProfile.siret
+      }
     };
 
     try {
-      const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
-      const method = editingInvoiceId ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      const res = await fetch('/api/owner-invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
         body: JSON.stringify(data)
       });
-      if (res.ok) {
-        alert('✅ Facture enregistrée !');
-        prestations = [];
-        prestationCounter = 0;
-        renderEditorPrestations();
-        switchTab('dashboard');
-        loadInvoices();
-      } else {
-        const err = await res.json();
-        alert('Erreur : ' + err.error);
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        return alert('Erreur : ' + (json.error || 'Impossible de créer la facture'));
       }
+
+      const created = json.invoice;
+      if (!created) {
+        return alert('Facture créée mais réponse inattendue du serveur');
+      }
+
+      // Si on a cliqué sur "Envoyer", on enchaîne avec la route d'envoi
+      if (send) {
+        const sendRes = await fetch(`/api/owner-invoices/${created.id}/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          }
+        });
+        const sendJson = await sendRes.json();
+
+        if (!sendRes.ok) {
+          return alert('Facture créée mais erreur à l\'envoi : ' + (sendJson.error || 'Erreur inconnue'));
+        }
+
+        alert('✅ Facture envoyée !');
+      } else {
+        alert('✅ Facture enregistrée en brouillon !');
+      }
+
+      // Reset éditeur
+      prestations = [];
+      prestationCounter = 0;
+      renderEditorPrestations();
+      addPrestation('commission');
+      updatePreview();
+
+      switchTab('dashboard');
+      loadInvoices();
+
     } catch (err) {
       console.error(err);
       alert('Erreur serveur');
     }
   };
+
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() { document.getElementById('clientModal').classList.add('active'); };
