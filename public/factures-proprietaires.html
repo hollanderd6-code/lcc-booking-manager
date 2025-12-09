@@ -76,6 +76,24 @@
     .totals-box { width: 260px; }
     .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #4b5563; }
     .total-row.final { font-size: 16px; font-weight: 700; color: var(--primary); border-top: 2px solid #e5e7eb; margin-top: 8px; padding-top: 12px; }
+/* Désactiver les petites flèches des inputs de type number */
+
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Optionnel : pour forcer un look "texte" partout */
+input[type="number"].form-control {
+  appearance: textfield;
+}
 
     /* PRESTATIONS MINI-CARDS (Style Éditeur) */
     .prestation-mini-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 8px; position: relative; }
