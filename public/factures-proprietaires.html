@@ -335,13 +335,9 @@
             <div class="editor-section">
               <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                  <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()"> TVA
+                  <input type="checkbox" id="invoiceVatApplicable" onchange="toggleVat(); updatePreview();"> TVA (20%)
                 </label>
-                <select id="invoiceVatRate" class="form-control" style="width:90px; display:none;" onchange="updatePreview()">
-                  <option value="20">20 %</option>
-                  <option value="10">10 %</option>
-                  <option value="5.5">5,5 %</option>
-                </select>
+                <input type="number" id="invoiceVatRate" value="20" style="width:50px; display:none;" onchange="updatePreview()">
               </div>
               <div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
                 <div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
@@ -390,10 +386,8 @@
                   <div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
                   <div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
                   <div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
-                  <div id="previewVatLegalMention" class="tva-mention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
-                    TVA non applicable, art. 293 B du CGI
-                  </div>
-                </div
+                  <div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">TVA non applicable, art. 293 B du CGI</div>
+                </div>
               </div>
             </div>
           </div>
@@ -746,7 +740,7 @@ window.editClient = function(clientId) {
     const p = prestations.find(x => x.id === id);
     if(p) {
       p[key] = key==='description' ? val : parseFloat(val)||0;
-      // On évite de re-render toute la liste à chaque frappe pour garder le focus
+      renderEditorPrestations(); 
       updatePreview();
     }
   };
@@ -938,51 +932,36 @@ window.editClient = function(clientId) {
           <td style="text-align:right; font-weight:600;">${lineTotal.toFixed(2)} €</td>
         </tr>`;
     });
+
     const hasVat = document.getElementById('invoiceVatApplicable').checked;
-    // Afficher ou cacher le sélecteur de taux
-    const vatRateInput = document.getElementById('invoiceVatRate');
-    if (vatRateInput) {
-      vatRateInput.style.display = hasVat ? 'inline-block' : 'none';
+    const vatRateSelect = document.getElementById('invoiceVatRate');
+    if (hasVat) {
+      if (vatRateSelect) vatRateSelect.style.display = 'inline-block';
+    } else {
+      if (vatRateSelect) vatRateSelect.style.display = 'none';
     }
 
-    const vatRateValue = hasVat ? (parseFloat(document.getElementById('invoiceVatRate').value) || 20) : 0;
-    const vatRate = vatRateValue / 100;
+    const rateValue = vatRateSelect ? parseFloat(vatRateSelect.value) : 20;
+    const vatRate = hasVat ? (rateValue || 20) / 100 : 0;
     const vatAmount = totalHT * vatRate;
     const totalTTC = totalHT + vatAmount;
 
-    // MAJ UI (panneau de droite)
-    const strHT  = totalHT.toFixed(2) + ' €';
+    // MAJ UI
+    const strHT = totalHT.toFixed(2) + ' €';
     const strVAT = vatAmount.toFixed(2) + ' €';
     const strTTC = totalTTC.toFixed(2) + ' €';
 
-    const dispHT  = document.getElementById('displayTotalHT');
-    const dispVAT = document.getElementById('displayTotalVAT');
-    const dispTTC = document.getElementById('displayTotalTTC');
+    document.getElementById('displayTotalHT').textContent = strHT;
+    document.getElementById('displayTotalVAT').textContent = strVAT;
+    document.getElementById('displayTotalTTC').textContent = strTTC;
+    document.getElementById('previewTotalHT').textContent = strHT;
+    document.getElementById('previewTotalVAT').textContent = strVAT;
+    document.getElementById('previewTotalTTC').textContent = strTTC;
 
-    if (dispHT)  dispHT.textContent  = strHT;
-    if (dispVAT) dispVAT.textContent = strVAT;
-    if (dispTTC) dispTTC.textContent = strTTC;
-
-    // MAJ UI (aperçu facture)
-    const prevHT  = document.getElementById('previewTotalHT');
-    const prevVAT = document.getElementById('previewTotalVAT');
-    const prevTTC = document.getElementById('previewTotalTTC');
-
-    if (prevHT)  prevHT.textContent  = strHT;
-    if (prevVAT) prevVAT.textContent = strVAT;
-    if (prevTTC) prevTTC.textContent = strTTC;
-
-    // Mention légale TVA non applicable
-    const mention = document.getElementById('previewVatLegalMention');
-    if (mention) {
-      if (!hasVat) {
-        mention.style.display = 'block';
-        mention.textContent = 'TVA non applicable, art. 293 B du CGI';
-      } else {
-        mention.style.display = 'none';
-      }
+    const mentionEl = document.getElementById('previewVatLegalMention');
+    if (mentionEl) {
+      mentionEl.style.display = hasVat ? 'none' : 'block';
     }
-
   };
 
   // --- LOGO ---
