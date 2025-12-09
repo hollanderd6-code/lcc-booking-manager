@@ -5442,6 +5442,187 @@ app.post('/api/owner-articles/init-defaults', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ============================================
+// FACTURES PROPRIÉTAIRES - LISTE & CRÉATION
+// ============================================
+
+// 1. LISTE DES FACTURES PROPRIÉTAIRES
+app.get('/api/owner-invoices', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(`
+      SELECT
+        i.id,
+        i.invoice_number,
+        i.issue_date,
+        i.total_ttc,
+        i.status,
+        COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name
+      FROM owner_invoices i
+      JOIN owner_clients c ON c.id = i.client_id
+      WHERE i.user_id = $1
+      ORDER BY i.issue_date DESC, i.id DESC
+    `, [user.id]);
+
+    res.json({ invoices: result.rows });
+  } catch (err) {
+    console.error('Erreur liste factures propriétaires:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 2. CRÉER UNE NOUVELLE FACTURE PROPRIÉTAIRE (BROUILLON PAR DÉFAUT)
+app.post('/api/owner-invoices', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const {
+      clientId,
+      periodStart,
+      periodEnd,
+      issueDate,
+      dueDate,
+      items = [],
+      vatApplicable,
+      vatRate,
+      discountType,
+      discountValue,
+      notes,
+      internalNotes
+    } = req.body;
+
+    if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Données facture incomplètes' });
+    }
+
+    await client.query('BEGIN');
+
+    // Recalculer les totaux de la même façon que dans le PUT /api/owner-invoices/:id
+    let subtotalHt = 0;
+    let subtotalDebours = 0;
+
+    items.forEach(item => {
+      const itemTotal = parseFloat(item.total) || 0;
+      if (item.isDebours) {
+        subtotalDebours += itemTotal;
+      } else {
+        subtotalHt += itemTotal;
+      }
+    });
+
+    let discountAmount = 0;
+    if (discountType === 'percent') {
+      discountAmount = subtotalHt * (parseFloat(discountValue) / 100 || 0);
+    } else if (discountType === 'fixed') {
+      discountAmount = parseFloat(discountValue) || 0;
+    }
+
+    const netHt = subtotalHt - discountAmount;
+    const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100 || 0) : 0;
+    const totalTtc = netHt + subtotalDebours + vatAmount;
+
+    // Création de la facture (brouillon)
+    const invoiceResult = await client.query(`
+      INSERT INTO owner_invoices (
+        user_id,
+        client_id,
+        period_start,
+        period_end,
+        issue_date,
+        due_date,
+        vat_applicable,
+        vat_rate,
+        discount_type,
+        discount_value,
+        discount_amount,
+        subtotal_ht,
+        subtotal_debours,
+        vat_amount,
+        total_ttc,
+        notes,
+        internal_notes,
+        status,
+        created_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,
+        $7,$8,
+        $9,$10,$11,
+        $12,$13,$14,$15,
+        $16,$17,
+        $18,
+        NOW()
+      )
+      RETURNING *
+    `, [
+      user.id,
+      clientId,
+      periodStart || null,
+      periodEnd || null,
+      issueDate,
+      dueDate,
+      !!vatApplicable,
+      vatRate || 0,
+      discountType || 'none',
+      discountValue || 0,
+      discountAmount,
+      netHt,
+      subtotalDebours,
+      vatAmount,
+      totalTtc,
+      notes || null,
+      internalNotes || null,
+      'draft'
+    ]);
+
+    const invoice = invoiceResult.rows[0];
+    const invoiceId = invoice.id;
+
+    // Lignes de facture
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      await client.query(`
+        INSERT INTO owner_invoice_items (
+          invoice_id, item_type, description,
+          rental_amount, commission_rate,
+          quantity, unit_price, total,
+          order_index, is_debours
+        ) VALUES (
+          $1,$2,$3,
+          $4,$5,
+          $6,$7,$8,
+          $9,$10
+        )
+      `, [
+        invoiceId,
+        item.itemType,
+        item.description,
+        item.rentalAmount || 0,
+        item.commissionRate || 0,
+        item.quantity || 0,
+        item.unitPrice || 0,
+        item.total || 0,
+        i,
+        item.isDebours || false
+      ]);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({ invoice });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erreur création facture propriétaire:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
+  }
+});
 
 // ============================================
 // FACTURES - ROUTES MODIFIÉES (AVEC RÉDUCTIONS)
