@@ -288,54 +288,6 @@ async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (user_id, property_id)
       );
-      // --- NOUVELLES TABLES FACTURATION ---
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS owner_clients (
-        id SERIAL PRIMARY KEY,
-        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-        client_type TEXT CHECK (client_type IN ('individual', 'business')),
-        first_name TEXT, last_name TEXT, company_name TEXT,
-        email TEXT, phone TEXT, address TEXT, postal_code TEXT, city TEXT, country TEXT,
-        siret TEXT, vat_number TEXT,
-        default_commission_rate NUMERIC DEFAULT 20,
-        default_vat_rate NUMERIC DEFAULT 20,
-        vat_applicable BOOLEAN DEFAULT FALSE,
-        notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS owner_articles (
-        id SERIAL PRIMARY KEY,
-        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-        article_type TEXT, name TEXT NOT NULL, description TEXT,
-        unit_price NUMERIC DEFAULT 0, commission_rate NUMERIC DEFAULT 0,
-        is_active BOOLEAN DEFAULT TRUE
-      );
-
-      CREATE TABLE IF NOT EXISTS owner_invoices (
-        id SERIAL PRIMARY KEY,
-        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-        client_id INTEGER REFERENCES owner_clients(id),
-        client_name TEXT, client_email TEXT, client_address TEXT,
-        invoice_number TEXT, status TEXT DEFAULT 'draft',
-        issue_date DATE, due_date DATE, period_start DATE, period_end DATE,
-        subtotal_ht NUMERIC DEFAULT 0, subtotal_debours NUMERIC DEFAULT 0,
-        vat_amount NUMERIC DEFAULT 0, total_ttc NUMERIC DEFAULT 0,
-        discount_type TEXT, discount_value NUMERIC DEFAULT 0, discount_amount NUMERIC DEFAULT 0,
-        vat_applicable BOOLEAN DEFAULT FALSE, vat_rate NUMERIC DEFAULT 20,
-        notes TEXT, internal_notes TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW(), sent_at TIMESTAMPTZ, credit_note_id INTEGER
-      );
-
-      CREATE TABLE IF NOT EXISTS owner_invoice_items (
-        id SERIAL PRIMARY KEY,
-        invoice_id INTEGER REFERENCES owner_invoices(id) ON DELETE CASCADE,
-        item_type TEXT, description TEXT,
-        rental_amount NUMERIC DEFAULT 0, commission_rate NUMERIC DEFAULT 0,
-        quantity NUMERIC DEFAULT 1, unit_price NUMERIC DEFAULT 0,
-        total NUMERIC DEFAULT 0, is_debours BOOLEAN DEFAULT FALSE, order_index INTEGER DEFAULT 0
-      );
-    `);
-    console.log('✅ Tables Facturation Propriétaires initialisées');
     `);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings & cleaning_assignments OK dans Postgres');
@@ -6362,91 +6314,7 @@ case 'checkout.session.completed': {
 // ============================================
 // FIN DU SCRIPT CRON
 // ============================================
-// ============================================
-// MODULE FACTURATION PROPRIÉTAIRES
-// ============================================
 
-// 1. CLIENTS
-app.get('/api/owner-clients', authenticateUser, checkSubscription, async (req, res) => {
-  try {
-    const result = await pool.query(`SELECT * FROM owner_clients WHERE user_id = $1 ORDER BY id DESC`, [req.user.id]);
-    res.json({ clients: result.rows });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/owner-clients', authenticateUser, checkSubscription, async (req, res) => {
-  const { clientType, firstName, lastName, companyName, email, phone, address, postalCode, city, country, siret, vatNumber, defaultCommissionRate } = req.body;
-  try {
-    const result = await pool.query(`
-      INSERT INTO owner_clients (user_id, client_type, first_name, last_name, company_name, email, phone, address, postal_code, city, country, siret, vat_number, default_commission_rate)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`, 
-      [req.user.id, clientType, firstName, lastName, companyName, email, phone, address, postalCode, city, country, siret, vatNumber, defaultCommissionRate]);
-    res.json({ client: result.rows[0] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// 2. ARTICLES (CATALOGUE)
-app.get('/api/owner-articles', authenticateUser, checkSubscription, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM owner_articles WHERE user_id=$1', [req.user.id]);
-    res.json({ articles: result.rows });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/owner-articles', authenticateUser, checkSubscription, async (req, res) => {
-  const { articleType, name, unitPrice, commissionRate } = req.body;
-  try {
-    const resDb = await pool.query(`INSERT INTO owner_articles (user_id, article_type, name, unit_price, commission_rate) VALUES ($1, $2, $3, $4, $5) RETURNING *`, 
-      [req.user.id, articleType, name, unitPrice, commissionRate]);
-    res.json({ article: resDb.rows[0] });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// 3. FACTURES
-app.get('/api/owner-invoices', authenticateUser, checkSubscription, async (req, res) => {
-  try {
-    const result = await pool.query(`SELECT * FROM owner_invoices WHERE user_id = $1 ORDER BY created_at DESC`, [req.user.id]);
-    res.json({ invoices: result.rows });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/owner-invoices', authenticateUser, checkSubscription, async (req, res) => {
-  const clientDb = await pool.connect();
-  try {
-    await clientDb.query('BEGIN');
-    const { clientId, issueDate, dueDate, periodStart, periodEnd, items, vatApplicable, vatRate, discountType, discountValue, notes, internalNotes } = req.body;
-    
-    // Récup Client
-    const cliRes = await clientDb.query('SELECT * FROM owner_clients WHERE id=$1', [clientId]);
-    const cli = cliRes.rows[0];
-    const clientName = cli.client_type==='business' ? cli.company_name : `${cli.first_name} ${cli.last_name}`;
-
-    // Numéro Facture
-    const numRes = await clientDb.query(`SELECT COUNT(*) FROM owner_invoices WHERE user_id=$1`, [req.user.id]);
-    const invNum = `FA-${new Date().getFullYear()}-${String(parseInt(numRes.rows[0].count)+1).padStart(3,'0')}`;
-
-    // Calculs
-    let subHT=0, subDebours=0;
-    items.forEach(i => { if(i.isDebours) subDebours+=i.total; else subHT+=i.total; });
-    
-    // Sauvegarde Facture
-    const invInsert = await clientDb.query(`
-      INSERT INTO owner_invoices (user_id, client_id, client_name, client_email, invoice_number, status, issue_date, due_date, period_start, period_end, subtotal_ht, subtotal_debours, total_ttc, vat_applicable, vat_rate, notes, internal_notes)
-      VALUES ($1, $2, $3, $4, $5, 'draft', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`, 
-      [req.user.id, clientId, clientName, cli.email, invNum, issueDate, dueDate, periodStart, periodEnd, subHT, subDebours, subHT+subDebours, vatApplicable, vatRate, notes, internalNotes]);
-
-    // Sauvegarde Lignes
-    const invId = invInsert.rows[0].id;
-    for (let i=0; i<items.length; i++) {
-        const it = items[i];
-        await clientDb.query(`INSERT INTO owner_invoice_items (invoice_id, item_type, description, rental_amount, commission_rate, quantity, unit_price, total, is_debours, order_index) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [invId, it.itemType, it.description, it.rentalAmount, it.commissionRate, it.quantity, it.unitPrice, it.total, it.isDebours, i]);
-    }
-
-    await clientDb.query('COMMIT');
-    res.json({ success: true, invoiceNumber: invNum });
-  } catch (err) { await clientDb.query('ROLLBACK'); res.status(500).json({ error: err.message }); } finally { clientDb.release(); }
-});
 // ============================================
 // DÉMARRAGE
 // ============================================
