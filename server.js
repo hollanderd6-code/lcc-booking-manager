@@ -5809,6 +5809,51 @@ app.delete('/api/owner-invoices/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// 2bis. VALIDER UNE FACTURE (BROUILLON -> FACTURÉE)
+app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const invoiceId = req.params.id;
+
+    // Récupérer la facture
+    const result = await pool.query(
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [invoiceId, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    const invoice = result.rows[0];
+
+    if (invoice.status !== 'draft') {
+      return res.status(400).json({ error: 'Seuls les brouillons peuvent être validés.' });
+    }
+
+    // Générer un numéro si absent
+    let invoiceNumber = invoice.invoice_number;
+    if (!invoiceNumber) {
+      const year = new Date().getFullYear();
+      invoiceNumber = `P-${year}-${String(invoice.id).padStart(4, '0')}`;
+    }
+
+    const updateResult = await pool.query(
+      `UPDATE owner_invoices
+       SET status = $1, invoice_number = $2
+       WHERE id = $3 AND user_id = $4
+       RETURNING *`,
+      ['invoiced', invoiceNumber, invoiceId, user.id]
+    );
+
+    res.json({ invoice: updateResult.rows[0] });
+  } catch (err) {
+    console.error('Erreur finalisation facture propriétaire:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // 8. ENVOYER UN BROUILLON
 app.post('/api/owner-invoices/:id/send', async (req, res) => {
