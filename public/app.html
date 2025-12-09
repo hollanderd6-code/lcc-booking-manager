@@ -5757,6 +5757,25 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     document.addEventListener('DOMContentLoaded', function() {
       console.log("🔧 Démarrage du script de réparation V2...");
 
+      // Sécurisation : on s'assure que les données globales existent
+      if (!window.LCC_RESERVATIONS) {
+        try {
+          window.LCC_RESERVATIONS = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+        } catch (e) {
+          console.warn('Impossible de charger LCC_RESERVATIONS depuis localStorage', e);
+          window.LCC_RESERVATIONS = [];
+        }
+      }
+      if (!window.LCC_PROPERTIES) {
+        try {
+          window.LCC_PROPERTIES = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+        } catch (e) {
+          console.warn('Impossible de charger LCC_PROPERTIES depuis localStorage', e);
+          window.LCC_PROPERTIES = [];
+        }
+      }
+
+
       // ---------------------------------------------------------
       // 1. GESTION DU BOUTON "+" (Nouvelle Réservation)
       // ---------------------------------------------------------
@@ -5782,6 +5801,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
           }
 
           // Remplissage du menu déroulant
+          console.log('🏠 Logements disponibles (window.LCC_PROPERTIES) :', Array.isArray(properties) ? properties.length : 0);
           if (propertySelect) {
             propertySelect.innerHTML = '<option value="">Sélectionner un logement...</option>';
             
@@ -5861,10 +5881,21 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
           }
 
           // Recherche de la réservation
+          console.log('📚 Nombre de réservations chargées :', allReservations ? allReservations.length : 0);
+          console.log('🔑 ID cliqué :', uid);
           let booking = null;
-          if (allReservations) {
+          if (allReservations && allReservations.length) {
             booking = allReservations.find(r => String(r.id) == String(uid));
             if (!booking && !isNaN(uid)) booking = allReservations[uid];
+          }
+
+          if (!booking) {
+            console.warn('Aucune réservation trouvée pour cet ID dans LCC_RESERVATIONS');
+            try {
+              const debugList = (allReservations || []).slice(0, 5).map(r => r && r.id);
+              console.warn('Exemple d'IDs présents :', debugList);
+            } catch(e) {}
+            alert("Je n'arrive pas à retrouver les détails de cette réservation (ID : " + uid + "). Vérifie que les données sont bien chargées dans le tableau de bord.");
           }
 
           if (booking) {
