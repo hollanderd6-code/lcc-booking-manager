@@ -989,7 +989,8 @@
         const checkin = document.getElementById('checkinDate').value;
         const checkout = document.getElementById('checkoutDate').value;
 
-        invoiceNumber = 'FACT-XXX'; // Sera généré par le serveur
+        // Numéro temporaire, le vrai viendra de l'API
+        invoiceNumber = 'FACT-XXX';
 
         const preview = `
           <div class="invoice-header">
@@ -1019,19 +1020,23 @@
             <h3>Séjour</h3>
             <div class="invoice-section-content">
               <strong>${propertyName}</strong>
-              ${checkin && checkout ? '<br>Du ' + new Date(checkin).toLocaleDateString('fr-FR') + ' au ' + new Date(checkout).toLocaleDateString('fr-FR') + ' (' + nights + ' ' + (nights > 1 ? 'nuits' : 'nuit') + ')' : ''}
+              ${checkin && checkout 
+                ? '<br>Du ' + new Date(checkin).toLocaleDateString('fr-FR') +
+                  ' au ' + new Date(checkout).toLocaleDateString('fr-FR') +
+                  (nights ? ' (' + nights + ' ' + (nights > 1 ? 'nuits' : 'nuit') + ')' : '')
+                : ''}
             </div>
           </div>
 
           <div class="invoice-section">
             <h3>Détails</h3>
-            ${rentAmount > 0 ? '<div class="invoice-line"><span>Loyer ' + propertyName + '</span><span>' + rentAmount.toFixed(2) + ' €</span></div>' : ''}
-            ${touristTaxAmount > 0 ? '<div class="invoice-line"><span>Taxe de séjour</span><span>' + touristTaxAmount.toFixed(2) + ' €</span></div>' : ''}
+            ${rentAmount > 0 ? '<div class="invoice-line"><span>Loyer</span><span>' + rentAmount.toFixed(2) + ' €</span></div>' : ''}
+            ${touristTaxAmount > 0 ? '<div class="invoice-line"><span>Taxes de séjour</span><span>' + touristTaxAmount.toFixed(2) + ' €</span></div>' : ''}
             ${cleaningFee > 0 ? '<div class="invoice-line"><span>Frais de ménage</span><span>' + cleaningFee.toFixed(2) + ' €</span></div>' : ''}
           </div>
 
           <div class="invoice-subtotal">
-            <span>Sous-total HT</span>
+            <span>Sous-total</span>
             <span>${subtotal.toFixed(2)} €</span>
           </div>
           ${withVat ? '<div class="invoice-line"><span>TVA (' + vatRate + '%)</span><span>' + vatAmount.toFixed(2) + ' €</span></div>' : ''}
@@ -1050,11 +1055,16 @@
           </div>
         `;
 
+        // IMPORTANT : "invoicePreview" doit maintenant être la <div class="invoice-paper" id="invoicePreview">
         document.getElementById('invoicePreview').innerHTML = preview;
-        document.getElementById('sendBtn').disabled = false;
-        document.getElementById('pdfBtn').disabled = false;
+
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn) sendBtn.disabled = false;
+        // On laisse le bouton PDF désactivé : il sera activé une fois la facture créée côté serveur
       };
 
+
+      // Envoyer la facture
       // Envoyer la facture
       window.sendInvoice = async function() {
         const clientEmail = document.getElementById('clientEmail').value;
@@ -1098,11 +1108,20 @@
             alert('✅ Facture ' + result.invoiceNumber + ' créée et envoyée par email !');
             currentInvoiceId = result.invoiceId;
             invoiceNumber = result.invoiceNumber;
+
             // Mettre à jour l'aperçu avec le vrai numéro
             const numberEl = document.querySelector('.invoice-number');
             if (numberEl) {
               numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
             }
+
+            // Activer le bouton PDF maintenant que l'ID de facture est connu
+            const pdfBtn = document.getElementById('pdfBtn');
+            if (pdfBtn) pdfBtn.disabled = false;
+
+            // Optionnel : désactiver le bouton d'envoi pour éviter les doublons
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) sendBtn.disabled = true;
           } else {
             alert('❌ Erreur: ' + result.error);
           }
@@ -1111,6 +1130,7 @@
           alert('❌ Erreur lors de l\'envoi de la facture');
         }
       };
+      
 
       // Télécharger PDF
       window.downloadPDF = async function() {
