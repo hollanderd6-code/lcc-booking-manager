@@ -1421,11 +1421,16 @@ async function loadProperties() {
         arrival_time,
         departure_time,
         deposit_amount,
-        photo_url
+        photo_url,
+        welcome_book_url,
+        access_code,
+        wifi_name,
+        wifi_password,
+        access_instructions,
+        owner_id
       FROM properties
       ORDER BY created_at ASC
     `);
-
     PROPERTIES = result.rows.map(row => {
       // ✅ Parser ical_urls si c'est une string JSON
       let icalUrls = row.ical_urls || [];
@@ -1443,20 +1448,20 @@ async function loadProperties() {
         userId: row.user_id,
         name: row.name,
         color: row.color,
-
-        // Pour l'instant on garde ical_urls tel quel (strings ou objets),
-        // on le transformera au moment de la réponse API si besoin.
         icalUrls,
-
-        // Champs supplémentaires
         address: row.address,
         arrival_time: row.arrival_time,
         departure_time: row.departure_time,
         deposit_amount: row.deposit_amount,
-        photo_url: row.photo_url
+        photo_url: row.photo_url,
+        welcome_book_url: row.welcome_book_url,
+        access_code: row.access_code,
+        wifi_name: row.wifi_name,
+        wifi_password: row.wifi_password,
+        access_instructions: row.access_instructions,
+        owner_id: row.owner_id
       };
     });
-
     console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`); 
   } catch (error) {
     console.error('❌ Erreur loadProperties :', error);
