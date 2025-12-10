@@ -3962,11 +3962,10 @@ await pool.query(
     wifiName || null,
     wifiPassword || null,
     accessInstructions || null,
-    ownerId // ← AJOUTE CETTE LIGNE
+    ownerId
   ]
 );
-      `
-
+      
     await loadProperties();
 
     const property = PROPERTIES.find(p => p.id === id);
