@@ -867,7 +867,7 @@ window.deleteOwnerInvoice = async function (id) {
 };
   window.downloadOwnerInvoice = async function (id) {
   try {
-    // Récupérer les infos de la facture
+    // Récupérer les données de la facture
     const res = await fetch('/api/owner-invoices/' + id, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -876,22 +876,125 @@ window.deleteOwnerInvoice = async function (id) {
     
     const json = await res.json();
     const inv = json.invoice;
+    const items = json.items || [];
     
-    // Charger la facture en mode lecture seule
-    await viewOwnerInvoiceReadOnly(id);
+    // Trouver le client
+    const client = clients.find(c => c.id == inv.client_id);
+    const clientName = client ? (client.company_name || `${client.first_name || ''} ${client.last_name || ''}`.trim()) : 'Client';
     
-    // Attendre que le DOM soit à jour
-    setTimeout(() => {
-      const invoicePaper = document.getElementById('invoicePaper');
-      if (!invoicePaper) {
-        alert('Impossible de trouver la facture');
-        return;
-      }
+    // Créer un conteneur temporaire invisible avec la facture
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'fixed';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    document.body.appendChild(tempContainer);
+    
+    // Générer le HTML de la facture
+    let itemsHtml = '';
+    items.forEach(item => {
+      const desc = item.description || 'Prestation';
+      const qty = item.quantity || 1;
+      const price = parseFloat(item.unit_price || 0);
+      const total = parseFloat(item.total || 0);
       
-      // Nom du fichier
-      const filename = `${inv.invoice_number || 'facture'}.pdf`;
-      
-      // Utiliser html2pdf (chargé via CDN)
+      itemsHtml += `
+        <tr>
+          <td style="padding:16px 8px;">${desc}</td>
+          <td style="padding:16px 8px;text-align:center;">${qty}</td>
+          <td style="padding:16px 8px;text-align:right;">${price.toFixed(2)} €</td>
+          <td style="padding:16px 8px;text-align:right;font-weight:600;">${total.toFixed(2)} €</td>
+        </tr>
+      `;
+    });
+    
+    const subtotal = parseFloat(inv.subtotal_ht || 0);
+    const vatAmount = parseFloat(inv.vat_amount || 0);
+    const totalTtc = parseFloat(inv.total_ttc || 0);
+    
+    tempContainer.innerHTML = `
+      <div id="tempInvoicePaper" style="background:white;width:800px;padding:48px;font-family:'Inter',sans-serif;color:#1f2937;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:40px;">
+          <div>
+            <p style="margin:0;font-size:12px;color:#6b7280;">
+              La Conciergerie de Charles<br>
+              123 Rue de la République<br>
+              95210 Saint-Gratien<br>
+              contact@lcc.fr
+            </p>
+          </div>
+          <div style="text-align:right;">
+            <h1 style="margin:0 0 8px 0;font-size:32px;font-weight:800;">FACTURE</h1>
+            <p style="margin:0;font-size:13px;color:#6b7280;">
+              N° ${inv.invoice_number || 'BROUILLON'}<br>
+              Date : ${new Date(inv.issue_date).toLocaleDateString('fr-FR')}<br>
+              Échéance : ${new Date(inv.due_date).toLocaleDateString('fr-FR')}
+            </p>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:32px;">
+          <p style="margin:0 0 4px 0;font-size:11px;font-weight:700;text-transform:uppercase;color:#9ca3af;">Facturé à</p>
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#4b5563;">
+            <strong>${clientName}</strong>
+          </p>
+        </div>
+        
+        <table style="width:100%;border-collapse:collapse;margin-top:32px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">Description</th>
+              <th style="text-align:center;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">Qté</th>
+              <th style="text-align:right;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">P.U. HT</th>
+              <th style="text-align:right;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">Total HT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        
+        <div style="display:flex;justify-content:flex-end;margin-top:32px;">
+          <div style="width:260px;">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
+              <span>Total HT</span>
+              <span>${subtotal.toFixed(2)} €</span>
+            </div>
+            ${vatAmount > 0 ? `
+            <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
+              <span>TVA (${inv.vat_rate}%)</span>
+              <span>${vatAmount.toFixed(2)} €</span>
+            </div>
+            ` : ''}
+            <div style="display:flex;justify-content:space-between;padding:12px 0 6px 0;font-size:16px;font-weight:700;color:#10B981;border-top:2px solid #e5e7eb;margin-top:8px;">
+              <span>Total TTC</span>
+              <span>${totalTtc.toFixed(2)} €</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const invoiceElement = document.getElementById('tempInvoicePaper');
+    const filename = `${inv.invoice_number || 'facture'}.pdf`;
+    
+    // Charger html2pdf dynamiquement
+    if (typeof html2pdf === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.onload = () => {
+        const opt = {
+          margin: 10,
+          filename: filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(invoiceElement).save().then(() => {
+          document.body.removeChild(tempContainer);
+        });
+      };
+      document.head.appendChild(script);
+    } else {
       const opt = {
         margin: 10,
         filename: filename,
@@ -899,20 +1002,10 @@ window.deleteOwnerInvoice = async function (id) {
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      
-      // Charger html2pdf dynamiquement
-      if (typeof html2pdf === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-        script.onload = () => {
-          html2pdf().set(opt).from(invoicePaper).save();
-        };
-        document.head.appendChild(script);
-      } else {
-        html2pdf().set(opt).from(invoicePaper).save();
-      }
-      
-    }, 500);
+      html2pdf().set(opt).from(invoiceElement).save().then(() => {
+        document.body.removeChild(tempContainer);
+      });
+    }
     
   } catch (err) {
     console.error(err);
