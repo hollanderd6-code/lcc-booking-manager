@@ -386,10 +386,6 @@
                   <div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
                   <div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
                   <div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
-                  <div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
-  TVA non applicable, art. 293 B du CGI
-</div>
-
                 </div>
               </div>
             </div>
@@ -543,7 +539,7 @@ async function loadInvoices() {
     let totalRev = 0;
     tbody.innerHTML = '';
 
-    invs.forEach(function (inv) {
+    invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0);
       totalRev += total;
 
@@ -565,21 +561,18 @@ async function loadInvoices() {
       let actionsHtml = '';
 
       if (inv.is_credit_note) {
-        // Menu pour un avoir
         actionsHtml =
           '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
           '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
       } else if (inv.status === 'draft') {
-        // Menu pour un brouillon
         actionsHtml =
           '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
           '<button type="button" onclick="finalizeOwnerInvoice(' + inv.id + ')">Passer en “Facturée”</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer le brouillon</button>';
       } else {
-        // Facture normale
         actionsHtml =
           '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
           '<button type="button" onclick="createOwnerCreditNote(' + inv.id + ')">Créer un avoir</button>' +
@@ -618,7 +611,6 @@ async function loadInvoices() {
 
 
 let editingClientId = null;
- = null;
 window.toggleInvoiceActions = function (id, btn) {
   const menu = document.getElementById('invoice-actions-' + id);
   if (!menu) return;
@@ -965,40 +957,34 @@ window.editClient = function(clientId) {
     });
 
     const hasVat = document.getElementById('invoiceVatApplicable').checked;
-const vatRateInput = document.getElementById('invoiceVatRate');
+    const vatRateInput = document.getElementById('invoiceVatRate');
 
-// Affichage / masquage du champ de taux
-if (vatRateInput) {
-  vatRateInput.style.display = hasVat ? 'inline-block' : 'none';
-}
+    if (vatRateInput) {
+      vatRateInput.style.display = hasVat ? 'inline-block' : 'none';
+    }
 
-// Taux de TVA choisi (5.5, 10, 20...)
-const rateValue = vatRateInput ? parseFloat(vatRateInput.value) : 20;
-const vatRate = hasVat ? (rateValue || 20) / 100 : 0;
+    const rateValue = vatRateInput ? parseFloat(vatRateInput.value) : 20;
+    const vatRate = hasVat ? (rateValue || 20) / 100 : 0;
 
-// Calculs
-const vatAmount = totalHT * vatRate;
-const totalTTC = totalHT + vatAmount;
+    const vatAmount = totalHT * vatRate;
+    const totalTTC = totalHT + vatAmount;
 
-// MAJ UI
-const strHT  = totalHT.toFixed(2) + ' €';
-const strVAT = vatAmount.toFixed(2) + ' €';
-const strTTC = totalTTC.toFixed(2) + ' €';
+    const strHT  = totalHT.toFixed(2) + ' €';
+    const strVAT = vatAmount.toFixed(2) + ' €';
+    const strTTC = totalTTC.toFixed(2) + ' €';
 
-document.getElementById('displayTotalHT').textContent  = strHT;
-document.getElementById('displayTotalVAT').textContent = strVAT;
-document.getElementById('displayTotalTTC').textContent = strTTC;
+    document.getElementById('displayTotalHT').textContent  = strHT;
+    document.getElementById('displayTotalVAT').textContent = strVAT;
+    document.getElementById('displayTotalTTC').textContent = strTTC;
+    document.getElementById('previewTotalHT').textContent  = strHT;
+    document.getElementById('previewTotalVAT').textContent = strVAT;
+    document.getElementById('previewTotalTTC').textContent = strTTC;
 
-document.getElementById('previewTotalHT').textContent  = strHT;
-document.getElementById('previewTotalVAT').textContent = strVAT;
-document.getElementById('previewTotalTTC').textContent = strTTC;
-
-// Mention TVA non applicable
-const mentionEl = document.getElementById('previewVatLegalMention');
-if (mentionEl) {
-  mentionEl.style.display = hasVat ? 'none' : 'block';
-}
-
+    const mentionEl = document.getElementById('previewVatLegalMention');
+    if (mentionEl) {
+      mentionEl.style.display = hasVat ? 'none' : 'block';
+    }
+  };
 
   // --- LOGO ---
   window.updateLogoPreview = function() {
