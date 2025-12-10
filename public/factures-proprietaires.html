@@ -346,7 +346,7 @@ input[type="number"] {
             <div class="editor-section">
               <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                  <input type="checkbox" id="invoiceVatApplicable" onchange="toggleVat(); updatePreview();"> TVA (20%)
+                  <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()"> TVA
                 </label>
                 <input type="number" id="invoiceVatRate" value="20" style="width:50px; display:none;" onchange="updatePreview()">
               </div>
@@ -1031,7 +1031,10 @@ window.editClient = function(clientId) {
     }
 
 
-  // --- LOGO ---
+  
+  };
+
+// --- LOGO ---
   window.updateLogoPreview = function() {
     const file = document.getElementById('logoInput').files[0];
     if (file) {
