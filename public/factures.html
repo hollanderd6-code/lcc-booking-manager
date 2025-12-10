@@ -845,6 +845,8 @@
 
       let currentInvoiceId = null;
       let invoiceNumber = '';
+            const propertiesByName = {};
+
 
       // Load user info pour la sidebar
       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
@@ -933,6 +935,27 @@
 
       document.getElementById('checkoutDate').addEventListener('change', calculateNights);
       document.getElementById('checkinDate').addEventListener('change', calculateNights);
+     
+      function getSelectedPropertyAddress() {
+        const select = document.getElementById('propertyName');
+        if (!select) return '';
+
+        const selectedOption = select.options[select.selectedIndex];
+        let address = selectedOption && selectedOption.dataset.address
+          ? selectedOption.dataset.address
+          : '';
+
+        if (!address && propertiesByName[select.value]) {
+          const prop = propertiesByName[select.value];
+          address =
+            prop.address ||
+            prop.propertyAddress ||
+            prop.addressLine ||
+            '';
+        }
+
+        return address || '';
+      }
 
       // Charger les logements
       async function loadProperties() {
@@ -940,15 +963,29 @@
           const response = await fetch('/api/properties', {
             headers: { 'Authorization': 'Bearer ' + token }
           });
-          if (response.ok) {
+                    if (response.ok) {
             const data = await response.json();
             const select = document.getElementById('propertyName');
+
             data.properties.forEach(prop => {
               const option = document.createElement('option');
-              option.value = prop.name;
+              option.value = prop.name; // on garde le nom comme avant
               option.textContent = prop.name;
+
+              // On essaye plusieurs clés possibles pour l'adresse
+              option.dataset.address =
+                prop.address ||
+                prop.propertyAddress ||
+                prop.addressLine ||
+                '';
+
               select.appendChild(option);
+
+              // On garde l'objet complet en mémoire
+              propertiesByName[prop.name] = prop;
             });
+          }
+          
           } else {
             console.error('Erreur chargement logements:', response.status);
           }
@@ -961,6 +998,8 @@
       window.generateInvoice = function() {
         const clientName = document.getElementById('clientName').value;
         const propertyName = document.getElementById('propertyName').value;
+              const propertyAddress = getSelectedPropertyAddress();
+
         
         if (!clientName || !propertyName) {
           alert('Veuillez remplir au minimum le nom du client et le logement');
@@ -1010,10 +1049,11 @@
             </div>
           </div>
 
-          <div class="invoice-section">
+                    <div class="invoice-section">
             <h3>Séjour</h3>
             <div class="invoice-section-content">
               <strong>${propertyName}</strong>
+              ${propertyAddress ? '<br>' + propertyAddress : ''}
               ${checkin && checkout 
                 ? '<br>Du ' + new Date(checkin).toLocaleDateString('fr-FR') +
                   ' au ' + new Date(checkout).toLocaleDateString('fr-FR') +
@@ -1021,6 +1061,7 @@
                 : ''}
             </div>
           </div>
+
 
           <div class="invoice-section">
             <h3>Détails</h3>
@@ -1073,6 +1114,8 @@
           clientCity: document.getElementById('clientCity').value,
           clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
           propertyName: document.getElementById('propertyName').value,
+                    propertyAddress: getSelectedPropertyAddress(),
+
           checkinDate: document.getElementById('checkinDate').value,
           checkoutDate: document.getElementById('checkoutDate').value,
           nights: calculateNights(),
