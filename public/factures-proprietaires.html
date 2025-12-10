@@ -317,7 +317,15 @@ input[type="number"] {
                 <div class="form-group"><label>Au</label><input type="date" class="form-control" id="invoicePeriodEnd" onchange="updatePreview()"></div>
               </div>
             </div>
-
+<div class="form-group" id="propertySelectContainer" style="display:none;margin-top:12px;">
+  <label>Logements concernés</label>
+  <div id="propertyCheckboxList" style="max-height:150px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
+    <!-- Cases à cocher générées dynamiquement -->
+  </div>
+  <small style="display:block;margin-top:4px;font-size:11px;color:#6b7280;">
+    Sélectionnez le(s) logement(s) concerné(s) par cette facture
+  </small>
+</div>
             <div class="editor-section">
                             <div class="editor-section-title">Profil émetteur</div>
 
