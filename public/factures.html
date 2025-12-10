@@ -562,17 +562,16 @@
           </a>
 
           <div class="nav-section">
-  <div class="nav-section-title">Facturation</div>
-  <a href="/factures.html" class="nav-item active">
-    <i class="fas fa-file-invoice"></i>
-    <span>Factures clients</span>
-  </a>
-  <a href="/factures-proprietaires.html" class="nav-item">
-    <i class="fas fa-file-invoice-dollar"></i>
-    <span>Factures propriétaires</span>
-  </a>
-</div>
-
+            <div class="nav-section-title">Facturation</div>
+            <a href="/factures.html" class="nav-item active">
+              <i class="fas fa-file-invoice"></i>
+              <span>Factures clients</span>
+            </a>
+            <a href="/factures-proprietaires.html" class="nav-item">
+              <i class="fas fa-file-invoice-dollar"></i>
+              <span>Factures propriétaires</span>
+            </a>
+          </div>
 
           <a href="/deposits.html" class="nav-item" data-page="deposits">
             <i class="fas fa-shield-alt"></i>
@@ -629,9 +628,6 @@
       
       <!-- Page Content -->
       <div class="page-content">
-      <!-- Page Content -->
-      <div class="page-content">
-
         <div class="invoice-grid">
           
           <!-- Formulaire -->
@@ -776,30 +772,26 @@
           </div>
 
           <!-- Aperçu -->
-          </div>
           <div class="invoice-preview-card">
-  <div class="invoice-preview-header">
-    <i class="fas fa-file-invoice"></i>
-    Aperçu de la facture
-  </div>
-  <div class="invoice-preview-body">
-    <!-- On déplace l'ID sur la "feuille" -->
-    <div class="invoice-paper" id="invoicePreview">
-      <div class="invoice-preview-empty">
-        <i class="fas fa-file-invoice"></i>
-        <div>
-          <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
-          <p style="font-size: 14px;">Remplissez le formulaire et cliquez sur "Aperçu"</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+            <div class="invoice-preview-header">
+              <i class="fas fa-file-invoice"></i>
+              Aperçu de la facture
+            </div>
+            <div class="invoice-preview-body">
+              <div class="invoice-paper" id="invoicePreview">
+                <div class="invoice-preview-empty">
+                  <i class="fas fa-file-invoice"></i>
+                  <div>
+                    <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
+                    <p style="font-size: 14px;">Remplissez le formulaire et cliquez sur "Aperçu"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-
-        </div>
-
-      </div>
+        </div><!-- /.invoice-grid -->
+      </div><!-- /.page-content -->
       
     </main>
   </div>
@@ -807,43 +799,44 @@
   <!-- Scripts -->
   <script>
     (async function checkSubscriptionAccess() {
-    const token = localStorage.getItem('lcc_token');
-    
-    if (!token) {
-      window.location.href = '/login.html';
-      return;
-    }
+      const token = localStorage.getItem('lcc_token');
+      
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
 
-    try {
-      const res = await fetch('/api/subscription/status', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
+      try {
+        const res = await fetch('/api/subscription/status', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
 
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = '/login.html';
+          }
+          return;
         }
-        return;
+
+        const data = await res.json();
+
+        if (data.status === 'expired' || data.status === 'canceled') {
+          window.location.href = '/subscription-expired.html';
+          return;
+        }
+
+        if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
+          window.location.href = '/subscription-expired.html';
+          return;
+        }
+
+      } catch (err) {
+        console.error('Erreur vérification abonnement:', err);
       }
+    })();
 
-      const data = await res.json();
-
-      if (data.status === 'expired' || data.status === 'canceled') {
-        window.location.href = '/subscription-expired.html';
-        return;
-      }
-
-      if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
-        window.location.href = '/subscription-expired.html';
-        return;
-      }
-
-    } catch (err) {
-      console.error('Erreur vérification abonnement:', err);
-    }
-  })();
     document.addEventListener('DOMContentLoaded', async function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
@@ -927,9 +920,6 @@
       });
 
       // Calcul des nuits
-      document.getElementById('checkoutDate').addEventListener('change', calculateNights);
-      document.getElementById('checkinDate').addEventListener('change', calculateNights);
-
       function calculateNights() {
         const checkin = document.getElementById('checkinDate').value;
         const checkout = document.getElementById('checkoutDate').value;
@@ -941,6 +931,9 @@
         }
         return 0;
       }
+
+      document.getElementById('checkoutDate').addEventListener('change', calculateNights);
+      document.getElementById('checkinDate').addEventListener('change', calculateNights);
 
       // Charger les logements
       async function loadProperties() {
@@ -1055,21 +1048,18 @@
           </div>
         `;
 
-        // IMPORTANT : "invoicePreview" doit maintenant être la <div class="invoice-paper" id="invoicePreview">
         document.getElementById('invoicePreview').innerHTML = preview;
 
         const sendBtn = document.getElementById('sendBtn');
         if (sendBtn) sendBtn.disabled = false;
-        // On laisse le bouton PDF désactivé : il sera activé une fois la facture créée côté serveur
+        // Le bouton PDF restera activé seulement après création côté serveur
       };
 
-
-      // Envoyer la facture
       // Envoyer la facture
       window.sendInvoice = async function() {
         const clientEmail = document.getElementById('clientEmail').value;
         if (!clientEmail) {
-          alert('Veuillez renseigner l\'email du client');
+          alert("Veuillez renseigner l'email du client");
           return;
         }
 
@@ -1094,77 +1084,57 @@
         };
 
         try {
-  const response = await fetch('/api/invoice/create', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify(data)
-  });
+          const response = await fetch('/api/invoice/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(data)
+          });
 
-  let result;
-  try {
-    result = await response.json();
-  } catch (e) {
-    console.error('Réponse non-JSON de l’API /api/invoice/create', e);
-    alert('❌ Erreur : la réponse du serveur n’est pas au format JSON. Code HTTP : ' + response.status);
-    return;
-  }
+          let result;
+          try {
+            result = await response.json();
+          } catch (e) {
+            console.error('Reponse non-JSON de l API /api/invoice/create', e);
+            alert('❌ Erreur : la réponse du serveur n est pas au format JSON. Code HTTP : ' + response.status);
+            return;
+          }
 
-  if (response.ok) {
-    alert('✅ Facture ' + result.invoiceNumber + ' créée et envoyée par email !');
+          if (response.ok) {
+            // On gère plusieurs noms possibles côté API : invoiceId / id / _id
+            currentInvoiceId = result.invoiceId || result.id || result._id || null;
+            invoiceNumber = result.invoiceNumber || result.number || invoiceNumber || '';
 
-    // On gère plusieurs noms possibles côté API : invoiceId / id
-    currentInvoiceId = result.invoiceId || result.id;
-    invoiceNumber = result.invoiceNumber || result.number || invoiceNumber;
+            alert('✅ Facture ' + (invoiceNumber || '') + ' créée et envoyée par email !');
 
-    const numberEl = document.querySelector('.invoice-number');
-    if (numberEl && invoiceNumber) {
-      numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
-    }
-
-    const pdfBtn = document.getElementById('pdfBtn');
-    if (pdfBtn) pdfBtn.disabled = !currentInvoiceId;
-
-    const sendBtn = document.getElementById('sendBtn');
-    if (sendBtn) sendBtn.disabled = true;
-  } else {
-    console.error('Erreur API /api/invoice/create', {
-      status: response.status,
-      body: result
-    });
-    alert('❌ Erreur serveur (' + response.status + ') : ' + (result.error || JSON.stringify(result)));
-  }
-} catch (err) {
-  console.error('Erreur réseau ou JS:', err);
-  alert('❌ Erreur technique : ' + (err.message || err));
-}
-
-
-            // Mettre à jour l'aperçu avec le vrai numéro
-            const numberEl = document.querySelector('.invoice-number');
-            if (numberEl) {
-              numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
+            if (invoiceNumber) {
+              const numberEl = document.querySelector('.invoice-number');
+              if (numberEl) {
+                numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
+              }
             }
 
-            // Activer le bouton PDF maintenant que l'ID de facture est connu
             const pdfBtn = document.getElementById('pdfBtn');
-            if (pdfBtn) pdfBtn.disabled = false;
+            if (pdfBtn) pdfBtn.disabled = !currentInvoiceId;
 
-            // Optionnel : désactiver le bouton d'envoi pour éviter les doublons
             const sendBtn = document.getElementById('sendBtn');
             if (sendBtn) sendBtn.disabled = true;
+
           } else {
-            alert('❌ Erreur: ' + result.error);
+            console.error('Erreur API /api/invoice/create', {
+              status: response.status,
+              body: result
+            });
+            alert('❌ Erreur serveur (' + response.status + ') : ' + (result.error || JSON.stringify(result)));
           }
         } catch (err) {
-          console.error('Erreur:', err);
-          alert('❌ Erreur lors de l\'envoi de la facture');
+          console.error('Erreur réseau ou JS:', err);
+          alert('❌ Erreur technique : ' + (err.message || err));
         }
       };
       
-
       // Télécharger PDF
       window.downloadPDF = async function() {
         if (!currentInvoiceId) {
@@ -1172,16 +1142,19 @@
           return;
         }
 
-        window.open(`/api/invoice/${currentInvoiceId}/pdf?token=${token}`, '_blank');
+        window.open('/api/invoice/' + currentInvoiceId + '/pdf?token=' + token, '_blank');
       };
 
       // Auto-update preview
       ['rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', function() {
-          if (document.getElementById('clientName').value && document.getElementById('propertyName').value) {
-            generateInvoice();
-          }
-        });
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', function() {
+            if (document.getElementById('clientName').value && document.getElementById('propertyName').value) {
+              generateInvoice();
+            }
+          });
+        }
       });
 
       // Init
