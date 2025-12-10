@@ -1056,104 +1056,116 @@
       };
 
       // Envoyer la facture
-      window.sendInvoice = async function() {
-        const clientEmail = document.getElementById('clientEmail').value;
-        if (!clientEmail) {
-          alert("Veuillez renseigner l'email du client");
-          return;
+     // Envoyer la facture
+window.sendInvoice = async function() {
+  const clientEmail = document.getElementById('clientEmail').value;
+  if (!clientEmail) {
+    alert("Veuillez renseigner l'email du client");
+    return;
+  }
+
+  if (!confirm("Envoyer la facture par email à " + clientEmail + " ?")) return;
+
+  const data = {
+    clientName: document.getElementById('clientName').value,
+    clientEmail: clientEmail,
+    clientAddress: document.getElementById('clientAddress').value,
+    clientPostalCode: document.getElementById('clientPostalCode').value,
+    clientCity: document.getElementById('clientCity').value,
+    clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
+    propertyName: document.getElementById('propertyName').value,
+    checkinDate: document.getElementById('checkinDate').value,
+    checkoutDate: document.getElementById('checkoutDate').value,
+    nights: (function calculateNightsLocal() {
+      const checkin = document.getElementById('checkinDate').value;
+      const checkout = document.getElementById('checkoutDate').value;
+      if (checkin && checkout) {
+        const d1 = new Date(checkin);
+        const d2 = new Date(checkout);
+        return Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+      }
+      return 0;
+    })(),
+    rentAmount: document.getElementById('rentAmount').value,
+    touristTaxAmount: document.getElementById('touristTaxAmount').value,
+    cleaningFee: document.getElementById('cleaningFee').value,
+    vatRate: document.getElementById('withVat').checked ? document.getElementById('vatRate').value : 0,
+    sendEmail: true
+  };
+
+  try {
+    const response = await fetch('/api/invoice/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+      // ✅ Cas où l’API fonctionne
+      const result = await response.json();
+
+      // On gère plusieurs noms possibles côté API
+      currentInvoiceId = result.invoiceId || result.id || result._id || null;
+      invoiceNumber = result.invoiceNumber || result.number || invoiceNumber || '';
+
+      alert("✅ Facture " + (invoiceNumber || '') + " créée et envoyée par email !");
+
+      // Mise à jour du numéro dans l’aperçu
+      if (invoiceNumber) {
+        const numberEl = document.querySelector('.invoice-number');
+        if (numberEl) {
+          numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
         }
+      }
 
-        if (!confirm('Envoyer la facture par email à ' + clientEmail + ' ?')) return;
+      // Activer PDF + désactiver envoi
+      const pdfBtn = document.getElementById('pdfBtn');
+      if (pdfBtn) pdfBtn.disabled = false;
 
-        const data = {
-          clientName: document.getElementById('clientName').value,
-          clientEmail: clientEmail,
-          clientAddress: document.getElementById('clientAddress').value,
-          clientPostalCode: document.getElementById('clientPostalCode').value,
-          clientCity: document.getElementById('clientCity').value,
-          clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
-          propertyName: document.getElementById('propertyName').value,
-          checkinDate: document.getElementById('checkinDate').value,
-          checkoutDate: document.getElementById('checkoutDate').value,
-          nights: calculateNights(),
-          rentAmount: document.getElementById('rentAmount').value,
-          touristTaxAmount: document.getElementById('touristTaxAmount').value,
-          cleaningFee: document.getElementById('cleaningFee').value,
-          vatRate: document.getElementById('withVat').checked ? document.getElementById('vatRate').value : 0,
-          sendEmail: true
-        };
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) sendBtn.disabled = true;
 
-        try {
-          const response = await fetch('/api/invoice/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(data)
-          });
+    } else {
+      // ❌ Cas erreur API (404 dans ton cas)
+      const errorText = await response.text();
+      console.error("Erreur API /api/invoice/create", response.status, errorText);
 
-          let result;
-          try {
-            result = await response.json();
-          } catch (e) {
-            console.error('Reponse non-JSON de l API /api/invoice/create', e);
-            alert('❌ Erreur : la réponse du serveur n est pas au format JSON. Code HTTP : ' + response.status);
-            return;
-          }
+      alert(
+        "⚠️ L'envoi automatique par email ne fonctionne pas (code " +
+        response.status +
+        ").\n\n" +
+        "La facture est quand même prête : vous pouvez la télécharger en PDF."
+      );
 
-          if (response.ok) {
-            // On gère plusieurs noms possibles côté API : invoiceId / id / _id
-            currentInvoiceId = result.invoiceId || result.id || result._id || null;
-            invoiceNumber = result.invoiceNumber || result.number || invoiceNumber || '';
+      // On n’a pas d’ID, mais on autorise quand même le bouton PDF (mode impression navigateur)
+      currentInvoiceId = null;
+      const pdfBtn = document.getElementById('pdfBtn');
+      if (pdfBtn) pdfBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error("Erreur réseau ou JS:", err);
+    alert("❌ Erreur technique : " + (err.message || err));
+  }
+};
 
-            alert('✅ Facture ' + (invoiceNumber || '') + ' créée et envoyée par email !');
 
-            if (invoiceNumber) {
-              const numberEl = document.querySelector('.invoice-number');
-              if (numberEl) {
-                numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
-              }
-            }
+     // Télécharger PDF
+window.downloadPDF = function() {
+  const token = localStorage.getItem('lcc_token');
 
-            const pdfBtn = document.getElementById('pdfBtn');
-            if (pdfBtn) pdfBtn.disabled = !currentInvoiceId;
+  // Si on a une facture enregistrée côté serveur
+  if (currentInvoiceId) {
+    window.open('/api/invoice/' + currentInvoiceId + '/pdf?token=' + token, '_blank');
+  } else {
+    // Fallback : impression navigateur sur l'aperçu en pleine page
+    // (avec ton @media print, seule la feuille .invoice-paper est affichée)
+    window.print();
+  }
+};
 
-            const sendBtn = document.getElementById('sendBtn');
-            if (sendBtn) sendBtn.disabled = true;
-
-          } else {
-            console.error('Erreur API /api/invoice/create', {
-              status: response.status,
-              body: result
-            });
-            alert('❌ Erreur serveur (' + response.status + ') : ' + (result.error || JSON.stringify(result)));
-          }
-        } catch (err) {
-          console.error('Erreur réseau ou JS:', err);
-          alert('❌ Erreur technique : ' + (err.message || err));
-        }
-      };
-      
-      // Télécharger PDF
-      window.downloadPDF = async function() {
-        if (!currentInvoiceId) {
-          alert('Veuillez d\'abord créer et envoyer la facture');
-          return;
-        }
-
-        window.open('/api/invoice/' + currentInvoiceId + '/pdf?token=' + token, '_blank');
-      };
-
-      // Auto-update preview
-      ['rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.addEventListener('input', function() {
-            if (document.getElementById('clientName').value && document.getElementById('propertyName').value) {
-              generateInvoice();
-            }
-          });
         }
       });
 
