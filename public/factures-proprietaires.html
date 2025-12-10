@@ -742,7 +742,7 @@ async function loadInvoices() {
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
       } else if (status === 'draft') {
         actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="viewOwnerInvoiceReadOnly(' + inv.id + ')">Voir la facture</button>' +
           '<button type="button" onclick="finalizeOwnerInvoice(' + inv.id + ')">Passer en “Facturée”</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer le brouillon</button>';
@@ -753,7 +753,7 @@ async function loadInvoices() {
         }
 
         actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="viewOwnerInvoiceReadOnly(' + inv.id + ')">Voir la facture</button>' +
           paidBtn +
           '<button type="button" onclick="createOwnerCreditNote(' + inv.id + ')">Créer un avoir</button>' +
           '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
