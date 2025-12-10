@@ -979,33 +979,51 @@ window.deleteOwnerInvoice = async function (id) {
     
     // Charger html2pdf dynamiquement
     if (typeof html2pdf === 'undefined') {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      script.onload = () => {
-        const opt = {
-          margin: 10,
-          filename: filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(invoiceElement).save().then(() => {
-          document.body.removeChild(tempContainer);
-        });
-      };
-      document.head.appendChild(script);
-    } else {
-      const opt = {
-        margin: 10,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(invoiceElement).save().then(() => {
-        document.body.removeChild(tempContainer);
-      });
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+  script.onload = () => {
+    const opt = {
+      margin: 0,
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        letterRendering: true
+      },
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true
+      }
+    };
+    html2pdf().set(opt).from(invoiceElement).save().then(() => {
+      document.body.removeChild(tempContainer);
+    });
+  };
+  document.head.appendChild(script);
+} else {
+  const opt = {
+    margin: 0,
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { 
+      scale: 2,
+      useCORS: true,
+      letterRendering: true
+    },
+    jsPDF: { 
+      unit: 'mm', 
+      format: 'a4', 
+      orientation: 'portrait',
+      compress: true
     }
+  };
+  html2pdf().set(opt).from(invoiceElement).save().then(() => {
+    document.body.removeChild(tempContainer);
+  });
+}
     
   } catch (err) {
     console.error(err);
