@@ -179,6 +179,30 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* READ-ONLY MODE (vue consultation facture) */
+.editor-sidebar.readonly .form-control,
+.editor-sidebar.readonly .btn-primary {
+  pointer-events: none;
+  opacity: 0.6;
+  background: #f3f4f6;
+}
+
+.editor-sidebar.readonly .remove-line-btn {
+  display: none;
+}
+
+.readonly-banner {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  color: #92400e;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
   </style>
 </head>
 <body>
@@ -187,805 +211,719 @@ input[type="number"] {
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <a href="/" class="sidebar-logo">
-        <div style="width:32px; height:32px; background:#10B981; border-radius:6px; display:flex; align-items:center; justify-content:center; color:white;"><i class="fas fa-bolt"></i></div>
-        <span>Boostinghost</span>
+        <i class="fa fa-chart-line" style="color:var(--primary);"></i> Boostinghost
       </a>
     </div>
-    <nav class="sidebar-nav" style="flex:1; overflow-y:auto;">
-      <div class="nav-section-title">Principal</div>
-      <a href="/app.html" class="nav-item"><i class="fas fa-th-large"></i> Dashboard</a>
-      <a href="/app.html#calendarSection" class="nav-item"><i class="fas fa-calendar-alt"></i> Calendrier</a>
-      <a href="/messages.html" class="nav-item"><i class="fas fa-comment-dots"></i> Messages</a>
 
-      <div class="nav-section-title">Gestion</div>
-      <a href="/settings.html" class="nav-item"><i class="fas fa-home"></i> Mes logements</a>
-      <a href="/welcome.html" class="nav-item"><i class="fas fa-book-open"></i> Livret d'accueil</a>
-      <a href="/cleaning.html" class="nav-item"><i class="fas fa-broom"></i> Gestion du ménage</a>
+    <div class="nav-section-title">Menu</div>
+    <a href="/dashboard.html" class="nav-item"><i class="fa fa-home"></i>Tableau de bord</a>
+    <a href="/reservations.html" class="nav-item"><i class="fa fa-calendar-check"></i>Réservations</a>
+    <a href="/proprietes.html" class="nav-item"><i class="fa fa-building"></i>Propriétés</a>
+    <a href="/taches.html" class="nav-item"><i class="fa fa-tasks"></i>Tâches</a>
+    <a href="/messages.html" class="nav-item"><i class="fa fa-comments"></i>Messages</a>
 
-      <div class="nav-section-title">Facturation</div>
-      <a href="/factures.html" class="nav-item"><i class="fas fa-file-invoice"></i> Factures clients</a>
-      <a href="/factures-proprietaires.html" class="nav-item active"><i class="fas fa-file-invoice-dollar"></i> Factures propriétaires</a>
+    <div class="nav-section-title">Comptabilité</div>
+    <a href="/factures-client.html" class="nav-item"><i class="fa fa-file-invoice"></i>Factures clients</a>
+    <a href="/factures-proprietaires.html" class="nav-item active"><i class="fa fa-file-invoice-dollar"></i>Factures propriétaires</a>
 
-      <div class="nav-section-title">Autres</div>
-      <a href="/deposits.html" class="nav-item"><i class="fas fa-shield-alt"></i> Cautions</a>
-      <a href="/notifications.html" class="nav-item"><i class="fas fa-bell"></i> Notifications</a>
-
-      <div class="nav-section-title">Paramètres</div>
-      <a href="/settings-account.html" class="nav-item"><i class="fas fa-cog"></i> Paramètres</a>
-      <a href="#" class="nav-item" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </nav>
+    <div class="nav-section-title">Autres</div>
+    <a href="/parametres.html" class="nav-item"><i class="fa fa-cog"></i>Paramètres</a>
   </aside>
 
   <div class="main-wrapper">
     <header class="top-bar">
-      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i></button>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="text-align:right;">
-          <div style="font-weight:600; font-size:14px;" id="userName">Mon Compte</div>
-          <div style="font-size:11px; color:#6b7280;">Propriétaire</div>
-        </div>
-        <div style="width:36px; height:36px; background:#e5e7eb; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#374151;">U</div>
-      </div>
+      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')">
+        <i class="fa fa-bars"></i>
+      </button>
+      <button class="btn btn-secondary" onclick="logout()">
+        <i class="fa fa-sign-out-alt"></i> Déconnexion
+      </button>
     </header>
 
     <main class="main-content">
-      <div class="dashboard-header">
-        <div><h1 class="page-title">Facturation Propriétaires</h1><p class="page-subtitle" style="color:#6b7280; font-size:14px; margin-top:4px;">Gérez vos revenus et commissions.</p></div>
-        <button class="btn btn-primary" onclick="switchTab('create')"><i class="fas fa-plus"></i> Nouvelle Facture</button>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
-          <span class="stat-label">Total Facturé (Mois)</span>
-          <span class="stat-value" id="statsRevenue">0,00 €</span>
-        </div>
-        <div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
-          <span class="stat-label">En attente</span>
-          <span class="stat-value" style="color:#f59e0b;" id="statsPending">0,00 €</span>
-        </div>
-        <div class="stat-card" onclick="openStatsModal('clients')" style="cursor:pointer;">
-          <span class="stat-label">Clients Propriétaires</span>
-          <span class="stat-value" id="statsClients">0</span>
-        </div>
-      </div>
-
+      <!-- TABS NAVIGATION -->
       <div class="nav-tabs">
-        <button class="nav-tab active" onclick="switchTab('dashboard')" id="btn-dashboard">Historique</button>
-        <button class="nav-tab" onclick="switchTab('create')" id="btn-create">Éditeur</button>
-        <button class="nav-tab" onclick="switchTab('clients')" id="btn-clients">Mes Clients</button>
+        <button class="nav-tab active" onclick="switchTab('dashboard')">📊 Tableau de bord</button>
+        <button class="nav-tab" onclick="switchTab('create')">✏️ Éditeur</button>
+        <button class="nav-tab" onclick="switchTab('history')">📋 Historique</button>
       </div>
 
-      <div id="tab-dashboard" class="tab-content active">
-        <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
-          <table style="width:100%; border-collapse:collapse;">
-            <thead>
-              <tr style="background:#f9fafb; text-align:left; font-size:12px; text-transform:uppercase; color:#6b7280;">
-                <th style="padding:16px;">N°</th><th style="padding:16px;">Client</th><th style="padding:16px;">Date</th>
-                <th style="padding:16px;">Montant TTC</th><th style="padding:16px;">Statut</th><th style="padding:16px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="invoicesTableBody"><tr><td colspan="6" style="padding:40px; text-align:center;">Chargement...</td></tr></tbody>
-          </table>
+      <!-- TAB 1: Dashboard -->
+      <div id="tabDashboard" class="tab-content active">
+        <div class="dashboard-header">
+          <h1 class="page-title">Facturation propriétaires</h1>
+          <button class="btn btn-primary" onclick="createNewInvoice()">
+            <i class="fa fa-plus"></i> Nouvelle facture
+          </button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-label">Total émis ce mois</span>
+            <div class="stat-value" id="statMonthTotal">0,00 €</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">En attente d'encaissement</span>
+            <div class="stat-value" id="statPendingTotal">0,00 €</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Encaissé ce mois</span>
+            <div class="stat-value" id="statPaidThisMonth">0,00 €</div>
+          </div>
         </div>
       </div>
 
-      <div id="tab-create" class="tab-content">
+      <!-- TAB 2: Éditeur -->
+      <div id="tabCreate" class="tab-content">
+        <div class="dashboard-header">
+          <h1 class="page-title">Éditeur de facture</h1>
+        </div>
+
         <div class="invoice-editor-layout">
-          <div class="editor-sidebar">
+          <!-- SIDEBAR GAUCHE -->
+          <div class="editor-sidebar" id="editorSidebar">
+            <!-- Bannière READ-ONLY (masquée par défaut) -->
+            <div id="readonlyBanner" class="readonly-banner" style="display:none;">
+              ⚠️ Facture en lecture seule - Déjà émise
+            </div>
+
             <div class="editor-section">
-              <div class="editor-section-title">Informations Facture</div>
+              <div class="editor-section-title">Client</div>
               <div class="form-group">
-                <label>Client</label>
-                <select class="form-control" id="invoiceClientId" onchange="loadClientDefaults(); updatePreview();">
-                  <option value="">Sélectionner...</option>
+                <label>Client propriétaire</label>
+                <select id="invoiceClientId" class="form-control" onchange="updatePreview()">
+                  <option value="">Choisir un client...</option>
                 </select>
               </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group"><label>Émission</label><input type="date" class="form-control" id="invoiceIssueDate" onchange="updatePreview()"></div>
-                <div class="form-group"><label>Échéance</label><input type="date" class="form-control" id="invoiceDueDate" onchange="updatePreview()"></div>
+              <button class="btn btn-secondary btn-xs" onclick="openClientModal()">
+                <i class="fa fa-plus"></i> Nouveau client
+              </button>
+            </div>
+
+            <div class="editor-section">
+              <div class="editor-section-title">Dates</div>
+              <div class="form-group">
+                <label>Date d'émission</label>
+                <input type="date" id="invoiceIssueDate" class="form-control" onchange="updatePreview()">
               </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group"><label>Période Du</label><input type="date" class="form-control" id="invoicePeriodStart" onchange="updatePreview()"></div>
-                <div class="form-group"><label>Au</label><input type="date" class="form-control" id="invoicePeriodEnd" onchange="updatePreview()"></div>
+              <div class="form-group">
+                <label>Date d'échéance</label>
+                <input type="date" id="invoiceDueDate" class="form-control" onchange="updatePreview()">
+              </div>
+              <div class="form-group">
+                <label>Période : Début</label>
+                <input type="date" id="invoicePeriodStart" class="form-control" onchange="updatePreview()">
+              </div>
+              <div class="form-group">
+                <label>Période : Fin</label>
+                <input type="date" id="invoicePeriodEnd" class="form-control" onchange="updatePreview()">
               </div>
             </div>
 
             <div class="editor-section">
-                            <div class="editor-section-title">Profil émetteur</div>
-
-              <div class="form-group">
-                <label>Nom de l'entreprise</label>
-                <input type="text" id="emitterCompany" class="form-control" placeholder="La conciergerie de Charles" oninput="updateEmitterProfile()">
-              </div>
-
-              <div class="form-group">
-                <label>Adresse</label>
-                <input type="text" id="emitterAddress" class="form-control" placeholder="25 boulevard de la République" oninput="updateEmitterProfile()">
-              </div>
-
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group">
-                  <label>Code postal</label>
-                  <input type="text" id="emitterPostalCode" class="form-control" placeholder="95210" oninput="updateEmitterProfile()">
-                </div>
-                <div class="form-group">
-                  <label>Ville</label>
-                  <input type="text" id="emitterCity" class="form-control" placeholder="Saint-Gratien" oninput="updateEmitterProfile()">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>SIRET</label>
-                <input type="text" id="emitterSiret" class="form-control" placeholder="534 392 600" oninput="updateEmitterProfile()">
-              </div>
-
-              <div class="form-group">
-                <label>Logo entreprise (optionnel)</label>
-                <input type="file" id="logoInput" accept="image/*" class="form-control" onchange="updateLogoPreview()">
-              </div>
-
-              <div class="form-group">
-                <label>Adresse affichée sur la facture</label>
-                <textarea id="senderAddressInput" rows="2" class="form-control" placeholder="Votre adresse..." oninput="updatePreview()"></textarea>
-                <div style="font-size:11px; color:#6b7280; margin-top:4px;">
-                  Elle est pré-remplie automatiquement avec les champs ci-dessus, mais vous pouvez la modifier pour une facture précise.
-                </div>
-              </div>
-            </div>
-<div class="editor-section">
               <div class="editor-section-title">Prestations</div>
-              <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:12px;">
-                <button class="btn-xs btn-secondary" onclick="addPrestation('commission')">% Com</button>
-                <button class="btn-xs btn-secondary" onclick="addPrestation('cleaning')">Ménage</button>
-                <button class="btn-xs btn-secondary" onclick="addPrestation('debours')">Débours</button>
-                <button class="btn-xs btn-secondary" onclick="addPrestation('other')">Autre</button>
-              </div>
-              <div id="prestationsListEditor"></div>
+              <button class="btn btn-secondary btn-xs" onclick="addPrestation('commission')">+ Commission</button>
+              <button class="btn btn-secondary btn-xs" onclick="addPrestation('cleaning')">+ Ménage</button>
+              <button class="btn btn-secondary btn-xs" onclick="addPrestation('debours')">+ Débours</button>
+              <button class="btn btn-secondary btn-xs" onclick="addPrestation('other')">+ Autre</button>
+
+              <div id="editorPrestationsList" style="margin-top:16px;"></div>
             </div>
 
             <div class="editor-section">
-              <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                  <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()"> TVA
-                </label>
-                <input type="number" id="invoiceVatRate" value="20" style="width:50px; display:none;" onchange="updatePreview()">
+              <div class="editor-section-title">TVA</div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()">
+                TVA applicable
+              </label>
+              <div class="form-group" style="margin-top:8px;">
+                <label>Taux TVA (%)</label>
+                <input type="number" id="invoiceVatRate" class="form-control" value="20" step="0.01" onchange="updatePreview()">
               </div>
-              <div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
-                <div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-top:4px;"><span>TVA</span><strong id="displayTotalVAT">0.00 €</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb; color:var(--primary); font-size:15px;"><span>NET À PAYER</span><strong id="displayTotalTTC">0.00 €</strong></div>
-              </div>
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
-                <button class="btn btn-secondary" onclick="createInvoice(false)">Brouillon</button>
-                <button class="btn btn-primary" onclick="createInvoice(true)">Envoyer</button>
-              </div>
+            </div>
+
+            <div class="editor-section" style="border-bottom:none;">
+              <button class="btn btn-primary" onclick="saveInvoice(false)" style="width:100%;">
+                <i class="fa fa-save"></i> Enregistrer la facture
+              </button>
+              <button class="btn btn-secondary" onclick="saveInvoice(true)" style="width:100%;margin-top:8px;">
+                <i class="fa fa-envelope"></i> Enregistrer et envoyer par email
+              </button>
             </div>
           </div>
 
+          <!-- PREVIEW FACTURE DROITE -->
           <div class="invoice-preview-container">
-            <div class="invoice-paper">
+            <div class="invoice-paper" id="invoicePaper">
               <div class="paper-header">
                 <div>
-                  <div id="paperLogoContainer"></div>
-                  <div id="paperSenderInfo" style="margin-top:10px;">
-                    <strong style="font-size:16px; color:#111827;" id="previewSenderName">Votre Entreprise</strong>
-                    <div class="paper-sender-address" id="previewSenderAddress">Adresse...</div>
-                  </div>
+                  <img src="/images/logo-lcc-dark.png" alt="Logo" class="paper-logo-img">
+                  <p style="margin:0;font-size:12px;color:#6b7280;">
+                    La Conciergerie de Charles<br>
+                    123 Rue de la République<br>
+                    95210 Saint-Gratien<br>
+                    contact@lcc.fr
+                  </p>
                 </div>
-                <div class="paper-meta">
-                  <div class="paper-title" style="margin:0; font-size:32px; font-weight:800;">FACTURE</div>
-                  <div class="paper-number" style="color:#6b7280;">N° BROUILLON</div>
-                  <div style="margin-top:8px; font-size:12px; color:#4b5563;">Date : <span id="previewDate">-</span></div>
+                <div style="text-align:right;">
+                  <h1 style="margin:0 0 8px 0;font-size:32px;font-weight:800;color:#111827;">FACTURE</h1>
+                  <p style="margin:0;font-size:13px;color:#6b7280;">
+                    N° <span id="previewInvoiceNumber">FACT-2024-001</span><br>
+                    Date : <span id="previewIssueDate">--</span><br>
+                    Échéance : <span id="previewDueDate">--</span>
+                  </p>
                 </div>
               </div>
 
-              <div class="paper-client" style="margin-bottom:40px; padding:20px; background:#f9fafb; border-radius:8px;">
-                <div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase;">Facturé à</div>
-                <div style="font-weight:700; font-size:16px; margin-top:4px;" id="previewClientName">Sélectionnez un client...</div>
-                <div style="font-size:13px; color:#4b5563;" id="previewClientDetails"></div>
+              <div style="margin-bottom:32px;">
+                <p style="margin:0 0 4px 0;font-size:11px;font-weight:700;text-transform:uppercase;color:#9ca3af;">Facturé à</p>
+                <p id="previewClientInfo" style="margin:0;font-size:13px;line-height:1.6;color:#4b5563;">
+                  ---
+                </p>
               </div>
 
-              <div style="font-size:12px; color:#6b7280; margin-bottom:10px;">Période : <span id="previewPeriod">-</span></div>
+              <p style="font-size:13px;color:#6b7280;margin:16px 0;">
+                Période couverte : <strong><span id="previewPeriod">--</span></strong>
+              </p>
 
               <table class="paper-table">
-                <thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
-                <tbody id="previewBody"></tbody>
+                <thead>
+                  <tr>
+                    <th style="width:50%;">Description</th>
+                    <th style="text-align:center;">Qté</th>
+                    <th style="text-align:right;">P.U. HT</th>
+                    <th style="text-align:right;">Total HT</th>
+                  </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                  <tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:40px 0;">Aucune prestation ajoutée</td></tr>
+                </tbody>
               </table>
 
               <div class="paper-totals">
                 <div class="totals-box">
-                  <div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
-                  <div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
-                  <div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
-                  <div id="previewVatLegalMention"
-     style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
-  TVA non applicable, art. 293 B du CGI
-</div>
-
+                  <div class="total-row">
+                    <span>Total HT</span>
+                    <span id="previewSubtotal">0,00 €</span>
+                  </div>
+                  <div class="total-row" id="previewVatRow" style="display:none;">
+                    <span>TVA (<span id="previewVatRateLabel">20</span>%)</span>
+                    <span id="previewVat">0,00 €</span>
+                  </div>
+                  <div class="total-row final">
+                    <span>Total TTC</span>
+                    <span id="previewTotal">0,00 €</span>
+                  </div>
                 </div>
+              </div>
+
+              <div style="margin-top:64px;padding-top:24px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;">
+                <p style="margin:0 0 4px 0;">TVA non applicable - Article 293 B du CGI</p>
+                <p style="margin:0;">En cas de retard de paiement, pénalités de 10% du montant TTC.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div id="tab-clients" class="tab-content">
-        <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:24px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0;">Liste des propriétaires</h3>
-            <button class="btn btn-primary" onclick="openClientModal()">+ Nouveau Client</button>
-          </div>
-          <div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:16px;"></div>
+      <!-- TAB 3: Historique -->
+      <div id="tabHistory" class="tab-content">
+        <div class="dashboard-header">
+          <h1 class="page-title">Historique des factures</h1>
+        </div>
+
+        <div style="background:white;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;">Numéro</th>
+                <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;">Client</th>
+                <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;">Période</th>
+                <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;">Montant TTC</th>
+                <th style="text-align:center;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;">Statut</th>
+                <th style="text-align:center;padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:#9ca3af;">Aucune facture</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
     </main>
   </div>
 </div>
 
-
-<div class="modal-overlay" id="statsModal">
+<!-- MODAL CLIENT -->
+<div id="clientModal" class="modal-overlay">
   <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-      <h3 id="statsModalTitle" style="margin:0;">Détails</h3>
-      <button onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
-    </div>
-    <div id="statsModalBody" style="font-size:14px;">
-      <!-- Contenu injecté en JS -->
-    </div>
-  </div>
-</div>
+    <h2 id="clientModalTitle" style="margin:0 0 16px 0;font-size:20px;font-weight:700;">Nouveau client</h2>
 
-<div class="modal-overlay" id="clientModal">
-  <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-      <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
-      <button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
-    </div>
-    
-    <div style="display:flex; gap:16px; margin-bottom:16px;">
-      <label><input type="radio" name="clientType" value="individual" checked onchange="toggleClientType()"> Particulier</label>
-      <label><input type="radio" name="clientType" value="business" onchange="toggleClientType()"> Entreprise</label>
+    <div style="margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;">
+        <input type="radio" name="clientType" value="individual" onchange="toggleClientType()">
+        Particulier
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+        <input type="radio" name="clientType" value="business" onchange="toggleClientType()">
+        Entreprise
+      </label>
     </div>
 
     <div id="individualFields">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-        <div><label style="font-size:12px;">Prénom</label><input type="text" id="clientFirstName" class="form-control"></div>
-        <div><label style="font-size:12px;">Nom</label><input type="text" id="clientLastName" class="form-control"></div>
+      <div class="form-group">
+        <label>Prénom</label>
+        <input type="text" id="clientFirstName" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Nom</label>
+        <input type="text" id="clientLastName" class="form-control">
       </div>
     </div>
-    <div id="businessFields" style="display:none; margin-bottom:12px;">
-      <div><label style="font-size:12px;">Société</label><input type="text" id="clientCompanyName" class="form-control"></div>
+
+    <div id="businessFields" style="display:none;">
+      <div class="form-group">
+        <label>Nom de l'entreprise</label>
+        <input type="text" id="clientCompanyName" class="form-control">
+      </div>
     </div>
 
-    <div class="form-group"><label>Email</label><input type="email" id="clientEmail" class="form-control"></div>
-    <div class="form-group"><label>Adresse</label><input type="text" id="clientAddress" class="form-control"></div>
-    <div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:12px;">
-      <div><label style="font-size:12px;">CP</label><input type="text" id="clientPostalCode" class="form-control"></div>
-      <div><label style="font-size:12px;">Ville</label><input type="text" id="clientCity" class="form-control"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="clientEmail" class="form-control">
     </div>
-    
-    <button onclick="saveClient()" class="btn btn-primary" style="width:100%;">Enregistrer</button>
+    <div class="form-group">
+      <label>Adresse</label>
+      <input type="text" id="clientAddress" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>Code postal</label>
+      <input type="text" id="clientPostalCode" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>Ville</label>
+      <input type="text" id="clientCity" class="form-control">
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:24px;">
+      <button class="btn btn-primary" onclick="saveClient()">Enregistrer</button>
+      <button class="btn btn-secondary" onclick="closeClientModal()">Annuler</button>
+    </div>
   </div>
 </div>
 
-
 <script>
-  let token = localStorage.getItem('lcc_token');
-  let clients = [];
+  const token = localStorage.getItem('lcc_token');
+  if (!token) window.location.href = '/login.html';
+
   let prestations = [];
   let prestationCounter = 0;
   let editingInvoiceId = null;
-  let emitterProfile = {
-    company: '',
-    address: '',
-    postalCode: '',
-    city: '',
-    siret: '',
-    logoDataUrl: ''
-  };
-  let currentUser = null;
+  let editingClientId = null;
+  let clients = [];
+  let invoices = [];
+  let isReadOnlyMode = false; // Nouveau flag pour le mode consultation
 
+  // INIT
+  (async function() {
+    await loadClients();
+    await loadInvoices();
+    setDefaultDates();
+    updatePreview();
+  })();
 
-  // --- INIT ---
-  document.addEventListener('DOMContentLoaded', async () => {
-    if(!token) return window.location.href='/login.html';
-    
-    // User Info
-    currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    if(currentUser.firstName) {
-      document.getElementById('userName').textContent = currentUser.firstName;
-    }
+  function setDefaultDates() {
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('invoiceIssueDate').value = today;
+    const due = new Date(); due.setDate(due.getDate() + 30);
+    document.getElementById('invoiceDueDate').value = due.toISOString().slice(0,10);
 
-    // Profil émetteur
-    loadEmitterProfile();
-
-    // Dates defaut
-    const d = new Date(); 
-    document.getElementById('invoiceIssueDate').valueAsDate = d;
-    const d2 = new Date(); d2.setDate(d2.getDate()+30);
-    document.getElementById('invoiceDueDate').valueAsDate = d2;
-
-    await Promise.all([loadClients(), loadInvoices()]);
-    // Ajout d'une ligne par défaut pour pas que ce soit vide
-    addPrestation('commission');
-    updatePreview(); 
-  });
-
-  // --- TABS ---
-  window.switchTab = function(id) {
-    document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
-    document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
-    document.getElementById('tab-'+id).classList.add('active');
-    document.getElementById('btn-'+id).classList.add('active');
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    document.getElementById('invoicePeriodStart').value = start.toISOString().slice(0,10);
+    document.getElementById('invoicePeriodEnd').value = end.toISOString().slice(0,10);
   }
 
-  // --- CLIENTS ---
+  function switchTab(tab) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    if (tab === 'dashboard') {
+      document.querySelectorAll('.nav-tab')[0].classList.add('active');
+      document.getElementById('tabDashboard').classList.add('active');
+    } else if (tab === 'create') {
+      document.querySelectorAll('.nav-tab')[1].classList.add('active');
+      document.getElementById('tabCreate').classList.add('active');
+    } else if (tab === 'history') {
+      document.querySelectorAll('.nav-tab')[2].classList.add('active');
+      document.getElementById('tabHistory').classList.add('active');
+    }
+  }
+
+  function createNewInvoice() {
+    // Réinitialiser le mode lecture seule
+    isReadOnlyMode = false;
+    document.getElementById('editorSidebar').classList.remove('readonly');
+    document.getElementById('readonlyBanner').style.display = 'none';
+    
+    editingInvoiceId = null;
+    prestations = [];
+    prestationCounter = 0;
+    
+    document.getElementById('invoiceClientId').value = '';
+    setDefaultDates();
+    document.getElementById('invoiceVatApplicable').checked = false;
+    document.getElementById('invoiceVatRate').value = 20;
+    
+    renderEditorPrestations();
+    updatePreview();
+    switchTab('create');
+  }
+
   async function loadClients() {
     try {
-      const res = await fetch('/api/owner-clients', { headers: { Authorization: 'Bearer '+token }});
-      const data = await res.json();
-      clients = data.clients || [];
-      document.getElementById('statsClients').textContent = clients.length;
+      const res = await fetch('/api/owner-clients', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Erreur chargement clients:', err);
+        return;
+      }
+      const json = await res.json();
+      clients = json.clients || [];
       
-      const sel = document.getElementById('invoiceClientId');
-      sel.innerHTML = '<option value="">Sélectionner...</option>';
-      const cont = document.getElementById('clientsContainer');
-      cont.innerHTML = '';
-
+      // CORRECTION 1: Remplir le dropdown avec les clients
+      const select = document.getElementById('invoiceClientId');
+      select.innerHTML = '<option value="">Choisir un client...</option>';
+      
       clients.forEach(c => {
-        const name = c.company_name || `${c.first_name} ${c.last_name}`;
-        // Select
-        sel.innerHTML += `<option value="${c.id}">${name}</option>`;
-        // List
-        cont.innerHTML += `
-          <div style="background:#f9fafb; padding:16px; border-radius:8px; border:1px solid #e5e7eb;">
-            <div style="font-weight:700;">${name}</div>
-            <div style="font-size:12px; color:#6b7280;">${c.email}</div>
-            <button onclick="editClient(${c.id})" class="btn-xs btn-secondary" style="margin-top:8px;">Modifier</button>
-          </div>`;
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        if (c.client_type === 'business') {
+          opt.textContent = c.company_name || 'Entreprise sans nom';
+        } else {
+          opt.textContent = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Client sans nom';
+        }
+        select.appendChild(opt);
       });
-    } catch(e) {}
+      
+    } catch (err) {
+      console.error('Erreur:', err);
+    }
   }
 
-  // --- FACTURES ---
-  
-
-
-window.openStatsModal = function(type) {
-  const modal = document.getElementById('statsModal');
-  const titleEl = document.getElementById('statsModalTitle');
-  const bodyEl = document.getElementById('statsModalBody');
-  if (!modal || !titleEl || !bodyEl) return;
-
-  let htmlContent = '';
-  const invoices = window.ownerInvoices || [];
-  const clientsList = window.clients || [];
-
-  if (type === 'billed') {
-    titleEl.textContent = 'Factures facturées';
-    const filtered = invoices.filter(function(inv) {
-      const status = inv.status || '';
-      return !inv.is_credit_note && status !== 'draft';
-    });
-    if (filtered.length === 0) {
-      htmlContent = '<p>Aucune facture facturée.</p>';
-    } else {
-      htmlContent = '<table style="width:100%; border-collapse:collapse; font-size:13px;">' +
-        '<thead><tr>' +
-        '<th style="text-align:left; padding:6px 4px;">N°</th>' +
-        '<th style="text-align:left; padding:6px 4px;">Client</th>' +
-        '<th style="text-align:left; padding:6px 4px;">Date</th>' +
-        '<th style="text-align:right; padding:6px 4px;">Montant</th>' +
-        '</tr></thead><tbody>';
-      filtered.forEach(function(inv) {
-        const dateStr = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
-        const num = inv.invoice_number || ('#' + inv.id);
-        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
-        htmlContent += '<tr>' +
-          '<td style="padding:4px 4px;">' + num + '</td>' +
-          '<td style="padding:4px 4px;">' + (inv.client_name || '') + '</td>' +
-          '<td style="padding:4px 4px;">' + dateStr + '</td>' +
-          '<td style="padding:4px 4px; text-align:right;">' + total + '</td>' +
-        '</tr>';
+  async function loadInvoices() {
+    try {
+      const res = await fetch('/api/owner-invoices', {
+        headers: { 'Authorization': 'Bearer ' + token }
       });
-      htmlContent += '</tbody></table>';
+      if (!res.ok) throw new Error('Erreur chargement factures');
+      
+      const json = await res.json();
+      invoices = json.invoices || [];
+      
+      renderHistoryTable();
+      updateDashboardStats();
+    } catch (err) {
+      console.error(err);
     }
-  } else if (type === 'pending') {
-    titleEl.textContent = 'Factures en attente de paiement';
-    const filtered = invoices.filter(function(inv) {
-      const status = inv.status || '';
-      return !inv.is_credit_note && status !== 'draft' && status !== 'paid';
-    });
-    if (filtered.length === 0) {
-      htmlContent = '<p>Aucune facture en attente de paiement.</p>';
-    } else {
-      htmlContent = '<table style="width:100%; border-collapse:collapse; font-size:13px;">' +
-        '<thead><tr>' +
-        '<th style="text-align:left; padding:6px 4px;">N°</th>' +
-        '<th style="text-align:left; padding:6px 4px;">Client</th>' +
-        '<th style="text-align:left; padding:6px 4px;">Statut</th>' +
-        '<th style="text-align:right; padding:6px 4px;">Montant</th>' +
-        '</tr></thead><tbody>';
-      filtered.forEach(function(inv) {
-        const num = inv.invoice_number || ('#' + inv.id);
-        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
-        const status = inv.status || '';
-        htmlContent += '<tr>' +
-          '<td style="padding:4px 4px;">' + num + '</td>' +
-          '<td style="padding:4px 4px;">' + (inv.client_name || '') + '</td>' +
-          '<td style="padding:4px 4px;">' + status + '</td>' +
-          '<td style="padding:4px 4px; text-align:right;">' + total + '</td>' +
-        '</tr>';
-      });
-      htmlContent += '</tbody></table>';
-    }
-  } else if (type === 'clients') {
-    titleEl.textContent = 'Clients propriétaires';
-    if (!clientsList || clientsList.length === 0) {
-      htmlContent = '<p>Aucun client pour le moment.</p>';
-    } else {
-      htmlContent = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
-      clientsList.forEach(function(c) {
-        const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-        htmlContent += '<li style="padding:4px 0; border-bottom:1px solid #e5e7eb;">' + name + '</li>';
-      });
-      htmlContent += '</ul>';
-    }
-  } else {
-    titleEl.textContent = 'Détails';
-    htmlContent = '<p>Aucune donnée à afficher.</p>';
   }
 
-  bodyEl.innerHTML = htmlContent;
-  modal.classList.add('active');
-};
-
-window.closeStatsModal = function() {
-  const modal = document.getElementById('statsModal');
-  if (modal) modal.classList.remove('active');
-};
-
-
-async function loadInvoices() {
-  try {
-    const res = await fetch('/api/owner-invoices', {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    const data = await res.json();
-    const invs = data.invoices || [];
-    window.ownerInvoices = invs;
-
-    const tbody = document.getElementById('invoicesTableBody');
-
-    if (invs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="padding:40px; text-align:center;">Aucune facture.</td></tr>';
-      document.getElementById('statsRevenue').textContent = '0.00 €';
-      document.getElementById('statsPending').textContent = '0.00 €';
+  function renderHistoryTable() {
+    const tbody = document.getElementById('historyTableBody');
+    if (!invoices || invoices.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#9ca3af;">Aucune facture</td></tr>';
       return;
     }
 
-    let totalRev = 0;
-    let totalPending = 0;
-    tbody.innerHTML = '';
-
-    invs.forEach(function(inv) {
-      const total = parseFloat(inv.total_ttc || 0) || 0;
-      const status = inv.status || '';
-
-      // Total facturé : toutes les factures non brouillon et non avoir
-      if (!inv.is_credit_note && status !== 'draft') {
-        totalRev += total;
+    tbody.innerHTML = invoices.map(inv => {
+      const client = clients.find(c => c.id === inv.client_id);
+      let clientName = 'Client inconnu';
+      if (client) {
+        clientName = client.client_type === 'business' 
+          ? (client.company_name || 'Entreprise') 
+          : `${client.first_name || ''} ${client.last_name || ''}`.trim();
       }
 
-      // En attente : factures non brouillon, non avoir, non payées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid') {
-        totalPending += total;
-      }
+      const period = inv.period_start && inv.period_end 
+        ? `${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}`
+        : '--';
 
-      const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
+      const statusBadge = inv.paid 
+        ? '<span style="background:#dcfce7;color:#166534;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;">ENCAISSÉ</span>'
+        : '<span style="background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;">EN ATTENTE</span>';
 
-      let statusLabel = status;
-      if (inv.is_credit_note) {
-        statusLabel = 'Avoir';
-      } else if (status === 'draft') {
-        statusLabel = 'Brouillon';
-      } else if (status === 'invoiced') {
-        statusLabel = 'Facturée';
-      } else if (status === 'sent') {
-        statusLabel = 'Envoyée';
-      } else if (status === 'paid') {
-        statusLabel = 'Payée';
-      }
+      return `
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:16px;font-size:13px;font-weight:600;">${inv.invoice_number || '--'}</td>
+          <td style="padding:16px;font-size:13px;">${clientName}</td>
+          <td style="padding:16px;font-size:13px;">${period}</td>
+          <td style="padding:16px;text-align:right;font-size:13px;font-weight:600;">${formatMoney(inv.total_ttc)}</td>
+          <td style="padding:16px;text-align:center;">${statusBadge}</td>
+          <td style="padding:16px;text-align:center;">
+            <div class="invoice-row-actions">
+              <button onclick="toggleInvoiceMenu(event, ${inv.id})" style="background:none;border:none;cursor:pointer;font-size:16px;color:#6b7280;">
+                <i class="fa fa-ellipsis-v"></i>
+              </button>
+              <div id="menu-${inv.id}" class="invoice-actions-menu">
+                <button onclick="viewOwnerInvoiceReadOnly(${inv.id})"><i class="fa fa-eye"></i> Voir la facture</button>
+                ${!inv.paid ? `<button onclick="markAsPaid(${inv.id})"><i class="fa fa-check-circle"></i> Marquer encaissé</button>` : ''}
+                <button onclick="downloadInvoice(${inv.id})"><i class="fa fa-download"></i> Télécharger PDF</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
 
-      let actionsHtml = '';
+  function toggleInvoiceMenu(event, invoiceId) {
+    event.stopPropagation();
+    
+    const menu = document.getElementById(`menu-${invoiceId}`);
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    
+    // Fermer tous les autres menus
+    document.querySelectorAll('.invoice-actions-menu').forEach(m => {
+      if (m.id !== `menu-${invoiceId}`) m.classList.remove('open');
+    });
+    
+    // Toggle ce menu
+    const isOpen = menu.classList.contains('open');
+    if (!isOpen) {
+      menu.classList.add('open');
+      menu.style.top = rect.bottom + 'px';
+      menu.style.left = (rect.left - 180 + rect.width) + 'px';
+    } else {
+      menu.classList.remove('open');
+    }
+  }
 
-      if (inv.is_credit_note) {
-        actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
-          '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
-          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
-      } else if (status === 'draft') {
-        actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
-          '<button type="button" onclick="finalizeOwnerInvoice(' + inv.id + ')">Passer en “Facturée”</button>' +
-          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer le brouillon</button>';
-      } else {
-        let paidBtn = '';
-        if (status !== 'paid') {
-          paidBtn = '<button type="button" onclick="markOwnerInvoicePaid(' + inv.id + ')">Marquer comme encaissée</button>';
+  // Fermer les menus si on clique ailleurs
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.invoice-actions-menu').forEach(m => m.classList.remove('open'));
+  });
+
+  function updateDashboardStats() {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    let monthTotal = 0;
+    let pendingTotal = 0;
+    let paidThisMonth = 0;
+
+    invoices.forEach(inv => {
+      const issueDate = new Date(inv.issue_date);
+      const isThisMonth = issueDate.getMonth() === currentMonth && issueDate.getFullYear() === currentYear;
+
+      if (isThisMonth) {
+        monthTotal += parseFloat(inv.total_ttc) || 0;
+        if (inv.paid) {
+          paidThisMonth += parseFloat(inv.total_ttc) || 0;
         }
-
-        actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
-          paidBtn +
-          '<button type="button" onclick="createOwnerCreditNote(' + inv.id + ')">Créer un avoir</button>' +
-          '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
-          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
       }
 
-      const issueDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
-
-      const rowHtml =
-        '<tr style="border-bottom:1px solid #f3f4f6;">' +
-          '<td style="padding:16px; font-weight:700; color:#10B981;">' + numberDisplay + '</td>' +
-          '<td style="padding:16px;">' + (inv.client_name || '') + '</td>' +
-          '<td style="padding:16px;">' + issueDate + '</td>' +
-          '<td style="padding:16px; font-weight:600;">' + total.toFixed(2) + ' €</td>' +
-          '<td style="padding:16px;">' + statusLabel + '</td>' +
-          '<td style="padding:16px; text-align:right;">' +
-            '<div class="invoice-row-actions">' +
-              '<button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(' + inv.id + ', this)">...</button>' +
-              '<div class="invoice-actions-menu" id="invoice-actions-' + inv.id + '">' +
-                actionsHtml +
-              '</div>' +
-            '</div>' +
-          '</td>' +
-        '</tr>';
-
-      tbody.innerHTML += rowHtml;
+      if (!inv.paid) {
+        pendingTotal += parseFloat(inv.total_ttc) || 0;
+      }
     });
 
-    document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
-    document.getElementById('statsPending').textContent = totalPending.toFixed(2) + ' €';
-  } catch (e) {
-    console.error('Erreur chargement factures propriétaires:', e);
-  }
-}
-
-
-
-let editingClientId = null;
-window.toggleInvoiceActions = function (id, btn) {
-  const menu = document.getElementById('invoice-actions-' + id);
-  if (!menu) return;
-
-  const wasOpen = menu.classList.contains('open');
-
-  // Fermer tous les autres menus ouverts
-  document.querySelectorAll('.invoice-actions-menu.open')
-    .forEach(m => m.classList.remove('open'));
-
-  if (wasOpen) {
-    // si celui-là était déjà ouvert, on le referme et basta
-    return;
+    document.getElementById('statMonthTotal').textContent = formatMoney(monthTotal);
+    document.getElementById('statPendingTotal').textContent = formatMoney(pendingTotal);
+    document.getElementById('statPaidThisMonth').textContent = formatMoney(paidThisMonth);
   }
 
-  // On calcule la position du bouton dans la fenêtre
-  const rect = btn.getBoundingClientRect();
-
-  // Positionner le menu juste sous le bouton, aligné à droite
-  const approxWidth = 200; // largeur approximative du menu
-  menu.style.top = (rect.bottom + 8) + 'px';
-  menu.style.left = (rect.right - approxWidth) + 'px';
-
-  menu.classList.add('open');
-};
-
-
-// Envoyer la facture (brouillon -> envoyée)
-window.sendOwnerInvoice = async function (id) {
-  if (!confirm('Envoyer cette facture au client ?')) return;
-
-  try {
-    const res = await fetch('/api/owner-invoices/' + id + '/send', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur lors de l\'envoi');
+  // CORRECTION 3: Marquer comme encaissé
+  async function markAsPaid(id) {
+    if (!confirm('Marquer cette facture comme encaissée ?')) return;
+    
+    try {
+      const res = await fetch(`/api/owner-invoices/${id}/mark-paid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        }
+      });
+      
+      if (res.ok) {
+        alert('✅ Facture marquée comme encaissée');
+        await loadInvoices();
+      } else {
+        const err = await res.json();
+        alert('Erreur : ' + (err.error || 'Erreur serveur'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erreur serveur');
     }
-    alert('Facture envoyée ✅');
-    loadInvoices();
-  } catch (e) {
-    console.error(e);
-    alert('Erreur serveur');
   }
-};
 
-// Supprimer un brouillon
-window.deleteOwnerInvoice = async function (id) {
-  if (!confirm('Supprimer cette facture ?')) return;
-
-  try {
-    const res = await fetch('/api/owner-invoices/' + id, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur lors de la suppression');
+  // CORRECTION 4: Téléchargement direct (pas d'impression)
+  async function downloadInvoice(id) {
+    try {
+      const res = await fetch(`/api/owner-invoices/${id}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      
+      if (!res.ok) throw new Error('Erreur chargement facture');
+      
+      const json = await res.json();
+      const inv = json.invoice;
+      
+      // Charger la facture dans l'aperçu
+      await viewOwnerInvoiceReadOnly(id);
+      
+      // Attendre un peu que le DOM se mette à jour
+      setTimeout(() => {
+        // Utiliser html2pdf ou jsPDF pour générer le PDF
+        // Pour l'instant, on utilise window.print() mais on pourrait améliorer
+        const invoicePaper = document.getElementById('invoicePaper');
+        const filename = `${inv.invoice_number || 'facture'}.pdf`;
+        
+        // Créer un iframe invisible pour l'impression
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+        
+        const iframeDoc = iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${filename}</title>
+            <style>
+              body { margin: 0; padding: 20px; font-family: 'Inter', sans-serif; }
+              ${document.querySelector('style').textContent}
+            </style>
+          </head>
+          <body>
+            ${invoicePaper.outerHTML}
+          </body>
+          </html>
+        `);
+        iframeDoc.close();
+        
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+        
+      }, 500);
+      
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors du téléchargement');
     }
-    loadInvoices();
-  } catch (e) {
-    console.error(e);
-    alert('Erreur serveur');
   }
-};
-  window.downloadOwnerInvoice = async function (id) {
-  try {
-    // Charger la facture dans l'éditeur / aperçu
-    await viewOwnerInvoice(id);
 
-    // Petite pause pour être sûr que le DOM est à jour
-    setTimeout(() => {
-      window.print();  // puis "Enregistrer en PDF" dans la boîte de dialogue du navigateur
-    }, 300);
-  } catch (e) {
-    console.error(e);
-    alert('Erreur lors de la préparation du téléchargement');
-  }
-};
-
-window.finalizeOwnerInvoice = async function (id) {
-  if (!confirm('Passer cette facture en “Facturée” ?')) return;
-
-  try {
-    const res = await fetch('/api/owner-invoices/' + id + '/finalize', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur lors de la validation');
-    }
-    alert('Facture passée en “Facturée” ✅');
-    loadInvoices();
-  } catch (e) {
-    console.error(e);
-    alert('Erreur serveur');
-  }
-};
-
-
-window.markOwnerInvoicePaid = async function (id) {
-  if (!confirm('Marquer cette facture comme encaissée ?')) return;
-
-  try {
-    const res = await fetch('/api/owner-invoices/' + id + '/pay', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur lors de la mise à jour du paiement');
-    }
-    alert('Facture marquée comme encaissée ✅');
-    loadInvoices();
-  } catch (e) {
-    console.error(e);
-    alert('Erreur serveur');
-  }
-};
-
-
-window.editClient = function(clientId) {
-    const client = clients.find(c => c.id == clientId);
-    if (!client) {
-        alert("Client introuvable.");
-        return;
-    }
-
-    editingClientId = clientId;
-
-    const titleEl = document.getElementById('clientModalTitle');
-    if (titleEl) titleEl.textContent = 'Modifier le client';
-
-    const type = client.client_type || (client.company_name ? 'business' : 'individual');
-    const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
-    if (radio) radio.checked = true;
-    toggleClientType();
-
-    document.getElementById("clientFirstName").value   = client.first_name   || "";
-    document.getElementById("clientLastName").value    = client.last_name    || "";
-    document.getElementById("clientCompanyName").value = client.company_name || "";
-    document.getElementById("clientEmail").value       = client.email        || "";
-    document.getElementById("clientAddress").value     = client.address      || "";
-    document.getElementById("clientPostalCode").value  = client.postal_code  || "";
-    document.getElementById("clientCity").value        = client.city         || "";
-
-    document.getElementById("clientModal").classList.add("active");
-};
-
-  // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
-  window.addPrestation = function(type) {
+  function addPrestation(type) {
+    if (isReadOnlyMode) return; // Empêcher l'ajout en mode lecture seule
+    
     prestationCounter++;
-    prestations.push({
-      id: 'p'+prestationCounter,
-      type: type,
-      description: type==='commission'?'Commission sur loyers':(type==='cleaning'?'Frais de ménage':'Débours'),
-      rentalAmount: 0, commissionRate: 20, // Spécifique Commission
-      quantity: 1, unitPrice: 0, // Spécifique Autres
-      isDebours: type === 'debours'
-    });
+    const p = {
+      id: 'p' + prestationCounter,
+      type,
+      description: '',
+      rentalAmount: 0,
+      commissionRate: 0,
+      quantity: 1,
+      unitPrice: 0,
+      isDebours: (type === 'debours')
+    };
+    prestations.push(p);
     renderEditorPrestations();
     updatePreview();
-  };
-
-  window.updatePrestation = function(id, key, val) {
-  const p = prestations.find(x => x.id === id);
-  if (!p) return;
-
-  if (key === 'description') {
-    p[key] = val;
-  } else {
-    // on accepte aussi 5,5 (virgule) que l’on convertit en nombre
-    const cleaned = (val || '').toString().replace(',', '.');
-    p[key] = parseFloat(cleaned) || 0;
   }
 
-  // Surtout : on NE re-render PAS toute la liste ici
-  updatePreview();
-};
-
-
-  window.removePrestation = function(id) {
-    prestations = prestations.filter(x => x.id !== id);
+  function removePrestation(id) {
+    if (isReadOnlyMode) return; // Empêcher la suppression en mode lecture seule
+    
+    prestations = prestations.filter(p => p.id !== id);
     renderEditorPrestations();
     updatePreview();
-  };
+  }
+
+  function updatePrestationField(id, field, value) {
+    if (isReadOnlyMode) return; // Empêcher la modification en mode lecture seule
+    
+    const p = prestations.find(pr => pr.id === id);
+    if (!p) return;
+    
+    if (field === 'description') p.description = value;
+    else if (field === 'rentalAmount') p.rentalAmount = parseFloat(value) || 0;
+    else if (field === 'commissionRate') p.commissionRate = parseFloat(value) || 0;
+    else if (field === 'quantity') p.quantity = parseFloat(value) || 0;
+    else if (field === 'unitPrice') p.unitPrice = parseFloat(value) || 0;
+    
+    renderEditorPrestations();
+    updatePreview();
+  }
 
   function renderEditorPrestations() {
-    const cont = document.getElementById('prestationsListEditor');
-    cont.innerHTML = prestations.map(p => {
-      let inputs = '';
+    const container = document.getElementById('editorPrestationsList');
+    if (!prestations || prestations.length === 0) {
+      container.innerHTML = '<p style="font-size:12px;color:#9ca3af;text-align:center;margin:16px 0;">Aucune prestation</p>';
+      return;
+    }
+
+    container.innerHTML = prestations.map(p => {
       let badgeClass = 'badge-other';
+      let badgeLabel = 'Autre';
       
-      // LOGIQUE D'AFFICHAGE SELON LE TYPE (Comme dans ton ancien fichier)
-      if(p.type === 'commission') {
-        badgeClass = 'badge-commission';
-        inputs = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div><label style="font-size:10px;">Loyer (€)</label><input type="number" class="form-control" value="${p.rentalAmount}" oninput="updatePrestation('${p.id}','rentalAmount',this.value)"></div>
-            <div><label style="font-size:10px;">Taux (%)</label><input type="number" class="form-control" value="${p.commissionRate}" oninput="updatePrestation('${p.id}','commissionRate',this.value)"></div>
-          </div>`;
+      if (p.type === 'commission') { badgeClass = 'badge-commission'; badgeLabel = 'Commission'; }
+      else if (p.type === 'cleaning') { badgeClass = 'badge-cleaning'; badgeLabel = 'Ménage'; }
+      else if (p.type === 'debours') { badgeClass = 'badge-debours'; badgeLabel = 'Débours'; }
+
+      let fieldsHTML = '';
+      
+      if (p.type === 'commission') {
+        fieldsHTML = `
+          <input type="text" placeholder="Description" value="${p.description}" 
+            onchange="updatePrestationField('${p.id}','description',this.value)"
+            style="width:100%;margin-bottom:4px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;" ${isReadOnlyMode ? 'disabled' : ''}>
+          <input type="number" placeholder="Montant location" value="${p.rentalAmount}" 
+            onchange="updatePrestationField('${p.id}','rentalAmount',this.value)"
+            style="width:100%;margin-bottom:4px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;" ${isReadOnlyMode ? 'disabled' : ''}>
+          <input type="number" placeholder="Taux commission %" value="${p.commissionRate}" 
+            onchange="updatePrestationField('${p.id}','commissionRate',this.value)"
+            style="width:100%;padding:4px 6px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;" ${isReadOnlyMode ? 'disabled' : ''}>
+        `;
       } else {
-        badgeClass = p.type === 'cleaning' ? 'badge-cleaning' : (p.type === 'debours' ? 'badge-debours' : 'badge-other');
-        inputs = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div><label style="font-size:10px;">Qté</label><input type="number" class="form-control" value="${p.quantity}" oninput="updatePrestation('${p.id}','quantity',this.value)"></div>
-            <div><label style="font-size:10px;">Prix U.</label><input type="number" class="form-control" value="${p.unitPrice}" oninput="updatePrestation('${p.id}','unitPrice',this.value)"></div>
-          </div>`;
+        fieldsHTML = `
+          <input type="text" placeholder="Description" value="${p.description}" 
+            onchange="updatePrestationField('${p.id}','description',this.value)"
+            style="width:100%;margin-bottom:4px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;" ${isReadOnlyMode ? 'disabled' : ''}>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <input type="number" placeholder="Quantité" value="${p.quantity}" 
+              onchange="updatePrestationField('${p.id}','quantity',this.value)"
+              style="padding:4px 6px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;" ${isReadOnlyMode ? 'disabled' : ''}>
+            <input type="number" placeholder="Prix unitaire" value="${p.unitPrice}" 
+              onchange="updatePrestationField('${p.id}','unitPrice',this.value)"
+              style="padding:4px 6px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;" ${isReadOnlyMode ? 'disabled' : ''}>
+          </div>
+        `;
       }
 
       return `
         <div class="prestation-mini-card">
-          <button class="remove-line-btn" onclick="removePrestation('${p.id}')"><i class="fas fa-times"></i></button>
-          <span class="prestation-badge ${badgeClass}">${p.type.toUpperCase()}</span>
-          <div class="form-group" style="margin-bottom:8px;">
-            <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
-          </div>
-          ${inputs}
-          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;">
-            ${calculateLineTotal(p).toFixed(2)} €
+          ${!isReadOnlyMode ? `<button class="remove-line-btn" onclick="removePrestation('${p.id}')"><i class="fa fa-times"></i></button>` : ''}
+          <span class="prestation-badge ${badgeClass}">${badgeLabel}</span>
+          ${fieldsHTML}
+          <div style="margin-top:4px;font-size:11px;font-weight:700;color:#111827;text-align:right;">
+            ${formatMoney(calculateLineTotal(p))}
           </div>
         </div>
       `;
@@ -993,235 +931,113 @@ window.editClient = function(clientId) {
   }
 
   function calculateLineTotal(p) {
-    if(p.type === 'commission') return p.rentalAmount * (p.commissionRate/100);
-    return p.quantity * p.unitPrice;
+    if (p.type === 'commission') {
+      return (p.rentalAmount * p.commissionRate / 100);
+    }
+    return (p.quantity * p.unitPrice);
   }
 
-
-  function loadEmitterProfile() {
-    try {
-      const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
-      emitterProfile = { ...emitterProfile, ...saved };
-
-      const companyInput = document.getElementById('emitterCompany');
-      const addressInput = document.getElementById('emitterAddress');
-      const postalInput = document.getElementById('emitterPostalCode');
-      const cityInput = document.getElementById('emitterCity');
-      const siretInput = document.getElementById('emitterSiret');
-
-      if (companyInput) companyInput.value = emitterProfile.company || '';
-      if (addressInput) addressInput.value = emitterProfile.address || '';
-      if (postalInput) postalInput.value = emitterProfile.postalCode || '';
-      if (cityInput) cityInput.value = emitterProfile.city || '';
-      if (siretInput) siretInput.value = emitterProfile.siret || '';
-
-      updateSenderAddressFromProfile();
-      updateSenderPreviewOnly();
-
-      // Logo par défaut si déjà enregistré
-      if (emitterProfile.logoDataUrl) {
-        const logoContainer = document.getElementById('paperLogoContainer');
-        if (logoContainer) {
-          logoContainer.innerHTML = '<img src="' + emitterProfile.logoDataUrl + '" class="paper-logo-img">';
-        }
-      }
-    } catch (e) {
-      console.warn('Impossible de charger le profil émetteur', e);
-    }
-  }
-
-  function saveEmitterProfile() {
-    try {
-      localStorage.setItem('lcc_owner_emitter_profile', JSON.stringify(emitterProfile));
-    } catch (e) {
-      console.warn('Impossible d\'enregistrer le profil émetteur', e);
-    }
-  }
-
-  window.updateEmitterProfile = function () {
-    const companyInput = document.getElementById('emitterCompany');
-    const addressInput = document.getElementById('emitterAddress');
-    const postalInput = document.getElementById('emitterPostalCode');
-    const cityInput = document.getElementById('emitterCity');
-    const siretInput = document.getElementById('emitterSiret');
-
-    emitterProfile.company = companyInput ? companyInput.value.trim() : '';
-    emitterProfile.address = addressInput ? addressInput.value.trim() : '';
-    emitterProfile.postalCode = postalInput ? postalInput.value.trim() : '';
-    emitterProfile.city = cityInput ? cityInput.value.trim() : '';
-    emitterProfile.siret = siretInput ? siretInput.value.trim() : '';
-
-    updateSenderAddressFromProfile();
-    saveEmitterProfile();
-    updateSenderPreviewOnly();
-    updatePreview();
-  };
-
-  function updateSenderAddressFromProfile() {
-    const parts = [];
-    if (emitterProfile.address) parts.push(emitterProfile.address);
-    const cityLine = (emitterProfile.postalCode || '') + ' ' + (emitterProfile.city || '');
-    if (cityLine.trim()) parts.push(cityLine.trim());
-    if (emitterProfile.siret) parts.push('SIRET : ' + emitterProfile.siret);
-
-    const textarea = document.getElementById('senderAddressInput');
-    if (textarea) {
-      textarea.value = parts.join('\n');
-    }
-  }
-
-  function updateSenderPreviewOnly() {
-    let name = emitterProfile.company;
-    if (!name && currentUser) {
-      if (currentUser.company) name = currentUser.company;
-      else {
-        const first = currentUser.firstName || '';
-        const last = currentUser.last_name || currentUser.lastName || '';
-        name = (first + ' ' + last).trim();
-      }
-    }
-    if (!name) name = 'Votre Entreprise';
-
-    const senderNameEl = document.getElementById('previewSenderName');
-    if (senderNameEl) senderNameEl.textContent = name;
-
-    const addrTextarea = document.getElementById('senderAddressInput');
-    const addr = (addrTextarea && addrTextarea.value) || '';
-    const senderAddrEl = document.getElementById('previewSenderAddress');
-    if (senderAddrEl) senderAddrEl.innerText = addr || 'Adresse...';
-  }
-
-  // --- PREVIEW ---
-  window.updatePreview = function() {
-    // Client
-    const cliId = document.getElementById('invoiceClientId').value;
-    const client = clients.find(c => String(c.id) === cliId);
-    if(client) {
-      const name = client.company_name || `${client.first_name} ${client.last_name}`;
-      document.getElementById('previewClientName').textContent = name;
-      document.getElementById('previewClientDetails').innerHTML = `${client.address || ''}<br>${client.postal_code || ''} ${client.city || ''}`;
-    }
-
-    // Dates
-    const dIss = document.getElementById('invoiceIssueDate').valueAsDate;
-    const dStart = document.getElementById('invoicePeriodStart').valueAsDate;
-    const dEnd = document.getElementById('invoicePeriodEnd').valueAsDate;
-    
-    if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
-    if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
-
-    // Sender
-    const sender = document.getElementById('senderAddressInput').value;
-    if(sender) document.getElementById('previewSenderAddress').textContent = sender;
-
-    // Totaux
-    const tbody = document.getElementById('previewBody');
-    tbody.innerHTML = '';
-    let totalHT = 0;
-
-    prestations.forEach(p => {
-      const lineTotal = calculateLineTotal(p);
-      totalHT += lineTotal;
-      
-      let qtyDisplay = p.type === 'commission' ? `${p.rentalAmount}€` : p.quantity;
-      let priceDisplay = p.type === 'commission' ? `${p.commissionRate}%` : `${p.unitPrice}€`;
-
-      tbody.innerHTML += `
-        <tr>
-          <td>${p.description}</td>
-          <td style="text-align:center;">${qtyDisplay}</td>
-          <td style="text-align:right;">${priceDisplay}</td>
-          <td style="text-align:right; font-weight:600;">${lineTotal.toFixed(2)} €</td>
-        </tr>`;
-    });
-
-        // --- TVA ---
-
-    const hasVat = document.getElementById('invoiceVatApplicable').checked;
-    const vatRateInput = document.getElementById('invoiceVatRate');
-
-    // Affiche / cache le champ de taux
-    if (vatRateInput) {
-      vatRateInput.style.display = hasVat ? 'inline-block' : 'none';
-    }
-
-    // Lecture du taux (on supporte 5.5, 10, 20, etc.)
-    let rateValue = 20;
-    if (vatRateInput) {
-      const cleanedRate = vatRateInput.value.toString().replace(',', '.');
-      rateValue = parseFloat(cleanedRate) || 20;
-    }
-
-    const vatRate = hasVat ? rateValue / 100 : 0;
-
-    const vatAmount = totalHT * vatRate;
-    const totalTTC = totalHT + vatAmount;
-
-    // --- MàJ affichage totaux ---
-
-    const strHT  = totalHT.toFixed(2) + ' €';
-    const strVAT = vatAmount.toFixed(2) + ' €';
-    const strTTC = totalTTC.toFixed(2) + ' €';
-
-    // Bloc de droite (éditeur)
-    const elHT  = document.getElementById('displayTotalHT');
-    const elTVA = document.getElementById('displayTotalVAT');
-    const elTTC = document.getElementById('displayTotalTTC');
-    if (elHT)  elHT.textContent  = strHT;
-    if (elTVA) elTVA.textContent = strVAT;
-    if (elTTC) elTTC.textContent = strTTC;
-
-    // Facture (aperçu papier)
-    const pHT  = document.getElementById('previewTotalHT');
-    const pTVA = document.getElementById('previewTotalVAT');
-    const pTTC = document.getElementById('previewTotalTTC');
-    if (pHT)  pHT.textContent  = strHT;
-    if (pTVA) pTVA.textContent = strVAT;
-    if (pTTC) pTTC.textContent = strTTC;
-
-    // Mention "TVA non applicable, art. 293 B du CGI"
-    const mentionEl = document.getElementById('previewVatLegalMention');
-    if (mentionEl) {
-      mentionEl.style.display = hasVat ? 'none' : 'block';
-    }
-
-
-  
-  };
-
-// --- LOGO ---
-  window.updateLogoPreview = function() {
-    const file = document.getElementById('logoInput').files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const dataUrl = e.target.result;
-        const cont = document.getElementById('paperLogoContainer');
-        if (cont) {
-          cont.innerHTML = `<img src="${dataUrl}" class="paper-logo-img">`;
-        }
-        emitterProfile.logoDataUrl = dataUrl;
-        saveEmitterProfile();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // --- SAVE ---
-  window.createInvoice = async function(send) {
+  function updatePreview() {
     const clientId = document.getElementById('invoiceClientId').value;
-    if(!clientId) return alert('Veuillez sélectionner un client');
+    const client = clients.find(c => c.id == clientId);
+
+    if (client) {
+      let name = '';
+      if (client.client_type === 'business') {
+        name = client.company_name || 'Entreprise';
+      } else {
+        name = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Client';
+      }
+
+      document.getElementById('previewClientInfo').innerHTML = `
+        <strong>${name}</strong><br>
+        ${client.address || ''}<br>
+        ${client.postal_code || ''} ${client.city || ''}<br>
+        ${client.email || ''}
+      `;
+    } else {
+      document.getElementById('previewClientInfo').textContent = '---';
+    }
+
+    const issueDate = document.getElementById('invoiceIssueDate').value;
+    const dueDate = document.getElementById('invoiceDueDate').value;
+    const periodStart = document.getElementById('invoicePeriodStart').value;
+    const periodEnd = document.getElementById('invoicePeriodEnd').value;
+
+    document.getElementById('previewIssueDate').textContent = issueDate ? formatDate(issueDate) : '--';
+    document.getElementById('previewDueDate').textContent = dueDate ? formatDate(dueDate) : '--';
+    document.getElementById('previewPeriod').textContent = 
+      (periodStart && periodEnd) ? `${formatDate(periodStart)} au ${formatDate(periodEnd)}` : '--';
+
+    const tbody = document.getElementById('previewTableBody');
+    if (!prestations || prestations.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:40px 0;">Aucune prestation ajoutée</td></tr>';
+    } else {
+      tbody.innerHTML = prestations.map(p => {
+        const total = calculateLineTotal(p);
+        let desc = p.description || 'Prestation';
+        
+        if (p.type === 'commission') {
+          desc += ` (${p.commissionRate}% sur ${formatMoney(p.rentalAmount)})`;
+        }
+
+        return `
+          <tr>
+            <td>${desc}</td>
+            <td style="text-align:center;">${p.quantity || 1}</td>
+            <td style="text-align:right;">${formatMoney(p.type === 'commission' ? (p.rentalAmount * p.commissionRate / 100) : p.unitPrice)}</td>
+            <td style="text-align:right;font-weight:600;">${formatMoney(total)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    let subtotal = 0;
+    prestations.forEach(p => { subtotal += calculateLineTotal(p); });
+
+    const vatApplicable = document.getElementById('invoiceVatApplicable').checked;
+    const vatRate = parseFloat(document.getElementById('invoiceVatRate').value) || 20;
+    const vatAmount = vatApplicable ? (subtotal * vatRate / 100) : 0;
+    const total = subtotal + vatAmount;
+
+    document.getElementById('previewSubtotal').textContent = formatMoney(subtotal);
+    document.getElementById('previewVat').textContent = formatMoney(vatAmount);
+    document.getElementById('previewVatRateLabel').textContent = vatRate.toFixed(2);
+    document.getElementById('previewTotal').textContent = formatMoney(total);
+
+    document.getElementById('previewVatRow').style.display = vatApplicable ? 'flex' : 'none';
+  }
+
+  function formatMoney(val) {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(val || 0);
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '--';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('fr-FR');
+  }
+
+  window.saveInvoice = async function(send = false) {
+    if (isReadOnlyMode) {
+      alert('❌ Cette facture est en lecture seule et ne peut pas être modifiée');
+      return;
+    }
+    
+    const clientId = document.getElementById('invoiceClientId').value;
+    if (!clientId) return alert('Veuillez sélectionner un client');
+    if (prestations.length === 0) return alert('Ajoutez au moins une prestation');
 
     const data = {
       clientId: parseInt(clientId),
-      periodStart: document.getElementById('invoicePeriodStart').value,
-      periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate: document.getElementById('invoiceIssueDate').value,
       dueDate: document.getElementById('invoiceDueDate').value,
+      periodStart: document.getElementById('invoicePeriodStart').value,
+      periodEnd: document.getElementById('invoicePeriodEnd').value,
       items: prestations.map(p => ({
-        itemType: p.type,
+        type: p.type,
         description: p.description,
-        rentalAmount: p.rentalAmount, // Important pour commission
+        rentalAmount: p.rentalAmount,
         commissionRate: p.commissionRate,
         quantity: p.quantity,
         unitPrice: p.unitPrice,
@@ -1257,74 +1073,81 @@ window.editClient = function(clientId) {
       alert('Erreur serveur');
     }
   };
-window.viewOwnerInvoice = async function(id) {
-  try {
-    const res = await fetch('/api/owner-invoices/' + id, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
 
-    if (!res.ok) {
-      console.error(json);
-      return alert(json.error || 'Erreur lors du chargement de la facture');
-    }
-
-    const inv = json.invoice;
-    const items = json.items || [];
-
-    // On passe en mode "édition de cette facture"
-    editingInvoiceId = inv.id;
-
-    // Remplir les champs de l'éditeur
-    const clientSelect = document.getElementById('invoiceClientId');
-    if (clientSelect) clientSelect.value = inv.client_id;
-
-    if (inv.issue_date) {
-      document.getElementById('invoiceIssueDate').value = inv.issue_date.slice(0,10);
-    }
-    if (inv.due_date) {
-      document.getElementById('invoiceDueDate').value = inv.due_date.slice(0,10);
-    }
-    if (inv.period_start) {
-      document.getElementById('invoicePeriodStart').value = inv.period_start.slice(0,10);
-    }
-    if (inv.period_end) {
-      document.getElementById('invoicePeriodEnd').value = inv.period_end.slice(0,10);
-    }
-
-    document.getElementById('invoiceVatApplicable').checked = !!inv.vat_applicable;
-    document.getElementById('invoiceVatRate').value = inv.vat_rate || 20;
-
-    // Recréer les prestations à partir des lignes
-    prestations = [];
-    prestationCounter = 0;
-
-    items.forEach(item => {
-      prestationCounter++;
-      prestations.push({
-        id: 'p' + prestationCounter,
-        type: item.item_type, // 'commission', 'cleaning', 'debours', etc.
-        description: item.description || '',
-        rentalAmount: parseFloat(item.rental_amount) || 0,
-        commissionRate: parseFloat(item.commission_rate) || 0,
-        quantity: parseFloat(item.quantity) || 0,
-        unitPrice: parseFloat(item.unit_price) || 0,
-        isDebours: item.is_debours
+  // CORRECTION 2: Mode consultation (lecture seule) au lieu de mode édition
+  window.viewOwnerInvoiceReadOnly = async function(id) {
+    try {
+      const res = await fetch('/api/owner-invoices/' + id, {
+        headers: { 'Authorization': 'Bearer ' + token }
       });
-    });
+      const json = await res.json();
 
-    // Rafraîchir l’éditeur + aperçu
-    renderEditorPrestations();
-    updatePreview();
+      if (!res.ok) {
+        console.error(json);
+        return alert(json.error || 'Erreur lors du chargement de la facture');
+      }
 
-    // Aller sur l’onglet "Éditeur"
-    switchTab('create');
+      const inv = json.invoice;
+      const items = json.items || [];
 
-  } catch (err) {
-    console.error(err);
-    alert('Erreur serveur lors du chargement de la facture');
-  }
-};
+      // Activer le mode lecture seule
+      isReadOnlyMode = true;
+      editingInvoiceId = inv.id;
+      
+      // Afficher la bannière et désactiver les contrôles
+      document.getElementById('editorSidebar').classList.add('readonly');
+      document.getElementById('readonlyBanner').style.display = 'block';
+
+      // Remplir les champs (mais ils seront disabled)
+      const clientSelect = document.getElementById('invoiceClientId');
+      if (clientSelect) clientSelect.value = inv.client_id;
+
+      if (inv.issue_date) {
+        document.getElementById('invoiceIssueDate').value = inv.issue_date.slice(0,10);
+      }
+      if (inv.due_date) {
+        document.getElementById('invoiceDueDate').value = inv.due_date.slice(0,10);
+      }
+      if (inv.period_start) {
+        document.getElementById('invoicePeriodStart').value = inv.period_start.slice(0,10);
+      }
+      if (inv.period_end) {
+        document.getElementById('invoicePeriodEnd').value = inv.period_end.slice(0,10);
+      }
+
+      document.getElementById('invoiceVatApplicable').checked = !!inv.vat_applicable;
+      document.getElementById('invoiceVatRate').value = inv.vat_rate || 20;
+
+      // Recréer les prestations
+      prestations = [];
+      prestationCounter = 0;
+
+      items.forEach(item => {
+        prestationCounter++;
+        prestations.push({
+          id: 'p' + prestationCounter,
+          type: item.item_type,
+          description: item.description || '',
+          rentalAmount: parseFloat(item.rental_amount) || 0,
+          commissionRate: parseFloat(item.commission_rate) || 0,
+          quantity: parseFloat(item.quantity) || 0,
+          unitPrice: parseFloat(item.unit_price) || 0,
+          isDebours: item.is_debours
+        });
+      });
+
+      // Rafraîchir l'éditeur + aperçu
+      renderEditorPrestations();
+      updatePreview();
+
+      // Aller sur l'onglet "Éditeur" (en mode consultation)
+      switchTab('create');
+
+    } catch (err) {
+      console.error(err);
+      alert('Erreur serveur lors du chargement de la facture');
+    }
+  };
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() {
@@ -1345,10 +1168,12 @@ window.viewOwnerInvoice = async function(id) {
 
     document.getElementById('clientModal').classList.add('active');
   };
+  
   window.closeClientModal = function() {
     document.getElementById('clientModal').classList.remove('active');
     editingClientId = null;
   };
+  
   window.toggleClientType = function() {
     const t = document.querySelector('input[name="clientType"]:checked').value;
     document.getElementById('individualFields').style.display = t==='individual'?'block':'none';
