@@ -167,6 +167,17 @@
     min-height: 0;
   }
 }
+/* Désactiver les petites flèches sur tous les champs numériques */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
 
   </style>
 </head>
@@ -760,13 +771,21 @@ window.editClient = function(clientId) {
   };
 
   window.updatePrestation = function(id, key, val) {
-    const p = prestations.find(x => x.id === id);
-    if(p) {
-      p[key] = key==='description' ? val : parseFloat(val)||0;
-      renderEditorPrestations(); 
-      updatePreview();
-    }
-  };
+  const p = prestations.find(x => x.id === id);
+  if (!p) return;
+
+  if (key === 'description') {
+    p[key] = val;
+  } else {
+    // on accepte aussi 5,5 (virgule) que l’on convertit en nombre
+    const cleaned = (val || '').toString().replace(',', '.');
+    p[key] = parseFloat(cleaned) || 0;
+  }
+
+  // Surtout : on NE re-render PAS toute la liste ici
+  updatePreview();
+};
+
 
   window.removePrestation = function(id) {
     prestations = prestations.filter(x => x.id !== id);
@@ -956,35 +975,56 @@ window.editClient = function(clientId) {
         </tr>`;
     });
 
+        // --- TVA ---
+
     const hasVat = document.getElementById('invoiceVatApplicable').checked;
     const vatRateInput = document.getElementById('invoiceVatRate');
 
+    // Affiche / cache le champ de taux
     if (vatRateInput) {
       vatRateInput.style.display = hasVat ? 'inline-block' : 'none';
     }
 
-    const rateValue = vatRateInput ? parseFloat(vatRateInput.value) : 20;
-    const vatRate = hasVat ? (rateValue || 20) / 100 : 0;
+    // Lecture du taux (on supporte 5.5, 10, 20, etc.)
+    let rateValue = 20;
+    if (vatRateInput) {
+      const cleanedRate = vatRateInput.value.toString().replace(',', '.');
+      rateValue = parseFloat(cleanedRate) || 20;
+    }
+
+    const vatRate = hasVat ? rateValue / 100 : 0;
 
     const vatAmount = totalHT * vatRate;
     const totalTTC = totalHT + vatAmount;
+
+    // --- MàJ affichage totaux ---
 
     const strHT  = totalHT.toFixed(2) + ' €';
     const strVAT = vatAmount.toFixed(2) + ' €';
     const strTTC = totalTTC.toFixed(2) + ' €';
 
-    document.getElementById('displayTotalHT').textContent  = strHT;
-    document.getElementById('displayTotalVAT').textContent = strVAT;
-    document.getElementById('displayTotalTTC').textContent = strTTC;
-    document.getElementById('previewTotalHT').textContent  = strHT;
-    document.getElementById('previewTotalVAT').textContent = strVAT;
-    document.getElementById('previewTotalTTC').textContent = strTTC;
+    // Bloc de droite (éditeur)
+    const elHT  = document.getElementById('displayTotalHT');
+    const elTVA = document.getElementById('displayTotalVAT');
+    const elTTC = document.getElementById('displayTotalTTC');
+    if (elHT)  elHT.textContent  = strHT;
+    if (elTVA) elTVA.textContent = strVAT;
+    if (elTTC) elTTC.textContent = strTTC;
 
+    // Facture (aperçu papier)
+    const pHT  = document.getElementById('previewTotalHT');
+    const pTVA = document.getElementById('previewTotalVAT');
+    const pTTC = document.getElementById('previewTotalTTC');
+    if (pHT)  pHT.textContent  = strHT;
+    if (pTVA) pTVA.textContent = strVAT;
+    if (pTTC) pTTC.textContent = strTTC;
+
+    // Mention "TVA non applicable, art. 293 B du CGI"
     const mentionEl = document.getElementById('previewVatLegalMention');
     if (mentionEl) {
       mentionEl.style.display = hasVat ? 'none' : 'block';
     }
-  };
+
 
   // --- LOGO ---
   window.updateLogoPreview = function() {
