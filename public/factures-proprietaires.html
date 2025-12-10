@@ -1656,6 +1656,41 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
     document.getElementById('clientModal').classList.add('active');
   };
+  window.editClient = function(clientId) {
+  const client = clients.find(c => c.id == clientId);
+  if (!client) {
+    alert('Client introuvable');
+    return;
+  }
+  
+  editingClientId = clientId;
+  
+  const titleEl = document.getElementById('clientModalTitle');
+  if (titleEl) titleEl.textContent = 'Modifier le client';
+  
+  // Cocher le bon type
+  if (client.client_type === 'business') {
+    document.querySelector('input[name="clientType"][value="business"]').checked = true;
+  } else {
+    document.querySelector('input[name="clientType"][value="individual"]').checked = true;
+  }
+  toggleClientType();
+  
+  // Remplir les champs
+  document.getElementById('clientFirstName').value = client.first_name || '';
+  document.getElementById('clientLastName').value = client.last_name || '';
+  document.getElementById('clientCompanyName').value = client.company_name || '';
+  document.getElementById('clientEmail').value = client.email || '';
+  document.getElementById('clientAddress').value = client.address || '';
+  document.getElementById('clientPostalCode').value = client.postal_code || '';
+  document.getElementById('clientCity').value = client.city || '';
+  
+  // Ouvrir le modal
+  document.getElementById('clientModal').classList.add('active');
+  
+  // Fermer la modal des stats
+  closeStatsModal();
+};
   window.closeClientModal = function() {
     document.getElementById('clientModal').classList.remove('active');
     editingClientId = null;
