@@ -5663,7 +5663,17 @@ app.post('/api/owner-invoices', async (req, res) => {
         item.isDebours || false
       ]);
     }
-
+// Sauvegarder les logements liés
+const propertyIds = req.body.propertyIds || [];
+if (Array.isArray(propertyIds) && propertyIds.length > 0) {
+  for (const propId of propertyIds) {
+    await client.query(`
+      INSERT INTO owner_invoice_properties (invoice_id, property_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+    `, [invoiceId, propId]);
+  }
+}
     await client.query('COMMIT');
 
     res.json({ invoice });
