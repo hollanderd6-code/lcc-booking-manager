@@ -1462,7 +1462,10 @@ window.editClient = function(clientId) {
       reader.readAsDataURL(file);
     }
   };
-
+function getSelectedProperties() {
+  const checkboxes = document.querySelectorAll('.property-checkbox:checked');
+  return Array.from(checkboxes).map(cb => cb.value);
+}
   // --- SAVE ---
   window.createInvoice = async function(send) {
     const clientId = document.getElementById('invoiceClientId').value;
@@ -1486,6 +1489,7 @@ window.editClient = function(clientId) {
       })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
+      propertyIds: getSelectedProperties(),
       sendEmail: send
     };
 
