@@ -15,248 +15,484 @@
   <link rel="stylesheet" href="/css/style.css">
 
   <style>
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
+  /* DESIGN SYSTEM inspiré de factures-proprietaires */
+  :root {
+    --primary: #10B981;
+    --primary-dark: #059669;
+    --bg-body: #f3f4f6;
+    --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1),
+                    0 4px 6px -2px rgba(0,0,0,0.05);
+  }
 
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--bg-body);
+    font-family: 'Inter', sans-serif;
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-container {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* SIDEBAR – même look que factures propriétaires */
+  .sidebar {
+    width: 260px;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-header {
+    padding: 24px;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #111827;
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  .nav-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    margin: 24px 24px 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+  }
+
+  .nav-item:hover {
+    background: #f9fafb;
+    color: #111827;
+  }
+
+  .nav-item.active {
+    background: #ecfdf5;
+    color: #10B981;
+    border-right-color: #10B981;
+  }
+
+  .nav-item i {
+    width: 20px;
+    text-align: center;
+  }
+
+  /* MAIN CONTENT */
+  .main-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 32px;
+    max-width: 1600px;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+
+  .page-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9ca3af;
+    margin-bottom: 4px;
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 6px;
+  }
+
+  .page-content {
+    margin-top: 24px;
+    max-width: 1400px;
+  }
+
+  /* GRID : formulaire à gauche, aperçu à droite */
+  .invoice-grid {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+    }
+    .sidebar.active {
+      transform: translateX(0);
+    }
     .main-content {
-      padding-top: 24px !important;
+      margin-left: 0;
+      padding: 16px;
     }
-
-    .page-content {
-      margin-top: 0 !important;
-      max-width: 1400px;
-    }
-
-    /* Grid Layout */
     .invoice-grid {
-      display: grid;
-      grid-template-columns: 500px 1fr;
-      gap: 24px;
-      margin-top: 24px;
+      grid-template-columns: 1fr;
     }
+  }
 
-    @media (max-width: 1200px) {
-      .invoice-grid {
-        grid-template-columns: 1fr;
-      }
-    }
+  /* FORMULAIRE (on reprend tes classes actuelles) */
+  .card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
 
-    /* Form Styles */
-    .form-section {
-      margin-bottom: 24px;
-    }
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-    .form-section-title {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    .form-section-title i {
-      color: var(--primary-color);
-      font-size: 14px;
-    }
+  .card-body {
+    padding: 20px;
+  }
 
+  .form-section {
+    margin-bottom: 24px;
+  }
+
+  .form-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-section-title i {
+    color: var(--primary);
+    font-size: 14px;
+  }
+
+  .form-row {
+    margin-bottom: 12px;
+  }
+
+  .form-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #374151;
+  }
+
+  .form-row input,
+  .form-row select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+
+  .form-row input:focus,
+  .form-row select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+  }
+
+  .form-row-inline {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  @media (max-width: 640px) {
     .form-row-inline {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: minmax(0, 1fr);
     }
+  }
 
-    @media (max-width: 640px) {
-      .form-row-inline {
-        grid-template-columns: minmax(0, 1fr);
-      }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+
+  .checkbox-row input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+
+  .form-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 24px 0;
+  }
+
+  /* BOUTONS */
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-dark);
+  }
+
+  .btn-secondary {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* APERÇU : feuille A4 comme factures propriétaires */
+  .invoice-preview-card {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  .invoice-preview-header {
+    padding: 0 0 12px 0;
+    font-weight: 600;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .invoice-preview-body {
+    padding: 0;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* Feuille */
+  .invoice-paper {
+    background: #ffffff;
+    width: 100%;
+    max-width: 800px;
+    min-height: 1000px;
+    padding: 48px;
+    box-shadow: var(--paper-shadow);
+    border-radius: 2px;
+    position: relative;
+    color: #1f2937;
+  }
+
+  .invoice-preview-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  .invoice-preview-empty i {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  /* CONTENU DE LA FACTURE (on garde tes classes existantes) */
+  .invoice-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 3px solid #111827;
+  }
+
+  .invoice-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #111827;
+  }
+
+  .invoice-number {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+
+  .invoice-section {
+    margin-bottom: 28px;
+  }
+
+  .invoice-section h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-bottom: 12px;
+  }
+
+  .invoice-section-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #111827;
+  }
+
+  .invoice-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+  }
+
+  .invoice-line:last-child {
+    border-bottom: none;
+  }
+
+  .invoice-subtotal {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    font-weight: 600;
+    margin-top: 12px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .invoice-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 0;
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 12px;
+    border-top: 3px solid #111827;
+    color: var(--primary);
+  }
+
+  .paid-stamp {
+    text-align: center;
+    margin: 32px 0;
+    padding: 20px;
+    background: rgba(16,185,129,0.08);
+    border: 3px solid var(--primary);
+    border-radius: 12px;
+  }
+
+  .paid-stamp h3 {
+    color: var(--primary);
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .invoice-footer {
+    text-align: center;
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  @media print {
+    body {
+      background: #ffffff !important;
     }
-
-    .checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 12px 0;
+    body * {
+      visibility: hidden;
     }
-
-    .checkbox-row input[type="checkbox"] {
-      width: auto;
+    .invoice-paper,
+    .invoice-paper * {
+      visibility: visible;
+    }
+    .invoice-paper {
+      position: absolute;
+      inset: 0;
       margin: 0;
+      box-shadow: none;
+      max-width: none;
+      width: 210mm;
+      min-height: 0;
     }
+  }
+</style>
 
-    .checkbox-row label {
-      margin: 0;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .form-divider {
-      height: 1px;
-      background: var(--border-color);
-      margin: 24px 0;
-    }
-
-    /* Invoice Preview */
-    .invoice-preview-card {
-      background: var(--bg-primary);
-      border: 2px solid var(--border-color);
-      border-radius: 12px;
-      padding: 0;
-      overflow: hidden;
-      position: sticky;
-      top: 24px;
-    }
-
-    .invoice-preview-header {
-      padding: 16px 20px;
-      background: var(--bg-secondary);
-      border-bottom: 1px solid var(--border-color);
-      font-weight: 600;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .invoice-preview-body {
-      padding: 40px;
-      background: white;
-      min-height: 600px;
-    }
-
-    .invoice-preview-empty {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 500px;
-      color: var(--text-secondary);
-      text-align: center;
-    }
-
-    .invoice-preview-empty i {
-      font-size: 64px;
-      opacity: 0.2;
-      margin-bottom: 16px;
-    }
-
-    /* Invoice Design */
-    .invoice-header {
-      text-align: center;
-      margin-bottom: 40px;
-      padding-bottom: 24px;
-      border-bottom: 3px solid var(--text-primary);
-    }
-
-    .invoice-header h2 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--text-primary);
-    }
-
-    .invoice-number {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    .invoice-section {
-      margin-bottom: 28px;
-    }
-
-    .invoice-section h3 {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-secondary);
-      margin-bottom: 12px;
-    }
-
-    .invoice-section-content {
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text-primary);
-    }
-
-    .invoice-line {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #f3f4f6;
-      font-size: 14px;
-    }
-
-    .invoice-line:last-child {
-      border-bottom: none;
-    }
-
-    .invoice-subtotal {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      font-weight: 600;
-      margin-top: 12px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .invoice-total {
-      display: flex;
-      justify-content: space-between;
-      padding: 16px 0;
-      font-size: 20px;
-      font-weight: 700;
-      margin-top: 12px;
-      border-top: 3px solid var(--text-primary);
-      color: var(--primary-color);
-    }
-
-    .paid-stamp {
-      text-align: center;
-      margin: 32px 0;
-      padding: 20px;
-      background: rgba(16, 185, 129, 0.08);
-      border: 3px solid var(--primary-color);
-      border-radius: 12px;
-    }
-
-    .paid-stamp h3 {
-      color: var(--primary-color);
-      font-size: 22px;
-      font-weight: 700;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .invoice-footer {
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-secondary);
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    /* Actions */
-    .form-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 24px;
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  </style>
 </head>
 <body data-page="factures">
   <!-- MOBILE HEADER -->
@@ -540,23 +776,26 @@
           </div>
 
           <!-- Aperçu -->
-          <div>
-            <div class="invoice-preview-card">
-              <div class="invoice-preview-header">
-                <i class="fas fa-file-invoice"></i>
-                Aperçu de la facture
-              </div>
-              <div class="invoice-preview-body" id="invoicePreview">
-                <div class="invoice-preview-empty">
-                  <i class="fas fa-file-invoice"></i>
-                  <div>
-                    <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
-                    <p style="font-size: 14px;">Remplissez le formulaire et cliquez sur "Aperçu"</p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
+          <div class="invoice-preview-card">
+  <div class="invoice-preview-header">
+    <i class="fas fa-file-invoice"></i>
+    Aperçu de la facture
+  </div>
+  <div class="invoice-preview-body">
+    <!-- On déplace l'ID sur la "feuille" -->
+    <div class="invoice-paper" id="invoicePreview">
+      <div class="invoice-preview-empty">
+        <i class="fas fa-file-invoice"></i>
+        <div>
+          <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
+          <p style="font-size: 14px;">Remplissez le formulaire et cliquez sur "Aperçu"</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
         </div>
 
