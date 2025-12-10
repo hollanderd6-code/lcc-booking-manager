@@ -6094,7 +6094,45 @@ app.post('/api/owner-invoices/:id/send', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// MARQUER UNE FACTURE COMME ENCAISSÉE
+app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
+    const invoiceId = req.params.id;
+
+    // Récupérer la facture
+    const result = await pool.query(
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
+      [invoiceId, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Facture non trouvée' });
+    }
+
+    const invoice = result.rows[0];
+
+    if (invoice.status === 'draft') {
+      return res.status(400).json({ error: 'Vous devez d\'abord valider cette facture.' });
+    }
+
+    // Marquer comme payée
+    const updateResult = await pool.query(
+      `UPDATE owner_invoices
+       SET status = 'paid', paid_at = NOW()
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [invoiceId, user.id]
+    );
+
+    res.json({ success: true, invoice: updateResult.rows[0] });
+  } catch (err) {
+    console.error('Erreur marquage facture payée:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // ============================================
 // AVOIRS
 // ============================================
