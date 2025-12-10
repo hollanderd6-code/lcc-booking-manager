@@ -905,7 +905,7 @@ window.markOwnerInvoicePaid = async function (id) {
   if (!confirm('Marquer cette facture comme encaissée ?')) return;
 
   try {
-    const res = await fetch('/api/owner-invoices/' + id + '/pay', {
+    const res = await fetch('/api/owner-invoices/' + id + '/mark-paid', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token }
     });
