@@ -899,11 +899,12 @@ window.deleteOwnerInvoice = async function (id) {
       
       itemsHtml += `
         <tr>
-          <td style="padding:16px 8px;">${desc}</td>
-          <td style="padding:16px 8px;text-align:center;">${qty}</td>
-          <td style="padding:16px 8px;text-align:right;">${price.toFixed(2)} €</td>
-          <td style="padding:16px 8px;text-align:right;font-weight:600;">${total.toFixed(2)} €</td>
-        </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:14px 8px;">${desc}</td>
+      <td style="padding:14px 8px;text-align:center;">${qty}</td>
+      <td style="padding:14px 8px;text-align:right;">${price.toFixed(2)} €</td>
+      <td style="padding:14px 8px;text-align:right;font-weight:600;">${total.toFixed(2)} €</td>
+    </tr>
       `;
     });
     
