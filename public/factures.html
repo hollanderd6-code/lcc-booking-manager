@@ -1094,20 +1094,53 @@
         };
 
         try {
-          const response = await fetch('/api/invoice/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(data)
-          });
+  const response = await fetch('/api/invoice/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify(data)
+  });
 
-          const result = await response.json();
-          if (response.ok) {
-            alert('✅ Facture ' + result.invoiceNumber + ' créée et envoyée par email !');
-            currentInvoiceId = result.invoiceId;
-            invoiceNumber = result.invoiceNumber;
+  let result;
+  try {
+    result = await response.json();
+  } catch (e) {
+    console.error('Réponse non-JSON de l’API /api/invoice/create', e);
+    alert('❌ Erreur : la réponse du serveur n’est pas au format JSON. Code HTTP : ' + response.status);
+    return;
+  }
+
+  if (response.ok) {
+    alert('✅ Facture ' + result.invoiceNumber + ' créée et envoyée par email !');
+
+    // On gère plusieurs noms possibles côté API : invoiceId / id
+    currentInvoiceId = result.invoiceId || result.id;
+    invoiceNumber = result.invoiceNumber || result.number || invoiceNumber;
+
+    const numberEl = document.querySelector('.invoice-number');
+    if (numberEl && invoiceNumber) {
+      numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
+    }
+
+    const pdfBtn = document.getElementById('pdfBtn');
+    if (pdfBtn) pdfBtn.disabled = !currentInvoiceId;
+
+    const sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) sendBtn.disabled = true;
+  } else {
+    console.error('Erreur API /api/invoice/create', {
+      status: response.status,
+      body: result
+    });
+    alert('❌ Erreur serveur (' + response.status + ') : ' + (result.error || JSON.stringify(result)));
+  }
+} catch (err) {
+  console.error('Erreur réseau ou JS:', err);
+  alert('❌ Erreur technique : ' + (err.message || err));
+}
+
 
             // Mettre à jour l'aperçu avec le vrai numéro
             const numberEl = document.querySelector('.invoice-number');
