@@ -4010,7 +4010,8 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   accessCode,
   wifiName,
   wifiPassword,
-  accessInstructions
+  accessInstructions,
+  ownerId
     } = body;
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
@@ -4107,7 +4108,7 @@ const newAccessInstructions =
       newIcalUrls = property.icalUrls || property.ical_urls || [];
     }
 
-   const newOwnerId = req.body.ownerId || null; 
+   const newOwnerId = body.ownerId || null;
 
 await pool.query(
   `UPDATE properties
