@@ -867,16 +867,58 @@ window.deleteOwnerInvoice = async function (id) {
 };
   window.downloadOwnerInvoice = async function (id) {
   try {
-    // Charger la facture dans l'éditeur / aperçu
-    await viewOwnerInvoice(id);
-
-    // Petite pause pour être sûr que le DOM est à jour
+    // Charger la facture en mode lecture seule
+    await viewOwnerInvoiceReadOnly(id);
+    
+    // Attendre que le DOM soit à jour
     setTimeout(() => {
-      window.print();  // puis "Enregistrer en PDF" dans la boîte de dialogue du navigateur
-    }, 300);
-  } catch (e) {
-    console.error(e);
-    alert('Erreur lors de la préparation du téléchargement');
+      const invoicePaper = document.getElementById('invoicePaper');
+      if (!invoicePaper) {
+        alert('Impossible de trouver la facture');
+        return;
+      }
+      
+      // Créer un iframe invisible pour l'impression
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+      
+      const iframeDoc = iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Facture</title>
+          <style>
+            body { margin: 0; padding: 20px; font-family: 'Inter', sans-serif; }
+            ${document.querySelector('style').textContent}
+          </style>
+        </head>
+        <body>
+          ${invoicePaper.outerHTML}
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+      
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+      
+    }, 500);
+    
+  } catch (err) {
+    console.error(err);
+    alert('Erreur lors du téléchargement');
   }
 };
 
