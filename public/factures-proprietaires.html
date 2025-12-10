@@ -1258,7 +1258,7 @@ window.editClient = function(clientId) {
       items: prestations.map(p => ({
         itemType: p.type,
         description: p.description,
-        rentalAmount: p.rentalAmount, // Important pour commission
+        rentalAmount: p.rentalAmount,
         commissionRate: p.commissionRate,
         quantity: p.quantity,
         unitPrice: p.unitPrice,
@@ -1269,30 +1269,7 @@ window.editClient = function(clientId) {
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
       sendEmail: send
     };
-window.createNewInvoice = function() {
-  // Désactiver le mode lecture seule
-  isReadOnlyMode = false;
-  const sidebar = document.getElementById('editorSidebar');
-  if (sidebar) sidebar.classList.remove('readonly');
-  const banner = document.getElementById('readonlyBanner');
-  if (banner) banner.style.display = 'none';
-  
-  editingInvoiceId = null;
-  prestations = [];
-  prestationCounter = 0;
-  
-  document.getElementById('invoiceClientId').value = '';
-  const d = new Date(); 
-  document.getElementById('invoiceIssueDate').valueAsDate = d;
-  const d2 = new Date(); d2.setDate(d2.getDate()+30);
-  document.getElementById('invoiceDueDate').valueAsDate = d2;
-  document.getElementById('invoiceVatApplicable').checked = false;
-  document.getElementById('invoiceVatRate').value = 20;
-  
-  renderEditorPrestations();
-  updatePreview();
-  switchTab('create');
-};
+
     try {
       const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
@@ -1316,6 +1293,31 @@ window.createNewInvoice = function() {
       console.error(err);
       alert('Erreur serveur');
     }
+  };
+
+  window.createNewInvoice = function() {
+    // Désactiver le mode lecture seule
+    isReadOnlyMode = false;
+    const sidebar = document.getElementById('editorSidebar');
+    if (sidebar) sidebar.classList.remove('readonly');
+    const banner = document.getElementById('readonlyBanner');
+    if (banner) banner.style.display = 'none';
+    
+    editingInvoiceId = null;
+    prestations = [];
+    prestationCounter = 0;
+    
+    document.getElementById('invoiceClientId').value = '';
+    const d = new Date(); 
+    document.getElementById('invoiceIssueDate').valueAsDate = d;
+    const d2 = new Date(); d2.setDate(d2.getDate()+30);
+    document.getElementById('invoiceDueDate').valueAsDate = d2;
+    document.getElementById('invoiceVatApplicable').checked = false;
+    document.getElementById('invoiceVatRate').value = 20;
+    
+    renderEditorPrestations();
+    updatePreview();
+    switchTab('create');
   };
 window.viewOwnerInvoiceReadOnly = async function(id) {
   try {
