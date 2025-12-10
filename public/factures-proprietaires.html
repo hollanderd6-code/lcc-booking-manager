@@ -912,67 +912,67 @@ window.deleteOwnerInvoice = async function (id) {
     const totalTtc = parseFloat(inv.total_ttc || 0);
     
     tempContainer.innerHTML = `
-      <div id="tempInvoicePaper" style="background:white;width:800px;padding:48px;font-family:'Inter',sans-serif;color:#1f2937;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:40px;">
-          <div>
-            <p style="margin:0;font-size:12px;color:#6b7280;">
-              La Conciergerie de Charles<br>
-              123 Rue de la République<br>
-              95210 Saint-Gratien<br>
-              contact@lcc.fr
-            </p>
-          </div>
-          <div style="text-align:right;">
-            <h1 style="margin:0 0 8px 0;font-size:32px;font-weight:800;">FACTURE</h1>
-            <p style="margin:0;font-size:13px;color:#6b7280;">
-              N° ${inv.invoice_number || 'BROUILLON'}<br>
-              Date : ${new Date(inv.issue_date).toLocaleDateString('fr-FR')}<br>
-              Échéance : ${new Date(inv.due_date).toLocaleDateString('fr-FR')}
-            </p>
-          </div>
+  <div id="tempInvoicePaper" style="background:white;width:210mm;padding:20mm;font-family:'Inter',sans-serif;color:#1f2937;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:40px;">
+      <div>
+        <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">
+          Votre conciergerie<br>
+          123 Rue de la République<br>
+          75000 Paris<br>
+          contact@boostinghost.fr
+        </p>
+      </div>
+      <div style="text-align:right;">
+        <h1 style="margin:0 0 8px 0;font-size:28px;font-weight:800;">FACTURE</h1>
+        <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">
+          N° ${inv.invoice_number || 'BROUILLON'}<br>
+          Date : ${new Date(inv.issue_date).toLocaleDateString('fr-FR')}<br>
+          Échéance : ${new Date(inv.due_date).toLocaleDateString('fr-FR')}
+        </p>
+      </div>
+    </div>
+    
+    <div style="margin-bottom:30px;">
+      <p style="margin:0 0 4px 0;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;">Facturé à</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#4b5563;">
+        <strong>${clientName}</strong>
+      </p>
+    </div>
+    
+    <table style="width:100%;border-collapse:collapse;margin-top:25px;">
+      <thead>
+        <tr style="border-bottom:2px solid #e5e7eb;">
+          <th style="text-align:left;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">DESCRIPTION</th>
+          <th style="text-align:center;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">QTÉ</th>
+          <th style="text-align:right;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">P.U. HT</th>
+          <th style="text-align:right;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">TOTAL HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+    
+    <div style="display:flex;justify-content:flex-end;margin-top:30px;">
+      <div style="width:220px;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#4b5563;">
+          <span>Total HT</span>
+          <span style="font-weight:600;">${subtotal.toFixed(2)} €</span>
         </div>
-        
-        <div style="margin-bottom:32px;">
-          <p style="margin:0 0 4px 0;font-size:11px;font-weight:700;text-transform:uppercase;color:#9ca3af;">Facturé à</p>
-          <p style="margin:0;font-size:13px;line-height:1.6;color:#4b5563;">
-            <strong>${clientName}</strong>
-          </p>
+        ${vatAmount > 0 ? `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#4b5563;">
+          <span>TVA (${inv.vat_rate}%)</span>
+          <span style="font-weight:600;">${vatAmount.toFixed(2)} €</span>
         </div>
-        
-        <table style="width:100%;border-collapse:collapse;margin-top:32px;">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">Description</th>
-              <th style="text-align:center;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">Qté</th>
-              <th style="text-align:right;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">P.U. HT</th>
-              <th style="text-align:right;padding:12px 8px;border-bottom:2px solid #e5e7eb;font-size:11px;text-transform:uppercase;color:#6b7280;">Total HT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-        
-        <div style="display:flex;justify-content:flex-end;margin-top:32px;">
-          <div style="width:260px;">
-            <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
-              <span>Total HT</span>
-              <span>${subtotal.toFixed(2)} €</span>
-            </div>
-            ${vatAmount > 0 ? `
-            <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
-              <span>TVA (${inv.vat_rate}%)</span>
-              <span>${vatAmount.toFixed(2)} €</span>
-            </div>
-            ` : ''}
-            <div style="display:flex;justify-content:space-between;padding:12px 0 6px 0;font-size:16px;font-weight:700;color:#10B981;border-top:2px solid #e5e7eb;margin-top:8px;">
-              <span>Total TTC</span>
-              <span>${totalTtc.toFixed(2)} €</span>
-            </div>
-          </div>
+        ` : ''}
+        <div style="display:flex;justify-content:space-between;padding:12px 0 8px 0;font-size:16px;font-weight:700;color:#10B981;border-top:2px solid #e5e7eb;margin-top:8px;">
+          <span>Total TTC</span>
+          <span>${totalTtc.toFixed(2)} €</span>
         </div>
       </div>
-    `;
+    </div>
+  </div>
+`;
     
     const invoiceElement = document.getElementById('tempInvoicePaper');
     const filename = `${inv.invoice_number || 'facture'}.pdf`;
