@@ -867,6 +867,16 @@ window.deleteOwnerInvoice = async function (id) {
 };
   window.downloadOwnerInvoice = async function (id) {
   try {
+    // Récupérer les infos de la facture
+    const res = await fetch('/api/owner-invoices/' + id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (!res.ok) throw new Error('Erreur chargement facture');
+    
+    const json = await res.json();
+    const inv = json.invoice;
+    
     // Charger la facture en mode lecture seule
     await viewOwnerInvoiceReadOnly(id);
     
@@ -878,41 +888,29 @@ window.deleteOwnerInvoice = async function (id) {
         return;
       }
       
-      // Créer un iframe invisible pour l'impression
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      document.body.appendChild(iframe);
+      // Nom du fichier
+      const filename = `${inv.invoice_number || 'facture'}.pdf`;
       
-      const iframeDoc = iframe.contentWindow.document;
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Facture</title>
-          <style>
-            body { margin: 0; padding: 20px; font-family: 'Inter', sans-serif; }
-            ${document.querySelector('style').textContent}
-          </style>
-        </head>
-        <body>
-          ${invoicePaper.outerHTML}
-        </body>
-        </html>
-      `);
-      iframeDoc.close();
+      // Utiliser html2pdf (chargé via CDN)
+      const opt = {
+        margin: 10,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
       
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
+      // Charger html2pdf dynamiquement
+      if (typeof html2pdf === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = () => {
+          html2pdf().set(opt).from(invoicePaper).save();
+        };
+        document.head.appendChild(script);
+      } else {
+        html2pdf().set(opt).from(invoicePaper).save();
+      }
       
     }, 500);
     
