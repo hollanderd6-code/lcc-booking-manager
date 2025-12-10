@@ -1390,37 +1390,6 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   }
 };
 
-    // Recréer les prestations à partir des lignes
-    prestations = [];
-    prestationCounter = 0;
-
-    items.forEach(item => {
-      prestationCounter++;
-      prestations.push({
-        id: 'p' + prestationCounter,
-        type: item.item_type, // 'commission', 'cleaning', 'debours', etc.
-        description: item.description || '',
-        rentalAmount: parseFloat(item.rental_amount) || 0,
-        commissionRate: parseFloat(item.commission_rate) || 0,
-        quantity: parseFloat(item.quantity) || 0,
-        unitPrice: parseFloat(item.unit_price) || 0,
-        isDebours: item.is_debours
-      });
-    });
-
-    // Rafraîchir l’éditeur + aperçu
-    renderEditorPrestations();
-    updatePreview();
-
-    // Aller sur l’onglet "Éditeur"
-    switchTab('create');
-
-  } catch (err) {
-    console.error(err);
-    alert('Erreur serveur lors du chargement de la facture');
-  }
-};
-
   // --- CLIENT MODAL ---
   window.openClientModal = function() {
     editingClientId = null;
