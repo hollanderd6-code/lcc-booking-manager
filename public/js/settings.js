@@ -5,6 +5,7 @@ const API_URL = "https://lcc-booking-manager.onrender.com";
 const BOOSTINGHOST_ICAL_BASE = window.location.origin;
 let properties = [];
 let currentEditingProperty = null;
+let ownerClients = [];
 
 // ========================================
 // INITIALIZATION
@@ -15,6 +16,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupColorPicker();
   setupPhotoPreview();
   await loadProperties();
+  await loadOwnerClients(); 
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -134,7 +136,39 @@ async function loadProperties() {
     hideLoading();
   }
 }
+async function loadOwnerClients() {
+  try {
+    const token = localStorage.getItem("lcc_token");
+    const response = await fetch(`${API_URL}/api/owner-clients`, {
+      headers: { Authorization: "Bearer " + token },
+    });
+    const data = await response.json();
+    ownerClients = data.clients || [];
+    populateOwnerSelect();
+  } catch (error) {
+    console.error("Erreur lors du chargement des clients propriétaires:", error);
+  }
+}
 
+function populateOwnerSelect() {
+  const select = document.getElementById("propertyOwnerId");
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Aucun propriétaire</option>';
+  
+  ownerClients.forEach(client => {
+    const option = document.createElement("option");
+    option.value = client.id;
+    
+    if (client.client_type === 'business') {
+      option.textContent = client.company_name || 'Entreprise sans nom';
+    } else {
+      option.textContent = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Client sans nom';
+    }
+    
+    select.appendChild(option);
+  });
+}
 async function saveProperty(event) {
   event.preventDefault();
   showLoading();
@@ -206,7 +240,8 @@ async function saveProperty(event) {
   if (wifiName) formData.append('wifiName', wifiName);
   if (wifiPassword) formData.append('wifiPassword', wifiPassword);
   if (accessInstructions) formData.append('accessInstructions', accessInstructions);
-
+const ownerId = document.getElementById('propertyOwnerId')?.value || null;
+if (ownerId) formData.append('ownerId', ownerId);
   if (photoInput && photoInput.files && photoInput.files[0]) {
     formData.append('photo', photoInput.files[0]);
   }
@@ -359,7 +394,9 @@ function resetPropertyForm() {
   if (document.getElementById("propertyAccessInstructions")) {
     document.getElementById("propertyAccessInstructions").value = "";
   }
-  
+  if (document.getElementById("propertyOwnerId")) {
+  document.getElementById("propertyOwnerId").value = "";
+}
   document.getElementById("propertyColor").value = "#E67E50";
 
   const colorPreview = document.getElementById("colorPreview");
@@ -431,7 +468,9 @@ function openEditPropertyModal(propertyId) {
   if (document.getElementById("propertyAccessInstructions")) {
     document.getElementById("propertyAccessInstructions").value = property.accessInstructions || "";
   }
-  
+  if (document.getElementById("propertyOwnerId")) {
+  document.getElementById("propertyOwnerId").value = property.owner_id || "";
+}
   const photoBox = document.getElementById("photoPreviewBox");
   if (photoBox) {
     if (photoUrl) {
