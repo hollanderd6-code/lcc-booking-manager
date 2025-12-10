@@ -4407,8 +4407,7 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('Erreur envoi email:', emailErr);
       // On continue quand même
     }
-
-    // Retourner succès
+// Retourner succès
     res.status(201).json({
       success: true,
       message: 'Compte créé ! Vérifiez votre email pour activer votre compte.',
@@ -4422,13 +4421,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-const ownerId = req.body.ownerId || null;
-
-await pool.query(`
-  UPDATE properties 
-  SET name=$1, color=$2, address=$3, ..., owner_id=$X
-  WHERE id=$Y AND user_id=$Z
-`, [name, color, address, ..., ownerId, propertyId, userId]);/auth/login', async (req, res) => {
+app.post('/auth/login', async (req, res) => {  // ← AJOUTE CETTE LIGNE
   try {
     const { email, password } = req.body;
 
