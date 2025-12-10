@@ -715,12 +715,16 @@ window.openStatsModal = function(type) {
   if (!clients || clients.length === 0) {  // CHANGÉ: clientsList → clients
     htmlContent = '<p>Aucun client pour le moment.</p>';
   } else {
-    htmlContent = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
-    clients.forEach(function(c) {  // CHANGÉ: clientsList → clients
-      const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-      htmlContent += '<li style="padding:4px 0; border-bottom:1px solid #e5e7eb;">' + name + '</li>';
-    });
-    htmlContent += '</ul>';
+   htmlContent = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
+clients.forEach(function(c) {
+  const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+  htmlContent += 
+    '<li style="padding:8px 0; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
+      '<span>' + name + '</span>' +
+      '<button onclick="editClient(' + c.id + ')" style="padding:4px 12px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px;">✏️ Modifier</button>' +
+    '</li>';
+});
+htmlContent += '</ul>';
   }
   } else {
     titleEl.textContent = 'Détails';
