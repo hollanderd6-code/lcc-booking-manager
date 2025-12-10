@@ -178,7 +178,29 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+/* READ-ONLY MODE */
+.editor-sidebar.readonly .form-control,
+.editor-sidebar.readonly .btn-primary {
+  pointer-events: none;
+  opacity: 0.6;
+  background: #f3f4f6;
+}
 
+.editor-sidebar.readonly .remove-line-btn {
+  display: none;
+}
+
+.readonly-banner {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  color: #92400e;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
   </style>
 </head>
 <body>
@@ -271,7 +293,11 @@ input[type="number"] {
 
       <div id="tab-create" class="tab-content">
         <div class="invoice-editor-layout">
-          <div class="editor-sidebar">
+          <div class="editor-sidebar" id="editorSidebar">
+            <!-- Bannière READ-ONLY (masquée par défaut) -->
+<div id="readonlyBanner" class="readonly-banner" style="display:none;">
+  ⚠️ Facture en lecture seule - Déjà émise
+</div>
             <div class="editor-section">
               <div class="editor-section-title">Informations Facture</div>
               <div class="form-group">
@@ -476,6 +502,7 @@ input[type="number"] {
   let prestations = [];
   let prestationCounter = 0;
   let editingInvoiceId = null;
+  let isReadOnlyMode = false;
   let emitterProfile = {
     company: '',
     address: '',
@@ -709,7 +736,7 @@ async function loadInvoices() {
 
       if (inv.is_credit_note) {
         actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="viewOwnerInvoiceReadOnly(' + inv.id + ')">Voir la facture</button>' +
           '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
@@ -924,6 +951,7 @@ window.editClient = function(clientId) {
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
   window.addPrestation = function(type) {
+    if (isReadOnlyMode) return;
     prestationCounter++;
     prestations.push({
       id: 'p'+prestationCounter,
@@ -938,6 +966,7 @@ window.editClient = function(clientId) {
   };
 
   window.updatePrestation = function(id, key, val) {
+    if (isReadOnlyMode) return;
   const p = prestations.find(x => x.id === id);
   if (!p) return;
 
@@ -955,6 +984,7 @@ window.editClient = function(clientId) {
 
 
   window.removePrestation = function(id) {
+    if (isReadOnlyMode) return;
     prestations = prestations.filter(x => x.id !== id);
     renderEditorPrestations();
     updatePreview();
@@ -1239,7 +1269,30 @@ window.editClient = function(clientId) {
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
       sendEmail: send
     };
-
+window.createNewInvoice = function() {
+  // Désactiver le mode lecture seule
+  isReadOnlyMode = false;
+  const sidebar = document.getElementById('editorSidebar');
+  if (sidebar) sidebar.classList.remove('readonly');
+  const banner = document.getElementById('readonlyBanner');
+  if (banner) banner.style.display = 'none';
+  
+  editingInvoiceId = null;
+  prestations = [];
+  prestationCounter = 0;
+  
+  document.getElementById('invoiceClientId').value = '';
+  const d = new Date(); 
+  document.getElementById('invoiceIssueDate').valueAsDate = d;
+  const d2 = new Date(); d2.setDate(d2.getDate()+30);
+  document.getElementById('invoiceDueDate').valueAsDate = d2;
+  document.getElementById('invoiceVatApplicable').checked = false;
+  document.getElementById('invoiceVatRate').value = 20;
+  
+  renderEditorPrestations();
+  updatePreview();
+  switchTab('create');
+};
     try {
       const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
@@ -1264,7 +1317,7 @@ window.editClient = function(clientId) {
       alert('Erreur serveur');
     }
   };
-window.viewOwnerInvoice = async function(id) {
+window.viewOwnerInvoiceReadOnly = async function(id) {
   try {
     const res = await fetch('/api/owner-invoices/' + id, {
       headers: { 'Authorization': 'Bearer ' + token }
@@ -1279,10 +1332,15 @@ window.viewOwnerInvoice = async function(id) {
     const inv = json.invoice;
     const items = json.items || [];
 
-    // On passe en mode "édition de cette facture"
+    // Activer le mode lecture seule
+    isReadOnlyMode = true;
     editingInvoiceId = inv.id;
+    
+    // Afficher la bannière et désactiver les contrôles
+    document.getElementById('editorSidebar').classList.add('readonly');
+    document.getElementById('readonlyBanner').style.display = 'block';
 
-    // Remplir les champs de l'éditeur
+    // Remplir les champs
     const clientSelect = document.getElementById('invoiceClientId');
     if (clientSelect) clientSelect.value = inv.client_id;
 
@@ -1301,6 +1359,34 @@ window.viewOwnerInvoice = async function(id) {
 
     document.getElementById('invoiceVatApplicable').checked = !!inv.vat_applicable;
     document.getElementById('invoiceVatRate').value = inv.vat_rate || 20;
+
+    // Recréer les prestations
+    prestations = [];
+    prestationCounter = 0;
+
+    items.forEach(item => {
+      prestationCounter++;
+      prestations.push({
+        id: 'p' + prestationCounter,
+        type: item.item_type,
+        description: item.description || '',
+        rentalAmount: parseFloat(item.rental_amount) || 0,
+        commissionRate: parseFloat(item.commission_rate) || 0,
+        quantity: parseFloat(item.quantity) || 0,
+        unitPrice: parseFloat(item.unit_price) || 0,
+        isDebours: item.is_debours
+      });
+    });
+
+    renderEditorPrestations();
+    updatePreview();
+    switchTab('create');
+
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur lors du chargement de la facture');
+  }
+};
 
     // Recréer les prestations à partir des lignes
     prestations = [];
