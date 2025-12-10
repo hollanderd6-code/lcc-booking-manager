@@ -235,15 +235,15 @@ input[type="number"] {
       </div>
 
       <div class="stats-row">
-        <div class="stat-card">
+        <div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
           <span class="stat-label">Total Facturé (Mois)</span>
           <span class="stat-value" id="statsRevenue">0,00 €</span>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
           <span class="stat-label">En attente</span>
           <span class="stat-value" style="color:#f59e0b;" id="statsPending">0,00 €</span>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" onclick="openStatsModal('clients')" style="cursor:pointer;">
           <span class="stat-label">Clients Propriétaires</span>
           <span class="stat-value" id="statsClients">0</span>
         </div>
@@ -423,6 +423,19 @@ input[type="number"] {
   </div>
 </div>
 
+
+<div class="modal-overlay" id="statsModal">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+      <h3 id="statsModalTitle" style="margin:0;">Détails</h3>
+      <button onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+    </div>
+    <div id="statsModalBody" style="font-size:14px;">
+      <!-- Contenu injecté en JS -->
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="clientModal">
   <div class="modal-content">
     <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
@@ -537,6 +550,103 @@ input[type="number"] {
 
   // --- FACTURES ---
   
+
+
+window.openStatsModal = function(type) {
+  const modal = document.getElementById('statsModal');
+  const titleEl = document.getElementById('statsModalTitle');
+  const bodyEl = document.getElementById('statsModalBody');
+  if (!modal || !titleEl || !bodyEl) return;
+
+  let htmlContent = '';
+  const invoices = window.ownerInvoices || [];
+  const clientsList = window.clients || [];
+
+  if (type === 'billed') {
+    titleEl.textContent = 'Factures facturées';
+    const filtered = invoices.filter(function(inv) {
+      const status = inv.status || '';
+      return !inv.is_credit_note && status !== 'draft';
+    });
+    if (filtered.length === 0) {
+      htmlContent = '<p>Aucune facture facturée.</p>';
+    } else {
+      htmlContent = '<table style="width:100%; border-collapse:collapse; font-size:13px;">' +
+        '<thead><tr>' +
+        '<th style="text-align:left; padding:6px 4px;">N°</th>' +
+        '<th style="text-align:left; padding:6px 4px;">Client</th>' +
+        '<th style="text-align:left; padding:6px 4px;">Date</th>' +
+        '<th style="text-align:right; padding:6px 4px;">Montant</th>' +
+        '</tr></thead><tbody>';
+      filtered.forEach(function(inv) {
+        const dateStr = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
+        const num = inv.invoice_number || ('#' + inv.id);
+        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
+        htmlContent += '<tr>' +
+          '<td style="padding:4px 4px;">' + num + '</td>' +
+          '<td style="padding:4px 4px;">' + (inv.client_name || '') + '</td>' +
+          '<td style="padding:4px 4px;">' + dateStr + '</td>' +
+          '<td style="padding:4px 4px; text-align:right;">' + total + '</td>' +
+        '</tr>';
+      });
+      htmlContent += '</tbody></table>';
+    }
+  } else if (type === 'pending') {
+    titleEl.textContent = 'Factures en attente de paiement';
+    const filtered = invoices.filter(function(inv) {
+      const status = inv.status || '';
+      return !inv.is_credit_note && status !== 'draft' && status !== 'paid';
+    });
+    if (filtered.length === 0) {
+      htmlContent = '<p>Aucune facture en attente de paiement.</p>';
+    } else {
+      htmlContent = '<table style="width:100%; border-collapse:collapse; font-size:13px;">' +
+        '<thead><tr>' +
+        '<th style="text-align:left; padding:6px 4px;">N°</th>' +
+        '<th style="text-align:left; padding:6px 4px;">Client</th>' +
+        '<th style="text-align:left; padding:6px 4px;">Statut</th>' +
+        '<th style="text-align:right; padding:6px 4px;">Montant</th>' +
+        '</tr></thead><tbody>';
+      filtered.forEach(function(inv) {
+        const num = inv.invoice_number || ('#' + inv.id);
+        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
+        const status = inv.status || '';
+        htmlContent += '<tr>' +
+          '<td style="padding:4px 4px;">' + num + '</td>' +
+          '<td style="padding:4px 4px;">' + (inv.client_name || '') + '</td>' +
+          '<td style="padding:4px 4px;">' + status + '</td>' +
+          '<td style="padding:4px 4px; text-align:right;">' + total + '</td>' +
+        '</tr>';
+      });
+      htmlContent += '</tbody></table>';
+    }
+  } else if (type === 'clients') {
+    titleEl.textContent = 'Clients propriétaires';
+    if (!clientsList || clientsList.length === 0) {
+      htmlContent = '<p>Aucun client pour le moment.</p>';
+    } else {
+      htmlContent = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
+      clientsList.forEach(function(c) {
+        const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+        htmlContent += '<li style="padding:4px 0; border-bottom:1px solid #e5e7eb;">' + name + '</li>';
+      });
+      htmlContent += '</ul>';
+    }
+  } else {
+    titleEl.textContent = 'Détails';
+    htmlContent = '<p>Aucune donnée à afficher.</p>';
+  }
+
+  bodyEl.innerHTML = htmlContent;
+  modal.classList.add('active');
+};
+
+window.closeStatsModal = function() {
+  const modal = document.getElementById('statsModal');
+  if (modal) modal.classList.remove('active');
+};
+
+
 async function loadInvoices() {
   try {
     const res = await fetch('/api/owner-invoices', {
@@ -544,33 +654,47 @@ async function loadInvoices() {
     });
     const data = await res.json();
     const invs = data.invoices || [];
+    window.ownerInvoices = invs;
+
     const tbody = document.getElementById('invoicesTableBody');
 
     if (invs.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="padding:40px; text-align:center;">Aucune facture.</td></tr>';
       document.getElementById('statsRevenue').textContent = '0.00 €';
+      document.getElementById('statsPending').textContent = '0.00 €';
       return;
     }
 
     let totalRev = 0;
+    let totalPending = 0;
     tbody.innerHTML = '';
 
     invs.forEach(function(inv) {
-      const total = parseFloat(inv.total_ttc || 0);
-      totalRev += total;
+      const total = parseFloat(inv.total_ttc || 0) || 0;
+      const status = inv.status || '';
+
+      // Total facturé : toutes les factures non brouillon et non avoir
+      if (!inv.is_credit_note && status !== 'draft') {
+        totalRev += total;
+      }
+
+      // En attente : factures non brouillon, non avoir, non payées
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid') {
+        totalPending += total;
+      }
 
       const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
 
-      let statusLabel = inv.status || '';
+      let statusLabel = status;
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
-      } else if (inv.status === 'draft') {
+      } else if (status === 'draft') {
         statusLabel = 'Brouillon';
-      } else if (inv.status === 'invoiced') {
+      } else if (status === 'invoiced') {
         statusLabel = 'Facturée';
-      } else if (inv.status === 'sent') {
+      } else if (status === 'sent') {
         statusLabel = 'Envoyée';
-      } else if (inv.status === 'paid') {
+      } else if (status === 'paid') {
         statusLabel = 'Payée';
       }
 
@@ -582,15 +706,21 @@ async function loadInvoices() {
           '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
-      } else if (inv.status === 'draft') {
+      } else if (status === 'draft') {
         actionsHtml =
           '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
           '<button type="button" onclick="finalizeOwnerInvoice(' + inv.id + ')">Passer en “Facturée”</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer le brouillon</button>';
       } else {
+        let paidBtn = '';
+        if (status !== 'paid') {
+          paidBtn = '<button type="button" onclick="markOwnerInvoicePaid(' + inv.id + ')">Marquer comme encaissée</button>';
+        }
+
         actionsHtml =
           '<button type="button" onclick="viewOwnerInvoice(' + inv.id + ')">Voir la facture</button>' +
+          paidBtn +
           '<button type="button" onclick="createOwnerCreditNote(' + inv.id + ')">Créer un avoir</button>' +
           '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
           '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
@@ -620,10 +750,12 @@ async function loadInvoices() {
     });
 
     document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
+    document.getElementById('statsPending').textContent = totalPending.toFixed(2) + ' €';
   } catch (e) {
     console.error('Erreur chargement factures propriétaires:', e);
   }
 }
+
 
 
 let editingClientId = null;
@@ -731,6 +863,29 @@ window.finalizeOwnerInvoice = async function (id) {
     alert('Erreur serveur');
   }
 };
+
+
+window.markOwnerInvoicePaid = async function (id) {
+  if (!confirm('Marquer cette facture comme encaissée ?')) return;
+
+  try {
+    const res = await fetch('/api/owner-invoices/' + id + '/pay', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error(json);
+      return alert(json.error || 'Erreur lors de la mise à jour du paiement');
+    }
+    alert('Facture marquée comme encaissée ✅');
+    loadInvoices();
+  } catch (e) {
+    console.error(e);
+    alert('Erreur serveur');
+  }
+};
+
 
 window.editClient = function(clientId) {
     const client = clients.find(c => c.id == clientId);
