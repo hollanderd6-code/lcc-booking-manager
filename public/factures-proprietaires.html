@@ -563,7 +563,6 @@ input[type="number"] {
     const res = await fetch('/api/owner-clients', { headers: { Authorization: 'Bearer '+token }});
     const data = await res.json();
     clients = data.clients || [];
-    window.clientsList = clients; // IMPORTANT : stocke dans une variable globale
     document.getElementById('statsClients').textContent = clients.length;
     
     // Remplir le SELECT dans l'éditeur
@@ -574,23 +573,68 @@ input[type="number"] {
       sel.innerHTML += `<option value="${c.id}">${name}</option>`;
     });
     
-    // Remplir la liste des clients dans l'onglet (si elle existe)
-    const cont = document.getElementById('clientsContainer');
-    if (cont) {
-      cont.innerHTML = '';
-      clients.forEach(c => {
-        const name = c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
-        cont.innerHTML += `
-          <div style="background:#f9fafb; padding:16px; border-radius:8px; border:1px solid #e5e7eb;">
-            <div style="font-weight:700;">${name}</div>
-            <div style="font-size:12px; color:#6b7280;">${c.email || ''}</div>
-            <button onclick="editClient(${c.id})" class="btn-xs btn-secondary" style="margin-top:8px;">Modifier</button>
-          </div>`;
-      });
-    }
+    // Charger aussi les propriétés pour pouvoir les afficher
+    await loadPropertiesForInvoice();
+    
   } catch(e) {
     console.error('Erreur chargement clients:', e);
   }
+}
+
+// Nouvelle fonction pour charger les propriétés
+async function loadPropertiesForInvoice() {
+  try {
+    const res = await fetch('/api/properties', { 
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    window.allProperties = data.properties || [];
+  } catch(e) {
+    console.error('Erreur chargement propriétés:', e);
+  }
+}
+
+// Nouvelle fonction appelée quand on sélectionne un client
+function loadClientDefaults() {
+  const clientId = document.getElementById('invoiceClientId').value;
+  
+  if (!clientId) {
+    // Cacher la section logements
+    document.getElementById('propertySelectSection').style.display = 'none';
+    return;
+  }
+  
+  // Afficher les logements de ce client
+  const clientProperties = (window.allProperties || []).filter(p => p.owner_id == clientId);
+  
+  const container = document.getElementById('propertyCheckboxList');
+  const section = document.getElementById('propertySelectSection');
+  
+  if (clientProperties.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  container.innerHTML = '';
+  
+  clientProperties.forEach(prop => {
+    const label = document.createElement('label');
+    label.style.display = 'flex';
+    label.style.alignItems = 'center';
+    label.style.gap = '8px';
+    label.style.padding = '8px';
+    label.style.cursor = 'pointer';
+    label.style.borderRadius = '6px';
+    label.style.fontSize = '13px';
+    label.innerHTML = `
+      <input type="checkbox" class="property-checkbox" value="${prop.id}" onchange="updatePreview()">
+      <span>${prop.name}</span>
+    `;
+    container.appendChild(label);
+  });
+  
+  updatePreview();
 }
   // --- FACTURES ---
   
