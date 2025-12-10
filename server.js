@@ -4108,7 +4108,7 @@ const newAccessInstructions =
       newIcalUrls = property.icalUrls || property.ical_urls || [];
     }
 
-   const newOwnerId = body.ownerId || null;
+  const newOwnerId = body.ownerId || null;
 
 await pool.query(
   `UPDATE properties
