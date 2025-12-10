@@ -850,9 +850,12 @@ window.deleteOwnerInvoice = async function (id) {
 
   try {
     const res = await fetch('/api/owner-invoices/' + id, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+  method: 'PATCH',
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + token 
+  },
+  body: JSON.stringify({ paid: true })
     const json = await res.json();
     if (!res.ok) {
       console.error(json);
