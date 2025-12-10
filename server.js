@@ -6118,10 +6118,10 @@ app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
       return res.status(400).json({ error: 'Vous devez d\'abord valider cette facture.' });
     }
 
-    // Marquer comme payée
+    // Marquer comme payée (sans paid_at)
     const updateResult = await pool.query(
       `UPDATE owner_invoices
-       SET status = 'paid', paid_at = NOW()
+       SET status = 'paid'
        WHERE id = $1 AND user_id = $2
        RETURNING *`,
       [invoiceId, user.id]
