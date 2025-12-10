@@ -969,7 +969,19 @@
               </label>
               <input type="text" id="propertyName" required placeholder="Ex: Saint-Gratien - RDC">
             </div>
-
+<div class="form-group">
+  <label for="propertyOwnerId">
+    <i class="fas fa-user"></i>
+    <span>Propriétaire (optionnel)</span>
+  </label>
+  <select id="propertyOwnerId" class="form-control">
+    <option value="">Aucun propriétaire</option>
+    <!-- Options remplies dynamiquement -->
+  </select>
+  <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+    Lier ce logement à un client propriétaire
+  </small>
+</div>
             <div class="form-group">
               <label for="propertyAddress">
                 <i class="fas fa-location-dot"></i>
