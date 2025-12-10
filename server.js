@@ -5707,15 +5707,20 @@ app.get('/api/owner-invoices/:id', async (req, res) => {
     const invoice = invResult.rows[0];
 
     // Lignes
-    const itemsResult = await pool.query(
-      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index, id',
-      [invoiceId]
-    );
+    // Récupérer les logements liés
+const propertiesResult = await pool.query(
+  `SELECT p.id, p.name, p.address 
+   FROM owner_invoice_properties oip
+   JOIN properties p ON p.id = oip.property_id
+   WHERE oip.invoice_id = $1`,
+  [invoiceId]
+);
 
-    res.json({
-      invoice,
-      items: itemsResult.rows
-    });
+res.json({
+  invoice,
+  items: itemsResult.rows,
+  properties: propertiesResult.rows
+});
 
   } catch (err) {
     console.error('Erreur lecture facture propriétaire:', err);
