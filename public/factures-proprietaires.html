@@ -821,6 +821,15 @@ window.toggleInvoiceActions = function (id, btn) {
   menu.classList.add('open');
 };
 
+// Fermer le menu si on clique ailleurs dans la page
+document.addEventListener('click', function(e) {
+  // Vérifier si le clic est en dehors d'un menu ou d'un bouton "..."
+  if (!e.target.closest('.invoice-row-actions')) {
+    document.querySelectorAll('.invoice-actions-menu.open')
+      .forEach(m => m.classList.remove('open'));
+  }
+});
+
 
 // Envoyer la facture (brouillon -> envoyée)
 window.sendOwnerInvoice = async function (id) {
