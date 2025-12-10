@@ -304,12 +304,12 @@ input[type="number"] {
               <div class="editor-section-title">Informations Facture</div>
               <div class="form-group">
                 <label>Client</label>
-                <select class="form-control" id="invoiceClientId" onchange="loadClientDefaults(); updatePreview();">
+                <select class="form-control" id="invoiceClientId" onchange="loadClientDefaults(); ;">
                   <option value="">Sélectionner...</option>
                 </select>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group"><label>Émission</label><input type="date" class="form-control" id="invoiceIssueDate" onchange="updatePreview()"></div>
+                <div class="form-group"><label>Émission</label><input type="date" class="form-control" id="invoiceIssueDate" onchange=""></div>
                 <div class="form-group"><label>Échéance</label><input type="date" class="form-control" id="invoiceDueDate" onchange="updatePreview()"></div>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -422,7 +422,9 @@ input[type="number"] {
               </div>
 
               <div style="font-size:12px; color:#6b7280; margin-bottom:10px;">Période : <span id="previewPeriod">-</span></div>
-
+<p style="font-size:13px;color:#6b7280;margin:16px 0;display:none;">
+  Logement(s) : <strong><span id="previewProperties">--</span></strong>
+</p>
               <table class="paper-table">
                 <thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
                 <tbody id="previewBody"></tbody>
@@ -1365,7 +1367,25 @@ window.editClient = function(clientId) {
     
     if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
     if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
+// Afficher les logements sélectionnés
+    const selectedProps = getSelectedProperties();
+    const propertyContainer = document.getElementById('previewProperties');
 
+    if (selectedProps.length > 0 && window.allProperties) {
+      const propNames = selectedProps.map(id => {
+        const prop = window.allProperties.find(p => p.id === id);
+        return prop ? prop.name : '';
+      }).filter(Boolean);
+      
+      if (propertyContainer) {
+        propertyContainer.textContent = propNames.join(', ');
+        propertyContainer.parentElement.style.display = 'block';
+      }
+    } else {
+      if (propertyContainer) {
+        propertyContainer.parentElement.style.display = 'none';
+      }
+    }
     // Sender
     const sender = document.getElementById('senderAddressInput').value;
     if(sender) document.getElementById('previewSenderAddress').textContent = sender;
