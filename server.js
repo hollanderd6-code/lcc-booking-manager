@@ -3936,32 +3936,36 @@ if (Array.isArray(icalUrls)) {
     .filter(Boolean);
 }
 
-    await pool.query(
-      `INSERT INTO properties (
-         id, user_id, name, color, ical_urls,
-         address, arrival_time, departure_time, deposit_amount, photo_url,
-         welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
-         created_at
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
-      [
-        id,
-        user.id,
-        name,
-        color,
-        JSON.stringify(normalizedIcal),
-        address || null,
-        arrivalTime || null,
-        departureTime || null,
-        depositAmount === '' || depositAmount == null ? null : Number(depositAmount),
-        photoUrl,
-        welcomeBookUrl || null,
-        accessCode || null,
-        wifiName || null,
-        wifiPassword || null,
-        accessInstructions || null
-      ]
-    );
+    const ownerId = req.body.ownerId || null; 
+
+await pool.query(
+  `INSERT INTO properties (
+     id, user_id, name, color, ical_urls,
+     address, arrival_time, departure_time, deposit_amount, photo_url,
+     welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
+     owner_id, created_at
+   )
+   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
+  [
+    id,
+    user.id,
+    name,
+    color,
+    JSON.stringify(normalizedIcal),
+    address || null,
+    arrivalTime || null,
+    departureTime || null,
+    depositAmount === '' || depositAmount == null ? null : Number(depositAmount),
+    photoUrl,
+    welcomeBookUrl || null,
+    accessCode || null,
+    wifiName || null,
+    wifiPassword || null,
+    accessInstructions || null,
+    ownerId // ← AJOUTE CETTE LIGNE
+  ]
+);
+      `
 
     await loadProperties();
 
@@ -4103,42 +4107,45 @@ const newAccessInstructions =
       newIcalUrls = property.icalUrls || property.ical_urls || [];
     }
 
-    await pool.query(
-      `UPDATE properties
-       SET
-         name = $1,
-         color = $2,
-         ical_urls = $3,
-         address = $4,
-         arrival_time = $5,
-         departure_time = $6,
-         deposit_amount = $7,
-         photo_url = $8,
-         welcome_book_url = $9,
-         access_code = $10,
-         wifi_name = $11,
-         wifi_password = $12,
-         access_instructions = $13
-       WHERE id = $14 AND user_id = $15`,
-      [
-        newName,
-        newColor,
-        JSON.stringify(newIcalUrls || []),
-        newAddress,
-        newArrivalTime,
-        newDepartureTime,
-        newDepositAmount,
-        newPhotoUrl,
-        newWelcomeBookUrl,
-        newAccessCode,
-        newWifiName,
-        newWifiPassword,
-        newAccessInstructions,
-        propertyId,
-        user.id
-      ]
-    );
+   const newOwnerId = req.body.ownerId || null; 
 
+await pool.query(
+  `UPDATE properties
+   SET
+     name = $1,
+     color = $2,
+     ical_urls = $3,
+     address = $4,
+     arrival_time = $5,
+     departure_time = $6,
+     deposit_amount = $7,
+     photo_url = $8,
+     welcome_book_url = $9,
+     access_code = $10,
+     wifi_name = $11,
+     wifi_password = $12,
+     access_instructions = $13,
+     owner_id = $14
+   WHERE id = $15 AND user_id = $16`,
+  [
+    newName,
+    newColor,
+    JSON.stringify(newIcalUrls || []),
+    newAddress,
+    newArrivalTime,
+    newDepartureTime,
+    newDepositAmount,
+    newPhotoUrl,
+    newWelcomeBookUrl,
+    newAccessCode,
+    newWifiName,
+    newWifiPassword,
+    newAccessInstructions,
+    newOwnerId, // ← AJOUTE CETTE LIGNE
+    propertyId,
+    user.id
+  ]
+);
     await loadProperties();
 
     const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
@@ -4415,7 +4422,13 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+const ownerId = req.body.ownerId || null;
+
+await pool.query(`
+  UPDATE properties 
+  SET name=$1, color=$2, address=$3, ..., owner_id=$X
+  WHERE id=$Y AND user_id=$Z
+`, [name, color, address, ..., ownerId, propertyId, userId]);/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
