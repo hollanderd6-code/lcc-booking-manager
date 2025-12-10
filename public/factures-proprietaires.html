@@ -472,7 +472,6 @@ input[type="number"] {
 
 <script>
   let token = localStorage.getItem('lcc_token');
-  let clientsList = []; // Variable globale pour le modal de stats
   let clients = [];
   let prestations = [];
   let prestationCounter = 0;
@@ -629,17 +628,17 @@ window.openStatsModal = function(type) {
       htmlContent += '</tbody></table>';
     }
   } else if (type === 'clients') {
-    titleEl.textContent = 'Clients propriétaires';
-    if (!clientsList || clientsList.length === 0) {
-      htmlContent = '<p>Aucun client pour le moment.</p>';
-    } else {
-      htmlContent = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
-      clientsList.forEach(function(c) {
-        const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-        htmlContent += '<li style="padding:4px 0; border-bottom:1px solid #e5e7eb;">' + name + '</li>';
-      });
-      htmlContent += '</ul>';
-    }
+  titleEl.textContent = 'Clients propriétaires';
+  if (!clients || clients.length === 0) {  // CHANGÉ: clientsList → clients
+    htmlContent = '<p>Aucun client pour le moment.</p>';
+  } else {
+    htmlContent = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
+    clients.forEach(function(c) {  // CHANGÉ: clientsList → clients
+      const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+      htmlContent += '<li style="padding:4px 0; border-bottom:1px solid #e5e7eb;">' + name + '</li>';
+    });
+    htmlContent += '</ul>';
+  }
   } else {
     titleEl.textContent = 'Détails';
     htmlContent = '<p>Aucune donnée à afficher.</p>';
