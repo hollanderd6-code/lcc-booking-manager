@@ -1345,12 +1345,12 @@ window.editClient = function(clientId) {
       updateSenderPreviewOnly();
 
       // Logo par défaut si déjà enregistré
-      if (emitterProfile.logoDataUrl) {
-        const logoContainer = document.getElementById('paperLogoContainer');
-        if (logoContainer) {
-          logoContainer.innerHTML = '<img src="' + emitterProfile.logoDataUrl + '" class="paper-logo-img">';
-        }
-      }
+if (emitterProfile.logoDataUrl) {
+  const logoContainer = document.getElementById('paperLogoContainer');
+  if (logoContainer) {
+    logoContainer.innerHTML = '<img src="' + emitterProfile.logoDataUrl + '" class="paper-logo-img">';
+  }
+}
     } catch (e) {
       console.warn('Impossible de charger le profil émetteur', e);
     }
@@ -1550,21 +1550,31 @@ if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateS
 
 // --- LOGO ---
   window.updateLogoPreview = function() {
-    const file = document.getElementById('logoInput').files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const dataUrl = e.target.result;
-        const cont = document.getElementById('paperLogoContainer');
-        if (cont) {
-          cont.innerHTML = `<img src="${dataUrl}" class="paper-logo-img">`;
-        }
-        emitterProfile.logoDataUrl = dataUrl;
-        saveEmitterProfile();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const file = document.getElementById('logoInput').files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const dataUrl = e.target.result;
+      // Afficher l'aperçu temporaire dans l'éditeur
+      const logoPreviewImg = document.getElementById('logoPreviewImg');
+      if (logoPreviewImg) {
+        logoPreviewImg.src = dataUrl;
+        logoPreviewImg.style.display = 'block';
+      }
+      const logoPlaceholder = document.getElementById('logoPlaceholder');
+      if (logoPlaceholder) {
+        logoPlaceholder.style.display = 'none';
+      }
+      
+      // Afficher sur la facture
+      const cont = document.getElementById('paperLogoContainer');
+      if (cont) {
+        cont.innerHTML = `<img src="${dataUrl}" class="paper-logo-img">`;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+};
 function getSelectedProperties() {
   const checkboxes = document.querySelectorAll('.property-checkbox:checked');
   return Array.from(checkboxes).map(cb => cb.value);
