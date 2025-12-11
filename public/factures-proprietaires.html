@@ -1431,7 +1431,22 @@ window.editClient = function(clientId) {
     
     if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
     if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
-// Afficher les logements sélectionnés
+if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
+    if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
+
+    // Afficher le logo si présent
+    if (window.userProfile && window.userProfile.logoUrl) {
+      const logoImg = document.getElementById('previewLogoImg');
+      if (logoImg) {
+        logoImg.src = window.userProfile.logoUrl;
+        logoImg.style.display = 'block';
+      }
+      const logoPlaceholder = document.getElementById('previewLogoPlaceholder');
+      if (logoPlaceholder) {
+        logoPlaceholder.style.display = 'none';
+      }
+    }
+    // Afficher les logements sélectionnés
     const selectedProps = getSelectedProperties();
     const propertyContainer = document.getElementById('previewProperties');
 
