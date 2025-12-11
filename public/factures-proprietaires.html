@@ -1307,8 +1307,15 @@ window.editClient = function(clientId) {
 
       return `
         <div class="prestation-mini-card">
-          <button class="remove-line-btn" onclick="removePrestation('${p.id}')"><i class="fas fa-times"></i></button>
-          <span class="prestation-badge ${badgeClass}">${p.type.toUpperCase()}</span>
+<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
+  <button class="remove-line-btn" onclick="duplicatePrestation('${p.id}')" title="Dupliquer" style="background:#10b981;">
+    <i class="fas fa-copy"></i>
+  </button>
+  <button class="remove-line-btn" onclick="removePrestation('${p.id}')" title="Supprimer">
+    <i class="fas fa-times"></i>
+  </button>
+</div>         
+<span class="prestation-badge ${badgeClass}">${p.type.toUpperCase()}</span>
           <div class="form-group" style="margin-bottom:8px;">
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
@@ -1320,7 +1327,21 @@ window.editClient = function(clientId) {
       `;
     }).join('');
   }
-
+window.duplicatePrestation = function(id) {
+  if (isReadOnlyMode) return;
+  const original = prestations.find(x => x.id === id);
+  if (!original) return;
+  
+  // Créer une copie avec un nouvel ID
+  const duplicate = {
+    ...original,
+    id: 'p_' + Date.now()
+  };
+  
+  prestations.push(duplicate);
+  renderEditorPrestations();
+  updatePreview();
+};
   function calculateLineTotal(p) {
     if(p.type === 'commission') return p.rentalAmount * (p.commissionRate/100);
     return p.quantity * p.unitPrice;
