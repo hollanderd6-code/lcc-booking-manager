@@ -778,6 +778,32 @@
       const siretRow       = document.getElementById('siretRow');
       const saveProfileBtn = document.getElementById('saveProfileBtn');
       const profileSaveStatus = document.getElementById('profileSaveStatus');
+      const logoInput = document.getElementById('profileLogo');
+const logoPreview = document.getElementById('logoPreview');
+
+// Aperçu du logo
+if (logoInput && logoPreview) {
+  logoInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) {
+      logoPreview.innerHTML = '<i class="fas fa-image" style="color:#9ca3af;font-size:24px;"></i>';
+      return;
+    }
+    
+    // Vérifier la taille (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Le fichier est trop volumineux (max 2 MB)');
+      logoInput.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      logoPreview.innerHTML = `<img src="${event.target.result}" style="width:100%;height:100%;object-fit:contain;">`;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
       // Fonction pour afficher/masquer le champ SIRET
       function toggleSiretField() {
@@ -898,96 +924,113 @@
       loadProfileFromAPI();
 
       if (saveProfileBtn) {
-        saveProfileBtn.addEventListener('click', async function () {
-          const data = {
-            firstName: firstNameInput.value.trim(),
-            lastName:  lastNameInput.value.trim(),
-            company:   companyInput.value.trim(),
-            email:     emailInput.value.trim(),
-            address:   addressInput.value.trim(),
-            postalCode: postalCodeInput.value.trim(),
-            city:      cityInput.value.trim(),
-            accountType: accountTypeBusiness.checked ? 'business' : 'individual',
-            siret:     accountTypeBusiness.checked ? siretInput.value.trim() : ''
-          };
+  saveProfileBtn.addEventListener('click', async function () {
+    const formData = new FormData();
+    formData.append('firstName', firstNameInput.value.trim());
+    formData.append('lastName', lastNameInput.value.trim());
+    formData.append('company', companyInput.value.trim());
+    formData.append('email', emailInput.value.trim());
+    formData.append('address', addressInput.value.trim());
+    formData.append('postalCode', postalCodeInput.value.trim());
+    formData.append('city', cityInput.value.trim());
+    formData.append('siret', siretInput.value.replace(/\s/g, ''));
+    formData.append('accountType', accountTypeIndividual.checked ? 'individual' : 'business');
+    
+    // Ajouter le logo si un fichier est sélectionné
+    if (logoInput.files && logoInput.files[0]) {
+      formData.append('logo', logoInput.files[0]);
+    }
 
-          // Sauvegarde locale immédiate pour UX
-          localStorage.setItem('lcc_settings_profile', JSON.stringify(data));
+    // Créer un objet pour le localStorage
+    const dataForStorage = {
+      firstName: firstNameInput.value.trim(),
+      lastName: lastNameInput.value.trim(),
+      company: companyInput.value.trim(),
+      email: emailInput.value.trim(),
+      address: addressInput.value.trim(),
+      postalCode: postalCodeInput.value.trim(),
+      city: cityInput.value.trim(),
+      siret: siretInput.value.replace(/\s/g, ''),
+      accountType: accountTypeIndividual.checked ? 'individual' : 'business'
+    };
 
-          const rawUser = localStorage.getItem('lcc_user');
-          let user = {};
-          try {
-            user = rawUser ? JSON.parse(rawUser) : {};
-          } catch {
-            user = {};
-          }
-          if (data.firstName) user.firstName = data.firstName;
-          if (data.lastName)  user.lastName  = data.lastName;
-          if (data.company)   user.company   = data.company;
-          if (data.email)     user.email     = data.email;
+    // Sauvegarde locale immédiate pour UX
+    localStorage.setItem('lcc_settings_profile', JSON.stringify(dataForStorage));
 
-          localStorage.setItem('lcc_user', JSON.stringify(user));
+    const rawUser = localStorage.getItem('lcc_user');
+    let user = {};
+    try {
+      user = rawUser ? JSON.parse(rawUser) : {};
+    } catch {
+      user = {};
+    }
+    if (dataForStorage.firstName) user.firstName = dataForStorage.firstName;
+    if (dataForStorage.lastName)  user.lastName  = dataForStorage.lastName;
+    if (dataForStorage.company)   user.company   = dataForStorage.company;
+    if (dataForStorage.email)     user.email     = dataForStorage.email;
 
-          // Sauvegarde sur le serveur
-          const token = localStorage.getItem('lcc_token');
-          if (token) {
-            try {
-              const response = await fetch('/api/user/profile', {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify(data)
-              });
+    localStorage.setItem('lcc_user', JSON.stringify(user));
 
-              const result = await response.json();
-
-              if (response.ok && result.success) {
-                if (profileSaveStatus) {
-                  profileSaveStatus.textContent = '✓ Profil enregistré avec succès';
-                  setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
-                } else {
-                  alert('Profil enregistré avec succès');
-                }
-                window.setTimeout(() => window.location.reload(), 300);
-              } else {
-                if (profileSaveStatus) {
-                  profileSaveStatus.textContent = '⚠ Erreur : ' + (result.error || 'Erreur inconnue');
-                  profileSaveStatus.style.color = '#dc2626';
-                  setTimeout(() => { 
-                    profileSaveStatus.textContent = ''; 
-                    profileSaveStatus.style.color = '';
-                  }, 3500);
-                } else {
-                  alert('Erreur : ' + (result.error || 'Erreur inconnue'));
-                }
-              }
-            } catch (err) {
-              console.error('Erreur sauvegarde profil API', err);
-              if (profileSaveStatus) {
-                profileSaveStatus.textContent = '⚠ Profil sauvegardé localement uniquement';
-                profileSaveStatus.style.color = '#f59e0b';
-                setTimeout(() => { 
-                  profileSaveStatus.textContent = ''; 
-                  profileSaveStatus.style.color = '';
-                }, 3500);
-              } else {
-                alert('Profil sauvegardé localement uniquement');
-              }
-            }
-          } else {
-            // Pas de token, sauvegarde locale seulement
-            if (profileSaveStatus) {
-              profileSaveStatus.textContent = 'Profil enregistré localement.';
-              setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
-            } else {
-              alert('Profil enregistré localement');
-            }
-            window.setTimeout(() => window.location.reload(), 300);
-          }
+    // Sauvegarde sur le serveur
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
+      try {
+        const response = await fetch('/api/user/profile', {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'Bearer ' + token
+            // PAS de Content-Type avec FormData !
+          },
+          body: formData
         });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          if (profileSaveStatus) {
+            profileSaveStatus.textContent = '✓ Profil enregistré avec succès';
+            setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
+          } else {
+            alert('Profil enregistré avec succès');
+          }
+          window.setTimeout(() => window.location.reload(), 300);
+        } else {
+          if (profileSaveStatus) {
+            profileSaveStatus.textContent = '⚠ Erreur : ' + (result.error || 'Erreur inconnue');
+            profileSaveStatus.style.color = '#dc2626';
+            setTimeout(() => { 
+              profileSaveStatus.textContent = ''; 
+              profileSaveStatus.style.color = '';
+            }, 3500);
+          } else {
+            alert('Erreur : ' + (result.error || 'Erreur inconnue'));
+          }
+        }
+      } catch (err) {
+        console.error('Erreur sauvegarde profil API', err);
+        if (profileSaveStatus) {
+          profileSaveStatus.textContent = '⚠ Profil sauvegardé localement uniquement';
+          profileSaveStatus.style.color = '#f59e0b';
+          setTimeout(() => { 
+            profileSaveStatus.textContent = ''; 
+            profileSaveStatus.style.color = '';
+          }, 3500);
+        } else {
+          alert('Profil sauvegardé localement uniquement');
+        }
       }
+    } else {
+      // Pas de token, sauvegarde locale seulement
+      if (profileSaveStatus) {
+        profileSaveStatus.textContent = 'Profil enregistré localement.';
+        setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
+      } else {
+        alert('Profil enregistré localement');
+      }
+      window.setTimeout(() => window.location.reload(), 300);
+    }
+  });
+}
 
       /* -------- PRÉFÉRENCES D’AFFICHAGE (THÈME) -------- */
 
