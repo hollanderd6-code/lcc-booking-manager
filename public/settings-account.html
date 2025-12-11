@@ -901,24 +901,29 @@ if (logoInput && logoPreview) {
         }
       }
 
-      function fillProfileFields(profile) {
-        if (profile.firstName) firstNameInput.value = profile.firstName;
-        if (profile.lastName)  lastNameInput.value  = profile.lastName;
-        if (profile.company)   companyInput.value   = profile.company;
-        if (profile.email)     emailInput.value     = profile.email;
-        if (profile.address)   addressInput.value   = profile.address;
-        if (profile.postalCode) postalCodeInput.value = profile.postalCode;
-        if (profile.city)      cityInput.value      = profile.city;
-        if (profile.siret)     siretInput.value     = profile.siret;
-        
-        // Restaurer le type de compte
-        if (profile.accountType === 'business') {
-          accountTypeBusiness.checked = true;
-        } else {
-          accountTypeIndividual.checked = true;
-        }
-        toggleSiretField();
-      }
+     function fillProfileFields(profile) {
+  if (profile.firstName) firstNameInput.value = profile.firstName;
+  if (profile.lastName)  lastNameInput.value  = profile.lastName;
+  if (profile.company)   companyInput.value   = profile.company;
+  if (profile.email)     emailInput.value     = profile.email;
+  if (profile.address)   addressInput.value   = profile.address;
+  if (profile.postalCode) postalCodeInput.value = profile.postalCode;
+  if (profile.city)      cityInput.value      = profile.city;
+  if (profile.siret)     siretInput.value     = profile.siret;
+  
+  // Restaurer le type de compte
+  if (profile.accountType === 'business') {
+    accountTypeBusiness.checked = true;
+  } else {
+    accountTypeIndividual.checked = true;
+  }
+  toggleSiretField();
+  
+  // Charger le logo si présent
+  if (profile.logoUrl && logoPreview) {
+    logoPreview.innerHTML = `<img src="${profile.logoUrl}" style="width:100%;height:100%;object-fit:contain;">`;
+  }
+}
 
       // Charger au démarrage
       loadProfileFromAPI();
