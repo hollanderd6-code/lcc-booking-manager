@@ -556,7 +556,8 @@ input[type="number"] {
     await Promise.all([loadClients(), loadInvoices(), loadUserProfile()]);
     // Ajout d'une ligne par défaut pour pas que ce soit vide
     addPrestation('commission');
-    updatePreview(); 
+    // Attendre que le DOM soit prêt avant d'appeler updatePreview
+setTimeout(() => updatePreview(), 100);
   });
 
   // --- TABS ---
