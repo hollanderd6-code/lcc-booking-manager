@@ -354,11 +354,16 @@ input[type="number"] {
                 <label>SIRET</label>
                 <input type="text" id="emitterSiret" class="form-control" placeholder="534 392 600" oninput="updateEmitterProfile()">
               </div>
-
-              <div class="form-group">
-                <label>Logo entreprise (optionnel)</label>
-                <input type="file" id="logoInput" accept="image/*" class="form-control" onchange="updateLogoPreview()">
-              </div>
+<div class="form-group">
+  <label>Logo entreprise (optionnel)</label>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <div style="width:60px;height:60px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+      <img id="logoPreviewImg" style="display:none;width:100%;height:100%;object-fit:contain;">
+      <i class="fas fa-image" style="color:#9ca3af;font-size:20px;" id="logoPlaceholder"></i>
+    </div>
+    <input type="file" id="logoInput" accept="image/*" class="form-control" onchange="updateLogoPreview()" style="flex:1;">
+  </div>
+</div>
 
               <div class="form-group">
                 <label>Adresse affichée sur la facture</label>
