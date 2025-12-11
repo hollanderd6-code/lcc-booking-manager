@@ -1181,7 +1181,7 @@ window.editClient = function(clientId) {
     prestations.push({
       id: 'p'+prestationCounter,
       type: type,
-      description: type==='commission'?'Commission sur loyers':(type==='cleaning'?'Frais de ménage':'Débours'),
+      description: type==='commission'?'Loyer du':(type==='cleaning'?'Frais de ménage':'Débours'),
       rentalAmount: 0, commissionRate: 20, // Spécifique Commission
       quantity: 1, unitPrice: 0, // Spécifique Autres
       isDebours: type === 'debours'
