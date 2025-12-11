@@ -545,7 +545,7 @@ input[type="number"] {
     const d2 = new Date(); d2.setDate(d2.getDate()+30);
     document.getElementById('invoiceDueDate').valueAsDate = d2;
 
-    await Promise.all([loadClients(), loadInvoices()]);
+    await Promise.all([loadClients(), loadInvoices(), loadUserProfile()]);
     // Ajout d'une ligne par défaut pour pas que ce soit vide
     addPrestation('commission');
     updatePreview(); 
@@ -582,7 +582,63 @@ input[type="number"] {
     console.error('Erreur chargement clients:', e);
   }
 }
+}
 
+// Charger les infos du profil utilisateur
+async function loadUserProfile() {
+  try {
+    const res = await fetch('/api/user/profile', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    
+    if (!res.ok) return;
+    
+    const profile = await res.json();
+    window.userProfile = profile;
+    
+    // Pré-remplir automatiquement les champs émetteur
+    if (profile.company) {
+      const companyInput = document.getElementById('emitterCompany');
+      if (companyInput && !companyInput.value) {
+        companyInput.value = profile.company;
+      }
+    }
+    
+    if (profile.address) {
+      const addressInput = document.getElementById('emitterAddress');
+      if (addressInput && !addressInput.value) {
+        addressInput.value = profile.address;
+      }
+    }
+    
+    if (profile.postalCode && profile.city) {
+      const cityInput = document.getElementById('emitterCity');
+      if (cityInput && !cityInput.value) {
+        cityInput.value = `${profile.postalCode} ${profile.city}`;
+      }
+    }
+    
+    if (profile.siret) {
+      const siretInput = document.getElementById('emitterSiret');
+      if (siretInput && !siretInput.value) {
+        siretInput.value = profile.siret;
+      }
+    }
+    
+    // Charger le logo si présent
+    if (profile.logoUrl) {
+      emitterProfile.logoDataUrl = profile.logoUrl;
+      const logoPreview = document.getElementById('logoPreviewImg');
+      if (logoPreview) {
+        logoPreview.src = profile.logoUrl;
+        logoPreview.style.display = 'block';
+      }
+    }
+    
+  } catch (e) {
+    console.error('Erreur chargement profil:', e);
+  }
+}
 // Nouvelle fonction pour charger les propriétés
 async function loadPropertiesForInvoice() {
   try {
