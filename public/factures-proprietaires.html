@@ -1344,8 +1344,14 @@ window.editClient = function(clientId) {
       updateSenderAddressFromProfile();
       updateSenderPreviewOnly();
 
-      // Logo par défaut si déjà enregistré
-if (emitterProfile.logoDataUrl) {
+// Charger le logo depuis le profil utilisateur
+if (window.userProfile && window.userProfile.logoUrl) {
+  const logoContainer = document.getElementById('paperLogoContainer');
+  if (logoContainer) {
+    logoContainer.innerHTML = '<img src="' + window.userProfile.logoUrl + '" class="paper-logo-img">';
+  }
+} else if (emitterProfile.logoDataUrl) {
+  // Fallback sur l'ancien système
   const logoContainer = document.getElementById('paperLogoContainer');
   if (logoContainer) {
     logoContainer.innerHTML = '<img src="' + emitterProfile.logoDataUrl + '" class="paper-logo-img">';
