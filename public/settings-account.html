@@ -525,6 +525,21 @@
                   </p>
                 </div>
 
+                <div class="form-row">
+  <label for="profileLogo">Logo de l'entreprise</label>
+  <div style="display:flex;gap:12px;align-items:flex-start;">
+    <div id="logoPreview" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+      <i class="fas fa-image" style="color:#9ca3af;font-size:24px;"></i>
+    </div>
+    <div style="flex:1;">
+      <input type="file" id="profileLogo" accept="image/*" style="margin-bottom:8px;">
+      <p class="settings-hint" style="margin:0;">
+        Format recommandé : PNG avec fond transparent. Taille max : 2 MB
+      </p>
+    </div>
+  </div>
+</div>
+
                 <div class="form-actions" style="margin-top: 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                   <button type="button" class="btn btn-primary" id="saveProfileBtn">
                     <i class="fas fa-save"></i>
