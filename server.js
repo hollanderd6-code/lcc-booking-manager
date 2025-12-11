@@ -2191,7 +2191,7 @@ app.get('/api/user/profile', async (req, res) => {
 });
 
 // PUT - Mettre à jour le profil complet de l'utilisateur
-app.put('/api/user/profile', async (req, res) => {
+app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -2226,6 +2226,12 @@ app.put('/api/user/profile', async (req, res) => {
       }
     }
 
+    // Gérer le logo uploadé
+    let logoUrl = null;
+    if (req.file) {
+      logoUrl = buildPhotoUrl(req, req.file.filename);
+    }
+
     // Mise à jour dans la base de données
     const result = await pool.query(
       `UPDATE users 
@@ -2237,8 +2243,9 @@ app.put('/api/user/profile', async (req, res) => {
          address = $5,
          postal_code = $6,
          city = $7,
-         siret = $8
-       WHERE id = $9
+         siret = $8,
+         logo_url = COALESCE($9, logo_url)
+       WHERE id = $10
        RETURNING 
          id, 
          email, 
@@ -2249,7 +2256,8 @@ app.put('/api/user/profile', async (req, res) => {
          address,
          postal_code,
          city,
-         siret`,
+         siret,
+         logo_url`,
       [
         firstName || null,
         lastName || null,
@@ -2259,6 +2267,7 @@ app.put('/api/user/profile', async (req, res) => {
         postalCode || null,
         city || null,
         (accountType === 'business' ? siret : null) || null,
+        logoUrl,
         user.id
       ]
     );
@@ -2287,12 +2296,16 @@ app.put('/api/user/profile', async (req, res) => {
         address: updated.address,
         postalCode: updated.postal_code,
         city: updated.city,
-        siret: updated.siret
+        siret: updated.siret,
+        logoUrl: updated.logo_url
       }
     });
 
   } catch (err) {
     console.error('Erreur mise à jour profil:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
     
     // Gérer les erreurs de contraintes
     if (err.code === '23514') { // Constraint violation
