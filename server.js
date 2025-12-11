@@ -22,7 +22,14 @@ const axios = require('axios');
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY) 
   : null;
+const cloudinary = require('cloudinary').v2;
 
+// Configuration Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 // Stripe Subscriptions pour les abonnements Boostinghost
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SUBSCRIPTION_SECRET_KEY) 
@@ -73,35 +80,22 @@ try {
 // UPLOAD_DIR = .../uploads/properties (ou /tmp/uploads/properties en prod)
 const UPLOAD_ROOT = path.dirname(UPLOAD_DIR);
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '');
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e6);
-    cb(null, `${base}-${unique}${ext}`);
-  }
-});
-
+// Multer en mémoire pour envoyer directement à Cloudinary
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    // ✅ Liste élargie des types MIME acceptés
     const allowedMimes = [
       'image/jpeg',
-      'image/jpg',      // Parfois envoyé au lieu de image/jpeg
+      'image/jpg',
       'image/png',
       'image/webp',
       'image/gif',
-      'image/heic',     // Photos iPhone
-      'image/heif'      // Photos iPhone
+      'image/heic',
+      'image/heif'
     ];
     
-    // ✅ Vérifier aussi l'extension du fichier
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif'];
     const fileExtension = file.originalname.toLowerCase().match(/\.[^.]+$/)?.[0];
     
@@ -121,6 +115,30 @@ const upload = multer({
     return cb(new Error('Type de fichier non supporté. Formats acceptés: JPG, PNG, WEBP, GIF'), false);
   }
 });
+// Fonction helper pour uploader vers Cloudinary
+async function uploadToCloudinary(fileBuffer, filename) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'lcc-properties',
+        public_id: filename.replace(/\.[^.]+$/, ''), // Nom sans extension
+        resource_type: 'auto'
+      },
+      (error, result) => {
+        if (error) {
+          console.error('Erreur upload Cloudinary:', error);
+          reject(error);
+        } else {
+          resolve(result.secure_url);
+        }
+      }
+    );
+    
+    // Envoyer le buffer vers Cloudinary
+    const bufferStream = require('stream').Readable.from(fileBuffer);
+    bufferStream.pipe(uploadStream);
+  });
+}
 // ============================================
 // MIDDLEWARE D'AUTHENTIFICATION JWT
 // ============================================
@@ -2125,14 +2143,23 @@ function parsePropertyBody(req) {
   return body;
 }
 
-function buildPhotoUrl(req, filename) {
-  if (!filename) return null;
+// Upload vers Cloudinary et retourner l'URL
+async function uploadPhotoToCloudinary(file) {
+  if (!file) return null;
   
-  // ✅ Utiliser le bon protocole (HTTPS sur Render via x-forwarded-proto)
-  const protocol = req.get('x-forwarded-proto') || req.protocol;
-  const baseUrl = `${protocol}://${req.get('host')}`;
-  
-  return `${baseUrl}/uploads/properties/${filename}`;
+  try {
+    const filename = file.originalname
+      .toLowerCase()
+      .replace(/[^a-z0-9.]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+    
+    const cloudinaryUrl = await uploadToCloudinary(file.buffer, filename);
+    console.log('✅ Image uploadée vers Cloudinary:', cloudinaryUrl);
+    return cloudinaryUrl;
+  } catch (error) {
+    console.error('❌ Erreur upload Cloudinary:', error);
+    throw error;
+  }
 }
 
 // ============================================
@@ -2229,10 +2256,11 @@ app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
     }
 
     // Gérer le logo uploadé
-    let logoUrl = null;
-    if (req.file) {
-      logoUrl = buildPhotoUrl(req, req.file.filename);
-    }
+   // Upload du logo vers Cloudinary
+let logoUrl = null;
+if (req.file) {
+  logoUrl = await uploadPhotoToCloudinary(req.file);
+}
 
     // Mise à jour dans la base de données
     const result = await pool.query(
@@ -3897,11 +3925,11 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
 
     const id = `${user.id}-${baseId}`;
 
-    // photo : si un fichier est uploadé on l’utilise, sinon on garde l’éventuelle valeur existante
-    let photoUrl = existingPhotoUrl || null;
-    if (req.file) {
-      photoUrl = buildPhotoUrl(req, req.file.filename);
-    }
+    // Upload vers Cloudinary si un fichier est présent
+let photoUrl = existingPhotoUrl || null;
+if (req.file) {
+  photoUrl = await uploadPhotoToCloudinary(req.file);
+}
 
     // normaliser les URLs iCal : on accepte strings ou objets {platform,url}
     // normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
