@@ -2308,24 +2308,6 @@ app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-    
-    // Gérer les erreurs de contraintes
-    if (err.code === '23514') { // Constraint violation
-      if (err.constraint === 'check_account_type') {
-        return res.status(400).json({ 
-          error: 'Type de compte invalide' 
-        });
-      }
-      if (err.constraint === 'check_siret_format') {
-        return res.status(400).json({ 
-          error: 'Format du SIRET invalide (14 chiffres requis)' 
-        });
-      }
-    }
-    
-    res.status(500).json({ error: 'Erreur serveur lors de la mise à jour' });
-  }
-});
 // Route pour vérifier le statut de l'abonnement
 app.get('/api/subscription/status', authenticateToken, async (req, res) => {
   try {
