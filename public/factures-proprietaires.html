@@ -535,30 +535,33 @@ input[type="number"] {
 
 
   // --- INIT ---
-  document.addEventListener('DOMContentLoaded', async () => {
-    if(!token) return window.location.href='/login.html';
-    
-    // User Info
-    currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    if(currentUser.firstName) {
-      document.getElementById('userName').textContent = currentUser.firstName;
-    }
-
-    // Profil émetteur
-    loadEmitterProfile();
-
-    // Dates defaut
-    const d = new Date(); 
-    document.getElementById('invoiceIssueDate').valueAsDate = d;
-    const d2 = new Date(); d2.setDate(d2.getDate()+30);
-    document.getElementById('invoiceDueDate').valueAsDate = d2;
-
-    await Promise.all([loadClients(), loadInvoices(), loadUserProfile()]);
-    // Ajout d'une ligne par défaut pour pas que ce soit vide
-    addPrestation('commission');
-    // Attendre que le DOM soit prêt avant d'appeler updatePreview
-setTimeout(() => updatePreview(), 100);
-  });
+document.addEventListener('DOMContentLoaded', async () => {
+  if(!token) return window.location.href='/login.html';
+  
+  // User Info
+  currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+  if(currentUser.firstName) {
+    document.getElementById('userName').textContent = currentUser.firstName;
+  }
+  
+  // Dates defaut
+  const d = new Date(); 
+  document.getElementById('invoiceIssueDate').valueAsDate = d;
+  const d2 = new Date(); d2.setDate(d2.getDate()+30);
+  document.getElementById('invoiceDueDate').valueAsDate = d2;
+  
+  // Charger les données
+  await Promise.all([loadClients(), loadInvoices(), loadUserProfile()]);
+  
+  // Profil émetteur (APRÈS loadUserProfile pour ne pas écraser le logo)
+  loadEmitterProfile();
+  
+  // Ajout d'une ligne par défaut
+  addPrestation('commission');
+  
+  // Attendre que le DOM soit prêt avant d'appeler updatePreview
+  setTimeout(() => updatePreview(), 100);
+});
 
   // --- TABS ---
   window.switchTab = function(id) {
