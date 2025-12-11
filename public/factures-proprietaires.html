@@ -331,22 +331,22 @@ input[type="number"] {
 
               <div class="form-group">
                 <label>Nom de l'entreprise</label>
-                <input type="text" id="emitterCompany" class="form-control" placeholder="La conciergerie de Charles" oninput="updateEmitterProfile()">
+                <input type="text" id="emitterCompany" class="form-control" placeholder="Conciergerie" oninput="updateEmitterProfile()">
               </div>
 
               <div class="form-group">
                 <label>Adresse</label>
-                <input type="text" id="emitterAddress" class="form-control" placeholder="25 boulevard de la République" oninput="updateEmitterProfile()">
+                <input type="text" id="emitterAddress" class="form-control" placeholder="boulevard de la République" oninput="updateEmitterProfile()">
               </div>
 
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div class="form-group">
                   <label>Code postal</label>
-                  <input type="text" id="emitterPostalCode" class="form-control" placeholder="95210" oninput="updateEmitterProfile()">
+                  <input type="text" id="emitterPostalCode" class="form-control" placeholder="75000" oninput="updateEmitterProfile()">
                 </div>
                 <div class="form-group">
                   <label>Ville</label>
-                  <input type="text" id="emitterCity" class="form-control" placeholder="Saint-Gratien" oninput="updateEmitterProfile()">
+                  <input type="text" id="emitterCity" class="form-control" placeholder="Paris" oninput="updateEmitterProfile()">
                 </div>
               </div>
 
@@ -407,7 +407,10 @@ input[type="number"] {
             <div class="invoice-paper">
               <div class="paper-header">
                 <div>
-                  <div id="paperLogoContainer"></div>
+                  <div id="paperLogoContainer" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+  <img id="previewLogoImg" style="display:none;width:100%;height:100%;object-fit:contain;">
+  <i class="fas fa-image" style="color:#9ca3af;font-size:24px;" id="previewLogoPlaceholder"></i>
+</div>
                   <div id="paperSenderInfo" style="margin-top:10px;">
                     <strong style="font-size:16px; color:#111827;" id="previewSenderName">Votre Entreprise</strong>
                     <div class="paper-sender-address" id="previewSenderAddress">Adresse...</div>
