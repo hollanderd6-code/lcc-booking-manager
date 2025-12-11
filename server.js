@@ -5280,29 +5280,38 @@ app.put('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
-const clientId = req.params.id;
+
+    const clientId = req.params.id;
     const {
       clientType, firstName, lastName, companyName,
       email, address, postalCode, city, defaultCommissionRate
     } = req.body;
   
-
     const result = await pool.query(`
       UPDATE owner_clients SET
-        client_type = $1, first_name = $2, last_name = $3, company_name = $4,
-        email = $5, phone = $6, address = $7, postal_code = $8, city = $9, country = $10,
-        siret = $11, vat_number = $12,
-        default_commission_rate = $13, vat_applicable = $14, default_vat_rate = $15,
-        properties = $16, notes = $17
-      WHERE id = $18 AND user_id = $19
+        client_type = $1, 
+        first_name = $2, 
+        last_name = $3, 
+        company_name = $4,
+        email = $5, 
+        address = $6, 
+        postal_code = $7, 
+        city = $8,
+        default_commission_rate = $9
+      WHERE id = $10 AND user_id = $11
       RETURNING *
     `, [
-      clientType, firstName, lastName, companyName,
-      email, phone, address, postalCode, city, country,
-      siret, vatNumber,
-      defaultCommissionRate, vatApplicable, defaultVatRate,
-      JSON.stringify(properties || []), notes,
-      req.params.id, user.id
+      clientType, 
+      firstName || null, 
+      lastName || null, 
+      companyName || null,
+      email || null, 
+      address || null, 
+      postalCode || null, 
+      city || null,
+      defaultCommissionRate || 20,
+      clientId, 
+      user.id
     ]);
 
     if (result.rows.length === 0) {
