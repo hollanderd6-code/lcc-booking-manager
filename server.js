@@ -62,19 +62,31 @@ async function sendEmail(mailOptions) {
       sendSmtpEmail.subject = mailOptions.subject;
       sendSmtpEmail.htmlContent = mailOptions.html || mailOptions.text;
       
-      // Gérer l'expéditeur
+      // Gérer l'expéditeur (CORRIGÉ)
+      let senderEmail = process.env.EMAIL_FROM;
+      let senderName = '';
+      
       if (typeof mailOptions.from === 'string') {
+        // Format: "Name <email@domain.com>" ou juste "email@domain.com"
         const fromMatch = mailOptions.from.match(/^(.+?)\s*<(.+?)>$/);
         if (fromMatch) {
-          sendSmtpEmail.sender = { name: fromMatch[1].trim(), email: fromMatch[2].trim() };
+          senderName = fromMatch[1].trim();
+          senderEmail = fromMatch[2].trim();
         } else {
-          sendSmtpEmail.sender = { email: mailOptions.from };
+          senderEmail = mailOptions.from.trim();
         }
       } else if (mailOptions.from && mailOptions.from.email) {
-        sendSmtpEmail.sender = mailOptions.from;
-      } else {
-        sendSmtpEmail.sender = { email: process.env.EMAIL_FROM };
+        senderEmail = mailOptions.from.email;
+        senderName = mailOptions.from.name || '';
       }
+      
+      // S'assurer que l'email est propre (pas de < > ni de texte autour)
+      senderEmail = senderEmail.replace(/[<>]/g, '').trim();
+      
+      sendSmtpEmail.sender = { 
+        email: senderEmail,
+        name: senderName || undefined
+      };
       
       // Gérer les destinataires
       if (Array.isArray(mailOptions.to)) {
