@@ -12,16 +12,19 @@ const messagingService = require('./services/messagingService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const nodemailer = require('nodemailer'); // 
+const nodemailer = require('nodemailer'); // ← GARDE CELLE-LÀ
 const multer = require('multer');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const crypto = require('crypto');
 const axios = require('axios');
+const brevo = require('@getbrevo/brevo'); // ← Ajoute Brevo ici
+
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY) 
   : null;
+
 const cloudinary = require('cloudinary').v2;
 
 // Configuration Cloudinary
@@ -30,12 +33,11 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
 // Stripe Subscriptions pour les abonnements Boostinghost
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SUBSCRIPTION_SECRET_KEY) 
   : null;
-const brevo = require('@getbrevo/brevo');
-const nodemailer = require('nodemailer');
 
 // Ancien transporter SMTP (garde-le pour fallback)
 const smtpTransporter = nodemailer.createTransport({
@@ -62,7 +64,6 @@ async function sendEmail(mailOptions) {
       
       // Gérer l'expéditeur
       if (typeof mailOptions.from === 'string') {
-        // Format: "Name <email@domain.com>" ou juste "email@domain.com"
         const fromMatch = mailOptions.from.match(/^(.+?)\s*<(.+?)>$/);
         if (fromMatch) {
           sendSmtpEmail.sender = { name: fromMatch[1].trim(), email: fromMatch[2].trim() };
@@ -94,7 +95,6 @@ async function sendEmail(mailOptions) {
       return { success: true };
       
     } else {
-      // Fallback SMTP si pas de BREVO_API_KEY
       console.warn('⚠️ BREVO_API_KEY non configuré, tentative SMTP...');
       return await smtpTransporter.sendMail(mailOptions);
     }
