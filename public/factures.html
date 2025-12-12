@@ -1180,7 +1180,31 @@
           alert("❌ Erreur technique : " + (err.message || err));
         }
       };
+// Envoyer une facture par email
+app.post('/api/send-invoice', authenticateUser, async (req, res) => {
+  try {
+    const { to, subject, html } = req.body;
+    
+    if (!to || !subject || !html) {
+      return res.status(400).json({ error: 'Paramètres manquants' });
+    }
 
+    // Configuration de l'email (utilise ton service d'email existant)
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@yourdomain.com',
+      to: to,
+      subject: subject,
+      html: html
+    };
+
+    await transporter.sendMail(mailOptions);
+    
+    res.json({ success: true, message: 'Email envoyé avec succès' });
+  } catch (err) {
+    console.error('Erreur envoi email:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'email' });
+  }
+});
       // Télécharger PDF : API si ID dispo, sinon impression navigateur
       window.downloadPDF = function() {
         const token = localStorage.getItem('lcc_token');
