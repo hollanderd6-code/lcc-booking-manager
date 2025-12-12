@@ -4254,6 +4254,7 @@ app.post('/api/properties/test-ical', async (req, res) => {
       details: error.message
     });
   }
+  });
   // Réorganiser l'ordre des logements
 app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
   try {
