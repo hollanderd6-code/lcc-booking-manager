@@ -34,15 +34,81 @@ cloudinary.config({
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SUBSCRIPTION_SECRET_KEY) 
   : null;
+const brevo = require('@getbrevo/brevo');
+const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
+// Ancien transporter SMTP (garde-le pour fallback)
+const smtpTransporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
   port: process.env.EMAIL_PORT || 587,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
-  },
+  }
+});
+
+// Nouvelle fonction d'envoi email avec Brevo API
+async function sendEmail(mailOptions) {
+  try {
+    // Si BREVO_API_KEY est configuré, utiliser l'API Brevo
+    if (process.env.BREVO_API_KEY) {
+      const apiInstance = new brevo.TransactionalEmailsApi();
+      apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
+      
+      const sendSmtpEmail = new brevo.SendSmtpEmail();
+      sendSmtpEmail.subject = mailOptions.subject;
+      sendSmtpEmail.htmlContent = mailOptions.html || mailOptions.text;
+      
+      // Gérer l'expéditeur
+      if (typeof mailOptions.from === 'string') {
+        // Format: "Name <email@domain.com>" ou juste "email@domain.com"
+        const fromMatch = mailOptions.from.match(/^(.+?)\s*<(.+?)>$/);
+        if (fromMatch) {
+          sendSmtpEmail.sender = { name: fromMatch[1].trim(), email: fromMatch[2].trim() };
+        } else {
+          sendSmtpEmail.sender = { email: mailOptions.from };
+        }
+      } else if (mailOptions.from && mailOptions.from.email) {
+        sendSmtpEmail.sender = mailOptions.from;
+      } else {
+        sendSmtpEmail.sender = { email: process.env.EMAIL_FROM };
+      }
+      
+      // Gérer les destinataires
+      if (Array.isArray(mailOptions.to)) {
+        sendSmtpEmail.to = mailOptions.to.map(recipient => {
+          if (typeof recipient === 'string') {
+            return { email: recipient };
+          }
+          return recipient;
+        });
+      } else if (typeof mailOptions.to === 'string') {
+        sendSmtpEmail.to = [{ email: mailOptions.to }];
+      } else {
+        sendSmtpEmail.to = [mailOptions.to];
+      }
+      
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log('✅ Email envoyé via Brevo API à:', mailOptions.to);
+      return { success: true };
+      
+    } else {
+      // Fallback SMTP si pas de BREVO_API_KEY
+      console.warn('⚠️ BREVO_API_KEY non configuré, tentative SMTP...');
+      return await smtpTransporter.sendMail(mailOptions);
+    }
+  } catch (error) {
+    console.error('❌ Erreur envoi email:', error.response?.body || error.message);
+    throw error;
+  }
+}
+
+// Créer un objet transporter compatible
+const transporter = {
+  sendMail: sendEmail,
+  verify: () => Promise.resolve(true)
+};
   // Ajoute juste ces 4 lignes pour éviter les timeouts
   connectionTimeout: 10000,
   greetingTimeout: 10000,
