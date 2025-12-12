@@ -5672,7 +5672,97 @@ app.post('/api/owner-invoices', async (req, res) => {
     const netHt = subtotalHt - discountAmount;
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100 || 0) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
+// ============================================
+// ROUTES API - FACTURES CLIENTS
+// ============================================
 
+// Créer une facture client
+app.post('/api/invoice/create', authenticateUser, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { 
+      clientName, 
+      clientEmail,
+      clientAddress, 
+      clientPostalCode, 
+      clientCity, 
+      clientSiret,
+      propertyName, 
+      propertyAddress,
+      checkinDate,
+      checkoutDate,
+      nights,
+      rentAmount, 
+      touristTaxAmount, 
+      cleaningFee,
+      vatRate,
+      sendEmail
+    } = req.body;
+
+    // Générer le numéro de facture
+    const invoiceNumber = 'FACT-' + Date.now();
+    const invoiceId = 'inv_' + Date.now();
+
+    // Calculer les montants
+    const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
+    const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
+    const total = subtotal + vatAmount;
+
+    // Si sendEmail est true, envoyer l'email
+    if (sendEmail && clientEmail) {
+      const profile = user;
+      
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Facture N° ${invoiceNumber}</h2>
+          <p><strong>De:</strong> ${profile.company || 'Conciergerie'}</p>
+          <p><strong>Pour:</strong> ${clientName}</p>
+          <p><strong>Logement:</strong> ${propertyName}</p>
+          ${checkinDate && checkoutDate ? `<p><strong>Séjour:</strong> Du ${checkinDate} au ${checkoutDate} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
+          <h3>Détails:</h3>
+          <ul>
+            ${rentAmount > 0 ? `<li>Loyer: ${rentAmount} €</li>` : ''}
+            ${touristTaxAmount > 0 ? `<li>Taxes de séjour: ${touristTaxAmount} €</li>` : ''}
+            ${cleaningFee > 0 ? `<li>Frais de ménage: ${cleaningFee} €</li>` : ''}
+          </ul>
+          <p><strong>Sous-total:</strong> ${subtotal.toFixed(2)} €</p>
+          ${vatAmount > 0 ? `<p><strong>TVA (${vatRate}%):</strong> ${vatAmount.toFixed(2)} €</p>` : ''}
+          <h3><strong>TOTAL TTC: ${total.toFixed(2)} €</strong></h3>
+          <p style="color: green; font-weight: bold;">✓ FACTURE ACQUITTÉE</p>
+        </div>
+      `;
+
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || 'noreply@laconciergerie.com',
+        to: clientEmail,
+        subject: `Facture ${invoiceNumber} - ${propertyName}`,
+        html: emailHtml
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+      } catch (emailErr) {
+        console.error('Erreur envoi email:', emailErr);
+        // On continue quand même pour retourner le numéro de facture
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      invoiceNumber,
+      invoiceId,
+      message: 'Facture créée avec succès' 
+    });
+    
+  } catch (err) {
+    console.error('Erreur création facture:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
     // Création de la facture (brouillon)
     const invoiceResult = await client.query(`
       INSERT INTO owner_invoices (
