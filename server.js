@@ -6125,7 +6125,7 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
 
       // Envoyer via API Brevo avec PDF en pièce jointe
       try {
-        const puppeteer = require('puppeteer');
+        const chromium = require('@sparticuz/chromium');
         
         // Créer un HTML complet pour le PDF
         const pdfHtml = `
