@@ -37,6 +37,7 @@
     "stripe": "^16.0.0",
     "@getbrevo/brevo": "^2.0.0",
     "cloudinary": "^1.41.0",
+    "@sparticuz/chromium": "^119.0.2",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
