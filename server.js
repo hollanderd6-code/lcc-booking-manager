@@ -34,6 +34,7 @@ cloudinary.config({
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SUBSCRIPTION_SECRET_KEY) 
   : null;
+
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
   port: process.env.EMAIL_PORT || 587,
@@ -41,7 +42,13 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
-  }
+  },
+  // Ajoute juste ces 4 lignes pour éviter les timeouts
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+  logger: true, // Pour voir les logs dans Render
+  debug: true   // Pour déboguer
 });
 
 // Dossier d'upload pour les photos de logements
