@@ -5974,10 +5974,12 @@ app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
   }
 });
 // ============================================
-// ROUTES API - FACTURES CLIENTS
+// ROUTES API - FACTURES CLIENTS (AVEC API BREVO)
 // ============================================
 
-// Créer une facture client
+// NOTE : Cette route utilise l'API Brevo au lieu de SMTP
+// car Render bloque parfois le port 587
+
 app.post('/api/invoice/create', authenticateUser, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -6013,41 +6015,69 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
     const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
     const total = subtotal + vatAmount;
 
-    // Si sendEmail est true, envoyer l'email
+    // Si sendEmail est true, envoyer l'email via API Brevo
     if (sendEmail && clientEmail) {
       const profile = user;
       
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Facture N° ${invoiceNumber}</h2>
-          <p><strong>De:</strong> ${profile.company || 'Conciergerie'}</p>
-          <p><strong>Pour:</strong> ${clientName}</p>
-          <p><strong>Logement:</strong> ${propertyName}</p>
-          ${checkinDate && checkoutDate ? `<p><strong>Séjour:</strong> Du ${checkinDate} au ${checkoutDate} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
-          <h3>Détails:</h3>
-          <ul>
-            ${rentAmount > 0 ? `<li>Loyer: ${rentAmount} €</li>` : ''}
-            ${touristTaxAmount > 0 ? `<li>Taxes de séjour: ${touristTaxAmount} €</li>` : ''}
-            ${cleaningFee > 0 ? `<li>Frais de ménage: ${cleaningFee} €</li>` : ''}
-          </ul>
-          <p><strong>Sous-total:</strong> ${subtotal.toFixed(2)} €</p>
-          ${vatAmount > 0 ? `<p><strong>TVA (${vatRate}%):</strong> ${vatAmount.toFixed(2)} €</p>` : ''}
-          <h3><strong>TOTAL TTC: ${total.toFixed(2)} €</strong></h3>
-          <p style="color: green; font-weight: bold;">✓ FACTURE ACQUITTÉE</p>
+          <h2 style="color: #111827;">Facture N° ${invoiceNumber}</h2>
+          <p><strong>De :</strong> ${profile.company || 'Conciergerie'}</p>
+          <p><strong>Pour :</strong> ${clientName}</p>
+          <p><strong>Logement :</strong> ${propertyName}</p>
+          ${propertyAddress ? `<p><strong>Adresse :</strong> ${propertyAddress}</p>` : ''}
+          ${checkinDate && checkoutDate ? `<p><strong>Séjour :</strong> Du ${new Date(checkinDate).toLocaleDateString('fr-FR')} au ${new Date(checkoutDate).toLocaleDateString('fr-FR')} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
+          
+          <h3 style="margin-top: 24px; color: #374151;">Détails de la facture</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${rentAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Loyer</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
+            ${touristTaxAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Taxes de séjour</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
+            ${cleaningFee > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Frais de ménage</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
+          </table>
+          
+          <p style="margin-top: 16px; font-weight: 600;">Sous-total : ${subtotal.toFixed(2)} €</p>
+          ${vatAmount > 0 ? `<p style="font-weight: 600;">TVA (${vatRate}%) : ${vatAmount.toFixed(2)} €</p>` : ''}
+          <h3 style="font-size: 20px; color: #10B981; margin-top: 24px;">TOTAL TTC : ${total.toFixed(2)} €</h3>
+          
+          <div style="background: #ecfdf5; border: 2px solid #10B981; border-radius: 8px; padding: 16px; margin-top: 24px; text-align: center;">
+            <p style="color: #10B981; font-weight: bold; margin: 0; font-size: 18px;">✓ FACTURE ACQUITTÉE</p>
+          </div>
+          
+          <p style="font-size: 12px; color: #6b7280; margin-top: 32px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+            ${profile.company || 'Ma Conciergerie'}<br>
+            ${profile.address || ''} ${profile.postalCode || ''} ${profile.city || ''}<br>
+            ${profile.siret ? 'SIRET : ' + profile.siret + '<br>' : ''}
+            ${user.email || ''}
+          </p>
         </div>
       `;
 
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@laconciergerie.com',
-        to: clientEmail,
-        subject: `Facture ${invoiceNumber} - ${propertyName}`,
-        html: emailHtml
-      };
-
+      // Envoyer via API Brevo
       try {
-        await transporter.sendMail(mailOptions);
+        const brevo = require('@getbrevo/brevo');
+        const apiInstance = new brevo.TransactionalEmailsApi();
+        
+        // Configurer l'API key
+        apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
+        
+        const sendSmtpEmail = new brevo.SendSmtpEmail();
+        sendSmtpEmail.subject = `Facture ${invoiceNumber} - ${propertyName}`;
+        sendSmtpEmail.htmlContent = emailHtml;
+        sendSmtpEmail.sender = { 
+          name: profile.company || user.company || 'La Conciergerie de Charles',
+          email: process.env.EMAIL_FROM || user.email
+        };
+        sendSmtpEmail.to = [{ 
+          email: clientEmail, 
+          name: clientName 
+        }];
+        
+        await apiInstance.sendTransacEmail(sendSmtpEmail);
+        
+        console.log('✅ Email facture client envoyé via Brevo API à:', clientEmail);
+
       } catch (emailErr) {
-        console.error('Erreur envoi email:', emailErr);
+        console.error('❌ Erreur envoi email facture client:', emailErr);
         // On continue quand même pour retourner le numéro de facture
       }
     }
