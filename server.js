@@ -12,13 +12,13 @@ const messagingService = require('./services/messagingService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const nodemailer = require('nodemailer'); // ← GARDE CELLE-LÀ
+const nodemailer = require('nodemailer');
 const multer = require('multer');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
 const crypto = require('crypto');
 const axios = require('axios');
-const brevo = require('@getbrevo/brevo'); // ← Ajoute Brevo ici
+const brevo = require('@getbrevo/brevo');
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -34,7 +34,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Stripe Subscriptions pour les abonnements Boostinghost
+// Stripe Subscriptions pour les abonnements Bookingmanage
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SUBSCRIPTION_SECRET_KEY) 
   : null;
@@ -109,13 +109,6 @@ const transporter = {
   sendMail: sendEmail,
   verify: () => Promise.resolve(true)
 };
-  // Ajoute juste ces 4 lignes pour éviter les timeouts
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-  logger: true, // Pour voir les logs dans Render
-  debug: true   // Pour déboguer
-});
 
 // Dossier d'upload pour les photos de logements
 // En local : /.../lcc-booking-manager/uploads/properties
