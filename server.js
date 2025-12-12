@@ -4140,60 +4140,6 @@ const newAccessInstructions =
 
 const newOwnerId = body.ownerId || null;
     
-// Réorganiser l'ordre des logements
-app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { propertyId } = req.params;
-    const { direction } = req.body; // 'up' ou 'down'
-
-    // Récupérer le logement actuel
-    const currentResult = await pool.query(
-      'SELECT id, display_order FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, user.id]
-    );
-
-    if (currentResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Logement non trouvé' });
-    }
-
-    const currentOrder = currentResult.rows[0].display_order;
-    const newOrder = direction === 'up' ? currentOrder - 1 : currentOrder + 1;
-
-    if (newOrder < 1) {
-      return res.status(400).json({ error: 'Déjà en première position' });
-    }
-
-    // Trouver le logement à échanger
-    const swapResult = await pool.query(
-      'SELECT id, display_order FROM properties WHERE user_id = $1 AND display_order = $2',
-      [user.id, newOrder]
-    );
-
-    if (swapResult.rows.length === 0) {
-      return res.status(400).json({ error: 'Déjà en dernière position' });
-    }
-
-    const swapId = swapResult.rows[0].id;
-
-    // Échanger les positions
-    await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [newOrder, propertyId]);
-    await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [currentOrder, swapId]);
-
-    // Recharger les propriétés
-    await loadProperties();
-
-    res.json({ success: true, message: 'Ordre mis à jour' });
-
-  } catch (err) {
-    console.error('Erreur réorganisation:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 await pool.query(
   `UPDATE properties
    SET
@@ -4307,6 +4253,59 @@ app.post('/api/properties/test-ical', async (req, res) => {
       error: 'URL iCal invalide ou inaccessible',
       details: error.message
     });
+  }
+  // Réorganiser l'ordre des logements
+app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId } = req.params;
+    const { direction } = req.body; // 'up' ou 'down'
+
+    // Récupérer le logement actuel
+    const currentResult = await pool.query(
+      'SELECT id, display_order FROM properties WHERE id = $1 AND user_id = $2',
+      [propertyId, user.id]
+    );
+
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    const currentOrder = currentResult.rows[0].display_order;
+    const newOrder = direction === 'up' ? currentOrder - 1 : currentOrder + 1;
+
+    if (newOrder < 1) {
+      return res.status(400).json({ error: 'Déjà en première position' });
+    }
+
+    // Trouver le logement à échanger
+    const swapResult = await pool.query(
+      'SELECT id, display_order FROM properties WHERE user_id = $1 AND display_order = $2',
+      [user.id, newOrder]
+    );
+
+    if (swapResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Déjà en dernière position' });
+    }
+
+    const swapId = swapResult.rows[0].id;
+
+    // Échanger les positions
+    await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [newOrder, propertyId]);
+    await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [currentOrder, swapId]);
+
+    // Recharger les propriétés
+    await loadProperties();
+
+    res.json({ success: true, message: 'Ordre mis à jour' });
+
+  } catch (err) {
+    console.error('Erreur réorganisation:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
