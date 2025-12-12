@@ -743,6 +743,26 @@ function renderProperties() {
           <div class="property-actions">
             <button
               type="button"
+              class="btn-icon-action btn-reorder"
+              data-id="${escapeHtml(id)}"
+              data-direction="up"
+              title="Monter"
+              style="background:#dbeafe;color:#1e40af;"
+            >
+              <i class="fas fa-arrow-up"></i>
+            </button>
+            <button
+              type="button"
+              class="btn-icon-action btn-reorder"
+              data-id="${escapeHtml(id)}"
+              data-direction="down"
+              title="Descendre"
+              style="background:#dbeafe;color:#1e40af;"
+            >
+              <i class="fas fa-arrow-down"></i>
+            </button>
+            <button
+              type="button"
               class="btn-icon-action btn-edit"
               data-id="${escapeHtml(id)}"
             >
@@ -804,3 +824,41 @@ function renderProperties() {
     });
   });
 }
+// Gérer le clic sur les boutons de réorganisation
+document.addEventListener('click', async function(e) {
+  if (e.target.closest('.btn-reorder')) {
+    const btn = e.target.closest('.btn-reorder');
+    const propertyId = btn.dataset.id;
+    const direction = btn.dataset.direction;
+    
+    try {
+      showLoading();
+      
+      const response = await fetch(`${API_URL}/api/properties/${propertyId}/reorder`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ direction })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la réorganisation');
+      }
+      
+      // Recharger les logements
+      await loadProperties();
+      
+      showToast('Ordre mis à jour !', 'success');
+      
+    } catch (error) {
+      console.error('Erreur réorganisation:', error);
+      showToast(error.message || 'Erreur lors de la réorganisation', 'error');
+    } finally {
+      hideLoading();
+    }
+  }
+});
