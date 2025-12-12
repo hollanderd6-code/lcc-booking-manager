@@ -6128,28 +6128,20 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
         const brevo = require('@getbrevo/brevo');
         const apiInstance = new brevo.TransactionalEmailsApi();
         
-        // Configurer l'API key
-        apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
+        // Envoyer via transporter (qui utilise automatiquement Brevo API)
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || user.email,
+          to: clientEmail,
+          subject: `Facture ${invoiceNumber} - ${propertyName}`,
+          html: emailHtml
+        });
         
-        const sendSmtpEmail = new brevo.SendSmtpEmail();
-        sendSmtpEmail.subject = `Facture ${invoiceNumber} - ${propertyName}`;
-        sendSmtpEmail.htmlContent = emailHtml;
-        // Nettoyer l'email FROM pour éviter les formats invalides
-        let senderEmail = process.env.EMAIL_FROM || user.email;
-        if (senderEmail && senderEmail.includes('<') && senderEmail.includes('>')) {
-          // Extraire juste l'email entre < >
-          const match = senderEmail.match(/<(.+?)>/);
-          if (match) {
-            senderEmail = match[1];
-          }
-        }
-        // Supprimer tout texte résiduel autour de l'email
-        senderEmail = senderEmail.replace(/[<>]/g, '').trim();
-        
-        sendSmtpEmail.sender = { 
-          name: profile.company || user.company || 'La Conciergerie de Charles',
-          email: senderEmail
-        };
+        console.log('✅ Email facture client envoyé à:', clientEmail);
+
+      } catch (emailErr) {
+        console.error('❌ Erreur envoi email facture client:', emailErr);
+      }
         sendSmtpEmail.to = [{ 
           email: clientEmail, 
           name: clientName 
