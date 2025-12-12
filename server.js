@@ -6123,33 +6123,195 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
         </div>
       `;
 
-      // Envoyer via API Brevo
+      // Envoyer via API Brevo avec PDF en pièce jointe
       try {
+        const puppeteer = require('puppeteer');
+        
+        // Créer un HTML complet pour le PDF
+        const pdfHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                margin: 40px; 
+                color: #1f2937; 
+              }
+              .invoice-header { 
+                text-align: center; 
+                margin-bottom: 40px; 
+                padding-bottom: 24px; 
+                border-bottom: 3px solid #111827; 
+              }
+              .invoice-header h2 { 
+                font-size: 24px; 
+                font-weight: 700; 
+                margin-bottom: 8px; 
+                color: #111827; 
+              }
+              .section { 
+                margin-bottom: 24px; 
+              }
+              .section h3 { 
+                font-size: 11px; 
+                font-weight: 700; 
+                text-transform: uppercase; 
+                letter-spacing: 0.08em; 
+                color: #6b7280; 
+                margin-bottom: 12px; 
+              }
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 16px;
+              }
+              td { 
+                padding: 10px; 
+                border-bottom: 1px solid #f3f4f6; 
+              }
+              .total-row { 
+                font-weight: 700; 
+                font-size: 18px; 
+                color: #10B981; 
+                border-top: 3px solid #111827; 
+                padding-top: 16px;
+              }
+              .paid-stamp { 
+                text-align: center; 
+                margin: 32px 0; 
+                padding: 20px; 
+                background: rgba(16,185,129,0.08); 
+                border: 3px solid #10B981; 
+                border-radius: 12px; 
+              }
+              .paid-stamp h3 { 
+                color: #10B981; 
+                font-size: 22px; 
+                margin: 0; 
+              }
+              .footer { 
+                text-align: center; 
+                font-size: 11px; 
+                color: #6b7280; 
+                margin-top: 32px; 
+                padding-top: 20px; 
+                border-top: 1px solid #e5e7eb; 
+              }
+            </style>
+          </head>
+          <body>
+            <div class="invoice-header">
+              <h2>${profile.company || 'Ma Conciergerie'}</h2>
+              <div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                ${profile.address || ''} ${profile.postalCode || ''} ${profile.city || ''}<br>
+                ${profile.siret ? 'SIRET: ' + profile.siret + '<br>' : ''}
+                ${user.email || ''}
+              </div>
+              <div style="margin-top: 16px; font-size: 16px; font-weight: 600;">FACTURE N° ${invoiceNumber}</div>
+              <div style="font-size: 14px; color: #6b7280;">Date: ${new Date().toLocaleDateString('fr-FR')}</div>
+            </div>
+
+            <div class="section">
+              <h3>Facturer à</h3>
+              <strong>${clientName}</strong><br>
+              ${clientAddress ? clientAddress + '<br>' : ''}
+              ${clientPostalCode || ''} ${clientCity || ''}
+              ${clientSiret ? '<br>SIRET: ' + clientSiret : ''}
+            </div>
+
+            <div class="section">
+              <h3>Séjour</h3>
+              <strong>${propertyName}</strong><br>
+              ${propertyAddress ? propertyAddress + '<br>' : ''}
+              ${checkinDate && checkoutDate ? 'Du ' + new Date(checkinDate).toLocaleDateString('fr-FR') + ' au ' + new Date(checkoutDate).toLocaleDateString('fr-FR') + (nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : '') : ''}
+            </div>
+
+            <div class="section">
+              <h3>Détails</h3>
+              <table>
+                ${rentAmount > 0 ? `<tr><td>Loyer</td><td style="text-align: right;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
+                ${touristTaxAmount > 0 ? `<tr><td>Taxes de séjour</td><td style="text-align: right;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
+                ${cleaningFee > 0 ? `<tr><td>Frais de ménage</td><td style="text-align: right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
+                <tr style="font-weight: 600; border-top: 1px solid #e5e7eb;">
+                  <td>Sous-total</td>
+                  <td style="text-align: right;">${subtotal.toFixed(2)} €</td>
+                </tr>
+                ${vatAmount > 0 ? `<tr><td>TVA (${vatRate}%)</td><td style="text-align: right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
+                <tr class="total-row">
+                  <td>TOTAL TTC</td>
+                  <td style="text-align: right;">${total.toFixed(2)} €</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="paid-stamp">
+              <h3>✓ FACTURE ACQUITTÉE</h3>
+            </div>
+
+            <div class="footer">
+              ${vatAmount === 0 ? 'TVA non applicable - Art. 293B du CGI' : ''}
+            </div>
+          </body>
+          </html>
+        `;
+
+        // Générer le PDF avec Puppeteer
+        const browser = await puppeteer.launch({
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.setContent(pdfHtml, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' }
+        });
+        await browser.close();
+
+        // Convertir le buffer en base64 pour Brevo
+        const pdfBase64 = pdfBuffer.toString('base64');
+
         const brevo = require('@getbrevo/brevo');
         const apiInstance = new brevo.TransactionalEmailsApi();
         
-        // Envoyer via transporter (qui utilise automatiquement Brevo API)
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || user.email,
-          to: clientEmail,
-          subject: `Facture ${invoiceNumber} - ${propertyName}`,
-          html: emailHtml
-        });
+        // Configurer l'API key
+        apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
         
-        console.log('✅ Email facture client envoyé à:', clientEmail);
-
-      } catch (emailErr) {
-        console.error('❌ Erreur envoi email facture client:', emailErr);
-      }
+        const sendSmtpEmail = new brevo.SendSmtpEmail();
+        sendSmtpEmail.subject = `Facture ${invoiceNumber} - ${propertyName}`;
+        sendSmtpEmail.htmlContent = emailHtml;
+        
+        // Nettoyer l'email FROM pour éviter les formats invalides
+        let senderEmail = process.env.EMAIL_FROM || user.email;
+        if (senderEmail && senderEmail.includes('<') && senderEmail.includes('>')) {
+          const match = senderEmail.match(/<(.+?)>/);
+          if (match) {
+            senderEmail = match[1];
+          }
+        }
+        senderEmail = senderEmail.replace(/[<>]/g, '').trim();
+        
+        sendSmtpEmail.sender = { 
+          name: profile.company || user.company || 'La Conciergerie de Charles',
+          email: senderEmail
+        };
         sendSmtpEmail.to = [{ 
           email: clientEmail, 
           name: clientName 
         }];
         
+        // Ajouter le PDF en pièce jointe
+        sendSmtpEmail.attachment = [{
+          content: pdfBase64,
+          name: `Facture-${invoiceNumber}.pdf`
+        }];
+        
         await apiInstance.sendTransacEmail(sendSmtpEmail);
         
-        console.log('✅ Email facture client envoyé via Brevo API à:', clientEmail);
+        console.log('✅ Email facture client envoyé avec PDF à:', clientEmail);
 
       } catch (emailErr) {
         console.error('❌ Erreur envoi email facture client:', emailErr);
