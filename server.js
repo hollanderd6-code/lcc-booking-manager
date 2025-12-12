@@ -4139,6 +4139,7 @@ const newAccessInstructions =
     }
 
 const newOwnerId = body.ownerId || null;
+    
 // Réorganiser l'ordre des logements
 app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
   try {
