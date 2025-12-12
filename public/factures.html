@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Factures</title>
+  <title>Bookingmanage – Factures</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1108,6 +1108,8 @@
         };
 
         try {
+          console.log('📤 Envoi des données:', data);
+          
           const response = await fetch('/api/invoice/create', {
             method: 'POST',
             headers: {
@@ -1117,7 +1119,19 @@
             body: JSON.stringify(data)
           });
 
-          const result = await response.json();
+          console.log('📥 Réponse status:', response.status);
+          
+          const text = await response.text();
+          console.log('📥 Réponse brute:', text);
+          
+          let result = null;
+          try {
+            result = JSON.parse(text);
+          } catch (e) {
+            console.error('❌ Erreur parsing JSON:', e);
+            alert("❌ Erreur serveur : La réponse n'est pas au bon format.\n\nVérifie les logs de la console (F12)");
+            return;
+          }
 
           if (response.ok && result) {
             currentInvoiceId = result.invoiceId || null;
@@ -1135,13 +1149,14 @@
             const sendBtn = document.getElementById('sendBtn');
             if (sendBtn) sendBtn.disabled = true;
           } else {
-            alert("⚠️ L'envoi automatique par email a échoué.\nVous pouvez quand même télécharger la facture en PDF.");
+            console.error('❌ Erreur API:', result);
+            alert("⚠️ Erreur: " + (result.error || 'Erreur inconnue') + "\n\nVérifie les logs de la console (F12)");
             const pdfBtn = document.getElementById('pdfBtn');
             if (pdfBtn) pdfBtn.disabled = false;
           }
         } catch (err) {
-          console.error('Erreur:', err);
-          alert("❌ Erreur technique : " + (err.message || err));
+          console.error('❌ Erreur réseau:', err);
+          alert("❌ Erreur technique : " + (err.message || err) + "\n\nVérifie les logs de la console (F12)");
         }
       };
 
