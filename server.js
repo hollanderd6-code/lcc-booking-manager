@@ -36,30 +36,13 @@ const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY
   : null;
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
+  port: process.env.EMAIL_PORT || 587,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // 10 secondes
-  greetingTimeout: 10000,
-  socketTimeout: 10000
+  }
 });
-```
-
-## 🔍 **Vérifie tes variables d'environnement dans Render :**
-
-Va dans **Render Dashboard > ton service > Environment** et vérifie que tu as :
-```
-EMAIL_HOST=smtp-relay.brevo.com
-EMAIL_PORT=587
-EMAIL_USER=ton_email@laconciergerie.com (l'email de ton compte Brevo)
-EMAIL_PASSWORD=ta_clé_smtp_brevo (pas ton mot de passe de connexion !)
-EMAIL_FROM=ton_email@laconciergerie.com
 
 // Dossier d'upload pour les photos de logements
 // En local : /.../lcc-booking-manager/uploads/properties
