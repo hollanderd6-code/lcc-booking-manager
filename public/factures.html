@@ -498,7 +498,7 @@
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo">
       <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Boostinghost</span>
+      <span class="mobile-logo-text">Bookingmanage</span>
     </a>
     <button class="mobile-menu-btn" id="mobileMenuBtn">
       <i class="fas fa-bars"></i>
@@ -514,7 +514,7 @@
         <a href="/" class="sidebar-logo">
           <i class="fas fa-calendar-check"></i>
           <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">Boostinghost</span>
+            <span class="sidebar-logo-title">Bookingmanage</span>
             <span class="sidebar-logo-subtitle">Property Manager</span>
           </div>
         </a>
@@ -752,10 +752,6 @@
 
                 <!-- Actions -->
                 <div class="form-actions">
-                  <button type="button" class="btn btn-primary" onclick="generateInvoice()">
-                    <i class="fas fa-eye"></i>
-                    Aperçu
-                  </button>
                   <button type="button" class="btn btn-primary" onclick="sendInvoice()" id="sendBtn" disabled>
                     <i class="fas fa-envelope"></i>
                     Envoyer par email
@@ -782,7 +778,7 @@
                   <i class="fas fa-file-invoice"></i>
                   <div>
                     <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
-                    <p style="font-size: 14px;">Remplissez le formulaire et cliquez sur "Aperçu"</p>
+                    <p style="font-size: 14px;">Remplissez le formulaire pour voir l'aperçu en temps réel</p>
                   </div>
                 </div>
               </div>
@@ -845,8 +841,7 @@
 
       let currentInvoiceId = null;
       let invoiceNumber = '';
-            const propertiesByName = {};
-
+      const propertiesByName = {};
 
       // Load user info pour la sidebar
       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
@@ -963,27 +958,18 @@
           const response = await fetch('/api/properties', {
             headers: { 'Authorization': 'Bearer ' + token }
           });
-                    if (response.ok) {
+          
+          if (response.ok) {
             const data = await response.json();
             const select = document.getElementById('propertyName');
 
             data.properties.forEach(prop => {
               const option = document.createElement('option');
-              option.value = prop.name; // on garde le nom comme avant
+              option.value = prop.name;
               option.textContent = prop.name;
-
-              // On essaye plusieurs clés possibles pour l'adresse
-              option.dataset.address =
-                prop.address ||
-                prop.propertyAddress ||
-                prop.addressLine ||
-                '';
+              option.dataset.address = prop.address || '';
 
               select.appendChild(option);
-
-              select.appendChild(option);
-
-              // On garde l'objet complet en mémoire
               propertiesByName[prop.name] = prop;
             });
           } else {
@@ -998,11 +984,9 @@
       window.generateInvoice = function() {
         const clientName = document.getElementById('clientName').value;
         const propertyName = document.getElementById('propertyName').value;
-              const propertyAddress = getSelectedPropertyAddress();
+        const propertyAddress = getSelectedPropertyAddress();
 
-        
         if (!clientName || !propertyName) {
-          alert('Veuillez remplir au minimum le nom du client et le logement');
           return;
         }
 
@@ -1022,8 +1006,7 @@
         const checkin = document.getElementById('checkinDate').value;
         const checkout = document.getElementById('checkoutDate').value;
 
-        // Numéro temporaire, le vrai viendra de l'API
-        invoiceNumber = 'FACT-XXX';
+        invoiceNumber = invoiceNumber || 'FACT-XXX';
 
         const preview = `
           <div class="invoice-header">
@@ -1049,7 +1032,7 @@
             </div>
           </div>
 
-                    <div class="invoice-section">
+          <div class="invoice-section">
             <h3>Séjour</h3>
             <div class="invoice-section-content">
               <strong>${propertyName}</strong>
@@ -1061,7 +1044,6 @@
                 : ''}
             </div>
           </div>
-
 
           <div class="invoice-section">
             <h3>Détails</h3>
@@ -1096,7 +1078,7 @@
         if (sendBtn) sendBtn.disabled = false;
       };
 
-      // Envoyer la facture (avec fallback si l'API ne marche pas)
+      // Envoyer la facture
       window.sendInvoice = async function() {
         const clientEmail = document.getElementById('clientEmail').value;
         if (!clientEmail) {
@@ -1114,8 +1096,7 @@
           clientCity: document.getElementById('clientCity').value,
           clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
           propertyName: document.getElementById('propertyName').value,
-                    propertyAddress: getSelectedPropertyAddress(),
-
+          propertyAddress: getSelectedPropertyAddress(),
           checkinDate: document.getElementById('checkinDate').value,
           checkoutDate: document.getElementById('checkoutDate').value,
           nights: calculateNights(),
@@ -1136,25 +1117,16 @@
             body: JSON.stringify(data)
           });
 
-          const text = await response.text();
-          let result = null;
-          try {
-            result = JSON.parse(text);
-          } catch (e) {
-            // pas du JSON, ce n'est pas grave
-          }
+          const result = await response.json();
 
           if (response.ok && result) {
-            currentInvoiceId = result.invoiceId || result.id || result._id || null;
-            invoiceNumber = result.invoiceNumber || result.number || invoiceNumber || '';
+            currentInvoiceId = result.invoiceId || null;
+            invoiceNumber = result.invoiceNumber || '';
 
             alert("✅ Facture " + (invoiceNumber || '') + " créée et envoyée par email !");
 
             if (invoiceNumber) {
-              const numberEl = document.querySelector('.invoice-number');
-              if (numberEl) {
-                numberEl.textContent = 'FACTURE N° ' + invoiceNumber;
-              }
+              generateInvoice(); // Régénérer avec le bon numéro
             }
 
             const pdfBtn = document.getElementById('pdfBtn');
@@ -1163,157 +1135,31 @@
             const sendBtn = document.getElementById('sendBtn');
             if (sendBtn) sendBtn.disabled = true;
           } else {
-            console.error('Erreur API /api/invoice/create', {
-              status: response.status,
-              body: text
-            });
-            alert(
-              "⚠️ L'envoi automatique par email a échoué (code " +
-              response.status +
-              ").\nVous pouvez quand même télécharger la facture en PDF."
-            );
+            alert("⚠️ L'envoi automatique par email a échoué.\nVous pouvez quand même télécharger la facture en PDF.");
             const pdfBtn = document.getElementById('pdfBtn');
             if (pdfBtn) pdfBtn.disabled = false;
           }
         } catch (err) {
-          console.error('Erreur réseau ou JS:', err);
+          console.error('Erreur:', err);
           alert("❌ Erreur technique : " + (err.message || err));
         }
       };
-// Envoyer une facture par email
-app.post('/api/send-invoice', authenticateUser, async (req, res) => {
-  try {
-    const { to, subject, html } = req.body;
-    
-    if (!to || !subject || !html) {
-      return res.status(400).json({ error: 'Paramètres manquants' });
-    }
 
-    // Configuration de l'email (utilise ton service d'email existant)
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@yourdomain.com',
-      to: to,
-      subject: subject,
-      html: html
-    };
-
-    await transporter.sendMail(mailOptions);
-    
-    res.json({ success: true, message: 'Email envoyé avec succès' });
-  } catch (err) {
-    console.error('Erreur envoi email:', err);
-    res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'email' });
-  }
-});
-      // Télécharger PDF : API si ID dispo, sinon impression navigateur
+      // Télécharger PDF (force le download)
       window.downloadPDF = function() {
-        const token = localStorage.getItem('lcc_token');
-        if (currentInvoiceId) {
-          window.open('/api/invoice/' + currentInvoiceId + '/pdf?token=' + token, '_blank');
-        } else {
-          window.print();
-        }
-      };
-// Créer une facture client
-app.post('/api/invoice/create', authenticateUser, async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { 
-      clientName, 
-      clientEmail,
-      clientAddress, 
-      clientPostalCode, 
-      clientCity, 
-      clientSiret,
-      propertyName, 
-      propertyAddress,
-      checkinDate,
-      checkoutDate,
-      nights,
-      rentAmount, 
-      touristTaxAmount, 
-      cleaningFee,
-      vatRate,
-      sendEmail
-    } = req.body;
-
-    // Générer le numéro de facture
-    const invoiceNumber = 'FACT-' + Date.now();
-    const invoiceId = 'inv_' + Date.now();
-
-    // Calculer les montants
-    const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
-    const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
-    const total = subtotal + vatAmount;
-
-    // Si sendEmail est true, envoyer l'email
-    if (sendEmail && clientEmail) {
-      const profile = user; // Utilise les infos du user
-      
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Facture N° ${invoiceNumber}</h2>
-          <p><strong>De:</strong> ${profile.company || 'Conciergerie'}</p>
-          <p><strong>Pour:</strong> ${clientName}</p>
-          <p><strong>Logement:</strong> ${propertyName}</p>
-          ${checkinDate && checkoutDate ? `<p><strong>Séjour:</strong> Du ${checkinDate} au ${checkoutDate} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
-          <h3>Détails:</h3>
-          <ul>
-            ${rentAmount > 0 ? `<li>Loyer: ${rentAmount} €</li>` : ''}
-            ${touristTaxAmount > 0 ? `<li>Taxes de séjour: ${touristTaxAmount} €</li>` : ''}
-            ${cleaningFee > 0 ? `<li>Frais de ménage: ${cleaningFee} €</li>` : ''}
-          </ul>
-          <p><strong>Sous-total:</strong> ${subtotal.toFixed(2)} €</p>
-          ${vatAmount > 0 ? `<p><strong>TVA (${vatRate}%):</strong> ${vatAmount.toFixed(2)} €</p>` : ''}
-          <h3><strong>TOTAL TTC: ${total.toFixed(2)} €</strong></h3>
-          <p style="color: green; font-weight: bold;">✓ FACTURE ACQUITTÉE</p>
-        </div>
-      `;
-
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@laconciergerie.com',
-        to: clientEmail,
-        subject: `Facture ${invoiceNumber} - ${propertyName}`,
-        html: emailHtml
+        window.print();
       };
 
-      try {
-        await transporter.sendMail(mailOptions);
-      } catch (emailErr) {
-        console.error('Erreur envoi email:', emailErr);
-        // On continue quand même pour retourner le numéro de facture
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      invoiceNumber,
-      invoiceId,
-      message: 'Facture créée avec succès' 
-    });
-    
-  } catch (err) {
-    console.error('Erreur création facture:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
       // Auto-update preview
-      ['rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate'].forEach(id => {
+      ['clientName', 'propertyName', 'rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate', 'checkinDate', 'checkoutDate'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-          el.addEventListener('input', function() {
-            if (document.getElementById('clientName').value && document.getElementById('propertyName').value) {
-              generateInvoice();
-            }
-          });
+          el.addEventListener('input', generateInvoice);
+          el.addEventListener('change', generateInvoice);
         }
       });
 
-      // Init : charger les logements
+      // Init
       loadProperties();
     });
   </script>
