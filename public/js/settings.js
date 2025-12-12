@@ -837,9 +837,9 @@ document.addEventListener('click', async function(e) {
       const response = await fetch(`${API_URL}/api/properties/${propertyId}/reorder`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
+  'Content-Type': 'application/json',
+  'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+},
         body: JSON.stringify({ direction })
       });
       
