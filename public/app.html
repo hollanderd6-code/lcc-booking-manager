@@ -124,17 +124,170 @@
         font-size: 13px;
       }
     }
-     /* Boutons du header +50% */
-.header-actions .btn-icon,
-.header-actions .theme-toggle {
-  transform: scale(1.5);        /* +50% */
-  transform-origin: center;     /* reste centrés */
+     /* Boutons du header - Style moderne et coloré */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
-/* Icônes un peu plus grosses aussi */
+.header-actions .btn-icon,
+.header-actions .theme-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 .header-actions .btn-icon i,
 .header-actions .theme-toggle i {
-  font-size: 1.2em;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+/* Bouton Sync - Vert */
+#syncBtn {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+}
+
+#syncBtn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  transform: translateY(-2px);
+}
+
+#syncBtn:hover i {
+  animation: spin-once 0.6s ease;
+}
+
+/* Bouton Notifications - Bleu */
+#notificationsBtn {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: white;
+}
+
+#notificationsBtn:hover {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+  transform: translateY(-2px);
+}
+
+#notificationsBtn:hover i {
+  animation: ring 0.5s ease;
+}
+
+/* Badge de notification */
+.notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: none;
+}
+
+.notification-badge.active {
+  display: block;
+  animation: pulse-badge 2s infinite;
+}
+
+/* Bouton Theme - Violet/Indigo */
+#themeToggle {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+  color: white;
+}
+
+#themeToggle:hover {
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+  transform: translateY(-2px);
+}
+
+#themeToggle:hover i {
+  animation: rotate-smooth 0.5s ease;
+}
+
+/* Animations */
+@keyframes spin-once {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(-15deg); }
+  20%, 40% { transform: rotate(15deg); }
+  50% { transform: rotate(0deg); }
+}
+
+@keyframes rotate-smooth {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-badge {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Active states */
+.header-actions .btn-icon:active,
+.header-actions .theme-toggle:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Effet de brillance au survol */
+.header-actions .btn-icon::before,
+.header-actions .theme-toggle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s ease;
+  z-index: 1;
+}
+
+.header-actions .btn-icon:hover::before,
+.header-actions .theme-toggle:hover::before {
+  left: 100%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-actions .btn-icon,
+  .header-actions .theme-toggle {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .header-actions .btn-icon i,
+  .header-actions .theme-toggle i {
+    font-size: 16px;
+  }
 }
      /* Style spécifique pour le logo "B." de Booking dans les statuts */
 .status-booking-letter {
