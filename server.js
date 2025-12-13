@@ -6194,8 +6194,8 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
       );
 
       // 3) Construire l’URL de download (idéalement via env)
-      const baseUrl = process.env.BASE_URL || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-      const pdfUrl = `${baseUrl}/api/invoice/download/${token}`;
+      const origin = new URL(process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).origin;
+const pdfUrl = `${origin}/api/invoice/download/${token}`;
 
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
