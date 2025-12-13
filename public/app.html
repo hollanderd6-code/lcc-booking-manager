@@ -3237,16 +3237,17 @@ function populateEditBookingProperties(selectedPropertyId) {
     alert(err.message || 'Erreur lors de la création de la réservation.');
   }
 });
+      } // Fermeture du if (newReservationForm)
 
 
 
       /* Notifications */
-
+      
       // Gestion du panneau d'activité
       const notificationsBtn = document.getElementById('notificationsBtn');
       const notificationsPanel = document.getElementById('notificationsPanel');
       const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
-
+      
       if (notificationsBtn && notificationsPanel) {
         notificationsBtn.addEventListener('click', async function() {
           notificationsPanel.classList.toggle('open');
@@ -3257,13 +3258,13 @@ function populateEditBookingProperties(selectedPropertyId) {
           }
         });
       }
-
+      
       if (notificationsCloseBtn) {
         notificationsCloseBtn.addEventListener('click', function() {
           notificationsPanel.classList.remove('open');
         });
       }
-
+      
       // Fonction pour charger les données d'activité
       async function loadActivityData() {
         const token = localStorage.getItem('lcc_token');
