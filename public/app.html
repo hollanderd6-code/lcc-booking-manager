@@ -297,6 +297,22 @@
   line-height: 1;    /* Alignement vertical */
   letter-spacing: -0.5px; /* Un peu plus compact */
 }
+     .sidebar{
+  display: flex;
+  flex-direction: column;
+  height: 100vh;          /* important */
+}
+
+.sidebar-nav{
+  flex: 1;                /* prend tout l’espace */
+  overflow-y: auto;       /* scroll si menu long */
+}
+
+.sidebar-footer{
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 16px;
+}
+
   </style>
 
   <style>
