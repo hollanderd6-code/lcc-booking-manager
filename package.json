@@ -19,9 +19,11 @@
   "author": "La Conciergerie de Charles",
   "license": "MIT",
   "dependencies": {
+    "@getbrevo/brevo": "^2.0.0",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
+    "cloudinary": "^1.41.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -33,10 +35,9 @@
     "node-cron": "^3.0.3",
     "node-ical": "^0.18.0",
     "nodemailer": "^6.10.1",
+    "pdfkit": "^0.17.2",
     "pg": "^8.11.0",
     "stripe": "^16.0.0",
-    "@getbrevo/brevo": "^2.0.0",
-    "cloudinary": "^1.41.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
