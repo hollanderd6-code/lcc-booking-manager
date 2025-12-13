@@ -6173,8 +6173,8 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
       });
     }
 
-// Si sendEmail
- est true, envoyer l'email via API Brevo
+// Si sendEmail est true, envoyer l'email via API Brevo
+
     if (sendEmail && clientEmail) {
       const profile = user;
       
