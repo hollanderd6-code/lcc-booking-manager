@@ -6374,6 +6374,7 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
 
 
 // Télécharger une facture PDF via token expirant
+    console.log('✅ REGISTER: /api/invoice/download/:token');
 app.get('/api/invoice/download/:token', async (req, res) => {
   try {
     const { token } = req.params;
