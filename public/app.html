@@ -2106,17 +2106,56 @@
       </div>
 
       <!-- Notifications Panel -->
-      <aside class="notifications-panel" id="notificationsPanel">
-        <div class="notifications-header">
-          <h2>Notifications</h2>
-          <button class="btn-icon" id="notificationsCloseBtn">
-            <i class="fas fa-times"></i>
-          </button>
+     <aside class="notifications-panel" id="notificationsPanel">
+  <div class="notifications-header">
+    <h2><i class="fas fa-bell"></i> Activité</h2>
+    <button class="btn-icon" id="notificationsCloseBtn">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="notifications-body" id="notificationsList">
+    
+    <!-- Section : Aujourd'hui -->
+    <div class="activity-section">
+      <div class="activity-section-header">
+        <i class="fas fa-calendar-day"></i>
+        <h3>Aujourd'hui</h3>
+      </div>
+      <div id="activityToday" class="activity-list">
+        <div class="activity-loading">
+          <i class="fas fa-spinner fa-spin"></i> Chargement...
         </div>
-        <div class="notifications-body" id="notificationsList">
-          <p class="empty-state">Aucune notification pour le moment.</p>
+      </div>
+    </div>
+
+    <!-- Section : Cette semaine -->
+    <div class="activity-section">
+      <div class="activity-section-header">
+        <i class="fas fa-broom"></i>
+        <h3>Ménages cette semaine</h3>
+      </div>
+      <div id="activityThisWeek" class="activity-list">
+        <div class="activity-loading">
+          <i class="fas fa-spinner fa-spin"></i> Chargement...
         </div>
-      </aside>
+      </div>
+    </div>
+
+    <!-- Section : Nouvelles réservations -->
+    <div class="activity-section">
+      <div class="activity-section-header">
+        <i class="fas fa-star"></i>
+        <h3>Nouvelles réservations (7 derniers jours)</h3>
+      </div>
+      <div id="activityNewReservations" class="activity-list">
+        <div class="activity-loading">
+          <i class="fas fa-spinner fa-spin"></i> Chargement...
+        </div>
+      </div>
+    </div>
+
+  </div>
+</aside>
 
     </main>
   </div>
@@ -2385,7 +2424,130 @@
       color: var(--primary-color);
       margin-bottom: var(--spacing-md);
     }
-    
+    /* Sections d'activité */
+.activity-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.activity-section:last-child {
+  border-bottom: none;
+}
+
+.activity-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.activity-section-header i {
+  color: #10B981;
+  font-size: 16px;
+}
+
+.activity-section-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.activity-item:hover {
+  background: #f3f4f6;
+  border-color: #10B981;
+}
+
+.activity-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.activity-icon.checkin {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.activity-icon.checkout {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.activity-icon.cleaning {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.activity-icon.new-booking {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.activity-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.activity-time {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.activity-loading {
+  text-align: center;
+  padding: 20px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.activity-empty {
+  text-align: center;
+  padding: 20px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.activity-empty i {
+  font-size: 24px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
     .toast-container {
       position: fixed;
       bottom: var(--spacing-lg);
@@ -3080,139 +3242,188 @@ function populateEditBookingProperties(selectedPropertyId) {
 
       /* Notifications */
 
-      const notificationsBtn = document.getElementById('notificationsBtn');
-      const notificationsPanel = document.getElementById('notificationsPanel');
-      const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
-      const notificationsList = document.getElementById('notificationsList');
+      // Gestion du panneau d'activité
+const notificationsBtn = document.getElementById('notificationsBtn');
+const notificationsPanel = document.getElementById('notificationsPanel');
+const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
 
-      function buildNotificationsFromReservations() {
-        if (!notificationsList) return;
+if (notificationsBtn && notificationsPanel) {
+  notificationsBtn.addEventListener('click', async function() {
+    notificationsPanel.classList.toggle('open');
+    
+    // Charger les données d'activité
+    if (notificationsPanel.classList.contains('open')) {
+      await loadActivityData();
+    }
+  });
+}
 
-        notificationsList.innerHTML = '<p class="empty-state">Chargement...</p>';
+if (notificationsCloseBtn) {
+  notificationsCloseBtn.addEventListener('click', function() {
+    notificationsPanel.classList.remove('open');
+  });
+}
 
-        const reservations = window.LCC_RESERVATIONS;
-        if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
-          notificationsList.innerHTML = '<p class="empty-state">Aucune notification pour le moment.</p>';
-          return;
-        }
+// Fonction pour charger les données d'activité
+async function loadActivityData() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) return;
 
-        const now = new Date();
-        const todayStr = now.toISOString().slice(0, 10);
+  try {
+    // Charger toutes les réservations
+    const response = await fetch(`${API_URL}/api/reservations`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
 
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    if (!response.ok) return;
 
-        const items = [];
+    const data = await response.json();
+    const reservations = data.reservations || [];
+    const properties = PROPERTIES || [];
 
-        reservations.forEach(r => {
-          if (!r.start || !r.end) return;
+    // === AUJOURD'HUI : Check-in/Check-out ===
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayCheckins = reservations.filter(r => {
+      const checkin = new Date(r.startDate);
+      checkin.setHours(0, 0, 0, 0);
+      return checkin.getTime() === today.getTime();
+    });
 
-          const startStr = r.start.slice(0, 10);
-          const endStr = r.end.slice(0, 10);
+    const todayCheckouts = reservations.filter(r => {
+      const checkout = new Date(r.endDate);
+      checkout.setHours(0, 0, 0, 0);
+      return checkout.getTime() === today.getTime();
+    });
 
-          const start = new Date(r.start);
-          const end = new Date(r.end);
-
-          const propertyName = r.propertyName || r.property || 'Logement';
-          const guestName = r.guestName || r.name || '';
-
-          if (startStr === todayStr || startStr === tomorrowStr) {
-            items.push({
-              type: 'arrival',
-              title: `Arrivée – ${propertyName}`,
-              message: guestName ? `Client : ${guestName}` : '',
-              when: startStr === todayStr ? 'Aujourd’hui' : 'Demain',
-              time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-            });
-          }
-
-          if (start <= now && end >= now) {
-            items.push({
-              type: 'stay',
-              title: `Séjour en cours – ${propertyName}`,
-              message: guestName ? `Client : ${guestName}` : '',
-              when: 'En cours',
-              time: ''
-            });
-          }
-
-          if (endStr === todayStr || endStr === tomorrowStr) {
-            items.push({
-              type: 'departure',
-              title: `Départ – ${propertyName}`,
-              message: guestName ? `Client : ${guestName}` : '',
-              when: endStr === todayStr ? 'Aujourd’hui' : 'Demain',
-              time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-            });
-          }
-        });
-
-        const limited = items.slice(0, 15);
-
-        if (limited.length === 0) {
-          notificationsList.innerHTML = '<p class="empty-state">Aucun check-in ou check-out aujourd’hui / demain.</p>';
-          return;
-        }
-
-        notificationsList.innerHTML = '';
-        limited.forEach(n => {
-          const item = document.createElement('div');
-          item.className = 'notification-item';
-
-          let badgeColor = '#22c55e';
-          if (n.type === 'stay') badgeColor = '#3b82f6';
-          if (n.type === 'departure') badgeColor = '#f97316';
-
-          item.innerHTML = `
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-              <span style="
-                width:8px;
-                height:8px;
-                border-radius:999px;
-                background:${badgeColor};
-                flex-shrink:0;
-              "></span>
-              <div class="notification-item-title">${n.title}</div>
+    const todayContainer = document.getElementById('activityToday');
+    if (todayCheckins.length === 0 && todayCheckouts.length === 0) {
+      todayContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-check-circle"></i><br>Aucun check-in/out aujourd\'hui</div>';
+    } else {
+      let html = '';
+      
+      todayCheckins.forEach(r => {
+        const property = properties.find(p => p.id === r.propertyId);
+        html += `
+          <div class="activity-item">
+            <div class="activity-icon checkin">
+              <i class="fas fa-sign-in-alt"></i>
             </div>
-            <div class="notification-item-body">
-              ${n.message ? `<div>${n.message}</div>` : ''}
+            <div class="activity-content">
+              <div class="activity-title">Check-in : ${r.guestName}</div>
+              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+              <div class="activity-time">Aujourd'hui</div>
             </div>
-            <div class="notification-item-meta">
-              ${n.when}${n.time ? ' • ' + n.time : ''}
+          </div>
+        `;
+      });
+
+      todayCheckouts.forEach(r => {
+        const property = properties.find(p => p.id === r.propertyId);
+        html += `
+          <div class="activity-item">
+            <div class="activity-icon checkout">
+              <i class="fas fa-sign-out-alt"></i>
             </div>
-          `;
-          notificationsList.appendChild(item);
-        });
-      }
+            <div class="activity-content">
+              <div class="activity-title">Check-out : ${r.guestName}</div>
+              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+              <div class="activity-time">Aujourd'hui</div>
+            </div>
+          </div>
+        `;
+      });
 
-      function openNotifications() {
-        if (notificationsPanel) {
-          notificationsPanel.classList.add('open');
-          buildNotificationsFromReservations();
-        }
-      }
+      todayContainer.innerHTML = html;
+    }
 
-      function closeNotifications() {
-        if (notificationsPanel) {
-          notificationsPanel.classList.remove('open');
-        }
-      }
+    // === CETTE SEMAINE : Ménages ===
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + 1); // Lundi
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // Dimanche
 
-      if (notificationsBtn) {
-        notificationsBtn.addEventListener('click', function () {
-          if (!notificationsPanel) return;
-          if (notificationsPanel.classList.contains('open')) {
-            closeNotifications();
-          } else {
-            openNotifications();
-          }
-        });
-      }
+    const thisWeekCheckouts = reservations.filter(r => {
+      const checkout = new Date(r.endDate);
+      return checkout >= weekStart && checkout <= weekEnd;
+    }).sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
 
-      if (notificationsCloseBtn) {
-        notificationsCloseBtn.addEventListener('click', closeNotifications);
-      }
+    const weekContainer = document.getElementById('activityThisWeek');
+    if (thisWeekCheckouts.length === 0) {
+      weekContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-broom"></i><br>Aucun ménage prévu cette semaine</div>';
+    } else {
+      let html = '';
+      thisWeekCheckouts.forEach(r => {
+        const property = properties.find(p => p.id === r.propertyId);
+        const checkoutDate = new Date(r.endDate);
+        const daysFromNow = Math.ceil((checkoutDate - today) / (1000 * 60 * 60 * 24));
+        
+        let timeText = '';
+        if (daysFromNow === 0) timeText = 'Aujourd\'hui';
+        else if (daysFromNow === 1) timeText = 'Demain';
+        else timeText = `Dans ${daysFromNow} jours`;
+
+        html += `
+          <div class="activity-item">
+            <div class="activity-icon cleaning">
+              <i class="fas fa-broom"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">Ménage après ${r.guestName}</div>
+              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+              <div class="activity-time">${timeText} - ${checkoutDate.toLocaleDateString('fr-FR')}</div>
+            </div>
+          </div>
+        `;
+      });
+      weekContainer.innerHTML = html;
+    }
+
+    // === NOUVELLES RÉSERVATIONS (7 derniers jours) ===
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    const newReservations = reservations.filter(r => {
+      const created = r.createdAt ? new Date(r.createdAt) : null;
+      return created && created >= sevenDaysAgo;
+    }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const newReservationsContainer = document.getElementById('activityNewReservations');
+    if (newReservations.length === 0) {
+      newReservationsContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-calendar-plus"></i><br>Aucune nouvelle réservation</div>';
+    } else {
+      let html = '';
+      newReservations.forEach(r => {
+        const property = properties.find(p => p.id === r.propertyId);
+        const created = new Date(r.createdAt);
+        const daysAgo = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+        
+        let timeText = '';
+        if (daysAgo === 0) timeText = 'Aujourd\'hui';
+        else if (daysAgo === 1) timeText = 'Hier';
+        else timeText = `Il y a ${daysAgo} jours`;
+
+        html += `
+          <div class="activity-item">
+            <div class="activity-icon new-booking">
+              <i class="fas fa-calendar-plus"></i>
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">${r.guestName}</div>
+              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'} • ${new Date(r.startDate).toLocaleDateString('fr-FR')} - ${new Date(r.endDate).toLocaleDateString('fr-FR')}</div>
+              <div class="activity-time">${timeText}</div>
+            </div>
+          </div>
+        `;
+      });
+      newReservationsContainer.innerHTML = html;
+    }
+
+  } catch (err) {
+    console.error('Erreur chargement activité:', err);
+  }
+}
 
       /* Scroll vers calendrier depuis le menu */
       const navCalendarLink = document.getElementById('navCalendarLink');
