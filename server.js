@@ -19,6 +19,7 @@ const { Pool } = require('pg');
 const crypto = require('crypto');
 const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
+const PDFDocument = require('pdfkit');
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -157,6 +158,20 @@ try {
 
 // UPLOAD_DIR = .../uploads/properties (ou /tmp/uploads/properties en prod)
 const UPLOAD_ROOT = path.dirname(UPLOAD_DIR);
+// Dossier de stockage des PDF de factures (writable sur Render via /tmp)
+const INVOICE_PDF_DIR = isRenderEnv
+  ? path.join('/tmp', 'invoices')
+  : path.join(__dirname, 'public', 'invoices');
+
+try {
+  if (!fs.existsSync(INVOICE_PDF_DIR)) {
+    fs.mkdirSync(INVOICE_PDF_DIR, { recursive: true });
+  }
+  console.log('📁 Dossier factures PDF initialisé :', INVOICE_PDF_DIR);
+} catch (err) {
+  console.error('❌ Impossible de créer le dossier factures PDF :', INVOICE_PDF_DIR, err);
+}
+
 
 // Multer en mémoire pour envoyer directement à Cloudinary
 const storage = multer.memoryStorage();
@@ -384,7 +399,22 @@ async function initDb() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (user_id, property_id)
       );
-    `);
+    
+
+CREATE TABLE IF NOT EXISTS invoice_download_tokens (
+  id SERIAL PRIMARY KEY,
+  token TEXT UNIQUE NOT NULL,
+  user_id TEXT,
+  invoice_number TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  used_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_download_tokens_token
+ON invoice_download_tokens(token);
+`);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings & cleaning_assignments OK dans Postgres');
   } catch (err) {
@@ -6086,10 +6116,87 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
     const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
     const total = subtotal + vatAmount;
 
-    // Si sendEmail est true, envoyer l'email via API Brevo
+    
+
+    
+// Générer un PDF simple (serveur) avec PDFKit
+    async function generateInvoicePdfToFile(outputPath) {
+      return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const stream = fs.createWriteStream(outputPath);
+        doc.pipe(stream);
+
+        doc.fontSize(20).text(`FACTURE ${invoiceNumber}`, { align: 'center' });
+        doc.moveDown();
+
+        doc.fontSize(12).text(`Émetteur : ${user.company || 'Conciergerie'}`);
+        if (user.email) doc.text(`Email : ${user.email}`);
+        doc.moveDown();
+
+        doc.fontSize(12).text(`Client : ${clientName}`);
+        if (clientAddress) doc.text(`Adresse : ${clientAddress}`);
+        const cityLine = `${clientPostalCode || ''} ${clientCity || ''}`.trim();
+        if (cityLine) doc.text(cityLine);
+        if (clientSiret) doc.text(`SIRET : ${clientSiret}`);
+        doc.moveDown();
+
+        doc.text(`Logement : ${propertyName}`);
+        if (propertyAddress) doc.text(`Adresse : ${propertyAddress}`);
+
+        if (checkinDate && checkoutDate) {
+          const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
+          const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
+          doc.text(`Séjour : du ${ci} au ${co} (${nights} nuit${nights > 1 ? 's' : ''})`);
+        }
+
+        doc.moveDown();
+        doc.fontSize(13).text('Détails', { underline: true });
+        doc.moveDown(0.5);
+
+        const addLine = (label, value) => {
+          doc.fontSize(12).text(`${label} : ${Number(value).toFixed(2)} €`);
+        };
+
+        if (parseFloat(rentAmount || 0) > 0) addLine('Loyer', rentAmount);
+        if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de séjour', touristTaxAmount);
+        if (parseFloat(cleaningFee || 0) > 0) addLine('Frais de ménage', cleaningFee);
+
+        doc.moveDown();
+        doc.fontSize(12).text(`Sous-total : ${subtotal.toFixed(2)} €`);
+        if (vatAmount > 0) doc.text(`TVA (${vatRate}%) : ${vatAmount.toFixed(2)} €`);
+        doc.fontSize(16).text(`TOTAL TTC : ${total.toFixed(2)} €`, { underline: true });
+
+        doc.end();
+
+        stream.on('finish', resolve);
+        stream.on('error', reject);
+      });
+    }
+
+// Si sendEmail
+ est true, envoyer l'email via API Brevo
     if (sendEmail && clientEmail) {
       const profile = user;
       
+
+      // 1) Générer le fichier PDF
+      const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
+      await generateInvoicePdfToFile(pdfPath);
+
+      // 2) Créer un token expirant 24h
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await pool.query(
+        `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [token, user.id, invoiceNumber, pdfPath, expiresAt]
+      );
+
+      // 3) Construire l’URL de download (idéalement via env)
+      const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+      const pdfUrl = `${baseUrl}/api/invoice/download/${token}`;
+
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #111827;">Facture N° ${invoiceNumber}</h2>
@@ -6113,7 +6220,17 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
           <div style="background: #ecfdf5; border: 2px solid #10B981; border-radius: 8px; padding: 16px; margin-top: 24px; text-align: center;">
             <p style="color: #10B981; font-weight: bold; margin: 0; font-size: 18px;">✓ FACTURE ACQUITTÉE</p>
           </div>
-          
+
+          <div style="margin-top: 18px; text-align: center;">
+            <a href="${pdfUrl}"
+              style="display:inline-block; padding:12px 18px; background:#111827; color:#fff; text-decoration:none; border-radius:10px; font-weight:700;">
+              Télécharger la facture (PDF)
+            </a>
+            <div style="font-size:12px; color:#6b7280; margin-top:10px;">
+              Lien valable 24h.
+            </div>
+          </div>
+
           <p style="font-size: 12px; color: #6b7280; margin-top: 32px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px;">
             ${profile.company || 'Ma Conciergerie'}<br>
             ${profile.address || ''} ${profile.postalCode || ''} ${profile.city || ''}<br>
@@ -6249,6 +6366,46 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
     await client.query('COMMIT');
 
     res.json({ success: true, message: 'Facture modifiée' });
+
+
+// Télécharger une facture PDF via token expirant
+app.get('/api/invoice/download/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const r = await pool.query(
+      `SELECT file_path, invoice_number, expires_at
+       FROM invoice_download_tokens
+       WHERE token = $1`,
+      [token]
+    );
+
+    if (!r.rowCount) return res.status(404).send('Lien invalide.');
+    const row = r.rows[0];
+
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      return res.status(410).send('Lien expiré.');
+    }
+
+    const absolutePath = path.resolve(row.file_path);
+
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).send('Fichier introuvable.');
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${row.invoice_number}.pdf"`
+    );
+
+    fs.createReadStream(absolutePath).pipe(res);
+
+  } catch (err) {
+    console.error('❌ Erreur download invoice:', err);
+    res.status(500).send('Erreur serveur.');
+  }
+});
 
   } catch (err) {
     await client.query('ROLLBACK');
