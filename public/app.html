@@ -3243,187 +3243,187 @@ function populateEditBookingProperties(selectedPropertyId) {
       /* Notifications */
 
       // Gestion du panneau d'activité
-const notificationsBtn = document.getElementById('notificationsBtn');
-const notificationsPanel = document.getElementById('notificationsPanel');
-const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
+      const notificationsBtn = document.getElementById('notificationsBtn');
+      const notificationsPanel = document.getElementById('notificationsPanel');
+      const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
 
-if (notificationsBtn && notificationsPanel) {
-  notificationsBtn.addEventListener('click', async function() {
-    notificationsPanel.classList.toggle('open');
-    
-    // Charger les données d'activité
-    if (notificationsPanel.classList.contains('open')) {
-      await loadActivityData();
-    }
-  });
-}
+      if (notificationsBtn && notificationsPanel) {
+        notificationsBtn.addEventListener('click', async function() {
+          notificationsPanel.classList.toggle('open');
+          
+          // Charger les données d'activité
+          if (notificationsPanel.classList.contains('open')) {
+            await loadActivityData();
+          }
+        });
+      }
 
-if (notificationsCloseBtn) {
-  notificationsCloseBtn.addEventListener('click', function() {
-    notificationsPanel.classList.remove('open');
-  });
-}
+      if (notificationsCloseBtn) {
+        notificationsCloseBtn.addEventListener('click', function() {
+          notificationsPanel.classList.remove('open');
+        });
+      }
 
-// Fonction pour charger les données d'activité
-async function loadActivityData() {
-  const token = localStorage.getItem('lcc_token');
-  if (!token) return;
-
-  try {
-    // Charger toutes les réservations
-    const response = await fetch(`${API_URL}/api/reservations`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!response.ok) return;
-
-    const data = await response.json();
-    const reservations = data.reservations || [];
-    const properties = PROPERTIES || [];
-
-    // === AUJOURD'HUI : Check-in/Check-out ===
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayCheckins = reservations.filter(r => {
-      const checkin = new Date(r.startDate);
-      checkin.setHours(0, 0, 0, 0);
-      return checkin.getTime() === today.getTime();
-    });
-
-    const todayCheckouts = reservations.filter(r => {
-      const checkout = new Date(r.endDate);
-      checkout.setHours(0, 0, 0, 0);
-      return checkout.getTime() === today.getTime();
-    });
-
-    const todayContainer = document.getElementById('activityToday');
-    if (todayCheckins.length === 0 && todayCheckouts.length === 0) {
-      todayContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-check-circle"></i><br>Aucun check-in/out aujourd\'hui</div>';
-    } else {
-      let html = '';
+      // Fonction pour charger les données d'activité
+      async function loadActivityData() {
+        const token = localStorage.getItem('lcc_token');
+        if (!token) return;
       
-      todayCheckins.forEach(r => {
-        const property = properties.find(p => p.id === r.propertyId);
-        html += `
-          <div class="activity-item">
-            <div class="activity-icon checkin">
-              <i class="fas fa-sign-in-alt"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">Check-in : ${r.guestName}</div>
-              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
-              <div class="activity-time">Aujourd'hui</div>
-            </div>
-          </div>
-        `;
-      });
-
-      todayCheckouts.forEach(r => {
-        const property = properties.find(p => p.id === r.propertyId);
-        html += `
-          <div class="activity-item">
-            <div class="activity-icon checkout">
-              <i class="fas fa-sign-out-alt"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">Check-out : ${r.guestName}</div>
-              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
-              <div class="activity-time">Aujourd'hui</div>
-            </div>
-          </div>
-        `;
-      });
-
-      todayContainer.innerHTML = html;
-    }
-
-    // === CETTE SEMAINE : Ménages ===
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1); // Lundi
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6); // Dimanche
-
-    const thisWeekCheckouts = reservations.filter(r => {
-      const checkout = new Date(r.endDate);
-      return checkout >= weekStart && checkout <= weekEnd;
-    }).sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
-
-    const weekContainer = document.getElementById('activityThisWeek');
-    if (thisWeekCheckouts.length === 0) {
-      weekContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-broom"></i><br>Aucun ménage prévu cette semaine</div>';
-    } else {
-      let html = '';
-      thisWeekCheckouts.forEach(r => {
-        const property = properties.find(p => p.id === r.propertyId);
-        const checkoutDate = new Date(r.endDate);
-        const daysFromNow = Math.ceil((checkoutDate - today) / (1000 * 60 * 60 * 24));
-        
-        let timeText = '';
-        if (daysFromNow === 0) timeText = 'Aujourd\'hui';
-        else if (daysFromNow === 1) timeText = 'Demain';
-        else timeText = `Dans ${daysFromNow} jours`;
-
-        html += `
-          <div class="activity-item">
-            <div class="activity-icon cleaning">
-              <i class="fas fa-broom"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">Ménage après ${r.guestName}</div>
-              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
-              <div class="activity-time">${timeText} - ${checkoutDate.toLocaleDateString('fr-FR')}</div>
-            </div>
-          </div>
-        `;
-      });
-      weekContainer.innerHTML = html;
-    }
-
-    // === NOUVELLES RÉSERVATIONS (7 derniers jours) ===
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-
-    const newReservations = reservations.filter(r => {
-      const created = r.createdAt ? new Date(r.createdAt) : null;
-      return created && created >= sevenDaysAgo;
-    }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const newReservationsContainer = document.getElementById('activityNewReservations');
-    if (newReservations.length === 0) {
-      newReservationsContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-calendar-plus"></i><br>Aucune nouvelle réservation</div>';
-    } else {
-      let html = '';
-      newReservations.forEach(r => {
-        const property = properties.find(p => p.id === r.propertyId);
-        const created = new Date(r.createdAt);
-        const daysAgo = Math.floor((today - created) / (1000 * 60 * 60 * 24));
-        
-        let timeText = '';
-        if (daysAgo === 0) timeText = 'Aujourd\'hui';
-        else if (daysAgo === 1) timeText = 'Hier';
-        else timeText = `Il y a ${daysAgo} jours`;
-
-        html += `
-          <div class="activity-item">
-            <div class="activity-icon new-booking">
-              <i class="fas fa-calendar-plus"></i>
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">${r.guestName}</div>
-              <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'} • ${new Date(r.startDate).toLocaleDateString('fr-FR')} - ${new Date(r.endDate).toLocaleDateString('fr-FR')}</div>
-              <div class="activity-time">${timeText}</div>
-            </div>
-          </div>
-        `;
-      });
-      newReservationsContainer.innerHTML = html;
-    }
-
-  } catch (err) {
-    console.error('Erreur chargement activité:', err);
-  }
-}
+        try {
+          // Charger toutes les réservations
+          const response = await fetch(`${API_URL}/api/reservations`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+      
+          if (!response.ok) return;
+      
+          const data = await response.json();
+          const reservations = data.reservations || [];
+          const properties = PROPERTIES || [];
+      
+          // === AUJOURD'HUI : Check-in/Check-out ===
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const todayCheckins = reservations.filter(r => {
+            const checkin = new Date(r.startDate);
+            checkin.setHours(0, 0, 0, 0);
+            return checkin.getTime() === today.getTime();
+          });
+      
+          const todayCheckouts = reservations.filter(r => {
+            const checkout = new Date(r.endDate);
+            checkout.setHours(0, 0, 0, 0);
+            return checkout.getTime() === today.getTime();
+          });
+      
+          const todayContainer = document.getElementById('activityToday');
+          if (todayCheckins.length === 0 && todayCheckouts.length === 0) {
+            todayContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-check-circle"></i><br>Aucun check-in/out aujourd\'hui</div>';
+          } else {
+            let html = '';
+            
+            todayCheckins.forEach(r => {
+              const property = properties.find(p => p.id === r.propertyId);
+              html += `
+                <div class="activity-item">
+                  <div class="activity-icon checkin">
+                    <i class="fas fa-sign-in-alt"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Check-in : ${r.guestName}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+                    <div class="activity-time">Aujourd'hui</div>
+                  </div>
+                </div>
+              `;
+            });
+      
+            todayCheckouts.forEach(r => {
+              const property = properties.find(p => p.id === r.propertyId);
+              html += `
+                <div class="activity-item">
+                  <div class="activity-icon checkout">
+                    <i class="fas fa-sign-out-alt"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Check-out : ${r.guestName}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+                    <div class="activity-time">Aujourd'hui</div>
+                  </div>
+                </div>
+              `;
+            });
+      
+            todayContainer.innerHTML = html;
+          }
+      
+          // === CETTE SEMAINE : Ménages ===
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - today.getDay() + 1); // Lundi
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6); // Dimanche
+      
+          const thisWeekCheckouts = reservations.filter(r => {
+            const checkout = new Date(r.endDate);
+            return checkout >= weekStart && checkout <= weekEnd;
+          }).sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+      
+          const weekContainer = document.getElementById('activityThisWeek');
+          if (thisWeekCheckouts.length === 0) {
+            weekContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-broom"></i><br>Aucun ménage prévu cette semaine</div>';
+          } else {
+            let html = '';
+            thisWeekCheckouts.forEach(r => {
+              const property = properties.find(p => p.id === r.propertyId);
+              const checkoutDate = new Date(r.endDate);
+              const daysFromNow = Math.ceil((checkoutDate - today) / (1000 * 60 * 60 * 24));
+              
+              let timeText = '';
+              if (daysFromNow === 0) timeText = 'Aujourd\'hui';
+              else if (daysFromNow === 1) timeText = 'Demain';
+              else timeText = `Dans ${daysFromNow} jours`;
+      
+              html += `
+                <div class="activity-item">
+                  <div class="activity-icon cleaning">
+                    <i class="fas fa-broom"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Ménage après ${r.guestName}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+                    <div class="activity-time">${timeText} - ${checkoutDate.toLocaleDateString('fr-FR')}</div>
+                  </div>
+                </div>
+              `;
+            });
+            weekContainer.innerHTML = html;
+          }
+      
+          // === NOUVELLES RÉSERVATIONS (7 derniers jours) ===
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(today.getDate() - 7);
+      
+          const newReservations = reservations.filter(r => {
+            const created = r.createdAt ? new Date(r.createdAt) : null;
+            return created && created >= sevenDaysAgo;
+          }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+          const newReservationsContainer = document.getElementById('activityNewReservations');
+          if (newReservations.length === 0) {
+            newReservationsContainer.innerHTML = '<div class="activity-empty"><i class="fas fa-calendar-plus"></i><br>Aucune nouvelle réservation</div>';
+          } else {
+            let html = '';
+            newReservations.forEach(r => {
+              const property = properties.find(p => p.id === r.propertyId);
+              const created = new Date(r.createdAt);
+              const daysAgo = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+              
+              let timeText = '';
+              if (daysAgo === 0) timeText = 'Aujourd\'hui';
+              else if (daysAgo === 1) timeText = 'Hier';
+              else timeText = `Il y a ${daysAgo} jours`;
+      
+              html += `
+                <div class="activity-item">
+                  <div class="activity-icon new-booking">
+                    <i class="fas fa-calendar-plus"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">${r.guestName}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'} • ${new Date(r.startDate).toLocaleDateString('fr-FR')} - ${new Date(r.endDate).toLocaleDateString('fr-FR')}</div>
+                    <div class="activity-time">${timeText}</div>
+                  </div>
+                </div>
+              `;
+            });
+            newReservationsContainer.innerHTML = html;
+          }
+      
+        } catch (err) {
+          console.error('Erreur chargement activité:', err);
+        }
+      }
 
       /* Scroll vers calendrier depuis le menu */
       const navCalendarLink = document.getElementById('navCalendarLink');
