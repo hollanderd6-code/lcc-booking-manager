@@ -7269,60 +7269,6 @@ case 'checkout.session.completed': {
 // FIN DU SCRIPT CRON
 // ============================================
 
-// ============================================
-// DÉMARRAGE
-// ============================================
-
-app.listen(PORT, async () => {
-  console.log('');
-  console.log('╔════════════════════════════════════════════════════════╗');
-  console.log('║   🏠 LCC Booking Manager - Système de Réservations    ║');
-  console.log('╚════════════════════════════════════════════════════════╝');
-  console.log('');
-  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
-  console.log('');
-
-  await initDb();
-
-  await loadProperties();
-  await loadManualReservations();
-  await loadDeposits();
-
-  console.log('Logements configurés:');
-  PROPERTIES.forEach(p => {
-    const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
-    console.log(`  ${status} ${p.name} (${p.icalUrls.length} source${p.icalUrls.length > 1 ? 's' : ''})`);
-  });
-  console.log('');
-
-  console.log('🔄 Synchronisation initiale...');
-  await syncAllCalendars();
-
-  const syncInterval = parseInt(process.env.SYNC_INTERVAL) || 15;
-  cron.schedule(`*/${syncInterval} * * * *`, async () => {
-    console.log('');
-    console.log('⏰ Synchronisation automatique programmée');
-    await syncAllCalendars();
-  });
-  const cleaningPlanHour = parseInt(process.env.CLEANING_PLAN_HOUR || '18', 10); // heure FR (18h par défaut)
-
-  cron.schedule(`0 ${cleaningPlanHour} * * *`, async () => {
-    console.log('');
-    console.log(`⏰ Envoi du planning ménage quotidien (pour demain) à ${cleaningPlanHour}h`);
-    try {
-      await sendDailyCleaningPlan();
-    } catch (err) {
-      console.error('❌ Erreur lors de l’envoi du planning ménage quotidien :', err);
-    }
-  });
-
-  console.log('');
-  console.log(`⏰ Synchronisation automatique: toutes les ${syncInterval} minutes`);
-  console.log('');
-  console.log('📧 Notifications configurées:', process.env.EMAIL_USER ? '✅ OUI' : '⚠️  NON');
-  console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
-  console.log('');
-});
 // Route pour supprimer une réservation manuelle ou un blocage
 app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
@@ -7417,3 +7363,59 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+// ============================================
+// DÉMARRAGE (TOUJOURS EN DERNIER)
+// ============================================
+
+app.listen(PORT, async () => {
+  console.log('');
+  console.log('╔════════════════════════════════════════════════════════╗');
+  console.log('║   🏠 LCC Booking Manager - Système de Réservations    ║');
+  console.log('╚════════════════════════════════════════════════════════╝');
+  console.log('');
+  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+  console.log('');
+
+  await initDb();
+
+  await loadProperties();
+  await loadManualReservations();
+  await loadDeposits();
+
+  console.log('Logements configurés:');
+  PROPERTIES.forEach(p => {
+    const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
+    console.log(`  ${status} ${p.name} (${p.icalUrls.length} source${p.icalUrls.length > 1 ? 's' : ''})`);
+  });
+  console.log('');
+
+  console.log('🔄 Synchronisation initiale...');
+  await syncAllCalendars();
+
+  const syncInterval = parseInt(process.env.SYNC_INTERVAL) || 15;
+  cron.schedule(`*/${syncInterval} * * * *`, async () => {
+    console.log('');
+    console.log('⏰ Synchronisation automatique programmée');
+    await syncAllCalendars();
+  });
+
+  const cleaningPlanHour = parseInt(process.env.CLEANING_PLAN_HOUR || '18', 10); // heure FR (18h par défaut)
+  cron.schedule(`0 ${cleaningPlanHour} * * *`, async () => {
+    console.log('');
+    console.log(`⏰ Envoi du planning ménage quotidien (pour demain) à ${cleaningPlanHour}h`);
+    try {
+      await sendDailyCleaningPlan();
+    } catch (err) {
+      console.error('❌ Erreur lors de l’envoi du planning ménage quotidien :', err);
+    }
+  });
+
+  console.log('');
+  console.log(`⏰ Synchronisation automatique: toutes les ${syncInterval} minutes`);
+  console.log('');
+  console.log('📧 Notifications configurées:', process.env.EMAIL_USER ? '✅ OUI' : '⚠️  NON');
+  console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
+  console.log('');
+});
+
