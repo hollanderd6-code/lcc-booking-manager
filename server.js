@@ -6161,6 +6161,42 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
         const addLine = (label, value) => {
           doc.fontSize(12).text(`${label} : ${Number(value).toFixed(2)} €`);
         };
+// ✅ Download facture PDF via token expirant
+app.get('/api/invoice/download/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const r = await pool.query(
+      `SELECT file_path, invoice_number, expires_at
+       FROM invoice_download_tokens
+       WHERE token = $1`,
+      [token]
+    );
+
+    if (!r.rowCount) return res.status(404).send('Lien invalide.');
+
+    const row = r.rows[0];
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      return res.status(410).send('Lien expiré.');
+    }
+
+    const absolutePath = path.resolve(row.file_path);
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).send('Fichier introuvable.');
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${row.invoice_number}.pdf"`
+    );
+
+    fs.createReadStream(absolutePath).pipe(res);
+  } catch (err) {
+    console.error('❌ Erreur download invoice:', err);
+    res.status(500).send('Erreur serveur.');
+  }
+});
 
         if (parseFloat(rentAmount || 0) > 0) addLine('Loyer', rentAmount);
         if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de séjour', touristTaxAmount);
