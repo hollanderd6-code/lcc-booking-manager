@@ -337,62 +337,72 @@
 
   <div class="app-container">
     
-    <!-- Sidebar -->
+   <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <a href="/" class="sidebar-logo">
-          <i class="fas fa-calendar-check"></i>
-          <div class="sidebar-logo-text">
-            <span class="sidebar-logo-title">Bookingmanage</span>
-            <span class="sidebar-logo-subtitle">Property Manager</span>
-          </div>
-        </a>
-      </div>
+  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+    <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" 
+          stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M16 36V26H24V36" 
+          stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20 4L4 18H10V22H30V18H36L20 4Z" 
+          fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20 9L24 14H16L20 9Z" fill="white"/>
+  </svg>
+  <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
+    <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
+      <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
+    </span>
+    <span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
+      Smart Property Manager
+    </span>
+  </div>
+</a>
       
       <nav class="sidebar-nav">
-  <!-- PRINCIPAL -->
-  <div class="nav-section">
-    <div class="nav-section-title">Principal</div>
+        <!-- PRINCIPAL -->
+        <div class="nav-section">
+          <div class="nav-section-title">Principal</div>
 
-    <a href="/app.html" class="nav-item" data-page="app">
-      <i class="fas fa-th-large"></i>
-      <span>Dashboard</span>
-    </a>
+          <a href="/app.html" class="nav-item" data-page="app">
+            <i class="fas fa-th-large"></i>
+            <span>Dashboard</span>
+          </a>
 
-    <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-      <i class="fas fa-calendar"></i>
-      <span>Calendrier</span>
-      <span class="nav-badge" id="navTotalReservations">0</span>
-    </a>
+          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+            <i class="fas fa-calendar"></i>
+            <span>Calendrier</span>
+            <span class="nav-badge" id="navTotalReservations">0</span>
+          </a>
 
-    <a href="/messages.html" class="nav-item" data-page="messages">
-      <i class="fas fa-comment-dots"></i>
-      <span>Messages</span>
-    </a>
-  </div>
+          <a href="/messages.html" class="nav-item" data-page="messages">
+            <i class="fas fa-comment-dots"></i>
+            <span>Messages</span>
+          </a>
+        </div>
 
-  <!-- GESTION -->
-  <div class="nav-section">
-    <div class="nav-section-title">Gestion</div>
+        <!-- GESTION -->
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
 
-    <a href="/settings.html" class="nav-item" data-page="settings">
-      <i class="fas fa-home"></i>
-      <span>Mes logements</span>
-    </a>
+          <a href="/settings.html" class="nav-item" data-page="settings">
+            <i class="fas fa-home"></i>
+            <span>Mes logements</span>
+          </a>
 
-    <a href="/welcome.html" class="nav-item" data-page="welcome">
-      <i class="fas fa-book-open"></i>
-      <span>Livret d'accueil</span>
-    </a>
+          <a href="/welcome.html" class="nav-item" data-page="welcome">
+            <i class="fas fa-book-open"></i>
+            <span>Livret d'accueil</span>
+          </a>
 
-    <a href="/cleaning.html" class="nav-item active" data-page="cleaning">
-      <i class="fas fa-broom"></i>
-      <span>Gestion du ménage</span>
-      <span class="nav-badge">Nouveau</span>
-    </a>
+          <a href="/cleaning.html" class="nav-item active" data-page="cleaning">
+            <i class="fas fa-broom"></i>
+            <span>Gestion du ménage</span>
+             </a>
 
-    <div class="nav-section">
-  <div class="nav-section-title">Facturation</div>
+          <div class="nav-section">
+  <div class="nav-section-title"><Facturation></Facturation></div>
   <a href="/factures.html" class="nav-item">
     <i class="fas fa-file-invoice"></i>
     <span>Factures clients</span>
@@ -404,32 +414,32 @@
 </div>
 
 
-    <a href="/deposits.html" class="nav-item" data-page="deposits">
-      <i class="fas fa-shield-alt"></i>
-      <span>Cautions</span>
-    </a>
+          <a href="/deposits.html" class="nav-item" data-page="deposits">
+            <i class="fas fa-shield-alt"></i>
+            <span>Cautions</span>
+          </a>
 
-    <a href="/notifications.html" class="nav-item" data-page="notifications">
-      <i class="fas fa-bell"></i>
-      <span>Notifications</span>
-    </a>
-  </div>
+          <a href="/notifications.html" class="nav-item" data-page="notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+        </div>
 
-  <!-- PARAMÈTRES -->
-  <div class="nav-section">
-    <div class="nav-section-title">Paramètres</div>
+        <!-- PARAMÈTRES -->
+        <div class="nav-section">
+          <div class="nav-section-title">Paramètres</div>
 
-    <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-      <i class="fas fa-cog"></i>
-      <span>Paramètres</span>
-    </a>
+          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </a>
 
-    <a href="/help.html" class="nav-item" data-page="help">
-      <i class="fas fa-question-circle"></i>
-      <span>Aide</span>
-    </a>
-  </div>
-</nav>
+          <a href="/help.html" class="nav-item" data-page="help">
+            <i class="fas fa-question-circle"></i>
+            <span>Aide</span>
+          </a>
+        </div>
+      </nav>
       
       <div class="sidebar-footer">
         <div class="user-profile">
