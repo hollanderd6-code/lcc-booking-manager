@@ -1116,9 +1116,13 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // ============================================
 
 const app = express();
-app.get('/api/invoice/download/:token', async (req, res) => {
+
+// ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
+app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
+
 app.use('/uploads', express.static(UPLOAD_ROOT));
 const PORT = process.env.PORT || 3000;
+
 
 // Stripe
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
