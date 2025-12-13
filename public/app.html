@@ -312,6 +312,27 @@
   border-top: 1px solid #e5e7eb;
   padding: 14px 16px;
 }
+/* Sidebar en colonne pleine hauteur */
+.sidebar{
+  display: flex;
+  flex-direction: column;
+  height: 100vh;          /* hauteur écran */
+  overflow: hidden;       /* le scroll doit être dans le nav, pas sur tout le sidebar */
+}
+
+/* Le menu prend l'espace et scrolle */
+.sidebar-nav{
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;          /* IMPORTANT pour que le scroll marche en flex */
+}
+
+/* Footer toujours visible en bas */
+.sidebar-footer{
+  flex-shrink: 0;
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 16px;
+}
 
   </style>
 
