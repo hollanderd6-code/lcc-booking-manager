@@ -3280,7 +3280,7 @@ function populateEditBookingProperties(selectedPropertyId) {
       
           const data = await response.json();
           const reservations = data.reservations || [];
-          const properties = PROPERTIES || [];
+          const properties = window.LCC_PROPERTIES || allProperties || [];
       
           // === AUJOURD'HUI : Check-in/Check-out ===
           const today = new Date();
