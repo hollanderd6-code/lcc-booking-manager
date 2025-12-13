@@ -7363,6 +7363,23 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// DEBUG: vérifier que les GET fonctionnent et lister les routes chargées
+app.get('/api/health', (req, res) => res.status(200).send('ok'));
+
+app.get('/api/_routes', (req, res) => {
+  try {
+    const routes = [];
+    app._router.stack.forEach((layer) => {
+      if (layer.route && layer.route.path) {
+        const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+        routes.push(`${methods} ${layer.route.path}`);
+      }
+    });
+    res.json({ count: routes.length, routes });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
 
 // ============================================
 // DÉMARRAGE (TOUJOURS EN DERNIER)
