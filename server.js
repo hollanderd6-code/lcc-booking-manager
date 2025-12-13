@@ -1116,6 +1116,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // ============================================
 
 const app = express();
+app.get('/api/invoice/download/:token', async (req, res) => {
 app.use('/uploads', express.static(UPLOAD_ROOT));
 const PORT = process.env.PORT || 3000;
 
