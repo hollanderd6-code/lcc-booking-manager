@@ -490,6 +490,19 @@
       min-height: 0;
     }
   }
+    /* Style pour le lien actif dans le sidebar */
+.nav-item.active {
+  background-color: #10B981;  /* couleur verte, comme pour 'Gestion du ménage' */
+  color: white;
+  border-radius: 20px;  /* bord arrondi comme sur l'image */
+  padding: 6px 12px;  /* espacement interne pour plus de confort visuel */
+}
+
+/* Survol de l'élément actif */
+.nav-item.active:hover {
+  background-color: #34d399;  /* une teinte plus claire en survol */
+  transition: background-color 0.3s ease;
+}
   </style>
 
 </head>
