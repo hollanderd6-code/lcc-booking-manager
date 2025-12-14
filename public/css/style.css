@@ -1477,3 +1477,70 @@ html, body {
   padding:6px 12px;
   border-radius:999px;
 }
+/* ====== TITRES DE SECTIONS (comme Factures clients) ====== */
+.nav-section-title{
+  margin: 22px 16px 10px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: .14em !important;
+  text-transform: uppercase !important;
+  color: #9CA3AF !important;
+}
+
+/* ====== LIENS (inactifs = simples, pas de pill gris) ====== */
+.nav-item{
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+
+  padding: 14px 18px !important;
+  margin: 6px 12px !important;
+
+  border-radius: 999px !important;
+
+  background: transparent !important;     /* <-- clé : enlève le gris */
+  box-shadow: none !important;            /* <-- enlève les ombres résiduelles */
+  color: #6B7280 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.nav-item i{
+  width: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  color: inherit !important;
+}
+
+/* Hover discret (tu peux retirer si tu veux 0 fond) */
+.nav-item:hover{
+  background: rgba(16,185,129,.08) !important;
+  color: #111827 !important;
+}
+
+/* ====== ACTIVE (le seul en pill vert + ombre, comme Factures clients) ====== */
+.nav-item.active{
+  background: #10B981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 18px 30px rgba(16,185,129,.25) !important;
+}
+
+.nav-item.active i{
+  color: #ffffff !important;
+}
+
+/* Badge calendrier : reste lisible en actif */
+.nav-item.active .nav-badge{
+  background: rgba(255,255,255,.25) !important;
+  color: #ffffff !important;
+}
+
+/* Badge normal */
+.nav-badge{
+  margin-left: auto !important;
+  padding: 6px 12px !important;
+  border-radius: 999px !important;
+  font-weight: 800 !important;
+}
