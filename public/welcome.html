@@ -1075,11 +1075,20 @@
   <script>
 
 // Vérifier si l'utilisateur est connecté
-async function checkAuth() {
-  try {
-    const response = await fetch('/api/user/profile', {
-      credentials: 'include'
-    });
+const token = localStorage.getItem('lcc_token');
+if (!token) {
+  alert('Vous devez être connecté');
+  window.location.href = '/login.html';
+  return;
+}
+
+const response = await fetch('/api/welcome-books/create', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  },
+  body: formData
+});
     
     if (!response.ok) {
       // Pas connecté, rediriger vers la page de connexion
