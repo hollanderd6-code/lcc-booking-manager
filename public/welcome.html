@@ -1601,22 +1601,7 @@ let currentSection = 1;
     });
 
     // Soumission du formulaire
-    document.getElementById('welcomeForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      // Ici vous pouvez ajouter la logique pour envoyer les données au backend
-      console.log('Formulaire soumis');
-      
-      // Masquer le formulaire
-      document.getElementById('welcomeForm').style.display = 'none';
-      document.querySelector('.progress-steps').style.display = 'none';
-      
-      // Afficher le message de succès
-      document.getElementById('successMessage').classList.add('show');
-      
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    
 
     // Actions après création
     function viewWelcomeBook() {
@@ -1742,15 +1727,24 @@ document.getElementById('welcomeForm').addEventListener('submit', async function
   submitButton.innerHTML = '<div class="spinner"></div> Création en cours...';
   
   try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) {
+      throw new Error('Non authentifié');
+    }
+
     const formData = collectFormData();
     
     // Envoyer au backend
     const response = await fetch('/api/welcome-books/create', {
       method: 'POST',
-      body: formData,
-      credentials: 'include' // Important pour envoyer les cookies d'authentification
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData
     });
     
+    if (response.status === 401) {
+      throw new Error('Non authentifié');
+    }
+
     const result = await response.json();
     
     if (result.success) {
