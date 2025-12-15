@@ -1512,6 +1512,27 @@ function copyWelcomeBookLink() {
     });
   }
 }
+    function viewWelcomeBook() {
+  if (window.welcomeBookUrl) {
+    window.open(window.welcomeBookUrl, '_blank');
+  } else {
+    alert('URL du livret non disponible');
+  }
+}
+
+function copyWelcomeBookLink() {
+  if (window.welcomeBookUrl) {
+    navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
+      alert('✅ Lien copié dans le presse-papiers !');
+    }).catch(err => {
+      prompt('Copiez ce lien:', window.welcomeBookUrl);
+    });
+  }
+}
+
+function createAnother() {
+  location.reload();
+}
    </script>
 
 </body>
