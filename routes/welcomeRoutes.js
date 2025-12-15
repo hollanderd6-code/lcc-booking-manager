@@ -46,13 +46,28 @@ const upload = multer({
   },
   fileFilter: fileFilter
 });
-
 // Middleware d'authentification
-// Utiliser le middleware d'authentification existant du server
-const authenticateUser = require('../middleware/auth'); // Si vous avez un fichier auth.js
-
-// OU si l'authentification est dans server.js, importez-le autrement
-// OU dupliquez votre fonction authenticateToken ici
+function authenticateUser(req, res, next) {
+  console.log('🔍 Cookies reçus:', req.cookies);  // DEBUG
+  console.log('🔍 Headers:', req.headers.cookie);  // DEBUG
+  
+  const token = req.cookies.token;
+  if (!token) {
+    console.log('❌ Pas de token trouvé dans les cookies');
+    return res.status(401).json({ error: 'Non authentifié' });
+  }
+  
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    console.log('✅ Utilisateur authentifié:', req.userId);
+    next();
+  } catch (error) {
+    console.log('❌ Erreur validation token:', error.message);
+    return res.status(401).json({ error: 'Token invalide' });
+  }
+}
 
 // Créer les tables si elles n'existent pas (VERSION SIMPLIFIÉE SANS CONTRAINTES)
 const initWelcomeBookTables = async (pool) => {
