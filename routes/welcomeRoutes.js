@@ -8,7 +8,7 @@ const crypto = require('crypto');
 // Configuration Multer pour l'upload d'images
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const uploadDir = path.join(__dirname, 'public', 'uploads', 'welcome-books');
+    const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'welcome-books');
     
     // Créer le dossier s'il n'existe pas
     try {
@@ -64,12 +64,12 @@ function authenticateUser(req, res, next) {
   }
 }
 
-// Créer les tables si elles n'existent pas
+// Créer les tables si elles n'existent pas (VERSION SIMPLIFIÉE SANS CONTRAINTES)
 const initWelcomeBookTables = async (pool) => {
   const createWelcomeBooksTable = `
     CREATE TABLE IF NOT EXISTS welcome_books (
       id SERIAL PRIMARY KEY,
-     user_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
       unique_id VARCHAR(50) UNIQUE NOT NULL,
       property_name VARCHAR(255) NOT NULL,
       cover_photo VARCHAR(500),
@@ -97,7 +97,7 @@ const initWelcomeBookTables = async (pool) => {
   const createWelcomeBookRoomsTable = `
     CREATE TABLE IF NOT EXISTS welcome_book_rooms (
       id SERIAL PRIMARY KEY,
-      welcome_book_id INTEGER NOT NULL REFERENCES welcome_books(id) ON DELETE CASCADE,
+      welcome_book_id INTEGER NOT NULL,
       name VARCHAR(100) NOT NULL,
       description TEXT,
       display_order INTEGER DEFAULT 0,
@@ -108,9 +108,9 @@ const initWelcomeBookTables = async (pool) => {
   const createWelcomeBookPhotosTable = `
     CREATE TABLE IF NOT EXISTS welcome_book_photos (
       id SERIAL PRIMARY KEY,
-      welcome_book_id INTEGER NOT NULL REFERENCES welcome_books(id) ON DELETE CASCADE,
-      room_id INTEGER REFERENCES welcome_book_rooms(id) ON DELETE CASCADE,
-      photo_type VARCHAR(50) NOT NULL, -- 'cover', 'entrance', 'parking', 'room', 'place'
+      welcome_book_id INTEGER NOT NULL,
+      room_id INTEGER,
+      photo_type VARCHAR(50) NOT NULL,
       photo_url VARCHAR(500) NOT NULL,
       caption TEXT,
       display_order INTEGER DEFAULT 0,
@@ -121,7 +121,7 @@ const initWelcomeBookTables = async (pool) => {
   const createWelcomeBookRestaurantsTable = `
     CREATE TABLE IF NOT EXISTS welcome_book_restaurants (
       id SERIAL PRIMARY KEY,
-      welcome_book_id INTEGER NOT NULL REFERENCES welcome_books(id) ON DELETE CASCADE,
+      welcome_book_id INTEGER NOT NULL,
       name VARCHAR(200) NOT NULL,
       phone VARCHAR(50),
       address VARCHAR(300),
@@ -134,7 +134,7 @@ const initWelcomeBookTables = async (pool) => {
   const createWelcomeBookPlacesTable = `
     CREATE TABLE IF NOT EXISTS welcome_book_places (
       id SERIAL PRIMARY KEY,
-      welcome_book_id INTEGER NOT NULL REFERENCES welcome_books(id) ON DELETE CASCADE,
+      welcome_book_id INTEGER NOT NULL,
       name VARCHAR(200) NOT NULL,
       description TEXT,
       photo_url VARCHAR(500),
@@ -164,7 +164,7 @@ router.post('/create', authenticateUser, upload.fields([
   { name: 'roomPhotos', maxCount: 50 },
   { name: 'placePhotos', maxCount: 20 }
 ]), async (req, res) => {
-  const client = await req.app.locals.pool.acquire();
+  const client = await req.app.locals.pool.connect();
   
   try {
     await client.query('BEGIN');
@@ -273,7 +273,7 @@ router.post('/create', authenticateUser, upload.fields([
 
     // Traiter les pièces
     if (rooms) {
-      const roomsArray = Array.isArray(rooms) ? rooms : [rooms];
+      const roomsArray = typeof rooms === 'string' ? JSON.parse(rooms) : (Array.isArray(rooms) ? rooms : [rooms]);
       
       for (let i = 0; i < roomsArray.length; i++) {
         const room = typeof roomsArray[i] === 'string' ? JSON.parse(roomsArray[i]) : roomsArray[i];
@@ -282,29 +282,12 @@ router.post('/create', authenticateUser, upload.fields([
           'INSERT INTO welcome_book_rooms (welcome_book_id, name, description, display_order) VALUES ($1, $2, $3, $4) RETURNING id',
           [welcomeBookId, room.name, room.description, i]
         );
-        
-        const roomId = roomResult.rows[0].id;
-        
-        // Photos de la pièce
-        if (files.roomPhotos) {
-          const roomPhotosForThisRoom = files.roomPhotos.filter(file => 
-            file.fieldname.includes(`room-${i + 1}`)
-          );
-          
-          for (let j = 0; j < roomPhotosForThisRoom.length; j++) {
-            const photoUrl = `/uploads/welcome-books/${roomPhotosForThisRoom[j].filename}`;
-            await client.query(
-              'INSERT INTO welcome_book_photos (welcome_book_id, room_id, photo_type, photo_url, display_order) VALUES ($1, $2, $3, $4, $5)',
-              [welcomeBookId, roomId, 'room', photoUrl, j]
-            );
-          }
-        }
       }
     }
 
     // Traiter les restaurants
     if (restaurants) {
-      const restaurantsArray = Array.isArray(restaurants) ? restaurants : [restaurants];
+      const restaurantsArray = typeof restaurants === 'string' ? JSON.parse(restaurants) : (Array.isArray(restaurants) ? restaurants : [restaurants]);
       
       for (let i = 0; i < restaurantsArray.length; i++) {
         const restaurant = typeof restaurantsArray[i] === 'string' ? JSON.parse(restaurantsArray[i]) : restaurantsArray[i];
@@ -318,12 +301,11 @@ router.post('/create', authenticateUser, upload.fields([
 
     // Traiter les lieux à visiter
     if (places) {
-      const placesArray = Array.isArray(places) ? places : [places];
+      const placesArray = typeof places === 'string' ? JSON.parse(places) : (Array.isArray(places) ? places : [places]);
       
       for (let i = 0; i < placesArray.length; i++) {
         const place = typeof placesArray[i] === 'string' ? JSON.parse(placesArray[i]) : placesArray[i];
         
-        // Trouver la photo correspondante
         let photoUrl = null;
         if (files.placePhotos) {
           const placePhoto = files.placePhotos.find(file => 
@@ -363,77 +345,6 @@ router.post('/create', authenticateUser, upload.fields([
   }
 });
 
-// Route pour récupérer un livret d'accueil par son ID unique
-router.get('/:uniqueId', async (req, res) => {
-  try {
-    const { uniqueId } = req.params;
-    
-    // Récupérer le livret principal
-    const welcomeBookQuery = `
-      SELECT * FROM welcome_books 
-      WHERE unique_id = $1
-    `;
-    const welcomeBookResult = await req.app.locals.pool.query(welcomeBookQuery, [uniqueId]);
-    
-    if (welcomeBookResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Livret d\'accueil non trouvé' });
-    }
-    
-    const welcomeBook = welcomeBookResult.rows[0];
-    
-    // Récupérer toutes les données associées
-    const [roomsResult, photosResult, restaurantsResult, placesResult] = await Promise.all([
-      req.app.locals.pool.query(
-        'SELECT * FROM welcome_book_rooms WHERE welcome_book_id = $1 ORDER BY display_order',
-        [welcomeBook.id]
-      ),
-      req.app.locals.pool.query(
-        'SELECT * FROM welcome_book_photos WHERE welcome_book_id = $1 ORDER BY photo_type, display_order',
-        [welcomeBook.id]
-      ),
-      req.app.locals.pool.query(
-        'SELECT * FROM welcome_book_restaurants WHERE welcome_book_id = $1 ORDER BY display_order',
-        [welcomeBook.id]
-      ),
-      req.app.locals.pool.query(
-        'SELECT * FROM welcome_book_places WHERE welcome_book_id = $1 ORDER BY display_order',
-        [welcomeBook.id]
-      )
-    ]);
-    
-    // Organiser les photos par type
-    const photos = {
-      cover: photosResult.rows.filter(p => p.photo_type === 'cover'),
-      entrance: photosResult.rows.filter(p => p.photo_type === 'entrance'),
-      parking: photosResult.rows.filter(p => p.photo_type === 'parking'),
-      rooms: photosResult.rows.filter(p => p.photo_type === 'room'),
-      places: photosResult.rows.filter(p => p.photo_type === 'place')
-    };
-    
-    // Associer les photos aux pièces
-    const rooms = roomsResult.rows.map(room => ({
-      ...room,
-      photos: photos.rooms.filter(p => p.room_id === room.id)
-    }));
-    
-    res.json({
-      success: true,
-      welcomeBook,
-      rooms,
-      photos,
-      restaurants: restaurantsResult.rows,
-      places: placesResult.rows
-    });
-    
-  } catch (error) {
-    console.error('Erreur lors de la récupération du livret:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération du livret d\'accueil'
-    });
-  }
-});
-
 // Route pour récupérer tous les livrets d'un utilisateur
 router.get('/user/list', authenticateUser, async (req, res) => {
   try {
@@ -468,7 +379,7 @@ router.get('/user/list', authenticateUser, async (req, res) => {
 
 // Route pour supprimer un livret
 router.delete('/:id', authenticateUser, async (req, res) => {
-  const client = await req.app.locals.pool.acquire();
+  const client = await req.app.locals.pool.connect();
   
   try {
     const { id } = req.params;
@@ -483,23 +394,13 @@ router.delete('/:id', authenticateUser, async (req, res) => {
     
     await client.query('BEGIN');
     
-    // Récupérer toutes les photos pour les supprimer du disque
-    const photosResult = await client.query(
-      'SELECT photo_url FROM welcome_book_photos WHERE welcome_book_id = $1',
-      [id]
-    );
+    // Supprimer les données liées
+    await client.query('DELETE FROM welcome_book_photos WHERE welcome_book_id = $1', [id]);
+    await client.query('DELETE FROM welcome_book_rooms WHERE welcome_book_id = $1', [id]);
+    await client.query('DELETE FROM welcome_book_restaurants WHERE welcome_book_id = $1', [id]);
+    await client.query('DELETE FROM welcome_book_places WHERE welcome_book_id = $1', [id]);
     
-    // Supprimer les fichiers du disque
-    for (const photo of photosResult.rows) {
-      try {
-        const filePath = path.join(__dirname, 'public', photo.photo_url);
-        await fs.unlink(filePath);
-      } catch (err) {
-        console.error('Erreur lors de la suppression du fichier:', err);
-      }
-    }
-    
-    // Supprimer le livret (CASCADE supprimera automatiquement les entrées liées)
+    // Supprimer le livret
     await client.query('DELETE FROM welcome_books WHERE id = $1', [id]);
     
     await client.query('COMMIT');
@@ -515,93 +416,6 @@ router.delete('/:id', authenticateUser, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Erreur lors de la suppression du livret'
-    });
-  } finally {
-    client.release();
-  }
-});
-
-// Route pour mettre à jour un livret
-router.put('/:id', authenticateUser, upload.fields([
-  { name: 'coverPhoto', maxCount: 1 },
-  { name: 'entrancePhotos', maxCount: 10 },
-  { name: 'parkingPhotos', maxCount: 5 },
-  { name: 'roomPhotos', maxCount: 50 },
-  { name: 'placePhotos', maxCount: 20 }
-]), async (req, res) => {
-  const client = await req.app.locals.pool.acquire();
-  
-  try {
-    const { id } = req.params;
-    
-    // Vérifier que le livret appartient à l'utilisateur
-    const checkQuery = 'SELECT id FROM welcome_books WHERE id = $1 AND user_id = $2';
-    const checkResult = await client.query(checkQuery, [id, req.userId]);
-    
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Livret non trouvé ou accès non autorisé' });
-    }
-    
-    await client.query('BEGIN');
-    
-    // Mettre à jour les informations principales
-    const updateQuery = `
-      UPDATE welcome_books SET
-        property_name = $1,
-        welcome_description = $2,
-        contact_phone = $3,
-        address = $4,
-        postal_code = $5,
-        city = $6,
-        keybox_code = $7,
-        access_instructions = $8,
-        parking_info = $9,
-        wifi_ssid = $10,
-        wifi_password = $11,
-        checkout_time = $12,
-        checkout_instructions = $13,
-        equipment_list = $14,
-        important_rules = $15,
-        transport_info = $16,
-        shops_list = $17,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $18
-    `;
-    
-    await client.query(updateQuery, [
-      req.body.propertyName,
-      req.body.welcomeDescription,
-      req.body.contactPhone,
-      req.body.address,
-      req.body.postalCode,
-      req.body.city,
-      req.body.keyboxCode,
-      req.body.accessInstructions,
-      req.body.parkingInfo,
-      req.body.wifiSSID,
-      req.body.wifiPassword,
-      req.body.checkoutTime,
-      req.body.checkoutInstructions,
-      req.body.equipmentList,
-      req.body.importantRules,
-      req.body.transportInfo,
-      req.body.shopsList,
-      id
-    ]);
-    
-    await client.query('COMMIT');
-    
-    res.json({
-      success: true,
-      message: 'Livret d\'accueil mis à jour avec succès'
-    });
-    
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Erreur lors de la mise à jour du livret:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la mise à jour du livret'
     });
   } finally {
     client.release();
