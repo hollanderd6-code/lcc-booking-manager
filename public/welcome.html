@@ -1,724 +1,1324 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Livret d'accueil – Boostinghost</title>
-
+  <title>Créateur de Livret d'Accueil – LCC</title>
+  
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  <!-- Platform CSS -->
-  <link rel="stylesheet" href="/css/style.css">
+    :root {
+      --primary: #10B981;
+      --primary-dark: #059669;
+      --secondary: #3B82F6;
+      --accent: #E67E50;
+      --dark: #111827;
+      --gray-50: #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --gray-800: #1F2937;
+      --gray-900: #111827;
+      --white: #FFFFFF;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Header */
+    .header {
+      background: var(--white);
+      padding: 1.5rem 2rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    .logo-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .logo-text .green {
+      color: var(--primary);
+    }
+
+    .logo-text .dark {
+      color: var(--gray-900);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    /* Page Title */
+    .page-title {
+      margin-bottom: 2rem;
+    }
+
+    .page-title h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 0.5rem;
+    }
+
+    .page-title p {
+      font-size: 1rem;
+      color: var(--gray-500);
+    }
+
+    /* Progress Steps */
+    .progress-steps {
+      background: var(--white);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .steps-container {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .steps-container::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--gray-200);
+      z-index: 0;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--gray-200);
+      color: var(--gray-500);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .step.active .step-number {
+      background: var(--primary);
+      color: white;
+    }
+
+    .step.completed .step-number {
+      background: var(--success);
+      color: white;
+    }
+
+    .step-label {
+      font-size: 0.875rem;
+      color: var(--gray-500);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .step.active .step-label {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Form Card */
+    .form-card {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-section {
+      display: none;
+    }
+
+    .form-section.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--gray-100);
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-title i {
+      color: var(--accent);
+    }
+
+    .section-description {
+      font-size: 0.95rem;
+      color: var(--gray-500);
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group label .required {
+      color: var(--danger);
+    }
+
+    .form-group .hint {
+      font-size: 0.8rem;
+      color: var(--gray-500);
+      font-weight: 400;
+      display: block;
+      margin-top: 0.25rem;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* Grid Layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* Image Upload */
+    .image-upload-area {
+      border: 2px dashed var(--gray-300);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: var(--gray-50);
+    }
+
+    .image-upload-area:hover {
+      border-color: var(--primary);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .image-upload-area i {
+      font-size: 3rem;
+      color: var(--gray-400);
+      margin-bottom: 1rem;
+    }
+
+    .image-upload-area p {
+      color: var(--gray-600);
+      margin-bottom: 0.5rem;
+    }
+
+    .image-upload-area .supported-formats {
+      font-size: 0.8rem;
+      color: var(--gray-400);
+    }
+
+    .image-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .image-preview-item {
+      position: relative;
+      aspect-ratio: 4/3;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid var(--gray-200);
+    }
+
+    .image-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-preview-item .remove-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .image-preview-item .remove-btn:hover {
+      background: var(--danger);
+      transform: scale(1.1);
+    }
+
+    /* Repeatable Items */
+    .repeatable-section {
+      margin-bottom: 2rem;
+    }
+
+    .repeatable-item {
+      background: var(--gray-50);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      position: relative;
+      border: 1px solid var(--gray-200);
+    }
+
+    .repeatable-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .repeatable-item-title {
+      font-weight: 600;
+      color: var(--gray-700);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .remove-item-btn {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .remove-item-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .add-item-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--gray-100);
+      color: var(--gray-700);
+      border: 1px dashed var(--gray-300);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }
+
+    .add-item-btn:hover {
+      background: var(--gray-200);
+      border-color: var(--gray-400);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--gray-200);
+      color: var(--gray-700);
+    }
+
+    .btn-secondary:hover {
+      background: var(--gray-300);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background: #d46d42;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(230, 126, 80, 0.3);
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 2px solid var(--gray-100);
+    }
+
+    /* Info Box */
+    .info-box {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-box i {
+      color: var(--primary);
+      margin-right: 0.5rem;
+    }
+
+    .info-box p {
+      color: var(--gray-700);
+      font-size: 0.9rem;
+    }
+
+    /* Warning Box */
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 4px solid var(--warning);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .warning-box i {
+      color: var(--warning);
+      margin-right: 0.5rem;
+    }
+
+    /* Success Message */
+    .success-message {
+      display: none;
+      background: var(--white);
+      border-radius: 12px;
+      padding: 3rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .success-message.show {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--success);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      color: white;
+      font-size: 2.5rem;
+    }
+
+    .success-message h2 {
+      font-size: 1.75rem;
+      color: var(--gray-900);
+      margin-bottom: 0.75rem;
+    }
+
+    .success-message p {
+      color: var(--gray-600);
+      margin-bottom: 2rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .form-card {
+        padding: 1.5rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .steps-container {
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .step {
+        flex-basis: 45%;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .page-title h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      border: 3px solid var(--gray-200);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
-<body data-page="welcome">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Boostinghost</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <div class="app-container">
-   <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div> <!-- ✅ IMPORTANT -->
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item active" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- FACTURATION (propre) -->
-    <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
-
-      <a href="/factures.html" class="nav-item" data-page="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures clients</span>
-      </a>
-
-      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
-        <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
-      </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-    
-    <!-- Main Content -->
-    <main class="main-content">
+<body>
   <!-- Header -->
-  <header class="main-header">
-    <div class="header-left">
-      <div class="page-kicker">Livret d'accueil</div>
-      <h1 class="page-title">Préparez votre livret d'accueil</h1>
-      <p class="page-subtitle">
-        Renseignez toutes les informations utiles pour vos voyageurs. Une fois le formulaire enregistré,
-        Boostinghost recevra les données et se chargera de créer le livret d'accueil pour vous.
-      </p>
-    </div>
-    
-    <div class="header-actions">
-      <button class="btn btn-ghost" id="saveBtn">
-        <i class="fas fa-save"></i>
-        Enregistrer le formulaire
-      </button>
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="fas fa-book-open"></i>
+        </div>
+        <div class="logo-text">
+          <span class="green">Boosting</span>
+          <span class="dark">Host</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="window.location.href='/app.html'">
+          <i class="fas fa-arrow-left"></i>
+          Retour au dashboard
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Page Content -->
-  <div class="page-content">
-        
-        <!-- Infos logement -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-house-user"></i>
-              Informations du logement
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="propertyName">Nom du logement</label>
-                <input type="text" id="propertyName" class="input" placeholder="Ex : Villa Deuil, Studio Montmorency">
-              </div>
-              <div class="form-group">
-                <label for="address">Adresse complète</label>
-                <textarea id="address" class="textarea" rows="2" placeholder="Adresse, code postal, ville"></textarea>
-              </div>
-            </div>
+  <div class="container">
+    <!-- Page Title -->
+    <div class="page-title">
+      <h1>Créer un Livret d'Accueil</h1>
+      <p>Créez un livret d'accueil personnalisé et professionnel pour vos voyageurs</p>
+    </div>
 
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="accessCode">Code boîte à clés / digicode</label>
-                <input type="text" id="accessCode" class="input" placeholder="Ex : 2580A">
-              </div>
-              <div class="form-group">
-                <label for="accessInstructions">Instructions d'accès</label>
-                <textarea id="accessInstructions" class="textarea" rows="3" placeholder="Étapes pour trouver la boîte à clés, étage, porte, etc."></textarea>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="emergencyPhone">Téléphone d'urgence (conciergerie)</label>
-                <input type="text" id="emergencyPhone" class="input" placeholder="Ex : +33 6 12 34 56 78">
-              </div>
-              <div class="form-group">
-                <label for="generalNotes">Infos importantes / rappel règlement intérieur</label>
-                <textarea id="generalNotes" class="textarea" rows="3" placeholder="Ex : Non-fumeur, pas de soirées, tri des poubelles, etc."></textarea>
-              </div>
-            </div>
-          </div>
+    <!-- Progress Steps -->
+    <div class="progress-steps">
+      <div class="steps-container">
+        <div class="step active" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-label">Informations<br>générales</div>
         </div>
-
-        <!-- Wi-Fi -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-wifi"></i>
-              Wi-Fi
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="wifiName">Nom du réseau (SSID)</label>
-                <input type="text" id="wifiName" class="input" placeholder="Ex : Livebox-1234">
-              </div>
-              <div class="form-group">
-                <label for="wifiPassword">Mot de passe Wi-Fi</label>
-                <input type="text" id="wifiPassword" class="input" placeholder="Ex : 4FQ9-ABCD-2025">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="wifiNote">Infos complémentaires</label>
-              <textarea id="wifiNote" class="textarea" rows="2" placeholder="Ex : Merci de ne pas modifier le mot de passe, redémarrer la box en cas de souci, etc."></textarea>
-            </div>
-          </div>
+        <div class="step" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-label">Accès &<br>Arrivée</div>
         </div>
-
-        <!-- Restaurants -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-utensils"></i>
-              Restaurants à proximité
-            </div>
-            <button class="btn btn-ghost" id="addRestaurantBtn">
-              <i class="fas fa-plus"></i>
-              Ajouter un restaurant
-            </button>
-          </div>
-          <div class="card-body" id="restaurantsContainer">
-            <!-- Lignes restaurants générées en JS -->
-          </div>
+        <div class="step" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-label">Le<br>Logement</div>
         </div>
-
-        <!-- Commerces -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-store"></i>
-              Commerces utiles (boulangerie, supermarché, pharmacie...)
-            </div>
-            <button class="btn btn-ghost" id="addShopBtn">
-              <i class="fas fa-plus"></i>
-              Ajouter un commerce
-            </button>
-          </div>
-          <div class="card-body" id="shopsContainer">
-            <!-- Lignes commerces générées en JS -->
-          </div>
+        <div class="step" data-step="4">
+          <div class="step-number">4</div>
+          <div class="step-label">Informations<br>pratiques</div>
         </div>
+        <div class="step" data-step="5">
+          <div class="step-number">5</div>
+          <div class="step-label">Aux<br>Alentours</div>
+        </div>
+      </div>
+    </div>
 
-               <!-- Photos -->
-        <div class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-image"></i>
-              Photos pour le livret
-            </div>
-          </div>
-          <div class="card-body">
-            <p class="text-muted" style="margin-bottom: 12px;">
-              Ajoutez quelques photos clés (façade, entrée, boîte à clés, salon, plan d'accès…).
-              Elles seront envoyées à votre conciergerie et intégrées au livret d'accueil.
+    <!-- Form -->
+    <form id="welcomeForm">
+      <!-- Section 1: Informations Générales -->
+      <div class="form-section active" data-section="1">
+        <div class="form-card">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i class="fas fa-home"></i>
+              Informations Générales
+            </h2>
+            <p class="section-description">
+              Commencez par les informations de base de votre logement
             </p>
-            <div id="photosContainer"></div>
-            <button class="btn btn-ghost" id="addPhotoBtn" style="margin-top: 8px;">
-              <i class="fas fa-plus"></i>
-              Ajouter une photo
-            </button>
+          </div>
+
+          <div class="info-box">
+            <p><i class="fas fa-info-circle"></i> Ces informations apparaîtront sur la page d'accueil de votre livret</p>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Nom du logement <span class="required">*</span>
+              <span class="hint">Ex: "Votre Pied-à-Terre ", "Appartement Cosy Centre-Ville"</span>
+            </label>
+            <input type="text" class="form-control" name="propertyName" required placeholder="Nom de votre logement">
+          </div>
+
+          <div class="form-group">
+            <label>
+              Photo de couverture <span class="required">*</span>
+              <span class="hint">Image principale qui apparaîtra en haut du livret (format recommandé: 1920x1080px)</span>
+            </label>
+            <div class="image-upload-area" onclick="document.getElementById('coverPhoto').click()">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <p>Cliquez pour télécharger votre photo de couverture</p>
+              <p class="supported-formats">JPG, PNG ou WebP (max 5MB)</p>
+            </div>
+            <input type="file" id="coverPhoto" accept="image/*" style="display: none;">
+            <div class="image-preview" id="coverPhotoPreview"></div>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Description d'accueil
+              <span class="hint">Message de bienvenue pour vos voyageurs</span>
+            </label>
+            <textarea class="form-control" name="welcomeDescription" rows="3" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement. Ce livret contient toutes les informations pour profiter pleinement de votre séjour."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Votre numéro de téléphone <span class="required">*</span>
+              <span class="hint">Pour que vos voyageurs puissent vous contacter</span>
+            </label>
+            <input type="tel" class="form-control" name="contactPhone" required placeholder="06 XX XX XX XX">
           </div>
         </div>
-      </div> <!-- fin .page-content -->
-    </main> <!-- fin .main-content -->
-  </div> <!-- fin .app-container -->
 
-       <!-- Script logique livret -->
+        <div class="form-actions">
+          <div></div>
+          <button type="button" class="btn btn-primary" onclick="nextSection()">
+            Suivant
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 2: Accès & Arrivée -->
+      <div class="form-section" data-section="2">
+        <div class="form-card">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i class="fas fa-map-marker-alt"></i>
+              Accès & Arrivée
+            </h2>
+            <p class="section-description">
+              Comment vos voyageurs accèdent-ils à votre logement ?
+            </p>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>
+                Adresse complète <span class="required">*</span>
+              </label>
+              <input type="text" class="form-control" name="address" required placeholder="Numéro et rue">
+            </div>
+
+            <div class="form-group">
+              <label>
+                Code postal <span class="required">*</span>
+              </label>
+              <input type="text" class="form-control" name="postalCode" required placeholder="75001">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>
+                Ville <span class="required">*</span>
+              </label>
+              <input type="text" class="form-control" name="city" required placeholder="Paris">
+            </div>
+
+            <div class="form-group">
+              <label>
+                Code de la boîte à clés
+                <span class="hint">Si applicable</span>
+              </label>
+              <input type="text" class="form-control" name="keyboxCode" placeholder="Ex: 8670">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Instructions d'accès
+              <span class="hint">Expliquez comment accéder au logement (portail, étage, etc.)</span>
+            </label>
+            <textarea class="form-control" name="accessInstructions" rows="4" placeholder="Ex: Poussez le portail, la boîte à clés est à gauche au niveau de la flèche rouge..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Photos de l'entrée
+              <span class="hint">Photos du portail, de l'entrée, de la boîte à clés, etc.</span>
+            </label>
+            <div class="image-upload-area" onclick="document.getElementById('entrancePhotos').click()">
+              <i class="fas fa-images"></i>
+              <p>Cliquez pour télécharger les photos de l'entrée</p>
+              <p class="supported-formats">Vous pouvez sélectionner plusieurs images</p>
+            </div>
+            <input type="file" id="entrancePhotos" accept="image/*" multiple style="display: none;">
+            <div class="image-preview" id="entrancePhotosPreview"></div>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Parking
+              <span class="hint">Informations sur le stationnement</span>
+            </label>
+            <textarea class="form-control" name="parkingInfo" rows="3" placeholder="Ex: Parking gratuit au 43-51 rue du Marché, 230 places sur 3 niveaux"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>
+              Photos du parking
+              <span class="hint">Si applicable</span>
+            </label>
+            <div class="image-upload-area" onclick="document.getElementById('parkingPhotos').click()">
+              <i class="fas fa-parking"></i>
+              <p>Cliquez pour télécharger les photos du parking</p>
+            </div>
+            <input type="file" id="parkingPhotos" accept="image/*" multiple style="display: none;">
+            <div class="image-preview" id="parkingPhotosPreview"></div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevSection()">
+            <i class="fas fa-arrow-left"></i>
+            Précédent
+          </button>
+          <button type="button" class="btn btn-primary" onclick="nextSection()">
+            Suivant
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 3: Le Logement -->
+      <div class="form-section" data-section="3">
+        <div class="form-card">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i class="fas fa-door-open"></i>
+              Le Logement
+            </h2>
+            <p class="section-description">
+              Présentez les différentes pièces et espaces de votre logement
+            </p>
+          </div>
+
+          <div class="warning-box">
+            <p><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire pour présenter votre logement</p>
+          </div>
+
+          <div id="roomsContainer" class="repeatable-section">
+            <!-- Les pièces seront ajoutées ici dynamiquement -->
+          </div>
+
+          <button type="button" class="add-item-btn" onclick="addRoom()">
+            <i class="fas fa-plus-circle"></i>
+            Ajouter une pièce / un espace
+          </button>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevSection()">
+            <i class="fas fa-arrow-left"></i>
+            Précédent
+          </button>
+          <button type="button" class="btn btn-primary" onclick="nextSection()">
+            Suivant
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 4: Informations Pratiques -->
+      <div class="form-section" data-section="4">
+        <div class="form-card">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i class="fas fa-info-circle"></i>
+              Informations Pratiques
+            </h2>
+            <p class="section-description">
+              WiFi, équipements, consignes et tout ce qui est utile au quotidien
+            </p>
+          </div>
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-wifi" style="color: var(--accent);"></i> WiFi
+          </h3>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom du réseau WiFi (SSID)</label>
+              <input type="text" class="form-control" name="wifiSSID" placeholder="Nom du réseau">
+            </div>
+
+            <div class="form-group">
+              <label>Mot de passe WiFi</label>
+              <input type="text" class="form-control" name="wifiPassword" placeholder="Mot de passe">
+            </div>
+          </div>
+
+          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-clipboard-list" style="color: var(--accent);"></i> Consignes de départ
+          </h3>
+
+          <div class="form-group">
+            <label>
+              Heure de départ
+              <span class="hint">Ex: 11h, 10h30</span>
+            </label>
+            <input type="text" class="form-control" name="checkoutTime" placeholder="11h">
+          </div>
+
+          <div class="form-group">
+            <label>
+              Instructions de départ
+              <span class="hint">Ce que les voyageurs doivent faire avant de partir</span>
+            </label>
+            <textarea class="form-control" name="checkoutInstructions" rows="5" placeholder="Ex:&#10;- Éteindre toutes les lumières&#10;- Laver la vaisselle&#10;- Poser les serviettes au sol..."></textarea>
+          </div>
+
+          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-toolbox" style="color: var(--accent);"></i> Équipements disponibles
+          </h3>
+
+          <div class="form-group">
+            <label>
+              Liste des équipements
+              <span class="hint">Un équipement par ligne</span>
+            </label>
+            <textarea class="form-control" name="equipmentList" rows="8" placeholder="Ex:&#10;Machine à café Nespresso&#10;Micro-ondes&#10;Machine à laver&#10;Fer et planche à repasser..."></textarea>
+          </div>
+
+          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Règles importantes
+          </h3>
+
+          <div class="form-group">
+            <label>
+              Règles et avertissements
+              <span class="hint">Ex: Poutre basse, logement non-fumeur, attention aux marches...</span>
+            </label>
+            <textarea class="form-control" name="importantRules" rows="4" placeholder="Entrez les règles importantes..."></textarea>
+          </div>
+
+          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-train" style="color: var(--accent);"></i> Transports
+          </h3>
+
+          <div class="form-group">
+            <label>
+              Informations sur les transports
+              <span class="hint">Comment accéder aux transports en commun, gares, etc.</span>
+            </label>
+            <textarea class="form-control" name="transportInfo" rows="6" placeholder="Ex: Bus ligne 15 à 1 minute à pied..."></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevSection()">
+            <i class="fas fa-arrow-left"></i>
+            Précédent
+          </button>
+          <button type="button" class="btn btn-primary" onclick="nextSection()">
+            Suivant
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 5: Aux Alentours -->
+      <div class="form-section" data-section="5">
+        <div class="form-card">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i class="fas fa-map-marked-alt"></i>
+              Aux Alentours
+            </h2>
+            <p class="section-description">
+              Recommandations de restaurants, commerces et lieux à visiter
+            </p>
+          </div>
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-utensils" style="color: var(--accent);"></i> Restaurants & Bars
+          </h3>
+
+          <div id="restaurantsContainer" class="repeatable-section">
+            <!-- Les restaurants seront ajoutés ici dynamiquement -->
+          </div>
+
+          <button type="button" class="add-item-btn" onclick="addRestaurant()">
+            <i class="fas fa-plus-circle"></i>
+            Ajouter un restaurant / bar
+          </button>
+
+          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-shopping-bag" style="color: var(--accent);"></i> Commerces
+          </h3>
+
+          <div class="form-group">
+            <label>
+              Liste des commerces
+              <span class="hint">Supermarchés, boulangeries, pharmacies, etc. (un par ligne)</span>
+            </label>
+            <textarea class="form-control" name="shopsList" rows="6" placeholder="Ex:&#10;FRANPRIX - 6 rue de Pontoise&#10;Boulangerie LA POTERNE - Place du marché..."></textarea>
+          </div>
+
+          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
+
+          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+            <i class="fas fa-map-signs" style="color: var(--accent);"></i> Lieux à Visiter
+          </h3>
+
+          <div id="placesContainer" class="repeatable-section">
+            <!-- Les lieux seront ajoutés ici dynamiquement -->
+          </div>
+
+          <button type="button" class="add-item-btn" onclick="addPlace()">
+            <i class="fas fa-plus-circle"></i>
+            Ajouter un lieu à visiter
+          </button>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevSection()">
+            <i class="fas fa-arrow-left"></i>
+            Précédent
+          </button>
+          <button type="submit" class="btn btn-accent">
+            <i class="fas fa-check-circle"></i>
+            Créer le livret d'accueil
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Success Message -->
+    <div class="success-message" id="successMessage">
+      <div class="success-icon">
+        <i class="fas fa-check"></i>
+      </div>
+      <h2>Livret d'accueil créé avec succès !</h2>
+      <p>Votre livret d'accueil personnalisé a été généré.</p>
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <button class="btn btn-primary" onclick="viewWelcomeBook()">
+          <i class="fas fa-eye"></i>
+          Voir le livret
+        </button>
+        <button class="btn btn-secondary" onclick="createAnother()">
+          <i class="fas fa-plus"></i>
+          Créer un autre livret
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    (async function checkSubscriptionAccess() {
-    const token = localStorage.getItem('lcc_token');
-    
-    if (!token) {
-      window.location.href = '/login.html';
-      return;
+    let currentSection = 1;
+    const totalSections = 5;
+    let roomCounter = 0;
+    let restaurantCounter = 0;
+    let placeCounter = 0;
+
+    // Navigation entre sections
+    function nextSection() {
+      if (currentSection < totalSections) {
+        // Masquer la section actuelle
+        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
+        
+        // Marquer l'étape comme complétée
+        document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('completed');
+        document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
+        
+        currentSection++;
+        
+        // Afficher la nouvelle section
+        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
+        document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
 
-    try {
-      const res = await fetch('/api/subscription/status', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        }
-        return;
+    function prevSection() {
+      if (currentSection > 1) {
+        // Masquer la section actuelle
+        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
+        document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
+        
+        currentSection--;
+        
+        // Afficher la section précédente
+        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
+        document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
+        
+        // Retirer le statut completed de la section actuelle
+        document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('completed');
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-
-      const data = await res.json();
-
-      if (data.status === 'expired' || data.status === 'canceled') {
-        window.location.href = '/subscription-expired.html';
-        return;
-      }
-
-      if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
-        window.location.href = '/subscription-expired.html';
-        return;
-      }
-
-    } catch (err) {
-      console.error('Erreur vérification abonnement:', err);
     }
-  })();
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
-        return;
-      }
 
-      // Remplir l'info utilisateur dans la sidebar
-      const rawUser = localStorage.getItem('lcc_user');
-      let user = null;
-      try {
-        user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {}
-      if (user) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const companyEl = document.getElementById('sidebarUserCompany');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) {
-          nameEl.textContent = user.firstName
-            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-            : (user.email || 'Mon compte');
-        }
-        if (companyEl) {
-          companyEl.textContent = user.company || 'Mon espace';
-        }
-        if (avatarEl) {
-          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-          avatarEl.textContent = initial.toUpperCase();
-        }
-      }
-
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', function () {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        });
-      }
-
-      const restaurantsContainer = document.getElementById('restaurantsContainer');
-      const shopsContainer = document.getElementById('shopsContainer');
-      const photosContainer = document.getElementById('photosContainer');
-
-      function createRestaurantRow(data = {}) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-grid restaurant-row';
-        wrapper.style.marginBottom = '12px';
-        wrapper.innerHTML = `
-          <div class="form-group">
-            <label>Nom</label>
-            <input type="text" class="input rest-name" placeholder="Ex : Le Bistrot du Coin" value="${data.name || ''}">
-          </div>
-          <div class="form-group">
-            <label>Type</label>
-            <input type="text" class="input rest-type" placeholder="Ex : Bistrot, Pizzeria..." value="${data.type || ''}">
-          </div>
-          <div class="form-group">
-            <label>Adresse / distance</label>
-            <input type="text" class="input rest-address" placeholder="Ex : 5 min à pied, 12 rue de Paris" value="${data.address || ''}">
-          </div>
-          <div class="form-group">
-            <label>Infos</label>
-            <div style="display:flex; gap:8px; align-items:flex-start;">
-              <textarea class="textarea rest-notes" rows="2" placeholder="Plat conseillé, jours d'ouverture…">${data.notes || ''}</textarea>
-              <button type="button" class="btn btn-ghost remove-row-btn">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
-          wrapper.remove();
-        });
-        restaurantsContainer.appendChild(wrapper);
-      }
-
-      function createShopRow(data = {}) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-grid shop-row';
-        wrapper.style.marginBottom = '12px';
-        wrapper.innerHTML = `
-          <div class="form-group">
-            <label>Nom</label>
-            <input type="text" class="input shop-name" placeholder="Ex : Boulangerie du Marché" value="${data.name || ''}">
-          </div>
-          <div class="form-group">
-            <label>Type</label>
-            <input type="text" class="input shop-type" placeholder="Ex : Boulangerie, Supermarché..." value="${data.type || ''}">
-          </div>
-          <div class="form-group">
-            <label>Adresse / distance</label>
-            <input type="text" class="input shop-address" placeholder="Ex : 3 min à pied, 8 avenue Victor Hugo" value="${data.address || ''}">
-          </div>
-          <div class="form-group">
-            <label>Infos</label>
-            <div style="display:flex; gap:8px; align-items:flex-start;">
-              <textarea class="textarea shop-notes" rows="2" placeholder="Horaires, particularités…">${data.notes || ''}</textarea>
-              <button type="button" class="btn btn-ghost remove-row-btn">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        wrapper.querySelector('.remove-row-btn').addEventListener('click', () => {
-          wrapper.remove();
-        });
-        shopsContainer.appendChild(wrapper);
-      }
-
-      let photosState = [];
-
-      function renderPhotos() {
-        photosContainer.innerHTML = '';
-        photosState.forEach((photo, index) => {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'photo-row';
-          wrapper.style.marginBottom = '10px';
-          wrapper.innerHTML = `
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Légende de la photo</label>
-                <input type="text" class="input photo-label" data-index="${index}" placeholder="Ex : Façade, Boîte à clés, Salon" value="${photo.label || ''}">
-              </div>
-              <div class="form-group">
-                <label>Fichier</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="file" class="photo-file-input" data-index="${index}" accept="image/*">
-                  <button type="button" class="btn btn-ghost remove-photo-btn" data-index="${index}">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-                ${photo.dataUrl ? `<div style="margin-top:6px;"><img src="${photo.dataUrl}" alt="" style="max-width:140px;border-radius:8px;border:1px solid #e5e7eb;"></div>` : ''}
-              </div>
-            </div>
-          `;
-          photosContainer.appendChild(wrapper);
-        });
-
-        photosContainer.querySelectorAll('.photo-label').forEach(input => {
-          input.addEventListener('input', (e) => {
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (!isNaN(idx) && photosState[idx]) {
-              photosState[idx].label = e.target.value;
-            }
-          });
-        });
-
-        photosContainer.querySelectorAll('.photo-file-input').forEach(input => {
-          input.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (file && !isNaN(idx)) {
-              const reader = new FileReader();
-              reader.onload = function (ev) {
-                photosState[idx].dataUrl = ev.target.result;
-                renderPhotos();
-              };
-              reader.readAsDataURL(file);
-            }
-          });
-        });
-
-        photosContainer.querySelectorAll('.remove-photo-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const idx = parseInt(e.target.dataset.index, 10);
-            if (!isNaN(idx)) {
-              photosState.splice(idx, 1);
-              renderPhotos();
-            }
-          });
-        });
-      }
-
-      document.getElementById('addRestaurantBtn').addEventListener('click', () => {
-        createRestaurantRow();
-      });
-
-      document.getElementById('addShopBtn').addEventListener('click', () => {
-        createShopRow();
-      });
-
-      document.getElementById('addPhotoBtn').addEventListener('click', () => {
-        photosState.push({ id: 'p_' + Date.now(), label: '', dataUrl: '' });
-        renderPhotos();
-      });
-
-      // Charger les données existantes
-      async function loadWelcomeData() {
-        try {
-          const res = await fetch('/api/welcome', {
-            headers: {
-              'Authorization': 'Bearer ' + token
-            }
-          });
-          if (!res.ok) return;
-          const data = await res.json();
-
-          document.getElementById('propertyName').value = data.propertyName || '';
-          document.getElementById('address').value = data.address || '';
-          document.getElementById('accessCode').value = data.accessCode || '';
-          document.getElementById('accessInstructions').value = data.accessInstructions || '';
-          document.getElementById('emergencyPhone').value = data.emergencyPhone || '';
-          document.getElementById('wifiName').value = data.wifiName || '';
-          document.getElementById('wifiPassword').value = data.wifiPassword || '';
-          document.getElementById('wifiNote').value = data.wifiNote || '';
-          document.getElementById('generalNotes').value = data.generalNotes || '';
-
-          restaurantsContainer.innerHTML = '';
-          (data.restaurants || []).forEach(r => createRestaurantRow(r));
-          shopsContainer.innerHTML = '';
-          (data.shops || []).forEach(s => createShopRow(s));
-
-          photosState = Array.isArray(data.photos) ? data.photos : [];
-          renderPhotos();
-        } catch (err) {
-          console.error('Erreur chargement livret', err);
-        }
-      }
-
-      async function saveWelcomeData() {
-        const restaurants = [];
-        document.querySelectorAll('.restaurant-row').forEach(row => {
-          const r = {
-            name: row.querySelector('.rest-name').value.trim(),
-            type: row.querySelector('.rest-type').value.trim(),
-            address: row.querySelector('.rest-address').value.trim(),
-            notes: row.querySelector('.rest-notes').value.trim()
-          };
-          if (r.name || r.address || r.notes) {
-            restaurants.push(r);
-          }
-        });
-
-        const shops = [];
-        document.querySelectorAll('.shop-row').forEach(row => {
-          const s = {
-            name: row.querySelector('.shop-name').value.trim(),
-            type: row.querySelector('.shop-type').value.trim(),
-            address: row.querySelector('.shop-address').value.trim(),
-            notes: row.querySelector('.shop-notes').value.trim()
-          };
-          if (s.name || s.address || s.notes) {
-            shops.push(s);
-          }
-        });
-
-        const payload = {
-          propertyName: document.getElementById('propertyName').value.trim(),
-          address: document.getElementById('address').value.trim(),
-          accessCode: document.getElementById('accessCode').value.trim(),
-          accessInstructions: document.getElementById('accessInstructions').value.trim(),
-          emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
-          wifiName: document.getElementById('wifiName').value.trim(),
-          wifiPassword: document.getElementById('wifiPassword').value.trim(),
-          wifiNote: document.getElementById('wifiNote').value.trim(),
-          generalNotes: document.getElementById('generalNotes').value.trim(),
-          restaurants,
-          shops,
-          photos: photosState
-        };
-
-        try {
-          const res = await fetch('/api/welcome', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            alert(data.error || 'Erreur lors de la sauvegarde du livret');
-            return;
-          }
-          alert('Livret sauvegardé 👍');
-        } catch (err) {
-          console.error('Erreur sauvegarde livret', err);
-          alert('Erreur réseau lors de la sauvegarde');
-        }
-      }
-
-      const saveBtn = document.getElementById('saveBtn');
-      if (saveBtn) {
-        saveBtn.addEventListener('click', saveWelcomeData);
-      }
-
-      loadWelcomeData();
-    })();
-  </script>
-
-  <!-- MOBILE MENU SCRIPT -->
-  
-
-<script>
-    (function() {
-      const menuBtn = document.getElementById('mobileMenuBtn');
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
+    // Gestion des images
+    function setupImageUpload(inputId, previewId) {
+      const input = document.getElementById(inputId);
+      const preview = document.getElementById(previewId);
       
-      if (menuBtn && sidebar && overlay) {
-        menuBtn.addEventListener('click', function() {
-          sidebar.classList.toggle('active');
-          overlay.classList.toggle('active');
+      input.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        
+        files.forEach((file, index) => {
+          const reader = new FileReader();
           
-          const icon = menuBtn.querySelector('i');
-          if (sidebar.classList.contains('active')) {
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
-          } else {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-          }
+          reader.onload = function(event) {
+            const div = document.createElement('div');
+            div.className = 'image-preview-item';
+            div.innerHTML = `
+              <img src="${event.target.result}" alt="Preview">
+              <button type="button" class="remove-btn" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+              </button>
+            `;
+            preview.appendChild(div);
+          };
+          
+          reader.readAsDataURL(file);
         });
-        
-        overlay.addEventListener('click', function() {
-          sidebar.classList.remove('active');
-          overlay.classList.remove('active');
-          const icon = menuBtn.querySelector('i');
-          icon.classList.remove('fa-times');
-          icon.classList.add('fa-bars');
-        });
-        
-        if (window.innerWidth <= 1024) {
-          document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-              sidebar.classList.remove('active');
-              overlay.classList.remove('active');
-              const icon = menuBtn.querySelector('i');
-              icon.classList.remove('fa-times');
-              icon.classList.add('fa-bars');
-            });
-          });
-        }
+      });
+    }
+
+    // Setup image uploads
+    setupImageUpload('coverPhoto', 'coverPhotoPreview');
+    setupImageUpload('entrancePhotos', 'entrancePhotosPreview');
+    setupImageUpload('parkingPhotos', 'parkingPhotosPreview');
+
+    // Ajouter une pièce
+    function addRoom() {
+      roomCounter++;
+      const container = document.getElementById('roomsContainer');
+      const roomHtml = `
+        <div class="repeatable-item" id="room-${roomCounter}">
+          <div class="repeatable-item-header">
+            <div class="repeatable-item-title">
+              <i class="fas fa-door-closed"></i>
+              Pièce ${roomCounter}
+            </div>
+            <button type="button" class="remove-item-btn" onclick="removeItem('room-${roomCounter}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          
+          <div class="form-group">
+            <label>Nom de la pièce</label>
+            <input type="text" class="form-control" name="room[${roomCounter}][name]" placeholder="Ex: Chambre, Salon, Cuisine, Terrasse...">
+          </div>
+          
+          <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" name="room[${roomCounter}][description]" rows="3" placeholder="Ex: 1 lit 140×200 • Linge de lit fourni • Serviettes"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label>Photo(s) de cette pièce</label>
+            <div class="image-upload-area" onclick="document.getElementById('roomPhotos-${roomCounter}').click()">
+              <i class="fas fa-camera"></i>
+              <p>Cliquez pour télécharger des photos</p>
+            </div>
+            <input type="file" id="roomPhotos-${roomCounter}" accept="image/*" multiple style="display: none;">
+            <div class="image-preview" id="roomPhotosPreview-${roomCounter}"></div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', roomHtml);
+      setupImageUpload(`roomPhotos-${roomCounter}`, `roomPhotosPreview-${roomCounter}`);
+    }
+
+    // Ajouter un restaurant
+    function addRestaurant() {
+      restaurantCounter++;
+      const container = document.getElementById('restaurantsContainer');
+      const restaurantHtml = `
+        <div class="repeatable-item" id="restaurant-${restaurantCounter}">
+          <div class="repeatable-item-header">
+            <div class="repeatable-item-title">
+              <i class="fas fa-utensils"></i>
+              Restaurant ${restaurantCounter}
+            </div>
+            <button type="button" class="remove-item-btn" onclick="removeItem('restaurant-${restaurantCounter}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom du restaurant</label>
+              <input type="text" class="form-control" name="restaurant[${restaurantCounter}][name]" placeholder="Ex: LA MAISON">
+            </div>
+            
+            <div class="form-group">
+              <label>Téléphone</label>
+              <input type="tel" class="form-control" name="restaurant[${restaurantCounter}][phone]" placeholder="01 XX XX XX XX">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Adresse</label>
+            <input type="text" class="form-control" name="restaurant[${restaurantCounter}][address]" placeholder="8 rue Carnot">
+          </div>
+          
+          <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" name="restaurant[${restaurantCounter}][description]" rows="3" placeholder="Bistrot déco originale. Saumon fumé, Tataki de bœuf..."></textarea>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', restaurantHtml);
+    }
+
+    // Ajouter un lieu à visiter
+    function addPlace() {
+      placeCounter++;
+      const container = document.getElementById('placesContainer');
+      const placeHtml = `
+        <div class="repeatable-item" id="place-${placeCounter}">
+          <div class="repeatable-item-header">
+            <div class="repeatable-item-title">
+              <i class="fas fa-map-marker-alt"></i>
+              Lieu ${placeCounter}
+            </div>
+            <button type="button" class="remove-item-btn" onclick="removeItem('place-${placeCounter}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          
+          <div class="form-group">
+            <label>Nom du lieu</label>
+            <input type="text" class="form-control" name="place[${placeCounter}][name]" placeholder="Ex: Musée Jean-Jacques Rousseau">
+          </div>
+          
+          <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" name="place[${placeCounter}][description]" rows="2" placeholder="Joli petit musée retraçant une partie de sa vie"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label>Photo</label>
+            <div class="image-upload-area" onclick="document.getElementById('placePhoto-${placeCounter}').click()">
+              <i class="fas fa-image"></i>
+              <p>Cliquez pour télécharger une photo</p>
+            </div>
+            <input type="file" id="placePhoto-${placeCounter}" accept="image/*" style="display: none;">
+            <div class="image-preview" id="placePhotoPreview-${placeCounter}"></div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', placeHtml);
+      setupImageUpload(`placePhoto-${placeCounter}`, `placePhotoPreview-${placeCounter}`);
+    }
+
+    // Supprimer un item
+    function removeItem(itemId) {
+      if (confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
+        document.getElementById(itemId).remove();
       }
-    })();
-    
-    (function() {
-      const currentPage = document.body.getAttribute('data-page');
-      if (currentPage) {
-        document.querySelectorAll('.nav-item').forEach(item => {
-          item.classList.remove('active');
-        });
-        const activeLink = document.querySelector('.nav-item[data-page="welcome"]');
-        if (activeLink) {
-          activeLink.classList.add('active');
-        }
-      }
-    })();
-    
-    document.getElementById('logoutBtn')?.addEventListener('click', function() {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
+    }
+
+    // Initialiser avec quelques éléments par défaut
+    window.addEventListener('DOMContentLoaded', function() {
+      addRoom();
+      addRestaurant();
+      addPlace();
     });
-    
-    (function() {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) {
-        const companyEl = document.getElementById('sidebarUserCompany');
-        if (companyEl) companyEl.textContent = user.company;
-      }
-    })();
+
+    // Soumission du formulaire
+    document.getElementById('welcomeForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Ici vous pouvez ajouter la logique pour envoyer les données au backend
+      console.log('Formulaire soumis');
+      
+      // Masquer le formulaire
+      document.getElementById('welcomeForm').style.display = 'none';
+      document.querySelector('.progress-steps').style.display = 'none';
+      
+      // Afficher le message de succès
+      document.getElementById('successMessage').classList.add('show');
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Actions après création
+    function viewWelcomeBook() {
+      // Rediriger vers le livret créé
+      alert('Redirection vers le livret d\'accueil...');
+    }
+
+    function createAnother() {
+      // Réinitialiser le formulaire
+      location.reload();
+    }
   </script>
 </body>
 </html>
