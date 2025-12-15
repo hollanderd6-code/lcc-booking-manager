@@ -1073,6 +1073,35 @@
   </div>
 
   <script>
+
+// Vérifier si l'utilisateur est connecté
+async function checkAuth() {
+  try {
+    const response = await fetch('/api/user/profile', {
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      // Pas connecté, rediriger vers la page de connexion
+      alert('Vous devez être connecté pour créer un livret d\'accueil');
+      window.location.href = '/login.html'; // ← Adaptez selon votre page de connexion
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Erreur vérification auth:', error);
+    alert('Veuillez vous connecter d\'abord');
+    window.location.href = '/login.html'; // ← Adaptez selon votre page de connexion
+    return false;
+  }
+}
+
+// Vérifier au chargement de la page
+window.addEventListener('DOMContentLoaded', async () => {
+  await checkAuth();
+});
+
     let currentSection = 1;
     const totalSections = 5;
     let roomCounter = 0;
