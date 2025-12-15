@@ -20,6 +20,12 @@ const crypto = require('crypto');
 const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
 const PDFDocument = require('pdfkit');
+// ============================================
+// ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
+// ============================================
+const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
+const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
+// ============================================
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -6791,7 +6797,12 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 // ============================================
 // FIN DES ROUTES V2
 // ============================================
-
+// ============================================
+// ✅ NOUVEAU : ROUTES POUR LIVRETS D'ACCUEIL
+// ============================================
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/api/welcome-books', welcomeRouter);
+// ============================================
 // ============================================
 // NOTES D'INSTALLATION
 // ============================================
@@ -7416,6 +7427,90 @@ app.get('/api/_routes', (req, res) => {
     res.status(500).json({ error: String(e) });
   }
 });
+// ============================================
+// ✅ NOUVEAU : ROUTE PUBLIQUE LIVRET D'ACCUEIL
+// ============================================
+app.get('/welcome/:uniqueId', async (req, res) => {
+  try {
+    const { uniqueId } = req.params;
+    const welcomeBookQuery = 'SELECT * FROM welcome_books WHERE unique_id = $1';
+    const welcomeBookResult = await pool.query(welcomeBookQuery, [uniqueId]);
+    
+    if (welcomeBookResult.rows.length === 0) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+          <meta charset="UTF-8">
+          <title>Livret non trouvé</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .error-container {
+              text-align: center;
+              color: white;
+              padding: 2rem;
+            }
+            .error-container h1 {
+              font-size: 4rem;
+              margin: 0 0 1rem 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="error-container">
+            <h1>404</h1>
+            <p>Livret d'accueil non trouvé</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+    
+    const welcomeBook = welcomeBookResult.rows[0];
+    const [roomsResult, photosResult, restaurantsResult, placesResult] = await Promise.all([
+      pool.query('SELECT * FROM welcome_book_rooms WHERE welcome_book_id = $1 ORDER BY display_order', [welcomeBook.id]),
+      pool.query('SELECT * FROM welcome_book_photos WHERE welcome_book_id = $1 ORDER BY photo_type, display_order', [welcomeBook.id]),
+      pool.query('SELECT * FROM welcome_book_restaurants WHERE welcome_book_id = $1 ORDER BY display_order', [welcomeBook.id]),
+      pool.query('SELECT * FROM welcome_book_places WHERE welcome_book_id = $1 ORDER BY display_order', [welcomeBook.id])
+    ]);
+    
+    const photos = {
+      cover: photosResult.rows.filter(p => p.photo_type === 'cover'),
+      entrance: photosResult.rows.filter(p => p.photo_type === 'entrance'),
+      parking: photosResult.rows.filter(p => p.photo_type === 'parking'),
+      rooms: photosResult.rows.filter(p => p.photo_type === 'room'),
+      places: photosResult.rows.filter(p => p.photo_type === 'place')
+    };
+    
+    const rooms = roomsResult.rows.map(room => ({
+      ...room,
+      photos: photos.rooms.filter(p => p.room_id === room.id)
+    }));
+    
+    const html = generateWelcomeBookHTML({
+      welcomeBook,
+      rooms,
+      photos,
+      restaurants: restaurantsResult.rows,
+      places: placesResult.rows
+    });
+    
+    res.send(html);
+    
+  } catch (error) {
+    console.error('Erreur affichage livret:', error);
+    res.status(500).send('<h1>Erreur serveur</h1>');
+  }
+});
+// ============================================
 
 // ============================================
 // DÉMARRAGE (TOUJOURS EN DERNIER)
@@ -7431,7 +7526,9 @@ app.listen(PORT, async () => {
   console.log('');
 
   await initDb();
-
+  // ✅ NOUVEAU : Initialiser les tables livrets d'accueil
+  await initWelcomeBookTables(pool);
+  console.log('✅ Tables welcome_books initialisées');
   await loadProperties();
   await loadManualReservations();
   await loadDeposits();
