@@ -1072,8 +1072,6 @@
     </div>
   </div>
 
-  <script>
-
 <script>
 async function checkAuth() {
   const token = localStorage.getItem('lcc_token');
@@ -1081,13 +1079,36 @@ async function checkAuth() {
     window.location.href = '/login.html';
     return false;
   }
+
+  // Si tu veux juste vérifier la présence du token, on s'arrête là:
   return true;
+
+  // (Optionnel) si tu veux vérifier côté serveur, décommente ceci:
+  /*
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      alert("Vous devez être connecté pour créer un livret d'accueil");
+      window.location.href = '/login.html';
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Erreur vérification auth:', error);
+    window.location.href = '/login.html';
+    return false;
+  }
+  */
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   checkAuth();
 });
 </script>
+
 
     
     if (!response.ok) {
