@@ -1320,5 +1320,199 @@
       location.reload();
     }
   </script>
+  // Ajoutez ce script à la fin de votre welcome-creator.html, juste avant la balise </body>
+
+// Fonction pour collecter toutes les données du formulaire
+function collectFormData() {
+  const formData = new FormData();
+  
+  // Section 1: Informations générales
+  formData.append('propertyName', document.querySelector('[name="propertyName"]').value);
+  formData.append('welcomeDescription', document.querySelector('[name="welcomeDescription"]').value);
+  formData.append('contactPhone', document.querySelector('[name="contactPhone"]').value);
+  
+  // Photo de couverture
+  const coverPhotoInput = document.getElementById('coverPhoto');
+  if (coverPhotoInput.files[0]) {
+    formData.append('coverPhoto', coverPhotoInput.files[0]);
+  }
+  
+  // Section 2: Accès & Arrivée
+  formData.append('address', document.querySelector('[name="address"]').value);
+  formData.append('postalCode', document.querySelector('[name="postalCode"]').value);
+  formData.append('city', document.querySelector('[name="city"]').value);
+  formData.append('keyboxCode', document.querySelector('[name="keyboxCode"]').value);
+  formData.append('accessInstructions', document.querySelector('[name="accessInstructions"]').value);
+  formData.append('parkingInfo', document.querySelector('[name="parkingInfo"]').value);
+  
+  // Photos d'entrée
+  const entrancePhotosInput = document.getElementById('entrancePhotos');
+  if (entrancePhotosInput.files) {
+    Array.from(entrancePhotosInput.files).forEach(file => {
+      formData.append('entrancePhotos', file);
+    });
+  }
+  
+  // Photos de parking
+  const parkingPhotosInput = document.getElementById('parkingPhotos');
+  if (parkingPhotosInput.files) {
+    Array.from(parkingPhotosInput.files).forEach(file => {
+      formData.append('parkingPhotos', file);
+    });
+  }
+  
+  // Section 3: Pièces
+  const rooms = [];
+  document.querySelectorAll('[id^="room-"]').forEach((roomElement, index) => {
+    const roomId = roomElement.id;
+    const room = {
+      name: roomElement.querySelector(`[name="room[${index + 1}][name]"]`)?.value || '',
+      description: roomElement.querySelector(`[name="room[${index + 1}][description]"]`)?.value || ''
+    };
+    rooms.push(room);
+    
+    // Photos de la pièce
+    const roomPhotosInput = document.getElementById(`roomPhotos-${index + 1}`);
+    if (roomPhotosInput && roomPhotosInput.files) {
+      Array.from(roomPhotosInput.files).forEach(file => {
+        formData.append(`roomPhotos`, file);
+      });
+    }
+  });
+  formData.append('rooms', JSON.stringify(rooms));
+  
+  // Section 4: Informations pratiques
+  formData.append('wifiSSID', document.querySelector('[name="wifiSSID"]').value);
+  formData.append('wifiPassword', document.querySelector('[name="wifiPassword"]').value);
+  formData.append('checkoutTime', document.querySelector('[name="checkoutTime"]').value);
+  formData.append('checkoutInstructions', document.querySelector('[name="checkoutInstructions"]').value);
+  formData.append('equipmentList', document.querySelector('[name="equipmentList"]').value);
+  formData.append('importantRules', document.querySelector('[name="importantRules"]').value);
+  formData.append('transportInfo', document.querySelector('[name="transportInfo"]').value);
+  
+  // Section 5: Aux alentours
+  const restaurants = [];
+  document.querySelectorAll('[id^="restaurant-"]').forEach((restaurantElement, index) => {
+    const restaurant = {
+      name: restaurantElement.querySelector(`[name="restaurant[${index + 1}][name]"]`)?.value || '',
+      phone: restaurantElement.querySelector(`[name="restaurant[${index + 1}][phone]"]`)?.value || '',
+      address: restaurantElement.querySelector(`[name="restaurant[${index + 1}][address]"]`)?.value || '',
+      description: restaurantElement.querySelector(`[name="restaurant[${index + 1}][description]"]`)?.value || ''
+    };
+    restaurants.push(restaurant);
+  });
+  formData.append('restaurants', JSON.stringify(restaurants));
+  
+  formData.append('shopsList', document.querySelector('[name="shopsList"]').value);
+  
+  const places = [];
+  document.querySelectorAll('[id^="place-"]').forEach((placeElement, index) => {
+    const place = {
+      name: placeElement.querySelector(`[name="place[${index + 1}][name]"]`)?.value || '',
+      description: placeElement.querySelector(`[name="place[${index + 1}][description]"]`)?.value || ''
+    };
+    places.push(place);
+    
+    // Photo du lieu
+    const placePhotoInput = document.getElementById(`placePhoto-${index + 1}`);
+    if (placePhotoInput && placePhotoInput.files[0]) {
+      formData.append(`placePhotos`, placePhotoInput.files[0]);
+    }
+  });
+  formData.append('places', JSON.stringify(places));
+  
+  return formData;
+}
+
+// Modifier la soumission du formulaire
+document.getElementById('welcomeForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  // Afficher un loader
+  const submitButton = document.querySelector('button[type="submit"]');
+  const originalButtonText = submitButton.innerHTML;
+  submitButton.disabled = true;
+  submitButton.innerHTML = '<div class="spinner"></div> Création en cours...';
+  
+  try {
+    const formData = collectFormData();
+    
+    // Envoyer au backend
+    const response = await fetch('/api/welcome-books/create', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include' // Important pour envoyer les cookies d'authentification
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Masquer le formulaire
+      document.getElementById('welcomeForm').style.display = 'none';
+      document.querySelector('.progress-steps').style.display = 'none';
+      
+      // Stocker l'URL du livret
+      window.welcomeBookUrl = result.url;
+      window.welcomeBookUniqueId = result.uniqueId;
+      
+      // Afficher le message de succès
+      document.getElementById('successMessage').classList.add('show');
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      throw new Error(result.error || 'Erreur lors de la création du livret');
+    }
+    
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert('Une erreur est survenue lors de la création du livret d\'accueil. Veuillez réessayer.');
+    
+    // Restaurer le bouton
+    submitButton.disabled = false;
+    submitButton.innerHTML = originalButtonText;
+  }
+});
+
+// Actions après création
+function viewWelcomeBook() {
+  if (window.welcomeBookUrl) {
+    window.open(window.welcomeBookUrl, '_blank');
+  } else {
+    alert('URL du livret non disponible');
+  }
+}
+
+function createAnother() {
+  // Réinitialiser le formulaire
+  location.reload();
+}
+
+// Ajouter un bouton pour copier le lien
+document.querySelector('.success-message .btn-primary').insertAdjacentHTML('afterend', `
+  <button class="btn btn-secondary" onclick="copyWelcomeBookLink()">
+    <i class="fas fa-copy"></i>
+    Copier le lien
+  </button>
+`);
+
+function copyWelcomeBookLink() {
+  if (window.welcomeBookUrl) {
+    navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
+      const button = event.target.closest('button');
+      const originalHTML = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
+      button.style.background = '#10B981';
+      
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.style.background = '';
+      }, 2000);
+    }).catch(err => {
+      console.error('Erreur lors de la copie:', err);
+      prompt('Copiez ce lien:', window.welcomeBookUrl);
+    });
+  }
+}
 </body>
 </html>
