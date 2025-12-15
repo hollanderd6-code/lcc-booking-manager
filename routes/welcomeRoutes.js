@@ -69,7 +69,7 @@ const initWelcomeBookTables = async (pool) => {
   const createWelcomeBooksTable = `
     CREATE TABLE IF NOT EXISTS welcome_books (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     user_id INTEGER NOT NULL,
       unique_id VARCHAR(50) UNIQUE NOT NULL,
       property_name VARCHAR(255) NOT NULL,
       cover_photo VARCHAR(500),
