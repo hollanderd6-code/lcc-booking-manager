@@ -1079,7 +1079,6 @@ const token = localStorage.getItem('lcc_token');
 if (!token) {
   alert('Vous devez être connecté');
   window.location.href = '/login.html';
-  return;
 }
 
 const response = await fetch('/api/welcome-books/create', {
