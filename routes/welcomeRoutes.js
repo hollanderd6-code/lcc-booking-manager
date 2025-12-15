@@ -47,7 +47,7 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// Utilisez votre middleware d'authentification existant
+// Middleware d'authentification
 function authenticateUser(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
@@ -55,6 +55,7 @@ function authenticateUser(req, res, next) {
   }
   
   try {
+    const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.userId;
     next();
@@ -62,22 +63,6 @@ function authenticateUser(req, res, next) {
     return res.status(401).json({ error: 'Token invalide' });
   }
 }
-```
-
-8. **Sauvegardez** (Ctrl+S)
-
----
-
-## ✅ **VÉRIFICATION**
-
-Votre structure doit maintenant ressembler à ça :
-```
-votre-projet/
-├── server.js ✅
-├── routes/
-│   └── welcomeRoutes.js ✅ (nouveau)
-└── services/
-    └── welcomeGenerator.js ✅ (nouveau)
 
 // Créer les tables si elles n'existent pas
 const initWelcomeBookTables = async (pool) => {
