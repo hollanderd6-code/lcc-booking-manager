@@ -51,7 +51,10 @@ function authenticateUser(req, res, next) {
   console.log('🔍 Cookies reçus:', req.cookies);  // DEBUG
   console.log('🔍 Headers:', req.headers.cookie);  // DEBUG
   
-  const token = req.cookies.token;
+const authHeader = req.headers.authorization || '';
+const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+const token = req.cookies?.token || bearerToken;
+
   if (!token) {
     console.log('❌ Pas de token trouvé dans les cookies');
     return res.status(401).json({ error: 'Non authentifié' });
@@ -335,7 +338,7 @@ router.post('/create', authenticateUser, upload.fields([
       message: 'Livret d\'accueil créé avec succès',
       welcomeBookId,
       uniqueId,
-      url: `${req.protocol}://${req.get('host')}/welcome/${uniqueId}`
+      url: `${req.protocol}://${req.get('host')}/api/welcome-books/public/${uniqueId}`
     });
 
   } catch (error) {
@@ -425,6 +428,50 @@ router.delete('/:id', authenticateUser, async (req, res) => {
   } finally {
     client.release();
   }
+  // ✅ Route PUBLIQUE : récupérer un livret par uniqueId
+router.get('/public/:uniqueId', async (req, res) => {
+  try {
+    const { uniqueId } = req.params;
+
+    const bookRes = await req.app.locals.pool.query(
+      'SELECT * FROM welcome_books WHERE unique_id = $1',
+      [uniqueId]
+    );
+    if (bookRes.rows.length === 0) return res.status(404).json({ error: 'Livret introuvable' });
+
+    const book = bookRes.rows[0];
+
+    const photosRes = await req.app.locals.pool.query(
+      'SELECT * FROM welcome_book_photos WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+    const roomsRes = await req.app.locals.pool.query(
+      'SELECT * FROM welcome_book_rooms WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+    const restaurantsRes = await req.app.locals.pool.query(
+      'SELECT * FROM welcome_book_restaurants WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+    const placesRes = await req.app.locals.pool.query(
+      'SELECT * FROM welcome_book_places WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+
+    res.json({
+      success: true,
+      book,
+      photos: photosRes.rows,
+      rooms: roomsRes.rows,
+      restaurants: restaurantsRes.rows,
+      places: placesRes.rows
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 });
 
 module.exports = { router, initWelcomeBookTables };
