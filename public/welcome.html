@@ -612,9 +612,258 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-  </style>
+  
+/* --- Sidebar layout (added) --- */
+.app-container{
+  display:flex;
+  min-height:100vh;
+  background: var(--gray-50);
+}
+.main-content{
+  flex:1;
+  min-width:0;
+  padding: 24px;
+}
+.sidebar{
+  width:280px;
+  background:#fff;
+  border-right:1px solid var(--gray-200);
+  display:flex;
+  flex-direction:column;
+  position:sticky;
+  top:0;
+  height:100vh;
+}
+.sidebar-header{ padding:18px 16px; border-bottom:1px solid var(--gray-200); }
+.sidebar-nav{ padding:14px 10px; overflow:auto; flex:1; }
+.nav-section{ margin-bottom:14px; }
+.nav-section-title{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--gray-500); padding:8px 10px; }
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  color:var(--gray-700);
+  text-decoration:none;
+}
+.nav-item i{ width:18px; text-align:center; color:var(--gray-500); }
+.nav-item:hover{ background:var(--gray-100); }
+.nav-item.active{ background:rgba(59,130,246,.12); color:var(--gray-900); }
+.nav-badge{
+  margin-left:auto;
+  background:var(--gray-100);
+  border:1px solid var(--gray-200);
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:12px;
+  color:var(--gray-700);
+}
+.sidebar-footer{ padding:12px 12px 16px; border-top:1px solid var(--gray-200); }
+.user-profile{ display:flex; align-items:center; gap:10px; }
+.user-avatar{
+  width:36px; height:36px; border-radius:12px;
+  background:rgba(16,185,129,.15);
+  color:#0f766e;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800;
+}
+.user-info{ min-width:0; }
+.user-name{ font-weight:700; color:var(--gray-900); font-size:13px; }
+.user-email{ color:var(--gray-500); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+
+/* Mobile header + drawer */
+.mobile-header{
+  display:none;
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:#fff;
+  border-bottom:1px solid var(--gray-200);
+  padding:10px 14px;
+  align-items:center;
+  justify-content:space-between;
+}
+.mobile-logo{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--gray-900); font-weight:800; }
+.mobile-menu-btn{
+  border:1px solid var(--gray-200);
+  background:#fff;
+  border-radius:12px;
+  padding:8px 10px;
+  cursor:pointer;
+}
+.sidebar-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(17,24,39,.45);
+  z-index:60;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.sidebar-overlay.active{ opacity:1; pointer-events:auto; }
+
+@media (max-width: 980px){
+  .mobile-header{ display:flex; }
+  .app-container{ display:block; }
+  .main-content{ padding:16px; }
+  .sidebar{
+    position:fixed;
+    left:0; top:0;
+    z-index:70;
+    transform:translateX(-105%);
+    transition:transform .25s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  }
+  .sidebar.open{ transform:translateX(0); }
+  body.no-scroll{ overflow:hidden; }
+}
+
+</style>
 </head>
 <body>
+  <!-- MOBILE HEADER -->
+  <div class="mobile-header">
+    <a href="/app.html" class="mobile-logo">
+      <i class="fas fa-calendar-check"></i>
+      <span class="mobile-logo-text">Bookingmanage</span>
+    </a>
+    <button class="mobile-menu-btn" id="mobileMenuBtn" type="button">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-container">
+
+  <!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="/" class="sidebar-logo">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
+              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 36V26H24V36"
+              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
+              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
+      </svg>
+
+      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
+        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
+          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+        </span>
+        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
+          Smart Property Manager
+        </span>
+      </div>
+    </a>
+  </div> <!-- ✅ IMPORTANT -->
+
+  <nav class="sidebar-nav">
+    <!-- PRINCIPAL -->
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+
+      <a href="/app.html" class="nav-item" data-page="app">
+        <i class="fas fa-th-large"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+        <i class="fas fa-calendar"></i>
+        <span>Calendrier</span>
+        <span class="nav-badge" id="navTotalReservations">0</span>
+      </a>
+
+      <a href="/messages.html" class="nav-item" data-page="messages">
+        <i class="fas fa-comment-dots"></i>
+        <span>Messages</span>
+      </a>
+    </div>
+
+    <!-- GESTION -->
+    <div class="nav-section">
+      <div class="nav-section-title">Gestion</div>
+
+      <a href="/settings.html" class="nav-item" data-page="settings">
+        <i class="fas fa-home"></i>
+        <span>Mes logements</span>
+      </a>
+
+      <a href="/welcome.html" class="nav-item active" data-page="welcome">
+        <i class="fas fa-book-open"></i>
+        <span>Livret d'accueil</span>
+      </a>
+
+      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+        <i class="fas fa-broom"></i>
+        <span>Gestion du ménage</span>
+      </a>
+    </div>
+
+    <!-- FACTURATION (propre) -->
+    <div class="nav-section">
+      <div class="nav-section-title">Facturation</div>
+
+      <a href="/factures.html" class="nav-item" data-page="factures">
+        <i class="fas fa-file-invoice"></i>
+        <span>Factures clients</span>
+      </a>
+
+      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span>Factures propriétaires</span>
+      </a>
+    </div>
+
+    <!-- AUTRES -->
+    <div class="nav-section">
+      <div class="nav-section-title">Autres</div>
+
+      <a href="/deposits.html" class="nav-item" data-page="deposits">
+        <i class="fas fa-shield-alt"></i>
+        <span>Cautions</span>
+      </a>
+
+      <a href="/notifications.html" class="nav-item" data-page="notifications">
+        <i class="fas fa-bell"></i>
+        <span>Notifications</span>
+      </a>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div class="nav-section">
+      <div class="nav-section-title">Paramètres</div>
+
+      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+        <i class="fas fa-cog"></i>
+        <span>Paramètres</span>
+      </a>
+
+      <a href="/help.html" class="nav-item" data-page="help">
+        <i class="fas fa-question-circle"></i>
+        <span>Aide</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile">
+      <div class="user-avatar" id="sidebarUserAvatar">C</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Utilisateur</div>
+        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+      </div>
+
+      <button class="btn btn-ghost btn-xs" id="logoutBtn" type="button">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+  <main class="main-content">
+
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -1072,6 +1321,9 @@
     </div>
   </div>
 
+  
+  </main>
+  </div>
 <script>
 async function checkAuth() {
   const token = localStorage.getItem('lcc_token');
@@ -1079,60 +1331,58 @@ async function checkAuth() {
     window.location.href = '/login.html';
     return false;
   }
-
-  // Si tu veux juste vérifier la présence du token, on s'arrête là:
   return true;
+}
 
-  // (Optionnel) si tu veux vérifier côté serveur, décommente ceci:
-  /*
-  try {
-    const response = await fetch('/api/auth/me', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+function initSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const btn = document.getElementById('mobileMenuBtn');
 
-    if (!response.ok) {
-      alert("Vous devez être connecté pour créer un livret d'accueil");
-      window.location.href = '/login.html';
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error('Erreur vérification auth:', error);
+  if (!sidebar || !overlay || !btn) return;
+
+  const open = () => {
+    sidebar.classList.add('open');
+    overlay.classList.add('active');
+    document.body.classList.add('no-scroll');
+  };
+
+  const close = () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+  };
+
+  btn.addEventListener('click', () => {
+    if (sidebar.classList.contains('open')) close();
+    else open();
+  });
+
+  overlay.addEventListener('click', close);
+
+  // Close on ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
+}
+
+function initLogout() {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (!logoutBtn) return;
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('lcc_token');
     window.location.href = '/login.html';
-    return false;
-  }
-  */
+  });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  checkAuth();
-});
-</script>
-
-
-    
-    if (!response.ok) {
-      // Pas connecté, rediriger vers la page de connexion
-      alert('Vous devez être connecté pour créer un livret d\'accueil');
-      window.location.href = '/login.html'; // ← Adaptez selon votre page de connexion
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Erreur vérification auth:', error);
-    alert('Veuillez vous connecter d\'abord');
-    window.location.href = '/login.html'; // ← Adaptez selon votre page de connexion
-    return false;
-  }
-}
-
-// Vérifier au chargement de la page
 window.addEventListener('DOMContentLoaded', async () => {
   await checkAuth();
+  initSidebar();
+  initLogout();
 });
 
-    let currentSection = 1;
+
+let currentSection = 1;
     const totalSections = 5;
     let roomCounter = 0;
     let restaurantCounter = 0;
@@ -1592,7 +1842,7 @@ function copyWelcomeBookLink() {
 function createAnother() {
   location.reload();
 }
-   </script>
+</script>
 
 </body>
 </html>
