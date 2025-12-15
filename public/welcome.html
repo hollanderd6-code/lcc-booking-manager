@@ -1735,11 +1735,12 @@ document.getElementById('welcomeForm').addEventListener('submit', async function
     const formData = collectFormData();
     
     // Envoyer au backend
-    const response = await fetch('/api/welcome-books/create', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData
-    });
+    fetch('https://lcc-booking-manager.onrender.com/api/welcome-books/create', {
+  method: 'POST',
+  credentials: 'include', // 🔥 OBLIGATOIRE
+  body: formData
+});
+
     
     if (response.status === 401) {
       throw new Error('Non authentifié');
