@@ -612,258 +612,9 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-  
-/* --- Sidebar layout (added) --- */
-.app-container{
-  display:flex;
-  min-height:100vh;
-  background: var(--gray-50);
-}
-.main-content{
-  flex:1;
-  min-width:0;
-  padding: 24px;
-}
-.sidebar{
-  width:280px;
-  background:#fff;
-  border-right:1px solid var(--gray-200);
-  display:flex;
-  flex-direction:column;
-  position:sticky;
-  top:0;
-  height:100vh;
-}
-.sidebar-header{ padding:18px 16px; border-bottom:1px solid var(--gray-200); }
-.sidebar-nav{ padding:14px 10px; overflow:auto; flex:1; }
-.nav-section{ margin-bottom:14px; }
-.nav-section-title{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--gray-500); padding:8px 10px; }
-.nav-item{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px;
-  border-radius:10px;
-  color:var(--gray-700);
-  text-decoration:none;
-}
-.nav-item i{ width:18px; text-align:center; color:var(--gray-500); }
-.nav-item:hover{ background:var(--gray-100); }
-.nav-item.active{ background:rgba(59,130,246,.12); color:var(--gray-900); }
-.nav-badge{
-  margin-left:auto;
-  background:var(--gray-100);
-  border:1px solid var(--gray-200);
-  padding:2px 8px;
-  border-radius:999px;
-  font-size:12px;
-  color:var(--gray-700);
-}
-.sidebar-footer{ padding:12px 12px 16px; border-top:1px solid var(--gray-200); }
-.user-profile{ display:flex; align-items:center; gap:10px; }
-.user-avatar{
-  width:36px; height:36px; border-radius:12px;
-  background:rgba(16,185,129,.15);
-  color:#0f766e;
-  display:flex; align-items:center; justify-content:center;
-  font-weight:800;
-}
-.user-info{ min-width:0; }
-.user-name{ font-weight:700; color:var(--gray-900); font-size:13px; }
-.user-email{ color:var(--gray-500); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
-
-/* Mobile header + drawer */
-.mobile-header{
-  display:none;
-  position:sticky;
-  top:0;
-  z-index:50;
-  background:#fff;
-  border-bottom:1px solid var(--gray-200);
-  padding:10px 14px;
-  align-items:center;
-  justify-content:space-between;
-}
-.mobile-logo{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--gray-900); font-weight:800; }
-.mobile-menu-btn{
-  border:1px solid var(--gray-200);
-  background:#fff;
-  border-radius:12px;
-  padding:8px 10px;
-  cursor:pointer;
-}
-.sidebar-overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(17,24,39,.45);
-  z-index:60;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .2s ease;
-}
-.sidebar-overlay.active{ opacity:1; pointer-events:auto; }
-
-@media (max-width: 980px){
-  .mobile-header{ display:flex; }
-  .app-container{ display:block; }
-  .main-content{ padding:16px; }
-  .sidebar{
-    position:fixed;
-    left:0; top:0;
-    z-index:70;
-    transform:translateX(-105%);
-    transition:transform .25s ease;
-    box-shadow: 0 20px 60px rgba(0,0,0,.2);
-  }
-  .sidebar.open{ transform:translateX(0); }
-  body.no-scroll{ overflow:hidden; }
-}
-
-</style>
+  </style>
 </head>
 <body>
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Bookingmanage</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn" type="button">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <div class="app-container">
-
-  <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div> <!-- ✅ IMPORTANT -->
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item active" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- FACTURATION (propre) -->
-    <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
-
-      <a href="/factures.html" class="nav-item" data-page="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures clients</span>
-      </a>
-
-      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
-        <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
-      </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn" type="button">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-  <main class="main-content">
-
   <!-- Header -->
   <header class="header">
     <div class="header-content">
@@ -1321,14 +1072,12 @@
     </div>
   </div>
 
-  
-  </main>
-  </div>
-<script>
+  <script>
+const API_BASE = 'https://lcc-booking-manager.onrender.com';
+
 async function checkAuth({ redirect = true } = {}) {
   const token = localStorage.getItem('lcc_token');
 
-  // Token absent / corrompu
   if (!token || token === 'undefined' || token === 'null') {
     localStorage.removeItem('lcc_token');
     localStorage.removeItem('lcc_user');
@@ -1336,9 +1085,8 @@ async function checkAuth({ redirect = true } = {}) {
     return false;
   }
 
-  // Vérif côté serveur (recommandé)
   try {
-    const res = await fetch('/api/auth/me', {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
@@ -1388,7 +1136,6 @@ function initSidebar() {
 
   overlay.addEventListener('click', close);
 
-  // Close on ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') close();
   });
@@ -1399,6 +1146,7 @@ function initLogout() {
   if (!logoutBtn) return;
   logoutBtn.addEventListener('click', () => {
     localStorage.removeItem('lcc_token');
+    localStorage.removeItem('lcc_user');
     window.location.href = '/login.html';
   });
 }
@@ -1409,469 +1157,402 @@ function getAuthToken() {
   return t;
 }
 
-window.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
-  initSidebar();
-  initLogout();
-});
-
-
 let currentSection = 1;
-    const totalSections = 5;
-    let roomCounter = 0;
-    let restaurantCounter = 0;
-    let placeCounter = 0;
+const totalSections = 5;
+let roomCounter = 0;
+let restaurantCounter = 0;
+let placeCounter = 0;
 
-    // Navigation entre sections
-    function nextSection() {
-      if (currentSection < totalSections) {
-        // Masquer la section actuelle
-        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
-        
-        // Marquer l'étape comme complétée
-        document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('completed');
-        document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
-        
-        currentSection++;
-        
-        // Afficher la nouvelle section
-        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
-        document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
-        
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
+function nextSection() {
+  if (currentSection < totalSections) {
+    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
+    document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('completed');
+    document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
 
-    function prevSection() {
-      if (currentSection > 1) {
-        // Masquer la section actuelle
-        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
-        document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
-        
-        currentSection--;
-        
-        // Afficher la section précédente
-        document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
-        document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
-        
-        // Retirer le statut completed de la section actuelle
-        document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('completed');
-        
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
+    currentSection++;
 
-    // Gestion des images
-    function setupImageUpload(inputId, previewId) {
-      const input = document.getElementById(inputId);
-      const preview = document.getElementById(previewId);
-      
-      input.addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-        
-        files.forEach((file, index) => {
-          const reader = new FileReader();
-          
-          reader.onload = function(event) {
-            const div = document.createElement('div');
-            div.className = 'image-preview-item';
-            div.innerHTML = `
-              <img src="${event.target.result}" alt="Preview">
-              <button type="button" class="remove-btn" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-              </button>
-            `;
-            preview.appendChild(div);
-          };
-          
-          reader.readAsDataURL(file);
-        });
-      });
-    }
+    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
+    document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
 
-    // Setup image uploads
-    setupImageUpload('coverPhoto', 'coverPhotoPreview');
-    setupImageUpload('entrancePhotos', 'entrancePhotosPreview');
-    setupImageUpload('parkingPhotos', 'parkingPhotosPreview');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
 
-    // Ajouter une pièce
-    function addRoom() {
-      roomCounter++;
-      const container = document.getElementById('roomsContainer');
-      const roomHtml = `
-        <div class="repeatable-item" id="room-${roomCounter}">
-          <div class="repeatable-item-header">
-            <div class="repeatable-item-title">
-              <i class="fas fa-door-closed"></i>
-              Pièce ${roomCounter}
-            </div>
-            <button type="button" class="remove-item-btn" onclick="removeItem('room-${roomCounter}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-          
-          <div class="form-group">
-            <label>Nom de la pièce</label>
-            <input type="text" class="form-control" name="room[${roomCounter}][name]" placeholder="Ex: Chambre, Salon, Cuisine, Terrasse...">
-          </div>
-          
-          <div class="form-group">
-            <label>Description</label>
-            <textarea class="form-control" name="room[${roomCounter}][description]" rows="3" placeholder="Ex: 1 lit 140×200 • Linge de lit fourni • Serviettes"></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>Photo(s) de cette pièce</label>
-            <div class="image-upload-area" onclick="document.getElementById('roomPhotos-${roomCounter}').click()">
-              <i class="fas fa-camera"></i>
-              <p>Cliquez pour télécharger des photos</p>
-            </div>
-            <input type="file" id="roomPhotos-${roomCounter}" accept="image/*" multiple style="display: none;">
-            <div class="image-preview" id="roomPhotosPreview-${roomCounter}"></div>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', roomHtml);
-      setupImageUpload(`roomPhotos-${roomCounter}`, `roomPhotosPreview-${roomCounter}`);
-    }
+function prevSection() {
+  if (currentSection > 1) {
+    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
+    document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
 
-    // Ajouter un restaurant
-    function addRestaurant() {
-      restaurantCounter++;
-      const container = document.getElementById('restaurantsContainer');
-      const restaurantHtml = `
-        <div class="repeatable-item" id="restaurant-${restaurantCounter}">
-          <div class="repeatable-item-header">
-            <div class="repeatable-item-title">
-              <i class="fas fa-utensils"></i>
-              Restaurant ${restaurantCounter}
-            </div>
-            <button type="button" class="remove-item-btn" onclick="removeItem('restaurant-${restaurantCounter}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-          
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Nom du restaurant</label>
-              <input type="text" class="form-control" name="restaurant[${restaurantCounter}][name]" placeholder="Ex: LA MAISON">
-            </div>
-            
-            <div class="form-group">
-              <label>Téléphone</label>
-              <input type="tel" class="form-control" name="restaurant[${restaurantCounter}][phone]" placeholder="01 XX XX XX XX">
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Adresse</label>
-            <input type="text" class="form-control" name="restaurant[${restaurantCounter}][address]" placeholder="8 rue Carnot">
-          </div>
-          
-          <div class="form-group">
-            <label>Description</label>
-            <textarea class="form-control" name="restaurant[${restaurantCounter}][description]" rows="3" placeholder="Bistrot déco originale. Saumon fumé, Tataki de bœuf..."></textarea>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', restaurantHtml);
-    }
+    currentSection--;
 
-    // Ajouter un lieu à visiter
-    function addPlace() {
-      placeCounter++;
-      const container = document.getElementById('placesContainer');
-      const placeHtml = `
-        <div class="repeatable-item" id="place-${placeCounter}">
-          <div class="repeatable-item-header">
-            <div class="repeatable-item-title">
-              <i class="fas fa-map-marker-alt"></i>
-              Lieu ${placeCounter}
-            </div>
-            <button type="button" class="remove-item-btn" onclick="removeItem('place-${placeCounter}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-          
-          <div class="form-group">
-            <label>Nom du lieu</label>
-            <input type="text" class="form-control" name="place[${placeCounter}][name]" placeholder="Ex: Musée Jean-Jacques Rousseau">
-          </div>
-          
-          <div class="form-group">
-            <label>Description</label>
-            <textarea class="form-control" name="place[${placeCounter}][description]" rows="2" placeholder="Joli petit musée retraçant une partie de sa vie"></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>Photo</label>
-            <div class="image-upload-area" onclick="document.getElementById('placePhoto-${placeCounter}').click()">
-              <i class="fas fa-image"></i>
-              <p>Cliquez pour télécharger une photo</p>
-            </div>
-            <input type="file" id="placePhoto-${placeCounter}" accept="image/*" style="display: none;">
-            <div class="image-preview" id="placePhotoPreview-${placeCounter}"></div>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', placeHtml);
-      setupImageUpload(`placePhoto-${placeCounter}`, `placePhotoPreview-${placeCounter}`);
-    }
+    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
+    document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
+    document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('completed');
 
-    // Supprimer un item
-    function removeItem(itemId) {
-      if (confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
-        document.getElementById(itemId).remove();
-      }
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
 
-    // Initialiser avec quelques éléments par défaut
-    window.addEventListener('DOMContentLoaded', function() {
-      addRoom();
-      addRestaurant();
-      addPlace();
+function setupImageUpload(inputId, previewId) {
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if (!input || !preview) return;
+
+  input.addEventListener('change', function(e) {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const div = document.createElement('div');
+        div.className = 'image-preview-item';
+        div.innerHTML = `
+          <img src="${event.target.result}" alt="Preview">
+          <button type="button" class="remove-btn" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+        preview.appendChild(div);
+      };
+      reader.readAsDataURL(file);
     });
+  });
+}
 
-    // Soumission du formulaire
-    
+setupImageUpload('coverPhoto', 'coverPhotoPreview');
+setupImageUpload('entrancePhotos', 'entrancePhotosPreview');
+setupImageUpload('parkingPhotos', 'parkingPhotosPreview');
 
-    // Actions après création
-    function viewWelcomeBook() {
-      // Rediriger vers le livret créé
-      alert('Redirection vers le livret d\'accueil...');
-    }
+function addRoom() {
+  roomCounter++;
+  const container = document.getElementById('roomsContainer');
+  if (!container) return;
 
-    function createAnother() {
-      // Réinitialiser le formulaire
-      location.reload();
-    }
+  const roomHtml = `
+    <div class="repeatable-item" id="room-${roomCounter}">
+      <div class="repeatable-item-header">
+        <div class="repeatable-item-title">
+          <i class="fas fa-door-closed"></i>
+          Pièce ${roomCounter}
+        </div>
+        <button type="button" class="remove-item-btn" onclick="removeItem('room-${roomCounter}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
 
-// Fonction pour collecter toutes les données du formulaire
+      <div class="form-group">
+        <label>Nom de la pièce</label>
+        <input type="text" class="form-control" name="room[${roomCounter}][name]" placeholder="Ex: Chambre, Salon, Cuisine, Terrasse...">
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" name="room[${roomCounter}][description]" rows="3" placeholder="Ex: 1 lit 140×200 • Linge de lit fourni • Serviettes"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Photo(s) de cette pièce</label>
+        <div class="image-upload-area" onclick="document.getElementById('roomPhotos-${roomCounter}').click()">
+          <i class="fas fa-camera"></i>
+          <p>Cliquez pour télécharger des photos</p>
+        </div>
+        <input type="file" id="roomPhotos-${roomCounter}" accept="image/*" multiple style="display:none;">
+        <div class="image-preview" id="roomPhotosPreview-${roomCounter}"></div>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', roomHtml);
+  setupImageUpload(`roomPhotos-${roomCounter}`, `roomPhotosPreview-${roomCounter}`);
+}
+
+function addRestaurant() {
+  restaurantCounter++;
+  const container = document.getElementById('restaurantsContainer');
+  if (!container) return;
+
+  const restaurantHtml = `
+    <div class="repeatable-item" id="restaurant-${restaurantCounter}">
+      <div class="repeatable-item-header">
+        <div class="repeatable-item-title">
+          <i class="fas fa-utensils"></i>
+          Restaurant ${restaurantCounter}
+        </div>
+        <button type="button" class="remove-item-btn" onclick="removeItem('restaurant-${restaurantCounter}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom du restaurant</label>
+          <input type="text" class="form-control" name="restaurant[${restaurantCounter}][name]" placeholder="Ex: LA MAISON">
+        </div>
+
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" class="form-control" name="restaurant[${restaurantCounter}][phone]" placeholder="01 XX XX XX XX">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Adresse</label>
+        <input type="text" class="form-control" name="restaurant[${restaurantCounter}][address]" placeholder="8 rue Carnot">
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" name="restaurant[${restaurantCounter}][description]" rows="3" placeholder="Bistrot déco originale. Saumon fumé, Tataki de bœuf..."></textarea>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', restaurantHtml);
+}
+
+function addPlace() {
+  placeCounter++;
+  const container = document.getElementById('placesContainer');
+  if (!container) return;
+
+  const placeHtml = `
+    <div class="repeatable-item" id="place-${placeCounter}">
+      <div class="repeatable-item-header">
+        <div class="repeatable-item-title">
+          <i class="fas fa-map-marker-alt"></i>
+          Lieu ${placeCounter}
+        </div>
+        <button type="button" class="remove-item-btn" onclick="removeItem('place-${placeCounter}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label>Nom du lieu</label>
+        <input type="text" class="form-control" name="place[${placeCounter}][name]" placeholder="Ex: Musée Jean-Jacques Rousseau">
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" name="place[${placeCounter}][description]" rows="2" placeholder="Joli petit musée retraçant une partie de sa vie"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Photo</label>
+        <div class="image-upload-area" onclick="document.getElementById('placePhoto-${placeCounter}').click()">
+          <i class="fas fa-image"></i>
+          <p>Cliquez pour télécharger une photo</p>
+        </div>
+        <input type="file" id="placePhoto-${placeCounter}" accept="image/*" style="display:none;">
+        <div class="image-preview" id="placePhotoPreview-${placeCounter}"></div>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', placeHtml);
+  setupImageUpload(`placePhoto-${placeCounter}`, `placePhotoPreview-${placeCounter}`);
+}
+
+function removeItem(itemId) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
+    const el = document.getElementById(itemId);
+    if (el) el.remove();
+  }
+}
+
 function collectFormData() {
   const formData = new FormData();
-  
-  // Section 1: Informations générales
-  formData.append('propertyName', document.querySelector('[name="propertyName"]').value);
-  formData.append('welcomeDescription', document.querySelector('[name="welcomeDescription"]').value);
-  formData.append('contactPhone', document.querySelector('[name="contactPhone"]').value);
-  
-  // Photo de couverture
+
+  formData.append('propertyName', document.querySelector('[name="propertyName"]')?.value || '');
+  formData.append('welcomeDescription', document.querySelector('[name="welcomeDescription"]')?.value || '');
+  formData.append('contactPhone', document.querySelector('[name="contactPhone"]')?.value || '');
+
   const coverPhotoInput = document.getElementById('coverPhoto');
-  if (coverPhotoInput.files[0]) {
-    formData.append('coverPhoto', coverPhotoInput.files[0]);
-  }
-  
-  // Section 2: Accès & Arrivée
-  formData.append('address', document.querySelector('[name="address"]').value);
-  formData.append('postalCode', document.querySelector('[name="postalCode"]').value);
-  formData.append('city', document.querySelector('[name="city"]').value);
-  formData.append('keyboxCode', document.querySelector('[name="keyboxCode"]').value);
-  formData.append('accessInstructions', document.querySelector('[name="accessInstructions"]').value);
-  formData.append('parkingInfo', document.querySelector('[name="parkingInfo"]').value);
-  
-  // Photos d'entrée
+  if (coverPhotoInput?.files?.[0]) formData.append('coverPhoto', coverPhotoInput.files[0]);
+
+  formData.append('address', document.querySelector('[name="address"]')?.value || '');
+  formData.append('postalCode', document.querySelector('[name="postalCode"]')?.value || '');
+  formData.append('city', document.querySelector('[name="city"]')?.value || '');
+  formData.append('keyboxCode', document.querySelector('[name="keyboxCode"]')?.value || '');
+  formData.append('accessInstructions', document.querySelector('[name="accessInstructions"]')?.value || '');
+  formData.append('parkingInfo', document.querySelector('[name="parkingInfo"]')?.value || '');
+
   const entrancePhotosInput = document.getElementById('entrancePhotos');
-  if (entrancePhotosInput.files) {
-    Array.from(entrancePhotosInput.files).forEach(file => {
-      formData.append('entrancePhotos', file);
-    });
-  }
-  
-  // Photos de parking
+  Array.from(entrancePhotosInput?.files || []).forEach(file => formData.append('entrancePhotos', file));
+
   const parkingPhotosInput = document.getElementById('parkingPhotos');
-  if (parkingPhotosInput.files) {
-    Array.from(parkingPhotosInput.files).forEach(file => {
-      formData.append('parkingPhotos', file);
-    });
-  }
-  
-  // Section 3: Pièces
+  Array.from(parkingPhotosInput?.files || []).forEach(file => formData.append('parkingPhotos', file));
+
   const rooms = [];
-  document.querySelectorAll('[id^="room-"]').forEach((roomElement, index) => {
-    const roomId = roomElement.id;
-    const room = {
-      name: roomElement.querySelector(`[name="room[${index + 1}][name]"]`)?.value || '',
-      description: roomElement.querySelector(`[name="room[${index + 1}][description]"]`)?.value || ''
-    };
-    rooms.push(room);
-    
-    // Photos de la pièce
-    const roomPhotosInput = document.getElementById(`roomPhotos-${index + 1}`);
-    if (roomPhotosInput && roomPhotosInput.files) {
-      Array.from(roomPhotosInput.files).forEach(file => {
-        formData.append(`roomPhotos`, file);
-      });
-    }
+  document.querySelectorAll('[id^="room-"]').forEach((roomElement, idx) => {
+    const i = idx + 1;
+    rooms.push({
+      name: roomElement.querySelector(`[name="room[${i}][name]"]`)?.value || '',
+      description: roomElement.querySelector(`[name="room[${i}][description]"]`)?.value || ''
+    });
+
+    const roomPhotosInput = document.getElementById(`roomPhotos-${i}`);
+    Array.from(roomPhotosInput?.files || []).forEach(file => formData.append('roomPhotos', file));
   });
   formData.append('rooms', JSON.stringify(rooms));
-  
-  // Section 4: Informations pratiques
-  formData.append('wifiSSID', document.querySelector('[name="wifiSSID"]').value);
-  formData.append('wifiPassword', document.querySelector('[name="wifiPassword"]').value);
-  formData.append('checkoutTime', document.querySelector('[name="checkoutTime"]').value);
-  formData.append('checkoutInstructions', document.querySelector('[name="checkoutInstructions"]').value);
-  formData.append('equipmentList', document.querySelector('[name="equipmentList"]').value);
-  formData.append('importantRules', document.querySelector('[name="importantRules"]').value);
-  formData.append('transportInfo', document.querySelector('[name="transportInfo"]').value);
-  
-  // Section 5: Aux alentours
+
+  formData.append('wifiSSID', document.querySelector('[name="wifiSSID"]')?.value || '');
+  formData.append('wifiPassword', document.querySelector('[name="wifiPassword"]')?.value || '');
+  formData.append('checkoutTime', document.querySelector('[name="checkoutTime"]')?.value || '');
+  formData.append('checkoutInstructions', document.querySelector('[name="checkoutInstructions"]')?.value || '');
+  formData.append('equipmentList', document.querySelector('[name="equipmentList"]')?.value || '');
+  formData.append('importantRules', document.querySelector('[name="importantRules"]')?.value || '');
+  formData.append('transportInfo', document.querySelector('[name="transportInfo"]')?.value || '');
+
   const restaurants = [];
-  document.querySelectorAll('[id^="restaurant-"]').forEach((restaurantElement, index) => {
-    const restaurant = {
-      name: restaurantElement.querySelector(`[name="restaurant[${index + 1}][name]"]`)?.value || '',
-      phone: restaurantElement.querySelector(`[name="restaurant[${index + 1}][phone]"]`)?.value || '',
-      address: restaurantElement.querySelector(`[name="restaurant[${index + 1}][address]"]`)?.value || '',
-      description: restaurantElement.querySelector(`[name="restaurant[${index + 1}][description]"]`)?.value || ''
-    };
-    restaurants.push(restaurant);
+  document.querySelectorAll('[id^="restaurant-"]').forEach((restaurantElement, idx) => {
+    const i = idx + 1;
+    restaurants.push({
+      name: restaurantElement.querySelector(`[name="restaurant[${i}][name]"]`)?.value || '',
+      phone: restaurantElement.querySelector(`[name="restaurant[${i}][phone]"]`)?.value || '',
+      address: restaurantElement.querySelector(`[name="restaurant[${i}][address]"]`)?.value || '',
+      description: restaurantElement.querySelector(`[name="restaurant[${i}][description]"]`)?.value || ''
+    });
   });
   formData.append('restaurants', JSON.stringify(restaurants));
-  
-  formData.append('shopsList', document.querySelector('[name="shopsList"]').value);
-  
+
+  formData.append('shopsList', document.querySelector('[name="shopsList"]')?.value || '');
+
   const places = [];
-  document.querySelectorAll('[id^="place-"]').forEach((placeElement, index) => {
-    const place = {
-      name: placeElement.querySelector(`[name="place[${index + 1}][name]"]`)?.value || '',
-      description: placeElement.querySelector(`[name="place[${index + 1}][description]"]`)?.value || ''
-    };
-    places.push(place);
-    
-    // Photo du lieu
-    const placePhotoInput = document.getElementById(`placePhoto-${index + 1}`);
-    if (placePhotoInput && placePhotoInput.files[0]) {
-      formData.append(`placePhotos`, placePhotoInput.files[0]);
-    }
+  document.querySelectorAll('[id^="place-"]').forEach((placeElement, idx) => {
+    const i = idx + 1;
+    places.push({
+      name: placeElement.querySelector(`[name="place[${i}][name]"]`)?.value || '',
+      description: placeElement.querySelector(`[name="place[${i}][description]"]`)?.value || ''
+    });
+
+    const placePhotoInput = document.getElementById(`placePhoto-${i}`);
+    if (placePhotoInput?.files?.[0]) formData.append('placePhotos', placePhotoInput.files[0]);
   });
   formData.append('places', JSON.stringify(places));
-  
+
   return formData;
 }
 
-// Modifier la soumission du formulaire
-document.getElementById('welcomeForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  // Afficher un loader
-  const submitButton = document.querySelector('button[type="submit"]');
-  const originalButtonText = submitButton.innerHTML;
-  submitButton.disabled = true;
-  submitButton.innerHTML = '<div class="spinner"></div> Création en cours...';
-  
-  try {
-    const token = getAuthToken();
-    if (!token) {
-      await checkAuth();
-      throw new Error('Non authentifié');
-    }
+function showSuccess(result) {
+  document.getElementById('welcomeForm').style.display = 'none';
+  const steps = document.querySelector('.progress-steps');
+  if (steps) steps.style.display = 'none';
 
-    const formData = collectFormData();
-    
-    // Envoyer au backend
-    const response = await fetch('/api/welcome-books/create', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-      credentials: 'include'
-    });
-    
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('Non authentifié');
-    }
+  window.welcomeBookUrl = result.url;
+  window.welcomeBookUniqueId = result.uniqueId;
 
-    const result = await response.json();
-    
-    if (result.success) {
-      // Masquer le formulaire
-      document.getElementById('welcomeForm').style.display = 'none';
-      document.querySelector('.progress-steps').style.display = 'none';
-      
-      // Stocker l'URL du livret
-      window.welcomeBookUrl = result.url;
-      window.welcomeBookUniqueId = result.uniqueId;
-      
-      // Afficher le message de succès
-      document.getElementById('successMessage').classList.add('show');
-      
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      throw new Error(result.error || 'Erreur lors de la création du livret');
-    }
-    
-  } catch (error) {
-    console.error('Erreur:', error);
-    alert('Une erreur est survenue lors de la création du livret d\'accueil. Veuillez réessayer.');
-    
-    // Restaurer le bouton
-    submitButton.disabled = false;
-    submitButton.innerHTML = originalButtonText;
-  }
-});
+  document.getElementById('successMessage').classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-// Actions après création
 function viewWelcomeBook() {
-  if (window.welcomeBookUrl) {
-    window.open(window.welcomeBookUrl, '_blank');
-  } else {
-    alert('URL du livret non disponible');
-  }
-}
-
-function createAnother() {
-  // Réinitialiser le formulaire
-  location.reload();
-}
-
-// Ajouter un bouton pour copier le lien
-document.querySelector('.success-message .btn-primary').insertAdjacentHTML('afterend', `
-  <button class="btn btn-secondary" onclick="copyWelcomeBookLink()">
-    <i class="fas fa-copy"></i>
-    Copier le lien
-  </button>
-`);
-
-function copyWelcomeBookLink() {
-  if (window.welcomeBookUrl) {
-    navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
-      const button = event.target.closest('button');
-      const originalHTML = button.innerHTML;
-      button.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
-      button.style.background = '#10B981';
-      
-      setTimeout(() => {
-        button.innerHTML = originalHTML;
-        button.style.background = '';
-      }, 2000);
-    }).catch(err => {
-      console.error('Erreur lors de la copie:', err);
-      prompt('Copiez ce lien:', window.welcomeBookUrl);
-    });
-  }
-}
-    function viewWelcomeBook() {
-  if (window.welcomeBookUrl) {
-    window.open(window.welcomeBookUrl, '_blank');
-  } else {
-    alert('URL du livret non disponible');
-  }
-}
-
-function copyWelcomeBookLink() {
-  if (window.welcomeBookUrl) {
-    navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
-      alert('✅ Lien copié dans le presse-papiers !');
-    }).catch(err => {
-      prompt('Copiez ce lien:', window.welcomeBookUrl);
-    });
-  }
+  if (window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
+  else alert('URL du livret non disponible');
 }
 
 function createAnother() {
   location.reload();
 }
+
+function copyWelcomeBookLink(btnEl) {
+  if (!window.welcomeBookUrl) {
+    alert('URL du livret non disponible');
+    return;
+  }
+
+  navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
+    if (!btnEl) {
+      alert('✅ Lien copié !');
+      return;
+    }
+    const originalHTML = btnEl.innerHTML;
+    btnEl.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
+    setTimeout(() => (btnEl.innerHTML = originalHTML), 2000);
+  }).catch(() => {
+    prompt('Copiez ce lien:', window.welcomeBookUrl);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await checkAuth();
+
+  initSidebar();
+  initLogout();
+
+  // éléments par défaut
+  addRoom();
+  addRestaurant();
+  addPlace();
+
+  // inject button "copier le lien" si le conteneur existe
+  const successPrimary = document.querySelector('#successMessage .btn-primary');
+  if (successPrimary && !document.getElementById('copyWelcomeBookBtn')) {
+    successPrimary.insertAdjacentHTML('afterend', `
+      <button id="copyWelcomeBookBtn" class="btn btn-secondary" type="button">
+        <i class="fas fa-copy"></i> Copier le lien
+      </button>
+    `);
+    document.getElementById('copyWelcomeBookBtn').addEventListener('click', function() {
+      copyWelcomeBookLink(this);
+    });
+  }
+
+  // submit handler
+  const form = document.getElementById('welcomeForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton ? submitButton.innerHTML : '';
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<div class="spinner"></div> Création en cours...';
+    }
+
+    try {
+      const ok = await checkAuth({ redirect: false });
+      if (!ok) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const token = getAuthToken();
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const formData = collectFormData();
+
+      const response = await fetch(`${API_BASE}/api/welcome-books/create`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('lcc_token');
+        localStorage.removeItem('lcc_user');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const result = await response.json().catch(() => ({}));
+      if (result && result.success) {
+        showSuccess(result);
+      } else {
+        throw new Error(result.error || 'Erreur lors de la création du livret');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert("Une erreur est survenue lors de la création du livret d'accueil. Veuillez réessayer.");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+      }
+    }
+  });
+});
 </script>
 
 </body>
