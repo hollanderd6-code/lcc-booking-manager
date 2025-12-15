@@ -7527,6 +7527,8 @@ app.listen(PORT, async () => {
 
   await initDb();
   // ✅ NOUVEAU : Initialiser les tables livrets d'accueil
+  app.locals.pool = pool;  // ← Ajouter cette ligne
+await initWelcomeBookTables(pool);
   await initWelcomeBookTables(pool);
   console.log('✅ Tables welcome_books initialisées');
   await loadProperties();
