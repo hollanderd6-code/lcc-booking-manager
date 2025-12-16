@@ -44,23 +44,27 @@ const upload = multer({
 });
 // ---------- Auth (Cookie token OR Bearer token) ----------
 function authenticateUser(req, res, next) {
-  // On récupère le header d'autorisation (gère minuscules/majuscules)
-  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
-  
-  // On extrait le token s'il commence par "Bearer "
+  const authHeader = req.headers.authorization || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  
-  // On regarde aussi dans les cookies au cas où
   const cookieToken = (req.cookies && req.cookies.token) ? req.cookies.token : null;
-  
-  // On prend celui qu'on trouve
   const token = cookieToken || bearerToken;
 
-  if (!token) {
-    console.log('❌ Auth Welcome: Aucun token trouvé');
-    return res.status(401).json({ error: 'Non authentifié' });
-  }
+  if (!token) return res.status(401).json({ error: 'Non authentifié' });
 
+  try {
+    // IMPORTANT : On ajoute le fallback pour correspondre à server-22.js
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const decoded = jwt.verify(token, secret);
+    
+    // IMPORTANT : On utilise 'id' et pas 'userId' car c'est le nom dans le token
+    req.userId = String(decoded.id); 
+    
+    next();
+  } catch (error) {
+    console.error("Erreur Auth:", error.message);
+    return res.status(401).json({ error: 'Token invalide' });
+  }
+}
   try {
     // CORRECTION 1 : On ajoute le MEME fallback que dans server-22.js
     // Sinon, si JWT_SECRET n'est pas dans le .env, la vérification échoue.
@@ -219,12 +223,12 @@ router.post('/create', authenticateUser, upload.fields([
       updatedAt: new Date().toISOString()
     };
 
-    // Sauvegarde DB (UPSERT)
+    // Insert OU Mise à jour si ça existe déjà
     await pool.query(
       `INSERT INTO public.welcome_books (user_id, data, updated_at)
        VALUES ($1, $2::jsonb, NOW())
-       ON CONFLICT (user_id) DO UPDATE
-       SET data = EXCLUDED.data,
+       ON CONFLICT (user_id) DO UPDATE 
+       SET data = EXCLUDED.data, 
            updated_at = NOW()`,
       [req.userId, JSON.stringify(data)]
     );
