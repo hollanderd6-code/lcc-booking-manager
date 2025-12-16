@@ -44,24 +44,37 @@ const upload = multer({
 });
 // ---------- Auth (Cookie token OR Bearer token) ----------
 function authenticateUser(req, res, next) {
-  const authHeader = req.headers.authorization || '';
+  // On récupère le header d'autorisation (gère minuscules/majuscules)
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+  
+  // On extrait le token s'il commence par "Bearer "
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  
+  // On regarde aussi dans les cookies au cas où
   const cookieToken = (req.cookies && req.cookies.token) ? req.cookies.token : null;
+  
+  // On prend celui qu'on trouve
   const token = cookieToken || bearerToken;
 
-  if (!token) return res.status(401).json({ error: 'Non authentifié' });
+  if (!token) {
+    console.log('❌ Auth Welcome: Aucun token trouvé');
+    return res.status(401).json({ error: 'Non authentifié' });
+  }
 
   try {
-    // CORRECTION 1 : Ajout du fallback 'dev-secret-change-me' pour correspondre à server.js
+    // CORRECTION 1 : On ajoute le MEME fallback que dans server-22.js
+    // Sinon, si JWT_SECRET n'est pas dans le .env, la vérification échoue.
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    
     const decoded = jwt.verify(token, secret);
     
-    // CORRECTION 2 : On récupère decoded.id (et non decoded.userId) car c'est ainsi qu'il est signé dans server.js
+    // CORRECTION 2 : Dans server-22.js, le token est signé avec { id: ... }
+    // On doit donc lire decoded.id et non decoded.userId
     req.userId = String(decoded.id);
     
     next();
   } catch (error) {
-    console.error('Auth error:', error.message); // Utile pour le debug
+    console.error('❌ Auth Welcome Error:', error.message);
     return res.status(401).json({ error: 'Token invalide' });
   }
 }
