@@ -65,22 +65,6 @@ function authenticateUser(req, res, next) {
     return res.status(401).json({ error: 'Token invalide' });
   }
 }
-  try {
-    // CORRECTION 1 : On ajoute le MEME fallback que dans server-22.js
-    // Sinon, si JWT_SECRET n'est pas dans le .env, la vérification échoue.
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    
-    const decoded = jwt.verify(token, secret);
-    
-    // CORRECTION 2 : Dans server-22.js, le token est signé avec { id: ... }
-    // On doit donc lire decoded.id et non decoded.userId
-    req.userId = String(decoded.id);
-    
-    next();
-  } catch (error) {
-    console.error('❌ Auth Welcome Error:', error.message);
-    return res.status(401).json({ error: 'Token invalide' });
-  }
 
 // ---------- Optional: keep initializer (does nothing for jsonb schema) ----------
 const initWelcomeBookTables = async (_pool) => {
