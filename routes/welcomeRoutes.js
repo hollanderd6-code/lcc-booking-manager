@@ -352,19 +352,40 @@ router.delete('/:id', authenticateUser, async (req, res) => {
 // ===========================
 router.get('/public/:uniqueId', async (req, res) => {
   try {
+    const pool = req.app.locals.pool;
+    if (!pool) {
+      return res.status(500).json({ error: 'Pool DB manquant (app.locals.pool non défini)' });
+    }
+
     const { uniqueId } = req.params;
 
-    const bookRes = await req.app.locals.pool.query('SELECT * FROM welcome_books WHERE unique_id = $1', [uniqueId]);
-    if (bookRes.rows.length === 0) return res.status(404).json({ error: 'Livret introuvable' });
+    const bookRes = await pool.query(
+      'SELECT * FROM welcome_books WHERE unique_id = $1',
+      [uniqueId]
+    );
+
+    if (bookRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Livret introuvable' });
+    }
 
     const book = bookRes.rows[0];
 
-    const [photosRes, roomsRes, restaurantsRes, placesRes] = await Promise.all([
-      req.app.locals.pool.query('SELECT * FROM welcome_book_photos WHERE welcome_book_id = $1 ORDER BY photo_type, display_order', [book.id]),
-      req.app.locals.pool.query('SELECT * FROM welcome_book_rooms WHERE welcome_book_id = $1 ORDER BY display_order', [book.id]),
-      req.app.locals.pool.query('SELECT * FROM welcome_book_restaurants WHERE welcome_book_id = $1 ORDER BY display_order', [book.id]),
-      req.app.locals.pool.query('SELECT * FROM welcome_book_places WHERE welcome_book_id = $1 ORDER BY display_order', [book.id])
-    ]);
+    const photosRes = await pool.query(
+      'SELECT * FROM welcome_book_photos WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+    const roomsRes = await pool.query(
+      'SELECT * FROM welcome_book_rooms WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+    const restaurantsRes = await pool.query(
+      'SELECT * FROM welcome_book_restaurants WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
+    const placesRes = await pool.query(
+      'SELECT * FROM welcome_book_places WHERE welcome_book_id = $1 ORDER BY display_order ASC',
+      [book.id]
+    );
 
     res.json({
       success: true,
@@ -375,8 +396,8 @@ router.get('/public/:uniqueId', async (req, res) => {
       places: placesRes.rows
     });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('PUBLIC welcome error:', e);
+    res.status(500).json({ error: 'Erreur serveur', details: e.message });
   }
 });
 
