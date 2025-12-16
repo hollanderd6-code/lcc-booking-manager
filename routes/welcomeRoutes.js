@@ -165,13 +165,15 @@ router.post('/create', authenticateUser, upload.fields([
       updatedAt: new Date().toISOString()
     };
 
-    // Insert into jsonb schema
+    // Insert OR Update if exists (Upsert)
     await pool.query(
       `INSERT INTO public.welcome_books (user_id, data, updated_at)
-       VALUES ($1, $2::jsonb, NOW())`,
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (user_id) DO UPDATE
+       SET data = EXCLUDED.data,
+           updated_at = NOW()`,
       [req.userId, JSON.stringify(data)]
     );
-
     const host = `${req.protocol}://${req.get('host')}`;
     res.json({
       success: true,
