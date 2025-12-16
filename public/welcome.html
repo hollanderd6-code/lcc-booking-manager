@@ -1437,15 +1437,17 @@ function showSuccess(result) {
 
   window.welcomeBookUrl = result.url;
   window.welcomeBookUniqueId = result.uniqueId;
-
+window.welcomeBookUrl = `${API_BASE}/api/welcome-books/public/${result.uniqueId}`;
   document.getElementById('successMessage').classList.add('show');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function viewWelcomeBook() {
-  if (window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
-  else alert('URL du livret non disponible');
+  if (!window.welcomeBookUniqueId) return alert('ID du livret manquant');
+  const API_BASE = 'https://lcc-booking-manager.onrender.com';
+  window.open(`${API_BASE}/api/welcome-books/public/${window.welcomeBookUniqueId}`, '_blank');
 }
+
 
 function createAnother() {
   location.reload();
