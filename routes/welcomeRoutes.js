@@ -81,7 +81,6 @@ function authenticateUser(req, res, next) {
     console.error('❌ Auth Welcome Error:', error.message);
     return res.status(401).json({ error: 'Token invalide' });
   }
-}
 
 // ---------- Optional: keep initializer (does nothing for jsonb schema) ----------
 const initWelcomeBookTables = async (_pool) => {
