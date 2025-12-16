@@ -6800,6 +6800,7 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 // ============================================
 // ✅ NOUVEAU : ROUTES POUR LIVRETS D'ACCUEIL
 // ============================================
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
 // ============================================
 // ============================================
@@ -7526,8 +7527,7 @@ app.listen(PORT, async () => {
 
   await initDb();
   // ✅ NOUVEAU : Initialiser les tables livrets d'accueil
-  app.locals.pool = pool;  // ← Ajouter cette ligne
-await initWelcomeBookTables(pool);
+  app.locals.pool = pool;
   await initWelcomeBookTables(pool);
   console.log('✅ Tables welcome_books initialisées');
   await loadProperties();
