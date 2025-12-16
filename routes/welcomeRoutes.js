@@ -42,7 +42,6 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter
 });
-
 // ---------- Auth (Cookie token OR Bearer token) ----------
 function authenticateUser(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -53,11 +52,16 @@ function authenticateUser(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Non authentifié' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // DB user_id is text → store as string to avoid type mismatch
-    req.userId = String(decoded.userId);
+    // CORRECTION 1 : Ajout du fallback 'dev-secret-change-me' pour correspondre à server.js
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const decoded = jwt.verify(token, secret);
+    
+    // CORRECTION 2 : On récupère decoded.id (et non decoded.userId) car c'est ainsi qu'il est signé dans server.js
+    req.userId = String(decoded.id);
+    
     next();
   } catch (error) {
+    console.error('Auth error:', error.message); // Utile pour le debug
     return res.status(401).json({ error: 'Token invalide' });
   }
 }
