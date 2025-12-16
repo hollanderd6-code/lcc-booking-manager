@@ -1430,22 +1430,28 @@ function collectFormData() {
   return formData;
 }
 
+const API_BASE = 'https://lcc-booking-manager.onrender.com';
+
 function showSuccess(result) {
   document.getElementById('welcomeForm').style.display = 'none';
   const steps = document.querySelector('.progress-steps');
   if (steps) steps.style.display = 'none';
 
-  window.welcomeBookUrl = result.url;
   window.welcomeBookUniqueId = result.uniqueId;
-window.welcomeBookUrl = `${API_BASE}/api/welcome-books/public/${result.uniqueId}`;
+  window.welcomeBookUrl = `${API_BASE}/api/welcome-books/public/${result.uniqueId}`;
+
+  console.log('PUBLIC URL:', window.welcomeBookUrl);
+
   document.getElementById('successMessage').classList.add('show');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function viewWelcomeBook() {
-  if (!window.welcomeBookUniqueId) return alert('ID du livret manquant');
-  const API_BASE = 'https://lcc-booking-manager.onrender.com';
-  window.open(`${API_BASE}/api/welcome-books/public/${window.welcomeBookUniqueId}`, '_blank');
+  if (!window.welcomeBookUrl) {
+    alert("URL du livret non disponible");
+    return;
+  }
+  window.open(window.welcomeBookUrl, '_blank');
 }
 
 
@@ -1540,6 +1546,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
 
       const result = await response.json().catch(() => ({}));
+      console.log('CREATE result:', result);
       if (result && result.success) {
         showSuccess(result);
       } else {
