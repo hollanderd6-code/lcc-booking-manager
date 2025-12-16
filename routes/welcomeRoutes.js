@@ -103,7 +103,34 @@ function fileUrl(file) {
 function filesUrls(files) {
   return (files || []).map(f => fileUrl(f)).filter(Boolean);
 }
+// ---------- Récupérer mon livret (pour modification) ----------
+router.get('/my-book', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    
+    // On cherche le livret de l'utilisateur connecté
+    const result = await pool.query(
+      `SELECT data FROM welcome_books WHERE user_id = $1`,
+      [req.userId]
+    );
 
+    if (result.rows.length === 0) {
+      // Pas encore de livret, on renvoie vide mais succès
+      return res.json({ success: true, exists: false });
+    }
+
+    // On renvoie les données JSON stockées
+    res.json({ 
+      success: true, 
+      exists: true, 
+      data: result.rows[0].data 
+    });
+
+  } catch (error) {
+    console.error('Erreur récupération livret:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
 // ---------- CREATE ----------
 router.post('/create', authenticateUser, upload.fields([
   { name: 'coverPhoto', maxCount: 1 },
