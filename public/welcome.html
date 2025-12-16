@@ -1447,11 +1447,8 @@ function showSuccess(result) {
 }
 
 function viewWelcomeBook() {
-  if (!window.welcomeBookUrl) {
-    alert("URL du livret non disponible");
-    return;
-  }
-  window.open(window.welcomeBookUrl, '_blank');
+  if (window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
+  else alert("URL du livret non disponible");
 }
 
 
