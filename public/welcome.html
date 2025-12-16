@@ -1560,6 +1560,61 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
 });
     }
+    // --- FONCTION POUR CHARGER LES DONNÉES EXISTANTES ---
+async function loadExistingData() {
+    try {
+        const token = localStorage.getItem('lcc_token'); // Assure-toi que c'est le bon nom de ton token
+        if (!token) return;
+
+        const response = await fetch(`${API_BASE}/api/welcome-books/my-book`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.exists) {
+            console.log("Données trouvées, remplissage du formulaire...");
+            const data = result.data;
+
+            // 1. Remplir les champs textes simples
+            // Assure-toi que les ID ici correspondent aux 'name' ou 'id' de tes inputs HTML
+            if(document.getElementById('propertyName')) document.getElementById('propertyName').value = data.propertyName || '';
+            if(document.getElementById('address')) document.getElementById('address').value = data.address || '';
+            if(document.getElementById('postalCode')) document.getElementById('postalCode').value = data.postalCode || '';
+            if(document.getElementById('city')) document.getElementById('city').value = data.city || '';
+            
+            if(document.getElementById('welcomeDescription')) document.getElementById('welcomeDescription').value = data.welcomeDescription || '';
+            if(document.getElementById('accessInstructions')) document.getElementById('accessInstructions').value = data.accessInstructions || '';
+            if(document.getElementById('keyboxCode')) document.getElementById('keyboxCode').value = data.keyboxCode || '';
+            
+            if(document.getElementById('wifiSSID')) document.getElementById('wifiSSID').value = data.wifiSSID || '';
+            if(document.getElementById('wifiPassword')) document.getElementById('wifiPassword').value = data.wifiPassword || '';
+            
+            if(document.getElementById('checkoutTime')) document.getElementById('checkoutTime').value = data.checkoutTime || '';
+            if(document.getElementById('checkoutInstructions')) document.getElementById('checkoutInstructions').value = data.checkoutInstructions || '';
+            
+            // 2. Gestion des Photos déjà présentes
+            // Astuce : On ne peut pas remplir un <input type="file">.
+            // Il faut afficher un petit aperçu "Image actuelle" à côté.
+            if (data.photos && data.photos.cover) {
+                // Exemple : afficher un petit texte ou une image si tu as un div prévu pour ça
+                // showExistingImage('preview-cover', data.photos.cover);
+            }
+
+            // 3. Modifier le texte du bouton pour dire "Mettre à jour"
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if(submitBtn) submitBtn.textContent = "Mettre à jour mon Livret";
+            
+            // Si tu as des listes (Chambres, Restaurants), c'est plus complexe, 
+            // il faut faire une boucle pour recréer les éléments HTML (div) pour chaque item.
+        }
+    } catch (error) {
+        console.error("Erreur au chargement du livret:", error);
+    }
+}
+
+// Lancer le chargement au démarrage de la page
+document.addEventListener('DOMContentLoaded', loadExistingData);
 </script>
 
 </body>
