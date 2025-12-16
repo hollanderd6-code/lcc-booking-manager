@@ -604,11 +604,13 @@ const generateWelcomeBookHTML = (data) => {
     <!-- Hero -->
     <section class="hero">
         <div class="hero-content">
-            <p class="hero-subtitle">Bienvenue dans</p>
-            <h1>${welcomeBook.property_name}</h1>
-            ${welcomeBook.welcome_description ? `
+            <p class="hero-subtitle">Bienvenue</p> 
+            
+            <h1>${welcomeBook.propertyName || welcomeBook.property_name}</h1>
+            
+            ${welcomeBook.welcomeDescription ? `
             <p class="hero-description">
-                ${welcomeBook.welcome_description}
+                ${welcomeBook.welcomeDescription}
             </p>
             ` : ''}
         </div>
