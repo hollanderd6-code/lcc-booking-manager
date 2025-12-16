@@ -23,7 +23,7 @@ const PDFDocument = require('pdfkit');
 // ============================================
 // ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
-const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeBooks');
+const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ============================================
 
@@ -6800,7 +6800,6 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 // ============================================
 // ✅ NOUVEAU : ROUTES POUR LIVRETS D'ACCUEIL
 // ============================================
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
 // ============================================
 // ============================================
