@@ -577,6 +577,33 @@ const generateWelcomeBookHTML = (data) => {
                 gap: 1.5rem;
             }
         }
+
+.header-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 2rem;
+  /* AJOUTE CETTE LIGNE pour remonter le texte (plus le chiffre est grand, plus ça monte) */
+  padding-bottom: 80px; 
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); /* Fond noir dégradé pour aider la lecture */
+}
+
+.property-name {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: white;
+  /* AJOUTE CETTE LIGNE pour l'ombre portée (lisibilité) */
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); 
+}
+
+.property-address {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  /* AJOUTE CETTE LIGNE aussi */
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+}
     </style>
 </head>
 <body>
