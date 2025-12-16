@@ -1,5 +1,21 @@
 const generateWelcomeBookHTML = (data) => {
-  const { welcomeBook, rooms, photos, restaurants, places } = data;
+  const { welcomeBook, userProfile, rooms, photos, restaurants, places } = data;
+
+  // --- 1. LOGIQUE LOGO HEADER ---
+  // Si un logo existe dans le profil, on crée une balise IMG.
+  // Sinon, on garde ta structure HTML actuelle (LCC + points + souligné)
+  const headerLogoHtml = (userProfile && userProfile.logo_url) 
+    ? `<img src="${userProfile.logo_url}" alt="Logo" style="max-height: 50px; object-fit: contain;">` 
+    : `<div class="logo-text">LCC</div>
+       <div class="logo-dots"><span></span><span></span><span></span></div>
+       <div class="logo-underline"></div>`;
+
+  // --- 2. LOGIQUE NOM ENTREPRISE ---
+  // Affiche le nom seulement si le compte n'est pas "individual"
+  let companyTitleHtml = '';
+  if (userProfile && userProfile.account_type !== 'individual' && userProfile.company) {
+    companyTitleHtml = `<h2 style="font-size: 2.5rem; margin-bottom: 2rem; color: white;">${userProfile.company}</h2>`;
+  }
   
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -584,12 +600,8 @@ const generateWelcomeBookHTML = (data) => {
     <header class="header-bar">
         <div class="header-content">
             <div class="logo">
-                <div class="logo-text">LCC</div>
-                <div class="logo-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
+    ${headerLogoHtml}
+</div>
                 <div class="logo-underline"></div>
             </div>
             <nav class="header-nav">
@@ -891,9 +903,11 @@ const generateWelcomeBookHTML = (data) => {
     </div>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <h2>Nous Espérons que Vous Passerez un Excellent Séjour</h2>
+   <footer class="footer">
+    <div class="footer-content">
+        ${companyTitleHtml}
+        
+        <h2>Nous Espérons que Vous Passerez un Excellent Séjour</h2>
             <p style="font-size: 1.1rem; line-height: 1.8; margin: 2rem 0;">
                 Nous serions heureux de connaître votre avis sur votre séjour.<br>
                 Votre retour est précieux et nous permettra d'améliorer ce logement.
@@ -919,18 +933,12 @@ const generateWelcomeBookHTML = (data) => {
             </div>
             ` : ''}
 
-            <div class="footer-logo">
-                <div class="logo">
-                    <div class="logo-text">LCC</div>
-                    <div class="logo-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                    <div class="logo-underline"></div>
+            <div class="footer-logo" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 3rem; padding-top: 2rem;">
+                <div style="font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.8rem; margin-bottom: 0.5rem; display: inline-block; color: white;">
+                    <span style="color:#10B981">Boosting</span>Host
                 </div>
                 <p style="margin-top: 1rem; opacity: 0.7; font-size: 0.9rem;">
-                    © 2024 La Conciergerie de Charles
+                    © 2025 Ce livret a été conçu par Boostinghost.com
                 </p>
             </div>
         </div>
