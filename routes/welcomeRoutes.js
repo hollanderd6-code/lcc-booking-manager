@@ -4,23 +4,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // Configuration Multer pour l'upload d'images
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'welcome-books');
-    
-    // Créer le dossier s'il n'existe pas
-    try {
-      await fs.mkdir(uploadDir, { recursive: true });
-    } catch (err) {
-      console.error('Error creating upload directory:', err);
-    }
-    
+    try { await fs.mkdir(uploadDir, { recursive: true }); } catch (err) { console.error('Error creating upload directory:', err); }
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    // Générer un nom unique pour chaque fichier
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
@@ -31,48 +24,34 @@ const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
-  
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Seules les images sont acceptées (JPEG, PNG, GIF, WebP)'));
-  }
+  if (mimetype && extname) return cb(null, true);
+  cb(new Error('Seules les images sont acceptées (JPEG, PNG, GIF, WebP)'));
 };
 
 const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // Limite de 5MB par fichier
-  },
-  fileFilter: fileFilter
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter
 });
-// Middleware d'authentification
-function authenticateUser(req, res, next) {
-  console.log('🔍 Cookies reçus:', req.cookies);  // DEBUG
-  console.log('🔍 Headers:', req.headers.cookie);  // DEBUG
-  
-const authHeader = req.headers.authorization || '';
-const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-const token = req.cookies?.token || bearerToken;
 
-  if (!token) {
-    console.log('❌ Pas de token trouvé dans les cookies');
-    return res.status(401).json({ error: 'Non authentifié' });
-  }
-  
+// Middleware d'authentification (Cookie token OU Bearer token)
+function authenticateUser(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = (req.cookies && req.cookies.token) ? req.cookies.token : bearerToken;
+
+  if (!token) return res.status(401).json({ error: 'Non authentifié' });
+
   try {
-    const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.userId;
-    console.log('✅ Utilisateur authentifié:', req.userId);
     next();
   } catch (error) {
-    console.log('❌ Erreur validation token:', error.message);
     return res.status(401).json({ error: 'Token invalide' });
   }
 }
 
-// Créer les tables si elles n'existent pas (VERSION SIMPLIFIÉE SANS CONTRAINTES)
+// Créer les tables si elles n'existent pas
 const initWelcomeBookTables = async (pool) => {
   const createWelcomeBooksTable = `
     CREATE TABLE IF NOT EXISTS welcome_books (
@@ -151,17 +130,11 @@ const initWelcomeBookTables = async (pool) => {
     );
   `;
 
-  try {
-    await pool.query(createWelcomeBooksTable);
-    await pool.query(createWelcomeBookRoomsTable);
-    await pool.query(createWelcomeBookPhotosTable);
-    await pool.query(createWelcomeBookRestaurantsTable);
-    await pool.query(createWelcomeBookPlacesTable);
-    console.log('✅ Tables welcome_books créées avec succès');
-  } catch (error) {
-    console.error('❌ Erreur lors de la création des tables welcome_books:', error);
-    throw error;
-  }
+  await pool.query(createWelcomeBooksTable);
+  await pool.query(createWelcomeBookRoomsTable);
+  await pool.query(createWelcomeBookPhotosTable);
+  await pool.query(createWelcomeBookRestaurantsTable);
+  await pool.query(createWelcomeBookPlacesTable);
 };
 
 // Route pour créer un nouveau livret d'accueil
@@ -173,37 +146,23 @@ router.post('/create', authenticateUser, upload.fields([
   { name: 'placePhotos', maxCount: 20 }
 ]), async (req, res) => {
   const client = await req.app.locals.pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const {
-      propertyName,
-      welcomeDescription,
-      contactPhone,
-      address,
-      postalCode,
-      city,
-      keyboxCode,
-      accessInstructions,
-      parkingInfo,
-      wifiSSID,
-      wifiPassword,
-      checkoutTime,
-      checkoutInstructions,
-      equipmentList,
-      importantRules,
-      transportInfo,
-      shopsList,
-      rooms,
-      restaurants,
-      places
+      propertyName, welcomeDescription, contactPhone,
+      address, postalCode, city, keyboxCode,
+      accessInstructions, parkingInfo,
+      wifiSSID, wifiPassword,
+      checkoutTime, checkoutInstructions,
+      equipmentList, importantRules,
+      transportInfo, shopsList,
+      rooms, restaurants, places
     } = req.body;
 
-    // Générer un ID unique pour le livret
     const uniqueId = crypto.randomBytes(16).toString('hex');
 
-    // Insérer le livret principal
     const insertWelcomeBookQuery = `
       INSERT INTO welcome_books (
         user_id, unique_id, property_name, welcome_description, contact_phone,
@@ -216,48 +175,24 @@ router.post('/create', authenticateUser, upload.fields([
     `;
 
     const welcomeBookResult = await client.query(insertWelcomeBookQuery, [
-      req.userId,
-      uniqueId,
-      propertyName,
-      welcomeDescription,
-      contactPhone,
-      address,
-      postalCode,
-      city,
-      keyboxCode,
-      accessInstructions,
-      parkingInfo,
-      wifiSSID,
-      wifiPassword,
-      checkoutTime,
-      checkoutInstructions,
-      equipmentList,
-      importantRules,
-      transportInfo,
-      shopsList
+      req.userId, uniqueId, propertyName, welcomeDescription, contactPhone,
+      address, postalCode, city, keyboxCode, accessInstructions,
+      parkingInfo, wifiSSID, wifiPassword, checkoutTime,
+      checkoutInstructions, equipmentList, importantRules,
+      transportInfo, shopsList
     ]);
 
     const welcomeBookId = welcomeBookResult.rows[0].id;
+    const files = req.files || {};
 
-    // Traiter les photos
-    const files = req.files;
-
-    // Photo de couverture
+    // Cover
     if (files.coverPhoto && files.coverPhoto[0]) {
       const photoUrl = `/uploads/welcome-books/${files.coverPhoto[0].filename}`;
-      await client.query(
-        'INSERT INTO welcome_book_photos (welcome_book_id, photo_type, photo_url) VALUES ($1, $2, $3)',
-        [welcomeBookId, 'cover', photoUrl]
-      );
-      
-      // Mettre à jour le livret avec la photo de couverture
-      await client.query(
-        'UPDATE welcome_books SET cover_photo = $1 WHERE id = $2',
-        [photoUrl, welcomeBookId]
-      );
+      await client.query('INSERT INTO welcome_book_photos (welcome_book_id, photo_type, photo_url) VALUES ($1, $2, $3)', [welcomeBookId, 'cover', photoUrl]);
+      await client.query('UPDATE welcome_books SET cover_photo = $1 WHERE id = $2', [photoUrl, welcomeBookId]);
     }
 
-    // Photos d'entrée
+    // Entrance
     if (files.entrancePhotos) {
       for (let i = 0; i < files.entrancePhotos.length; i++) {
         const photoUrl = `/uploads/welcome-books/${files.entrancePhotos[i].filename}`;
@@ -268,7 +203,7 @@ router.post('/create', authenticateUser, upload.fields([
       }
     }
 
-    // Photos de parking
+    // Parking
     if (files.parkingPhotos) {
       for (let i = 0; i < files.parkingPhotos.length; i++) {
         const photoUrl = `/uploads/welcome-books/${files.parkingPhotos[i].filename}`;
@@ -279,27 +214,23 @@ router.post('/create', authenticateUser, upload.fields([
       }
     }
 
-    // Traiter les pièces
+    // Rooms
     if (rooms) {
       const roomsArray = typeof rooms === 'string' ? JSON.parse(rooms) : (Array.isArray(rooms) ? rooms : [rooms]);
-      
       for (let i = 0; i < roomsArray.length; i++) {
         const room = typeof roomsArray[i] === 'string' ? JSON.parse(roomsArray[i]) : roomsArray[i];
-        
-        const roomResult = await client.query(
-          'INSERT INTO welcome_book_rooms (welcome_book_id, name, description, display_order) VALUES ($1, $2, $3, $4) RETURNING id',
+        await client.query(
+          'INSERT INTO welcome_book_rooms (welcome_book_id, name, description, display_order) VALUES ($1, $2, $3, $4)',
           [welcomeBookId, room.name, room.description, i]
         );
       }
     }
 
-    // Traiter les restaurants
+    // Restaurants
     if (restaurants) {
       const restaurantsArray = typeof restaurants === 'string' ? JSON.parse(restaurants) : (Array.isArray(restaurants) ? restaurants : [restaurants]);
-      
       for (let i = 0; i < restaurantsArray.length; i++) {
         const restaurant = typeof restaurantsArray[i] === 'string' ? JSON.parse(restaurantsArray[i]) : restaurantsArray[i];
-        
         await client.query(
           'INSERT INTO welcome_book_restaurants (welcome_book_id, name, phone, address, description, display_order) VALUES ($1, $2, $3, $4, $5, $6)',
           [welcomeBookId, restaurant.name, restaurant.phone, restaurant.address, restaurant.description, i]
@@ -307,26 +238,14 @@ router.post('/create', authenticateUser, upload.fields([
       }
     }
 
-    // Traiter les lieux à visiter
+    // Places
     if (places) {
       const placesArray = typeof places === 'string' ? JSON.parse(places) : (Array.isArray(places) ? places : [places]);
-      
       for (let i = 0; i < placesArray.length; i++) {
         const place = typeof placesArray[i] === 'string' ? JSON.parse(placesArray[i]) : placesArray[i];
-        
-        let photoUrl = null;
-        if (files.placePhotos) {
-          const placePhoto = files.placePhotos.find(file => 
-            file.fieldname.includes(`place-${i + 1}`)
-          );
-          if (placePhoto) {
-            photoUrl = `/uploads/welcome-books/${placePhoto.filename}`;
-          }
-        }
-        
         await client.query(
           'INSERT INTO welcome_book_places (welcome_book_id, name, description, photo_url, display_order) VALUES ($1, $2, $3, $4, $5)',
-          [welcomeBookId, place.name, place.description, photoUrl, i]
+          [welcomeBookId, place.name, place.description, null, i]
         );
       }
     }
@@ -335,19 +254,15 @@ router.post('/create', authenticateUser, upload.fields([
 
     res.json({
       success: true,
-      message: 'Livret d\'accueil créé avec succès',
+      message: "Livret d'accueil créé avec succès",
       welcomeBookId,
       uniqueId,
       url: `${req.protocol}://${req.get('host')}/api/welcome-books/public/${uniqueId}`
     });
-
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Erreur lors de la création du livret:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la création du livret d\'accueil'
-    });
+    res.status(500).json({ success: false, error: "Erreur lors de la création du livret d'accueil" });
   } finally {
     client.release();
   }
@@ -357,86 +272,55 @@ router.post('/create', authenticateUser, upload.fields([
 router.get('/user/list', authenticateUser, async (req, res) => {
   try {
     const query = `
-      SELECT 
-        id,
-        unique_id,
-        property_name,
-        cover_photo,
-        created_at,
-        updated_at
-      FROM welcome_books 
+      SELECT id, unique_id, property_name, cover_photo, created_at, updated_at
+      FROM welcome_books
       WHERE user_id = $1
       ORDER BY created_at DESC
     `;
-    
     const result = await req.app.locals.pool.query(query, [req.userId]);
-    
-    res.json({
-      success: true,
-      welcomeBooks: result.rows
-    });
-    
+    res.json({ success: true, welcomeBooks: result.rows });
   } catch (error) {
     console.error('Erreur lors de la récupération des livrets:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la récupération des livrets'
-    });
+    res.status(500).json({ success: false, error: 'Erreur lors de la récupération des livrets' });
   }
 });
 
 // Route pour supprimer un livret
 router.delete('/:id', authenticateUser, async (req, res) => {
   const client = await req.app.locals.pool.connect();
-  
   try {
     const { id } = req.params;
-    
-    // Vérifier que le livret appartient à l'utilisateur
+
     const checkQuery = 'SELECT id FROM welcome_books WHERE id = $1 AND user_id = $2';
     const checkResult = await client.query(checkQuery, [id, req.userId]);
-    
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Livret non trouvé ou accès non autorisé' });
     }
-    
+
     await client.query('BEGIN');
-    
-    // Supprimer les données liées
     await client.query('DELETE FROM welcome_book_photos WHERE welcome_book_id = $1', [id]);
     await client.query('DELETE FROM welcome_book_rooms WHERE welcome_book_id = $1', [id]);
     await client.query('DELETE FROM welcome_book_restaurants WHERE welcome_book_id = $1', [id]);
     await client.query('DELETE FROM welcome_book_places WHERE welcome_book_id = $1', [id]);
-    
-    // Supprimer le livret
     await client.query('DELETE FROM welcome_books WHERE id = $1', [id]);
-    
     await client.query('COMMIT');
-    
-    res.json({
-      success: true,
-      message: 'Livret d\'accueil supprimé avec succès'
-    });
-    
+
+    res.json({ success: true, message: "Livret d'accueil supprimé avec succès" });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Erreur lors de la suppression du livret:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erreur lors de la suppression du livret'
-    });
+    res.status(500).json({ success: false, error: 'Erreur lors de la suppression du livret' });
   } finally {
     client.release();
   }
-  // ✅ Route PUBLIQUE : récupérer un livret par uniqueId
+});
+
+// ✅ Route PUBLIQUE : récupérer un livret par uniqueId
 router.get('/public/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
 
-    const bookRes = await req.app.locals.pool.query(
-      'SELECT * FROM welcome_books WHERE unique_id = $1',
-      [uniqueId]
-    );
+    const bookRes = await req.app.locals.pool.query('SELECT * FROM welcome_books WHERE unique_id = $1', [uniqueId]);
     if (bookRes.rows.length === 0) return res.status(404).json({ error: 'Livret introuvable' });
 
     const book = bookRes.rows[0];
@@ -458,20 +342,11 @@ router.get('/public/:uniqueId', async (req, res) => {
       [book.id]
     );
 
-    res.json({
-      success: true,
-      book,
-      photos: photosRes.rows,
-      rooms: roomsRes.rows,
-      restaurants: restaurantsRes.rows,
-      places: placesRes.rows
-    });
+    res.json({ success: true, book, photos: photosRes.rows, rooms: roomsRes.rows, restaurants: restaurantsRes.rows, places: placesRes.rows });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
-});
-
 });
 
 module.exports = { router, initWelcomeBookTables };
