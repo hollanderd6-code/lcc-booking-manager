@@ -1478,6 +1478,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   await checkAuth({ redirect: false }); // 👈 IMPORTANT
   initSidebar();
   initLogout();
+// ✅ AJOUT : Si l'utilisateur est connecté, on charge ses données
+  if (isAuth) {
+    await loadExistingWelcomeBook();
+  }
 });
 
 
