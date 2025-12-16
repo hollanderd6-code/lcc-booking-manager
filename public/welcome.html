@@ -1436,7 +1436,8 @@ function showSuccess(result) {
   if (steps) steps.style.display = 'none';
 
   window.welcomeBookUniqueId = result.uniqueId;
-  window.welcomeBookUrl = `${API_BASE}/api/welcome-books/public/${result.uniqueId}`;
+  // On pointe vers la route d'affichage HTML définie dans server-22.js
+window.welcomeBookUrl = `${API_BASE}/welcome/${result.uniqueId}`;
 
   console.log('PUBLIC URL:', window.welcomeBookUrl);
 
