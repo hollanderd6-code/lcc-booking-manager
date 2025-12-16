@@ -1126,7 +1126,7 @@ const app = express();
 // ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
 
-app.use('/uploads', express.static(UPLOAD_ROOT));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 const PORT = process.env.PORT || 3000;
 
 
