@@ -179,7 +179,8 @@ router.post('/create', authenticateUser, upload.fields([
       success: true,
       message: "Livret d'accueil créé avec succès",
       uniqueId,
-      url: `${host}/api/welcome-books/public/${uniqueId}` // public JSON endpoint
+      // On renvoie l'URL de la page publique (HTML) et non l'API
+      url: `${host}/welcome/${uniqueId}` 
     });
   } catch (error) {
     console.error('Erreur lors de la création du livret:', error);
