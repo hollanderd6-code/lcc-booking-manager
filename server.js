@@ -7427,53 +7427,70 @@ app.get('/api/_routes', (req, res) => {
     res.status(500).json({ error: String(e) });
   }
 });
-// ✅ NOUVEAU : ROUTE PUBLIQUE LIVRET D'ACCUEIL (AVEC PROFIL USER)
+// ============================================
+// ✅ ROUTE PUBLIQUE LIVRET D'ACCUEIL (CORRIGÉE)
 // ============================================
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
     
-    // 1. On récupère le livret
-    const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = $1";
+    // 1. On cherche dans la colonne JSON 'data' car c'est là que welcomeRoutes-2.js a tout enregistré
+    const welcomeBookQuery = `SELECT data, updated_at FROM welcome_books WHERE data->>'uniqueId' = $1`;
     const welcomeBookResult = await pool.query(welcomeBookQuery, [uniqueId]);
     
     if (welcomeBookResult.rows.length === 0) {
-      return res.status(404).send('<h1>Livret introuvable</h1>');
+      return res.status(404).send('<h1>Livret introuvable (404)</h1>');
     }
     
-    const row = welcomeBookResult.rows[0];
-    const data = row.data || {};
-
-    // 2. ✅ ON RÉCUPÈRE LES INFOS DU PROPRIÉTAIRE (Logo, Entreprise, Type)
-    const userQuery = "SELECT company, logo_url, account_type FROM users WHERE id = $1";
-    const userResult = await pool.query(userQuery, [row.user_id]);
-    const userProfile = userResult.rows.length > 0 ? userResult.rows[0] : {};
-
-    // 3. Extraction et correction des chemins des photos
-    const photosData = data.photos || {};
-
-    // Petite fonction pour ajouter le dossier d'upload si c'est juste un nom de fichier
-    const fixImg = (url) => {
-        if (!url) return '';
-        if (url.startsWith('http') || url.startsWith('/')) return url; // Déjà un lien complet
-        return `/uploads/welcome-books/${url}`; // Sinon, on ajoute le chemin du dossier
-    };
-
-    const photos = {
-      cover: photosData.cover ? [{ url: fixImg(photosData.cover) }] : [],
-      entrance: (photosData.entrance || []).map(url => ({ url: fixImg(url) })),
-      parking: (photosData.parking || []).map(url => ({ url: fixImg(url) })),
-      rooms: (photosData.roomPhotos || []).map(url => ({ url: fixImg(url) })),
-      places: (photosData.placePhotos || []).map(url => ({ url: fixImg(url) }))
-    };
+    // 2. On récupère les données brutes du JSON
+    const bookData = welcomeBookResult.rows[0].data || {};
     
-    const rooms = roomsRaw.map(room => ({ ...room, photos: [] }));
-    const welcomeBookFull = { ...row, ...data };
+    // 3. On prépare les structures pour que le générateur HTML les comprenne
+    // Le générateur attend souvent des tableaux ou des objets spécifiques
+    
+    // Extraction des photos (adaptation du format JSON vers le format attendu par le générateur)
+    const rawPhotos = bookData.photos || {};
+    
+    const photos = {
+      cover: rawPhotos.cover ? [{ photo_url: rawPhotos.cover }] : [],
+      entrance: (rawPhotos.entrance || []).map(url => ({ photo_url: url })),
+      parking: (rawPhotos.parking || []).map(url => ({ photo_url: url })),
+      rooms: (rawPhotos.roomPhotos || []).map(url => ({ photo_url: url })),
+      places: (rawPhotos.placePhotos || []).map(url => ({ photo_url: url }))
+    };
 
-    // 4. On génère le HTML en passant le profil utilisateur
+    // Extraction des pièces
+    // On ajoute une propriété 'photos' vide par défaut aux pièces pour éviter les bugs d'affichage
+    const rooms = (bookData.rooms || []).map((room, index) => ({
+      id: index, // ID fictif pour l'affichage
+      name: room.name || 'Pièce sans nom',
+      description: room.description || '',
+      photos: [] // Le lien pièce<->photo est perdu dans le JSON actuel, on met vide pour éviter le crash
+    }));
+
+    // Extraction des restaurants et lieux
+    const restaurants = (bookData.restaurants || []).map((resto, index) => ({
+      ...resto, 
+      id: index
+    }));
+    
+    const places = (bookData.places || []).map((place, index) => ({
+      ...place,
+      id: index
+    }));
+
+    // 4. On génère le HTML
     const html = generateWelcomeBookHTML({
-      welcomeBook: welcomeBookFull,
-      userProfile: userProfile, // ✅ On envoie le profil ici
+      welcomeBook: {
+        ...bookData,
+        // Mapping des champs pour être sûr que le titre s'affiche
+        propertyName: bookData.propertyName || 'Mon Logement',
+        welcomeDescription: bookData.welcomeDescription || '',
+        address: bookData.address || '',
+        city: bookData.city || '',
+        wifiSSID: bookData.wifiSSID || '',
+        wifiPassword: bookData.wifiPassword || ''
+      },
       rooms,
       photos,
       restaurants,
@@ -7484,7 +7501,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     
   } catch (error) {
     console.error('Erreur affichage livret:', error);
-    res.status(500).send('<h1>Erreur serveur</h1>');
+    res.status(500).send('<h1>Erreur serveur lors de l\'affichage du livret</h1><p>' + error.message + '</p>');
   }
 });
 
