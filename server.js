@@ -7449,18 +7449,22 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     const userResult = await pool.query(userQuery, [row.user_id]);
     const userProfile = userResult.rows.length > 0 ? userResult.rows[0] : {};
 
-    // 3. Extraction des données du livret
-    const roomsRaw = data.rooms || [];
-    const restaurants = data.restaurants || [];
-    const places = data.places || [];
+    // 3. Extraction et correction des chemins des photos
     const photosData = data.photos || {};
 
+    // Petite fonction pour ajouter le dossier d'upload si c'est juste un nom de fichier
+    const fixImg = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http') || url.startsWith('/')) return url; // Déjà un lien complet
+        return `/uploads/welcome-books/${url}`; // Sinon, on ajoute le chemin du dossier
+    };
+
     const photos = {
-      cover: photosData.cover ? [{ url: photosData.cover }] : [],
-      entrance: (photosData.entrance || []).map(url => ({ url })),
-      parking: (photosData.parking || []).map(url => ({ url })),
-      rooms: (photosData.roomPhotos || []).map(url => ({ url })),
-      places: (photosData.placePhotos || []).map(url => ({ url }))
+      cover: photosData.cover ? [{ url: fixImg(photosData.cover) }] : [],
+      entrance: (photosData.entrance || []).map(url => ({ url: fixImg(url) })),
+      parking: (photosData.parking || []).map(url => ({ url: fixImg(url) })),
+      rooms: (photosData.roomPhotos || []).map(url => ({ url: fixImg(url) })),
+      places: (photosData.placePhotos || []).map(url => ({ url: fixImg(url) }))
     };
     
     const rooms = roomsRaw.map(room => ({ ...room, photos: [] }));
