@@ -1087,8 +1087,8 @@ async function checkAuth({ redirect = true } = {}) {
 
   try {
     const res = await fetch(`${API_BASE}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  headers: { Authorization: `Bearer ${token}` }
+});
 
     if (!res.ok) {
       localStorage.removeItem('lcc_token');
@@ -1474,10 +1474,11 @@ function copyWelcomeBookLink(btnEl) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
-
+  await checkAuth({ redirect: false }); // 👈 IMPORTANT
   initSidebar();
   initLogout();
+});
+
 
   // éléments par défaut
   addRoom();
