@@ -131,7 +131,7 @@ router.get('/my-book', authenticateUser, async (req, res) => {
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
-// ---------- CREATE ----------
+// ---------- CREATE OR UPDATE ----------
 router.post('/create', authenticateUser, upload.fields([
   { name: 'coverPhoto', maxCount: 1 },
   { name: 'entrancePhotos', maxCount: 10 },
@@ -141,9 +141,28 @@ router.post('/create', authenticateUser, upload.fields([
 ]), async (req, res) => {
   try {
     const pool = req.app.locals.pool;
-    if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
+    if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant' });
 
-    const uniqueId = crypto.randomBytes(16).toString('hex');
+    // 1. Vérifier si un livret existe déjà pour récupérer son uniqueId
+    const existingCheck = await pool.query(
+      'SELECT data FROM public.welcome_books WHERE user_id = $1',
+      [req.userId]
+    );
+
+    let uniqueId;
+    let oldPhotos = {};
+
+    if (existingCheck.rows.length > 0) {
+      // Le livret existe déjà : On garde le MEME ID
+      const oldData = existingCheck.rows[0].data || {};
+      uniqueId = oldData.uniqueId; 
+      oldPhotos = oldData.photos || {}; // On garde aussi les anciennes photos pour ne pas les perdre si on n'en renvoie pas
+      console.log(`Mise à jour du livret existant : ${uniqueId}`);
+    } else {
+      // Nouveau livret : On génère un nouvel ID
+      uniqueId = crypto.randomBytes(16).toString('hex');
+      console.log(`Création d'un nouveau livret : ${uniqueId}`);
+    }
 
     const body = req.body || {};
     const files = req.files || {};
@@ -152,9 +171,19 @@ router.post('/create', authenticateUser, upload.fields([
     const restaurants = safeJsonParse(body.restaurants, []);
     const places = safeJsonParse(body.places, []);
 
-    // Build JSON payload (stored in public.welcome_books.data)
+    // Gestion des photos : Si une nouvelle photo est envoyée, on la prend. Sinon on garde l'ancienne.
+    const photos = {
+      cover: (files.coverPhoto && files.coverPhoto[0]) ? fileUrl(files.coverPhoto[0]) : oldPhotos.cover,
+      entrance: (files.entrancePhotos && files.entrancePhotos.length > 0) ? filesUrls(files.entrancePhotos) : (oldPhotos.entrance || []),
+      parking: (files.parkingPhotos && files.parkingPhotos.length > 0) ? filesUrls(files.parkingPhotos) : (oldPhotos.parking || []),
+      // Pour les pièces et lieux, on remplace souvent tout ou on ajoute, ici on simplifie en prenant les nouvelles si dispos
+      roomPhotos: (files.roomPhotos && files.roomPhotos.length > 0) ? filesUrls(files.roomPhotos) : (oldPhotos.roomPhotos || []),
+      placePhotos: (files.placePhotos && files.placePhotos.length > 0) ? filesUrls(files.placePhotos) : (oldPhotos.placePhotos || []),
+    };
+
+    // Construction de l'objet de données
     const data = {
-      uniqueId,
+      uniqueId, // On utilise l'ID stable
       propertyName: body.propertyName || '',
       welcomeDescription: body.welcomeDescription || '',
       contactPhone: body.contactPhone || '',
@@ -178,21 +207,13 @@ router.post('/create', authenticateUser, upload.fields([
       rooms,
       restaurants,
       places,
+      photos, // Les photos mixées (anciennes/nouvelles)
 
-      // Photos (URLs)
-      photos: {
-        cover: (files.coverPhoto && files.coverPhoto[0]) ? fileUrl(files.coverPhoto[0]) : null,
-        entrance: filesUrls(files.entrancePhotos),
-        parking: filesUrls(files.parkingPhotos),
-        roomPhotos: filesUrls(files.roomPhotos),
-        placePhotos: filesUrls(files.placePhotos),
-      },
-
-      createdAt: new Date().toISOString(),
+      createdAt: existingCheck.rows.length > 0 ? (existingCheck.rows[0].data.createdAt) : new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    // Insert OR Update if exists (Upsert)
+    // Sauvegarde en base (UPSERT)
     await pool.query(
       `INSERT INTO public.welcome_books (user_id, data, updated_at)
        VALUES ($1, $2::jsonb, NOW())
@@ -201,17 +222,20 @@ router.post('/create', authenticateUser, upload.fields([
            updated_at = NOW()`,
       [req.userId, JSON.stringify(data)]
     );
-    const host = `${req.protocol}://${req.get('host')}`;
+
+    const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    
+    // IMPORTANT : On renvoie la bonne URL HTML (pas l'API)
     res.json({
       success: true,
-      message: "Livret d'accueil créé avec succès",
+      message: "Livret d'accueil sauvegardé avec succès",
       uniqueId,
-      // On renvoie l'URL de la page publique (HTML) et non l'API
       url: `${host}/welcome/${uniqueId}` 
     });
+
   } catch (error) {
-    console.error('Erreur lors de la création du livret:', error);
-    res.status(500).json({ success: false, error: "Erreur lors de la création du livret d'accueil" });
+    console.error('Erreur lors de la sauvegarde du livret:', error);
+    res.status(500).json({ success: false, error: "Erreur serveur lors de la sauvegarde" });
   }
 });
 
