@@ -7427,67 +7427,32 @@ app.get('/api/_routes', (req, res) => {
     res.status(500).json({ error: String(e) });
   }
 });
-// ============================================
-// ✅ NOUVEAU : ROUTE PUBLIQUE LIVRET D'ACCUEIL
+// ✅ NOUVEAU : ROUTE PUBLIQUE LIVRET D'ACCUEIL (AVEC PROFIL USER)
 // ============================================
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
     
-    // 1. On récupère la ligne principale en cherchant dans le JSON
+    // 1. On récupère le livret
     const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = $1";
     const welcomeBookResult = await pool.query(welcomeBookQuery, [uniqueId]);
     
-    // Gestion de l'erreur 404 (Livret non trouvé) - On garde ton design
     if (welcomeBookResult.rows.length === 0) {
-      return res.status(404).send(`
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-          <meta charset="UTF-8">
-          <title>Livret non trouvé</title>
-          <style>
-            body {
-              font-family: 'Inter', sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            }
-            .error-container {
-              text-align: center;
-              color: white;
-              padding: 2rem;
-            }
-            .error-container h1 {
-              font-size: 4rem;
-              margin: 0 0 1rem 0;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="error-container">
-            <h1>404</h1>
-            <p>Livret d'accueil non trouvé</p>
-          </div>
-        </body>
-        </html>
-      `);
+      return res.status(404).send('<h1>Livret introuvable</h1>');
     }
     
-    // --- C'EST ICI QUE LA LOGIQUE CHANGE ---
-    
     const row = welcomeBookResult.rows[0];
-    const data = row.data || {}; // On récupère les données du JSON
+    const data = row.data || {};
 
-    // 2. On extrait les listes directement du JSON (plus de requêtes SQL inutiles)
+    // 2. ✅ ON RÉCUPÈRE LES INFOS DU PROPRIÉTAIRE (Logo, Entreprise, Type)
+    const userQuery = "SELECT company, logo_url, account_type FROM users WHERE id = $1";
+    const userResult = await pool.query(userQuery, [row.user_id]);
+    const userProfile = userResult.rows.length > 0 ? userResult.rows[0] : {};
+
+    // 3. Extraction des données du livret
     const roomsRaw = data.rooms || [];
     const restaurants = data.restaurants || [];
     const places = data.places || [];
-    
-    // 3. On extrait et formate les photos du JSON pour le générateur HTML
     const photosData = data.photos || {};
 
     const photos = {
@@ -7498,18 +7463,13 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       places: (photosData.placePhotos || []).map(url => ({ url }))
     };
     
-    // 4. On prépare les chambres
-    const rooms = roomsRaw.map(room => ({
-      ...room,
-      photos: [] // On initialise les photos des chambres à vide pour éviter les bugs
-    }));
-    
-    // 5. On fusionne les infos pour avoir tout au même niveau (wifi, digicode, etc.)
+    const rooms = roomsRaw.map(room => ({ ...room, photos: [] }));
     const welcomeBookFull = { ...row, ...data };
 
-    // 6. On génère le HTML
+    // 4. On génère le HTML en passant le profil utilisateur
     const html = generateWelcomeBookHTML({
       welcomeBook: welcomeBookFull,
+      userProfile: userProfile, // ✅ On envoie le profil ici
       rooms,
       photos,
       restaurants,
