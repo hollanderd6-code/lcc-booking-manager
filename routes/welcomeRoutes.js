@@ -58,7 +58,6 @@ function authenticateUser(req, res, next) {
     
     // IMPORTANT : On utilise 'id' et pas 'userId' car c'est le nom dans le token
     req.userId = String(decoded.id); 
-    
     next();
   } catch (error) {
     console.error("Erreur Auth:", error.message);
