@@ -7428,14 +7428,6 @@ app.get('/api/_routes', (req, res) => {
   }
 });
 // ============================================
-Tu dois remplacer **l'intégralité** du code que tu m'as envoyé par celui ci-dessous.
-
-**Pourquoi ?**
-Le code que tu m'as montré essaie de faire des requêtes SQL (`SELECT * FROM welcome_book_rooms...`) dans des tables qui sont vides. Le nouveau code ci-dessous arrête de chercher dans ces tables et va lire directement les informations à l'intérieur du format JSON (`data`) que nous avons configuré juste avant.
-
-Voici le bloc complet à copier-coller à la place de ton bloc actuel dans **`server-22.js`** :
-
-```javascript
 // ✅ NOUVEAU : ROUTE PUBLIQUE LIVRET D'ACCUEIL
 // ============================================
 app.get('/welcome/:uniqueId', async (req, res) => {
