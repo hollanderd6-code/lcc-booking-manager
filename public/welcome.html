@@ -1745,6 +1745,130 @@ async function loadExistingWelcomeBook() {
         console.error("Erreur chargement livret", e);
     }
 });
+    // ============================================
+// FONCTION POUR CHARGER LES DONNÉES EXISTANTES
+// ============================================
+async function loadExistingWelcomeBook() {
+  const token = getAuthToken();
+  if (!token) return;
+
+  try {
+    // On appelle la route qui récupère VOTRE livret
+    const response = await fetch(`${API_BASE}/api/welcome-books/my-book`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    const result = await response.json();
+    
+    // Si on a des données, on remplit le formulaire
+    if (result.success && result.exists && result.data) {
+      const data = result.data;
+      console.log("Données récupérées :", data);
+
+      // 1. Remplissage des champs simples (Textes)
+      const setVal = (name, val) => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el) el.value = val || '';
+      };
+
+      setVal('propertyName', data.propertyName);
+      setVal('welcomeDescription', data.welcomeDescription);
+      setVal('contactPhone', data.contactPhone);
+      setVal('address', data.address);
+      setVal('postalCode', data.postalCode);
+      setVal('city', data.city);
+      setVal('keyboxCode', data.keyboxCode);
+      setVal('accessInstructions', data.accessInstructions);
+      setVal('parkingInfo', data.parkingInfo);
+      setVal('wifiSSID', data.wifiSSID);
+      setVal('wifiPassword', data.wifiPassword);
+      setVal('checkoutTime', data.checkoutTime);
+      setVal('checkoutInstructions', data.checkoutInstructions);
+      setVal('equipmentList', data.equipmentList);
+      setVal('importantRules', data.importantRules);
+      setVal('transportInfo', data.transportInfo);
+      setVal('shopsList', data.shopsList);
+
+      // 2. Prévisualisation des images existantes (Cover, Entrée, Parking)
+      const showExistingImg = (containerId, url) => {
+        const container = document.getElementById(containerId);
+        if (container && url) {
+           // Création d'un aperçu visuel
+           const div = document.createElement('div');
+           div.className = 'image-preview-item existing-file'; // Classe pour le style
+           div.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`; 
+           container.appendChild(div);
+        }
+      };
+
+      // Afficher Cover
+      if (data.photos && data.photos.cover) {
+         document.getElementById('coverPhotoPreview').innerHTML = ''; // Nettoyer
+         showExistingImg('coverPhotoPreview', data.photos.cover);
+      }
+      // Afficher Entrée
+      if (data.photos && data.photos.entrance) {
+         document.getElementById('entrancePhotosPreview').innerHTML = '';
+         data.photos.entrance.forEach(url => showExistingImg('entrancePhotosPreview', url));
+      }
+      // Afficher Parking
+      if (data.photos && data.photos.parking) {
+         document.getElementById('parkingPhotosPreview').innerHTML = '';
+         data.photos.parking.forEach(url => showExistingImg('parkingPhotosPreview', url));
+      }
+
+      // 3. Re-créer les Pièces (Rooms)
+      const roomsContainer = document.getElementById('roomsContainer');
+      roomsContainer.innerHTML = ''; // On vide pour éviter les doublons
+      roomCounter = 0; // On remet le compteur à 0
+
+      if (data.rooms && Array.isArray(data.rooms)) {
+        data.rooms.forEach((room) => {
+           addRoom(); // Cette fonction crée les champs HTML et incrémente roomCounter
+           // On remplit les champs qu'on vient de créer
+           document.querySelector(`[name="room[${roomCounter}][name]"]`).value = room.name || '';
+           document.querySelector(`[name="room[${roomCounter}][description]"]`).value = room.description || '';
+        });
+      }
+
+      // 4. Re-créer les Restaurants
+      const restoContainer = document.getElementById('restaurantsContainer');
+      restoContainer.innerHTML = '';
+      restaurantCounter = 0;
+
+      if (data.restaurants && Array.isArray(data.restaurants)) {
+        data.restaurants.forEach((resto) => {
+           addRestaurant();
+           document.querySelector(`[name="restaurant[${restaurantCounter}][name]"]`).value = resto.name || '';
+           document.querySelector(`[name="restaurant[${restaurantCounter}][phone]"]`).value = resto.phone || '';
+           document.querySelector(`[name="restaurant[${restaurantCounter}][address]"]`).value = resto.address || '';
+           document.querySelector(`[name="restaurant[${restaurantCounter}][description]"]`).value = resto.description || '';
+        });
+      }
+
+      // 5. Re-créer les Lieux (Places)
+      const placeContainer = document.getElementById('placesContainer');
+      placeContainer.innerHTML = '';
+      placeCounter = 0;
+
+      if (data.places && Array.isArray(data.places)) {
+        data.places.forEach((place) => {
+           addPlace();
+           document.querySelector(`[name="place[${placeCounter}][name]"]`).value = place.name || '';
+           document.querySelector(`[name="place[${placeCounter}][description]"]`).value = place.description || '';
+        });
+      }
+      
+      // Si on a un ID unique, on met à jour les liens
+      if (data.uniqueId) {
+        window.welcomeBookUniqueId = data.uniqueId;
+        window.welcomeBookUrl = `${API_BASE}/api/welcome-books/public/${data.uniqueId}`;
+      }
+    }
+  } catch (err) {
+    console.error("Erreur lors du chargement des infos:", err);
+  }
+}
 </script>
 
 </body>
