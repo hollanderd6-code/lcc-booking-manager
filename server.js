@@ -7428,15 +7428,25 @@ app.get('/api/_routes', (req, res) => {
   }
 });
 // ============================================
+Tu dois remplacer **l'intégralité** du code que tu m'as envoyé par celui ci-dessous.
+
+**Pourquoi ?**
+Le code que tu m'as montré essaie de faire des requêtes SQL (`SELECT * FROM welcome_book_rooms...`) dans des tables qui sont vides. Le nouveau code ci-dessous arrête de chercher dans ces tables et va lire directement les informations à l'intérieur du format JSON (`data`) que nous avons configuré juste avant.
+
+Voici le bloc complet à copier-coller à la place de ton bloc actuel dans **`server-22.js`** :
+
+```javascript
 // ✅ NOUVEAU : ROUTE PUBLIQUE LIVRET D'ACCUEIL
 // ============================================
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
-    // On cherche l'uniqueId à l'intérieur de la colonne data (JSONB)
-const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = $1";
+    
+    // 1. On récupère la ligne principale en cherchant dans le JSON
+    const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = $1";
     const welcomeBookResult = await pool.query(welcomeBookQuery, [uniqueId]);
     
+    // Gestion de l'erreur 404 (Livret non trouvé) - On garde ton design
     if (welcomeBookResult.rows.length === 0) {
       return res.status(404).send(`
         <!DOCTYPE html>
@@ -7475,33 +7485,43 @@ const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = 
       `);
     }
     
-    const welcomeBook = welcomeBookResult.rows[0];
-    const [roomsResult, photosResult, restaurantsResult, placesResult] = await Promise.all([
-      pool.query('SELECT * FROM welcome_book_rooms WHERE welcome_book_id = $1 ORDER BY display_order', [welcomeBook.id]),
-      pool.query('SELECT * FROM welcome_book_photos WHERE welcome_book_id = $1 ORDER BY photo_type, display_order', [welcomeBook.id]),
-      pool.query('SELECT * FROM welcome_book_restaurants WHERE welcome_book_id = $1 ORDER BY display_order', [welcomeBook.id]),
-      pool.query('SELECT * FROM welcome_book_places WHERE welcome_book_id = $1 ORDER BY display_order', [welcomeBook.id])
-    ]);
+    // --- C'EST ICI QUE LA LOGIQUE CHANGE ---
     
+    const row = welcomeBookResult.rows[0];
+    const data = row.data || {}; // On récupère les données du JSON
+
+    // 2. On extrait les listes directement du JSON (plus de requêtes SQL inutiles)
+    const roomsRaw = data.rooms || [];
+    const restaurants = data.restaurants || [];
+    const places = data.places || [];
+    
+    // 3. On extrait et formate les photos du JSON pour le générateur HTML
+    const photosData = data.photos || {};
+
     const photos = {
-      cover: photosResult.rows.filter(p => p.photo_type === 'cover'),
-      entrance: photosResult.rows.filter(p => p.photo_type === 'entrance'),
-      parking: photosResult.rows.filter(p => p.photo_type === 'parking'),
-      rooms: photosResult.rows.filter(p => p.photo_type === 'room'),
-      places: photosResult.rows.filter(p => p.photo_type === 'place')
+      cover: photosData.cover ? [{ url: photosData.cover }] : [],
+      entrance: (photosData.entrance || []).map(url => ({ url })),
+      parking: (photosData.parking || []).map(url => ({ url })),
+      rooms: (photosData.roomPhotos || []).map(url => ({ url })),
+      places: (photosData.placePhotos || []).map(url => ({ url }))
     };
     
-    const rooms = roomsResult.rows.map(room => ({
+    // 4. On prépare les chambres
+    const rooms = roomsRaw.map(room => ({
       ...room,
-      photos: photos.rooms.filter(p => p.room_id === room.id)
+      photos: [] // On initialise les photos des chambres à vide pour éviter les bugs
     }));
     
+    // 5. On fusionne les infos pour avoir tout au même niveau (wifi, digicode, etc.)
+    const welcomeBookFull = { ...row, ...data };
+
+    // 6. On génère le HTML
     const html = generateWelcomeBookHTML({
-      welcomeBook,
+      welcomeBook: welcomeBookFull,
       rooms,
       photos,
-      restaurants: restaurantsResult.rows,
-      places: placesResult.rows
+      restaurants,
+      places
     });
     
     res.send(html);
@@ -7511,6 +7531,8 @@ const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = 
     res.status(500).send('<h1>Erreur serveur</h1>');
   }
 });
+
+```
 // ============================================
 
 // ============================================
