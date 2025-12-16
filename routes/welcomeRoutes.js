@@ -131,7 +131,7 @@ router.get('/my-book', authenticateUser, async (req, res) => {
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
-// ---------- CREATE OR UPDATE ----------
+// ---------- CREATE OR UPDATE (CORRIGÉ) ----------
 router.post('/create', authenticateUser, upload.fields([
   { name: 'coverPhoto', maxCount: 1 },
   { name: 'entrancePhotos', maxCount: 10 },
@@ -141,9 +141,9 @@ router.post('/create', authenticateUser, upload.fields([
 ]), async (req, res) => {
   try {
     const pool = req.app.locals.pool;
-    if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant' });
+    console.log("📥 Tentative de sauvegarde reçue..."); // Log de debug
 
-    // 1. Vérifier si un livret existe déjà pour récupérer son uniqueId
+    // 1. Récupération de l'ID existant
     const existingCheck = await pool.query(
       'SELECT data FROM public.welcome_books WHERE user_id = $1',
       [req.userId]
@@ -153,67 +153,73 @@ router.post('/create', authenticateUser, upload.fields([
     let oldPhotos = {};
 
     if (existingCheck.rows.length > 0) {
-      // Le livret existe déjà : On garde le MEME ID
       const oldData = existingCheck.rows[0].data || {};
-      uniqueId = oldData.uniqueId; 
-      oldPhotos = oldData.photos || {}; // On garde aussi les anciennes photos pour ne pas les perdre si on n'en renvoie pas
-      console.log(`Mise à jour du livret existant : ${uniqueId}`);
+      uniqueId = oldData.uniqueId;
+      oldPhotos = oldData.photos || {};
+      console.log(`♻️ Mise à jour du livret existant : ${uniqueId}`);
     } else {
-      // Nouveau livret : On génère un nouvel ID
       uniqueId = crypto.randomBytes(16).toString('hex');
-      console.log(`Création d'un nouveau livret : ${uniqueId}`);
+      console.log(`✨ Création nouveau livret : ${uniqueId}`);
     }
 
     const body = req.body || {};
     const files = req.files || {};
 
-    const rooms = safeJsonParse(body.rooms, []);
-    const restaurants = safeJsonParse(body.restaurants, []);
-    const places = safeJsonParse(body.places, []);
+    // --- CORRECTION CRITIQUE ICI : Parsing manuel et sécurisé ---
+    const parseJSON = (input) => {
+      if (!input) return [];
+      try {
+        return typeof input === 'string' ? JSON.parse(input) : input;
+      } catch (e) {
+        console.error("Erreur parsing JSON:", e.message);
+        return [];
+      }
+    };
 
-    // Gestion des photos : Si une nouvelle photo est envoyée, on la prend. Sinon on garde l'ancienne.
+    const rooms = parseJSON(body.rooms);
+    const restaurants = parseJSON(body.restaurants);
+    const places = parseJSON(body.places);
+    // ------------------------------------------------------------
+
+    // Gestion des photos (Mix nouvelles / anciennes)
     const photos = {
       cover: (files.coverPhoto && files.coverPhoto[0]) ? fileUrl(files.coverPhoto[0]) : oldPhotos.cover,
       entrance: (files.entrancePhotos && files.entrancePhotos.length > 0) ? filesUrls(files.entrancePhotos) : (oldPhotos.entrance || []),
       parking: (files.parkingPhotos && files.parkingPhotos.length > 0) ? filesUrls(files.parkingPhotos) : (oldPhotos.parking || []),
-      // Pour les pièces et lieux, on remplace souvent tout ou on ajoute, ici on simplifie en prenant les nouvelles si dispos
       roomPhotos: (files.roomPhotos && files.roomPhotos.length > 0) ? filesUrls(files.roomPhotos) : (oldPhotos.roomPhotos || []),
       placePhotos: (files.placePhotos && files.placePhotos.length > 0) ? filesUrls(files.placePhotos) : (oldPhotos.placePhotos || []),
     };
 
-    // Construction de l'objet de données
+    // Construction des données
+    // On force la lecture du titre (parfois nommé 'propertyName', parfois 'title')
+    const propertyName = body.propertyName || body.title || "Mon Logement";
+
     const data = {
-      uniqueId, // On utilise l'ID stable
-      propertyName: body.propertyName || '',
+      uniqueId,
+      propertyName, // Le titre corrigé
       welcomeDescription: body.welcomeDescription || '',
       contactPhone: body.contactPhone || '',
-
       address: body.address || '',
       postalCode: body.postalCode || '',
       city: body.city || '',
       keyboxCode: body.keyboxCode || '',
       accessInstructions: body.accessInstructions || '',
       parkingInfo: body.parkingInfo || '',
-
       wifiSSID: body.wifiSSID || '',
       wifiPassword: body.wifiPassword || '',
       checkoutTime: body.checkoutTime || '',
       checkoutInstructions: body.checkoutInstructions || '',
-      equipmentList: body.equipmentList || '',
       importantRules: body.importantRules || '',
-      transportInfo: body.transportInfo || '',
-      shopsList: body.shopsList || '',
-
+      
       rooms,
       restaurants,
       places,
-      photos, // Les photos mixées (anciennes/nouvelles)
-
-      createdAt: existingCheck.rows.length > 0 ? (existingCheck.rows[0].data.createdAt) : new Date().toISOString(),
+      photos,
+      
       updatedAt: new Date().toISOString()
     };
 
-    // Sauvegarde en base (UPSERT)
+    // Sauvegarde DB (UPSERT)
     await pool.query(
       `INSERT INTO public.welcome_books (user_id, data, updated_at)
        VALUES ($1, $2::jsonb, NOW())
@@ -223,18 +229,20 @@ router.post('/create', authenticateUser, upload.fields([
       [req.userId, JSON.stringify(data)]
     );
 
+    console.log("✅ Sauvegarde réussie en base de données !");
+
     const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
     
-    // IMPORTANT : On renvoie la bonne URL HTML (pas l'API)
+    // Retourne la bonne URL HTML
     res.json({
       success: true,
-      message: "Livret d'accueil sauvegardé avec succès",
+      message: "Livret sauvegardé !",
       uniqueId,
-      url: `${host}/welcome/${uniqueId}` 
+      url: `${host}/welcome/${uniqueId}`
     });
 
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde du livret:', error);
+    console.error('❌ CRASH lors de la sauvegarde:', error);
     res.status(500).json({ success: false, error: "Erreur serveur lors de la sauvegarde" });
   }
 });
