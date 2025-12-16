@@ -1615,6 +1615,103 @@ async function loadExistingData() {
 
 // Lancer le chargement au démarrage de la page
 document.addEventListener('DOMContentLoaded', loadExistingData);
+    // ============================================
+// FONCTION POUR CHARGER LES DONNÉES EXISTANTES
+// ============================================
+async function loadExistingWelcomeBook() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    // On utilise la route GET /api/welcome de server-22.js qui renvoie le JSON complet
+    const response = await fetch(`${API_BASE}/api/welcome`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!response.ok) return; // Pas de livret ou erreur, on laisse vide
+
+    const data = await response.json();
+    
+    // Si pas de données, on arrête
+    if (!data || Object.keys(data).length === 0) return;
+
+    console.log('Données récupérées :', data);
+
+    // 1. Remplir les champs simples (texte)
+    const simpleFields = [
+      'propertyName', 'welcomeDescription', 'contactPhone', 
+      'address', 'postalCode', 'city', 'keyboxCode', 
+      'accessInstructions', 'parkingInfo', 'wifiSSID', 
+      'wifiPassword', 'checkoutTime', 'checkoutInstructions',
+      'equipmentList', 'importantRules', 'transportInfo', 'shopsList'
+    ];
+
+    simpleFields.forEach(field => {
+      const input = document.querySelector(`[name="${field}"]`);
+      if (input && data[field]) {
+        input.value = data[field];
+      }
+    });
+
+    // 2. Remplir les Pièces (Rooms)
+    const roomsContainer = document.getElementById('roomsContainer');
+    if (data.rooms && data.rooms.length > 0) {
+      roomsContainer.innerHTML = ''; // On vide les champs par défaut
+      roomCounter = 0; // On reset le compteur
+      
+      data.rooms.forEach(room => {
+        addRoom(); // Crée les champs HTML
+        // On remplit les champs créés
+        document.querySelector(`[name="room[${roomCounter}][name]"]`).value = room.name || '';
+        document.querySelector(`[name="room[${roomCounter}][description]"]`).value = room.description || '';
+        
+        // Note: On ne peut pas remettre les fichiers dans l'input file, 
+        // mais on pourrait afficher un aperçu des photos existantes ici si besoin.
+      });
+    }
+
+    // 3. Remplir les Restaurants
+    const restoContainer = document.getElementById('restaurantsContainer');
+    if (data.restaurants && data.restaurants.length > 0) {
+      restoContainer.innerHTML = '';
+      restaurantCounter = 0;
+
+      data.restaurants.forEach(resto => {
+        addRestaurant();
+        document.querySelector(`[name="restaurant[${restaurantCounter}][name]"]`).value = resto.name || '';
+        document.querySelector(`[name="restaurant[${restaurantCounter}][phone]"]`).value = resto.phone || '';
+        document.querySelector(`[name="restaurant[${restaurantCounter}][address]"]`).value = resto.address || '';
+        document.querySelector(`[name="restaurant[${restaurantCounter}][description]"]`).value = resto.description || '';
+      });
+    }
+
+    // 4. Remplir les Lieux (Places)
+    const placesContainer = document.getElementById('placesContainer');
+    if (data.places && data.places.length > 0) {
+      placesContainer.innerHTML = '';
+      placeCounter = 0;
+
+      data.places.forEach(place => {
+        addPlace();
+        document.querySelector(`[name="place[${placeCounter}][name]"]`).value = place.name || '';
+        document.querySelector(`[name="place[${placeCounter}][description]"]`).value = place.description || '';
+      });
+    }
+
+    // 5. Mettre à jour l'ID unique global si besoin pour les liens
+    if (data.uniqueId) {
+      window.welcomeBookUniqueId = data.uniqueId;
+      window.welcomeBookUrl = `${API_BASE}/welcome/${data.uniqueId}`;
+      
+      // Afficher le message de succès ou le bouton "Voir" si on est en mode édition
+      // (Optionnel : vous pouvez décommenter la ligne suivante pour afficher les boutons d'action tout de suite)
+      // document.getElementById('successMessage').classList.add('show');
+    }
+
+  } catch (err) {
+    console.error('Erreur lors du chargement du livret :', err);
+  }
+}
 </script>
 
 </body>
