@@ -7433,7 +7433,8 @@ app.get('/api/_routes', (req, res) => {
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
-    const welcomeBookQuery = 'SELECT * FROM welcome_books WHERE unique_id = $1';
+    // On cherche l'uniqueId à l'intérieur de la colonne data (JSONB)
+const welcomeBookQuery = "SELECT * FROM welcome_books WHERE data->>'uniqueId' = $1";
     const welcomeBookResult = await pool.query(welcomeBookQuery, [uniqueId]);
     
     if (welcomeBookResult.rows.length === 0) {
