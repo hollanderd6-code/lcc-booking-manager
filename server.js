@@ -23,7 +23,7 @@ const PDFDocument = require('pdfkit');
 // ============================================
 // ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
-const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
+const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeBooks');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ============================================
 
