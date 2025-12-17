@@ -34,7 +34,7 @@ const fileFilter = (req, file, cb) => {
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
   if (mimetype && extname) return cb(null, true);
-  cb(new Error('Seules les images sont acceptées (JPEG, PNG, GIF, WebP)'));
+  cb(new Error('Seules les images sont acceptÃ©es (JPEG, PNG, GIF, WebP)'));
 };
 
 const upload = multer({
@@ -49,10 +49,10 @@ function authenticateUser(req, res, next) {
   const cookieToken = (req.cookies && req.cookies.token) ? req.cookies.token : null;
   const token = cookieToken || bearerToken;
 
-  if (!token) return res.status(401).json({ error: 'Non authentifié' });
+  if (!token) return res.status(401).json({ error: 'Non authentifiÃ©' });
 
   try {
-    // IMPORTANT : On ajoute le fallback pour correspondre à server-22.js
+    // IMPORTANT : On ajoute le fallback pour correspondre Ã  server-22.js
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
     const decoded = jwt.verify(token, secret);
     
@@ -89,23 +89,23 @@ function fileUrl(file) {
 function filesUrls(files) {
   return (files || []).map(f => fileUrl(f)).filter(Boolean);
 }
-// ---------- Récupérer mon livret (pour modification) ----------
+// ---------- RÃ©cupÃ©rer mon livret (pour modification) ----------
 router.get('/my-book', authenticateUser, async (req, res) => {
   try {
     const pool = req.app.locals.pool;
     
-    // On cherche le livret de l'utilisateur connecté
+    // On cherche le livret de l'utilisateur connectÃ©
     const result = await pool.query(
-      `SELECT data FROM welcome_books WHERE user_id = $1`,
+      `SELECT data FROM welcome_books_v2 WHERE user_id = $1`,
       [req.userId]
     );
 
     if (result.rows.length === 0) {
-      // Pas encore de livret, on renvoie vide mais succès
+      // Pas encore de livret, on renvoie vide mais succÃ¨s
       return res.json({ success: true, exists: false });
     }
 
-    // On renvoie les données JSON stockées
+    // On renvoie les donnÃ©es JSON stockÃ©es
     res.json({ 
       success: true, 
       exists: true, 
@@ -113,11 +113,11 @@ router.get('/my-book', authenticateUser, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur récupération livret:', error);
+    console.error('Erreur rÃ©cupÃ©ration livret:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
-// ---------- CREATE OR UPDATE (CORRIGÉ) ----------
+// ---------- CREATE OR UPDATE (CORRIGÃ‰) ----------
 router.post('/create', authenticateUser, upload.fields([
   { name: 'coverPhoto', maxCount: 1 },
   { name: 'entrancePhotos', maxCount: 10 },
@@ -127,11 +127,11 @@ router.post('/create', authenticateUser, upload.fields([
 ]), async (req, res) => {
   try {
     const pool = req.app.locals.pool;
-    console.log("📥 Tentative de sauvegarde reçue..."); // Log de debug
+    console.log("ðŸ“¥ Tentative de sauvegarde reÃ§ue..."); // Log de debug
 
-    // 1. Récupération de l'ID existant
+    // 1. RÃ©cupÃ©ration de l'ID existant
     const existingCheck = await pool.query(
-      'SELECT data FROM public.welcome_books WHERE user_id = $1',
+      'SELECT data FROM public.welcome_books_v2 WHERE user_id = $1',
       [req.userId]
     );
 
@@ -142,16 +142,16 @@ router.post('/create', authenticateUser, upload.fields([
       const oldData = existingCheck.rows[0].data || {};
       uniqueId = oldData.uniqueId;
       oldPhotos = oldData.photos || {};
-      console.log(`♻️ Mise à jour du livret existant : ${uniqueId}`);
+      console.log(`â™»ï¸ Mise Ã  jour du livret existant : ${uniqueId}`);
     } else {
       uniqueId = crypto.randomBytes(16).toString('hex');
-      console.log(`✨ Création nouveau livret : ${uniqueId}`);
+      console.log(`âœ¨ CrÃ©ation nouveau livret : ${uniqueId}`);
     }
 
     const body = req.body || {};
     const files = req.files || {};
 
-    // --- CORRECTION CRITIQUE ICI : Parsing manuel et sécurisé ---
+    // --- CORRECTION CRITIQUE ICI : Parsing manuel et sÃ©curisÃ© ---
     const parseJSON = (input) => {
       if (!input) return [];
       try {
@@ -176,13 +176,13 @@ router.post('/create', authenticateUser, upload.fields([
       placePhotos: (files.placePhotos && files.placePhotos.length > 0) ? filesUrls(files.placePhotos) : (oldPhotos.placePhotos || []),
     };
 
-    // Construction des données
-    // On force la lecture du titre (parfois nommé 'propertyName', parfois 'title')
+    // Construction des donnÃ©es
+    // On force la lecture du titre (parfois nommÃ© 'propertyName', parfois 'title')
     const propertyName = body.propertyName || body.title || "Mon Logement";
 
     const data = {
       uniqueId,
-      propertyName, // Le titre corrigé
+      propertyName, // Le titre corrigÃ©
       welcomeDescription: body.welcomeDescription || '',
       contactPhone: body.contactPhone || '',
       address: body.address || '',
@@ -205,47 +205,31 @@ router.post('/create', authenticateUser, upload.fields([
       updatedAt: new Date().toISOString()
     };
 
-    // Vérifier si on modifie un livret existant (si uniqueId existe déjà)
-const existingLivret = await pool.query(
-  'SELECT id FROM public.welcome_books WHERE unique_id = $1 AND user_id = $2',
-  [uniqueId, req.userId]
-);
+    // Insert OU Mise Ã  jour si Ã§a existe dÃ©jÃ 
+    await pool.query(
+      `INSERT INTO public.welcome_books_v2 (user_id, unique_id, property_name, data, created_at, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
+       ON CONFLICT (unique_id) DO UPDATE 
+       SET data = EXCLUDED.data,
+           property_name = EXCLUDED.property_name,
+           updated_at = NOW()`,
+      [req.userId, uniqueId, propertyName, JSON.stringify(data)]
+    );
 
-if (existingLivret.rows.length > 0) {
-  // Mise à jour d'un livret existant
-  await pool.query(
-    `UPDATE public.welcome_books 
-     SET data = $1::jsonb, 
-         property_name = $2,
-         updated_at = NOW()
-     WHERE unique_id = $3 AND user_id = $4`,
-    [JSON.stringify(data), propertyName, uniqueId, req.userId]
-  );
-  console.log(`♻️ Mise à jour du livret : ${uniqueId}`);
-} else {
-  // Création d'un nouveau livret
-  await pool.query(
-    `INSERT INTO public.welcome_books (user_id, unique_id, property_name, data, created_at, updated_at)
-     VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())`,
-    [req.userId, uniqueId, propertyName, JSON.stringify(data)]
-  );
-  console.log(`✨ Nouveau livret créé : ${uniqueId}`);
-}
-
-    console.log("✅ Sauvegarde réussie en base de données !");
+    console.log("âœ… Sauvegarde rÃ©ussie en base de donnÃ©es !");
 
     const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
     
     // Retourne la bonne URL HTML
     res.json({
       success: true,
-      message: "Livret sauvegardé !",
+      message: "Livret sauvegardÃ© !",
       uniqueId,
       url: `${host}/welcome/${uniqueId}`
     });
 
   } catch (error) {
-    console.error('❌ CRASH lors de la sauvegarde:', error);
+    console.error('âŒ CRASH lors de la sauvegarde:', error);
     res.status(500).json({ success: false, error: "Erreur serveur lors de la sauvegarde" });
   }
 });
@@ -257,8 +241,8 @@ router.get('/user/list', authenticateUser, async (req, res) => {
     if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
 
     const result = await pool.query(
-      `SELECT user_id, data, updated_at
-       FROM public.welcome_books
+      `SELECT unique_id, property_name, data->>'coverPhoto' as cover_photo, updated_at
+       FROM public.welcome_books_v2
        WHERE user_id = $1
        ORDER BY updated_at DESC`,
       [req.userId]
@@ -266,19 +250,18 @@ router.get('/user/list', authenticateUser, async (req, res) => {
 
     // Return a compact list for UI
     const welcomeBooks = result.rows.map(r => {
-      const d = r.data || {};
       return {
-        uniqueId: d.uniqueId,
-        propertyName: d.propertyName || '',
-        coverPhoto: d.photos && d.photos.cover ? d.photos.cover : null,
+        uniqueId: r.unique_id,
+        propertyName: r.property_name || '',
+        coverPhoto: r.cover_photo || null,
         updatedAt: r.updated_at,
       };
     });
 
     res.json({ success: true, welcomeBooks });
   } catch (error) {
-    console.error('Erreur lors de la récupération des livrets:', error);
-    res.status(500).json({ success: false, error: 'Erreur lors de la récupération des livrets' });
+    console.error('Erreur lors de la rÃ©cupÃ©ration des livrets:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de la rÃ©cupÃ©ration des livrets' });
   }
 });
 
@@ -291,15 +274,15 @@ router.delete('/by-unique/:uniqueId', authenticateUser, async (req, res) => {
     const { uniqueId } = req.params;
 
     const del = await pool.query(
-  `DELETE FROM public.welcome_books
-   WHERE user_id = $1 AND unique_id = $2
-   RETURNING 1`,
-  [req.userId, uniqueId]
-);
+      `DELETE FROM public.welcome_books_v2
+       WHERE user_id = $1 AND unique_id = $2
+       RETURNING 1`,
+      [req.userId, uniqueId]
+    );
 
-    if (del.rowCount === 0) return res.status(404).json({ success: false, error: 'Livret introuvable ou non autorisé' });
+    if (del.rowCount === 0) return res.status(404).json({ success: false, error: 'Livret introuvable ou non autorisÃ©' });
 
-    res.json({ success: true, message: "Livret d'accueil supprimé avec succès" });
+    res.json({ success: true, message: "Livret d'accueil supprimÃ© avec succÃ¨s" });
   } catch (error) {
     console.error('Erreur lors de la suppression du livret:', error);
     res.status(500).json({ success: false, error: 'Erreur lors de la suppression du livret' });
@@ -316,8 +299,8 @@ router.get('/public/:uniqueId', async (req, res) => {
 
     const bookRes = await pool.query(
       `SELECT user_id, data, updated_at
-       FROM public.welcome_books
-       WHERE data->>'uniqueId' = $1
+       FROM public.welcome_books_v2
+       WHERE unique_id = $1
        LIMIT 1`,
       [uniqueId]
     );
@@ -330,35 +313,5 @@ router.get('/public/:uniqueId', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur', details: e.message });
   }
 });
-// Récupérer UN livret spécifique par son uniqueId
-router.get('/my-book/:uniqueId', authenticateUser, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    const { uniqueId } = req.params;
-    
-    const result = await pool.query(
-      `SELECT data FROM welcome_books WHERE user_id = $1 AND unique_id = $2`,
-      [req.userId, uniqueId]
-    );
 
-    if (result.rows.length === 0) {
-      return res.json({ success: true, exists: false });
-    }
-
-    res.json({ 
-      success: true, 
-      exists: true, 
-      data: result.rows[0].data 
-    });
-
-  } catch (error) {
-    console.error('Erreur récupération livret:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// Nouvelle route pour créer un livret vide (nouveau)
-router.get('/new', authenticateUser, async (req, res) => {
-  res.json({ success: true, exists: false });
-});
 module.exports = { router, initWelcomeBookTables };
