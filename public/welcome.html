@@ -1141,6 +1141,45 @@ function displayLivretsList(livrets) {
   document.getElementById('livretsList').innerHTML = html;
 }
 
+// Créer un nouveau livret
+function createNewLivret() {
+  currentUniqueId = null;
+  document.getElementById('welcomeForm').reset();
+  document.getElementById('livretsListSection').style.display = 'none';
+  document.getElementById('welcomeForm').style.display = 'block';
+  
+  // Remonter en haut de la page
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Voir un livret
+function viewLivret(uniqueId) {
+  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
+}
+
+// Supprimer un livret
+async function deleteLivret(uniqueId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/by-unique/${uniqueId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('Livret supprimé avec succès');
+      loadLivretsList();
+    } else {
+      alert('Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur suppression:', error);
+    alert('Erreur lors de la suppression');
+  }
+}
 
 // Remplir le formulaire avec les données d'un livret
 function fillFormWithData(data) {
@@ -1570,9 +1609,6 @@ async function editLivret(uniqueId) {
     console.error('Erreur chargement livret:', error);
     alert('Erreur lors du chargement du livret');
   }
-}
-  // Remonter en haut de la page
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Voir un livret
