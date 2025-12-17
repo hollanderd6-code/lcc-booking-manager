@@ -1603,6 +1603,7 @@ const response = await fetch(`${API_BASE}/api/welcome-books/user/list`, {
     });
     
     const data = await response.json();
+    console.log('Réponse API:', data);
     
     if (data.success && data.livrets.length > 0) {
       displayLivretsList(data.livrets);
