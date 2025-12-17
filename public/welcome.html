@@ -73,10 +73,11 @@
     }
 
     .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
+  max-width: 100%;
+  margin: 0;
+  padding: 2rem;
+  width: 100%;
+}
 
     /* Header */
 
@@ -631,27 +632,7 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    /* Fix pour le layout avec sidebar */
-body {
-  margin: 0;
-  padding: 0;
-}
-
-.main-content-welcome .container {
-  max-width: 100%;
-  margin: 0;
-  padding: 2rem 3rem;
-}
-
-.main-content-welcome .page-title {
-  padding-left: 0;
-}
-
-.main-content-welcome {
-  background: var(--gray-50);
-  min-height: 100vh;
-  padding: 2rem;
-}
+ 
   </style>
 </head>
 <body>
