@@ -1556,6 +1556,47 @@ function viewWelcomeBook() {
     if(window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
 }
 
+// Fonction pour copier le lien du livret
+function copyWelcomeBookLink(button) {
+  if (!window.welcomeBookUrl) {
+    alert('URL du livret introuvable');
+    return;
+  }
+  
+  // Copier dans le presse-papier
+  navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
+    // Changer temporairement le texte du bouton
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-check"></i> Copié !';
+    button.style.background = '#10B981';
+    button.style.color = 'white';
+    
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.style.background = '';
+      button.style.color = '';
+    }, 2000);
+  }).catch(err => {
+    console.error('Erreur copie:', err);
+    alert('Erreur lors de la copie du lien');
+  });
+}
+
+// Fonction pour modifier le livret (revenir au formulaire)
+function createAnother() {
+  // Cacher le message de succès
+  document.getElementById('successMessage').classList.remove('show');
+  
+  // Afficher le formulaire
+  document.getElementById('welcomeForm').style.display = 'block';
+  
+  // Recharger les données existantes
+  loadExistingData();
+  
+  // Remonter en haut
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // Afficher la liste des livrets
 function displayLivretsList(livrets) {
   const html = livrets.map(livret => `
@@ -1621,7 +1662,7 @@ async function deleteLivret(uniqueId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
   try {
-    const response = await fetch(`${API_BASE}/api/welcome/delete/${uniqueId}`, {
+    const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${getAuthToken()}` }
     });
