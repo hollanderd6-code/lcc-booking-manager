@@ -1098,7 +1098,7 @@ let currentUniqueId = null; // Pour savoir si on modifie ou on crée
 // Charger la liste des livrets au démarrage
 async function loadLivretsList() {
   try {
-    const response = await fetch(`${API_BASE}/api/welcome/list`, {
+    const response = await fetch(`${API_BASE}/api/welcome-books/user/list`, {
       headers: { 'Authorization': `Bearer ${getAuthToken()}` }
     });
     
