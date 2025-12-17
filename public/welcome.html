@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Créateur de Livret d'Accueil – LCC</title>
+  <title>Créateur de Livret d'Accueil – Boostinghost</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <style>
     * {
@@ -1073,6 +1074,27 @@
       </div>
       <h2>Livret d'accueil créé avec succès !</h2>
       <p>Votre livret d'accueil personnalisé a été généré.</p>
+      <div class="success-message" id="successMessage">
+  <div class="success-icon">
+    <i class="fas fa-check"></i>
+  </div>
+  <h2>Livret d'accueil créé avec succès !</h2>
+  <p>Votre livret d'accueil personnalisé a été généré.</p>
+  
+  <!-- QR Code Section -->
+  <div style="background: white; padding: 2rem; border-radius: 12px; margin: 2rem auto; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #374151;">
+      <i class="fas fa-qrcode"></i> QR Code du livret
+    </h3>
+    <div id="qrcode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
+    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem;">
+      Scannez ce code pour accéder directement au livret
+    </p>
+    <button class="btn btn-secondary" onclick="downloadQRCode()" style="width: 100%;">
+      <i class="fas fa-download"></i>
+      Télécharger le QR Code
+    </button>
+  </div>
       <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
         <button class="btn btn-primary" onclick="viewWelcomeBook()">
           <i class="fas fa-eye"></i>
@@ -1529,10 +1551,15 @@ document.addEventListener('DOMContentLoaded', async () => {
               });
               
               const result = await res.json();
-              if (result.success) {
-                  document.getElementById('successMessage').classList.add('show');
-                  window.scrollTo({top:0, behavior:'smooth'});
-                  if(result.uniqueId) window.welcomeBookUrl = `${API_BASE}/welcome/${result.uniqueId}`;
+             if (result.success) {
+  document.getElementById('successMessage').classList.add('show');
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(result.uniqueId) {
+    window.welcomeBookUrl = `${API_BASE}/welcome/${result.uniqueId}`;
+    // Générer le QR Code
+    setTimeout(() => generateQRCode(window.welcomeBookUrl), 100);
+  }
+}
               } else {
                   alert("Erreur: " + (result.error || "Inconnue"));
               }
@@ -1596,7 +1623,38 @@ function createAnother() {
   // Remonter en haut
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+// Générer le QR Code
+function generateQRCode(url) {
+  const qrContainer = document.getElementById('qrcode');
+  qrContainer.innerHTML = ''; // Vider le conteneur
+  
+  new QRCode(qrContainer, {
+    text: url,
+    width: 200,
+    height: 200,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
 
+// Télécharger le QR Code
+function downloadQRCode() {
+  const qrCanvas = document.querySelector('#qrcode canvas');
+  if (!qrCanvas) {
+    alert('QR Code introuvable');
+    return;
+  }
+  
+  // Convertir le canvas en image
+  const url = qrCanvas.toDataURL('image/png');
+  
+  // Créer un lien de téléchargement
+  const link = document.createElement('a');
+  link.download = `qrcode-${window.welcomeBookUrl ? window.welcomeBookUrl.split('/').pop() : 'livret'}.png`;
+  link.href = url;
+  link.click();
+}
 // Afficher la liste des livrets
 function displayLivretsList(livrets) {
   const html = livrets.map(livret => `
