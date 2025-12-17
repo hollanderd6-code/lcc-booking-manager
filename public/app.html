@@ -4600,6 +4600,11 @@ document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 
       return cell;
     }
+function riskColor(level) {
+  if (level === 'red') return '#ef4444';
+  if (level === 'orange') return '#f59e0b';
+  return '#10b981';
+}
 
     function renderBookingsInCells(range) {
       var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
