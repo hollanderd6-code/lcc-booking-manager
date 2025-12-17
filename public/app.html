@@ -3781,54 +3781,63 @@ function populateEditBookingProperties(selectedPropertyId) {
       if (cleaningEl) cleaningEl.textContent = cleaningToday;
     }
 
-    async function loadDataAndUpdateKpis() {
-      try {
-        const token = localStorage.getItem('lcc_token');
-        let reservations = [];
-        let properties = [];
+   async function loadDataAndUpdateKpis() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    let reservations = [];
+    let properties = [];
 
-        if (token) {
-          const res = await fetch(`${API_URL}/api/reservations`, {
-            headers: {
-              Authorization: 'Bearer ' + token
-            }
-          });
+    if (token) {
+      // 1) Base endpoint: récupère properties + réservations "basiques"
+      const baseRes = await fetch(`${API_URL}/api/reservations`, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
 
-          if (res.ok) {
-            const data = await res.json().catch(() => ({}));
-            reservations = Array.isArray(data.reservations) ? data.reservations : [];
-            properties = Array.isArray(data.properties) ? data.properties : [];
+      let baseData = {};
+      if (baseRes.ok) baseData = await baseRes.json().catch(() => ({}));
 
-            // stock pour le reste du dashboard (notifs, calendrier…)
-            localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
-            localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
-            window.LCC_RESERVATIONS = reservations;
-            window.LCC_PROPERTIES   = properties;
-          }
-        } else {
-          // fallback : données déjà en localStorage
-          const rRaw = localStorage.getItem('LCC_RESERVATIONS');
-          const pRaw = localStorage.getItem('LCC_PROPERTIES');
-          reservations = rRaw ? JSON.parse(rRaw) : [];
-          properties = pRaw ? JSON.parse(pRaw) : [];
-        }
+      properties = Array.isArray(baseData.properties) ? baseData.properties : [];
+      const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
 
-        // Alimente aussi le calendrier moderne s'il est présent
-        if (window.renderModernCalendar) {
-          window.renderModernCalendar(reservations, properties);
-        }
+      // 2) Enriched endpoint: récupère réservations enrichies (risque + checklist + dépôt)
+      const enrRes = await fetch(`${API_URL}/api/reservations/enriched`, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
 
-        computeKpis(reservations, properties);
-      } catch (e) {
-        console.warn('Erreur KPI dashboard', e);
+      if (enrRes.ok) {
+        const enrData = await enrRes.json().catch(() => ({}));
+        reservations = Array.isArray(enrData.reservations) ? enrData.reservations : reservationsBasic;
+      } else {
+        reservations = reservationsBasic;
       }
+
+      // stock pour le reste du dashboard (notifs, calendrier…)
+      localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
+      localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
+      window.LCC_RESERVATIONS = reservations;
+      window.LCC_PROPERTIES = properties;
+
+    } else {
+      // fallback : données déjà en localStorage
+      const rRaw = localStorage.getItem('LCC_RESERVATIONS');
+      const pRaw = localStorage.getItem('LCC_PROPERTIES');
+      reservations = rRaw ? JSON.parse(rRaw) : [];
+      properties = pRaw ? JSON.parse(pRaw) : [];
     }
 
-    document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
-  })();
+    // Alimente aussi le calendrier moderne s'il est présent
+    if (window.renderModernCalendar) {
+      window.renderModernCalendar(reservations, properties);
+    }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      
+    computeKpis(reservations, properties);
+  } catch (e) {
+    console.warn('Erreur KPI dashboard', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+
       // ==========================================
     // GESTION ONBOARDING (Masquage auto à 100%)
     // ==========================================
@@ -5315,6 +5324,141 @@ function findReservationForBlock(bookingBlock) {
         </div>
       </div>
     `;
+// =========================
+// ✅ Injection RISQUE + CHECKLIST
+// =========================
+try {
+  const token = localStorage.getItem('lcc_token');
+  const API = (typeof API_URL !== 'undefined') ? API_URL : '';
+
+  // ----- RISQUE
+  const riskScore = booking.riskScore;
+  const riskLabel = booking.riskLabel || booking.riskLevel || '';
+  const riskSummary = booking.riskSummary || '';
+  const riskTags = Array.isArray(booking.riskTags) ? booking.riskTags : [];
+
+  if (riskScore != null) {
+    let riskGroup = detailsContent.querySelector('[data-risk-info="1"]');
+    if (!riskGroup) {
+      riskGroup = document.createElement('div');
+      riskGroup.className = 'detail-group';
+      riskGroup.setAttribute('data-risk-info', '1');
+      detailsContent.appendChild(riskGroup);
+    }
+
+    const tagsHtml = riskTags.length
+      ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+          ${riskTags.map(t => `
+            <span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:999px; background:#f3f4f6;">
+              ${String(t)}
+            </span>`).join('')}
+        </div>`
+      : '';
+
+    riskGroup.innerHTML = `
+      <label><i class="fas fa-shield-alt"></i> Risque</label>
+      <div class="detail-value">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <div style="font-weight:800; font-size:16px;">${riskLabel} — ${Math.round(riskScore)}/100</div>
+            ${riskSummary ? `<div style="margin-top:4px; font-size:13px; opacity:.8;">${riskSummary}</div>` : ''}
+          </div>
+          <div style="min-width:120px;">
+            <div style="height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+              <div style="height:10px; width:${Math.max(0, Math.min(100, riskScore))}%; background:#10b981;"></div>
+            </div>
+          </div>
+        </div>
+        ${tagsHtml}
+      </div>
+    `;
+  }
+
+  // ----- CHECKLIST
+  const reservationUid = booking.uid || booking.reservationKey || booking.id || '';
+  const chk = booking.checklist || null;
+
+  if (reservationUid) {
+    let chkGroup = detailsContent.querySelector('[data-checklist-info="1"]');
+    if (!chkGroup) {
+      chkGroup = document.createElement('div');
+      chkGroup.className = 'detail-group';
+      chkGroup.setAttribute('data-checklist-info', '1');
+      detailsContent.appendChild(chkGroup);
+    }
+
+    if (!chk || !Array.isArray(chk.tasks)) {
+      chkGroup.innerHTML = `
+        <label><i class="fas fa-list-check"></i> Checklist</label>
+        <div class="detail-value">Aucune checklist trouvée.</div>
+      `;
+    } else {
+      const tasksHtml = chk.tasks.map(t => `
+        <label style="display:flex; align-items:center; gap:10px; margin:8px 0; text-transform:none; letter-spacing:0;">
+          <input type="checkbox" data-task-id="${t.id}" ${t.completed ? 'checked' : ''} />
+          <span style="font-size:14px; font-weight:600; opacity:${t.completed ? 0.6 : 1}; text-decoration:${t.completed ? 'line-through' : 'none'};">
+            ${t.title}
+          </span>
+        </label>
+      `).join('');
+
+      chkGroup.innerHTML = `
+        <label><i class="fas fa-list-check"></i> Checklist (${chk.status || 'pending'})</label>
+        <div class="detail-value">
+          ${tasksHtml}
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button type="button" class="btn btn-ghost" id="chkCompleteAllBtn" style="padding:8px 12px;">
+              Tout cocher
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Toggle tasks
+      chkGroup.querySelectorAll('input[type="checkbox"][data-task-id]').forEach((cb) => {
+        cb.addEventListener('change', async () => {
+          const taskId = cb.getAttribute('data-task-id');
+          try {
+            const r = await fetch(`${API}/api/checklists/${encodeURIComponent(reservationUid)}/tasks/${encodeURIComponent(taskId)}/toggle`, {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || 'Erreur toggle checklist');
+
+            // Mettre à jour booking.checklist en mémoire (pour l’affichage instant)
+            booking.checklist = data.checklist;
+          } catch (e) {
+            alert(e.message || 'Erreur checklist');
+            cb.checked = !cb.checked; // rollback UI
+          }
+        });
+      });
+
+      // Complete all
+      const completeAllBtn = chkGroup.querySelector('#chkCompleteAllBtn');
+      if (completeAllBtn) {
+        completeAllBtn.addEventListener('click', async () => {
+          try {
+            const r = await fetch(`${API}/api/checklists/${encodeURIComponent(reservationUid)}/complete`, {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || 'Erreur complete checklist');
+            booking.checklist = data.checklist;
+            // refresh simple : re-render du modal
+            setTimeout(() => fixModalContent(bookingBlock), 50);
+          } catch (e) {
+            alert(e.message || 'Erreur checklist');
+          }
+        });
+      }
+    }
+  }
+} catch (e) {
+  console.warn('Erreur injection risk/checklist modal', e);
+}
 
     // 5️⃣ Gestion du ménage – alignée sur cleaning.html
     try {
