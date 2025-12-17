@@ -1,366 +1,343 @@
-// ROUTE PROPRE POUR /welcome/:uniqueId
-// À COPIER dans server-23.js en remplaçant la route existante (ligne ~7440 à ~7767)
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const cloudinary = require('cloudinary').v2;
 
-app.get('/welcome/:uniqueId', async (req, res) => {
-  try {
-    const { uniqueId } = req.params;
-    
-    // 1. Récupération des données
-    const result = await pool.query(
-      `SELECT data FROM public.welcome_books_v2 WHERE unique_id = $1`, 
-      [uniqueId]
+/**
+ * CLOUDINARY CONFIGURATION
+ */
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// ---------- Multer (memory storage for Cloudinary) ----------
+const storage = multer.memoryStorage();
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const extname = allowedTypes.test(file.originalname.toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+  if (mimetype && extname) return cb(null, true);
+  cb(new Error('Seules les images sont acceptées (JPEG, PNG, GIF, WebP)'));
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter
+});
+
+// Helper: Upload to Cloudinary
+async function uploadToCloudinary(fileBuffer, folder = 'welcome-books') {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'auto' },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result.secure_url);
+      }
     );
+    uploadStream.end(fileBuffer);
+  });
+}
+// ---------- Auth (Cookie token OR Bearer token) ----------
+function authenticateUser(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const cookieToken = (req.cookies && req.cookies.token) ? req.cookies.token : null;
+  const token = cookieToken || bearerToken;
+
+  if (!token) return res.status(401).json({ error: 'Non authentifiÃ©' });
+
+  try {
+    // IMPORTANT : On ajoute le fallback pour correspondre Ã  server-22.js
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const decoded = jwt.verify(token, secret);
     
+    // IMPORTANT : On utilise 'id' et pas 'userId' car c'est le nom dans le token
+    req.userId = String(decoded.id); 
+    next();
+  } catch (error) {
+    console.error("Erreur Auth:", error.message);
+    return res.status(401).json({ error: 'Token invalide' });
+  }
+}
+
+// ---------- Optional: keep initializer (does nothing for jsonb schema) ----------
+const initWelcomeBookTables = async (_pool) => {
+  // You can keep this for backward compatibility. Your current schema is jsonb-based.
+  return;
+};
+
+// ---------- Helpers ----------
+function safeJsonParse(val, fallback) {
+  try {
+    if (typeof val === 'string') return JSON.parse(val);
+    if (val === undefined || val === null) return fallback;
+    return val;
+  } catch {
+    return fallback;
+  }
+}
+
+// Helper: Upload single file to Cloudinary
+async function uploadFile(file) {
+  if (!file || !file.buffer) return null;
+  try {
+    return await uploadToCloudinary(file.buffer);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return null;
+  }
+}
+
+// Helper: Upload multiple files to Cloudinary
+async function uploadFiles(files) {
+  if (!files || files.length === 0) return [];
+  const uploadPromises = files.map(file => uploadFile(file));
+  const results = await Promise.all(uploadPromises);
+  return results.filter(Boolean);
+}
+// ---------- RÃ©cupÃ©rer mon livret (pour modification) ----------
+router.get('/my-book', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    
+    // On cherche le livret de l'utilisateur connectÃ©
+    const result = await pool.query(
+      `SELECT data FROM welcome_books_v2 WHERE user_id = $1`,
+      [req.userId]
+    );
+
     if (result.rows.length === 0) {
-      return res.status(404).send("<h1>Livret introuvable</h1>");
+      // Pas encore de livret, on renvoie vide mais succÃ¨s
+      return res.json({ success: true, exists: false });
     }
-    
-    const d = result.rows[0].data || {};
 
-    // 2. Préparation des variables
-    const title = d.propertyName || "Mon Livret d'Accueil";
-    const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
-    
-    // 3. Génération du HTML
-    const html = `
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${title}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      <style>
-        :root {
-          --primary: #2563eb;
-          --text: #1e293b;
-          --bg: #f8fafc;
-          --card: #ffffff;
-        }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body {
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          background: var(--bg);
-          color: var(--text);
-          line-height: 1.6;
-          padding-bottom: 4rem;
-        }
-
-        .hero {
-          position: relative;
-          height: 60vh;
-          min-height: 400px;
-          background-image: url('${coverPhoto}');
-          background-size: cover;
-          background-position: center;
-        }
-        .hero-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 2rem;
-          padding-bottom: 5rem;
-        }
-        .hero-content {
-          max-width: 800px;
-          margin: 0 auto;
-          width: 100%;
-          color: white;
-        }
-        .hero h1 {
-          font-size: 2.5rem;
-          font-weight: 800;
-          margin-bottom: 0.5rem;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .hero p {
-          font-size: 1.1rem;
-          opacity: 0.9;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .container {
-          max-width: 800px;
-          margin: -4rem auto 0;
-          padding: 0 1rem;
-          position: relative;
-          z-index: 10;
-        }
-
-        .card {
-          background: var(--card);
-          border-radius: 16px;
-          padding: 2rem 1.5rem;
-          margin-bottom: 1.5rem;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .card:first-of-type {
-          margin-top: 0.5rem;
-        }
-        
-        .section-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          margin-bottom: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          color: var(--primary);
-        }
-
-        .key-info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-        }
-        .info-item {
-          background: #eff6ff;
-          padding: 1rem;
-          border-radius: 12px;
-        }
-        .info-label { font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem; }
-        
-        .wifi-card {
-          background: #1e293b;
-          color: white;
-          text-align: center;
-          padding: 2rem;
-        }
-        .wifi-icon { font-size: 2rem; margin-bottom: 1rem; color: #60a5fa; }
-        .wifi-ssid { font-size: 1.2rem; margin-bottom: 0.5rem; }
-        .wifi-pass { font-family: monospace; font-size: 1.4rem; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; }
-
-        .list-item {
-          border-bottom: 1px solid #f1f5f9;
-          padding: 1rem 0;
-        }
-        .list-item:last-child { border-bottom: none; }
-        .item-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
-        .item-title { font-weight: 700; font-size: 1.1rem; }
-        .item-meta { font-size: 0.9rem; color: #64748b; }
-        .item-desc { color: #475569; font-size: 0.95rem; }
-
-        .gallery {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-          gap: 0.5rem;
-          margin-top: 1rem;
-        }
-        .gallery img {
-          width: 100%;
-          height: 120px;
-          object-fit: cover;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: transform 0.2s;
-        }
-        .gallery img:hover { transform: scale(1.02); }
-
-        .footer {
-          text-align: center;
-          color: #94a3b8;
-          font-size: 0.9rem;
-          margin-top: 3rem;
-        }
-        
-        .fab {
-          position: fixed;
-          bottom: 2rem;
-          right: 2rem;
-          background: #25d366;
-          color: white;
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.5rem;
-          box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
-          text-decoration: none;
-          z-index: 100;
-          transition: transform 0.2s;
-        }
-        .fab:hover { transform: scale(1.1); }
-      </style>
-    </head>
-    <body>
-
-      <div class="hero">
-        <div class="hero-overlay">
-          <div class="hero-content">
-            <h1>${title}</h1>
-            <p><i class="fas fa-map-marker-alt"></i> ${d.address || ''} ${d.postalCode || ''} ${d.city || ''}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="container">
-      
-        <div class="card">
-          <div class="section-title"><i class="fas fa-hand-sparkles"></i> Bienvenue</div>
-          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent séjour.').replace(/\n/g, '<br>')}</p>
-        </div>
-
-        <div class="key-info-grid">
-          <div class="info-item">
-            <div class="info-label">Arrivée</div>
-            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'Dès 15h'}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Départ</div>
-            <div class="info-value">Avant ${d.checkoutTime || '11h00'}</div>
-          </div>
-          ${d.keyboxCode ? `
-          <div class="info-item">
-            <div class="info-label">Boîte à clés</div>
-            <div class="info-value">${d.keyboxCode}</div>
-          </div>` : ''}
-        </div>
-
-        <br>
-
-        ${d.wifiSSID ? `
-        <div class="card wifi-card">
-          <div class="wifi-icon"><i class="fas fa-wifi"></i></div>
-          <div class="wifi-ssid">${d.wifiSSID}</div>
-          <div class="wifi-pass">${d.wifiPassword || 'Pas de mot de passe'}</div>
-        </div>` : ''}
-
-        ${d.accessInstructions ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
-          <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
-          ${d.photos && d.photos.entrance && d.photos.entrance.length > 0 ? `
-            <div class="gallery">
-              ${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Entrée">`).join('')}
-            </div>
-          ` : ''}
-        </div>` : ''}
-
-        ${d.parkingInfo ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-parking"></i> Parking</div>
-          <p>${d.parkingInfo.replace(/\n/g, '<br>')}</p>
-          ${d.photos && d.photos.parking && d.photos.parking.length > 0 ? `
-            <div class="gallery">
-              ${d.photos.parking.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Parking">`).join('')}
-            </div>
-          ` : ''}
-        </div>` : ''}
-
-        ${d.rooms && d.rooms.length > 0 ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-bed"></i> Le Logement</div>
-          ${d.rooms.map((room, i) => `
-            <div class="list-item">
-              <div class="item-header">
-                <div class="item-title">${room.name || 'Pièce ' + (i+1)}</div>
-              </div>
-              ${room.description ? `<p class="item-desc">${room.description}</p>` : ''}
-            </div>
-          `).join('')}
-          
-          ${d.photos && d.photos.roomPhotos && d.photos.roomPhotos.length > 0 ? `
-            <div class="gallery" style="margin-top:1rem; border-top:1px dashed #e2e8f0; padding-top:1rem;">
-               ${d.photos.roomPhotos.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Photo">`).join('')}
-            </div>
-          ` : ''}
-        </div>` : ''}
-
-        ${d.importantRules || d.checkoutInstructions ? `
-        <div class="card">
-           <div class="section-title"><i class="fas fa-clipboard-check"></i> Règles & Départ</div>
-           ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
-           ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
-        </div>` : ''}
-
-        ${d.equipmentList ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-toolbox"></i> Équipements</div>
-          <ul style="padding-left: 1.5rem; color: #475569;">
-            ${d.equipmentList.split('\n').filter(e => e.trim()).map(item => `<li>${item}</li>`).join('')}
-          </ul>
-        </div>` : ''}
-
-        ${d.transportInfo ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-train"></i> Transports</div>
-          <p>${d.transportInfo.replace(/\n/g, '<br>')}</p>
-        </div>` : ''}
-
-        ${(d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-map-signs"></i> Guide Local</div>
-          
-          ${d.restaurants && d.restaurants.length > 0 ? `
-            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">🍽️ Restaurants</h4>
-            ${d.restaurants.map(resto => `
-              <div class="list-item">
-                <div class="item-header">
-                  <div class="item-title">${resto.name}</div>
-                  ${resto.phone ? `<div class="item-meta">${resto.phone}</div>` : ''}
-                </div>
-                ${resto.description ? `<p class="item-desc">${resto.description}</p>` : ''}
-                ${resto.address ? `<small style="color:#94a3b8"><i class="fas fa-location-arrow"></i> ${resto.address}</small>` : ''}
-              </div>
-            `).join('')}
-          ` : ''}
-
-          ${d.shopsList ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🛒 Commerces</h4>
-            <ul style="padding-left: 1.5rem; color: #475569;">
-              ${d.shopsList.split('\n').filter(s => s.trim()).map(shop => `<li>${shop}</li>`).join('')}
-            </ul>
-          ` : ''}
-
-          ${d.places && d.places.length > 0 ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🗺️ À visiter</h4>
-            ${d.places.map(place => `
-              <div class="list-item">
-                <div class="item-title">${place.name}</div>
-                ${place.description ? `<p class="item-desc">${place.description}</p>` : ''}
-              </div>
-            `).join('')}
-            
-            ${d.photos && d.photos.placePhotos && d.photos.placePhotos.length > 0 ? `
-              <div class="gallery" style="margin-top:1rem;">
-                 ${d.photos.placePhotos.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Lieu">`).join('')}
-              </div>
-            ` : ''}
-          ` : ''}
-        </div>` : ''}
-
-        <div class="footer">
-          <p>Livret propulsé par BoostingHost</p>
-        </div>
-
-      </div>
-
-      ${d.contactPhone ? `
-      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte">
-        <i class="fas fa-phone"></i>
-      </a>` : ''}
-
-    </body>
-    </html>
-    `;
-    
-    // Envoyer avec le bon header UTF-8
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(html);
+    // On renvoie les donnÃ©es JSON stockÃ©es
+    res.json({ 
+      success: true, 
+      exists: true, 
+      data: result.rows[0].data 
+    });
 
   } catch (error) {
-    console.error('Erreur affichage livret:', error);
-    res.status(500).send('Erreur lors de l\'affichage du livret');
+    console.error('Erreur rÃ©cupÃ©ration livret:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
+// ---------- CREATE OR UPDATE (CORRIGÃ‰) ----------
+router.post('/create', authenticateUser, upload.fields([
+  { name: 'coverPhoto', maxCount: 1 },
+  { name: 'entrancePhotos', maxCount: 10 },
+  { name: 'parkingPhotos', maxCount: 5 },
+  { name: 'roomPhotos', maxCount: 50 },
+  { name: 'placePhotos', maxCount: 20 }
+]), async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    console.log("ðŸ“¥ Tentative de sauvegarde reÃ§ue..."); // Log de debug
+
+    // 1. RÃ©cupÃ©ration de l'ID existant
+    const existingCheck = await pool.query(
+      'SELECT data FROM public.welcome_books_v2 WHERE user_id = $1',
+      [req.userId]
+    );
+
+    let uniqueId;
+    let oldPhotos = {};
+
+    if (existingCheck.rows.length > 0) {
+      const oldData = existingCheck.rows[0].data || {};
+      uniqueId = oldData.uniqueId;
+      oldPhotos = oldData.photos || {};
+      console.log(`â™»ï¸ Mise Ã  jour du livret existant : ${uniqueId}`);
+    } else {
+      uniqueId = crypto.randomBytes(16).toString('hex');
+      console.log(`âœ¨ CrÃ©ation nouveau livret : ${uniqueId}`);
+    }
+
+    const body = req.body || {};
+    const files = req.files || {};
+
+    // --- CORRECTION CRITIQUE ICI : Parsing manuel et sÃ©curisÃ© ---
+    const parseJSON = (input) => {
+      if (!input) return [];
+      try {
+        return typeof input === 'string' ? JSON.parse(input) : input;
+      } catch (e) {
+        console.error("Erreur parsing JSON:", e.message);
+        return [];
+      }
+    };
+
+    const rooms = parseJSON(body.rooms);
+    const restaurants = parseJSON(body.restaurants);
+    const places = parseJSON(body.places);
+    // ------------------------------------------------------------
+
+    // Gestion des photos (Upload vers Cloudinary)
+    const photos = {
+      cover: (files.coverPhoto && files.coverPhoto[0]) 
+        ? await uploadFile(files.coverPhoto[0]) || oldPhotos.cover 
+        : oldPhotos.cover,
+      entrance: (files.entrancePhotos && files.entrancePhotos.length > 0) 
+        ? await uploadFiles(files.entrancePhotos) 
+        : (oldPhotos.entrance || []),
+      parking: (files.parkingPhotos && files.parkingPhotos.length > 0) 
+        ? await uploadFiles(files.parkingPhotos) 
+        : (oldPhotos.parking || []),
+      roomPhotos: (files.roomPhotos && files.roomPhotos.length > 0) 
+        ? await uploadFiles(files.roomPhotos) 
+        : (oldPhotos.roomPhotos || []),
+      placePhotos: (files.placePhotos && files.placePhotos.length > 0) 
+        ? await uploadFiles(files.placePhotos) 
+        : (oldPhotos.placePhotos || []),
+    };
+
+    // Construction des donnÃ©es
+    // On force la lecture du titre (parfois nommÃ© 'propertyName', parfois 'title')
+    const propertyName = body.propertyName || body.title || "Mon Logement";
+
+    const data = {
+      uniqueId,
+      propertyName, // Le titre corrigÃ©
+      welcomeDescription: body.welcomeDescription || '',
+      contactPhone: body.contactPhone || '',
+      address: body.address || '',
+      postalCode: body.postalCode || '',
+      city: body.city || '',
+      keyboxCode: body.keyboxCode || '',
+      accessInstructions: body.accessInstructions || '',
+      parkingInfo: body.parkingInfo || '',
+      wifiSSID: body.wifiSSID || '',
+      wifiPassword: body.wifiPassword || '',
+      checkoutTime: body.checkoutTime || '',
+      checkoutInstructions: body.checkoutInstructions || '',
+      importantRules: body.importantRules || '',
+      equipmentList: body.equipmentList || '',
+      transportInfo: body.transportInfo || '',
+      shopsList: body.shopsList || '',
+      
+      rooms,
+      restaurants,
+      places,
+      photos,
+      
+      updatedAt: new Date().toISOString()
+    };
+
+    // Insert OU Mise Ã  jour si Ã§a existe dÃ©jÃ 
+    await pool.query(
+      `INSERT INTO public.welcome_books_v2 (user_id, unique_id, property_name, data, created_at, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
+       ON CONFLICT (unique_id) DO UPDATE 
+       SET data = EXCLUDED.data,
+           property_name = EXCLUDED.property_name,
+           updated_at = NOW()`,
+      [req.userId, uniqueId, propertyName, JSON.stringify(data)]
+    );
+
+    console.log("âœ… Sauvegarde rÃ©ussie en base de donnÃ©es !");
+
+    const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    
+    // Retourne la bonne URL HTML
+    res.json({
+      success: true,
+      message: "Livret sauvegardÃ© !",
+      uniqueId,
+      url: `${host}/welcome/${uniqueId}`
+    });
+
+  } catch (error) {
+    console.error('âŒ CRASH lors de la sauvegarde:', error);
+    res.status(500).json({ success: false, error: "Erreur serveur lors de la sauvegarde" });
+  }
+});
+
+// ---------- LIST (user) ----------
+router.get('/user/list', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
+
+    const result = await pool.query(
+      `SELECT unique_id, property_name, data->>'coverPhoto' as cover_photo, updated_at
+       FROM public.welcome_books_v2
+       WHERE user_id = $1
+       ORDER BY updated_at DESC`,
+      [req.userId]
+    );
+
+    // Return a compact list for UI
+    const welcomeBooks = result.rows.map(r => {
+      return {
+        uniqueId: r.unique_id,
+        propertyName: r.property_name || '',
+        coverPhoto: r.cover_photo || null,
+        updatedAt: r.updated_at,
+      };
+    });
+
+    res.json({ success: true, welcomeBooks });
+  } catch (error) {
+    console.error('Erreur lors de la rÃ©cupÃ©ration des livrets:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de la rÃ©cupÃ©ration des livrets' });
+  }
+});
+
+// ---------- DELETE (by uniqueId, scoped to user) ----------
+router.delete('/by-unique/:uniqueId', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
+
+    const { uniqueId } = req.params;
+
+    const del = await pool.query(
+      `DELETE FROM public.welcome_books_v2
+       WHERE user_id = $1 AND unique_id = $2
+       RETURNING 1`,
+      [req.userId, uniqueId]
+    );
+
+    if (del.rowCount === 0) return res.status(404).json({ success: false, error: 'Livret introuvable ou non autorisÃ©' });
+
+    res.json({ success: true, message: "Livret d'accueil supprimÃ© avec succÃ¨s" });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du livret:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de la suppression du livret' });
+  }
+});
+
+// ---------- PUBLIC GET (no auth) ----------
+router.get('/public/:uniqueId', async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    if (!pool) return res.status(500).json({ error: 'Pool DB manquant (app.locals.pool)' });
+
+    const { uniqueId } = req.params;
+
+    const bookRes = await pool.query(
+      `SELECT user_id, data, updated_at
+       FROM public.welcome_books_v2
+       WHERE unique_id = $1
+       LIMIT 1`,
+      [uniqueId]
+    );
+
+    if (bookRes.rows.length === 0) return res.status(404).json({ error: 'Livret introuvable' });
+
+    res.json({ success: true, book: bookRes.rows[0].data, updatedAt: bookRes.rows[0].updated_at });
+  } catch (e) {
+    console.error('PUBLIC welcome error:', e);
+    res.status(500).json({ error: 'Erreur serveur', details: e.message });
+  }
+});
+
+module.exports = { router, initWelcomeBookTables };
