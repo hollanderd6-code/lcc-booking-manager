@@ -934,7 +934,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
         const subject = `ðŸ§¹ Nouveau mÃ©nage Ã  prÃ©voir â€“ ${propertyName}`;
         const textBody = `${hello}
 
-Un nouveau sÃ©jour vient dâ€™Ãªtre rÃ©servÃ© pour le logement ${propertyName}.
+Un nouveau séjour vient dâ€™Ãªtre rÃ©servÃ© pour le logement ${propertyName}.
 
 Voyageur : ${guest}
 SÃ©jour  : du ${start} au ${end}
@@ -946,7 +946,7 @@ L'Ã©quipe Boostinghost`;
 
         const htmlBody = `
           <p>${hello}</p>
-          <p>Un nouveau sÃ©jour vient dâ€™Ãªtre rÃ©servÃ© pour le logement <strong>${propertyName}</strong>.</p>
+          <p>Un nouveau séjour vient dâ€™Ãªtre rÃ©servÃ© pour le logement <strong>${propertyName}</strong>.</p>
           <ul>
             <li><strong>Voyageur :</strong> ${guest}</li>
             <li><strong>SÃ©jour :</strong> du ${start} au ${end}</li>
@@ -5105,7 +5105,7 @@ app.post('/api/deposits', async (req, res) => {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: `Caution sÃ©jour â€“ ${property ? property.name : 'Logement'}`,
+            name: `Caution séjour â€“ ${property ? property.name : 'Logement'}`,
             description: `Du ${reservation.start} au ${reservation.end}`
           },
           unit_amount: amountCents
@@ -6212,7 +6212,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 });
 
         if (parseFloat(rentAmount || 0) > 0) addLine('Loyer', rentAmount);
-        if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de sÃ©jour', touristTaxAmount);
+        if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de séjour', touristTaxAmount);
         if (parseFloat(cleaningFee || 0) > 0) addLine('Frais de mÃ©nage', cleaningFee);
 
         doc.moveDown();
@@ -6263,7 +6263,7 @@ const pdfUrl = `${origin}/api/invoice/download/${token}`;
           <h3 style="margin-top: 24px; color: #374151;">DÃ©tails de la facture</h3>
           <table style="width: 100%; border-collapse: collapse;">
             ${rentAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Loyer</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} â‚¬</td></tr>` : ''}
-            ${touristTaxAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Taxes de sÃ©jour</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(touristTaxAmount).toFixed(2)} â‚¬</td></tr>` : ''}
+            ${touristTaxAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Taxes de séjour</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(touristTaxAmount).toFixed(2)} â‚¬</td></tr>` : ''}
             ${cleaningFee > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Frais de mÃ©nage</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(cleaningFee).toFixed(2)} â‚¬</td></tr>` : ''}
           </table>
           
@@ -7441,7 +7441,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
     
-    // 1. RÃ©cupÃ©ration des donnÃ©es
+    // 1. Récupération des données
     const result = await pool.query(
       `SELECT data FROM welcome_books_v2 WHERE unique_id = $1`, 
       [uniqueId]
@@ -7453,12 +7453,12 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     
     const d = result.rows[0].data || {};
 
-    // 2. PrÃ©paration des variables (Correction du Titre ici)
+    // 2. Préparation des variables (Correction du Titre ici)
     // On s'assure que si une info manque, on met un texte vide
-    const title = d.propertyName || "Mon Livret d'Accueil"; // <-- C'est ici que Ã§a corrige ton titre
+    const title = d.propertyName || "Mon Livret d'Accueil";
     const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
     
-    // 3. GÃ©nÃ©ration du HTML "Design Moderne"
+    // 3. Génération du HTML "Design Moderne"
     const html = `
     <!DOCTYPE html>
     <html lang="fr">
@@ -7648,16 +7648,16 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       
         <div class="card">
           <div class="section-title"><i class="fas fa-hand-sparkles"></i> Bienvenue</div>
-          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent sÃ©jour.').replace(/\n/g, '<br>')}</p>
+          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent séjour.').replace(/\n/g, '<br>')}</p>
         </div>
 
         <div class="key-info-grid">
           <div class="info-item">
-            <div class="info-label">ArrivÃ©e</div>
-            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'DÃ¨s 15h'}</div>
+            <div class="info-label">Arrivée</div>
+            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'Dès 15h'}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">DÃ©part</div>
+            <div class="info-label">Départ</div>
             <div class="info-value">Avant ${d.checkoutTime || '11h00'}</div>
           </div>
           ${d.keyboxCode ? `
@@ -7678,7 +7678,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
         ${d.accessInstructions ? `
         <div class="card">
-          <div class="section-title"><i class="fas fa-key"></i> AccÃ¨s au logement</div>
+          <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
           <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
           ${d.photos && d.photos.entrance ? `
             <div class="gallery">
@@ -7709,9 +7709,9 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         </div>` : ''}
 
         <div class="card">
-           <div class="section-title"><i class="fas fa-clipboard-check"></i> RÃ¨gles & DÃ©part</div>
-           ${d.importantRules ? `<p><strong>Ã€ savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
-           ${d.checkoutInstructions ? `<p><strong>Au dÃ©part :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
+           <div class="section-title"><i class="fas fa-clipboard-check"></i> Règles & Départ</div>
+           ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
+           ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
         </div>
 
         ${(d.restaurants?.length > 0 || d.places?.length > 0) ? `
@@ -7733,7 +7733,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           ` : ''}
 
           ${d.places && d.places.length > 0 ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">ðŸ›ï¸ Ã€ visiter</h4>
+            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">ðŸ›ï¸ À visiter</h4>
             ${d.places.map(place => `
               <div class="list-item">
                 <div class="item-title">${place.name}</div>
@@ -7744,13 +7744,13 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         </div>` : ''}
 
         <div class="footer">
-          <p>Livret propulsÃ© par BoostingHost</p>
+          <p>Livret propulsé par BoostingHost</p>
         </div>
 
       </div>
 
       ${d.contactPhone ? `
-      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hÃ´te">
+      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte">
         <i class="fas fa-phone"></i>
       </a>` : ''}
 
@@ -7759,6 +7759,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     `;
     
     res.send(html);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
   } catch (error) {
     console.error('Erreur affichage livret:', error);
