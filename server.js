@@ -7437,13 +7437,16 @@ app.get('/api/_routes', (req, res) => {
 // ============================================
 // âœ… ROUTE PUBLIQUE LIVRET D'ACCUEIL (VERSION PREMIUM)
 // ============================================
+// ROUTE PROPRE POUR /welcome/:uniqueId
+// À COPIER dans server-23.js en remplaçant la route existante (ligne ~7440 à ~7767)
+
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
     
     // 1. Récupération des données
     const result = await pool.query(
-      `SELECT data FROM welcome_books_v2 WHERE unique_id = $1`, 
+      `SELECT data FROM public.welcome_books_v2 WHERE unique_id = $1`, 
       [uniqueId]
     );
     
@@ -7453,12 +7456,11 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     
     const d = result.rows[0].data || {};
 
-    // 2. Préparation des variables (Correction du Titre ici)
-    // On s'assure que si une info manque, on met un texte vide
+    // 2. Préparation des variables
     const title = d.propertyName || "Mon Livret d'Accueil";
     const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
     
-    // 3. Génération du HTML "Design Moderne"
+    // 3. Génération du HTML
     const html = `
     <!DOCTYPE html>
     <html lang="fr">
@@ -7486,7 +7488,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           padding-bottom: 4rem;
         }
 
-        /* HERO HEADER */
         .hero {
           position: relative;
           height: 60vh;
@@ -7521,7 +7522,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           opacity: 0.9;
         }
 
-        /* CONTAINER */
         .container {
           max-width: 800px;
           margin: -3rem auto 0;
@@ -7530,7 +7530,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           z-index: 10;
         }
 
-        /* CARDS */
         .card {
           background: var(--card);
           border-radius: 16px;
@@ -7550,7 +7549,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           color: var(--primary);
         }
 
-        /* GRID INFO CLÃ‰S */
         .key-info-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -7564,7 +7562,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .info-label { font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .info-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem; }
         
-        /* WIFI CARD */
         .wifi-card {
           background: #1e293b;
           color: white;
@@ -7575,7 +7572,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .wifi-ssid { font-size: 1.2rem; margin-bottom: 0.5rem; }
         .wifi-pass { font-family: monospace; font-size: 1.4rem; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; }
 
-        /* LISTES (Restaurants, PiÃ¨ces) */
         .list-item {
           border-bottom: 1px solid #f1f5f9;
           padding: 1rem 0;
@@ -7586,7 +7582,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .item-meta { font-size: 0.9rem; color: #64748b; }
         .item-desc { color: #475569; font-size: 0.95rem; }
 
-        /* GALERIE */
         .gallery {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -7603,7 +7598,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         }
         .gallery img:hover { transform: scale(1.02); }
 
-        /* FOOTER */
         .footer {
           text-align: center;
           color: #94a3b8;
@@ -7611,12 +7605,11 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           margin-top: 3rem;
         }
         
-        /* BOUTTON CONTACT */
         .fab {
           position: fixed;
           bottom: 2rem;
           right: 2rem;
-          background: #25d366; /* Couleur WhatsApp/Tel */
+          background: #25d366;
           color: white;
           width: 60px;
           height: 60px;
@@ -7662,7 +7655,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           </div>
           ${d.keyboxCode ? `
           <div class="info-item">
-            <div class="info-label">BoÃ®te Ã  clÃ©s</div>
+            <div class="info-label">Boîte à clés</div>
             <div class="info-value">${d.keyboxCode}</div>
           </div>` : ''}
         </div>
@@ -7680,9 +7673,20 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         <div class="card">
           <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
           <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
-          ${d.photos && d.photos.entrance ? `
+          ${d.photos && d.photos.entrance && d.photos.entrance.length > 0 ? `
             <div class="gallery">
-              ${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}
+              ${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Entrée">`).join('')}
+            </div>
+          ` : ''}
+        </div>` : ''}
+
+        ${d.parkingInfo ? `
+        <div class="card">
+          <div class="section-title"><i class="fas fa-parking"></i> Parking</div>
+          <p>${d.parkingInfo.replace(/\n/g, '<br>')}</p>
+          ${d.photos && d.photos.parking && d.photos.parking.length > 0 ? `
+            <div class="gallery">
+              ${d.photos.parking.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Parking">`).join('')}
             </div>
           ` : ''}
         </div>` : ''}
@@ -7693,53 +7697,79 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           ${d.rooms.map((room, i) => `
             <div class="list-item">
               <div class="item-header">
-                <div class="item-title">${room.name}</div>
+                <div class="item-title">${room.name || 'Pièce ' + (i+1)}</div>
               </div>
-              <p class="item-desc">${room.description}</p>
-              ${d.photos && d.photos.roomPhotos ? `
-                 ` : ''}
+              ${room.description ? `<p class="item-desc">${room.description}</p>` : ''}
             </div>
           `).join('')}
           
           ${d.photos && d.photos.roomPhotos && d.photos.roomPhotos.length > 0 ? `
             <div class="gallery" style="margin-top:1rem; border-top:1px dashed #e2e8f0; padding-top:1rem;">
-               ${d.photos.roomPhotos.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}
+               ${d.photos.roomPhotos.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Photo">`).join('')}
             </div>
           ` : ''}
         </div>` : ''}
 
+        ${d.importantRules || d.checkoutInstructions ? `
         <div class="card">
            <div class="section-title"><i class="fas fa-clipboard-check"></i> Règles & Départ</div>
            ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
            ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
-        </div>
+        </div>` : ''}
 
-        ${(d.restaurants?.length > 0 || d.places?.length > 0) ? `
+        ${d.equipmentList ? `
+        <div class="card">
+          <div class="section-title"><i class="fas fa-toolbox"></i> Équipements</div>
+          <ul style="padding-left: 1.5rem; color: #475569;">
+            ${d.equipmentList.split('\n').filter(e => e.trim()).map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>` : ''}
+
+        ${d.transportInfo ? `
+        <div class="card">
+          <div class="section-title"><i class="fas fa-train"></i> Transports</div>
+          <p>${d.transportInfo.replace(/\n/g, '<br>')}</p>
+        </div>` : ''}
+
+        ${(d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList ? `
         <div class="card">
           <div class="section-title"><i class="fas fa-map-signs"></i> Guide Local</div>
           
           ${d.restaurants && d.restaurants.length > 0 ? `
-            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">ðŸ½ï¸ Restaurants</h4>
+            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">🍽️ Restaurants</h4>
             ${d.restaurants.map(resto => `
               <div class="list-item">
                 <div class="item-header">
                   <div class="item-title">${resto.name}</div>
-                  <div class="item-meta">${resto.phone || ''}</div>
+                  ${resto.phone ? `<div class="item-meta">${resto.phone}</div>` : ''}
                 </div>
-                <p class="item-desc">${resto.description}</p>
+                ${resto.description ? `<p class="item-desc">${resto.description}</p>` : ''}
                 ${resto.address ? `<small style="color:#94a3b8"><i class="fas fa-location-arrow"></i> ${resto.address}</small>` : ''}
               </div>
             `).join('')}
           ` : ''}
 
+          ${d.shopsList ? `
+            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🛒 Commerces</h4>
+            <ul style="padding-left: 1.5rem; color: #475569;">
+              ${d.shopsList.split('\n').filter(s => s.trim()).map(shop => `<li>${shop}</li>`).join('')}
+            </ul>
+          ` : ''}
+
           ${d.places && d.places.length > 0 ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">ðŸ›ï¸ À visiter</h4>
+            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🗺️ À visiter</h4>
             ${d.places.map(place => `
               <div class="list-item">
                 <div class="item-title">${place.name}</div>
-                <p class="item-desc">${place.description}</p>
+                ${place.description ? `<p class="item-desc">${place.description}</p>` : ''}
               </div>
             `).join('')}
+            
+            ${d.photos && d.photos.placePhotos && d.photos.placePhotos.length > 0 ? `
+              <div class="gallery" style="margin-top:1rem;">
+                 ${d.photos.placePhotos.map(url => `<img src="${url}" onclick="window.open(this.src)" alt="Lieu">`).join('')}
+              </div>
+            ` : ''}
           ` : ''}
         </div>` : ''}
 
@@ -7758,8 +7788,9 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     </html>
     `;
     
-    res.send(html);
+    // Envoyer avec le bon header UTF-8
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
 
   } catch (error) {
     console.error('Erreur affichage livret:', error);
@@ -7767,8 +7798,9 @@ app.get('/welcome/:uniqueId', async (req, res) => {
   }
 });
 
+
 // ============================================
-// DÃ‰MARRAGE (TOUJOURS EN DERNIER)
+// DEMARRAGE (TOUJOURS EN DERNIER)
 // ============================================
 
 app.listen(PORT, async () => {
