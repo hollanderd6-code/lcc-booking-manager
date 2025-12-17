@@ -7504,6 +7504,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           flex-direction: column;
           justify-content: flex-end;
           padding: 2rem;
+          padding-bottom: 5rem;
         }
         .hero-content {
           max-width: 800px;
@@ -7520,11 +7521,12 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .hero p {
           font-size: 1.1rem;
           opacity: 0.9;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
 
         .container {
           max-width: 800px;
-          margin: -3rem auto 0;
+          margin: -4rem auto 0;
           padding: 0 1rem;
           position: relative;
           z-index: 10;
@@ -7533,10 +7535,14 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .card {
           background: var(--card);
           border-radius: 16px;
-          padding: 1.5rem;
+          padding: 2rem 1.5rem;
           margin-bottom: 1.5rem;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
           border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .card:first-of-type {
+          margin-top: 0.5rem;
         }
         
         .section-title {
@@ -7797,7 +7803,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     res.status(500).send('Erreur lors de l\'affichage du livret');
   }
 });
-
 
 // ============================================
 // DEMARRAGE (TOUJOURS EN DERNIER)
