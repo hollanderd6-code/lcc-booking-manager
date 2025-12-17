@@ -3729,71 +3729,76 @@ function populateEditBookingProperties(selectedPropertyId) {
     const API_URL = 'https://lcc-booking-manager.onrender.com';
 
     function computeKpis(reservations, properties) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-      const monthStart = new Date(year, month, 1);
-      const monthEnd = new Date(year, month + 1, 0);
-      const daysInMonth = monthEnd.getDate();
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  const daysInMonth = monthEnd.getDate();
 
-      const totalNightsPossible = (properties.length || 1) * daysInMonth;
+  const totalNightsPossible = (properties.length || 1) * daysInMonth;
 
-      let nightsBooked = 0;
-      let futureRevenue = 0;
-      let cleaningToday = 0;
+  let nightsBooked = 0;
+  let futureRevenue = 0;
+  let cleaningToday = 0;
 
-      const todayStr = now.toISOString().slice(0, 10);
-      const horizon = new Date(now);
-      horizon.setDate(now.getDate() + 30);
+  const todayStr = now.toISOString().slice(0, 10);
+  const horizon = new Date(now);
+  horizon.setDate(now.getDate() + 30);
 
-      (reservations || []).forEach((r) => {
-        if (!r.start || !r.end) return;
+  (reservations || []).forEach((r) => {
+    // ✅ Supporte start/end OU startDate/endDate
+    const rawStart = r.start || r.startDate;
+    const rawEnd = r.end || r.endDate;
+    if (!rawStart || !rawEnd) return;
 
-        const start = new Date(r.start);
-        const end = new Date(r.end);
+    const start = new Date(rawStart);
+    const end = new Date(rawEnd);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
-        // Nuits réservées sur le mois en cours (clamp dans [monthStart, monthEnd])
-        const startClamped = start < monthStart ? monthStart : start;
-        const endClamped = end > monthEnd ? monthEnd : end;
-        if (endClamped > startClamped) {
-          const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
-          nightsBooked += d;
-        }
+    // Nuits réservées sur le mois en cours (clamp dans [monthStart, monthEnd])
+    const startClamped = start < monthStart ? monthStart : start;
+    const endClamped = end > monthEnd ? monthEnd : end;
 
-        // Revenus à venir sur 30 jours
-        if (end >= now && start <= horizon) {
-          futureRevenue += r.amount || 0;
-        }
-
-        // Ménage du jour : départ aujourd'hui
-        const endStr = r.end.slice(0, 10);
-        if (endStr === todayStr) {
-          cleaningToday += 1;
-        }
-      });
-
-      let occupancy = Math.round(
-        (nightsBooked / (totalNightsPossible || 1)) * 100
-      );
-      if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
-      if (occupancy > 100) occupancy = 100;
-
-      const occEl = document.getElementById('kpiOccupancyValue');
-      const revEl = document.getElementById('kpiRevenueValue');
-      const propEl = document.getElementById('kpiPropertiesValue');
-      const cleaningEl = document.getElementById('kpiCleaningTodayValue');
-
-      if (occEl) occEl.textContent = occupancy + '%';
-      if (revEl) {
-        revEl.textContent = new Intl.NumberFormat('fr-FR', {
-          style: 'currency',
-          currency: 'EUR'
-        }).format(futureRevenue);
-      }
-      if (propEl) propEl.textContent = properties.length || 0;
-      if (cleaningEl) cleaningEl.textContent = cleaningToday;
+    if (endClamped > startClamped) {
+      const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+      nightsBooked += d;
     }
+
+    // Revenus à venir sur 30 jours (✅ supporte amount OU price)
+    const amount = Number(r.amount ?? r.price ?? 0) || 0;
+    if (end >= now && start <= horizon) {
+      futureRevenue += amount;
+    }
+
+    // Ménage du jour : départ aujourd'hui
+    const endStr = String(rawEnd).slice(0, 10);
+    if (endStr === todayStr) {
+      cleaningToday += 1;
+    }
+  });
+
+  let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+  if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
+  if (occupancy > 100) occupancy = 100;
+
+  const occEl = document.getElementById('kpiOccupancyValue');
+  const revEl = document.getElementById('kpiRevenueValue');
+  const propEl = document.getElementById('kpiPropertiesValue');
+  const cleaningEl = document.getElementById('kpiCleaningTodayValue');
+
+  if (occEl) occEl.textContent = occupancy + '%';
+  if (revEl) {
+    revEl.textContent = new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(futureRevenue);
+  }
+  if (propEl) propEl.textContent = properties.length || 0;
+  if (cleaningEl) cleaningEl.textContent = cleaningToday;
+}
+
 function riskColor(level) {
   if (level === 'red') return '#ef4444';
   if (level === 'orange') return '#f59e0b';
@@ -4665,6 +4670,23 @@ document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 
           // Texte seulement sur le 1er jour
 if (j === 0 || cells.length === 1) {
+    // ✅ DOT risque (vert/orange/rouge)
+  var rawLevel = (b.riskLevel || b.riskLabel || '').toString().toLowerCase();
+  var level = 'green';
+  if (rawLevel.includes('red') || rawLevel.includes('rouge') || rawLevel.includes('high') || rawLevel.includes('élev')) level = 'red';
+  else if (rawLevel.includes('orange') || rawLevel.includes('medium') || rawLevel.includes('moy')) level = 'orange';
+
+  var dot = document.createElement('span');
+  dot.style.width = '8px';
+  dot.style.height = '8px';
+  dot.style.borderRadius = '999px';
+  dot.style.display = 'inline-block';
+  dot.style.marginRight = '6px';
+  dot.style.flexShrink = '0';
+  dot.style.background = riskColor(level);
+  dot.title = 'Risque: ' + (b.riskLabel || b.riskLevel || 'OK');
+  block.appendChild(dot);
+
   var iconEl;
   if (platform === 'airbnb') {
     iconEl = document.createElement('i');
