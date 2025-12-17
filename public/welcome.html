@@ -1582,27 +1582,6 @@ function viewWelcomeBook() {
     if(window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
 }
 
-// Charger la liste des livrets au démarrage
-async function loadLivretsList() {
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome-books/user/list`, {
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-    });
-    
-    const data = await response.json();
-    console.log('Réponse API:', data);
-    
-    if (data.success && data.welcomeBooks && data.welcomeBooks.length > 0) {
-      displayLivretsList(data.welcomeBooks);
-    } else {
-      document.getElementById('livretsList').innerHTML = '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>';
-    }
-  } catch (error) {
-    console.error('Erreur chargement livrets:', error);
-    document.getElementById('livretsList').innerHTML = '<p style="color: #e53e3e;">Erreur lors du chargement des livrets.</p>';
-  }
-}
-
 // Afficher la liste des livrets
 function displayLivretsList(livrets) {
   const html = livrets.map(livret => `
