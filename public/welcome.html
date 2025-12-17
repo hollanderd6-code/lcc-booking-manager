@@ -1157,19 +1157,15 @@ async function editLivret(uniqueId) {
   currentUniqueId = uniqueId;
   
   try {
-    const response = await fetch(`${API_BASE}/api/welcome/my-book`, {
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-    });
+    // Utiliser la route publique pour récupérer les données
+    const response = await fetch(`${API_BASE}/api/welcome-books/public/${uniqueId}`);
     
     const data = await response.json();
     
-    if (data.success && data.exists) {
-      // Remplir le formulaire avec les données
-      fillFormWithData(data.data);
+    if (data.success && data.book) {
+      fillFormWithData(data.book);
       document.getElementById('livretsListSection').style.display = 'none';
       document.getElementById('welcomeForm').style.display = 'block';
-      
-      // Remonter en haut
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   } catch (error) {
