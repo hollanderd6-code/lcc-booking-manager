@@ -1598,7 +1598,7 @@ function viewWelcomeBook() {
 // Charger la liste des livrets au démarrage
 async function loadLivretsList() {
   try {
-    const response = await fetch(`${API_BASE}/api/welcome/my-books`, {
+    const response = await fetch(`${API_BASE}/api/welcome/user/list`, {
       headers: { 'Authorization': `Bearer ${getAuthToken()}` }
     });
     
