@@ -1162,8 +1162,8 @@ async function deleteLivret(uniqueId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
   try {
-  const res = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`,
-  method: 'DELETE',
+    const response = await fetch(`${API_BASE}/api/welcome/by-unique/${uniqueId}`, {
+      method: 'DELETE',
       headers: { 'Authorization': `Bearer ${getAuthToken()}` }
     });
     
