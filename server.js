@@ -374,10 +374,17 @@ async function initDb() {
       );
 
       CREATE TABLE IF NOT EXISTS welcome_books (
-        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-        data JSONB NOT NULL DEFAULT '{}'::jsonb,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  unique_id TEXT UNIQUE NOT NULL,
+  property_name TEXT,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_welcome_books_user_id ON welcome_books(user_id);
+CREATE INDEX IF NOT EXISTS idx_welcome_books_unique_id ON welcome_books(unique_id);
 
       CREATE TABLE IF NOT EXISTS cleaners (
         id TEXT PRIMARY KEY,
