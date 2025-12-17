@@ -682,8 +682,22 @@
     </button>
   </div>
 </div>
+    <!-- Liste des livrets existants -->
+<div id="livretsListSection" class="form-card" style="margin-bottom: 2rem;">
+  <h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--gray-700);">
+    <i class="fas fa-list"></i>
+    Mes livrets d'accueil
+  </h2>
+  <div id="livretsList" style="margin-bottom: 1rem;">
+    <p style="color: #64748b; text-align: center;">Chargement...</p>
+  </div>
+  <button type="button" class="btn btn-primary" onclick="createNewLivret()">
+    <i class="fas fa-plus"></i>
+    Créer un nouveau livret
+  </button>
+</div>
     <!-- Form -->
-    <form id="welcomeForm">
+    <form id="welcomeForm" style="display: none;">
       <!-- Section 1: Informations Générales -->
       <div class="form-section active" data-section="1">
         <div class="form-card">
@@ -1092,7 +1106,135 @@
   </div>
 <script>
 const API_BASE = 'https://lcc-booking-manager.onrender.com';
+let currentUniqueId = null; // Pour savoir si on modifie ou on crée
 
+// Charger la liste des livrets au démarrage
+async function loadLivretsList() {
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/list`, {
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.welcomeBooks && data.welcomeBooks.length > 0) {
+      displayLivretsList(data.welcomeBooks);
+    } else {
+      document.getElementById('livretsList').innerHTML = '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>';
+    }
+  } catch (error) {
+    console.error('Erreur chargement livrets:', error);
+    document.getElementById('livretsList').innerHTML = '<p style="color: #e53e3e;">Erreur lors du chargement des livrets.</p>';
+  }
+}
+
+// Afficher la liste des livrets
+function displayLivretsList(livrets) {
+  const html = livrets.map(livret => `
+    <div style="border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; background: white;">
+      <div>
+        <strong style="font-size: 16px; color: #1a202c;">${livret.propertyName || 'Sans nom'}</strong>
+        <br>
+        <small style="color: #64748b;">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</small>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-secondary" onclick="editLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem;">
+          <i class="fas fa-edit"></i> Modifier
+        </button>
+        <button class="btn btn-secondary" onclick="viewLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem;">
+          <i class="fas fa-eye"></i> Voir
+        </button>
+        <button class="btn btn-secondary" onclick="deleteLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem; background: #e53e3e; color: white;">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+  
+  document.getElementById('livretsList').innerHTML = html;
+}
+
+// Créer un nouveau livret
+function createNewLivret() {
+  currentUniqueId = null;
+  document.getElementById('welcomeForm').reset();
+  document.getElementById('livretsListSection').style.display = 'none';
+  document.getElementById('welcomeForm').style.display = 'block';
+  
+  // Remonter en haut de la page
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Modifier un livret existant
+async function editLivret(uniqueId) {
+  currentUniqueId = uniqueId;
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/my-book`, {
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.exists) {
+      // Remplir le formulaire avec les données
+      fillFormWithData(data.data);
+      document.getElementById('livretsListSection').style.display = 'none';
+      document.getElementById('welcomeForm').style.display = 'block';
+      
+      // Remonter en haut
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  } catch (error) {
+    console.error('Erreur chargement livret:', error);
+    alert('Erreur lors du chargement du livret');
+  }
+}
+
+// Voir un livret
+function viewLivret(uniqueId) {
+  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
+}
+
+// Supprimer un livret
+async function deleteLivret(uniqueId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/by-unique/${uniqueId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('Livret supprimé avec succès');
+      loadLivretsList();
+    } else {
+      alert('Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur suppression:', error);
+    alert('Erreur lors de la suppression');
+  }
+}
+
+// Remplir le formulaire avec les données d'un livret
+function fillFormWithData(data) {
+  document.querySelector('[name="propertyName"]').value = data.propertyName || '';
+  document.querySelector('[name="welcomeDescription"]').value = data.welcomeDescription || '';
+  document.querySelector('[name="contactPhone"]').value = data.contactPhone || '';
+  document.querySelector('[name="address"]').value = data.address || '';
+  document.querySelector('[name="postalCode"]').value = data.postalCode || '';
+  document.querySelector('[name="city"]').value = data.city || '';
+  // ... ajoute les autres champs si besoin
+}
+
+// Charger la liste au démarrage de la page
+document.addEventListener('DOMContentLoaded', function() {
+  loadLivretsList();
+});
 // --- 1. GESTION AUTHENTIFICATION ---
 function getAuthToken() {
   const t = localStorage.getItem('lcc_token');
