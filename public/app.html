@@ -2089,6 +2089,20 @@
               <span class="kpi-sub">départs à nettoyer aujourd’hui</span>
             </div>
           </article>
+          <!-- KPI 4 : Top risques du mois -->
+<article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
+  <div class="kpi-header">
+    <span class="kpi-label">Top risques du mois</span>
+    <span class="kpi-pill kpi-pill-neutral">
+      <i class="fas fa-shield-alt"></i>
+      IA Risk
+    </span>
+  </div>
+  <div class="kpi-main">
+    <span class="kpi-value" id="kpiTopRisksValue">0</span>
+    <span class="kpi-sub" id="kpiTopRisksSub">réservations à surveiller</span>
+  </div>
+</article>
         </section>
 
         <section class="onboarding-section" id="onboardingSection">
@@ -3780,6 +3794,122 @@ function populateEditBookingProperties(selectedPropertyId) {
       if (propEl) propEl.textContent = properties.length || 0;
       if (cleaningEl) cleaningEl.textContent = cleaningToday;
     }
+function riskColor(level) {
+  if (level === 'red') return '#ef4444';
+  if (level === 'orange') return '#f59e0b';
+  return '#10b981';
+}
+
+function ensureTopRisksModal() {
+  if (document.getElementById('topRisksModal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'topRisksModal';
+  modal.className = 'modal-overlay';
+  modal.style.display = 'none';
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-shield-alt"></i> Top risques du mois
+        </h3>
+        <button class="btn btn-ghost" id="closeTopRisksModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="topRisksContent"></div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-ghost" id="closeTopRisksModal2">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => { modal.style.display = 'none'; modal.classList.remove('active'); };
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  document.getElementById('closeTopRisksModal')?.addEventListener('click', close);
+  document.getElementById('closeTopRisksModal2')?.addEventListener('click', close);
+}
+
+function openTopRisksModal(items) {
+  ensureTopRisksModal();
+  const modal = document.getElementById('topRisksModal');
+  const content = document.getElementById('topRisksContent');
+  if (!modal || !content) return;
+
+  if (!items.length) {
+    content.innerHTML = `<p class="detail-value">Aucun risque détecté sur le mois en cours.</p>`;
+  } else {
+    content.innerHTML = items.map((r) => {
+      const color = riskColor(r.riskLevel);
+      const tags = (r.riskTags || []).slice(0, 5);
+      const tagsHtml = tags.length
+        ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+            ${tags.map(t => `<span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:999px; background:#f3f4f6;">${t}</span>`).join('')}
+          </div>`
+        : '';
+
+      const name = r.guestName || 'Voyageur';
+      const prop = r.propertyName || r.propertyId || 'Logement';
+      const start = (r.start || '').slice(0,10);
+      const end = (r.end || '').slice(0,10);
+
+      return `
+        <div class="detail-group" style="border-left:6px solid ${color}; padding-left:12px;">
+          <label style="display:flex; justify-content:space-between; gap:10px;">
+            <span><i class="fas fa-calendar"></i> ${start} → ${end} • ${prop}</span>
+            <span style="font-weight:800;">${Math.round(r.riskScore || 0)}/100</span>
+          </label>
+          <div class="detail-value" style="margin-top:4px;">
+            <div style="font-weight:800;">${r.riskLabel || 'Risque'}</div>
+            <div style="opacity:.85; margin-top:2px;">${name}${r.source ? ' • ' + r.source : ''}</div>
+            ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+            ${tagsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+}
+
+function updateTopRisksKpi(reservations) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const monthStart = new Date(y, m, 1);
+  const monthEnd = new Date(y, m + 1, 1);
+
+  // On prend les réservations qui "touchent" le mois en cours
+  const monthRes = (reservations || []).filter(r => {
+    if (!r.start || !r.end) return false;
+    const s = new Date(r.start);
+    const e = new Date(r.end);
+    return e > monthStart && s < monthEnd;
+  });
+
+  // On ne garde que celles enrichies (avec riskScore)
+  const scored = monthRes.filter(r => typeof r.riskScore === 'number');
+
+  // Top 5 décroissant
+  scored.sort((a, b) => (b.riskScore - a.riskScore));
+  const top5 = scored.slice(0, 5);
+
+  const redCount = scored.filter(r => r.riskLevel === 'red').length;
+  const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
+
+  const valEl = document.getElementById('kpiTopRisksValue');
+  const subEl = document.getElementById('kpiTopRisksSub');
+  if (valEl) valEl.textContent = top5.length;
+  if (subEl) subEl.textContent = `${redCount} rouge • ${orangeCount} orange (mois en cours)`;
+
+  const card = document.getElementById('kpiTopRisksCard');
+  if (card) {
+    card.onclick = () => openTopRisksModal(top5);
+  }
+}
 
    async function loadDataAndUpdateKpis() {
   try {
@@ -3831,6 +3961,7 @@ function populateEditBookingProperties(selectedPropertyId) {
     }
 
     computeKpis(reservations, properties);
+    updateTopRisksKpi(reservations);
   } catch (e) {
     console.warn('Erreur KPI dashboard', e);
   }
