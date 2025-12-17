@@ -1152,28 +1152,6 @@ function createNewLivret() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Modifier un livret existant
-async function editLivret(uniqueId) {
-  currentUniqueId = uniqueId;
-  
-  try {
-    // Utiliser la route publique pour récupérer les données
-    const response = await fetch(`${API_BASE}/api/welcome-books/public/${uniqueId}`);
-    
-    const data = await response.json();
-    
-    if (data.success && data.book) {
-      fillFormWithData(data.book);
-      document.getElementById('livretsListSection').style.display = 'none';
-      document.getElementById('welcomeForm').style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  } catch (error) {
-    console.error('Erreur chargement livret:', error);
-    alert('Erreur lors du chargement du livret');
-  }
-}
-
 // Voir un livret
 function viewLivret(uniqueId) {
   window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
