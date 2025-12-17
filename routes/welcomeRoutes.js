@@ -205,15 +205,32 @@ router.post('/create', authenticateUser, upload.fields([
       updatedAt: new Date().toISOString()
     };
 
-    // Insert OU Mise à jour si ça existe déjà
-    await pool.query(
-      `INSERT INTO public.welcome_books (user_id, data, updated_at)
-       VALUES ($1, $2::jsonb, NOW())
-       ON CONFLICT (user_id) DO UPDATE 
-       SET data = EXCLUDED.data, 
-           updated_at = NOW()`,
-      [req.userId, JSON.stringify(data)]
-    );
+    // Vérifier si on modifie un livret existant (si uniqueId existe déjà)
+const existingLivret = await pool.query(
+  'SELECT id FROM public.welcome_books WHERE unique_id = $1 AND user_id = $2',
+  [uniqueId, req.userId]
+);
+
+if (existingLivret.rows.length > 0) {
+  // Mise à jour d'un livret existant
+  await pool.query(
+    `UPDATE public.welcome_books 
+     SET data = $1::jsonb, 
+         property_name = $2,
+         updated_at = NOW()
+     WHERE unique_id = $3 AND user_id = $4`,
+    [JSON.stringify(data), propertyName, uniqueId, req.userId]
+  );
+  console.log(`♻️ Mise à jour du livret : ${uniqueId}`);
+} else {
+  // Création d'un nouveau livret
+  await pool.query(
+    `INSERT INTO public.welcome_books (user_id, unique_id, property_name, data, created_at, updated_at)
+     VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())`,
+    [req.userId, uniqueId, propertyName, JSON.stringify(data)]
+  );
+  console.log(`✨ Nouveau livret créé : ${uniqueId}`);
+}
 
     console.log("✅ Sauvegarde réussie en base de données !");
 
@@ -274,11 +291,11 @@ router.delete('/by-unique/:uniqueId', authenticateUser, async (req, res) => {
     const { uniqueId } = req.params;
 
     const del = await pool.query(
-      `DELETE FROM public.welcome_books
-       WHERE user_id = $1 AND data->>'uniqueId' = $2
-       RETURNING 1`,
-      [req.userId, uniqueId]
-    );
+  `DELETE FROM public.welcome_books
+   WHERE user_id = $1 AND unique_id = $2
+   RETURNING 1`,
+  [req.userId, uniqueId]
+);
 
     if (del.rowCount === 0) return res.status(404).json({ success: false, error: 'Livret introuvable ou non autorisé' });
 
@@ -313,5 +330,35 @@ router.get('/public/:uniqueId', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur', details: e.message });
   }
 });
+// Récupérer UN livret spécifique par son uniqueId
+router.get('/my-book/:uniqueId', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    const { uniqueId } = req.params;
+    
+    const result = await pool.query(
+      `SELECT data FROM welcome_books WHERE user_id = $1 AND unique_id = $2`,
+      [req.userId, uniqueId]
+    );
 
+    if (result.rows.length === 0) {
+      return res.json({ success: true, exists: false });
+    }
+
+    res.json({ 
+      success: true, 
+      exists: true, 
+      data: result.rows[0].data 
+    });
+
+  } catch (error) {
+    console.error('Erreur récupération livret:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+// Nouvelle route pour créer un livret vide (nouveau)
+router.get('/new', authenticateUser, async (req, res) => {
+  res.json({ success: true, exists: false });
+});
 module.exports = { router, initWelcomeBookTables };
