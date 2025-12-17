@@ -1,40 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const cloudinary = require('cloudinary').v2;
 
 /**
- * IMPORTANT
- * Your DB table public.welcome_books currently has only:
- * - user_id (text)
- * - data (jsonb)
- * - updated_at (timestamptz)
- *
- * So we store the whole welcome book in data (jsonb), keyed by data.uniqueId.
+ * CLOUDINARY CONFIGURATION
  */
-
-// ---------- Multer (uploads to /public/uploads/welcome-books) ----------
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'welcome-books');
-    try { await fs.mkdir(uploadDir, { recursive: true }); } catch (err) { console.error('Error creating upload directory:', err); }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// ---------- Multer (memory storage for Cloudinary) ----------
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const extname = allowedTypes.test(file.originalname.toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
   if (mimetype && extname) return cb(null, true);
-  cb(new Error('Seules les images sont acceptÃ©es (JPEG, PNG, GIF, WebP)'));
+  cb(new Error('Seules les images sont acceptées (JPEG, PNG, GIF, WebP)'));
 };
 
 const upload = multer({
@@ -42,6 +30,20 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter
 });
+
+// Helper: Upload to Cloudinary
+async function uploadToCloudinary(fileBuffer, folder = 'welcome-books') {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'auto' },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result.secure_url);
+      }
+    );
+    uploadStream.end(fileBuffer);
+  });
+}
 // ---------- Auth (Cookie token OR Bearer token) ----------
 function authenticateUser(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -82,12 +84,23 @@ function safeJsonParse(val, fallback) {
   }
 }
 
-function fileUrl(file) {
-  return file ? `/uploads/welcome-books/${file.filename}` : null;
+// Helper: Upload single file to Cloudinary
+async function uploadFile(file) {
+  if (!file || !file.buffer) return null;
+  try {
+    return await uploadToCloudinary(file.buffer);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return null;
+  }
 }
 
-function filesUrls(files) {
-  return (files || []).map(f => fileUrl(f)).filter(Boolean);
+// Helper: Upload multiple files to Cloudinary
+async function uploadFiles(files) {
+  if (!files || files.length === 0) return [];
+  const uploadPromises = files.map(file => uploadFile(file));
+  const results = await Promise.all(uploadPromises);
+  return results.filter(Boolean);
 }
 // ---------- RÃ©cupÃ©rer mon livret (pour modification) ----------
 router.get('/my-book', authenticateUser, async (req, res) => {
@@ -167,13 +180,23 @@ router.post('/create', authenticateUser, upload.fields([
     const places = parseJSON(body.places);
     // ------------------------------------------------------------
 
-    // Gestion des photos (Mix nouvelles / anciennes)
+    // Gestion des photos (Upload vers Cloudinary)
     const photos = {
-      cover: (files.coverPhoto && files.coverPhoto[0]) ? fileUrl(files.coverPhoto[0]) : oldPhotos.cover,
-      entrance: (files.entrancePhotos && files.entrancePhotos.length > 0) ? filesUrls(files.entrancePhotos) : (oldPhotos.entrance || []),
-      parking: (files.parkingPhotos && files.parkingPhotos.length > 0) ? filesUrls(files.parkingPhotos) : (oldPhotos.parking || []),
-      roomPhotos: (files.roomPhotos && files.roomPhotos.length > 0) ? filesUrls(files.roomPhotos) : (oldPhotos.roomPhotos || []),
-      placePhotos: (files.placePhotos && files.placePhotos.length > 0) ? filesUrls(files.placePhotos) : (oldPhotos.placePhotos || []),
+      cover: (files.coverPhoto && files.coverPhoto[0]) 
+        ? await uploadFile(files.coverPhoto[0]) || oldPhotos.cover 
+        : oldPhotos.cover,
+      entrance: (files.entrancePhotos && files.entrancePhotos.length > 0) 
+        ? await uploadFiles(files.entrancePhotos) 
+        : (oldPhotos.entrance || []),
+      parking: (files.parkingPhotos && files.parkingPhotos.length > 0) 
+        ? await uploadFiles(files.parkingPhotos) 
+        : (oldPhotos.parking || []),
+      roomPhotos: (files.roomPhotos && files.roomPhotos.length > 0) 
+        ? await uploadFiles(files.roomPhotos) 
+        : (oldPhotos.roomPhotos || []),
+      placePhotos: (files.placePhotos && files.placePhotos.length > 0) 
+        ? await uploadFiles(files.placePhotos) 
+        : (oldPhotos.placePhotos || []),
     };
 
     // Construction des donnÃ©es
