@@ -632,7 +632,40 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
- 
+ /* Fix définitif pour le contenu avec sidebar */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+}
+
+.main-content-welcome {
+  flex: 1;
+  margin-left: 260px;
+  width: calc(100% - 260px);
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+  
+  .main-content-welcome {
+    margin-left: 0;
+    width: 100%;
+  }
+}
   </style>
 </head>
 <body>
