@@ -1313,6 +1313,11 @@ let reservationsStore = {
 const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
 
+// ✅ V1 Checklists (JSON)
+const CHECKLISTS_FILE = path.join(__dirname, 'checklists.json');
+let CHECKLISTS = {}; // { [reservationUid]: { reservationUid, propertyId, userId, status, tasks, createdAt, updatedAt } }
+
+
 // Data en mÃ©moire
 let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations ou blocages] }
 let DEPOSITS = [];               // { id, reservationUid, amountCents, ... }
@@ -1360,6 +1365,255 @@ async function saveDeposits() {
     console.error('âŒ Erreur lors de la sauvegarde des cautions:', error.message);
   }
 }
+
+// ============================================
+// ✅ CHECKLISTS (V1 - JSON) - Stockage simple, migrable en SQL plus tard
+// ============================================
+
+async function loadChecklists() {
+  try {
+    const data = await fsp.readFile(CHECKLISTS_FILE, 'utf8');
+    CHECKLISTS = JSON.parse(data);
+    console.log('✅ Checklists chargées depuis checklists.json');
+  } catch (e) {
+    CHECKLISTS = {};
+    console.log('ℹ️ Aucun fichier checklists.json, démarrage sans checklists');
+  }
+}
+
+async function saveChecklists() {
+  try {
+    await fsp.writeFile(CHECKLISTS_FILE, JSON.stringify(CHECKLISTS, null, 2));
+  } catch (e) {
+    console.error('❌ Erreur saveChecklists:', e);
+  }
+}
+
+function ensureChecklistForReservation({ reservationUid, propertyId, userId }) {
+  if (CHECKLISTS[reservationUid]) return CHECKLISTS[reservationUid];
+
+  const nowIso = new Date().toISOString();
+  CHECKLISTS[reservationUid] = {
+    reservationUid,
+    propertyId,
+    userId,
+    status: 'pending', // pending | in_progress | completed
+    tasks: [
+      { id: 't1', title: 'Logement prêt (ménage)', completed: false },
+      { id: 't2', title: 'Linge propre installé', completed: false },
+      { id: 't3', title: 'Accès / clés vérifiés', completed: false },
+      { id: 't4', title: "Heure d'arrivée confirmée", completed: false },
+      { id: 't5', title: "Message d'arrivée préparé", completed: false },
+      { id: 't6', title: 'Message de départ préparé', completed: false },
+    ],
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+
+  return CHECKLISTS[reservationUid];
+}
+
+function mapChecklistStatusFromChecklist(chk) {
+  if (!chk) return 'none';
+  if (chk.status === 'completed') return 'complete';
+  return 'incomplete';
+}
+
+// ============================================
+// ✅ RISK ENGINE V1 (opérationnel + usage intensif)
+// ============================================
+
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+function hoursBetween(a, b) {
+  const da = (a instanceof Date) ? a : new Date(a);
+  const db = (b instanceof Date) ? b : new Date(b);
+  return (db.getTime() - da.getTime()) / (1000 * 60 * 60);
+}
+
+function getNights(startDate, endDate) {
+  const s = (startDate instanceof Date) ? startDate : new Date(startDate);
+  const e = (endDate instanceof Date) ? endDate : new Date(endDate);
+  return Math.max(0, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+function isWeekendArrival(startDate) {
+  const d = (startDate instanceof Date) ? startDate : new Date(startDate);
+  const day = d.getDay(); // 0=dim, 5=ven, 6=sam
+  return day === 5 || day === 6;
+}
+
+// --- France holidays (fixed + Easter-based) ---
+function easterDateUTC(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+function addDaysUTC(date, days) { const d = new Date(date.getTime()); d.setUTCDate(d.getUTCDate() + days); return d; }
+function ymdUTC(date) {
+  const d = (date instanceof Date) ? date : new Date(date);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const da = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${da}`;
+}
+function franceHolidaysYMD(year) {
+  const easter = easterDateUTC(year);
+  const easterMon = addDaysUTC(easter, 1);
+  const ascension = addDaysUTC(easter, 39);
+  const whitMon = addDaysUTC(easter, 50);
+
+  const fixed = [
+    `${year}-01-01`, `${year}-05-01`, `${year}-05-08`, `${year}-07-14`,
+    `${year}-08-15`, `${year}-11-01`, `${year}-11-11`, `${year}-12-25`,
+  ];
+  return new Set([...fixed, ymdUTC(easterMon), ymdUTC(ascension), ymdUTC(whitMon)]);
+}
+function isFrenchHolidayOrEve(date) {
+  const d = (date instanceof Date) ? date : new Date(date);
+  const year = d.getUTCFullYear();
+  const holidays = franceHolidaysYMD(year);
+
+  const today = ymdUTC(d);
+  const tomorrow = ymdUTC(addDaysUTC(new Date(Date.UTC(year, d.getUTCMonth(), d.getUTCDate())), 1));
+
+  return { isHoliday: holidays.has(today), isHolidayEve: holidays.has(tomorrow) };
+}
+function isSensitiveDate(date) {
+  const d = (date instanceof Date) ? date : new Date(date);
+  const m = d.getMonth() + 1;
+  const da = d.getDate();
+  return (m === 10 && da === 31) || (m === 7 && da === 14) || (m === 12 && da === 31) || (m === 1 && da === 1);
+}
+
+function parseHour(arrivalTimeStr) {
+  if (!arrivalTimeStr) return null;
+  const m = String(arrivalTimeStr).match(/(\d{1,2})/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  return Number.isFinite(h) ? h : null;
+}
+
+function mapChannelFromReservation(r) {
+  if (r?.source && String(r.source).toLowerCase() === 'airbnb') return 'airbnb';
+  if (r?.platform && String(r.platform).toLowerCase() === 'direct') return 'direct';
+  return 'other';
+}
+
+function mapDepositStatusFromDeposit(dep) {
+  if (!dep) return 'missing';
+  switch (dep.status) {
+    case 'pending': return 'created_pending';
+    case 'authorized':
+    case 'captured':
+    case 'released':
+      return 'ok';
+    default:
+      return 'created_pending';
+  }
+}
+
+function computeRiskV1(input, now = new Date()) {
+  const tags = [];
+  const channel = input.channel ?? 'other';
+  const start = input.startDate;
+  const end = input.endDate;
+
+  const hoursUntilArrival = hoursBetween(now, start);
+  const nights = getNights(start, end);
+
+  // 1) OPÉRATIONNEL (cap 60)
+  let arrivalPts = 0;
+  if (hoursUntilArrival <= 24) { arrivalPts = 45; tags.push('Arrivée ≤ 24h'); }
+  else if (hoursUntilArrival <= 48) { arrivalPts = 30; tags.push('Arrivée ≤ 48h'); }
+  else if (hoursUntilArrival <= 72) { arrivalPts = 20; tags.push('Arrivée ≤ 72h'); }
+
+  let checklistPts = 0;
+  if (input.checklistStatus === 'none') { checklistPts = 30; tags.push('Checklist inexistante'); }
+  else if (input.checklistStatus === 'incomplete') { checklistPts = 25; tags.push('Checklist incomplète'); }
+
+  const sensitivePts = input.propertySensitive ? 10 : 0;
+  if (input.propertySensitive) tags.push('Logement sensible');
+
+  let stayLongPts = 0;
+  if (nights >= 14) { stayLongPts = 25; tags.push('Séjour ≥ 14 nuits'); }
+  else if (nights >= 7) { stayLongPts = 15; tags.push('Séjour ≥ 7 nuits'); }
+
+  let depositPts = 0;
+  if (channel !== 'airbnb') {
+    if (input.depositStatus === 'missing') { depositPts = 40; tags.push('Garantie absente'); }
+    else if (input.depositStatus === 'created_pending') { depositPts = 20; tags.push('Garantie à valider'); }
+  }
+
+  let turnoverPts = 0;
+  if (typeof input.turnoverHoursBefore === 'number') {
+    if (input.turnoverHoursBefore < 6) { turnoverPts = 20; tags.push('Turnover < 6h'); }
+    else if (input.turnoverHoursBefore < 12) { turnoverPts = 10; tags.push('Turnover < 12h'); }
+  }
+
+  let lateArrivalPts = 0;
+  if (typeof input.expectedCheckinHour === 'number' && input.expectedCheckinHour >= 22) {
+    lateArrivalPts = 10; tags.push('Arrivée tardive');
+  }
+
+  let staleIcalPts = 0;
+  if (input.lastIcalSyncAt) {
+    const hSinceSync = hoursBetween(input.lastIcalSyncAt, now);
+    if (hSinceSync >= 48) { staleIcalPts = 15; tags.push('Sync iCal > 48h'); }
+  }
+
+  const operational = clamp(arrivalPts + checklistPts + sensitivePts + stayLongPts + depositPts + turnoverPts + lateArrivalPts + staleIcalPts, 0, 60);
+
+  // 2) USAGE INTENSIF (cap 40)
+  let patternPts = 0;
+
+  if (nights === 1) { patternPts += 20; tags.push('Séjour 1 nuit'); }
+  else if (nights === 2) { patternPts += 10; tags.push('Séjour 2 nuits'); }
+
+  if (isWeekendArrival(start)) { patternPts += 15; tags.push('Week-end'); }
+
+  if (input.bookedAt) {
+    const hoursBetweenBookingAndArrival = hoursBetween(input.bookedAt, start);
+    if (hoursBetweenBookingAndArrival <= 24) { patternPts += 25; tags.push('Réservation < 24h'); }
+    else if (hoursBetweenBookingAndArrival <= 72) { patternPts += 15; tags.push('Réservation < 72h'); }
+  }
+
+  if (input.propertyType === 'entire') { patternPts += 10; tags.push('Logement entier'); }
+  if ((input.capacity ?? 0) >= 4) { patternPts += 10; tags.push('Capacité ≥ 4'); }
+
+  const { isHoliday, isHolidayEve } = isFrenchHolidayOrEve(start);
+  if (isHoliday) { patternPts += 20; tags.push('Jour férié'); }
+  if (isHolidayEve) { patternPts += 20; tags.push('Veille jour férié'); }
+  if (isSensitiveDate(start)) { patternPts += 25; tags.push('Date sensible'); }
+
+  const stayPattern = clamp(patternPts, 0, 40);
+
+  // 3) GLOBAL + couleur
+  const score = clamp(operational + stayPattern, 0, 100);
+  let level = 'green';
+  if (score >= 61) level = 'red';
+  else if (score >= 31) level = 'orange';
+
+  const uniqueTags = [...new Set(tags)];
+  const label = (level === 'red') ? 'Risque élevé' : (level === 'orange') ? 'À surveiller' : 'OK';
+  const summary = uniqueTags.length ? `${label} : ${uniqueTags.join(' + ')}` : label;
+
+  return { score, level, label, summary, tags: uniqueTags, subScores: { operational, stayPattern }, parts: { nights, hoursUntilArrival: Math.round(hoursUntilArrival), channel } };
+}
+
+
 
 // ============================================
 // JWT & UTILISATEURS (Postgres)
@@ -2856,6 +3110,147 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
 
   res.json(result);
 });
+// ============================================
+// ✅ GET - Réservations enrichies (risque + checklist + sous-scores)
+// ============================================
+app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async (req, res) => {
+  const user = await getUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+  try {
+    // Pré-calcul turnover par property
+    const turnoverByUid = new Map();
+
+    const userProps = PROPERTIES.filter(p => p.userId === user.id);
+
+    for (const property of userProps) {
+      const list = (reservationsStore.properties[property.id] || [])
+        .filter(r => r && r.start && r.end && r.type !== 'block' && r.source !== 'BLOCK');
+
+      const sorted = [...list].sort((a, b) => new Date(a.start) - new Date(b.start));
+      for (let i = 0; i < sorted.length; i++) {
+        const cur = sorted[i];
+        const prev = sorted[i - 1];
+        if (!prev) continue;
+        const gapHours = (new Date(cur.start) - new Date(prev.end)) / (1000 * 60 * 60);
+        turnoverByUid.set(cur.uid, gapHours);
+      }
+    }
+
+    const now = new Date();
+    const result = [];
+
+    for (const property of userProps) {
+      const reservations = (reservationsStore.properties[property.id] || [])
+        .filter(r => r && r.start && r.end && r.type !== 'block' && r.source !== 'BLOCK');
+
+      for (const r of reservations) {
+        // ✅ Checklist V1 auto (lazy)
+        const chk = ensureChecklistForReservation({
+          reservationUid: r.uid,
+          propertyId: property.id,
+          userId: user.id
+        });
+
+        // ✅ Deposit (Stripe) via DEPOSITS JSON
+        const dep = DEPOSITS.find(d => d.reservationUid === r.uid) || null;
+
+        const channel = mapChannelFromReservation(r);
+
+        const input = {
+          startDate: r.start,
+          endDate: r.end,
+          bookedAt: r.createdAt || null,
+          channel,
+          checklistStatus: mapChecklistStatusFromChecklist(chk),
+          depositStatus: mapDepositStatusFromDeposit(dep),
+
+          // Champs optionnels (chemin A : defaults)
+          propertySensitive: false,
+          capacity: 2,
+          propertyType: 'entire',
+          expectedCheckinHour: parseHour(property.arrivalTime || property.arrival_time),
+          turnoverHoursBefore: turnoverByUid.has(r.uid) ? turnoverByUid.get(r.uid) : null,
+          lastIcalSyncAt: reservationsStore.lastSync || null,
+        };
+
+        const risk = computeRiskV1(input, now);
+
+        result.push({
+          ...r,
+          propertyId: property.id,
+          propertyName: property.name,
+          deposit: dep,
+          checklist: chk,
+
+          riskScore: risk.score,
+          riskLevel: risk.level,
+          riskLabel: risk.label,
+          riskSummary: risk.summary,
+          riskTags: risk.tags,
+          riskSubScores: risk.subScores,
+          riskParts: risk.parts
+        });
+      }
+    }
+
+    // Tri : risque desc puis date
+    result.sort((a, b) => (b.riskScore - a.riskScore) || (new Date(a.start) - new Date(b.start)));
+
+    // Persister checklists si de nouvelles ont été créées
+    await saveChecklists();
+
+    res.json({ reservations: result });
+  } catch (err) {
+    console.error('Erreur /api/reservations/enriched :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// ✅ Checklists V1 - toggle task
+// ============================================
+app.post('/api/checklists/:reservationUid/tasks/:taskId/toggle', authenticateUser, checkSubscription, async (req, res) => {
+  const user = await getUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+  const { reservationUid, taskId } = req.params;
+  const chk = CHECKLISTS[reservationUid];
+  if (!chk) return res.status(404).json({ error: 'Checklist introuvable' });
+  if (chk.userId !== user.id) return res.status(403).json({ error: 'Accès refusé' });
+
+  const task = chk.tasks.find(t => t.id === taskId);
+  if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
+
+  task.completed = !task.completed;
+  chk.updatedAt = new Date().toISOString();
+
+  const allDone = chk.tasks.every(t => t.completed);
+  chk.status = allDone ? 'completed' : (chk.tasks.some(t => t.completed) ? 'in_progress' : 'pending');
+
+  await saveChecklists();
+  res.json({ checklist: chk });
+});
+
+// ✅ Checklists V1 - complete all
+app.post('/api/checklists/:reservationUid/complete', authenticateUser, checkSubscription, async (req, res) => {
+  const user = await getUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+  const { reservationUid } = req.params;
+  const chk = CHECKLISTS[reservationUid];
+  if (!chk) return res.status(404).json({ error: 'Checklist introuvable' });
+  if (chk.userId !== user.id) return res.status(403).json({ error: 'Accès refusé' });
+
+  chk.tasks = chk.tasks.map(t => ({ ...t, completed: true }));
+  chk.status = 'completed';
+  chk.updatedAt = new Date().toISOString();
+
+  await saveChecklists();
+  res.json({ checklist: chk });
+});
+
+
 // ============================================
 // ROUTES API - PARAMÃˆTRES NOTIFICATIONS (par user)
 // ============================================
@@ -7794,6 +8189,7 @@ app.listen(PORT, async () => {
   await loadProperties();
   await loadManualReservations();
   await loadDeposits();
+  await loadChecklists();
 
   console.log('Logements configurÃ©s:');
   PROPERTIES.forEach(p => {
