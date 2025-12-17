@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Créateur de Livret d'Accueil – LCC</title>
+  <title>CrÃ©ateur de Livret d'Accueil â€“ LCC</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -639,8 +639,8 @@
   <div class="container">
     <!-- Page Title -->
     <div class="page-title">
-      <h1>Créer un Livret d'Accueil</h1>
-      <p>Créez un livret d'accueil personnalisé et professionnel pour vos voyageurs</p>
+      <h1>CrÃ©er un Livret d'Accueil</h1>
+      <p>CrÃ©ez un livret d'accueil personnalisÃ© et professionnel pour vos voyageurs</p>
     </div>
 
     <!-- Progress Steps -->
@@ -648,11 +648,11 @@
       <div class="steps-container">
         <div class="step active" data-step="1">
           <div class="step-number">1</div>
-          <div class="step-label">Informations<br>générales</div>
+          <div class="step-label">Informations<br>gÃ©nÃ©rales</div>
         </div>
         <div class="step" data-step="2">
           <div class="step-number">2</div>
-          <div class="step-label">Accès &<br>Arrivée</div>
+          <div class="step-label">AccÃ¨s &<br>ArrivÃ©e</div>
         </div>
         <div class="step" data-step="3">
           <div class="step-number">3</div>
@@ -669,29 +669,15 @@
       </div>
     </div>
 
-    <!-- Liste des livrets existants -->
-<div id="livretsListSection" class="form-card" style="margin-bottom: 2rem;">
-  <h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--gray-700);">
-    <i class="fas fa-list"></i>
-    Mes livrets d'accueil
-  </h2>
-  <div id="livretsList" style="margin-bottom: 1rem;">
-    <p style="color: #64748b; text-align: center;">Chargement...</p>
-  </div>
-  <button type="button" class="btn btn-primary" onclick="createNewLivret()">
-    <i class="fas fa-plus"></i>
-    Créer un nouveau livret
-  </button>
-</div>
     <!-- Form -->
-    <form id="welcomeForm" style="display: none;">
-      <!-- Section 1: Informations Générales -->
+    <form id="welcomeForm">
+      <!-- Section 1: Informations GÃ©nÃ©rales -->
       <div class="form-section active" data-section="1">
         <div class="form-card">
           <div class="section-header">
             <h2 class="section-title">
               <i class="fas fa-home"></i>
-              Informations Générales
+              Informations GÃ©nÃ©rales
             </h2>
             <p class="section-description">
               Commencez par les informations de base de votre logement
@@ -699,13 +685,13 @@
           </div>
 
           <div class="info-box">
-            <p><i class="fas fa-info-circle"></i> Ces informations apparaîtront sur la page d'accueil de votre livret</p>
+            <p><i class="fas fa-info-circle"></i> Ces informations apparaÃ®tront sur la page d'accueil de votre livret</p>
           </div>
 
           <div class="form-group">
             <label>
               Nom du logement <span class="required">*</span>
-              <span class="hint">Ex: "Votre Pied-à-Terre ", "Appartement Cosy Centre-Ville"</span>
+              <span class="hint">Ex: "Votre Pied-Ã -Terre ", "Appartement Cosy Centre-Ville"</span>
             </label>
             <input type="text" class="form-control" name="propertyName" required placeholder="Nom de votre logement">
           </div>
@@ -713,11 +699,11 @@
           <div class="form-group">
             <label>
               Photo de couverture <span class="required">*</span>
-              <span class="hint">Image principale qui apparaîtra en haut du livret (format recommandé: 1920x1080px)</span>
+              <span class="hint">Image principale qui apparaÃ®tra en haut du livret (format recommandÃ©: 1920x1080px)</span>
             </label>
             <div class="image-upload-area" onclick="document.getElementById('coverPhoto').click()">
               <i class="fas fa-cloud-upload-alt"></i>
-              <p>Cliquez pour télécharger votre photo de couverture</p>
+              <p>Cliquez pour tÃ©lÃ©charger votre photo de couverture</p>
               <p class="supported-formats">JPG, PNG ou WebP (max 5MB)</p>
             </div>
             <input type="file" id="coverPhoto" accept="image/*" style="display: none;">
@@ -729,12 +715,12 @@
               Description d'accueil
               <span class="hint">Message de bienvenue pour vos voyageurs</span>
             </label>
-            <textarea class="form-control" name="welcomeDescription" rows="3" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement. Ce livret contient toutes les informations pour profiter pleinement de votre séjour."></textarea>
+            <textarea class="form-control" name="welcomeDescription" rows="3" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement. Ce livret contient toutes les informations pour profiter pleinement de votre sÃ©jour."></textarea>
           </div>
 
           <div class="form-group">
             <label>
-              Votre numéro de téléphone <span class="required">*</span>
+              Votre numÃ©ro de tÃ©lÃ©phone <span class="required">*</span>
               <span class="hint">Pour que vos voyageurs puissent vous contacter</span>
             </label>
             <input type="tel" class="form-control" name="contactPhone" required placeholder="06 XX XX XX XX">
@@ -750,25 +736,25 @@
         </div>
       </div>
 
-      <!-- Section 2: Accès & Arrivée -->
+      <!-- Section 2: AccÃ¨s & ArrivÃ©e -->
       <div class="form-section" data-section="2">
         <div class="form-card">
           <div class="section-header">
             <h2 class="section-title">
               <i class="fas fa-map-marker-alt"></i>
-              Accès & Arrivée
+              AccÃ¨s & ArrivÃ©e
             </h2>
             <p class="section-description">
-              Comment vos voyageurs accèdent-ils à votre logement ?
+              Comment vos voyageurs accÃ¨dent-ils Ã  votre logement ?
             </p>
           </div>
 
           <div class="form-grid">
             <div class="form-group">
               <label>
-                Adresse complète <span class="required">*</span>
+                Adresse complÃ¨te <span class="required">*</span>
               </label>
-              <input type="text" class="form-control" name="address" required placeholder="Numéro et rue">
+              <input type="text" class="form-control" name="address" required placeholder="NumÃ©ro et rue">
             </div>
 
             <div class="form-group">
@@ -789,7 +775,7 @@
 
             <div class="form-group">
               <label>
-                Code de la boîte à clés
+                Code de la boÃ®te Ã  clÃ©s
                 <span class="hint">Si applicable</span>
               </label>
               <input type="text" class="form-control" name="keyboxCode" placeholder="Ex: 8670">
@@ -798,21 +784,21 @@
 
           <div class="form-group">
             <label>
-              Instructions d'accès
-              <span class="hint">Expliquez comment accéder au logement (portail, étage, etc.)</span>
+              Instructions d'accÃ¨s
+              <span class="hint">Expliquez comment accÃ©der au logement (portail, Ã©tage, etc.)</span>
             </label>
-            <textarea class="form-control" name="accessInstructions" rows="4" placeholder="Ex: Poussez le portail, la boîte à clés est à gauche au niveau de la flèche rouge..."></textarea>
+            <textarea class="form-control" name="accessInstructions" rows="4" placeholder="Ex: Poussez le portail, la boÃ®te Ã  clÃ©s est Ã  gauche au niveau de la flÃ¨che rouge..."></textarea>
           </div>
 
           <div class="form-group">
             <label>
-              Photos de l'entrée
-              <span class="hint">Photos du portail, de l'entrée, de la boîte à clés, etc.</span>
+              Photos de l'entrÃ©e
+              <span class="hint">Photos du portail, de l'entrÃ©e, de la boÃ®te Ã  clÃ©s, etc.</span>
             </label>
             <div class="image-upload-area" onclick="document.getElementById('entrancePhotos').click()">
               <i class="fas fa-images"></i>
-              <p>Cliquez pour télécharger les photos de l'entrée</p>
-              <p class="supported-formats">Vous pouvez sélectionner plusieurs images</p>
+              <p>Cliquez pour tÃ©lÃ©charger les photos de l'entrÃ©e</p>
+              <p class="supported-formats">Vous pouvez sÃ©lectionner plusieurs images</p>
             </div>
             <input type="file" id="entrancePhotos" accept="image/*" multiple style="display: none;">
             <div class="image-preview" id="entrancePhotosPreview"></div>
@@ -823,7 +809,7 @@
               Parking
               <span class="hint">Informations sur le stationnement</span>
             </label>
-            <textarea class="form-control" name="parkingInfo" rows="3" placeholder="Ex: Parking gratuit au 43-51 rue du Marché, 230 places sur 3 niveaux"></textarea>
+            <textarea class="form-control" name="parkingInfo" rows="3" placeholder="Ex: Parking gratuit au 43-51 rue du MarchÃ©, 230 places sur 3 niveaux"></textarea>
           </div>
 
           <div class="form-group">
@@ -833,7 +819,7 @@
             </label>
             <div class="image-upload-area" onclick="document.getElementById('parkingPhotos').click()">
               <i class="fas fa-parking"></i>
-              <p>Cliquez pour télécharger les photos du parking</p>
+              <p>Cliquez pour tÃ©lÃ©charger les photos du parking</p>
             </div>
             <input type="file" id="parkingPhotos" accept="image/*" multiple style="display: none;">
             <div class="image-preview" id="parkingPhotosPreview"></div>
@@ -843,7 +829,7 @@
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="prevSection()">
             <i class="fas fa-arrow-left"></i>
-            Précédent
+            PrÃ©cÃ©dent
           </button>
           <button type="button" class="btn btn-primary" onclick="nextSection()">
             Suivant
@@ -861,28 +847,28 @@
               Le Logement
             </h2>
             <p class="section-description">
-              Présentez les différentes pièces et espaces de votre logement
+              PrÃ©sentez les diffÃ©rentes piÃ¨ces et espaces de votre logement
             </p>
           </div>
 
           <div class="warning-box">
-            <p><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire pour présenter votre logement</p>
+            <p><i class="fas fa-lightbulb"></i> Ajoutez autant de piÃ¨ces que nÃ©cessaire pour prÃ©senter votre logement</p>
           </div>
 
           <div id="roomsContainer" class="repeatable-section">
-            <!-- Les pièces seront ajoutées ici dynamiquement -->
+            <!-- Les piÃ¨ces seront ajoutÃ©es ici dynamiquement -->
           </div>
 
           <button type="button" class="add-item-btn" onclick="addRoom()">
             <i class="fas fa-plus-circle"></i>
-            Ajouter une pièce / un espace
+            Ajouter une piÃ¨ce / un espace
           </button>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="prevSection()">
             <i class="fas fa-arrow-left"></i>
-            Précédent
+            PrÃ©cÃ©dent
           </button>
           <button type="button" class="btn btn-primary" onclick="nextSection()">
             Suivant
@@ -900,7 +886,7 @@
               Informations Pratiques
             </h2>
             <p class="section-description">
-              WiFi, équipements, consignes et tout ce qui est utile au quotidien
+              WiFi, Ã©quipements, consignes et tout ce qui est utile au quotidien
             </p>
           </div>
 
@@ -910,8 +896,8 @@
 
           <div class="form-grid">
             <div class="form-group">
-              <label>Nom du réseau WiFi (SSID)</label>
-              <input type="text" class="form-control" name="wifiSSID" placeholder="Nom du réseau">
+              <label>Nom du rÃ©seau WiFi (SSID)</label>
+              <input type="text" class="form-control" name="wifiSSID" placeholder="Nom du rÃ©seau">
             </div>
 
             <div class="form-group">
@@ -923,12 +909,12 @@
           <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
 
           <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-clipboard-list" style="color: var(--accent);"></i> Consignes de départ
+            <i class="fas fa-clipboard-list" style="color: var(--accent);"></i> Consignes de dÃ©part
           </h3>
 
           <div class="form-group">
             <label>
-              Heure de départ
+              Heure de dÃ©part
               <span class="hint">Ex: 11h, 10h30</span>
             </label>
             <input type="text" class="form-control" name="checkoutTime" placeholder="11h">
@@ -936,38 +922,38 @@
 
           <div class="form-group">
             <label>
-              Instructions de départ
+              Instructions de dÃ©part
               <span class="hint">Ce que les voyageurs doivent faire avant de partir</span>
             </label>
-            <textarea class="form-control" name="checkoutInstructions" rows="5" placeholder="Ex:&#10;- Éteindre toutes les lumières&#10;- Laver la vaisselle&#10;- Poser les serviettes au sol..."></textarea>
+            <textarea class="form-control" name="checkoutInstructions" rows="5" placeholder="Ex:&#10;- Ã‰teindre toutes les lumiÃ¨res&#10;- Laver la vaisselle&#10;- Poser les serviettes au sol..."></textarea>
           </div>
 
           <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
 
           <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-toolbox" style="color: var(--accent);"></i> Équipements disponibles
+            <i class="fas fa-toolbox" style="color: var(--accent);"></i> Ã‰quipements disponibles
           </h3>
 
           <div class="form-group">
             <label>
-              Liste des équipements
-              <span class="hint">Un équipement par ligne</span>
+              Liste des Ã©quipements
+              <span class="hint">Un Ã©quipement par ligne</span>
             </label>
-            <textarea class="form-control" name="equipmentList" rows="8" placeholder="Ex:&#10;Machine à café Nespresso&#10;Micro-ondes&#10;Machine à laver&#10;Fer et planche à repasser..."></textarea>
+            <textarea class="form-control" name="equipmentList" rows="8" placeholder="Ex:&#10;Machine Ã  cafÃ© Nespresso&#10;Micro-ondes&#10;Machine Ã  laver&#10;Fer et planche Ã  repasser..."></textarea>
           </div>
 
           <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
 
           <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Règles importantes
+            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> RÃ¨gles importantes
           </h3>
 
           <div class="form-group">
             <label>
-              Règles et avertissements
+              RÃ¨gles et avertissements
               <span class="hint">Ex: Poutre basse, logement non-fumeur, attention aux marches...</span>
             </label>
-            <textarea class="form-control" name="importantRules" rows="4" placeholder="Entrez les règles importantes..."></textarea>
+            <textarea class="form-control" name="importantRules" rows="4" placeholder="Entrez les rÃ¨gles importantes..."></textarea>
           </div>
 
           <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
@@ -979,16 +965,16 @@
           <div class="form-group">
             <label>
               Informations sur les transports
-              <span class="hint">Comment accéder aux transports en commun, gares, etc.</span>
+              <span class="hint">Comment accÃ©der aux transports en commun, gares, etc.</span>
             </label>
-            <textarea class="form-control" name="transportInfo" rows="6" placeholder="Ex: Bus ligne 15 à 1 minute à pied..."></textarea>
+            <textarea class="form-control" name="transportInfo" rows="6" placeholder="Ex: Bus ligne 15 Ã  1 minute Ã  pied..."></textarea>
           </div>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="prevSection()">
             <i class="fas fa-arrow-left"></i>
-            Précédent
+            PrÃ©cÃ©dent
           </button>
           <button type="button" class="btn btn-primary" onclick="nextSection()">
             Suivant
@@ -1006,7 +992,7 @@
               Aux Alentours
             </h2>
             <p class="section-description">
-              Recommandations de restaurants, commerces et lieux à visiter
+              Recommandations de restaurants, commerces et lieux Ã  visiter
             </p>
           </div>
 
@@ -1015,7 +1001,7 @@
           </h3>
 
           <div id="restaurantsContainer" class="repeatable-section">
-            <!-- Les restaurants seront ajoutés ici dynamiquement -->
+            <!-- Les restaurants seront ajoutÃ©s ici dynamiquement -->
           </div>
 
           <button type="button" class="add-item-btn" onclick="addRestaurant()">
@@ -1032,35 +1018,35 @@
           <div class="form-group">
             <label>
               Liste des commerces
-              <span class="hint">Supermarchés, boulangeries, pharmacies, etc. (un par ligne)</span>
+              <span class="hint">SupermarchÃ©s, boulangeries, pharmacies, etc. (un par ligne)</span>
             </label>
-            <textarea class="form-control" name="shopsList" rows="6" placeholder="Ex:&#10;FRANPRIX - 6 rue de Pontoise&#10;Boulangerie LA POTERNE - Place du marché..."></textarea>
+            <textarea class="form-control" name="shopsList" rows="6" placeholder="Ex:&#10;FRANPRIX - 6 rue de Pontoise&#10;Boulangerie LA POTERNE - Place du marchÃ©..."></textarea>
           </div>
 
           <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
 
           <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-map-signs" style="color: var(--accent);"></i> Lieux à Visiter
+            <i class="fas fa-map-signs" style="color: var(--accent);"></i> Lieux Ã  Visiter
           </h3>
 
           <div id="placesContainer" class="repeatable-section">
-            <!-- Les lieux seront ajoutés ici dynamiquement -->
+            <!-- Les lieux seront ajoutÃ©s ici dynamiquement -->
           </div>
 
           <button type="button" class="add-item-btn" onclick="addPlace()">
             <i class="fas fa-plus-circle"></i>
-            Ajouter un lieu à visiter
+            Ajouter un lieu Ã  visiter
           </button>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="prevSection()">
             <i class="fas fa-arrow-left"></i>
-            Précédent
+            PrÃ©cÃ©dent
           </button>
           <button type="submit" class="btn btn-accent">
             <i class="fas fa-check-circle"></i>
-            Créer le livret d'accueil
+            CrÃ©er le livret d'accueil
           </button>
         </div>
       </div>
@@ -1071,8 +1057,8 @@
       <div class="success-icon">
         <i class="fas fa-check"></i>
       </div>
-      <h2>Livret d'accueil créé avec succès !</h2>
-      <p>Votre livret d'accueil personnalisé a été généré.</p>
+      <h2>Livret d'accueil crÃ©Ã© avec succÃ¨s !</h2>
+      <p>Votre livret d'accueil personnalisÃ© a Ã©tÃ© gÃ©nÃ©rÃ©.</p>
       <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
         <button class="btn btn-primary" onclick="viewWelcomeBook()">
           <i class="fas fa-eye"></i>
@@ -1093,109 +1079,7 @@
   </div>
 <script>
 const API_BASE = 'https://lcc-booking-manager.onrender.com';
-let currentUniqueId = null; // Pour savoir si on modifie ou on crée
 
-// Charger la liste des livrets au démarrage
-async function loadLivretsList() {
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome-books/user/list`, {
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-    });
-    
-    const data = await response.json();
-    
-    if (data.success && data.welcomeBooks && data.welcomeBooks.length > 0) {
-      displayLivretsList(data.welcomeBooks);
-    } else {
-      document.getElementById('livretsList').innerHTML = '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>';
-    }
-  } catch (error) {
-    console.error('Erreur chargement livrets:', error);
-    document.getElementById('livretsList').innerHTML = '<p style="color: #e53e3e;">Erreur lors du chargement des livrets.</p>';
-  }
-}
-
-// Afficher la liste des livrets
-function displayLivretsList(livrets) {
-  const html = livrets.map(livret => `
-    <div style="border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; background: white;">
-      <div>
-        <strong style="font-size: 16px; color: #1a202c;">${livret.propertyName || 'Sans nom'}</strong>
-        <br>
-        <small style="color: #64748b;">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</small>
-      </div>
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-secondary" onclick="editLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem;">
-          <i class="fas fa-edit"></i> Modifier
-        </button>
-        <button class="btn btn-secondary" onclick="viewLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem;">
-          <i class="fas fa-eye"></i> Voir
-        </button>
-        <button class="btn btn-secondary" onclick="deleteLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem; background: #e53e3e; color: white;">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-  
-  document.getElementById('livretsList').innerHTML = html;
-}
-
-// Créer un nouveau livret
-function createNewLivret() {
-  currentUniqueId = null;
-  document.getElementById('welcomeForm').reset();
-  document.getElementById('livretsListSection').style.display = 'none';
-  document.getElementById('welcomeForm').style.display = 'block';
-  
-  // Remonter en haut de la page
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// Voir un livret
-function viewLivret(uniqueId) {
-  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
-}
-
-// Supprimer un livret
-async function deleteLivret(uniqueId) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome/by-unique/${uniqueId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      alert('Livret supprimé avec succès');
-      loadLivretsList();
-    } else {
-      alert('Erreur lors de la suppression');
-    }
-  } catch (error) {
-    console.error('Erreur suppression:', error);
-    alert('Erreur lors de la suppression');
-  }
-}
-
-// Remplir le formulaire avec les données d'un livret
-function fillFormWithData(data) {
-  document.querySelector('[name="propertyName"]').value = data.propertyName || '';
-  document.querySelector('[name="welcomeDescription"]').value = data.welcomeDescription || '';
-  document.querySelector('[name="contactPhone"]').value = data.contactPhone || '';
-  document.querySelector('[name="address"]').value = data.address || '';
-  document.querySelector('[name="postalCode"]').value = data.postalCode || '';
-  document.querySelector('[name="city"]').value = data.city || '';
-  // ... ajoute les autres champs si besoin
-}
-
-// Charger la liste au démarrage de la page
-document.addEventListener('DOMContentLoaded', function() {
-  loadLivretsList();
-});
 // --- 1. GESTION AUTHENTIFICATION ---
 function getAuthToken() {
   const t = localStorage.getItem('lcc_token');
@@ -1297,14 +1181,14 @@ setupImageUpload('coverPhoto', 'coverPhotoPreview');
 setupImageUpload('entrancePhotos', 'entrancePhotosPreview');
 setupImageUpload('parkingPhotos', 'parkingPhotosPreview');
 
-// --- 3. GESTION DYNAMIQUE (Pièces, Restos, Lieux) ---
+// --- 3. GESTION DYNAMIQUE (PiÃ¨ces, Restos, Lieux) ---
 function addRoom() {
   roomCounter++;
   const container = document.getElementById('roomsContainer');
   const html = `
     <div class="repeatable-item" id="room-${roomCounter}">
       <div class="repeatable-item-header">
-        <div class="repeatable-item-title"><i class="fas fa-door-closed"></i> Pièce ${roomCounter}</div>
+        <div class="repeatable-item-title"><i class="fas fa-door-closed"></i> PiÃ¨ce ${roomCounter}</div>
         <button type="button" class="remove-item-btn" onclick="document.getElementById('room-${roomCounter}').remove()"><i class="fas fa-trash"></i></button>
       </div>
       <div class="form-group"><label>Nom</label><input type="text" class="form-control" name="room[${roomCounter}][name]"></div>
@@ -1329,7 +1213,7 @@ function addRestaurant() {
       </div>
       <div class="form-grid">
         <div class="form-group"><label>Nom</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][name]"></div>
-        <div class="form-group"><label>Tél</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][phone]"></div>
+        <div class="form-group"><label>TÃ©l</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][phone]"></div>
       </div>
       <div class="form-group"><label>Adresse</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][address]"></div>
       <div class="form-group"><label>Description</label><textarea class="form-control" name="restaurant[${restaurantCounter}][description]" rows="2"></textarea></div>
@@ -1357,7 +1241,7 @@ function addPlace() {
   setupImageUpload(`placePhoto-${placeCounter}`, `placePhotoPreview-${placeCounter}`);
 }
 
-// --- 4. CHARGEMENT DES DONNÉES EXISTANTES ---
+// --- 4. CHARGEMENT DES DONNÃ‰ES EXISTANTES ---
 async function loadExistingData() {
     const token = getAuthToken();
     if (!token) return;
@@ -1371,9 +1255,9 @@ async function loadExistingData() {
         if (!response.ok) return;
         const data = await response.json();
 
-        // Si on a des données, on remplit
+        // Si on a des donnÃ©es, on remplit
         if (data && (data.propertyName || data.uniqueId)) {
-            console.log("Données récupérées:", data);
+            console.log("DonnÃ©es rÃ©cupÃ©rÃ©es:", data);
 
             // Champs simples
             const fields = [
@@ -1395,7 +1279,7 @@ async function loadExistingData() {
                 if(Array.isArray(data.photos.parking)) data.photos.parking.forEach(u => showExistingImage('parkingPhotosPreview', u));
             }
 
-            // Pièces
+            // PiÃ¨ces
             document.getElementById('roomsContainer').innerHTML = '';
             roomCounter = 0;
             if (Array.isArray(data.rooms)) {
@@ -1404,7 +1288,7 @@ async function loadExistingData() {
                     document.querySelector(`[name="room[${roomCounter}][name]"]`).value = r.name || '';
                     document.querySelector(`[name="room[${roomCounter}][description]"]`).value = r.description || '';
                 });
-            } else { addRoom(); } // Une vide par défaut
+            } else { addRoom(); } // Une vide par dÃ©faut
 
             // Restaurants
             document.getElementById('restaurantsContainer').innerHTML = '';
@@ -1435,7 +1319,7 @@ async function loadExistingData() {
                 window.welcomeBookUrl = `${API_BASE}/welcome/${data.uniqueId}`;
             }
         } else {
-            // Pas de données : on initialise les champs vides
+            // Pas de donnÃ©es : on initialise les champs vides
             addRoom();
             addRestaurant();
             addPlace();
@@ -1546,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
   }
 
-  // Si connecté, on charge les données
+  // Si connectÃ©, on charge les donnÃ©es
   if (isAuth) {
       await loadExistingData();
   }
@@ -1556,100 +1440,47 @@ function viewWelcomeBook() {
     if(window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
 }
 
-// Afficher la liste des livrets
-function displayLivretsList(livrets) {
-  const html = livrets.map(livret => `
-    <div style="border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <strong>${livret.propertyName || 'Sans nom'}</strong>
-        <br>
-        <small style="color: #64748b;">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</small>
-      </div>
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-secondary btn-sm" onclick="editLivret('${livret.uniqueId}')">
-          <i class="fas fa-edit"></i> Modifier
-        </button>
-<button class="btn btn-secondary btn-sm" onclick="viewLivret('${livret.uniqueId}')">
-<i class="fas fa-eye"></i> Voir
-        </button>
-        <button class="btn btn-secondary btn-sm" onclick="deleteLivret('${livret.uniqueId}')">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-  
-  document.getElementById('livretsList').innerHTML = html;
-}
-
-// Créer un nouveau livret
-function createNewLivret() {
-  currentUniqueId = null;
-  document.getElementById('welcomeForm').reset();
-  document.getElementById('livretsListSection').style.display = 'none';
-  document.querySelector('form').style.display = 'block';
-}
-
-// Modifier un livret existant
-async function editLivret(uniqueId) {
-  currentUniqueId = uniqueId;
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome-books/public/${uniqueId}`);
-    
-    const data = await response.json();
-    
-    if (data.success && data.book) {
-      fillFormWithData(data.book);
-      document.getElementById('livretsListSection').style.display = 'none';
-      document.getElementById('welcomeForm').style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  } catch (error) {
-    console.error('Erreur chargement livret:', error);
-    alert('Erreur lors du chargement du livret');
+// Fonction pour copier le lien du livret
+function copyWelcomeBookLink(button) {
+  if (!window.welcomeBookUrl) {
+    alert('URL du livret introuvable');
+    return;
   }
-}
-
-// Voir un livret
-function viewLivret(uniqueId) {
-  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
-}
-
-// Supprimer un livret
-async function deleteLivret(uniqueId) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome/delete/${uniqueId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-    });
+  // Copier dans le presse-papier
+  navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
+    // Changer temporairement le texte du bouton
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-check"></i> Copié !';
+    button.style.background = '#10B981';
+    button.style.color = 'white';
     
-    const data = await response.json();
-    
-    if (data.success) {
-      alert('Livret supprimé avec succès');
-      loadLivretsList();
-    } else {
-      alert('Erreur lors de la suppression');
-    }
-  } catch (error) {
-    console.error('Erreur suppression:', error);
-    alert('Erreur lors de la suppression');
-  }
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.style.background = '';
+      button.style.color = '';
+    }, 2000);
+  }).catch(err => {
+    console.error('Erreur copie:', err);
+    alert('Erreur lors de la copie du lien');
+  });
 }
 
-// Remplir le formulaire avec les données d'un livret
-function fillFormWithData(data) {
-  // À compléter selon tes champs
-  document.querySelector('[name="propertyName"]').value = data.propertyName || '';
-  document.querySelector('[name="welcomeDescription"]').value = data.welcomeDescription || '';
-  // ... etc pour tous les champs
+// Fonction pour modifier le livret (revenir au formulaire)
+function createAnother() {
+  // Cacher le message de succès
+  document.getElementById('successMessage').classList.remove('show');
+  
+  // Afficher le formulaire
+  document.getElementById('welcomeForm').style.display = 'block';
+  
+  // Recharger les données existantes
+  loadExistingData();
+  
+  // Remonter en haut
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Appeler loadLivretsList() au chargement de la page
-document.addEventListener('DOMContentLoaded', loadLivretsList);
 </script>
 
 </body>
