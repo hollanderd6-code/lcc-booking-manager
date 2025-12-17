@@ -668,7 +668,20 @@
         </div>
       </div>
     </div>
-
+<!-- Liste des livrets existants -->
+<div id="livretsListSection" style="margin-bottom: 2rem;">
+  <div class="form-card">
+    <h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fas fa-list"></i>
+      Mes livrets d'accueil
+    </h2>
+    <div id="livretsList"></div>
+    <button type="button" class="btn btn-primary" onclick="createNewLivret()" style="margin-top: 1rem;">
+      <i class="fas fa-plus"></i>
+      Créer un nouveau livret
+    </button>
+  </div>
+</div>
     <!-- Form -->
     <form id="welcomeForm">
       <!-- Section 1: Informations Générales -->
@@ -1439,6 +1452,123 @@ document.addEventListener('DOMContentLoaded', async () => {
 function viewWelcomeBook() {
     if(window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
 }
+  let currentUniqueId = null; // Pour savoir si on modifie ou on crée
+
+// Charger la liste des livrets au démarrage
+async function loadLivretsList() {
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/my-books`, {
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.livrets.length > 0) {
+      displayLivretsList(data.livrets);
+    } else {
+      document.getElementById('livretsList').innerHTML = '<p style="color: #64748b;">Aucun livret pour le moment.</p>';
+    }
+  } catch (error) {
+    console.error('Erreur chargement livrets:', error);
+  }
+}
+
+// Afficher la liste des livrets
+function displayLivretsList(livrets) {
+  const html = livrets.map(livret => `
+    <div style="border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong>${livret.property_name || 'Sans nom'}</strong>
+        <br>
+        <small style="color: #64748b;">Modifié le ${new Date(livret.updated_at).toLocaleDateString('fr-FR')}</small>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-secondary btn-sm" onclick="editLivret('${livret.unique_id}')">
+          <i class="fas fa-edit"></i> Modifier
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="viewLivret('${livret.unique_id}')">
+          <i class="fas fa-eye"></i> Voir
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="deleteLivret('${livret.unique_id}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+  
+  document.getElementById('livretsList').innerHTML = html;
+}
+
+// Créer un nouveau livret
+function createNewLivret() {
+  currentUniqueId = null;
+  document.getElementById('welcomeForm').reset();
+  document.getElementById('livretsListSection').style.display = 'none';
+  document.querySelector('form').style.display = 'block';
+}
+
+// Modifier un livret existant
+async function editLivret(uniqueId) {
+  currentUniqueId = uniqueId;
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/my-book/${uniqueId}`, {
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.exists) {
+      // Remplir le formulaire avec les données
+      fillFormWithData(data.data);
+      document.getElementById('livretsListSection').style.display = 'none';
+      document.querySelector('form').style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Erreur chargement livret:', error);
+    alert('Erreur lors du chargement du livret');
+  }
+}
+
+// Voir un livret
+function viewLivret(uniqueId) {
+  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
+}
+
+// Supprimer un livret
+async function deleteLivret(uniqueId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome/delete/${uniqueId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('Livret supprimé avec succès');
+      loadLivretsList();
+    } else {
+      alert('Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur suppression:', error);
+    alert('Erreur lors de la suppression');
+  }
+}
+
+// Remplir le formulaire avec les données d'un livret
+function fillFormWithData(data) {
+  // À compléter selon tes champs
+  document.querySelector('[name="propertyName"]').value = data.propertyName || '';
+  document.querySelector('[name="welcomeDescription"]').value = data.welcomeDescription || '';
+  // ... etc pour tous les champs
+}
+
+// Appeler loadLivretsList() au chargement de la page
+document.addEventListener('DOMContentLoaded', loadLivretsList);
 </script>
 
 </body>
