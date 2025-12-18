@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messages – Boostinghost</title>
+  <title>Messages — Boostinghost</title>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -38,130 +38,516 @@
       color: var(--primary-color);
     }
 
-    /* ===== Cards & timelines ===== */
-
-    .timeline-section {
+    /* ===== Filtres ===== */
+    .filters-section {
       background: var(--bg-primary);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm);
-      padding: 24px;
+      padding: 20px;
       margin-bottom: 24px;
       border: 1px solid var(--border-color);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
-    .timeline-header {
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .filter-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      cursor: pointer;
+    }
+
+    .filter-group select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    /* ===== Stats ===== */
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-color);
+      gap: 16px;
     }
 
-    .timeline-icon {
-      width: 40px;
-      height: 40px;
+    .stat-icon {
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 20px;
       color: white;
     }
 
-    .timeline-title {
-      font-size: 16px;
+    .stat-content h3 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .stat-content p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ===== Liste des conversations ===== */
+    .conversations-section {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .conversations-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .conversations-header h2 {
+      font-size: 18px;
       font-weight: 700;
       color: var(--text-primary);
     }
 
-    .timeline-count {
-      background: var(--primary-light);
-      color: var(--primary-color);
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 600;
-      margin-left: auto;
-    }
-
-    .reservation-list {
-      display: grid;
-      gap: 16px;
-    }
-
-    .reservation-item {
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      border-left: 4px solid var(--primary-color);
+    .conversation-item {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
       transition: var(--transition);
+      cursor: pointer;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
     }
 
-    .reservation-item:hover {
-      box-shadow: var(--shadow-sm);
-      transform: translateX(4px);
+    .conversation-item:hover {
+      background: var(--bg-secondary);
     }
 
-    .reservation-header {
+    .conversation-item:last-child {
+      border-bottom: none;
+    }
+
+    .conversation-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .conversation-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .conversation-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
-    .reservation-info h3 {
+    .conversation-info h3 {
       font-size: 15px;
       font-weight: 700;
       color: var(--text-primary);
       margin-bottom: 4px;
     }
 
-    .reservation-meta {
-      color: var(--text-secondary);
+    .conversation-info .meta {
       font-size: 13px;
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
+    .conversation-info .meta .property-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--primary-light);
+      color: var(--primary-color);
+    }
+
+    .conversation-status {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-badge.active {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .status-badge.pending {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .status-badge.closed {
+      background: #F3F4F6;
+      color: #6B7280;
+    }
+
+    .unread-badge {
+      background: #EF4444;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .conversation-preview {
       font-size: 14px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .empty-state i {
-      font-size: 40px;
-      opacity: 0.3;
-      margin-bottom: 12px;
+    .conversation-time {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
     }
 
-    .copy-btn {
+    .conversation-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-action {
+      padding: 8px 14px;
       background: var(--primary-color);
       color: white;
       border: none;
-      padding: 8px 16px;
       border-radius: var(--radius-md);
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: var(--transition-fast);
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      gap: 6px;
     }
 
-    .copy-btn:hover {
+    .btn-action:hover {
       background: var(--primary-hover);
       transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
     }
 
-    .copy-btn.copied {
-      background: #16a34a;
+    .btn-action.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .btn-action.secondary:hover {
+      background: var(--border-color);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      opacity: 0.3;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    /* ===== Modal Chat ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9998;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .chat-modal {
+      background: white;
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 700px;
+      height: 80vh;
+      max-height: 700px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-md);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .chat-modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-modal-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .close-modal {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .close-modal:hover {
+      background: var(--border-color);
+    }
+
+    .chat-modal-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-message {
+      display: flex;
+      gap: 12px;
+      max-width: 70%;
+      animation: slideIn 0.3s ease;
+    }
+
+    .chat-message.owner {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .chat-message.guest,
+    .chat-message.bot {
+      align-self: flex-start;
+    }
+
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .chat-message.guest .chat-avatar {
+      background: #3B82F6;
+    }
+
+    .chat-message.bot .chat-avatar {
+      background: #8B5CF6;
+    }
+
+    .chat-bubble {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .chat-message.owner .chat-bubble {
+      background: #DBEAFE;
+    }
+
+    .chat-message.bot .chat-bubble {
+      background: #EDE9FE;
+    }
+
+    .chat-sender {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .chat-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .chat-modal-input {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      background: white;
+      display: flex;
+      gap: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      resize: none;
+      max-height: 120px;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .send-btn:hover {
+      background: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 768px) {
+      .chat-modal {
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
@@ -202,7 +588,7 @@
         </span>
       </div>
     </a>
-  </div> <!-- ✅ IMPORTANT : fermeture manquante -->
+  </div>
 
   <nav class="sidebar-nav">
     <!-- PRINCIPAL -->
@@ -223,6 +609,7 @@
       <a href="/messages.html" class="nav-item active" data-page="messages">
         <i class="fas fa-comment-dots"></i>
         <span>Messages</span>
+        <span class="nav-badge" id="unreadCount">0</span>
       </a>
     </div>
 
@@ -246,7 +633,7 @@
       </a>
     </div>
 
-    <!-- FACTURATION (propre) -->
+    <!-- FACTURATION -->
     <div class="nav-section">
       <div class="nav-section-title">Facturation</div>
 
@@ -259,35 +646,25 @@
         <i class="fas fa-file-invoice-dollar"></i>
         <span>Factures propriétaires</span>
       </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
 
       <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
+        <i class="fas fa-hand-holding-usd"></i>
         <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
       </a>
     </div>
 
-    <!-- PARAMÈTRES -->
+    <!-- SUPPORT -->
     <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
+      <div class="nav-section-title">Support</div>
+
+      <a href="/help.html" class="nav-item" data-page="help">
+        <i class="fas fa-question-circle"></i>
+        <span>Centre d'aide</span>
+      </a>
 
       <a href="/settings-account.html" class="nav-item" data-page="settings-account">
         <i class="fas fa-cog"></i>
         <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
       </a>
     </div>
   </nav>
@@ -307,7 +684,6 @@
   </div>
 </aside>
 
-
     <!-- Main -->
     <main class="main-content">
       <!-- Header -->
@@ -316,87 +692,115 @@
           <div class="page-kicker">Communication</div>
           <h1 class="page-title messages-page-title">
             <i class="fas fa-comment-dots"></i>
-            Messages
+            Messages & Chat
           </h1>
           <p class="page-subtitle">
-            Préparez vos messages pour les voyageurs en quelques clics.
+            Gérez vos conversations avec les voyageurs en temps réel
           </p>
         </div>
       </header>
 
       <!-- Page Content -->
       <div class="page-content">
-        <!-- Messages rapides – timeline réservations -->
-        <section class="timeline-section">
-          <div class="timeline-header">
-            <div class="timeline-icon" style="background:#10b981;">
-              <i class="fas fa-calendar-check"></i>
+        <!-- Stats -->
+        <div class="stats-section">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #10B981;">
+              <i class="fas fa-comments"></i>
             </div>
-            <div class="timeline-title">Messages rapides – arrivées & séjours</div>
+            <div class="stat-content">
+              <h3 id="statTotal">0</h3>
+              <p>Conversations totales</p>
+            </div>
           </div>
 
-          <!-- Arrivées aujourd'hui -->
-          <div class="timeline-section" id="checkinsToday">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #e74c3c;">
-                <i class="fas fa-door-open"></i>
-              </div>
-              <div class="timeline-title">Arrivées aujourd'hui</div>
-              <div class="timeline-count" id="countToday">0</div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #EF4444;">
+              <i class="fas fa-bell"></i>
             </div>
-            <div class="reservation-list" id="listToday"></div>
+            <div class="stat-content">
+              <h3 id="statUnread">0</h3>
+              <p>Messages non lus</p>
+            </div>
           </div>
 
-          <!-- Arrivées demain -->
-          <div class="timeline-section" id="checkinsTomorrow">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #f39c12;">
-                <i class="fas fa-calendar-day"></i>
-              </div>
-              <div class="timeline-title">Arrivées demain</div>
-              <div class="timeline-count" id="countTomorrow">0</div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #3B82F6;">
+              <i class="fas fa-check-circle"></i>
             </div>
-            <div class="reservation-list" id="listTomorrow"></div>
+            <div class="stat-content">
+              <h3 id="statActive">0</h3>
+              <p>Conversations actives</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filters-section">
+          <div class="filter-group">
+            <label>Statut</label>
+            <select id="filterStatus">
+              <option value="">Tous</option>
+              <option value="active" selected>Actives</option>
+              <option value="pending">En attente</option>
+              <option value="closed">Fermées</option>
+            </select>
           </div>
 
-          <!-- Prochains 7 jours -->
-          <div class="timeline-section" id="checkinsNext7">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #3498db;">
-                <i class="fas fa-calendar-week"></i>
-              </div>
-              <div class="timeline-title">Prochains 7 jours</div>
-              <div class="timeline-count" id="countNext7">0</div>
-            </div>
-            <div class="reservation-list" id="listNext7"></div>
+          <div class="filter-group">
+            <label>Logement</label>
+            <select id="filterProperty">
+              <option value="">Tous les logements</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Liste des conversations -->
+        <div class="conversations-section">
+          <div class="conversations-header">
+            <h2>Vos conversations</h2>
           </div>
 
-          <!-- Séjours en cours -->
-          <div class="timeline-section" id="currentStays">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #2ecc71;">
-                <i class="fas fa-home"></i>
-              </div>
-              <div class="timeline-title">Séjours en cours</div>
-              <div class="timeline-count" id="countCurrent">0</div>
+          <div id="conversationsList">
+            <div class="empty-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Chargement...</p>
             </div>
-            <div class="reservation-list" id="listCurrent"></div>
           </div>
-
-          <!-- Départs aujourd'hui -->
-          <div class="timeline-section" id="checkoutsToday">
-            <div class="timeline-header">
-              <div class="timeline-icon" style="background: #95a5a6;">
-                <i class="fas fa-sign-out-alt"></i>
-              </div>
-              <div class="timeline-title">Départs aujourd'hui</div>
-              <div class="timeline-count" id="countCheckouts">0</div>
-            </div>
-            <div class="reservation-list" id="listCheckouts"></div>
-          </div>
-        </section>
+        </div>
       </div>
     </main>
+  </div>
+
+  <!-- Modal Chat -->
+  <div class="modal-overlay" id="chatModal">
+    <div class="chat-modal">
+      <div class="chat-modal-header">
+        <h2 id="chatModalTitle">Conversation</h2>
+        <button class="close-modal" onclick="closeChat()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="chat-modal-messages" id="chatMessages">
+        <div class="loading" style="text-align: center; padding: 40px;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 32px;"></i>
+          <p>Chargement des messages...</p>
+        </div>
+      </div>
+
+      <div class="chat-modal-input">
+        <textarea 
+          class="chat-input" 
+          id="chatInput" 
+          placeholder="Écrivez votre message..."
+          rows="1"
+        ></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
@@ -407,10 +811,13 @@
     </div>
   </div>
 
-  <!-- JS spécifique messages (timeline) -->
-  <script src="/js/messages.js"></script>
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
-  <!-- Script auth + user + logout + menu mobile + nav active -->
+  <!-- Script -->
+  <script src="/js/chat-owner.js"></script>
+
+  <!-- Auth + User -->
   <script>
     (async function checkSubscriptionAccess() {
     const token = localStorage.getItem('lcc_token');
