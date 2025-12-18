@@ -3,7 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-<meta http-equiv="Pragm</head>a" content="no-cache">
+<meta http-equiv="Pragm
+<script>
+  window.riskColor = window.riskColor || function(level){
+    if(level==='red') return '#ef4444';
+    if(level==='orange') return '#f59e0b';
+    return '#10b981';
+  };
+</script>
+</head>a" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3919,8 +3927,19 @@ function updateTopRisksKpi(reservations) {
    async function loadDataAndUpdateKpis() {
   try {
     const token = localStorage.getItem('lcc_token');
-    let reservations = [];
-    let properties = [];
+
+    // ✅ fallback immédiat (si app.js a déjà rempli / ou localStorage)
+    let reservations = Array.isArray(window.LCC_RESERVATIONS) ? window.LCC_RESERVATIONS : [];
+    let properties = Array.isArray(window.LCC_PROPERTIES) ? window.LCC_PROPERTIES : [];
+
+    if (!reservations.length) {
+      const rRaw = localStorage.getItem('LCC_RESERVATIONS');
+      reservations = rRaw ? JSON.parse(rRaw) : [];
+    }
+    if (!properties.length) {
+      const pRaw = localStorage.getItem('LCC_PROPERTIES');
+      properties = pRaw ? JSON.parse(pRaw) : [];
+    }
 
     if (token) {
       // 1) Base endpoint: récupère properties + réservations "basiques"
@@ -3931,8 +3950,12 @@ function updateTopRisksKpi(reservations) {
       let baseData = {};
       if (baseRes.ok) baseData = await baseRes.json().catch(() => ({}));
 
-      properties = Array.isArray(baseData.properties) ? baseData.properties : [];
+      const baseProps = Array.isArray(baseData.properties) ? baseData.properties : [];
       const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
+
+      // si l’API ne renvoie pas (ou plus) properties, on garde celles déjà en mémoire
+      if (baseProps.length) properties = baseProps;
+      if (reservationsBasic.length && !reservations.length) reservations = reservationsBasic;
 
       // 2) Enriched endpoint: récupère réservations enrichies (risque + checklist + dépôt)
       const enrRes = await fetch(`${API_URL}/api/reservations/enriched`, {
@@ -3941,8 +3964,10 @@ function updateTopRisksKpi(reservations) {
 
       if (enrRes.ok) {
         const enrData = await enrRes.json().catch(() => ({}));
-        reservations = Array.isArray(enrData.reservations) ? enrData.reservations : reservationsBasic;
-      } else {
+        const enrReservations = Array.isArray(enrData.reservations) ? enrData.reservations : [];
+        if (enrReservations.length) reservations = enrReservations;
+        else if (reservationsBasic.length) reservations = reservationsBasic;
+      } else if (reservationsBasic.length) {
         reservations = reservationsBasic;
       }
 
@@ -3951,13 +3976,6 @@ function updateTopRisksKpi(reservations) {
       localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
       window.LCC_RESERVATIONS = reservations;
       window.LCC_PROPERTIES = properties;
-
-    } else {
-      // fallback : données déjà en localStorage
-      const rRaw = localStorage.getItem('LCC_RESERVATIONS');
-      const pRaw = localStorage.getItem('LCC_PROPERTIES');
-      reservations = rRaw ? JSON.parse(rRaw) : [];
-      properties = pRaw ? JSON.parse(pRaw) : [];
     }
 
     // Alimente aussi le calendrier moderne s'il est présent
@@ -3972,7 +3990,11 @@ function updateTopRisksKpi(reservations) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+document.addEventListener('DOMContentLoaded', () => {
+  loadDataAndUpdateKpis();
+  // petit retry au cas où app.js remplit les variables après ce script
+  setTimeout(loadDataAndUpdateKpis, 700);
+});
 
       // ==========================================
     // GESTION ONBOARDING (Masquage auto à 100%)
