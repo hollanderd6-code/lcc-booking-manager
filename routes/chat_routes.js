@@ -13,6 +13,45 @@ const crypto = require('crypto');
 function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
   
   // ============================================
+  // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
+  // ============================================
+  
+  /**
+   * Middleware qui tente d'authentifier l'utilisateur mais ne bloque pas si absent
+   * Utilisé pour les routes accessibles aux propriétaires ET aux voyageurs
+   */
+  const optionalAuth = async (req, res, next) => {
+    try {
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Pas de token = continue comme invité
+        req.user = null;
+        return next();
+      }
+      
+      const token = authHeader.substring(7);
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+      
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded; // Ajouter les infos user à req
+        next();
+      } catch (error) {
+        // Token invalide = continue comme invité
+        console.warn('⚠️ Token invalide dans optionalAuth:', error.message);
+        req.user = null;
+        next();
+      }
+    } catch (error) {
+      console.error('❌ Erreur dans optionalAuth:', error);
+      req.user = null;
+      next();
+    }
+  };
+  
+  // ============================================
   // 1. GÉNÉRATION DE CONVERSATION POUR NOUVELLE RÉSERVATION
   // ============================================
   
@@ -236,7 +275,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
   // 5. MESSAGES D'UNE CONVERSATION
   // ============================================
 
-  app.get('/api/chat/conversations/:conversationId/messages', authenticateToken, async (req, res) => {
+  app.get('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
 
@@ -296,7 +335,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
   // 6. ENVOI DE MESSAGE
   // ============================================
 
-  app.post('/api/chat/conversations/:conversationId/messages', async (req, res) => {
+  app.post('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
       const { content, sender_name } = req.body;
