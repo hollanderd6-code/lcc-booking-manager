@@ -168,7 +168,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
   // 3. RÉCUPÉRATION DES PROPRIÉTÉS (pour liste déroulante)
   // ============================================
 
-  app.get('/api/chat/properties', async (req, res) => {
+  app.get('/api/chat/properties', authenticateToken, async (req, res) => {
     try {
       // Récupérer toutes les propriétés actives
       const result = await pool.query(
@@ -236,7 +236,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
   // 5. MESSAGES D'UNE CONVERSATION
   // ============================================
 
-  app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => {
+  app.get('/api/chat/conversations/:conversationId/messages', authenticateToken, async (req, res) => {
     try {
       const { conversationId } = req.params;
 
