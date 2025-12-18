@@ -3746,661 +3746,421 @@ function populateEditBookingProperties(selectedPropertyId) {
   </script>
 
   <script>
-  (function() {
-    const API_URL = 'https://lcc-booking-manager.onrender.com';
+(function () {
+  const API_URL = 'https://lcc-booking-manager.onrender.com';
 
-    function computeKpis(reservations, properties) {
-  const now = new Date();
-
-  // Dates utiles
-  const todayStr = now.toISOString().slice(0, 10);
-  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-
-  // Occupation mois en cours
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const monthStart = new Date(year, month, 1);
-  const monthEnd = new Date(year, month + 1, 0);
-  const daysInMonth = monthEnd.getDate();
-  const totalNightsPossible = (properties.length || 1) * daysInMonth;
-  let nightsBooked = 0;
-
-  // Aujourd’hui: arrivées/départs
-  let checkinsToday = 0;
-  let checkoutsToday = 0;
-
-  // Ménages 48h (basé sur départs)
-  let cleaning48h = 0;
-
-  (reservations || []).forEach((r) => {
-    const rawStart = r.start || r.startDate;
-    const rawEnd   = r.end   || r.endDate;
-    if (!rawStart || !rawEnd) return;
-
-    const start = new Date(rawStart);
-    const end = new Date(rawEnd);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
-
-    // Occupation (clamp dans le mois)
-    const startClamped = start < monthStart ? monthStart : start;
-    const endClamped = end > monthEnd ? monthEnd : end;
-    if (endClamped > startClamped) {
-      nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+  // ---------- helpers ----------
+  function dateOnlyStr(v) {
+    if (!v) return null;
+    return String(v).slice(0, 10);
+  }
+  function startOfDay(d) {
+    const x = new Date(d);
+    x.setHours(0,0,0,0);
+    return x;
+  }
+  function addDays(d, n) {
+    const x = new Date(d);
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+  function parseDateSafe(v) {
+    if (!v) return null;
+    // if "YYYY-MM-DD", create local date (avoids timezone surprises)
+    const s = String(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y,m,dd] = s.split('-').map(Number);
+      return new Date(y, m-1, dd, 0, 0, 0, 0);
     }
-
-    // Check-in / out du jour
-    const startStr = String(rawStart).slice(0, 10);
-    const endStr = String(rawEnd).slice(0, 10);
-    if (startStr === todayStr) checkinsToday += 1;
-    if (endStr === todayStr) checkoutsToday += 1;
-
-    // Ménage à prévoir dans les 48h = départ entre maintenant et +48h (inclus)
-    if (end >= now && end <= in48h) cleaning48h += 1;
-  });
-
-  // Calcul taux d’occupation
-  let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
-  if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
-  if (occupancy > 100) occupancy = 100;
-
-  // Inject DOM
-  const propEl = document.getElementById('kpiPropertiesValue');
-  if (propEl) propEl.textContent = properties.length || 0;
-
-  const occEl = document.getElementById('kpiOccupancyValue');
-  if (occEl) occEl.textContent = occupancy + '%';
-
-  const movesVal = document.getElementById('kpiTodayMovesValue');
-  const movesSub = document.getElementById('kpiTodayMovesSub');
-  if (movesVal) movesVal.textContent = (checkinsToday + checkoutsToday);
-  if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
-
-  const cleanVal = document.getElementById('kpiCleaning48hValue');
-  const cleanSub = document.getElementById('kpiCleaning48hSub');
-  if (cleanVal) cleanVal.textContent = cleaning48h;
-  if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
-}
-
-
-  let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
-  if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
-  if (occupancy > 100) occupancy = 100;
-
-  const occEl = document.getElementById('kpiOccupancyValue');
-  const revEl = document.getElementById('kpiRevenueValue');
-  const propEl = document.getElementById('kpiPropertiesValue');
-  const cleaningEl = document.getElementById('kpiCleaningTodayValue');
-
-  if (occEl) occEl.textContent = occupancy + '%';
-  if (revEl) {
-    revEl.textContent = new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(futureRevenue);
-  }
-  if (propEl) propEl.textContent = properties.length || 0;
-  if (cleaningEl) cleaningEl.textContent = cleaningToday;
-}
-
-function riskColor(level) {
-  if (level === 'red') return '#ef4444';
-  if (level === 'orange') return '#f59e0b';
-  return '#10b981';
-}
-
-function ensureTopRisksModal() {
-  if (document.getElementById('topRisksModal')) return;
-
-  const modal = document.createElement('div');
-  modal.id = 'topRisksModal';
-  modal.className = 'modal-overlay';
-  modal.style.display = 'none';
-  modal.innerHTML = `
-    <div class="modal">
-      <div class="modal-header">
-        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
-          <i class="fas fa-shield-alt"></i> Top risques du mois
-        </h3>
-        <button class="btn btn-ghost" id="closeTopRisksModal">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body" id="topRisksContent"></div>
-      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
-        <button class="btn btn-ghost" id="closeTopRisksModal2">Fermer</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const close = () => { modal.style.display = 'none'; modal.classList.remove('active'); };
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  document.getElementById('closeTopRisksModal')?.addEventListener('click', close);
-  document.getElementById('closeTopRisksModal2')?.addEventListener('click', close);
-}
-
-function openTopRisksModal(items) {
-  ensureTopRisksModal();
-  const modal = document.getElementById('topRisksModal');
-  const content = document.getElementById('topRisksContent');
-  if (!modal || !content) return;
-
-  if (!items.length) {
-    content.innerHTML = `<p class="detail-value">Aucun risque détecté sur le mois en cours.</p>`;
-  } else {
-    content.innerHTML = items.map((r) => {
-      const color = riskColor(r.riskLevel);
-      const tags = (r.riskTags || []).slice(0, 5);
-      const tagsHtml = tags.length
-        ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
-            ${tags.map(t => `<span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:999px; background:#f3f4f6;">${t}</span>`).join('')}
-          </div>`
-        : '';
-
-      const name = r.guestName || 'Voyageur';
-      const prop = r.propertyName || r.propertyId || 'Logement';
-      const start = (r.start || '').slice(0,10);
-      const end = (r.end || '').slice(0,10);
-
-      return `
-        <div class="detail-group" style="border-left:6px solid ${color}; padding-left:12px;">
-          <label style="display:flex; justify-content:space-between; gap:10px;">
-            <span><i class="fas fa-calendar"></i> ${start} → ${end} • ${prop}</span>
-            <span style="font-weight:800;">${Math.round(r.riskScore || 0)}/100</span>
-          </label>
-          <div class="detail-value" style="margin-top:4px;">
-            <div style="font-weight:800;">${r.riskLabel || 'Risque'}</div>
-            <div style="opacity:.85; margin-top:2px;">${name}${r.source ? ' • ' + r.source : ''}</div>
-            ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
-            ${tagsHtml}
-          </div>
-        </div>
-      `;
-    }).join('');
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
   }
 
-  modal.style.display = 'flex';
-  modal.classList.add('active');
-}
+  // Make riskColor available everywhere (calendar, etc.)
+  window.riskColor = function riskColor(level) {
+    if (level === 'red') return '#ef4444';
+    if (level === 'orange') return '#f59e0b';
+    return '#10b981';
+  };
 
-function updateTopRisksKpi(reservations) {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const monthStart = new Date(y, m, 1);
-  const monthEnd = new Date(y, m + 1, 1);
+  // ---------- KPI compute ----------
+  function computeKpis(reservations, properties) {
+    const now = new Date();
+    const today0 = startOfDay(now);
+    const todayStr = today0.toISOString().slice(0,10);
 
-  // On prend les réservations qui "touchent" le mois en cours
-  const monthRes = (reservations || []).filter(r => {
-    if (!r.start || !r.end) return false;
-    const s = new Date(r.start);
-    const e = new Date(r.end);
-    return e > monthStart && s < monthEnd;
-  });
+    const window48End = addDays(today0, 2); // today + 48h window as dates (today & tomorrow)
 
-  // On ne garde que celles enrichies (avec riskScore)
-  const scored = monthRes.filter(r => typeof r.riskScore === 'number');
+    // Occupation mois en cours
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const monthStart = new Date(y, m, 1, 0, 0, 0, 0);
+    const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const totalNightsPossible = (properties.length || 1) * daysInMonth;
+    let nightsBooked = 0;
 
-  // Top 5 décroissant
-  scored.sort((a, b) => (b.riskScore - a.riskScore));
-  const top5 = scored.slice(0, 5);
+    let checkinsToday = 0;
+    let checkoutsToday = 0;
+    let cleaning48h = 0;
 
-  const redCount = scored.filter(r => r.riskLevel === 'red').length;
-  const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
-
-  const valEl = document.getElementById('kpiTopRisksValue');
-  const subEl = document.getElementById('kpiTopRisksSub');
-  if (valEl) valEl.textContent = top5.length;
-  if (subEl) subEl.textContent = `${redCount} rouge • ${orangeCount} orange (mois en cours)`;
-
-  const card = document.getElementById('kpiTopRisksCard');
-  if (card) {
-    card.onclick = () => openTopRisksModal(top5);
-  }
-}
-function ensureGenericModal(modalId, titleText) {
-  if (document.getElementById(modalId)) return;
-
-  const modal = document.createElement('div');
-  modal.id = modalId;
-  modal.className = 'modal-overlay';
-  modal.style.display = 'none';
-  modal.innerHTML = `
-    <div class="modal">
-      <div class="modal-header">
-        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
-          <i class="fas fa-list"></i> ${titleText}
-        </h3>
-        <button class="btn btn-ghost" data-close="1">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body" id="${modalId}Content"></div>
-      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
-        <button class="btn btn-ghost" data-close="1">Fermer</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const close = () => { modal.style.display = 'none'; modal.classList.remove('active'); };
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  modal.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
-}
-
-function openTodayMovesModal(reservations) {
-  const modalId = 'todayMovesModal';
-  ensureGenericModal(modalId, "Check-in / Check-out du jour");
-
-  const modal = document.getElementById(modalId);
-  const content = document.getElementById(modalId + 'Content');
-  if (!modal || !content) return;
-
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-
-  const rows = (reservations || [])
-    .map(r => {
+    (reservations || []).forEach((r) => {
       const rawStart = r.start || r.startDate;
       const rawEnd = r.end || r.endDate;
-      if (!rawStart || !rawEnd) return null;
+      if (!rawStart || !rawEnd) return;
 
-      const startStr = String(rawStart).slice(0,10);
-      const endStr = String(rawEnd).slice(0,10);
+      const start = parseDateSafe(rawStart);
+      const end = parseDateSafe(rawEnd);
+      if (!start || !end) return;
 
-      const isCheckin = startStr === todayStr;
-      const isCheckout = endStr === todayStr;
-      if (!isCheckin && !isCheckout) return null;
-
-      const who = r.guestName || r.summary || 'Réservation';
-      const prop = r.propertyName || r.propertyId || '';
-      const src = r.source || r.platform || '';
-
-      return {
-        type: isCheckin && isCheckout ? 'inout' : (isCheckin ? 'in' : 'out'),
-        startStr,
-        endStr,
-        who,
-        prop,
-        src,
-        riskLevel: r.riskLevel || 'green',
-        riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
-        riskSummary: r.riskSummary || ''
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => (a.type > b.type ? 1 : -1));
-
-  if (!rows.length) {
-    content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
-  } else {
-    const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
-    const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
-
-    const renderList = (list, label, icon) => {
-      if (!list.length) return '';
-      return `
-        <div style="margin-bottom:14px;">
-          <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-            <i class="fas ${icon}"></i> ${label} (${list.length})
-          </div>
-          ${list.map(r => {
-            const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
-            const score = r.riskScore != null ? `${r.riskScore}/100` : '';
-            return `
-              <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
-                <div style="margin-top:4px;">${dot}</div>
-                <div style="flex:1;">
-                  <div style="display:flex; justify-content:space-between; gap:12px;">
-                    <div style="font-weight:800;">${r.who}</div>
-                    <div style="font-weight:900;">${score}</div>
-                  </div>
-                  <div style="opacity:.8; margin-top:2px;">
-                    ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${r.startStr} → ${r.endStr}
-                  </div>
-                  ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    };
-
-    content.innerHTML =
-      renderList(inRows, "Arrivées", "fa-right-to-bracket") +
-      renderList(outRows, "Départs", "fa-right-from-bracket");
-  }
-
-  modal.style.display = 'flex';
-  modal.classList.add('active');
-}
-
-function openCleaning48hModal(reservations) {
-  const modalId = 'cleaning48hModal';
-  ensureGenericModal(modalId, "Ménages à prévoir (48h)");
-
-  const modal = document.getElementById(modalId);
-  const content = document.getElementById(modalId + 'Content');
-  if (!modal || !content) return;
-
-  const now = new Date();
-  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-
-  const rows = (reservations || [])
-    .map(r => {
-      const rawEnd = r.end || r.endDate;
-      const rawStart = r.start || r.startDate;
-      if (!rawEnd || !rawStart) return null;
-
-      const end = new Date(rawEnd);
-      if (isNaN(end.getTime())) return null;
-
-      // départ entre maintenant et +48h
-      if (!(end >= now && end <= in48h)) return null;
-
-      const who = r.guestName || r.summary || 'Réservation';
-      const prop = r.propertyName || r.propertyId || '';
-      const src = r.source || r.platform || '';
-
-      return {
-        end,
-        startStr: String(rawStart).slice(0,10),
-        endStr: String(rawEnd).slice(0,10),
-        who,
-        prop,
-        src,
-        riskLevel: r.riskLevel || 'green',
-        riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
-        riskSummary: r.riskSummary || ''
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.end - b.end);
-
-  if (!rows.length) {
-    content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
-  } else {
-    content.innerHTML = rows.map(r => {
-      const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
-      const score = r.riskScore != null ? `${r.riskScore}/100` : '';
-      return `
-        <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
-          <div style="margin-top:4px;">${dot}</div>
-          <div style="flex:1;">
-            <div style="display:flex; justify-content:space-between; gap:12px;">
-              <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${r.endStr}</div>
-              <div style="font-weight:900;">${score}</div>
-            </div>
-            <div style="opacity:.8; margin-top:2px;">
-              ${r.who}${r.src ? ' • ' + r.src : ''} • ${r.startStr} → ${r.endStr}
-            </div>
-            ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  modal.style.display = 'flex';
-  modal.classList.add('active');
-}
-
-   async function loadDataAndUpdateKpis() {
-  try {
-    const token = localStorage.getItem('lcc_token');
-    let reservations = [];
-    let properties = [];
-
-    if (token) {
-      // 1) Base endpoint: récupère properties + réservations "basiques"
-      const baseRes = await fetch(`${API_URL}/api/reservations`, {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-
-      let baseData = {};
-      if (baseRes.ok) baseData = await baseRes.json().catch(() => ({}));
-
-      properties = Array.isArray(baseData.properties) ? baseData.properties : [];
-      const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
-
-      // 2) Enriched endpoint: récupère réservations enrichies (risque + checklist + dépôt)
-      const enrRes = await fetch(`${API_URL}/api/reservations/enriched`, {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-
-      if (enrRes.ok) {
-        const enrData = await enrRes.json().catch(() => ({}));
-        reservations = Array.isArray(enrData.reservations) ? enrData.reservations : reservationsBasic;
-      } else {
-        reservations = reservationsBasic;
+      // Occupation (clamp dans le mois)
+      const startClamped = start < monthStart ? monthStart : start;
+      const endClamped = end > monthEnd ? monthEnd : end;
+      if (endClamped > startClamped) {
+        nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
       }
 
-      // stock pour le reste du dashboard (notifs, calendrier…)
-      localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
-      localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
-      window.LCC_RESERVATIONS = reservations;
-      window.LCC_PROPERTIES = properties;
+      // Check-in / out du jour (date-only)
+      const sStr = dateOnlyStr(rawStart);
+      const eStr = dateOnlyStr(rawEnd);
+      if (sStr === todayStr) checkinsToday += 1;
+      if (eStr === todayStr) checkoutsToday += 1;
 
-    } else {
-      // fallback : données déjà en localStorage
-      const rRaw = localStorage.getItem('LCC_RESERVATIONS');
-      const pRaw = localStorage.getItem('LCC_PROPERTIES');
-      reservations = rRaw ? JSON.parse(rRaw) : [];
-      properties = pRaw ? JSON.parse(pRaw) : [];
-    }
-
-    // Alimente aussi le calendrier moderne s'il est présent
-    if (window.renderModernCalendar) {
-      window.renderModernCalendar(reservations, properties);
-    }
-
-    computeKpis(reservations, properties);
-    updateTopRisksKpi(reservations);
-
-    // ✅ ICI : bind clics KPI (modals)
-    const movesCard = document.getElementById('kpiTodayMovesCard');
-    if (movesCard) movesCard.onclick = () => openTodayMovesModal(reservations);
-
-    const cleaningCard = document.getElementById('kpiCleaning48hCard');
-    if (cleaningCard) cleaningCard.onclick = () => openCleaning48hModal(reservations);
-
-  } catch (e) {
-    console.warn('Erreur KPI dashboard', e);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
-
-
-      // ==========================================
-    // GESTION ONBOARDING (Masquage auto à 100%)
-    // ==========================================
-    document.addEventListener('DOMContentLoaded', function () {
-      const onboardingSection = document.getElementById('onboardingSection');
-      
-      if (onboardingSection) {
-        // On récupère toutes les étapes
-        const steps = onboardingSection.querySelectorAll('.onboarding-step');
-        let completedCount = 0;
-
-        // On compte celles qui ont la classe "done" sur le badge de statut
-        steps.forEach(function(step) {
-          const statusBadge = step.querySelector('.onboarding-step-status');
-          if (statusBadge && statusBadge.classList.contains('done')) {
-            completedCount++;
-          }
-        });
-
-        // Mise à jour du compteur visuel (ex: 2/4)
-        const progressEl = document.getElementById('onboardingProgressValue');
-        if (progressEl) {
-          progressEl.textContent = completedCount;
-        }
-
-        // SI TOUT EST FINI (4/4) -> ON CACHE LA SECTION
-        if (completedCount >= steps.length && steps.length > 0) {
-          // Animation fluide avant de disparaître (optionnel, mais plus joli)
-          onboardingSection.style.transition = "opacity 0.5s ease, height 0.5s ease";
-          onboardingSection.style.opacity = "0";
-          
-          // On attend la fin de l'animation pour masquer complétement
-          setTimeout(() => {
-            onboardingSection.style.display = 'none';
-          }, 500);
-        }
-      }
+      // Ménages à prévoir (48h) : départ aujourd'hui ou demain (date-only)
+      const endDay = startOfDay(end);
+      if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
     });
-// WhatsApp UI (badge + alerte en haut)
-      try {
-        const raw = localStorage.getItem('lcc_notifications_settings');
-        const alertEl = document.getElementById('whatsappSetupAlert');
-        const card = document.getElementById('whatsappStatusCard');
-        const label = document.getElementById('whatsappStatusLabel');
 
-        let configured = false;
+    // taux d’occupation
+    let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+    if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
+    if (occupancy > 100) occupancy = 100;
 
-        if (raw) {
-          const settings = JSON.parse(raw);
-          const smsEnabled = settings.smsEnabled;
-          const smsNumbers = (settings.smsNumbers || '').trim();
-          configured = !!(smsEnabled && smsNumbers);
-        }
+    // inject DOM
+    const propEl = document.getElementById('kpiPropertiesValue');
+    if (propEl) propEl.textContent = properties.length || 0;
 
-        if (alertEl) {
-          alertEl.style.display = configured ? 'none' : 'block';
-        }
+    const occEl = document.getElementById('kpiOccupancyValue');
+    if (occEl) occEl.textContent = occupancy + '%';
 
-        if (card && label) {
-          label.textContent = configured ? 'Actif' : 'À configurer';
-          label.classList.remove('status-ok', 'status-warning');
-          label.classList.add(configured ? 'status-ok' : 'status-warning');
-        }
-      } catch (e) {
-        console.warn('Erreur lors de la mise à jour de l’UI WhatsApp', e);
-      }
-            // Ménages du jour - ouverture d'un modal avec le détail des départs à nettoyer
-      try {
-        const cleaningCard = document.getElementById('kpiCleaningTodayCard');
-        const modal = document.getElementById('cleaningTodayModal');
-        const overlay = document.getElementById('cleaningTodayOverlay');
-        const closeBtn = document.getElementById('closeCleaningTodayModal');
-        const contentEl = document.getElementById('cleaningTodayContent');
+    const movesVal = document.getElementById('kpiTodayMovesValue');
+    const movesSub = document.getElementById('kpiTodayMovesSub');
+    if (movesVal) movesVal.textContent = (checkinsToday + checkoutsToday);
+    if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
 
-        function getReservationKey(reservation) {
-          if (!reservation) return null;
-          if (reservation.reservationKey) return String(reservation.reservationKey);
-          if (reservation.uid) return String(reservation.uid);
-          if (reservation.id != null) return String(reservation.id);
-          if (reservation.propertyId && reservation.start && reservation.end) {
-            const startStr = String(reservation.start).slice(0, 10);
-            const endStr = String(reservation.end).slice(0, 10);
-            return reservation.propertyId + '::' + startStr + '>' + endStr;
-          }
-          return null;
-        }
+    const cleanVal = document.getElementById('kpiCleaning48hValue');
+    const cleanSub = document.getElementById('kpiCleaning48hSub');
+    if (cleanVal) cleanVal.textContent = cleaning48h;
+    if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
+  }
 
-        function getCleanerNameById(cleanerId, cleaners) {
-          if (!cleanerId || !Array.isArray(cleaners)) return null;
-          const strId = String(cleanerId);
-          const c = cleaners.find((x) => String(x.id) === strId);
-          return c ? (c.name || c.email || c.phone || strId) : null;
-        }
+  // ---------- Top risks KPI ----------
+  function ensureGenericModal(modalId, titleText) {
+    if (document.getElementById(modalId)) return;
 
-        function getPropertyNameById(propertyId, properties) {
-          if (!propertyId || !Array.isArray(properties)) return propertyId || 'Logement';
-          const p = properties.find(
-            (x) =>
-              String(x.id) === String(propertyId) ||
-              String(x.propertyId) === String(propertyId)
-          );
-          return p ? (p.name || p.title || p.label || propertyId) : propertyId || 'Logement';
-        }
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal-overlay';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-list"></i> ${titleText}
+          </h3>
+          <button class="btn btn-ghost" data-close="1">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="${modalId}Content"></div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-ghost" data-close="1">Fermer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
 
-        function openCleaningTodayModal() {
-          if (!modal || !contentEl) return;
+    const close = () => { modal.style.display = 'none'; modal.classList.remove('active'); };
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    modal.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
+  }
 
-          const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-          const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-          const reservationAssignments = JSON.parse(
-            localStorage.getItem('lcc_cleaning_reservation_assignments') || '{}'
-          );
-          const genericAssignments = JSON.parse(
-            localStorage.getItem('lcc_cleaning_assignments') || '{}'
-          );
-          const cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
+  function openTodayMovesModal(reservations) {
+    const modalId = 'todayMovesModal';
+    ensureGenericModal(modalId, "Check-in / Check-out du jour");
 
-          const todayStr = new Date().toISOString().slice(0, 10);
+    const modal = document.getElementById(modalId);
+    const content = document.getElementById(modalId + 'Content');
+    if (!modal || !content) return;
 
-          const todaysDepartures = (reservations || []).filter((r) => {
-            if (!r.end) return false;
-            const endStr = String(r.end).slice(0, 10);
-            return endStr === todayStr;
-          });
+    const todayStr = startOfDay(new Date()).toISOString().slice(0,10);
 
-          if (!todaysDepartures.length) {
-            contentEl.innerHTML =
-              '<p class="empty-state" style="margin:8px 0;">Aucun départ à nettoyer aujourd’hui.</p>';
-          } else {
-            let html =
-              '<div class="detail-group"><label>Départs à nettoyer aujourd’hui</label><div class="detail-value">';
-            todaysDepartures.forEach((r) => {
-              const key = getReservationKey(r);
-              const propertyId = r.propertyId ? String(r.propertyId) : null;
-              const assignedId =
-                (key && reservationAssignments[key]) ||
-                (key && genericAssignments[key]) ||
-                (propertyId && genericAssignments[propertyId]) ||
-                null;
+    const rows = (reservations || [])
+      .map(r => {
+        const rawStart = r.start || r.startDate;
+        const rawEnd = r.end || r.endDate;
+        if (!rawStart || !rawEnd) return null;
 
-              const cleanerName = getCleanerNameById(assignedId, cleaners);
-              const propName =
-  r.propertyName ||
-  (r.property && (r.property.name || r.property.title || r.property.label)) ||
-  getPropertyNameById(propertyId, properties);
+        const s = dateOnlyStr(rawStart);
+        const e = dateOnlyStr(rawEnd);
 
-              const guestName = r.guestName || r.name || 'Voyageur';
+        const isIn = s === todayStr;
+        const isOut = e === todayStr;
+        if (!isIn && !isOut) return null;
 
-              html += `
-                <div style="margin-bottom:8px;">
-                  <strong>${propName}</strong> – ${guestName}
-                  <div style="font-size:12px; color:var(--text-secondary);">
-                    Ménage : ${
-                      cleanerName ? 'Assigné à ' + cleanerName : 'Pas encore assigné'
-                    }
+        return {
+          type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
+          who: r.guestName || r.summary || 'Réservation',
+          prop: r.propertyName || r.propertyId || '',
+          src: r.source || r.platform || '',
+          startStr: s,
+          endStr: e,
+          riskLevel: r.riskLevel || 'green',
+          riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
+          riskSummary: r.riskSummary || ''
+        };
+      })
+      .filter(Boolean);
+
+    if (!rows.length) {
+      content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
+    } else {
+      const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
+      const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
+
+      const renderList = (list, label, icon) => {
+        if (!list.length) return '';
+        return `
+          <div style="margin-bottom:14px;">
+            <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+              <i class="fas ${icon}"></i> ${label} (${list.length})
+            </div>
+            ${list.map(r => {
+              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+              const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+              return `
+                <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
+                  <div style="margin-top:4px;">${dot}</div>
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; gap:12px;">
+                      <div style="font-weight:800;">${r.who}</div>
+                      <div style="font-weight:900;">${score}</div>
+                    </div>
+                    <div style="opacity:.8; margin-top:2px;">
+                      ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${r.startStr} → ${r.endStr}
+                    </div>
+                    ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
                   </div>
                 </div>
               `;
-            });
-            html += '</div></div>';
-            contentEl.innerHTML = html;
-          }
+            }).join('')}
+          </div>
+        `;
+      };
 
-          modal.style.display = 'flex';
-          modal.classList.add('active');
-        }
+      content.innerHTML =
+        renderList(inRows, "Arrivées", "fa-right-to-bracket") +
+        renderList(outRows, "Départs", "fa-right-from-bracket");
+    }
 
-        function closeCleaningTodayModal() {
-          if (!modal) return;
-          modal.classList.remove('active');
-          modal.style.display = 'none';
-        }
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+  }
 
-        if (cleaningCard && modal && contentEl) {
-  cleaningCard.classList.add('kpi-card--clickable');
-  cleaningCard.addEventListener('click', openCleaningTodayModal);
-}
+  function openCleaning48hModal(reservations) {
+    const modalId = 'cleaning48hModal';
+    ensureGenericModal(modalId, "Ménages à prévoir (48h)");
 
-        if (overlay) {
-          overlay.addEventListener('click', closeCleaningTodayModal);
-        }
-        if (closeBtn) {
-          closeBtn.addEventListener('click', closeCleaningTodayModal);
-        }
-      } catch (e) {
-        console.warn('Erreur initialisation modal Ménages du jour', e);
-      }
+    const modal = document.getElementById(modalId);
+    const content = document.getElementById(modalId + 'Content');
+    if (!modal || !content) return;
+
+    const today0 = startOfDay(new Date());
+    const window48End = addDays(today0, 2);
+
+    const rows = (reservations || [])
+      .map(r => {
+        const rawEnd = r.end || r.endDate;
+        const rawStart = r.start || r.startDate;
+        if (!rawEnd || !rawStart) return null;
+
+        const end = parseDateSafe(rawEnd);
+        if (!end) return null;
+
+        const endDay = startOfDay(end);
+        if (!(endDay >= today0 && endDay < window48End)) return null;
+
+        return {
+          end,
+          startStr: dateOnlyStr(rawStart),
+          endStr: dateOnlyStr(rawEnd),
+          who: r.guestName || r.summary || 'Réservation',
+          prop: r.propertyName || r.propertyId || '',
+          src: r.source || r.platform || '',
+          riskLevel: r.riskLevel || 'green',
+          riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
+          riskSummary: r.riskSummary || ''
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.end - b.end);
+
+    if (!rows.length) {
+      content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
+    } else {
+      content.innerHTML = rows.map(r => {
+        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+        const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+        return `
+          <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
+            <div style="margin-top:4px;">${dot}</div>
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; gap:12px;">
+                <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${r.endStr}</div>
+                <div style="font-weight:900;">${score}</div>
+              </div>
+              <div style="opacity:.8; margin-top:2px;">
+                ${r.who}${r.src ? ' • ' + r.src : ''} • ${r.startStr} → ${r.endStr}
+              </div>
+              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+  }
+
+  function updateTopRisksKpi(reservations) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const monthRes = (reservations || []).filter(r => {
+      const rawS = r.start || r.startDate;
+      const rawE = r.end || r.endDate;
+      if (!rawS || !rawE) return false;
+      const s = parseDateSafe(rawS);
+      const e = parseDateSafe(rawE);
+      if (!s || !e) return false;
+      return e > monthStart && s < monthEnd;
     });
+
+    const scored = monthRes.filter(r => typeof r.riskScore === 'number');
+    scored.sort((a, b) => (b.riskScore - a.riskScore));
+    const top5 = scored.slice(0, 5);
+
+    const redCount = scored.filter(r => r.riskLevel === 'red').length;
+    const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
+
+    const valEl = document.getElementById('kpiTopRisksValue');
+    const subEl = document.getElementById('kpiTopRisksSub');
+    if (valEl) valEl.textContent = top5.length;
+    if (subEl) subEl.textContent = `${redCount} rouge • ${orangeCount} orange (mois en cours)`;
+
+    const card = document.getElementById('kpiTopRisksCard');
+    if (card) {
+      card.onclick = () => {
+        // reuse your existing modal if present
+        if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
+        // fallback modal
+        ensureGenericModal('topRisksModal', 'Top risques du mois');
+        const modal = document.getElementById('topRisksModal');
+        const content = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent'.replace('Content',''));
+        const body = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
+        const c = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
+        // simple: open generic
+        const g = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModal'+'Content');
+        if (g) {
+          g.innerHTML = top5.length ? top5.map(r=>{
+            const start = dateOnlyStr(r.start||r.startDate);
+            const end = dateOnlyStr(r.end||r.endDate);
+            const prop = r.propertyName || r.propertyId || 'Logement';
+            const name = r.guestName || 'Voyageur';
+            const score = Math.round(r.riskScore||0);
+            const color = window.riskColor(r.riskLevel);
+            return `<div style="border-left:6px solid ${color}; padding-left:12px; margin-bottom:10px;">
+              <div style="font-weight:900;">${score}/100 • ${prop}</div>
+              <div style="opacity:.85;">${start} → ${end} • ${name}</div>
+              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+            </div>`;
+          }).join('') : `<div style="opacity:.8">Aucun risque détecté sur le mois en cours.</div>`;
+        }
+        const mm = document.getElementById('topRisksModal');
+        if (mm) { mm.style.display='flex'; mm.classList.add('active'); }
+      };
+    }
+  }
+
+  // ---------- Data loading + binding ----------
+  async function loadDataAndUpdateKpis() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      let reservations = [];
+      let properties = [];
+
+      if (token) {
+        const baseRes = await fetch(`${API_URL}/api/reservations`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        let baseData = {};
+        if (baseRes.ok) baseData = await baseRes.json().catch(() => ({}));
+
+        properties = Array.isArray(baseData.properties) ? baseData.properties : [];
+        const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
+
+        const enrRes = await fetch(`${API_URL}/api/reservations/enriched`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+
+        if (enrRes.ok) {
+          const enrData = await enrRes.json().catch(() => ({}));
+          reservations = Array.isArray(enrData.reservations) ? enrData.reservations : reservationsBasic;
+        } else {
+          reservations = reservationsBasic;
+        }
+
+        localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
+        localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
+        window.LCC_RESERVATIONS = reservations;
+        window.LCC_PROPERTIES = properties;
+      } else {
+        const rRaw = localStorage.getItem('LCC_RESERVATIONS');
+        const pRaw = localStorage.getItem('LCC_PROPERTIES');
+        reservations = rRaw ? JSON.parse(rRaw) : [];
+        properties = pRaw ? JSON.parse(pRaw) : [];
+      }
+
+      // store latest for click handlers
+      window.__LCC_KPI_STATE = { reservations, properties };
+
+      if (window.renderModernCalendar) {
+        window.renderModernCalendar(reservations, properties);
+      }
+
+      computeKpis(reservations, properties);
+      updateTopRisksKpi(reservations);
+
+      const movesCard = document.getElementById('kpiTodayMovesCard');
+      if (movesCard && !movesCard.dataset.bound) {
+        movesCard.dataset.bound = '1';
+        movesCard.addEventListener('click', () => openTodayMovesModal((window.__LCC_KPI_STATE||{}).reservations || reservations));
+      }
+
+      const cleaningCard = document.getElementById('kpiCleaning48hCard');
+      if (cleaningCard && !cleaningCard.dataset.bound) {
+        cleaningCard.dataset.bound = '1';
+        cleaningCard.addEventListener('click', () => openCleaning48hModal((window.__LCC_KPI_STATE||{}).reservations || reservations));
+      }
+    } catch (e) {
+      console.warn('Erreur KPI dashboard', e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+})();
 </script>
 
 
