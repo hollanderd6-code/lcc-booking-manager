@@ -7170,6 +7170,267 @@ overlay && overlay.addEventListener('click', close);
   });
 })();
 </script>
+<!-- ============================================ -->
+<!-- FIX MODALS + CALENDRIER - À AJOUTER À LA FIN DE APP.HTML -->
+<!-- ============================================ -->
+<script>
+(function() {
+  console.log('🔧 Fix Modals + Calendrier - Chargement...');
+  
+  // ============================================
+  // 1. FIX FERMETURE MODAL MÉNAGE
+  // ============================================
+  function fixCleaningModal() {
+    const cleaningModal = document.getElementById('cleaningTodayModal');
+    const closeCleaningX = document.getElementById('closeCleaningTodayModal');
+    const cleaningOverlay = document.getElementById('cleaningTodayOverlay');
+    
+    if (!cleaningModal) {
+      console.warn('⚠️ Modal ménage non trouvé');
+      return;
+    }
+    
+    function closeCleaningModalForce() {
+      console.log('🔒 Fermeture modal ménage');
+      cleaningModal.style.display = 'none';
+      cleaningModal.classList.remove('active');
+    }
+    
+    // Croix
+    if (closeCleaningX) {
+      // Supprimer tous les listeners existants en clonant l'élément
+      const newCloseBtn = closeCleaningX.cloneNode(true);
+      closeCleaningX.parentNode.replaceChild(newCloseBtn, closeCleaningX);
+      
+      newCloseBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeCleaningModalForce();
+      });
+      console.log('✅ Modal ménage: croix fixée');
+    }
+    
+    // Overlay
+    if (cleaningOverlay) {
+      const newOverlay = cleaningOverlay.cloneNode(true);
+      cleaningOverlay.parentNode.replaceChild(newOverlay, cleaningOverlay);
+      
+      newOverlay.addEventListener('click', function(e) {
+        if (e.target === newOverlay) {
+          closeCleaningModalForce();
+        }
+      });
+      console.log('✅ Modal ménage: overlay fixé');
+    }
+    
+    // Touche Échap
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && cleaningModal.classList.contains('active')) {
+        closeCleaningModalForce();
+      }
+    });
+  }
+  
+  // ============================================
+  // 2. FIX FERMETURE MODAL DÉTAILS
+  // ============================================
+  function fixDetailsModal() {
+    const detailsModal = document.getElementById('reservationDetailsModal');
+    const closeDetailsX = document.getElementById('closeDetailsModal');
+    const detailsOverlay = document.getElementById('detailsModalOverlay');
+    const closeDetailsBtn = document.getElementById('closeDetailsBtn');
+    
+    if (!detailsModal) {
+      console.warn('⚠️ Modal détails non trouvé');
+      return;
+    }
+    
+    function closeDetailsModalForce() {
+      console.log('🔒 Fermeture modal détails');
+      detailsModal.style.display = 'none';
+      detailsModal.classList.remove('active');
+    }
+    
+    // Croix
+    if (closeDetailsX) {
+      const newCloseBtn = closeDetailsX.cloneNode(true);
+      closeDetailsX.parentNode.replaceChild(newCloseBtn, closeDetailsX);
+      
+      newCloseBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeDetailsModalForce();
+      });
+      console.log('✅ Modal détails: croix fixée');
+    }
+    
+    // Bouton Fermer (si existe)
+    if (closeDetailsBtn) {
+      const newBtn = closeDetailsBtn.cloneNode(true);
+      closeDetailsBtn.parentNode.replaceChild(newBtn, closeDetailsBtn);
+      
+      newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeDetailsModalForce();
+      });
+      console.log('✅ Modal détails: bouton Fermer fixé');
+    }
+    
+    // Overlay
+    if (detailsOverlay) {
+      const newOverlay = detailsOverlay.cloneNode(true);
+      detailsOverlay.parentNode.replaceChild(newOverlay, detailsOverlay);
+      
+      newOverlay.addEventListener('click', function(e) {
+        if (e.target === newOverlay) {
+          closeDetailsModalForce();
+        }
+      });
+      console.log('✅ Modal détails: overlay fixé');
+    }
+    
+    // Touche Échap
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && detailsModal.classList.contains('active')) {
+        closeDetailsModalForce();
+      }
+    });
+  }
+  
+  // ============================================
+  // 3. FIX CLIC SUR ÉVÉNEMENTS DU CALENDRIER
+  // ============================================
+  function fixCalendarClick() {
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    const checkCalendar = setInterval(function() {
+      attempts++;
+      
+      const calendarEl = document.getElementById('calendar');
+      
+      if (calendarEl) {
+        console.log('✅ Calendrier trouvé, ajout du gestionnaire de clic');
+        
+        // Ajouter un gestionnaire de clic global
+        calendarEl.addEventListener('click', function(e) {
+          const eventEl = e.target.closest('.fc-event');
+          
+          if (eventEl) {
+            console.log('🎯 Clic sur réservation détecté');
+            
+            // Extraire l'ID de l'événement
+            let eventId = eventEl.getAttribute('data-event-id') || 
+                         eventEl.getAttribute('data-uid');
+            
+            // Chercher dans les enfants
+            if (!eventId) {
+              const uidEl = eventEl.querySelector('[data-uid]');
+              if (uidEl) eventId = uidEl.getAttribute('data-uid');
+            }
+            
+            if (eventId) {
+              console.log('📋 ID événement:', eventId);
+              
+              // Ouvrir le modal
+              const modal = document.getElementById('reservationDetailsModal');
+              if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.add('active');
+                
+                // Charger les données
+                try {
+                  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+                  const reservation = reservations.find(r => r.uid === eventId);
+                  
+                  if (reservation) {
+                    const content = document.getElementById('reservationDetailsContent');
+                    if (content) {
+                      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+                      const property = properties.find(p => p.id === reservation.propertyId);
+                      
+                      content.innerHTML = `
+                        <div class="detail-group">
+                          <label>Logement</label>
+                          <p class="detail-value">${property ? property.name : 'Non renseigné'}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Voyageur</label>
+                          <p class="detail-value">${reservation.guestName || reservation.name || 'Non renseigné'}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Dates</label>
+                          <p class="detail-value">Du ${new Date(reservation.start).toLocaleDateString('fr-FR')} au ${new Date(reservation.end).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Plateforme</label>
+                          <p class="detail-value">${reservation.platform || 'Non renseigné'}</p>
+                        </div>
+                        ${reservation.guestEmail ? `
+                        <div class="detail-group">
+                          <label>Email</label>
+                          <p class="detail-value">${reservation.guestEmail}</p>
+                        </div>
+                        ` : ''}
+                        ${reservation.guestPhone ? `
+                        <div class="detail-group">
+                          <label>Téléphone</label>
+                          <p class="detail-value">${reservation.guestPhone}</p>
+                        </div>
+                        ` : ''}
+                      `;
+                      
+                      // Stocker l'ID pour les boutons Modifier/Supprimer
+                      window.currentReservationId = eventId;
+                    }
+                  } else {
+                    console.warn('⚠️ Réservation non trouvée:', eventId);
+                  }
+                } catch (error) {
+                  console.error('❌ Erreur chargement réservation:', error);
+                }
+              }
+            }
+          }
+        });
+        
+        clearInterval(checkCalendar);
+        
+      } else if (attempts >= maxAttempts) {
+        console.warn('⚠️ Calendrier non trouvé après', maxAttempts, 'tentatives');
+        clearInterval(checkCalendar);
+      }
+    }, 500);
+  }
+  
+  // ============================================
+  // 4. INITIALISATION
+  // ============================================
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initialisation des fix...');
+    
+    // Attendre un peu que tout soit chargé
+    setTimeout(function() {
+      fixCleaningModal();
+      fixDetailsModal();
+      fixCalendarClick();
+      console.log('✅ Tous les fix sont actifs');
+    }, 1000);
+  });
+  
+  // Si DOMContentLoaded a déjà été déclenché
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(function() {
+      fixCleaningModal();
+      fixDetailsModal();
+      fixCalendarClick();
+      console.log('✅ Tous les fix sont actifs (chargement tardif)');
+    }, 1000);
+  }
+})();
+</script>
+<!-- FIN DU FIX -->
 
 </body>
 </html>
