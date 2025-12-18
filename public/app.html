@@ -3958,6 +3958,193 @@ function updateTopRisksKpi(reservations) {
     card.onclick = () => openTopRisksModal(top5);
   }
 }
+function ensureGenericModal(modalId, titleText) {
+  if (document.getElementById(modalId)) return;
+
+  const modal = document.createElement('div');
+  modal.id = modalId;
+  modal.className = 'modal-overlay';
+  modal.style.display = 'none';
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-list"></i> ${titleText}
+        </h3>
+        <button class="btn btn-ghost" data-close="1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="${modalId}Content"></div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-ghost" data-close="1">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => { modal.style.display = 'none'; modal.classList.remove('active'); };
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  modal.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
+}
+
+function openTodayMovesModal(reservations) {
+  const modalId = 'todayMovesModal';
+  ensureGenericModal(modalId, "Check-in / Check-out du jour");
+
+  const modal = document.getElementById(modalId);
+  const content = document.getElementById(modalId + 'Content');
+  if (!modal || !content) return;
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const rows = (reservations || [])
+    .map(r => {
+      const rawStart = r.start || r.startDate;
+      const rawEnd = r.end || r.endDate;
+      if (!rawStart || !rawEnd) return null;
+
+      const startStr = String(rawStart).slice(0,10);
+      const endStr = String(rawEnd).slice(0,10);
+
+      const isCheckin = startStr === todayStr;
+      const isCheckout = endStr === todayStr;
+      if (!isCheckin && !isCheckout) return null;
+
+      const who = r.guestName || r.summary || 'Réservation';
+      const prop = r.propertyName || r.propertyId || '';
+      const src = r.source || r.platform || '';
+
+      return {
+        type: isCheckin && isCheckout ? 'inout' : (isCheckin ? 'in' : 'out'),
+        startStr,
+        endStr,
+        who,
+        prop,
+        src,
+        riskLevel: r.riskLevel || 'green',
+        riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
+        riskSummary: r.riskSummary || ''
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a.type > b.type ? 1 : -1));
+
+  if (!rows.length) {
+    content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
+  } else {
+    const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
+    const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
+
+    const renderList = (list, label, icon) => {
+      if (!list.length) return '';
+      return `
+        <div style="margin-bottom:14px;">
+          <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <i class="fas ${icon}"></i> ${label} (${list.length})
+          </div>
+          ${list.map(r => {
+            const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+            const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+            return `
+              <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
+                <div style="margin-top:4px;">${dot}</div>
+                <div style="flex:1;">
+                  <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <div style="font-weight:800;">${r.who}</div>
+                    <div style="font-weight:900;">${score}</div>
+                  </div>
+                  <div style="opacity:.8; margin-top:2px;">
+                    ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${r.startStr} → ${r.endStr}
+                  </div>
+                  ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    };
+
+    content.innerHTML =
+      renderList(inRows, "Arrivées", "fa-right-to-bracket") +
+      renderList(outRows, "Départs", "fa-right-from-bracket");
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+}
+
+function openCleaning48hModal(reservations) {
+  const modalId = 'cleaning48hModal';
+  ensureGenericModal(modalId, "Ménages à prévoir (48h)");
+
+  const modal = document.getElementById(modalId);
+  const content = document.getElementById(modalId + 'Content');
+  if (!modal || !content) return;
+
+  const now = new Date();
+  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+  const rows = (reservations || [])
+    .map(r => {
+      const rawEnd = r.end || r.endDate;
+      const rawStart = r.start || r.startDate;
+      if (!rawEnd || !rawStart) return null;
+
+      const end = new Date(rawEnd);
+      if (isNaN(end.getTime())) return null;
+
+      // départ entre maintenant et +48h
+      if (!(end >= now && end <= in48h)) return null;
+
+      const who = r.guestName || r.summary || 'Réservation';
+      const prop = r.propertyName || r.propertyId || '';
+      const src = r.source || r.platform || '';
+
+      return {
+        end,
+        startStr: String(rawStart).slice(0,10),
+        endStr: String(rawEnd).slice(0,10),
+        who,
+        prop,
+        src,
+        riskLevel: r.riskLevel || 'green',
+        riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
+        riskSummary: r.riskSummary || ''
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.end - b.end);
+
+  if (!rows.length) {
+    content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
+  } else {
+    content.innerHTML = rows.map(r => {
+      const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+      const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+      return `
+        <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
+          <div style="margin-top:4px;">${dot}</div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; gap:12px;">
+              <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${r.endStr}</div>
+              <div style="font-weight:900;">${score}</div>
+            </div>
+            <div style="opacity:.8; margin-top:2px;">
+              ${r.who}${r.src ? ' • ' + r.src : ''} • ${r.startStr} → ${r.endStr}
+            </div>
+            ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+}
 
    async function loadDataAndUpdateKpis() {
   try {
@@ -4010,12 +4197,21 @@ function updateTopRisksKpi(reservations) {
 
     computeKpis(reservations, properties);
     updateTopRisksKpi(reservations);
+
+    // ✅ ICI : bind clics KPI (modals)
+    const movesCard = document.getElementById('kpiTodayMovesCard');
+    if (movesCard) movesCard.onclick = () => openTodayMovesModal(reservations);
+
+    const cleaningCard = document.getElementById('kpiCleaning48hCard');
+    if (cleaningCard) cleaningCard.onclick = () => openCleaning48hModal(reservations);
+
   } catch (e) {
     console.warn('Erreur KPI dashboard', e);
   }
 }
 
 document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+
 
       // ==========================================
     // GESTION ONBOARDING (Masquage auto à 100%)
