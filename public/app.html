@@ -1164,8 +1164,12 @@
     }
 
     .booking-modal.active {
-      display: flex;
-    }
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 10001 !important;
+}
 
     .booking-modal .modal-overlay {
       position: absolute;
@@ -7170,302 +7174,34 @@ overlay && overlay.addEventListener('click', close);
   });
 })();
 </script>
-<!-- ============================================ -->
-<!-- FIX MODALS V4 - SOLUTION DÉFINITIVE -->
-<!-- CORRIGE LA FONCTION ensureGenericModal + TOUS LES MODALS -->
-<!-- ============================================ -->
-<script>
-(function() {
-  console.log('🔧 Fix Modals V4 - SOLUTION DÉFINITIVE');
-  
-  // ============================================
-  // 1. OVERRIDE DE LA FONCTION ensureGenericModal
-  // ============================================
-  
-  // Sauvegarder l'ancienne fonction si elle existe
-  const originalEnsureGenericModal = window.ensureGenericModal;
-  
-  // Nouvelle fonction qui FORCE display: none
-  window.ensureGenericModal = function(modalId, titleText) {
-    if (document.getElementById(modalId)) {
-      console.log('📦 Modal déjà existant:', modalId);
-      return;
-    }
-    
-    console.log('🆕 Création modal:', modalId);
-    
-    const overlay = document.createElement('div');
-    overlay.id = modalId;
-    overlay.className = 'modal';
-    overlay.innerHTML = `
-      <div class="modal-box" style="background:#fff; border-radius:16px; width:min(720px, 92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.08);">
-          <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-list"></i> ${titleText}
-          </h3>
-          <button class="btn btn-ghost" data-close="1" data-modal-id="${modalId}">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div>
-        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid rgba(0,0,0,.08);">
-          <button class="btn btn-ghost" data-close="1" data-modal-id="${modalId}">Fermer</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    
-    // CORRECTION: Fermeture COMPLÈTE avec display: none
-    const close = () => {
-      console.log('🔒 Fermeture modal:', modalId);
-      overlay.classList.remove('active');
-      overlay.style.display = 'none';  // ← LA LIGNE MANQUANTE !
-      overlay.style.visibility = 'hidden';
-      overlay.style.opacity = '0';
-    };
-    
-    overlay.addEventListener('click', (e) => { 
-      if (e.target === overlay) {
-        console.log('🎯 Clic sur overlay de', modalId);
-        close();
-      }
-    });
-    
-    overlay.querySelectorAll('[data-close="1"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        console.log('🎯 Clic sur bouton fermer de', modalId);
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-      });
-    });
-    
-    console.log('✅ Modal créé:', modalId);
-  };
-  
-  // ============================================
-  // 2. FIX DES MODALS EXISTANTS (cleaningTodayModal, etc)
-  // ============================================
-  
-  function forceCloseModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return false;
-    
-    console.log('💪 Fermeture forcée:', modalId);
-    modal.classList.remove('active', 'show', 'open');
-    modal.style.display = 'none';
-    modal.style.visibility = 'hidden';
-    modal.style.opacity = '0';
-    return true;
-  }
-  
-  function fixExistingModal(modalId, closeSelectors) {
-    const modal = document.getElementById(modalId);
-    if (!modal) {
-      console.warn('⚠️ Modal non trouvé:', modalId);
-      return;
-    }
-    
-    console.log('🔧 Fix modal existant:', modalId);
-    
-    closeSelectors.forEach(selector => {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
-        // Clone pour supprimer les anciens listeners
-        const newEl = el.cloneNode(true);
-        el.parentNode.replaceChild(newEl, el);
+document.addEventListener('click', function(e) {
+    // 1. Détection des clics sur les blocs de réservation
+    const bookingBlock = e.target.closest('.booking-block');
+    if (bookingBlock) {
+        const bookingId = bookingBlock.getAttribute('data-booking-id');
+        console.log("Clic sur réservation ID:", bookingId);
         
-        // Nouveau listener
-        newEl.addEventListener('click', function(e) {
-          console.log('🎯 Clic détecté sur', selector, 'pour', modalId);
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          forceCloseModal(modalId);
-          return false;
-        }, true);
-        
-        // Listener sur les enfants (icônes)
-        const children = newEl.querySelectorAll('*');
-        children.forEach(child => {
-          child.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            forceCloseModal(modalId);
-            return false;
-          }, true);
-        });
-      });
-    });
-    
-    // Touche Échap
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && modal.style.display !== 'none') {
-        console.log('⌨️ Échap pour', modalId);
-        forceCloseModal(modalId);
-      }
-    });
-    
-    console.log('✅ Modal fixé:', modalId);
-  }
-  
-  // ============================================
-  // 3. LISTENER GLOBAL SUR TOUS LES [data-close]
-  // ============================================
-  
-  document.addEventListener('click', function(e) {
-    // Chercher si on a cliqué sur un [data-close] ou un de ses enfants
-    let target = e.target;
-    let dataCloseEl = null;
-    
-    for (let i = 0; i < 5 && target; i++) {
-      if (target.hasAttribute && target.hasAttribute('data-close')) {
-        dataCloseEl = target;
-        break;
-      }
-      target = target.parentElement;
-    }
-    
-    if (dataCloseEl) {
-      console.log('🎯 Clic sur [data-close] détecté');
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Trouver le modal parent
-      let modalEl = dataCloseEl;
-      for (let i = 0; i < 10 && modalEl; i++) {
-        if (modalEl.classList && modalEl.classList.contains('modal')) {
-          console.log('📦 Modal parent trouvé:', modalEl.id);
-          forceCloseModal(modalEl.id);
-          return false;
+        // On appelle la fonction de votre app.js ou on déclenche l'ouverture manuelle
+        if (typeof window.showReservationDetails === 'function') {
+            window.showReservationDetails(bookingId);
+        } else {
+            // Fallback : Ouverture manuelle du modal
+            const modal = document.getElementById('reservationDetailsModal');
+            if (modal) modal.classList.add('active');
         }
-        modalEl = modalEl.parentElement;
-      }
+        return;
     }
-  }, true);
-  
-  // ============================================
-  // 4. FIX CALENDRIER
-  // ============================================
-  
-  function fixCalendar() {
-    let attempts = 0;
-    const checkCalendar = setInterval(function() {
-      attempts++;
-      
-      const calendarEl = document.getElementById('calendarGrid') || document.getElementById('calendar');
-      
-      if (calendarEl) {
-        console.log('✅ Calendrier trouvé');
-        
-        calendarEl.addEventListener('click', function(e) {
-          let eventEl = e.target;
-          let found = false;
-          
-          for (let i = 0; i < 10 && eventEl; i++) {
-            if (eventEl.classList && eventEl.classList.contains('fc-event')) {
-              found = true;
-              break;
-            }
-            eventEl = eventEl.parentElement;
-          }
-          
-          if (found && eventEl) {
-            console.log('🎯 Clic sur réservation');
-            
-            let eventId = eventEl.getAttribute('data-uid') || eventEl.getAttribute('data-event-id');
-            
-            if (!eventId) {
-              const uidEl = eventEl.querySelector('[data-uid]');
-              if (uidEl) eventId = uidEl.getAttribute('data-uid');
-            }
-            
-            if (eventId) {
-              console.log('📋 ID:', eventId);
-              
-              const modal = document.getElementById('reservationDetailsModal');
-              if (modal) {
-                modal.style.display = 'flex';
-                modal.classList.add('active');
-                modal.style.visibility = 'visible';
-                modal.style.opacity = '1';
-                
-                const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-                const reservation = reservations.find(r => r.uid === eventId);
-                
-                if (reservation) {
-                  const content = document.getElementById('reservationDetailsContent');
-                  if (content) {
-                    const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-                    const property = properties.find(p => p.id === reservation.propertyId);
-                    
-                    content.innerHTML = `
-                      <div class="detail-group">
-                        <label>Logement</label>
-                        <p class="detail-value">${property ? property.name : 'Non renseigné'}</p>
-                      </div>
-                      <div class="detail-group">
-                        <label>Voyageur</label>
-                        <p class="detail-value">${reservation.guestName || reservation.name || 'Non renseigné'}</p>
-                      </div>
-                      <div class="detail-group">
-                        <label>Dates</label>
-                        <p class="detail-value">Du ${new Date(reservation.start).toLocaleDateString('fr-FR')} au ${new Date(reservation.end).toLocaleDateString('fr-FR')}</p>
-                      </div>
-                      <div class="detail-group">
-                        <label>Plateforme</label>
-                        <p class="detail-value">${reservation.platform || 'Non renseigné'}</p>
-                      </div>
-                    `;
-                    
-                    window.currentReservationId = eventId;
-                    console.log('✅ Modal ouvert');
-                  }
-                }
-              }
-            }
-          }
-        }, true);
-        
-        clearInterval(checkCalendar);
-        
-      } else if (attempts >= 20) {
-        clearInterval(checkCalendar);
-      }
-    }, 500);
-  }
-  
-  // ============================================
-  // 5. INITIALISATION
-  // ============================================
-  
-  setTimeout(function() {
-    console.log('🚀 Initialisation V4...');
-    
-    // Fix les modals existants
-    fixExistingModal('cleaningTodayModal', [
-      '#closeCleaningTodayModal',
-      '#cleaningTodayOverlay',
-      '[data-close="1"]'
-    ]);
-    
-    fixExistingModal('reservationDetailsModal', [
-      '#closeDetailsModal',
-      '#closeDetailsBtn',
-      '#detailsModalOverlay',
-      '[data-close="1"]'
-    ]);
-    
-    // Fix le calendrier
-    fixCalendar();
-    
-    console.log('✅ V4 active - ensureGenericModal corrigée');
-  }, 2000);
-  
-})();
-</script>
-<!-- FIN V4 -->
+
+    // 2. Gestion universelle de la fermeture (Croix et Overlays)
+    if (e.target.closest('.modal-close') || e.target.classList.contains('modal-overlay')) {
+        const openModal = e.target.closest('.booking-modal');
+        if (openModal) {
+            openModal.classList.remove('active');
+            // On nettoie les styles inline si la V3 les a pollués
+            openModal.style.display = ''; 
+        }
+    }
+});
 
 </body>
 </html>
