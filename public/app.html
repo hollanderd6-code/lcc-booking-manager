@@ -1164,12 +1164,8 @@
     }
 
     .booking-modal.active {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    z-index: 10001 !important;
-}
+      display: flex;
+    }
 
     .booking-modal .modal-overlay {
       position: absolute;
@@ -3344,7 +3340,7 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         if (cleaningCard && modal && contentEl) {
           cleaningCard.style.cursor = 'pointer';
-          cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+          cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi((()=>{try{return (window.LCC_RESERVATIONS&&Array.isArray(window.LCC_RESERVATIONS))?window.LCC_RESERVATIONS:JSON.parse(localStorage.getItem('LCC_RESERVATIONS')||'[]')}catch(e){return []}})()));
 }
         if (overlay) {
           overlay.addEventListener('click', closeCleaningTodayModal);
@@ -3970,6 +3966,11 @@ function populateEditBookingProperties(selectedPropertyId) {
     }
 
     modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.style.pointerEvents = 'auto';
+    modal.style.zIndex = '9999';
+
     modal.classList.add('active');
   }
 
@@ -4036,6 +4037,11 @@ function populateEditBookingProperties(selectedPropertyId) {
     }
 
     modal.style.display = 'flex';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.style.pointerEvents = 'auto';
+    modal.style.zIndex = '9999';
+
     modal.classList.add('active');
   }
 
@@ -4071,7 +4077,7 @@ function populateEditBookingProperties(selectedPropertyId) {
           window.openTodayMovesModal(data);
         } catch (err) { console.warn('todayMovesModal click error', err); }
       };
-      movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
+      movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi((()=>{try{return (window.LCC_RESERVATIONS&&Array.isArray(window.LCC_RESERVATIONS))?window.LCC_RESERVATIONS:JSON.parse(localStorage.getItem('LCC_RESERVATIONS')||'[]')}catch(e){return []}})()));
 movesCard.addEventListener('touchstart', handler, { passive: true });
       movesCard.onclick = handler;
     }
@@ -4085,7 +4091,7 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
           window.openCleaning48hModal(data);
         } catch (err) { console.warn('cleaning48hModal click error', err); }
       };
-      cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+      cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi((()=>{try{return (window.LCC_RESERVATIONS&&Array.isArray(window.LCC_RESERVATIONS))?window.LCC_RESERVATIONS:JSON.parse(localStorage.getItem('LCC_RESERVATIONS')||'[]')}catch(e){return []}})()));
 cleaningCard.addEventListener('touchstart', handler, { passive: true });
       cleaningCard.onclick = handler;
     }
@@ -4233,13 +4239,13 @@ function __lccDateYMD(raw){
       const movesCard = document.getElementById('kpiTodayMovesCard');
       if (movesCard && !movesCard.dataset.bound) {
         movesCard.dataset.bound = '1';
-        movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
+        movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi((()=>{try{return (window.LCC_RESERVATIONS&&Array.isArray(window.LCC_RESERVATIONS))?window.LCC_RESERVATIONS:JSON.parse(localStorage.getItem('LCC_RESERVATIONS')||'[]')}catch(e){return []}})()));
 }
 
       const cleaningCard = document.getElementById('kpiCleaning48hCard');
       if (cleaningCard && !cleaningCard.dataset.bound) {
         cleaningCard.dataset.bound = '1';
-        cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+        cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi((()=>{try{return (window.LCC_RESERVATIONS&&Array.isArray(window.LCC_RESERVATIONS))?window.LCC_RESERVATIONS:JSON.parse(localStorage.getItem('LCC_RESERVATIONS')||'[]')}catch(e){return []}})()));
 }
     } catch (e) {
       console.warn('Erreur KPI dashboard', e);
@@ -5579,7 +5585,7 @@ try {
   const riskSummary = booking.riskSummary || '';
   const riskTags = Array.isArray(booking.riskTags) ? booking.riskTags : [];
 
-  if (riskScore != null) {
+  if (riskScore != null || riskLabel || riskSummary || (riskTags && riskTags.length)) {
     let riskGroup = detailsContent.querySelector('[data-risk-info="1"]');
     if (!riskGroup) {
       riskGroup = document.createElement('div');
@@ -5602,12 +5608,12 @@ try {
       <div class="detail-value">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
           <div>
-            <div style="font-weight:800; font-size:16px;">${riskLabel} — ${Math.round(riskScore)}/100</div>
+            <div style="font-weight:800; font-size:16px;">${riskLabel || 'Non disponible'} — ${(riskScore!=null)?Math.round(riskScore):'—'}/100</div>
             ${riskSummary ? `<div style="margin-top:4px; font-size:13px; opacity:.8;">${riskSummary}</div>` : ''}
           </div>
           <div style="min-width:120px;">
             <div style="height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
-              <div style="height:10px; width:${Math.max(0, Math.min(100, riskScore))}%; background:#10b981;"></div>
+              <div style="height:10px; width:${Math.max(0, Math.min(100, (riskScore!=null?riskScore:0)))}%; background:#10b981;"></div>
             </div>
           </div>
         </div>
@@ -7007,7 +7013,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       modal.style.display = 'none';
     }
 
-    cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+    cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi((()=>{try{return (window.LCC_RESERVATIONS&&Array.isArray(window.LCC_RESERVATIONS))?window.LCC_RESERVATIONS:JSON.parse(localStorage.getItem('LCC_RESERVATIONS')||'[]')}catch(e){return []}})()));
 overlay && overlay.addEventListener('click', close);
     closeBtn && closeBtn.addEventListener('click', close);
   }
@@ -7174,34 +7180,320 @@ overlay && overlay.addEventListener('click', close);
   });
 })();
 </script>
-document.addEventListener('click', function(e) {
-    // 1. Détection des clics sur les blocs de réservation
-    const bookingBlock = e.target.closest('.booking-block');
-    if (bookingBlock) {
-        const bookingId = bookingBlock.getAttribute('data-booking-id');
-        console.log("Clic sur réservation ID:", bookingId);
+<!-- ============================================ -->
+<!-- FIX MODALS V3 - VERSION FINALE ULTRA-AGRESSIVE -->
+<!-- REMPLACE TOUS LES SCRIPTS PRÉCÉDENTS -->
+<!-- ============================================ -->
+<script>
+(function() {
+  console.log('🔧 Fix Modals V3 - SOLUTION FINALE...');
+  
+  // Fonction de fermeture brutale
+  function forceCloseModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+      console.warn('⚠️ Modal non trouvé:', modalId);
+      return false;
+    }
+    
+    console.log('💪 FERMETURE BRUTALE du modal:', modalId);
+    
+    // Supprimer toutes les classes qui pourraient l'afficher
+    modal.classList.remove('active', 'show', 'open', 'visible');
+    
+    // Forcer les styles inline
+    modal.style.display = 'none';
+    modal.style.visibility = 'hidden';
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+    modal.style.zIndex = '-1';
+    
+    // Vérification
+    setTimeout(function() {
+      const computed = window.getComputedStyle(modal);
+      if (computed.display !== 'none') {
+        console.error('❌ ÉCHEC: Modal encore visible!', computed.display);
+        // Deuxième tentative encore plus brutale
+        modal.remove();
+        console.log('🗑️ Modal supprimé du DOM');
+      } else {
+        console.log('✅ Modal fermé avec succès');
+      }
+    }, 50);
+    
+    return true;
+  }
+  
+  // Ajouter des listeners sur TOUS les éléments qui peuvent fermer les modals
+  function setupCloseHandlers(modalId, selectors) {
+    selectors.forEach(function(selector) {
+      const elements = document.querySelectorAll(selector);
+      
+      elements.forEach(function(el) {
+        console.log('📍 Ajout listener sur:', selector, '→', el.id || el.className);
         
-        // On appelle la fonction de votre app.js ou on déclenche l'ouverture manuelle
-        if (typeof window.showReservationDetails === 'function') {
-            window.showReservationDetails(bookingId);
-        } else {
-            // Fallback : Ouverture manuelle du modal
-            const modal = document.getElementById('reservationDetailsModal');
-            if (modal) modal.classList.add('active');
-        }
-        return;
+        // Supprimer les anciens listeners en clonant
+        const newEl = el.cloneNode(true);
+        el.parentNode.replaceChild(newEl, el);
+        
+        // Ajouter listener qui écoute TOUT (y compris les enfants)
+        newEl.addEventListener('click', function(e) {
+          console.log('🎯 CLIC DÉTECTÉ sur:', e.target.tagName, e.target.className);
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          forceCloseModal(modalId);
+          return false;
+        }, true);
+        
+        // Listener aussi sur les enfants directs (icônes, etc)
+        const children = newEl.querySelectorAll('*');
+        children.forEach(function(child) {
+          child.addEventListener('click', function(e) {
+            console.log('🎯 CLIC sur enfant:', e.target.tagName);
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            forceCloseModal(modalId);
+            return false;
+          }, true);
+        });
+      });
+    });
+  }
+  
+  // Setup modal ménage
+  function setupCleaningModal() {
+    const modalId = 'cleaningTodayModal';
+    
+    if (!document.getElementById(modalId)) {
+      console.warn('⚠️ Modal ménage non trouvé');
+      return;
+    }
+    
+    console.log('📦 Configuration modal ménage...');
+    
+    setupCloseHandlers(modalId, [
+      '#closeCleaningTodayModal',           // Croix
+      '#cleaningTodayOverlay',               // Overlay
+      '[data-modal="cleaningTodayModal"][data-close]' // data-close
+    ]);
+    
+    // Touche Échap
+    document.addEventListener('keydown', function(e) {
+      const modal = document.getElementById(modalId);
+      if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+        console.log('⌨️ ÉCHAP pour modal ménage');
+        forceCloseModal(modalId);
+      }
+    });
+    
+    console.log('✅ Modal ménage configuré');
+  }
+  
+  // Setup modal détails
+  function setupDetailsModal() {
+    const modalId = 'reservationDetailsModal';
+    
+    if (!document.getElementById(modalId)) {
+      console.warn('⚠️ Modal détails non trouvé');
+      return;
+    }
+    
+    console.log('📦 Configuration modal détails...');
+    
+    setupCloseHandlers(modalId, [
+      '#closeDetailsModal',                  // Croix
+      '#closeDetailsBtn',                    // Bouton Fermer
+      '#detailsModalOverlay',                // Overlay
+      '[data-modal="reservationDetailsModal"][data-close]' // data-close
+    ]);
+    
+    // Touche Échap
+    document.addEventListener('keydown', function(e) {
+      const modal = document.getElementById(modalId);
+      if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+        console.log('⌨️ ÉCHAP pour modal détails');
+        forceCloseModal(modalId);
+      }
+    });
+    
+    console.log('✅ Modal détails configuré');
+  }
+  
+  // Setup calendrier
+  function setupCalendar() {
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    const checkCalendar = setInterval(function() {
+      attempts++;
+      
+      const calendarEl = document.getElementById('calendarGrid') || document.getElementById('calendar');
+      
+      if (calendarEl) {
+        console.log('✅ Calendrier trouvé (ID:', calendarEl.id, ')');
+        
+        // Listener sur TOUT le calendrier
+        calendarEl.addEventListener('click', function(e) {
+          // Chercher l'événement le plus proche
+          let eventEl = e.target;
+          let found = false;
+          
+          // Remonter jusqu'à trouver .fc-event
+          for (let i = 0; i < 10 && eventEl; i++) {
+            if (eventEl.classList && eventEl.classList.contains('fc-event')) {
+              found = true;
+              break;
+            }
+            eventEl = eventEl.parentElement;
+          }
+          
+          if (found && eventEl) {
+            console.log('🎯 CLIC SUR RÉSERVATION');
+            
+            // Extraire l'ID
+            let eventId = eventEl.getAttribute('data-event-id') || 
+                         eventEl.getAttribute('data-uid');
+            
+            if (!eventId) {
+              const uidEl = eventEl.querySelector('[data-uid]');
+              if (uidEl) eventId = uidEl.getAttribute('data-uid');
+            }
+            
+            // Chercher dans les attributs de tous les enfants
+            if (!eventId) {
+              const allChildren = eventEl.querySelectorAll('*');
+              for (let child of allChildren) {
+                const uid = child.getAttribute('data-uid') || child.getAttribute('data-event-id');
+                if (uid) {
+                  eventId = uid;
+                  break;
+                }
+              }
+            }
+            
+            if (eventId) {
+              console.log('📋 ID:', eventId);
+              
+              // Ouvrir le modal brutalement
+              const modal = document.getElementById('reservationDetailsModal');
+              if (modal) {
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
+                modal.style.zIndex = '9999';
+                modal.classList.add('active');
+                
+                // Charger les données
+                try {
+                  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+                  const reservation = reservations.find(r => r.uid === eventId);
+                  
+                  if (reservation) {
+                    const content = document.getElementById('reservationDetailsContent');
+                    if (content) {
+                      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+                      const property = properties.find(p => p.id === reservation.propertyId);
+                      
+                      content.innerHTML = `
+                        <div class="detail-group">
+                          <label>Logement</label>
+                          <p class="detail-value">${property ? property.name : 'Non renseigné'}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Voyageur</label>
+                          <p class="detail-value">${reservation.guestName || reservation.name || 'Non renseigné'}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Dates</label>
+                          <p class="detail-value">Du ${new Date(reservation.start).toLocaleDateString('fr-FR')} au ${new Date(reservation.end).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Plateforme</label>
+                          <p class="detail-value">${reservation.platform || 'Non renseigné'}</p>
+                        </div>
+                      `;
+                      
+                      window.currentReservationId = eventId;
+                      console.log('✅ Modal ouvert avec succès');
+                    }
+                  }
+                } catch (error) {
+                  console.error('❌ Erreur:', error);
+                }
+              }
+            } else {
+              console.warn('⚠️ Aucun ID trouvé');
+            }
+          }
+        }, true);
+        
+        clearInterval(checkCalendar);
+        
+      } else if (attempts >= maxAttempts) {
+        console.warn('⚠️ Calendrier non trouvé');
+        clearInterval(checkCalendar);
+      }
+    }, 500);
+  }
+  
+  // INITIALISATION AVEC DÉLAI
+  setTimeout(function() {
+    console.log('🚀 Initialisation V3...');
+    setupCleaningModal();
+    setupDetailsModal();
+    setupCalendar();
+    console.log('✅ V3 actif');
+  }, 2000);
+  
+})();
+</script>
+<!-- FIN V3 -->
+
+
+
+<!-- CLEAN CLICK HANDLER V1 -->
+<script>
+(function() {
+  // Handler unique en capture pour garantir l'ouverture du modal au clic sur une réservation
+  document.addEventListener('click', function(e) {
+    const bookingBlock = e.target && e.target.closest ? e.target.closest('.booking-block') : null;
+    if (!bookingBlock) return;
+
+    // Empêche les handlers concurrents d'annuler / détourner le clic
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const found = (typeof findReservationForBlock === 'function') ? findReservationForBlock(bookingBlock) : null;
+      if (found) {
+        window.currentBookingData = found;
+        window.currentBooking = found;
+      }
+    } catch(err) {
+      console.warn('⚠️ Impossible de récupérer la réservation pour le bloc', err);
     }
 
-    // 2. Gestion universelle de la fermeture (Croix et Overlays)
-    if (e.target.closest('.modal-close') || e.target.classList.contains('modal-overlay')) {
-        const openModal = e.target.closest('.booking-modal');
-        if (openModal) {
-            openModal.classList.remove('active');
-            // On nettoie les styles inline si la V3 les a pollués
-            openModal.style.display = ''; 
-        }
+    // Ouvre le modal de détails
+    const modal = document.getElementById('reservationDetailsModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
+      modal.style.zIndex = '9999';
+      modal.classList.add('active');
     }
-});
-<script>
+
+    // Corrige le contenu (inclut Risque + Checklist)
+    if (typeof fixModalContent === 'function') {
+      setTimeout(function() { fixModalContent(bookingBlock); }, 80);
+    }
+  }, true);
+})();
+</script>
+
 </body>
 </html>
