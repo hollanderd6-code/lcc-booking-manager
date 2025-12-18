@@ -1,12 +1,7 @@
 require('dotenv').config();
 const express = require('express')
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.APP_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
-  }
-});
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -28,15 +23,16 @@ const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
 const PDFDocument = require('pdfkit');
 // ============================================
-// âœ… NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
+// Ã¢Å“â€¦ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ============================================
-// ============================================
-// SYSTÈME DE CHAT
+// ✅ IMPORT DES ROUTES DU CHAT
 // ============================================
 const { setupChatRoutes } = require('./routes/chat_routes');
+// ============================================
+
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY) 
@@ -70,7 +66,7 @@ const smtpTransporter = nodemailer.createTransport({
 // Nouvelle fonction d'envoi email avec Brevo API
 async function sendEmail(mailOptions) {
   try {
-    // Si BREVO_API_KEY est configurÃ©, utiliser l'API Brevo
+    // Si BREVO_API_KEY est configurÃƒÂ©, utiliser l'API Brevo
     if (process.env.BREVO_API_KEY) {
       const apiInstance = new brevo.TransactionalEmailsApi();
       apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
@@ -79,7 +75,7 @@ async function sendEmail(mailOptions) {
       sendSmtpEmail.subject = mailOptions.subject;
       sendSmtpEmail.htmlContent = mailOptions.html || mailOptions.text;
       
-      // GÃ©rer l'expÃ©diteur (CORRIGÃ‰)
+      // GÃƒÂ©rer l'expÃƒÂ©diteur (CORRIGÃƒâ€°)
       let senderEmail = process.env.EMAIL_FROM;
       let senderName = '';
       
@@ -105,7 +101,7 @@ async function sendEmail(mailOptions) {
         name: senderName || undefined
       };
       
-      // GÃ©rer les destinataires
+      // GÃƒÂ©rer les destinataires
       if (Array.isArray(mailOptions.to)) {
         sendSmtpEmail.to = mailOptions.to.map(recipient => {
           if (typeof recipient === 'string') {
@@ -120,20 +116,20 @@ async function sendEmail(mailOptions) {
       }
       
       await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log('âœ… Email envoyÃ© via Brevo API Ã :', mailOptions.to);
+      console.log('Ã¢Å“â€¦ Email envoyÃƒÂ© via Brevo API ÃƒÂ :', mailOptions.to);
       return { success: true };
       
     } else {
-      console.warn('âš ï¸ BREVO_API_KEY non configurÃ©, tentative SMTP...');
+      console.warn('Ã¢Å¡Â Ã¯Â¸Â BREVO_API_KEY non configurÃƒÂ©, tentative SMTP...');
       return await smtpTransporter.sendMail(mailOptions);
     }
   } catch (error) {
-    console.error('âŒ Erreur envoi email:', error.response?.body || error.message);
+    console.error('Ã¢ÂÅ’ Erreur envoi email:', error.response?.body || error.message);
     throw error;
   }
 }
 
-// CrÃ©er un objet transporter compatible
+// CrÃƒÂ©er un objet transporter compatible
 const transporter = {
   sendMail: sendEmail,
   verify: () => Promise.resolve(true)
@@ -141,7 +137,7 @@ const transporter = {
 
 // Dossier d'upload pour les photos de logements
 // En local : /.../lcc-booking-manager/uploads/properties
-// Sur Render : on prÃ©fÃ¨re /tmp qui est writable
+// Sur Render : on prÃƒÂ©fÃƒÂ¨re /tmp qui est writable
 const isRenderEnv =
   process.env.RENDER === 'true' ||
   !!process.env.RENDER_EXTERNAL_URL ||
@@ -155,9 +151,9 @@ try {
   if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   }
-  console.log('ðŸ“ Dossier uploads initialisÃ© :', UPLOAD_DIR);
+  console.log('Ã°Å¸â€œÂ Dossier uploads initialisÃƒÂ© :', UPLOAD_DIR);
 } catch (err) {
-  console.error('âŒ Impossible de crÃ©er le dossier uploads :', UPLOAD_DIR, err);
+  console.error('Ã¢ÂÅ’ Impossible de crÃƒÂ©er le dossier uploads :', UPLOAD_DIR, err);
   // On essaie un dernier fallback dans /tmp
   if (UPLOAD_DIR !== path.join('/tmp', 'uploads', 'properties')) {
     UPLOAD_DIR = path.join('/tmp', 'uploads', 'properties');
@@ -165,9 +161,9 @@ try {
       if (!fs.existsSync(UPLOAD_DIR)) {
         fs.mkdirSync(UPLOAD_DIR, { recursive: true });
       }
-      console.log('ðŸ“ Dossier uploads fallback :', UPLOAD_DIR);
+      console.log('Ã°Å¸â€œÂ Dossier uploads fallback :', UPLOAD_DIR);
     } catch (e2) {
-      console.error('âŒ Ã‰chec du fallback pour le dossier uploads :', e2);
+      console.error('Ã¢ÂÅ’ Ãƒâ€°chec du fallback pour le dossier uploads :', e2);
     }
   }
 }
@@ -183,13 +179,13 @@ try {
   if (!fs.existsSync(INVOICE_PDF_DIR)) {
     fs.mkdirSync(INVOICE_PDF_DIR, { recursive: true });
   }
-  console.log('ðŸ“ Dossier factures PDF initialisÃ© :', INVOICE_PDF_DIR);
+  console.log('Ã°Å¸â€œÂ Dossier factures PDF initialisÃƒÂ© :', INVOICE_PDF_DIR);
 } catch (err) {
-  console.error('âŒ Impossible de crÃ©er le dossier factures PDF :', INVOICE_PDF_DIR, err);
+  console.error('Ã¢ÂÅ’ Impossible de crÃƒÂ©er le dossier factures PDF :', INVOICE_PDF_DIR, err);
 }
 
 
-// Multer en mÃ©moire pour envoyer directement Ã  Cloudinary
+// Multer en mÃƒÂ©moire pour envoyer directement ÃƒÂ  Cloudinary
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
@@ -215,13 +211,13 @@ const upload = multer({
       return cb(null, true);
     }
     
-    console.log('âŒ Fichier rejetÃ©:', {
+    console.log('Ã¢ÂÅ’ Fichier rejetÃƒÂ©:', {
       mimetype: file.mimetype,
       extension: fileExtension,
       filename: file.originalname
     });
     
-    return cb(new Error('Type de fichier non supportÃ©. Formats acceptÃ©s: JPG, PNG, WEBP, GIF'), false);
+    return cb(new Error('Type de fichier non supportÃƒÂ©. Formats acceptÃƒÂ©s: JPG, PNG, WEBP, GIF'), false);
   }
 });
 // Fonction helper pour uploader vers Cloudinary
@@ -270,15 +266,15 @@ function authenticateToken(req, res, next) {
   }
 }
 // ============================================
-// MIDDLEWARE DE VÃ‰RIFICATION D'ABONNEMENT
-// Ã€ AJOUTER DANS server.js APRÃˆS authenticateToken
+// MIDDLEWARE DE VÃƒâ€°RIFICATION D'ABONNEMENT
+// Ãƒâ‚¬ AJOUTER DANS server.js APRÃƒË†S authenticateToken
 // ============================================
 
 async function checkSubscription(req, res, next) {
   try {
     const userId = req.user.id;
 
-    // RÃ©cupÃ©rer l'abonnement
+    // RÃƒÂ©cupÃƒÂ©rer l'abonnement
     const result = await pool.query(
       `SELECT status, trial_end_date, current_period_end
        FROM subscriptions 
@@ -287,7 +283,7 @@ async function checkSubscription(req, res, next) {
     );
 
     if (result.rows.length === 0) {
-      // Pas d'abonnement trouvÃ©
+      // Pas d'abonnement trouvÃƒÂ©
       return res.status(403).json({ 
         error: 'Aucun abonnement', 
         subscriptionExpired: true 
@@ -297,21 +293,21 @@ async function checkSubscription(req, res, next) {
     const sub = result.rows[0];
     const now = new Date();
 
-    // VÃ©rifier si l'abonnement est expirÃ©
+    // VÃƒÂ©rifier si l'abonnement est expirÃƒÂ©
     if (sub.status === 'trial') {
       const trialEnd = new Date(sub.trial_end_date);
       if (now > trialEnd) {
         return res.status(403).json({ 
-          error: 'Essai expirÃ©', 
+          error: 'Essai expirÃƒÂ©', 
           subscriptionExpired: true 
         });
       }
     } else if (sub.status === 'active') {
-      // L'abonnement actif est valide (gÃ©rÃ© par Stripe)
-      // On pourrait vÃ©rifier current_period_end si besoin
+      // L'abonnement actif est valide (gÃƒÂ©rÃƒÂ© par Stripe)
+      // On pourrait vÃƒÂ©rifier current_period_end si besoin
     } else if (sub.status === 'expired' || sub.status === 'canceled') {
       return res.status(403).json({ 
-        error: 'Abonnement expirÃ©', 
+        error: 'Abonnement expirÃƒÂ©', 
         subscriptionExpired: true 
       });
     }
@@ -320,7 +316,7 @@ async function checkSubscription(req, res, next) {
     next();
 
   } catch (err) {
-    console.error('Erreur vÃ©rification abonnement:', err);
+    console.error('Erreur vÃƒÂ©rification abonnement:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 }
@@ -330,19 +326,19 @@ async function checkSubscription(req, res, next) {
 // ============================================
 
 /*
-Pour protÃ©ger une route, ajoutez le middleware aprÃ¨s authenticateToken :
+Pour protÃƒÂ©ger une route, ajoutez le middleware aprÃƒÂ¨s authenticateToken :
 
 AVANT :
 app.get('/api/properties', authenticateToken, async (req, res) => {
   // ...
 });
 
-APRÃˆS :
+APRÃƒË†S :
 app.get('/api/properties', authenticateToken, checkSubscription, async (req, res) => {
   // ...
 });
 
-Routes Ã  protÃ©ger (exemples) :
+Routes ÃƒÂ  protÃƒÂ©ger (exemples) :
 - /api/properties
 - /api/reservations
 - /api/cleaning
@@ -350,7 +346,7 @@ Routes Ã  protÃ©ger (exemples) :
 - /api/statistics
 - etc.
 
-Routes Ã  NE PAS protÃ©ger :
+Routes ÃƒÂ  NE PAS protÃƒÂ©ger :
 - /api/auth/login
 - /api/auth/register
 - /api/subscription/status
@@ -368,7 +364,7 @@ const pool = new Pool({
     : false
 });
 
-// Init DB : crÃ©ation tables users + welcome_books + cleaners + user_settings + cleaning_assignments
+// Init DB : crÃƒÂ©ation tables users + welcome_books + cleaners + user_settings + cleaning_assignments
 async function initDb() {
   try {
     await pool.query(`
@@ -439,22 +435,22 @@ CREATE INDEX IF NOT EXISTS idx_invoice_download_tokens_token
 ON invoice_download_tokens(token);
 `);
 
-    console.log('âœ… Tables users, welcome_books, cleaners, user_settings & cleaning_assignments OK dans Postgres');
+    console.log('Ã¢Å“â€¦ Tables users, welcome_books, cleaners, user_settings & cleaning_assignments OK dans Postgres');
   } catch (err) {
-    console.error('âŒ Erreur initDb (Postgres):', err);
+    console.error('Ã¢ÂÅ’ Erreur initDb (Postgres):', err);
     process.exit(1);
   }
 }
 
 // ============================================
-// NOTIFICATIONS PROPRIÃ‰TAIRES â€“ EMAIL
+// NOTIFICATIONS PROPRIÃƒâ€°TAIRES Ã¢â‚¬â€œ EMAIL
 // ============================================
 
 let emailTransporter = null;
 // Cache des users pour ne pas spammer la base pendant une sync
 const notificationUserCache = new Map();
 
-// Valeurs par dÃ©faut des prÃ©fÃ©rences de notifications
+// Valeurs par dÃƒÂ©faut des prÃƒÂ©fÃƒÂ©rences de notifications
 const DEFAULT_NOTIFICATION_SETTINGS = {
   newReservation: true,
   reminder: false,
@@ -471,7 +467,7 @@ function getEmailTransporter() {
   const service = process.env.EMAIL_SERVICE;
 
   if (!user || !pass) {
-    console.log('âš ï¸  Email non configurÃ© (EMAIL_USER ou EMAIL_PASSWORD manquants)');
+    console.log('Ã¢Å¡Â Ã¯Â¸Â  Email non configurÃƒÂ© (EMAIL_USER ou EMAIL_PASSWORD manquants)');
     return null;
   }
 
@@ -487,7 +483,7 @@ function getEmailTransporter() {
       }
     });
   } else {
-    // Mode "service" (Gmail, Outlook...) â€“ compatible avec l'ancien systÃ¨me
+    // Mode "service" (Gmail, Outlook...) Ã¢â‚¬â€œ compatible avec l'ancien systÃƒÂ¨me
     emailTransporter = nodemailer.createTransport({
       service: service || 'gmail',
       auth: {
@@ -519,7 +515,7 @@ function getBrevoSender() {
 async function sendEmailViaBrevo({ to, subject, text, html }) {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    throw new Error('BREVO_API_KEY manquant pour lâ€™envoi via Brevo');
+    throw new Error('BREVO_API_KEY manquant pour lÃ¢â‚¬â„¢envoi via Brevo');
   }
 
   const sender = getBrevoSender();
@@ -550,7 +546,7 @@ async function sendEmailViaBrevo({ to, subject, text, html }) {
     return response.data;
   } catch (err) {
     console.error(
-      'âŒ Erreur envoi email via Brevo :',
+      'Ã¢ÂÅ’ Erreur envoi email via Brevo :',
       err.response?.data || err.message || err
     );
     throw err;
@@ -598,7 +594,7 @@ function formatDateForEmail(dateStr) {
   });
 }
 
-// RÃ©cupÃ¨re les prÃ©fÃ©rences de notifications pour un utilisateur
+// RÃƒÂ©cupÃƒÂ¨re les prÃƒÂ©fÃƒÂ©rences de notifications pour un utilisateur
 async function getNotificationSettings(userId) {
   if (!userId) return { ...DEFAULT_NOTIFICATION_SETTINGS };
 
@@ -633,7 +629,7 @@ async function getNotificationSettings(userId) {
   };
 }
 
-// Sauvegarde les prÃ©fÃ©rences de notifications pour un utilisateur
+// Sauvegarde les prÃƒÂ©fÃƒÂ©rences de notifications pour un utilisateur
 async function saveNotificationSettings(userId, settings) {
   if (!userId) throw new Error('userId manquant pour saveNotificationSettings');
 
@@ -667,7 +663,7 @@ async function saveNotificationSettings(userId, settings) {
 
   return clean;
 }
-// RÃ©cupÃ¨re les assignations de mÃ©nage pour un utilisateur sous forme de map { propertyId -> cleaner }
+// RÃƒÂ©cupÃƒÂ¨re les assignations de mÃƒÂ©nage pour un utilisateur sous forme de map { propertyId -> cleaner }
 async function getCleanerAssignmentsMapForUser(userId) {
   if (!userId) return {};
 
@@ -689,7 +685,7 @@ async function getCleanerAssignmentsMapForUser(userId) {
 
   const map = {};
   for (const row of result.rows) {
-    // On ignore les cleaners dÃ©sactivÃ©s
+    // On ignore les cleaners dÃƒÂ©sactivÃƒÂ©s
     if (row.cleaner_active === false) continue;
     if (!row.property_id || !row.cleaner_id) continue;
 
@@ -705,16 +701,16 @@ async function getCleanerAssignmentsMapForUser(userId) {
 }
 
 /**
- * Envoie les emails de notifications de nouvelles rÃ©servations / annulations,
- * en respectant les prÃ©fÃ©rences de l'utilisateur.
+ * Envoie les emails de notifications de nouvelles rÃƒÂ©servations / annulations,
+ * en respectant les prÃƒÂ©fÃƒÂ©rences de l'utilisateur.
  * 
- * VERSION CORRIGÃ‰E AVEC LOGS DÃ‰TAILLÃ‰S POUR DEBUGGING WHATSAPP
+ * VERSION CORRIGÃƒâ€°E AVEC LOGS DÃƒâ€°TAILLÃƒâ€°S POUR DEBUGGING WHATSAPP
  */
 async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
   const brevoKey = process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim();
   if (!brevoKey) {
     console.log(
-      "âš ï¸ BREVO_API_KEY manquant : aucune notification propriÃ©taire (nouvelle rÃ©sa / annulation) ne sera envoyÃ©e."
+      "Ã¢Å¡Â Ã¯Â¸Â BREVO_API_KEY manquant : aucune notification propriÃƒÂ©taire (nouvelle rÃƒÂ©sa / annulation) ne sera envoyÃƒÂ©e."
     );
     return;
   }
@@ -725,7 +721,7 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
   const handleReservation = (res, type) => {
     const userId = res.userId;
     if (!userId) {
-      console.log("âš ï¸  RÃ©servation sans userId, notification ignorÃ©e :", res.uid || res.id);
+      console.log("Ã¢Å¡Â Ã¯Â¸Â  RÃƒÂ©servation sans userId, notification ignorÃƒÂ©e :", res.uid || res.id);
       return;
     }
 
@@ -733,31 +729,31 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
       (async () => {
         const user = await getUserForNotifications(userId);
         if (!user || !user.email) {
-          console.log(`âš ï¸  Aucun email trouvÃ© pour user ${userId}, notification ignorÃ©e`);
+          console.log(`Ã¢Å¡Â Ã¯Â¸Â  Aucun email trouvÃƒÂ© pour user ${userId}, notification ignorÃƒÂ©e`);
           return;
         }
 
-        // ðŸ”” RÃ©cupÃ©rer les prÃ©fÃ©rences de notifications
+        // Ã°Å¸â€â€ RÃƒÂ©cupÃƒÂ©rer les prÃƒÂ©fÃƒÂ©rences de notifications
         let settings;
         try {
           settings = await getNotificationSettings(userId);
           console.log(
-            `ðŸ“‹ Settings rÃ©cupÃ©rÃ©s pour user ${userId}:`,
+            `Ã°Å¸â€œâ€¹ Settings rÃƒÂ©cupÃƒÂ©rÃƒÂ©s pour user ${userId}:`,
             JSON.stringify(settings, null, 2)
           );
         } catch (e) {
           console.error(
-            "Erreur lors de la rÃ©cupÃ©ration des prÃ©fÃ©rences de notifications pour user",
+            "Erreur lors de la rÃƒÂ©cupÃƒÂ©ration des prÃƒÂ©fÃƒÂ©rences de notifications pour user",
             userId,
             e
           );
           settings = { ...DEFAULT_NOTIFICATION_SETTINGS };
         }
 
-        // Pour l'instant, on utilise la mÃªme option pour nouvelles rÃ©sas & annulations
+        // Pour l'instant, on utilise la mÃƒÂªme option pour nouvelles rÃƒÂ©sas & annulations
         if (settings && settings.newReservation === false) {
           console.log(
-            `â„¹ï¸ Notifications de rÃ©servations dÃ©sactivÃ©es pour user ${userId}, email non envoyÃ©.`
+            `Ã¢â€žÂ¹Ã¯Â¸Â Notifications de rÃƒÂ©servations dÃƒÂ©sactivÃƒÂ©es pour user ${userId}, email non envoyÃƒÂ©.`
           );
           return;
         }
@@ -779,54 +775,54 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
         let htmlBody;
 
         if (type === "new") {
-          subject = `ðŸ›Žï¸ Nouvelle rÃ©servation â€“ ${propertyName}`;
+          subject = `Ã°Å¸â€ºÅ½Ã¯Â¸Â Nouvelle rÃƒÂ©servation Ã¢â‚¬â€œ ${propertyName}`;
           textBody = `${hello}
 
-Une nouvelle rÃ©servation vient d'Ãªtre enregistrÃ©e via ${source}.
+Une nouvelle rÃƒÂ©servation vient d'ÃƒÂªtre enregistrÃƒÂ©e via ${source}.
 
 Logement : ${propertyName}
 Voyageur : ${guest}
-SÃ©jour  : du ${start} au ${end}
+SÃƒÂ©jour  : du ${start} au ${end}
 
-Vous pouvez retrouver tous les dÃ©tails dans votre tableau de bord Boostinghost.`;
+Vous pouvez retrouver tous les dÃƒÂ©tails dans votre tableau de bord Boostinghost.`;
 
           htmlBody = `
             <p>${hello}</p>
-            <p>Une nouvelle rÃ©servation vient d'Ãªtre enregistrÃ©e via <strong>${source}</strong>.</p>
+            <p>Une nouvelle rÃƒÂ©servation vient d'ÃƒÂªtre enregistrÃƒÂ©e via <strong>${source}</strong>.</p>
             <ul>
               <li><strong>Logement :</strong> ${propertyName}</li>
               <li><strong>Voyageur :</strong> ${guest}</li>
-              <li><strong>SÃ©jour :</strong> du ${start} au ${end}</li>
+              <li><strong>SÃƒÂ©jour :</strong> du ${start} au ${end}</li>
             </ul>
-            <p>Vous pouvez retrouver tous les dÃ©tails dans votre tableau de bord Boostinghost.</p>
+            <p>Vous pouvez retrouver tous les dÃƒÂ©tails dans votre tableau de bord Boostinghost.</p>
           `;
         } else {
-          subject = `âš ï¸ RÃ©servation annulÃ©e â€“ ${propertyName}`;
+          subject = `Ã¢Å¡Â Ã¯Â¸Â RÃƒÂ©servation annulÃƒÂ©e Ã¢â‚¬â€œ ${propertyName}`;
           textBody = `${hello}
 
-Une rÃ©servation vient d'Ãªtre annulÃ©e sur ${source}.
+Une rÃƒÂ©servation vient d'ÃƒÂªtre annulÃƒÂ©e sur ${source}.
 
 Logement : ${propertyName}
 Voyageur : ${guest}
-SÃ©jour initial : du ${start} au ${end}
+SÃƒÂ©jour initial : du ${start} au ${end}
 
-Pensez Ã  vÃ©rifier votre calendrier et vos blocages si nÃ©cessaire.`;
+Pensez ÃƒÂ  vÃƒÂ©rifier votre calendrier et vos blocages si nÃƒÂ©cessaire.`;
 
           htmlBody = `
             <p>${hello}</p>
-            <p>Une rÃ©servation vient d'Ãªtre <strong>annulÃ©e</strong> sur <strong>${source}</strong>.</p>
+            <p>Une rÃƒÂ©servation vient d'ÃƒÂªtre <strong>annulÃƒÂ©e</strong> sur <strong>${source}</strong>.</p>
             <ul>
               <li><strong>Logement :</strong> ${propertyName}</li>
               <li><strong>Voyageur :</strong> ${guest}</li>
-              <li><strong>SÃ©jour initial :</strong> du ${start} au ${end}</li>
+              <li><strong>SÃƒÂ©jour initial :</strong> du ${start} au ${end}</li>
             </ul>
-            <p>Pensez Ã  vÃ©rifier votre calendrier et vos blocages si nÃ©cessaire.</p>
+            <p>Pensez ÃƒÂ  vÃƒÂ©rifier votre calendrier et vos blocages si nÃƒÂ©cessaire.</p>
           `;
         }
 
         try {
-          // ðŸ‘‰ Toujours via l'API Brevo
-          console.log("ðŸ“§ [Brevo API] Envoi email", type, "Ã ", user.email);
+          // Ã°Å¸â€˜â€° Toujours via l'API Brevo
+          console.log("Ã°Å¸â€œÂ§ [Brevo API] Envoi email", type, "ÃƒÂ ", user.email);
           await sendEmailViaBrevo({
             to: user.email,
             subject,
@@ -835,11 +831,11 @@ Pensez Ã  vÃ©rifier votre calendrier et vos blocages si nÃ©cessaire.`;
           });
 
           console.log(
-            `ðŸ“§ Notification "${type}" envoyÃ©e Ã  ${user.email} (resa uid=${res.uid || res.id})`
+            `Ã°Å¸â€œÂ§ Notification "${type}" envoyÃƒÂ©e ÃƒÂ  ${user.email} (resa uid=${res.uid || res.id})`
           );
         } catch (err) {
           console.error(
-            `âŒ Erreur envoi email de notification "${type}" Ã  ${user.email} :`,
+            `Ã¢ÂÅ’ Erreur envoi email de notification "${type}" ÃƒÂ  ${user.email} :`,
             err
           );
         }
@@ -851,20 +847,20 @@ Pensez Ã  vÃ©rifier votre calendrier et vos blocages si nÃ©cessaire.`;
   (cancelledReservations || []).forEach((r) => handleReservation(r, "cancelled"));
 
   if (tasks.length === 0) {
-    console.log("â„¹ï¸ Aucune notification propriÃ©taire Ã  envoyer (listes vides).");
+    console.log("Ã¢â€žÂ¹Ã¯Â¸Â Aucune notification propriÃƒÂ©taire ÃƒÂ  envoyer (listes vides).");
     return;
   }
 
   console.log(
-    `ðŸ“§ Notifications Ã  envoyer â€“ nouvelles: ${newReservations.length || 0}, annulÃ©es: ${
+    `Ã°Å¸â€œÂ§ Notifications ÃƒÂ  envoyer Ã¢â‚¬â€œ nouvelles: ${newReservations.length || 0}, annulÃƒÂ©es: ${
       cancelledReservations.length || 0
     }`
   );
   await Promise.all(tasks);
 }
 /**
- * Notifications mÃ©nage : pour chaque nouvelle rÃ©servation, si un logement a un cleaner assignÃ©,
- * on envoie un email + (optionnel) un WhatsApp Ã  ce cleaner.
+ * Notifications mÃƒÂ©nage : pour chaque nouvelle rÃƒÂ©servation, si un logement a un cleaner assignÃƒÂ©,
+ * on envoie un email + (optionnel) un WhatsApp ÃƒÂ  ce cleaner.
  */
 async function notifyCleanersAboutNewBookings(newReservations) {
   const useBrevo = !!process.env.BREVO_API_KEY;
@@ -872,7 +868,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
 
   if (!useBrevo && !transporter) {
     console.log(
-      'âš ï¸  Ni email (Brevo/SMTP) ni WhatsApp configurÃ©s, aucune notification mÃ©nage envoyÃ©e'
+      'Ã¢Å¡Â Ã¯Â¸Â  Ni email (Brevo/SMTP) ni WhatsApp configurÃƒÂ©s, aucune notification mÃƒÂ©nage envoyÃƒÂ©e'
     );
     return;
   }
@@ -884,7 +880,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
   const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
   const tasks = [];
 
-  // On groupe par user, pour ne pas requÃªter 50 fois la base
+  // On groupe par user, pour ne pas requÃƒÂªter 50 fois la base
   const byUser = new Map();
   for (const res of newReservations) {
     if (!res.userId || !res.propertyId) continue;
@@ -899,7 +895,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
     try {
       assignmentsMap = await getCleanerAssignmentsMapForUser(userId);
     } catch (err) {
-      console.error('Erreur rÃ©cupÃ©ration assignations mÃ©nage pour user', userId, err);
+      console.error('Erreur rÃƒÂ©cupÃƒÂ©ration assignations mÃƒÂ©nage pour user', userId, err);
       continue;
     }
 
@@ -910,13 +906,13 @@ async function notifyCleanersAboutNewBookings(newReservations) {
     for (const res of userReservations) {
       const assignment = assignmentsMap[res.propertyId];
       if (!assignment) {
-        // Aucun cleaner assignÃ© Ã  ce logement â†’ rien Ã  envoyer
+        // Aucun cleaner assignÃƒÂ© ÃƒÂ  ce logement Ã¢â€ â€™ rien ÃƒÂ  envoyer
         continue;
       }
 
       const cleanerEmail = assignment.email;
       const cleanerPhone = assignment.phone;
-      const cleanerName  = assignment.name || 'partenaire mÃ©nage';
+      const cleanerName  = assignment.name || 'partenaire mÃƒÂ©nage';
 
       const propertyName =
         res.propertyName ||
@@ -941,29 +937,29 @@ async function notifyCleanersAboutNewBookings(newReservations) {
 
             // Email
       if ((useBrevo || transporter) && cleanerEmail) {
-        const subject = `ðŸ§¹ Nouveau mÃ©nage Ã  prÃ©voir â€“ ${propertyName}`;
+        const subject = `Ã°Å¸Â§Â¹ Nouveau mÃƒÂ©nage ÃƒÂ  prÃƒÂ©voir Ã¢â‚¬â€œ ${propertyName}`;
         const textBody = `${hello}
 
-Un nouveau séjour vient dâ€™Ãªtre rÃ©servÃ© pour le logement ${propertyName}.
+Un nouveau sÃ©jour vient dÃ¢â‚¬â„¢ÃƒÂªtre rÃƒÂ©servÃƒÂ© pour le logement ${propertyName}.
 
 Voyageur : ${guest}
-SÃ©jour  : du ${start} au ${end}
-MÃ©nage Ã  prÃ©voir : le ${end} aprÃ¨s le dÃ©part des voyageurs
-(heure exacte de check-out Ã  confirmer avec la conciergerie).
+SÃƒÂ©jour  : du ${start} au ${end}
+MÃƒÂ©nage ÃƒÂ  prÃƒÂ©voir : le ${end} aprÃƒÂ¨s le dÃƒÂ©part des voyageurs
+(heure exacte de check-out ÃƒÂ  confirmer avec la conciergerie).
 
 Merci beaucoup,
-L'Ã©quipe Boostinghost`;
+L'ÃƒÂ©quipe Boostinghost`;
 
         const htmlBody = `
           <p>${hello}</p>
-          <p>Un nouveau séjour vient dâ€™Ãªtre rÃ©servÃ© pour le logement <strong>${propertyName}</strong>.</p>
+          <p>Un nouveau sÃ©jour vient dÃ¢â‚¬â„¢ÃƒÂªtre rÃƒÂ©servÃƒÂ© pour le logement <strong>${propertyName}</strong>.</p>
           <ul>
             <li><strong>Voyageur :</strong> ${guest}</li>
-            <li><strong>SÃ©jour :</strong> du ${start} au ${end}</li>
-            <li><strong>MÃ©nage Ã  prÃ©voir :</strong> le ${end} aprÃ¨s le dÃ©part des voyageurs</li>
+            <li><strong>SÃƒÂ©jour :</strong> du ${start} au ${end}</li>
+            <li><strong>MÃƒÂ©nage ÃƒÂ  prÃƒÂ©voir :</strong> le ${end} aprÃƒÂ¨s le dÃƒÂ©part des voyageurs</li>
           </ul>
           <p style="font-size:13px;color:#6b7280;">
-            Heure exacte de check-out Ã  confirmer avec la conciergerie.
+            Heure exacte de check-out ÃƒÂ  confirmer avec la conciergerie.
           </p>
         `;
 
@@ -985,11 +981,11 @@ L'Ã©quipe Boostinghost`;
           )
             .then(() => {
               console.log(
-                `ðŸ“§ Notification mÃ©nage envoyÃ©e Ã  ${cleanerEmail} (resa uid=${res.uid || res.id})`
+                `Ã°Å¸â€œÂ§ Notification mÃƒÂ©nage envoyÃƒÂ©e ÃƒÂ  ${cleanerEmail} (resa uid=${res.uid || res.id})`
               );
             })
             .catch((err) => {
-              console.error('âŒ Erreur envoi email notification mÃ©nage :', err);
+              console.error('Ã¢ÂÅ’ Erreur envoi email notification mÃƒÂ©nage :', err);
             })
         );
       }
@@ -999,8 +995,8 @@ L'Ã©quipe Boostinghost`;
   await Promise.all(tasks);
 }
 /**
- * Envoie chaque jour un planning de mÃ©nage pour "demain"
- * Ã  chaque cleaner assignÃ© (email + WhatsApp si dispo).
+ * Envoie chaque jour un planning de mÃƒÂ©nage pour "demain"
+ * ÃƒÂ  chaque cleaner assignÃƒÂ© (email + WhatsApp si dispo).
  */
 async function sendDailyCleaningPlan() {
   const useBrevo = !!process.env.BREVO_API_KEY;
@@ -1008,13 +1004,13 @@ async function sendDailyCleaningPlan() {
 
   if (!useBrevo && !transporter) {
     console.log(
-      'âš ï¸  Ni email (Brevo/SMTP) ni WhatsApp configurÃ©s, planning mÃ©nage non envoyÃ©'
+      'Ã¢Å¡Â Ã¯Â¸Â  Ni email (Brevo/SMTP) ni WhatsApp configurÃƒÂ©s, planning mÃƒÂ©nage non envoyÃƒÂ©'
     );
     return;
   }
 
   if (!PROPERTIES || !Array.isArray(PROPERTIES) || PROPERTIES.length === 0) {
-    console.log('â„¹ï¸ Aucun logement configurÃ©, pas de planning mÃ©nage Ã  envoyer.');
+    console.log('Ã¢â€žÂ¹Ã¯Â¸Â Aucun logement configurÃƒÂ©, pas de planning mÃƒÂ©nage ÃƒÂ  envoyer.');
     return;
   }
 
@@ -1033,7 +1029,7 @@ async function sendDailyCleaningPlan() {
     });
   }
 
-  // 2) Construire tÃ¢ches par cleaner
+  // 2) Construire tÃƒÂ¢ches par cleaner
   const tasksByCleanerId = {}; // cleanerId -> { cleaner, tasks: [] }
 
   for (const property of PROPERTIES) {
@@ -1049,7 +1045,7 @@ async function sendDailyCleaningPlan() {
       if (Number.isNaN(endDate.getTime())) continue;
 
       const endIso = endDate.toISOString().slice(0, 10);
-      if (endIso !== tomorrowIso) continue; // checkout pas demain â†’ ignore
+      if (endIso !== tomorrowIso) continue; // checkout pas demain Ã¢â€ â€™ ignore
 
       const cleanerId = assignment.cleanerId;
       if (!tasksByCleanerId[cleanerId]) {
@@ -1083,22 +1079,22 @@ const cleanerEmail = cleaner.email;
 const cleanerPhone = cleaner.phone;
 
 const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
-const subject = `ðŸ§¹ Planning mÃ©nage â€“ ${tomorrowIso}`;
+const subject = `Ã°Å¸Â§Â¹ Planning mÃƒÂ©nage Ã¢â‚¬â€œ ${tomorrowIso}`;
 
 if ((useBrevo || transporter) && cleanerEmail) {
   // Construction du textBody
-  let textBody = `${hello}\n\nPlanning mÃ©nage de demain (${tomorrowIso}):\n\n`;
+  let textBody = `${hello}\n\nPlanning mÃƒÂ©nage de demain (${tomorrowIso}):\n\n`;
   jobs.forEach((job, index) => {
-    textBody += `${index + 1}. ${job.propertyName} â€“ dÃ©part le ${job.end} (${job.guestName})\n`;
+    textBody += `${index + 1}. ${job.propertyName} Ã¢â‚¬â€œ dÃƒÂ©part le ${job.end} (${job.guestName})\n`;
   });
-  textBody += '\nMerci beaucoup,\nL\'Ã©quipe Boostinghost';
+  textBody += '\nMerci beaucoup,\nL\'ÃƒÂ©quipe Boostinghost';
 
   // Construction du htmlBody
-  let htmlBody = `<p>${hello}</p><p>Planning mÃ©nage de demain (${tomorrowIso}):</p><ul>`;
+  let htmlBody = `<p>${hello}</p><p>Planning mÃƒÂ©nage de demain (${tomorrowIso}):</p><ul>`;
   jobs.forEach((job) => {
-    htmlBody += `<li><strong>${job.propertyName}</strong> â€“ dÃ©part le ${job.end} (${job.guestName})</li>`;
+    htmlBody += `<li><strong>${job.propertyName}</strong> Ã¢â‚¬â€œ dÃƒÂ©part le ${job.end} (${job.guestName})</li>`;
   });
-  htmlBody += `</ul><p>Merci beaucoup,<br>L'Ã©quipe Boostinghost</p>`;
+  htmlBody += `</ul><p>Merci beaucoup,<br>L'ÃƒÂ©quipe Boostinghost</p>`;
 
   tasks.push(
     (useBrevo
@@ -1118,11 +1114,11 @@ if ((useBrevo || transporter) && cleanerEmail) {
     )
       .then(() => {
         console.log(
-          `ðŸ“§ Planning mÃ©nage envoyÃ© Ã  ${cleanerEmail} pour ${tomorrowIso}`
+          `Ã°Å¸â€œÂ§ Planning mÃƒÂ©nage envoyÃƒÂ© ÃƒÂ  ${cleanerEmail} pour ${tomorrowIso}`
         );
       })
       .catch((err) => {
-        console.error('âŒ Erreur envoi planning mÃ©nage (email) :', err);
+        console.error('Ã¢ÂÅ’ Erreur envoi planning mÃƒÂ©nage (email) :', err);
       })
   );
   }
@@ -1131,7 +1127,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
 
   await Promise.all(tasks);
 
-  console.log('âœ… Planning mÃ©nage quotidien envoyÃ© (si tÃ¢ches dÃ©tectÃ©es).');
+  console.log('Ã¢Å“â€¦ Planning mÃƒÂ©nage quotidien envoyÃƒÂ© (si tÃƒÂ¢ches dÃƒÂ©tectÃƒÂ©es).');
 }
 
 // ============================================
@@ -1140,7 +1136,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
 
 const app = express();
 
-// âœ… Healthcheck (pour vÃ©rifier que Render sert bien CE serveur)
+// Ã¢Å“â€¦ Healthcheck (pour vÃƒÂ©rifier que Render sert bien CE serveur)
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
@@ -1150,7 +1146,7 @@ const PORT = process.env.PORT || 3000;
 // Stripe
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 
-// âœ… WEBHOOK STRIPE (AVANT LES AUTRES MIDDLEWARES)
+// Ã¢Å“â€¦ WEBHOOK STRIPE (AVANT LES AUTRES MIDDLEWARES)
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -1169,7 +1165,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  console.log('âœ… Webhook Stripe reÃ§u:', event.type);
+  console.log('Ã¢Å“â€¦ Webhook Stripe reÃƒÂ§u:', event.type);
 
   try {
     switch (event.type) {
@@ -1217,7 +1213,7 @@ const userResult = await pool.query(
     await logEmailSent(userId, 'subscription_confirmed', { plan, planAmount });
   }
 
-  console.log(`âœ… Abonnement ACTIF crÃ©Ã© pour user ${userId} (plan: ${plan})`);
+  console.log(`Ã¢Å“â€¦ Abonnement ACTIF crÃƒÂ©ÃƒÂ© pour user ${userId} (plan: ${plan})`);
   break;
 }
       case 'customer.subscription.updated': {
@@ -1239,7 +1235,7 @@ const userResult = await pool.query(
           [status, subscription.current_period_end, subscriptionId]
         );
 
-        console.log(`âœ… Abonnement ${subscriptionId} mis Ã  jour: ${status}`);
+        console.log(`Ã¢Å“â€¦ Abonnement ${subscriptionId} mis ÃƒÂ  jour: ${status}`);
         break;
       }
 
@@ -1254,7 +1250,7 @@ const userResult = await pool.query(
           [subscriptionId]
         );
 
-        console.log(`âœ… Abonnement ${subscriptionId} annulÃ©`);
+        console.log(`Ã¢Å“â€¦ Abonnement ${subscriptionId} annulÃƒÂ©`);
         break;
       }
 
@@ -1273,7 +1269,7 @@ const userResult = await pool.query(
           [subscriptionId]
         );
 
-        console.log(`âœ… Paiement rÃ©ussi pour subscription ${subscriptionId}`);
+        console.log(`Ã¢Å“â€¦ Paiement rÃƒÂ©ussi pour subscription ${subscriptionId}`);
         break;
       }
 
@@ -1290,18 +1286,18 @@ const userResult = await pool.query(
           [subscriptionId]
         );
 
-        console.log(`âŒ Paiement Ã©chouÃ© pour subscription ${subscriptionId}`);
+        console.log(`Ã¢ÂÅ’ Paiement ÃƒÂ©chouÃƒÂ© pour subscription ${subscriptionId}`);
         break;
       }
 
       default:
-        console.log(`Ã‰vÃ©nement non gÃ©rÃ©: ${event.type}`);
+        console.log(`Ãƒâ€°vÃƒÂ©nement non gÃƒÂ©rÃƒÂ©: ${event.type}`);
     }
 
     res.json({ received: true });
 
   } catch (err) {
-    console.error('âŒ Erreur traitement webhook:', err);
+    console.error('Ã¢ÂÅ’ Erreur traitement webhook:', err);
     res.status(500).json({ error: 'Erreur traitement webhook' });
   }
 });
@@ -1312,7 +1308,7 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
 
-// Store for reservations (en mÃ©moire)
+// Store for reservations (en mÃƒÂ©moire)
 let reservationsStore = {
   properties: {},
   lastSync: null,
@@ -1323,12 +1319,12 @@ let reservationsStore = {
 const MANUAL_RES_FILE = path.join(__dirname, 'manual-reservations.json');
 const DEPOSITS_FILE = path.join(__dirname, 'deposits-config.json');
 
-// ✅ V1 Checklists (JSON)
+// âœ… V1 Checklists (JSON)
 const CHECKLISTS_FILE = path.join(__dirname, 'checklists.json');
 let CHECKLISTS = {}; // { [reservationUid]: { reservationUid, propertyId, userId, status, tasks, createdAt, updatedAt } }
 
 
-// Data en mÃ©moire
+// Data en mÃƒÂ©moire
 let MANUAL_RESERVATIONS = {};    // { [propertyId]: [reservations ou blocages] }
 let DEPOSITS = [];               // { id, reservationUid, amountCents, ... }
 
@@ -1340,19 +1336,19 @@ async function loadManualReservations() {
   try {
     const data = await fsp.readFile(MANUAL_RES_FILE, 'utf8');
     MANUAL_RESERVATIONS = JSON.parse(data);
-    console.log('âœ… RÃ©servations manuelles chargÃ©es depuis manual-reservations.json');
+    console.log('Ã¢Å“â€¦ RÃƒÂ©servations manuelles chargÃƒÂ©es depuis manual-reservations.json');
   } catch (error) {
     MANUAL_RESERVATIONS = {};
-    console.log('âš ï¸  Aucun fichier manual-reservations.json, dÃ©marrage sans rÃ©servations manuelles');
+    console.log('Ã¢Å¡Â Ã¯Â¸Â  Aucun fichier manual-reservations.json, dÃƒÂ©marrage sans rÃƒÂ©servations manuelles');
   }
 }
 
 async function saveManualReservations() {
   try {
     await fsp.writeFile(MANUAL_RES_FILE, JSON.stringify(MANUAL_RESERVATIONS, null, 2));
-    console.log('âœ… RÃ©servations manuelles sauvegardÃ©es');
+    console.log('Ã¢Å“â€¦ RÃƒÂ©servations manuelles sauvegardÃƒÂ©es');
   } catch (error) {
-    console.error('âŒ Erreur lors de la sauvegarde des rÃ©servations manuelles:', error.message);
+    console.error('Ã¢ÂÅ’ Erreur lors de la sauvegarde des rÃƒÂ©servations manuelles:', error.message);
   }
 }
 
@@ -1360,34 +1356,34 @@ async function loadDeposits() {
   try {
     const data = await fsp.readFile(DEPOSITS_FILE, 'utf8');
     DEPOSITS = JSON.parse(data);
-    console.log('âœ… Cautions chargÃ©es depuis deposits-config.json');
+    console.log('Ã¢Å“â€¦ Cautions chargÃƒÂ©es depuis deposits-config.json');
   } catch (error) {
     DEPOSITS = [];
-    console.log('âš ï¸  Aucun fichier deposits-config.json, dÃ©marrage sans cautions');
+    console.log('Ã¢Å¡Â Ã¯Â¸Â  Aucun fichier deposits-config.json, dÃƒÂ©marrage sans cautions');
   }
 }
 
 async function saveDeposits() {
   try {
     await fsp.writeFile(DEPOSITS_FILE, JSON.stringify(DEPOSITS, null, 2));
-    console.log('âœ… Cautions sauvegardÃ©es');
+    console.log('Ã¢Å“â€¦ Cautions sauvegardÃƒÂ©es');
   } catch (error) {
-    console.error('âŒ Erreur lors de la sauvegarde des cautions:', error.message);
+    console.error('Ã¢ÂÅ’ Erreur lors de la sauvegarde des cautions:', error.message);
   }
 }
 
 // ============================================
-// ✅ CHECKLISTS (V1 - JSON) - Stockage simple, migrable en SQL plus tard
+// âœ… CHECKLISTS (V1 - JSON) - Stockage simple, migrable en SQL plus tard
 // ============================================
 
 async function loadChecklists() {
   try {
     const data = await fsp.readFile(CHECKLISTS_FILE, 'utf8');
     CHECKLISTS = JSON.parse(data);
-    console.log('✅ Checklists chargées depuis checklists.json');
+    console.log('âœ… Checklists chargÃ©es depuis checklists.json');
   } catch (e) {
     CHECKLISTS = {};
-    console.log('ℹ️ Aucun fichier checklists.json, démarrage sans checklists');
+    console.log('â„¹ï¸ Aucun fichier checklists.json, dÃ©marrage sans checklists');
   }
 }
 
@@ -1395,7 +1391,7 @@ async function saveChecklists() {
   try {
     await fsp.writeFile(CHECKLISTS_FILE, JSON.stringify(CHECKLISTS, null, 2));
   } catch (e) {
-    console.error('❌ Erreur saveChecklists:', e);
+    console.error('âŒ Erreur saveChecklists:', e);
   }
 }
 
@@ -1409,12 +1405,12 @@ function ensureChecklistForReservation({ reservationUid, propertyId, userId }) {
     userId,
     status: 'pending', // pending | in_progress | completed
     tasks: [
-      { id: 't1', title: 'Logement prêt (ménage)', completed: false },
-      { id: 't2', title: 'Linge propre installé', completed: false },
-      { id: 't3', title: 'Accès / clés vérifiés', completed: false },
-      { id: 't4', title: "Heure d'arrivée confirmée", completed: false },
-      { id: 't5', title: "Message d'arrivée préparé", completed: false },
-      { id: 't6', title: 'Message de départ préparé', completed: false },
+      { id: 't1', title: 'Logement prÃªt (mÃ©nage)', completed: false },
+      { id: 't2', title: 'Linge propre installÃ©', completed: false },
+      { id: 't3', title: 'AccÃ¨s / clÃ©s vÃ©rifiÃ©s', completed: false },
+      { id: 't4', title: "Heure d'arrivÃ©e confirmÃ©e", completed: false },
+      { id: 't5', title: "Message d'arrivÃ©e prÃ©parÃ©", completed: false },
+      { id: 't6', title: 'Message de dÃ©part prÃ©parÃ©', completed: false },
     ],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -1430,7 +1426,7 @@ function mapChecklistStatusFromChecklist(chk) {
 }
 
 // ============================================
-// ✅ RISK ENGINE V1 (opérationnel + usage intensif)
+// âœ… RISK ENGINE V1 (opÃ©rationnel + usage intensif)
 // ============================================
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -1544,27 +1540,27 @@ function computeRiskV1(input, now = new Date()) {
   const hoursUntilArrival = hoursBetween(now, start);
   const nights = getNights(start, end);
 
-  // 1) OPÉRATIONNEL (cap 60)
+  // 1) OPÃ‰RATIONNEL (cap 60)
   let arrivalPts = 0;
-  if (hoursUntilArrival <= 24) { arrivalPts = 45; tags.push('Arrivée ≤ 24h'); }
-  else if (hoursUntilArrival <= 48) { arrivalPts = 30; tags.push('Arrivée ≤ 48h'); }
-  else if (hoursUntilArrival <= 72) { arrivalPts = 20; tags.push('Arrivée ≤ 72h'); }
+  if (hoursUntilArrival <= 24) { arrivalPts = 45; tags.push('ArrivÃ©e â‰¤ 24h'); }
+  else if (hoursUntilArrival <= 48) { arrivalPts = 30; tags.push('ArrivÃ©e â‰¤ 48h'); }
+  else if (hoursUntilArrival <= 72) { arrivalPts = 20; tags.push('ArrivÃ©e â‰¤ 72h'); }
 
   let checklistPts = 0;
   if (input.checklistStatus === 'none') { checklistPts = 30; tags.push('Checklist inexistante'); }
-  else if (input.checklistStatus === 'incomplete') { checklistPts = 25; tags.push('Checklist incomplète'); }
+  else if (input.checklistStatus === 'incomplete') { checklistPts = 25; tags.push('Checklist incomplÃ¨te'); }
 
   const sensitivePts = input.propertySensitive ? 10 : 0;
   if (input.propertySensitive) tags.push('Logement sensible');
 
   let stayLongPts = 0;
-  if (nights >= 14) { stayLongPts = 25; tags.push('Séjour ≥ 14 nuits'); }
-  else if (nights >= 7) { stayLongPts = 15; tags.push('Séjour ≥ 7 nuits'); }
+  if (nights >= 14) { stayLongPts = 25; tags.push('SÃ©jour â‰¥ 14 nuits'); }
+  else if (nights >= 7) { stayLongPts = 15; tags.push('SÃ©jour â‰¥ 7 nuits'); }
 
   let depositPts = 0;
   if (channel !== 'airbnb') {
     if (input.depositStatus === 'missing') { depositPts = 40; tags.push('Garantie absente'); }
-    else if (input.depositStatus === 'created_pending') { depositPts = 20; tags.push('Garantie à valider'); }
+    else if (input.depositStatus === 'created_pending') { depositPts = 20; tags.push('Garantie Ã  valider'); }
   }
 
   let turnoverPts = 0;
@@ -1575,7 +1571,7 @@ function computeRiskV1(input, now = new Date()) {
 
   let lateArrivalPts = 0;
   if (typeof input.expectedCheckinHour === 'number' && input.expectedCheckinHour >= 22) {
-    lateArrivalPts = 10; tags.push('Arrivée tardive');
+    lateArrivalPts = 10; tags.push('ArrivÃ©e tardive');
   }
 
   let staleIcalPts = 0;
@@ -1589,23 +1585,23 @@ function computeRiskV1(input, now = new Date()) {
   // 2) USAGE INTENSIF (cap 40)
   let patternPts = 0;
 
-  if (nights === 1) { patternPts += 20; tags.push('Séjour 1 nuit'); }
-  else if (nights === 2) { patternPts += 10; tags.push('Séjour 2 nuits'); }
+  if (nights === 1) { patternPts += 20; tags.push('SÃ©jour 1 nuit'); }
+  else if (nights === 2) { patternPts += 10; tags.push('SÃ©jour 2 nuits'); }
 
   if (isWeekendArrival(start)) { patternPts += 15; tags.push('Week-end'); }
 
   if (input.bookedAt) {
     const hoursBetweenBookingAndArrival = hoursBetween(input.bookedAt, start);
-    if (hoursBetweenBookingAndArrival <= 24) { patternPts += 25; tags.push('Réservation < 24h'); }
-    else if (hoursBetweenBookingAndArrival <= 72) { patternPts += 15; tags.push('Réservation < 72h'); }
+    if (hoursBetweenBookingAndArrival <= 24) { patternPts += 25; tags.push('RÃ©servation < 24h'); }
+    else if (hoursBetweenBookingAndArrival <= 72) { patternPts += 15; tags.push('RÃ©servation < 72h'); }
   }
 
   if (input.propertyType === 'entire') { patternPts += 10; tags.push('Logement entier'); }
-  if ((input.capacity ?? 0) >= 4) { patternPts += 10; tags.push('Capacité ≥ 4'); }
+  if ((input.capacity ?? 0) >= 4) { patternPts += 10; tags.push('CapacitÃ© â‰¥ 4'); }
 
   const { isHoliday, isHolidayEve } = isFrenchHolidayOrEve(start);
-  if (isHoliday) { patternPts += 20; tags.push('Jour férié'); }
-  if (isHolidayEve) { patternPts += 20; tags.push('Veille jour férié'); }
+  if (isHoliday) { patternPts += 20; tags.push('Jour fÃ©riÃ©'); }
+  if (isHolidayEve) { patternPts += 20; tags.push('Veille jour fÃ©riÃ©'); }
   if (isSensitiveDate(start)) { patternPts += 25; tags.push('Date sensible'); }
 
   const stayPattern = clamp(patternPts, 0, 40);
@@ -1617,7 +1613,7 @@ function computeRiskV1(input, now = new Date()) {
   else if (score >= 31) level = 'orange';
 
   const uniqueTags = [...new Set(tags)];
-  const label = (level === 'red') ? 'Risque élevé' : (level === 'orange') ? 'À surveiller' : 'OK';
+  const label = (level === 'red') ? 'Risque Ã©levÃ©' : (level === 'orange') ? 'Ã€ surveiller' : 'OK';
   const summary = uniqueTags.length ? `${label} : ${uniqueTags.join(' + ')}` : label;
 
   return { score, level, label, summary, tags: uniqueTags, subScores: { operational, stayPattern }, parts: { nights, hoursUntilArrival: Math.round(hoursUntilArrival), channel } };
@@ -1643,7 +1639,7 @@ function publicUser(user) {
   return safe;
 }
 
-// Cherche l'utilisateur en base Ã  partir du token dans Authorization: Bearer
+// Cherche l'utilisateur en base ÃƒÂ  partir du token dans Authorization: Bearer
 async function getUserFromRequest(req) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -1681,7 +1677,7 @@ async function getUserFromRequest(req) {
 }
 // ============================================
 // MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
-// Ã€ COPIER-COLLER APRÃˆS LA FONCTION getUserFromRequest
+// Ãƒâ‚¬ COPIER-COLLER APRÃƒË†S LA FONCTION getUserFromRequest
 // ============================================
 
 async function authenticateUser(req, res, next) {
@@ -1812,10 +1808,10 @@ async function getSubscriptionInfo(req, res, next) {
 }
 
 // ============================================
-// PROPERTIES (logements) - stockÃ©es en base
+// PROPERTIES (logements) - stockÃƒÂ©es en base
 // ============================================
 
-// PROPERTIES est crÃ©Ã© par affectation dans loadProperties (variable globale implicite)
+// PROPERTIES est crÃƒÂ©ÃƒÂ© par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
   try {
     const result = await pool.query(`
@@ -1840,13 +1836,13 @@ async function loadProperties() {
       ORDER BY display_order ASC, created_at ASC
     `);
     PROPERTIES = result.rows.map(row => {
-      // âœ… Parser ical_urls si c'est une string JSON
+      // Ã¢Å“â€¦ Parser ical_urls si c'est une string JSON
       let icalUrls = row.ical_urls || [];
       if (typeof icalUrls === 'string') {
         try {
           icalUrls = JSON.parse(icalUrls);
         } catch (e) {
-          console.error(`âŒ Erreur parse ical_urls pour ${row.name}:`, e.message);
+          console.error(`Ã¢ÂÅ’ Erreur parse ical_urls pour ${row.name}:`, e.message);
           icalUrls = [];
         }
       }
@@ -1871,9 +1867,9 @@ async function loadProperties() {
         display_order: row.display_order
       };
     });
-    console.log(`âœ… PROPERTIES chargÃ©es : ${PROPERTIES.length} logements`); 
+    console.log(`Ã¢Å“â€¦ PROPERTIES chargÃƒÂ©es : ${PROPERTIES.length} logements`); 
   } catch (error) {
-    console.error('âŒ Erreur loadProperties :', error);
+    console.error('Ã¢ÂÅ’ Erreur loadProperties :', error);
     PROPERTIES = [];
   }
 }
@@ -1882,15 +1878,15 @@ function getUserProperties(userId) {
   return PROPERTIES.filter(p => p.userId === userId);
 }
 // ============================================
-// CODE COMPLET À AJOUTER DANS server-23.js
+// CODE COMPLET Ã€ AJOUTER DANS server-23.js
 // ============================================
-// Position : Après la fonction getUserProperties() (ligne ~1619)
+// Position : AprÃ¨s la fonction getUserProperties() (ligne ~1619)
 
-// Variable globale pour cache en mémoire (performance)
+// Variable globale pour cache en mÃ©moire (performance)
 let RESERVATIONS_CACHE = {}; // { [propertyId]: [reservations] }
 
 /**
- * Charger toutes les réservations depuis PostgreSQL
+ * Charger toutes les rÃ©servations depuis PostgreSQL
  */
 async function loadReservationsFromDB() {
   try {
@@ -1938,19 +1934,19 @@ async function loadReservationsFromDB() {
       RESERVATIONS_CACHE[row.property_id].push(reservation);
     });
 
-    console.log(`✅ Réservations chargées : ${result.rows.length} réservations`);
+    console.log(`âœ… RÃ©servations chargÃ©es : ${result.rows.length} rÃ©servations`);
     
     reservationsStore.properties = RESERVATIONS_CACHE;
     reservationsStore.lastSync = new Date().toISOString();
     
   } catch (error) {
-    console.error('❌ Erreur loadReservationsFromDB:', error);
+    console.error('âŒ Erreur loadReservationsFromDB:', error);
     RESERVATIONS_CACHE = {};
   }
 }
 
 /**
- * Sauvegarder une réservation en base
+ * Sauvegarder une rÃ©servation en base
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
@@ -1995,29 +1991,29 @@ async function saveReservationToDB(reservation, propertyId, userId) {
 
     return true;
   } catch (error) {
-    console.error('❌ Erreur saveReservationToDB:', error);
+    console.error('âŒ Erreur saveReservationToDB:', error);
     return false;
   }
 }
 
 /**
- * Sauvegarder toutes les réservations d'une propriété (après synchro iCal)
+ * Sauvegarder toutes les rÃ©servations d'une propriÃ©tÃ© (aprÃ¨s synchro iCal)
  */
 async function savePropertyReservations(propertyId, reservations, userId) {
   try {
     for (const reservation of reservations) {
       await saveReservationToDB(reservation, propertyId, userId);
     }
-    console.log(`✅ ${reservations.length} réservations sauvegardées pour ${propertyId}`);
+    console.log(`âœ… ${reservations.length} rÃ©servations sauvegardÃ©es pour ${propertyId}`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur savePropertyReservations:', error);
+    console.error('âŒ Erreur savePropertyReservations:', error);
     return false;
   }
 }
 
 /**
- * Supprimer une réservation (soft delete)
+ * Supprimer une rÃ©servation (soft delete)
  */
 async function deleteReservationFromDB(uid) {
   try {
@@ -2028,13 +2024,13 @@ async function deleteReservationFromDB(uid) {
     `, [uid]);
     return true;
   } catch (error) {
-    console.error('❌ Erreur deleteReservationFromDB:', error);
+    console.error('âŒ Erreur deleteReservationFromDB:', error);
     return false;
   }
 }
 
 /**
- * Récupérer les réservations d'un utilisateur
+ * RÃ©cupÃ©rer les rÃ©servations d'un utilisateur
  */
 async function getUserReservations(userId, filters = {}) {
   try {
@@ -2075,24 +2071,24 @@ async function getUserReservations(userId, filters = {}) {
     const result = await pool.query(query, params);
     return result.rows;
   } catch (error) {
-    console.error('❌ Erreur getUserReservations:', error);
+    console.error('âŒ Erreur getUserReservations:', error);
     return [];
   }
 }
 
 /**
- * Migrer les réservations du JSON vers PostgreSQL (une seule fois)
+ * Migrer les rÃ©servations du JSON vers PostgreSQL (une seule fois)
  */
 async function migrateManualReservationsToPostgres() {
   try {
-    console.log('🔄 Migration des réservations manuelles vers PostgreSQL...');
+    console.log('ðŸ”„ Migration des rÃ©servations manuelles vers PostgreSQL...');
     
     let migratedCount = 0;
     
     for (const [propertyId, reservations] of Object.entries(MANUAL_RESERVATIONS)) {
       const property = PROPERTIES.find(p => p.id === propertyId);
       if (!property) {
-        console.log(`⚠️  Propriété ${propertyId} introuvable, skip`);
+        console.log(`âš ï¸  PropriÃ©tÃ© ${propertyId} introuvable, skip`);
         continue;
       }
 
@@ -2102,15 +2098,15 @@ async function migrateManualReservationsToPostgres() {
       }
     }
 
-    console.log(`✅ Migration terminée : ${migratedCount} réservations migrées`);
+    console.log(`âœ… Migration terminÃ©e : ${migratedCount} rÃ©servations migrÃ©es`);
     
     // Backup du fichier JSON
     const backupFile = MANUAL_RES_FILE.replace('.json', '.backup.json');
     await fsp.rename(MANUAL_RES_FILE, backupFile);
-    console.log(`📦 Backup créé : ${backupFile}`);
+    console.log(`ðŸ“¦ Backup crÃ©Ã© : ${backupFile}`);
     
   } catch (error) {
-    console.error('❌ Erreur migration:', error);
+    console.error('âŒ Erreur migration:', error);
   }
 }
 
@@ -2124,22 +2120,22 @@ async function syncCalendarAndSaveToPostgres(property) {
     // Sauvegarder en PostgreSQL
     await savePropertyReservations(property.id, reservations, property.userId);
     
-    // Mettre à jour le cache
+    // Mettre Ã  jour le cache
     RESERVATIONS_CACHE[property.id] = reservations;
     reservationsStore.properties[property.id] = reservations;
     
     return reservations;
   } catch (error) {
-    console.error(`❌ Erreur synchro ${property.name}:`, error);
+    console.error(`âŒ Erreur synchro ${property.name}:`, error);
     return [];
   }
 }
 // ============================================
 // GESTION DES DEPOSITS (CAUTIONS) EN POSTGRESQL
 // ============================================
-// À ajouter dans server-23.js après les fonctions des réservations
+// Ã€ ajouter dans server-23.js aprÃ¨s les fonctions des rÃ©servations
 
-// Variable globale pour cache en mémoire
+// Variable globale pour cache en mÃ©moire
 let DEPOSITS_CACHE = {}; // { [reservationUid]: deposit }
 
 /**
@@ -2160,7 +2156,7 @@ async function loadDepositsFromDB() {
       ORDER BY created_at DESC
     `);
 
-    // Reconstruire DEPOSITS pour compatibilité avec le code existant
+    // Reconstruire DEPOSITS pour compatibilitÃ© avec le code existant
     DEPOSITS = result.rows.map(row => ({
       id: row.id,
       reservationUid: row.reservation_uid,
@@ -2181,16 +2177,16 @@ async function loadDepositsFromDB() {
       updatedAt: row.updated_at
     }));
 
-    // Créer un cache indexé par reservation_uid
+    // CrÃ©er un cache indexÃ© par reservation_uid
     DEPOSITS_CACHE = {};
     result.rows.forEach(row => {
       DEPOSITS_CACHE[row.reservation_uid] = row;
     });
 
-    console.log(`✅ Deposits chargés : ${result.rows.length} cautions`);
+    console.log(`âœ… Deposits chargÃ©s : ${result.rows.length} cautions`);
     
   } catch (error) {
-    console.error('❌ Erreur loadDepositsFromDB:', error);
+    console.error('âŒ Erreur loadDepositsFromDB:', error);
     DEPOSITS = [];
     DEPOSITS_CACHE = {};
   }
@@ -2229,16 +2225,16 @@ async function saveDepositToDB(deposit, userId, propertyId = null) {
       deposit.metadata ? JSON.stringify(deposit.metadata) : null
     ]);
 
-    console.log(`✅ Deposit ${deposit.id} sauvegardé en PostgreSQL`);
+    console.log(`âœ… Deposit ${deposit.id} sauvegardÃ© en PostgreSQL`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur saveDepositToDB:', error);
+    console.error('âŒ Erreur saveDepositToDB:', error);
     return false;
   }
 }
 
 /**
- * Mettre à jour le statut d'un deposit
+ * Mettre Ã  jour le statut d'un deposit
  */
 async function updateDepositStatus(depositId, status, additionalData = {}) {
   try {
@@ -2286,16 +2282,16 @@ async function updateDepositStatus(depositId, status, additionalData = {}) {
     
     await pool.query(query, params);
 
-    console.log(`✅ Deposit ${depositId} mis à jour : ${status}`);
+    console.log(`âœ… Deposit ${depositId} mis Ã  jour : ${status}`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur updateDepositStatus:', error);
+    console.error('âŒ Erreur updateDepositStatus:', error);
     return false;
   }
 }
 
 /**
- * Récupérer un deposit par reservation_uid
+ * RÃ©cupÃ©rer un deposit par reservation_uid
  */
 async function getDepositByReservation(reservationUid) {
   try {
@@ -2305,13 +2301,13 @@ async function getDepositByReservation(reservationUid) {
 
     return result.rows.length > 0 ? result.rows[0] : null;
   } catch (error) {
-    console.error('❌ Erreur getDepositByReservation:', error);
+    console.error('âŒ Erreur getDepositByReservation:', error);
     return null;
   }
 }
 
 /**
- * Récupérer tous les deposits d'un utilisateur
+ * RÃ©cupÃ©rer tous les deposits d'un utilisateur
  */
 async function getUserDeposits(userId, filters = {}) {
   try {
@@ -2348,7 +2344,7 @@ async function getUserDeposits(userId, filters = {}) {
     const result = await pool.query(query, params);
     return result.rows;
   } catch (error) {
-    console.error('❌ Erreur getUserDeposits:', error);
+    console.error('âŒ Erreur getUserDeposits:', error);
     return [];
   }
 }
@@ -2358,18 +2354,18 @@ async function getUserDeposits(userId, filters = {}) {
  */
 async function migrateDepositsToPostgres() {
   try {
-    console.log('🔄 Migration des deposits vers PostgreSQL...');
+    console.log('ðŸ”„ Migration des deposits vers PostgreSQL...');
     
     let migratedCount = 0;
     
     for (const deposit of DEPOSITS) {
-      // Trouver la réservation pour récupérer user_id et property_id
+      // Trouver la rÃ©servation pour rÃ©cupÃ©rer user_id et property_id
       const reservation = await pool.query(`
         SELECT user_id, property_id FROM reservations WHERE uid = $1
       `, [deposit.reservationUid]);
 
       if (reservation.rows.length === 0) {
-        console.log(`⚠️  Réservation ${deposit.reservationUid} introuvable pour deposit ${deposit.id}`);
+        console.log(`âš ï¸  RÃ©servation ${deposit.reservationUid} introuvable pour deposit ${deposit.id}`);
         continue;
       }
 
@@ -2379,20 +2375,20 @@ async function migrateDepositsToPostgres() {
       if (success) migratedCount++;
     }
 
-    console.log(`✅ Migration terminée : ${migratedCount} deposits migrés`);
+    console.log(`âœ… Migration terminÃ©e : ${migratedCount} deposits migrÃ©s`);
     
     // Backup du fichier JSON
     const backupFile = DEPOSITS_FILE.replace('.json', '.backup.json');
     await fsp.rename(DEPOSITS_FILE, backupFile);
-    console.log(`📦 Backup créé : ${backupFile}`);
+    console.log(`ðŸ“¦ Backup crÃ©Ã© : ${backupFile}`);
     
   } catch (error) {
-    console.error('❌ Erreur migration deposits:', error);
+    console.error('âŒ Erreur migration deposits:', error);
   }
 }
 
 /**
- * Capturer une caution (débiter le client)
+ * Capturer une caution (dÃ©biter le client)
  */
 async function captureDeposit(depositId, amountCents = null) {
   try {
@@ -2405,7 +2401,7 @@ async function captureDeposit(depositId, amountCents = null) {
     const depositData = deposit.rows[0];
     
     if (!depositData.stripe_payment_intent_id) {
-      throw new Error('Pas de Payment Intent associé');
+      throw new Error('Pas de Payment Intent associÃ©');
     }
 
     // Capturer via Stripe
@@ -2414,20 +2410,20 @@ async function captureDeposit(depositId, amountCents = null) {
       amountCents ? { amount_to_capture: amountCents } : {}
     );
 
-    // Mettre à jour en base
+    // Mettre Ã  jour en base
     await updateDepositStatus(depositId, 'captured', {
       stripeChargeId: capture.charges.data[0]?.id
     });
 
     return true;
   } catch (error) {
-    console.error('❌ Erreur captureDeposit:', error);
+    console.error('âŒ Erreur captureDeposit:', error);
     return false;
   }
 }
 
 /**
- * Libérer une caution (annuler l'autorisation)
+ * LibÃ©rer une caution (annuler l'autorisation)
  */
 async function releaseDeposit(depositId) {
   try {
@@ -2440,28 +2436,28 @@ async function releaseDeposit(depositId) {
     const depositData = deposit.rows[0];
     
     if (!depositData.stripe_payment_intent_id) {
-      throw new Error('Pas de Payment Intent associé');
+      throw new Error('Pas de Payment Intent associÃ©');
     }
 
     // Annuler via Stripe
     await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
 
-    // Mettre à jour en base
+    // Mettre Ã  jour en base
     await updateDepositStatus(depositId, 'released');
 
     return true;
   } catch (error) {
-    console.error('❌ Erreur releaseDeposit:', error);
+    console.error('âŒ Erreur releaseDeposit:', error);
     return false;
   }
 }
 // ============================================
 // GESTION DES CHECKLISTS EN POSTGRESQL
 // ============================================
-// À ajouter dans server-23.js après les fonctions des deposits
+// Ã€ ajouter dans server-23.js aprÃ¨s les fonctions des deposits
 
 /**
- * Créer une checklist
+ * CrÃ©er une checklist
  */
 async function createChecklist(userId, data) {
   try {
@@ -2505,20 +2501,20 @@ async function createChecklist(userId, data) {
       'pending'
     ]);
 
-    console.log(`✅ Checklist créée : ${result.rows[0].id}`);
+    console.log(`âœ… Checklist crÃ©Ã©e : ${result.rows[0].id}`);
     return result.rows[0];
   } catch (error) {
-    console.error('❌ Erreur createChecklist:', error);
+    console.error('âŒ Erreur createChecklist:', error);
     return null;
   }
 }
 
 /**
- * Mettre à jour une tâche dans une checklist
+ * Mettre Ã  jour une tÃ¢che dans une checklist
  */
 async function updateChecklistTask(checklistId, taskId, updates) {
   try {
-    // Récupérer la checklist
+    // RÃ©cupÃ©rer la checklist
     const checklist = await pool.query(
       'SELECT * FROM checklists WHERE id = $1',
       [checklistId]
@@ -2532,10 +2528,10 @@ async function updateChecklistTask(checklistId, taskId, updates) {
     const taskIndex = tasks.findIndex(t => t.id === taskId);
 
     if (taskIndex === -1) {
-      throw new Error('Tâche introuvable');
+      throw new Error('TÃ¢che introuvable');
     }
 
-    // Mettre à jour la tâche
+    // Mettre Ã  jour la tÃ¢che
     tasks[taskIndex] = {
       ...tasks[taskIndex],
       ...updates,
@@ -2547,7 +2543,7 @@ async function updateChecklistTask(checklistId, taskId, updates) {
     const completedTasks = tasks.filter(t => t.completed).length;
     const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-    // Déterminer le statut
+    // DÃ©terminer le statut
     let status = checklist.rows[0].status;
     if (completedTasks === 0) {
       status = 'pending';
@@ -2578,16 +2574,16 @@ async function updateChecklistTask(checklistId, taskId, updates) {
       checklistId
     ]);
 
-    console.log(`✅ Tâche mise à jour : ${taskId} dans checklist ${checklistId}`);
+    console.log(`âœ… TÃ¢che mise Ã  jour : ${taskId} dans checklist ${checklistId}`);
     return result.rows[0];
   } catch (error) {
-    console.error('❌ Erreur updateChecklistTask:', error);
+    console.error('âŒ Erreur updateChecklistTask:', error);
     return null;
   }
 }
 
 /**
- * Récupérer les checklists d'un utilisateur
+ * RÃ©cupÃ©rer les checklists d'un utilisateur
  */
 async function getUserChecklists(userId, filters = {}) {
   try {
@@ -2636,13 +2632,13 @@ async function getUserChecklists(userId, filters = {}) {
     const result = await pool.query(query, params);
     return result.rows;
   } catch (error) {
-    console.error('❌ Erreur getUserChecklists:', error);
+    console.error('âŒ Erreur getUserChecklists:', error);
     return [];
   }
 }
 
 /**
- * Récupérer une checklist par ID
+ * RÃ©cupÃ©rer une checklist par ID
  */
 async function getChecklistById(checklistId, userId) {
   try {
@@ -2661,7 +2657,7 @@ async function getChecklistById(checklistId, userId) {
 
     return result.rows.length > 0 ? result.rows[0] : null;
   } catch (error) {
-    console.error('❌ Erreur getChecklistById:', error);
+    console.error('âŒ Erreur getChecklistById:', error);
     return null;
   }
 }
@@ -2676,16 +2672,16 @@ async function deleteChecklist(checklistId, userId) {
       [checklistId, userId]
     );
     
-    console.log(`✅ Checklist supprimée : ${checklistId}`);
+    console.log(`âœ… Checklist supprimÃ©e : ${checklistId}`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur deleteChecklist:', error);
+    console.error('âŒ Erreur deleteChecklist:', error);
     return false;
   }
 }
 
 /**
- * Créer un template de checklist
+ * CrÃ©er un template de checklist
  */
 async function createChecklistTemplate(userId, data) {
   try {
@@ -2704,16 +2700,16 @@ async function createChecklistTemplate(userId, data) {
       JSON.stringify(tasks)
     ]);
 
-    console.log(`✅ Template créé : ${result.rows[0].id}`);
+    console.log(`âœ… Template crÃ©Ã© : ${result.rows[0].id}`);
     return result.rows[0];
   } catch (error) {
-    console.error('❌ Erreur createChecklistTemplate:', error);
+    console.error('âŒ Erreur createChecklistTemplate:', error);
     return null;
   }
 }
 
 /**
- * Récupérer les templates d'un utilisateur
+ * RÃ©cupÃ©rer les templates d'un utilisateur
  */
 async function getUserChecklistTemplates(userId, filters = {}) {
   try {
@@ -2742,17 +2738,17 @@ async function getUserChecklistTemplates(userId, filters = {}) {
     const result = await pool.query(query, params);
     return result.rows;
   } catch (error) {
-    console.error('❌ Erreur getUserChecklistTemplates:', error);
+    console.error('âŒ Erreur getUserChecklistTemplates:', error);
     return [];
   }
 }
 
 /**
- * Créer une checklist depuis un template
+ * CrÃ©er une checklist depuis un template
  */
 async function createChecklistFromTemplate(userId, templateId, data) {
   try {
-    // Récupérer le template
+    // RÃ©cupÃ©rer le template
     const template = await pool.query(
       'SELECT * FROM checklist_templates WHERE id = $1 AND user_id = $2',
       [templateId, userId]
@@ -2764,7 +2760,7 @@ async function createChecklistFromTemplate(userId, templateId, data) {
 
     const templateData = template.rows[0];
     
-    // Générer des IDs uniques pour les tâches
+    // GÃ©nÃ©rer des IDs uniques pour les tÃ¢ches
     const tasks = templateData.tasks.map(task => ({
       ...task,
       id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -2773,7 +2769,7 @@ async function createChecklistFromTemplate(userId, templateId, data) {
       completedBy: null
     }));
 
-    // Créer la checklist
+    // CrÃ©er la checklist
     return await createChecklist(userId, {
       propertyId: data.propertyId,
       reservationUid: data.reservationUid,
@@ -2785,31 +2781,31 @@ async function createChecklistFromTemplate(userId, templateId, data) {
       assignedToName: data.assignedToName
     });
   } catch (error) {
-    console.error('❌ Erreur createChecklistFromTemplate:', error);
+    console.error('âŒ Erreur createChecklistFromTemplate:', error);
     return null;
   }
 }
 
 /**
- * Générer automatiquement des checklists pour une réservation
+ * GÃ©nÃ©rer automatiquement des checklists pour une rÃ©servation
  */
 async function generateChecklistsForReservation(userId, reservationUid) {
   try {
-    // Récupérer la réservation
+    // RÃ©cupÃ©rer la rÃ©servation
     const reservation = await pool.query(
       'SELECT * FROM reservations WHERE uid = $1 AND user_id = $2',
       [reservationUid, userId]
     );
 
     if (reservation.rows.length === 0) {
-      throw new Error('Réservation introuvable');
+      throw new Error('RÃ©servation introuvable');
     }
 
     const res = reservation.rows[0];
     
     const checklists = [];
 
-    // Checklist d'arrivée (J-1)
+    // Checklist d'arrivÃ©e (J-1)
     const arrivalDueDate = new Date(res.start_date);
     arrivalDueDate.setDate(arrivalDueDate.getDate() - 1);
 
@@ -2817,46 +2813,46 @@ async function generateChecklistsForReservation(userId, reservationUid) {
       propertyId: res.property_id,
       reservationUid,
       checklistType: 'arrival',
-      title: `Préparation arrivée - ${res.guest_name || 'Client'}`,
+      title: `PrÃ©paration arrivÃ©e - ${res.guest_name || 'Client'}`,
       tasks: [
-        { id: 'task_1', title: 'Vérifier le ménage', completed: false },
-        { id: 'task_2', title: 'Vérifier les équipements', completed: false },
-        { id: 'task_3', title: 'Préparer les clés/accès', completed: false },
-        { id: 'task_4', title: 'Vérifier les consommables', completed: false }
+        { id: 'task_1', title: 'VÃ©rifier le mÃ©nage', completed: false },
+        { id: 'task_2', title: 'VÃ©rifier les Ã©quipements', completed: false },
+        { id: 'task_3', title: 'PrÃ©parer les clÃ©s/accÃ¨s', completed: false },
+        { id: 'task_4', title: 'VÃ©rifier les consommables', completed: false }
       ],
       dueDate: arrivalDueDate
     });
 
     if (arrivalChecklist) checklists.push(arrivalChecklist);
 
-    // Checklist de départ (jour du départ)
+    // Checklist de dÃ©part (jour du dÃ©part)
     const departureChecklist = await createChecklist(userId, {
       propertyId: res.property_id,
       reservationUid,
       checklistType: 'departure',
-      title: `Contrôle départ - ${res.guest_name || 'Client'}`,
+      title: `ContrÃ´le dÃ©part - ${res.guest_name || 'Client'}`,
       tasks: [
-        { id: 'task_1', title: 'État des lieux', completed: false },
-        { id: 'task_2', title: 'Vérifier les dégâts éventuels', completed: false },
-        { id: 'task_3', title: 'Récupérer les clés', completed: false },
-        { id: 'task_4', title: 'Photos de l\'état', completed: false }
+        { id: 'task_1', title: 'Ã‰tat des lieux', completed: false },
+        { id: 'task_2', title: 'VÃ©rifier les dÃ©gÃ¢ts Ã©ventuels', completed: false },
+        { id: 'task_3', title: 'RÃ©cupÃ©rer les clÃ©s', completed: false },
+        { id: 'task_4', title: 'Photos de l\'Ã©tat', completed: false }
       ],
       dueDate: new Date(res.end_date)
     });
 
     if (departureChecklist) checklists.push(departureChecklist);
 
-    console.log(`✅ ${checklists.length} checklists générées pour ${reservationUid}`);
+    console.log(`âœ… ${checklists.length} checklists gÃ©nÃ©rÃ©es pour ${reservationUid}`);
     return checklists;
   } catch (error) {
-    console.error('❌ Erreur generateChecklistsForReservation:', error);
+    console.error('âŒ Erreur generateChecklistsForReservation:', error);
     return [];
   }
 }
 
 async function syncAllCalendars() {
-  console.log('ðŸ”„ DÃ©marrage de la synchronisation iCal...');
-  const isFirstSync = !reservationsStore.lastSync; // premiÃ¨re sync depuis le dÃ©marrage ?
+  console.log('Ã°Å¸â€â€ž DÃƒÂ©marrage de la synchronisation iCal...');
+  const isFirstSync = !reservationsStore.lastSync; // premiÃƒÂ¨re sync depuis le dÃƒÂ©marrage ?
   reservationsStore.syncStatus = 'syncing';
 
   const newReservations = [];
@@ -2864,17 +2860,17 @@ async function syncAllCalendars() {
 
   for (const property of PROPERTIES) {
     if (!property.icalUrls || property.icalUrls.length === 0) {
-      console.log(`âš ï¸  Aucune URL iCal configurÃ©e pour ${property.name}`);
+      console.log(`Ã¢Å¡Â Ã¯Â¸Â  Aucune URL iCal configurÃƒÂ©e pour ${property.name}`);
       continue;
     }
 
     try {
       const reservations = await icalService.fetchReservations(property);
 
-      // Ancien Ã©tat (iCal + manuelles) :
+      // Ancien ÃƒÂ©tat (iCal + manuelles) :
       const previousAllReservations = reservationsStore.properties[property.id] || [];
 
-      // On ne regarde que les rÃ©sas iCal (pas les manuelles ni les blocages)
+      // On ne regarde que les rÃƒÂ©sas iCal (pas les manuelles ni les blocages)
       const oldIcalReservations = previousAllReservations.filter(r =>
         r &&
         r.uid &&
@@ -2889,10 +2885,10 @@ async function syncAllCalendars() {
       const oldIds = new Set(oldIcalReservations.map(r => r.uid));
       const newIds = new Set(newIcalReservations.map(r => r.uid));
 
-      // âž• Nouvelles rÃ©servations (prÃ©sentes dans new mais pas dans old)
+      // Ã¢Å¾â€¢ Nouvelles rÃƒÂ©servations (prÃƒÂ©sentes dans new mais pas dans old)
       const trulyNewReservations = newIcalReservations.filter(r => !oldIds.has(r.uid));
 
-      // âž– RÃ©servations annulÃ©es (prÃ©sentes dans old mais plus dans new)
+      // Ã¢Å¾â€“ RÃƒÂ©servations annulÃƒÂ©es (prÃƒÂ©sentes dans old mais plus dans new)
       const cancelledForProperty = oldIcalReservations.filter(r => !newIds.has(r.uid));
 
       if (trulyNewReservations.length > 0) {
@@ -2922,7 +2918,7 @@ async function syncAllCalendars() {
       // Base = iCal
       reservationsStore.properties[property.id] = newIcalReservations;
 
-      // Ajouter les rÃ©servations manuelles (y compris blocages)
+      // Ajouter les rÃƒÂ©servations manuelles (y compris blocages)
       const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
       if (manualForProperty.length > 0) {
         reservationsStore.properties[property.id] = [
@@ -2932,78 +2928,78 @@ async function syncAllCalendars() {
       }
 
       console.log(
-        `âœ… ${property.name}: ${reservationsStore.properties[property.id].length} ` +
-        `rÃ©servations (iCal + manuelles)`
+        `Ã¢Å“â€¦ ${property.name}: ${reservationsStore.properties[property.id].length} ` +
+        `rÃƒÂ©servations (iCal + manuelles)`
       );
     } catch (error) {
-      console.error(`âŒ Erreur lors de la synchronisation de ${property.name}:`, error.message);
+      console.error(`Ã¢ÂÅ’ Erreur lors de la synchronisation de ${property.name}:`, error.message);
     }
   }
 
   reservationsStore.lastSync = new Date();
   reservationsStore.syncStatus = 'idle';
 
-  // ðŸ”” Notifications : nouvelles + annulations (sauf premiÃ¨re sync pour Ã©viter le spam massif)
+  // Ã°Å¸â€â€ Notifications : nouvelles + annulations (sauf premiÃƒÂ¨re sync pour ÃƒÂ©viter le spam massif)
   if (!isFirstSync && (newReservations.length > 0 || cancelledReservations.length > 0)) {
     console.log(
-      `ðŸ“§ Notifications Ã  envoyer â€“ nouvelles: ${newReservations.length}, annulÃ©es: ${cancelledReservations.length}`
+      `Ã°Å¸â€œÂ§ Notifications ÃƒÂ  envoyer Ã¢â‚¬â€œ nouvelles: ${newReservations.length}, annulÃƒÂ©es: ${cancelledReservations.length}`
     );
     try {
       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
     } catch (err) {
-      console.error('âŒ Erreur lors de lâ€™envoi des notifications propriÃ©taires:', err);
+      console.error('Ã¢ÂÅ’ Erreur lors de lÃ¢â‚¬â„¢envoi des notifications propriÃƒÂ©taires:', err);
     }
 
     if (newReservations.length > 0) {
       try {
         await notifyCleanersAboutNewBookings(newReservations);
       } catch (err) {
-        console.error('âŒ Erreur lors de lâ€™envoi des notifications mÃ©nage:', err);
+        console.error('Ã¢ÂÅ’ Erreur lors de lÃ¢â‚¬â„¢envoi des notifications mÃƒÂ©nage:', err);
       }
     }
   } else if (isFirstSync) {
-    console.log('â„¹ï¸ PremiÃ¨re synchronisation : aucune notification envoyÃ©e pour Ã©viter les doublons.');
+    console.log('Ã¢â€žÂ¹Ã¯Â¸Â PremiÃƒÂ¨re synchronisation : aucune notification envoyÃƒÂ©e pour ÃƒÂ©viter les doublons.');
   }
 
-  console.log('âœ… Synchronisation terminÃ©e');
+  console.log('Ã¢Å“â€¦ Synchronisation terminÃƒÂ©e');
   return reservationsStore;
 }
 // ============================================
-// ROUTE DE TEST WHATSAPP AMÃ‰LIORÃ‰E
+// ROUTE DE TEST WHATSAPP AMÃƒâ€°LIORÃƒâ€°E
 // ============================================
 
 app.get('/api/test-whatsapp', async (req, res) => {
   try {
-    console.log('ðŸ§ª Test WhatsApp demandÃ©');
+    console.log('Ã°Å¸Â§Âª Test WhatsApp demandÃƒÂ©');
     
-    // VÃ©rifier si le service est configurÃ©
-    console.log('   - Service configurÃ©:', isConfigured);
+    // VÃƒÂ©rifier si le service est configurÃƒÂ©
+    console.log('   - Service configurÃƒÂ©:', isConfigured);
     
     if (!isConfigured) {
       return res.status(500).json({ 
         ok: false, 
-        error: 'Service WhatsApp non configurÃ©. VÃ©rifiez WHATSAPP_API_KEY et WHATSAPP_PHONE_ID' 
+        error: 'Service WhatsApp non configurÃƒÂ©. VÃƒÂ©rifiez WHATSAPP_API_KEY et WHATSAPP_PHONE_ID' 
       });
     }
     
-    // Utiliser le numÃ©ro passÃ© en paramÃ¨tre ou un numÃ©ro par dÃ©faut
+    // Utiliser le numÃƒÂ©ro passÃƒÂ© en paramÃƒÂ¨tre ou un numÃƒÂ©ro par dÃƒÂ©faut
     const testNumber = req.query.number || '+33680559925'; // 
-    const testMessage = req.query.message || 'Test WhatsApp Boostinghost âœ…';
+    const testMessage = req.query.message || 'Test WhatsApp Boostinghost Ã¢Å“â€¦';
     
-    console.log(`   - Envoi Ã : ${testNumber}`);
+    console.log(`   - Envoi ÃƒÂ : ${testNumber}`);
     console.log(`   - Message: ${testMessage}`);
     
     
-    console.log('âœ… WhatsApp envoyÃ© avec succÃ¨s:', result);
+    console.log('Ã¢Å“â€¦ WhatsApp envoyÃƒÂ© avec succÃƒÂ¨s:', result);
     
     res.json({ 
       ok: true, 
-      message: 'WhatsApp envoyÃ© avec succÃ¨s',
+      message: 'WhatsApp envoyÃƒÂ© avec succÃƒÂ¨s',
       to: testNumber,
       result: result
     });
   } catch (err) {
-    console.error('âŒ Erreur /api/test-whatsapp :', err);
+    console.error('Ã¢ÂÅ’ Erreur /api/test-whatsapp :', err);
     res.status(500).json({ 
       ok: false,
       error: err.message,
@@ -3012,17 +3008,17 @@ app.get('/api/test-whatsapp', async (req, res) => {
   }
 });
 
-// Route pour tester avec l'utilisateur connectÃ©
+// Route pour tester avec l'utilisateur connectÃƒÂ©
 app.get('/api/test-whatsapp-user', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
-    console.log(`ðŸ§ª Test WhatsApp pour user ${user.id}`);
+    console.log(`Ã°Å¸Â§Âª Test WhatsApp pour user ${user.id}`);
     
-    // RÃ©cupÃ©rer les settings de l'utilisateur
+    // RÃƒÂ©cupÃƒÂ©rer les settings de l'utilisateur
     const settings = await getNotificationSettings(user.id);
     
     console.log('   - Settings utilisateur:', JSON.stringify(settings, null, 2));
@@ -3030,32 +3026,32 @@ app.get('/api/test-whatsapp-user', async (req, res) => {
     if (!settings.whatsappEnabled) {
       return res.json({ 
         ok: false, 
-        message: 'WhatsApp dÃ©sactivÃ© dans vos prÃ©fÃ©rences' 
+        message: 'WhatsApp dÃƒÂ©sactivÃƒÂ© dans vos prÃƒÂ©fÃƒÂ©rences' 
       });
     }
     
     if (!settings.whatsappNumber) {
       return res.json({ 
         ok: false, 
-        message: 'Aucun numÃ©ro WhatsApp configurÃ© dans vos prÃ©fÃ©rences' 
+        message: 'Aucun numÃƒÂ©ro WhatsApp configurÃƒÂ© dans vos prÃƒÂ©fÃƒÂ©rences' 
       });
     }
     
-    const testMessage = `Test notification Boostinghost âœ…\n\nCeci est un message de test envoyÃ© Ã  ${new Date().toLocaleString('fr-FR')}`;
+    const testMessage = `Test notification Boostinghost Ã¢Å“â€¦\n\nCeci est un message de test envoyÃƒÂ© ÃƒÂ  ${new Date().toLocaleString('fr-FR')}`;
     
-    console.log(`   - Envoi Ã : ${settings.whatsappNumber}`);
+    console.log(`   - Envoi ÃƒÂ : ${settings.whatsappNumber}`);
     
     
-    console.log('âœ… Test WhatsApp envoyÃ© avec succÃ¨s');
+    console.log('Ã¢Å“â€¦ Test WhatsApp envoyÃƒÂ© avec succÃƒÂ¨s');
     
     res.json({ 
       ok: true, 
-      message: 'Message WhatsApp envoyÃ© avec succÃ¨s Ã  votre numÃ©ro',
+      message: 'Message WhatsApp envoyÃƒÂ© avec succÃƒÂ¨s ÃƒÂ  votre numÃƒÂ©ro',
       to: settings.whatsappNumber
     });
     
   } catch (err) {
-    console.error('âŒ Erreur /api/test-whatsapp-user :', err);
+    console.error('Ã¢ÂÅ’ Erreur /api/test-whatsapp-user :', err);
     res.status(500).json({ 
       ok: false,
       error: err.message 
@@ -3064,7 +3060,7 @@ app.get('/api/test-whatsapp-user', async (req, res) => {
 });
 
 // ============================================
-// TEST CONNEXION BASE DE DONNÃ‰ES
+// TEST CONNEXION BASE DE DONNÃƒâ€°ES
 // ============================================
 
 app.get('/api/test-db', async (req, res) => {
@@ -3078,7 +3074,7 @@ app.get('/api/test-db', async (req, res) => {
     console.error('Erreur DB :', err);
     res.status(500).json({
       ok: false,
-      error: 'Erreur de connexion Ã  la base'
+      error: 'Erreur de connexion ÃƒÂ  la base'
     });
   }
 });
@@ -3099,7 +3095,7 @@ app.get('/api/debug-users', async (req, res) => {
   } catch (err) {
     console.error('Erreur debug users :', err);
     res.status(500).json({
-      error: 'Erreur lors de la rÃ©cupÃ©ration des utilisateurs'
+      error: 'Erreur lors de la rÃƒÂ©cupÃƒÂ©ration des utilisateurs'
     });
   }
 });
@@ -3109,20 +3105,20 @@ app.get('/api/debug-users', async (req, res) => {
 // ============================================
 // ============================================
 // ENDPOINT /api/reservations/manual
-// (appelÃ© par le frontend)
+// (appelÃƒÂ© par le frontend)
 // ============================================
 
 app.post('/api/reservations/manual', async (req, res) => {
-  console.log('ðŸ“ /api/reservations/manual appelÃ©');
+  console.log('Ã°Å¸â€œÂ /api/reservations/manual appelÃƒÂ©');
   
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId, start, end, guestName, notes } = req.body;
-    console.log('ðŸ“¦ DonnÃ©es reÃ§ues:', { propertyId, start, end, guestName });
+    console.log('Ã°Å¸â€œÂ¦ DonnÃƒÂ©es reÃƒÂ§ues:', { propertyId, start, end, guestName });
 
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
@@ -3130,10 +3126,10 @@ app.post('/api/reservations/manual', async (req, res) => {
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      console.log('âŒ Logement non trouvÃ©:', propertyId);
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      console.log('Ã¢ÂÅ’ Logement non trouvÃƒÂ©:', propertyId);
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
-    console.log('âœ… Logement trouvÃ©:', property.name);
+    console.log('Ã¢Å“â€¦ Logement trouvÃƒÂ©:', property.name);
 
     const uid = 'manual_' + Date.now();
     const reservation = {
@@ -3143,7 +3139,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       source: 'MANUEL',
       platform: 'MANUEL',
       type: 'manual',
-      guestName: guestName || 'RÃ©servation manuelle',
+      guestName: guestName || 'RÃƒÂ©servation manuelle',
       notes: notes || '',
       createdAt: new Date().toISOString(),
       propertyId: property.id,
@@ -3151,7 +3147,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       propertyColor: property.color || '#3b82f6',
       userId: user.id
     };
-    console.log('âœ… RÃ©servation crÃ©Ã©e:', uid);
+    console.log('Ã¢Å“â€¦ RÃƒÂ©servation crÃƒÂ©ÃƒÂ©e:', uid);
 
     // Sauvegarde
     if (!MANUAL_RESERVATIONS[propertyId]) {
@@ -3168,44 +3164,44 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
     reservationsStore.properties[propertyId].push(reservation);
 
-    // RÃ©ponse au client AVANT les notifications
+    // RÃƒÂ©ponse au client AVANT les notifications
     res.status(201).json({
-      message: 'RÃ©servation manuelle crÃ©Ã©e',
+      message: 'RÃƒÂ©servation manuelle crÃƒÂ©ÃƒÂ©e',
       reservation: reservation
     });
-    console.log('âœ… RÃ©ponse envoyÃ©e au client');
+    console.log('Ã¢Å“â€¦ RÃƒÂ©ponse envoyÃƒÂ©e au client');
 
-    // Notifications en arriÃ¨re-plan
+    // Notifications en arriÃƒÂ¨re-plan
     setImmediate(async () => {
       try {
-        console.log('ðŸ“§ Envoi des notifications...');
+        console.log('Ã°Å¸â€œÂ§ Envoi des notifications...');
         
         if (typeof notifyOwnersAboutBookings === 'function') {
           await notifyOwnersAboutBookings([reservation], []);
-          console.log('âœ… Notification propriÃ©taire envoyÃ©e');
+          console.log('Ã¢Å“â€¦ Notification propriÃƒÂ©taire envoyÃƒÂ©e');
         }
         
         if (typeof notifyCleanersAboutNewBookings === 'function') {
           await notifyCleanersAboutNewBookings([reservation]);
-          console.log('âœ… Notification cleaners envoyÃ©e');
+          console.log('Ã¢Å“â€¦ Notification cleaners envoyÃƒÂ©e');
         }
       } catch (notifErr) {
-        console.error('âš ï¸  Erreur notifications:', notifErr.message);
+        console.error('Ã¢Å¡Â Ã¯Â¸Â  Erreur notifications:', notifErr.message);
       }
     });
 
   } catch (err) {
-    console.error('âŒ Erreur /api/reservations/manual:', err);
+    console.error('Ã¢ÂÅ’ Erreur /api/reservations/manual:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }
 });
-// GET - Toutes les rÃ©servations du user
+// GET - Toutes les rÃƒÂ©servations du user
 app.get('/api/reservations', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const allReservations = [];
@@ -3238,53 +3234,53 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
   });
 });
 
-// POST - CrÃ©er une rÃ©servation manuelle
+// POST - CrÃƒÂ©er une rÃƒÂ©servation manuelle
 app.post('/api/bookings', async (req, res) => {
-  console.log('ðŸ“ Nouvelle demande de crÃ©ation de rÃ©servation');
+  console.log('Ã°Å¸â€œÂ Nouvelle demande de crÃƒÂ©ation de rÃƒÂ©servation');
   
   try {
-    // 1. VÃ‰RIFICATION AUTHENTIFICATION
+    // 1. VÃƒâ€°RIFICATION AUTHENTIFICATION
     const user = await getUserFromRequest(req);
     if (!user) {
-      console.log('âŒ Utilisateur non authentifiÃ©');
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      console.log('Ã¢ÂÅ’ Utilisateur non authentifiÃƒÂ©');
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
-    console.log('âœ… Utilisateur authentifiÃ©:', user.id);
+    console.log('Ã¢Å“â€¦ Utilisateur authentifiÃƒÂ©:', user.id);
     
-    // 2. EXTRACTION ET VALIDATION DES DONNÃ‰ES
+    // 2. EXTRACTION ET VALIDATION DES DONNÃƒâ€°ES
     const { propertyId, checkIn, checkOut, guestName, platform, price } = req.body || {};
-    console.log('ðŸ“¦ DonnÃ©es reÃ§ues:', { propertyId, checkIn, checkOut, guestName, platform, price });
+    console.log('Ã°Å¸â€œÂ¦ DonnÃƒÂ©es reÃƒÂ§ues:', { propertyId, checkIn, checkOut, guestName, platform, price });
     
     if (!propertyId) {
-      console.log('âŒ propertyId manquant');
+      console.log('Ã¢ÂÅ’ propertyId manquant');
       return res.status(400).json({ error: 'propertyId est requis' });
     }
     if (!checkIn) {
-      console.log('âŒ checkIn manquant');
+      console.log('Ã¢ÂÅ’ checkIn manquant');
       return res.status(400).json({ error: 'checkIn est requis' });
     }
     if (!checkOut) {
-      console.log('âŒ checkOut manquant');
+      console.log('Ã¢ÂÅ’ checkOut manquant');
       return res.status(400).json({ error: 'checkOut est requis' });
     }
     
-    // 3. VÃ‰RIFICATION DU LOGEMENT
+    // 3. VÃƒâ€°RIFICATION DU LOGEMENT
     if (!Array.isArray(PROPERTIES)) {
-      console.error('âŒ PROPERTIES n\'est pas un tableau');
+      console.error('Ã¢ÂÅ’ PROPERTIES n\'est pas un tableau');
       return res.status(500).json({ error: 'Erreur de configuration serveur (PROPERTIES)' });
     }
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      console.log('âŒ Logement non trouvÃ©:', propertyId);
-      console.log('ðŸ“‹ Logements disponibles pour cet utilisateur:', 
+      console.log('Ã¢ÂÅ’ Logement non trouvÃƒÂ©:', propertyId);
+      console.log('Ã°Å¸â€œâ€¹ Logements disponibles pour cet utilisateur:', 
         PROPERTIES.filter(p => p.userId === user.id).map(p => ({ id: p.id, name: p.name }))
       );
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
-    console.log('âœ… Logement trouvÃ©:', property.name);
+    console.log('Ã¢Å“â€¦ Logement trouvÃƒÂ©:', property.name);
     
-    // 4. CRÃ‰ATION DE LA RÃ‰SERVATION
+    // 4. CRÃƒâ€°ATION DE LA RÃƒâ€°SERVATION
     const uid = 'manual_' + Date.now();
     const reservation = {
       uid: uid,
@@ -3293,21 +3289,21 @@ app.post('/api/bookings', async (req, res) => {
       source: platform || 'MANUEL',
       platform: platform || 'direct',
       type: 'manual',
-      guestName: guestName || 'RÃ©servation manuelle',
+      guestName: guestName || 'RÃƒÂ©servation manuelle',
       price: typeof price === 'number' ? price : 0,
       createdAt: new Date().toISOString(),
-      // DonnÃ©es supplÃ©mentaires pour les notifications
+      // DonnÃƒÂ©es supplÃƒÂ©mentaires pour les notifications
       propertyId: property.id,
       propertyName: property.name,
       propertyColor: property.color || '#3b82f6',
       userId: user.id
     };
-    console.log('âœ… RÃ©servation crÃ©Ã©e:', uid);
+    console.log('Ã¢Å“â€¦ RÃƒÂ©servation crÃƒÂ©ÃƒÂ©e:', uid);
     
     // 5. SAUVEGARDE DANS MANUAL_RESERVATIONS
     try {
       if (typeof MANUAL_RESERVATIONS === 'undefined') {
-        console.log('âš ï¸  MANUAL_RESERVATIONS non dÃ©fini, initialisation');
+        console.log('Ã¢Å¡Â Ã¯Â¸Â  MANUAL_RESERVATIONS non dÃƒÂ©fini, initialisation');
         global.MANUAL_RESERVATIONS = {};
       }
       
@@ -3319,20 +3315,20 @@ MANUAL_RESERVATIONS[propertyId].push(reservation);
 // Sauvegarde sur disque (si la fonction existe)
 if (typeof saveManualReservations === 'function') {
   await saveManualReservations();
-  console.log('✅ Sauvegarde MANUAL_RESERVATIONS OK');
+  console.log('âœ… Sauvegarde MANUAL_RESERVATIONS OK');
 } else {
-  console.log('⚠️  Fonction saveManualReservations non trouvée');
+  console.log('âš ï¸  Fonction saveManualReservations non trouvÃ©e');
 }
 } catch (saveErr) {
-  console.error('⚠️  Erreur sauvegarde MANUAL_RESERVATIONS:', saveErr);
-  // On continue quand même
+  console.error('âš ï¸  Erreur sauvegarde MANUAL_RESERVATIONS:', saveErr);
+  // On continue quand mÃªme
 }
-    // DELETE - Supprimer une réservation
+    // DELETE - Supprimer une rÃ©servation
 app.delete('/api/bookings/:uid', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { uid } = req.params;
@@ -3345,16 +3341,16 @@ app.delete('/api/bookings/:uid', async (req, res) => {
 
     await loadReservationsFromDB();
     
-    res.json({ message: 'Réservation supprimée avec succès' });
+    res.json({ message: 'RÃ©servation supprimÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur DELETE /api/bookings:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-    // 6. AJOUT AU STORE DES RÃ‰SERVATIONS
+    // 6. AJOUT AU STORE DES RÃƒâ€°SERVATIONS
     try {
       if (typeof reservationsStore === 'undefined') {
-        console.log('âš ï¸  reservationsStore non dÃ©fini, initialisation');
+        console.log('Ã¢Å¡Â Ã¯Â¸Â  reservationsStore non dÃƒÂ©fini, initialisation');
         global.reservationsStore = { properties: {} };
       }
       
@@ -3366,13 +3362,13 @@ app.delete('/api/bookings/:uid', async (req, res) => {
         reservationsStore.properties[propertyId] = [];
       }
       reservationsStore.properties[propertyId].push(reservation);
-      console.log('âœ… Ajout au reservationsStore OK');
+      console.log('Ã¢Å“â€¦ Ajout au reservationsStore OK');
     } catch (storeErr) {
-      console.error('âš ï¸  Erreur ajout au reservationsStore:', storeErr);
-      // On continue quand mÃªme
+      console.error('Ã¢Å¡Â Ã¯Â¸Â  Erreur ajout au reservationsStore:', storeErr);
+      // On continue quand mÃƒÂªme
     }
     
-    // 7. PRÃ‰PARATION DE LA RÃ‰PONSE
+    // 7. PRÃƒâ€°PARATION DE LA RÃƒâ€°PONSE
     const bookingForClient = {
       id: reservation.uid,
       propertyId: property.id,
@@ -3386,46 +3382,46 @@ app.delete('/api/bookings/:uid', async (req, res) => {
       type: reservation.type
     };
     
-    // 8. ENVOI DE LA RÃ‰PONSE (AVANT LES NOTIFICATIONS)
-    console.log('âœ… RÃ©servation crÃ©Ã©e avec succÃ¨s, envoi de la rÃ©ponse');
+    // 8. ENVOI DE LA RÃƒâ€°PONSE (AVANT LES NOTIFICATIONS)
+    console.log('Ã¢Å“â€¦ RÃƒÂ©servation crÃƒÂ©ÃƒÂ©e avec succÃƒÂ¨s, envoi de la rÃƒÂ©ponse');
     res.status(201).json(bookingForClient);
     
-    // 9. NOTIFICATIONS EN ARRIÃˆRE-PLAN (aprÃ¨s avoir rÃ©pondu au client)
+    // 9. NOTIFICATIONS EN ARRIÃƒË†RE-PLAN (aprÃƒÂ¨s avoir rÃƒÂ©pondu au client)
     setImmediate(async () => {
       try {
-        console.log('ðŸ“§ Tentative d\'envoi des notifications...');
+        console.log('Ã°Å¸â€œÂ§ Tentative d\'envoi des notifications...');
         
-        // VÃ©rifier que les fonctions de notification existent
+        // VÃƒÂ©rifier que les fonctions de notification existent
         if (typeof notifyOwnersAboutBookings === 'function') {
           await notifyOwnersAboutBookings([reservation], []);
-          console.log('âœ… Notification propriÃ©taire envoyÃ©e');
+          console.log('Ã¢Å“â€¦ Notification propriÃƒÂ©taire envoyÃƒÂ©e');
         } else {
-          console.log('âš ï¸  Fonction notifyOwnersAboutBookings non trouvÃ©e');
+          console.log('Ã¢Å¡Â Ã¯Â¸Â  Fonction notifyOwnersAboutBookings non trouvÃƒÂ©e');
         }
         
         if (typeof notifyCleanersAboutNewBookings === 'function') {
           await notifyCleanersAboutNewBookings([reservation]);
-          console.log('âœ… Notification cleaners envoyÃ©e');
+          console.log('Ã¢Å“â€¦ Notification cleaners envoyÃƒÂ©e');
         } else {
-          console.log('âš ï¸  Fonction notifyCleanersAboutNewBookings non trouvÃ©e');
+          console.log('Ã¢Å¡Â Ã¯Â¸Â  Fonction notifyCleanersAboutNewBookings non trouvÃƒÂ©e');
         }
         
-        console.log('âœ… Notifications traitÃ©es');
+        console.log('Ã¢Å“â€¦ Notifications traitÃƒÂ©es');
       } catch (notifErr) {
-        console.error('âš ï¸  Erreur lors de l\'envoi des notifications (rÃ©servation crÃ©Ã©e quand mÃªme):', notifErr.message);
+        console.error('Ã¢Å¡Â Ã¯Â¸Â  Erreur lors de l\'envoi des notifications (rÃƒÂ©servation crÃƒÂ©ÃƒÂ©e quand mÃƒÂªme):', notifErr.message);
         console.error('Stack:', notifErr.stack);
       }
     });
     
   } catch (err) {
-    console.error('âŒ ERREUR CRITIQUE POST /api/bookings:', err);
+    console.error('Ã¢ÂÅ’ ERREUR CRITIQUE POST /api/bookings:', err);
     console.error('Message:', err.message);
     console.error('Stack:', err.stack);
     
-    // Si on n'a pas encore envoyÃ© de rÃ©ponse
+    // Si on n'a pas encore envoyÃƒÂ© de rÃƒÂ©ponse
     if (!res.headersSent) {
       res.status(500).json({ 
-        error: 'Erreur serveur lors de la crÃ©ation de la rÃ©servation',
+        error: 'Erreur serveur lors de la crÃƒÂ©ation de la rÃƒÂ©servation',
         message: err.message,
         details: process.env.NODE_ENV === 'development' ? err.stack : undefined
       });
@@ -3433,12 +3429,12 @@ app.delete('/api/bookings/:uid', async (req, res) => {
   }
 });
 
-// POST - CrÃ©er un blocage manuel (dates bloquÃ©es)
+// POST - CrÃƒÂ©er un blocage manuel (dates bloquÃƒÂ©es)
 app.post('/api/blocks', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId, start, end, reason } = req.body || {};
@@ -3449,7 +3445,7 @@ app.post('/api/blocks', async (req, res) => {
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
 
     const block = {
@@ -3477,27 +3473,27 @@ app.post('/api/blocks', async (req, res) => {
     reservationsStore.properties[propertyId].push(block);
 
     res.status(201).json({
-      message: 'Blocage crÃ©Ã©',
+      message: 'Blocage crÃƒÂ©ÃƒÂ©',
       block
     });
   } catch (err) {
-    console.error('Erreur crÃ©ation blocage:', err);
+    console.error('Erreur crÃƒÂ©ation blocage:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// GET - RÃ©servations dâ€™un logement
+// GET - RÃƒÂ©servations dÃ¢â‚¬â„¢un logement
 app.get('/api/reservations/:propertyId', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const { propertyId } = req.params;
   const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
 
   if (!property) {
-    return res.status(404).json({ error: 'Logement non trouvÃ©' });
+    return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
   }
 
   const reservations = reservationsStore.properties[propertyId] || [];
@@ -3513,7 +3509,7 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   });
 });
 function parsePropertyBody(req) {
-  // âœ… FormData simple : les champs sont directement dans req.body
+  // Ã¢Å“â€¦ FormData simple : les champs sont directement dans req.body
   const body = req.body || {};
   
   // Si icalUrls est une string JSON, la parser
@@ -3540,24 +3536,24 @@ async function uploadPhotoToCloudinary(file) {
       .replace(/(^-|-$)+/g, '');
     
     const cloudinaryUrl = await uploadToCloudinary(file.buffer, filename);
-    console.log('âœ… Image uploadÃ©e vers Cloudinary:', cloudinaryUrl);
+    console.log('Ã¢Å“â€¦ Image uploadÃƒÂ©e vers Cloudinary:', cloudinaryUrl);
     return cloudinaryUrl;
   } catch (error) {
-    console.error('âŒ Erreur upload Cloudinary:', error);
+    console.error('Ã¢ÂÅ’ Erreur upload Cloudinary:', error);
     throw error;
   }
 }
 
 // ============================================
-// ROUTES API - PROFIL UTILISATEUR Ã‰TENDU
+// ROUTES API - PROFIL UTILISATEUR Ãƒâ€°TENDU
 // ============================================
-// Ã€ ajouter dans server.js aprÃ¨s les routes existantes
+// Ãƒâ‚¬ ajouter dans server.js aprÃƒÂ¨s les routes existantes
 
 app.get('/api/user/profile', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const result = await pool.query(
@@ -3580,7 +3576,7 @@ app.get('/api/user/profile', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Utilisateur non trouvÃ©' });
+      return res.status(404).json({ error: 'Utilisateur non trouvÃƒÂ©' });
     }
 
     const row = result.rows[0];
@@ -3605,12 +3601,12 @@ app.get('/api/user/profile', async (req, res) => {
   }
 });
 
-// PUT - Mettre Ã  jour le profil complet de l'utilisateur
+// PUT - Mettre ÃƒÂ  jour le profil complet de l'utilisateur
 app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const {
@@ -3627,7 +3623,7 @@ app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
     // Validation du type de compte
     if (accountType && !['individual', 'business'].includes(accountType)) {
       return res.status(400).json({ 
-        error: 'Type de compte invalide. Doit Ãªtre "individual" ou "business"' 
+        error: 'Type de compte invalide. Doit ÃƒÂªtre "individual" ou "business"' 
       });
     }
 
@@ -3636,19 +3632,19 @@ app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
       const siretClean = siret.replace(/\s/g, '');
       if (siretClean.length !== 14 || !/^\d{14}$/.test(siretClean)) {
         return res.status(400).json({ 
-          error: 'Le numÃ©ro SIRET doit contenir exactement 14 chiffres' 
+          error: 'Le numÃƒÂ©ro SIRET doit contenir exactement 14 chiffres' 
         });
       }
     }
 
-    // GÃ©rer le logo uploadÃ©
+    // GÃƒÂ©rer le logo uploadÃƒÂ©
    // Upload du logo vers Cloudinary
 let logoUrl = null;
 if (req.file) {
   logoUrl = await uploadPhotoToCloudinary(req.file);
 }
 
-    // Mise Ã  jour dans la base de donnÃ©es
+    // Mise ÃƒÂ  jour dans la base de donnÃƒÂ©es
     const result = await pool.query(
       `UPDATE users 
        SET 
@@ -3689,19 +3685,19 @@ if (req.file) {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Utilisateur non trouvÃ©' });
+      return res.status(404).json({ error: 'Utilisateur non trouvÃƒÂ©' });
     }
 
     const updated = result.rows[0];
 
-    // Mettre Ã  jour le cache si utilisÃ©
+    // Mettre ÃƒÂ  jour le cache si utilisÃƒÂ©
     if (notificationUserCache.has(user.id)) {
       notificationUserCache.delete(user.id);
     }
 
     res.json({
       success: true,
-      message: 'Profil mis Ã  jour avec succÃ¨s',
+      message: 'Profil mis ÃƒÂ  jour avec succÃƒÂ¨s',
       profile: {
         id: updated.id,
         email: updated.email,
@@ -3718,11 +3714,11 @@ if (req.file) {
     });
 
   } catch (err) {
-    console.error('Erreur mise Ã  jour profil:', err);
+    console.error('Erreur mise ÃƒÂ  jour profil:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// Route pour vÃ©rifier le statut de l'abonnement
+// Route pour vÃƒÂ©rifier le statut de l'abonnement
 app.get('/api/subscription/status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -3740,7 +3736,7 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Aucun abonnement trouvÃ©' });
+      return res.status(404).json({ error: 'Aucun abonnement trouvÃƒÂ©' });
     }
 
     const sub = result.rows[0];
@@ -3754,24 +3750,24 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
       daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // âœ… AJOUTER LE PRIX
+    // Ã¢Å“â€¦ AJOUTER LE PRIX
     let planAmount = 0;
     if (sub.plan_type === 'basic') {
-      planAmount = 599; // 5,99â‚¬ en centimes
+      planAmount = 599; // 5,99Ã¢â€šÂ¬ en centimes
     } else if (sub.plan_type === 'pro') {
-      planAmount = 899; // 8,99â‚¬ en centimes
+      planAmount = 899; // 8,99Ã¢â€šÂ¬ en centimes
     }
 
-    // âœ… AJOUTER LE DISPLAY MESSAGE
+    // Ã¢Å“â€¦ AJOUTER LE DISPLAY MESSAGE
     let displayMessage = 'Abonnement';
     if (sub.status === 'trial') {
       displayMessage = 'Essai gratuit';
     } else if (sub.status === 'active') {
       displayMessage = sub.plan_type === 'pro' ? 'Abonnement Pro' : 'Abonnement Basic';
     } else if (sub.status === 'expired') {
-      displayMessage = 'Abonnement expirÃ©';
+      displayMessage = 'Abonnement expirÃƒÂ©';
     } else if (sub.status === 'canceled') {
-      displayMessage = 'Abonnement annulÃ©';
+      displayMessage = 'Abonnement annulÃƒÂ©';
     }
 
     res.json({
@@ -3795,7 +3791,7 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
 // ============================================
 
 /*
-// 1. RÃ©cupÃ©rer le profil au chargement
+// 1. RÃƒÂ©cupÃƒÂ©rer le profil au chargement
 fetch('/api/user/profile', {
   headers: {
     'Authorization': 'Bearer ' + token
@@ -3819,7 +3815,7 @@ fetch('/api/user/profile', {
   }
 });
 
-// 2. Mettre Ã  jour le profil lors de la sauvegarde
+// 2. Mettre ÃƒÂ  jour le profil lors de la sauvegarde
 fetch('/api/user/profile', {
   method: 'PUT',
   headers: {
@@ -3840,15 +3836,15 @@ fetch('/api/user/profile', {
 .then(res => res.json())
 .then(data => {
   if (data.success) {
-    alert('Profil mis Ã  jour avec succÃ¨s !');
+    alert('Profil mis ÃƒÂ  jour avec succÃƒÂ¨s !');
   } else {
     alert('Erreur : ' + data.error);
   }
 });
 */
 // ============================================
-// ROUTES API - BOOKINGS (alias pour rÃ©servations)
-// UtilisÃ© par le calendrier moderne (calendar-modern.js)
+// ROUTES API - BOOKINGS (alias pour rÃƒÂ©servations)
+// UtilisÃƒÂ© par le calendrier moderne (calendar-modern.js)
 // ============================================
 
 // GET - Liste des bookings pour l'utilisateur courant
@@ -3856,7 +3852,7 @@ app.get('/api/bookings', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const userProps = getUserProperties(user.id);
@@ -3901,12 +3897,12 @@ app.get('/api/bookings', async (req, res) => {
   }
 });
 
-// POST - CrÃ©er un booking manuel (alias de /api/reservations/manual)
+// POST - CrÃƒÂ©er un booking manuel (alias de /api/reservations/manual)
 app.post('/api/bookings', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId, checkIn, checkOut, guestName, platform, price } = req.body || {};
@@ -3917,7 +3913,7 @@ app.post('/api/bookings', async (req, res) => {
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
 
     const reservation = {
@@ -3927,7 +3923,7 @@ app.post('/api/bookings', async (req, res) => {
       source: platform || 'MANUEL',
       platform: platform || 'direct',
       type: 'manual',
-      guestName: guestName || 'RÃ©servation manuelle',
+      guestName: guestName || 'RÃƒÂ©servation manuelle',
       price: typeof price === 'number' ? price : 0,
       createdAt: new Date().toISOString()
     };
@@ -3967,12 +3963,12 @@ app.post('/api/bookings', async (req, res) => {
 app.post('/api/sync', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   if (reservationsStore.syncStatus === 'syncing') {
     return res.status(409).json({
-      error: 'Synchronisation dÃ©jÃ  en cours',
+      error: 'Synchronisation dÃƒÂ©jÃƒÂ  en cours',
       status: 'syncing'
     });
   }
@@ -3982,7 +3978,7 @@ app.post('/api/sync', async (req, res) => {
     const userProps = getUserProperties(user.id);
 
     res.json({
-      message: 'Synchronisation rÃ©ussie',
+      message: 'Synchronisation rÃƒÂ©ussie',
       lastSync: result.lastSync,
       properties: userProps.map(p => ({
         id: p.id,
@@ -4001,7 +3997,7 @@ app.post('/api/sync', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const stats = {
@@ -4046,7 +4042,7 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/availability/:propertyId', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const { propertyId } = req.params;
@@ -4054,7 +4050,7 @@ app.get('/api/availability/:propertyId', async (req, res) => {
 
   const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
   if (!property) {
-    return res.status(404).json({ error: 'Logement non trouvÃ©' });
+    return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
   }
 
   const reservations = reservationsStore.properties[propertyId] || [];
@@ -4078,11 +4074,11 @@ app.get('/api/availability/:propertyId', async (req, res) => {
   });
 });
 
-// GET - RÃ©servations avec infos de caution
+// GET - RÃƒÂ©servations avec infos de caution
 app.get('/api/reservations-with-deposits', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const result = [];
@@ -4116,14 +4112,14 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
   res.json(result);
 });
 // ============================================
-// ✅ GET - Réservations enrichies (risque + checklist + sous-scores)
+// âœ… GET - RÃ©servations enrichies (risque + checklist + sous-scores)
 // ============================================
 app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
-  if (!user) return res.status(401).json({ error: 'Non autorisé' });
+  if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
 
   try {
-    // Pré-calcul turnover par property
+    // PrÃ©-calcul turnover par property
     const turnoverByUid = new Map();
 
     const userProps = PROPERTIES.filter(p => p.userId === user.id);
@@ -4150,14 +4146,14 @@ app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async
         .filter(r => r && r.start && r.end && r.type !== 'block' && r.source !== 'BLOCK');
 
       for (const r of reservations) {
-        // ✅ Checklist V1 auto (lazy)
+        // âœ… Checklist V1 auto (lazy)
         const chk = ensureChecklistForReservation({
           reservationUid: r.uid,
           propertyId: property.id,
           userId: user.id
         });
 
-        // ✅ Deposit (Stripe) via DEPOSITS JSON
+        // âœ… Deposit (Stripe) via DEPOSITS JSON
         const dep = DEPOSITS.find(d => d.reservationUid === r.uid) || null;
 
         const channel = mapChannelFromReservation(r);
@@ -4202,7 +4198,7 @@ app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async
     // Tri : risque desc puis date
     result.sort((a, b) => (b.riskScore - a.riskScore) || (new Date(a.start) - new Date(b.start)));
 
-    // Persister checklists si de nouvelles ont été créées
+    // Persister checklists si de nouvelles ont Ã©tÃ© crÃ©Ã©es
     await saveChecklists();
 
     res.json({ reservations: result });
@@ -4213,19 +4209,19 @@ app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async
 });
 
 // ============================================
-// ✅ Checklists V1 - toggle task
+// âœ… Checklists V1 - toggle task
 // ============================================
 app.post('/api/checklists/:reservationUid/tasks/:taskId/toggle', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
-  if (!user) return res.status(401).json({ error: 'Non autorisé' });
+  if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
 
   const { reservationUid, taskId } = req.params;
   const chk = CHECKLISTS[reservationUid];
   if (!chk) return res.status(404).json({ error: 'Checklist introuvable' });
-  if (chk.userId !== user.id) return res.status(403).json({ error: 'Accès refusé' });
+  if (chk.userId !== user.id) return res.status(403).json({ error: 'AccÃ¨s refusÃ©' });
 
   const task = chk.tasks.find(t => t.id === taskId);
-  if (!task) return res.status(404).json({ error: 'Tâche introuvable' });
+  if (!task) return res.status(404).json({ error: 'TÃ¢che introuvable' });
 
   task.completed = !task.completed;
   chk.updatedAt = new Date().toISOString();
@@ -4237,15 +4233,15 @@ app.post('/api/checklists/:reservationUid/tasks/:taskId/toggle', authenticateUse
   res.json({ checklist: chk });
 });
 
-// ✅ Checklists V1 - complete all
+// âœ… Checklists V1 - complete all
 app.post('/api/checklists/:reservationUid/complete', authenticateUser, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
-  if (!user) return res.status(401).json({ error: 'Non autorisé' });
+  if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
 
   const { reservationUid } = req.params;
   const chk = CHECKLISTS[reservationUid];
   if (!chk) return res.status(404).json({ error: 'Checklist introuvable' });
-  if (chk.userId !== user.id) return res.status(403).json({ error: 'Accès refusé' });
+  if (chk.userId !== user.id) return res.status(403).json({ error: 'AccÃ¨s refusÃ©' });
 
   chk.tasks = chk.tasks.map(t => ({ ...t, completed: true }));
   chk.status = 'completed';
@@ -4257,13 +4253,13 @@ app.post('/api/checklists/:reservationUid/complete', authenticateUser, checkSubs
 
 
 // ============================================
-// ROUTES API - PARAMÃˆTRES NOTIFICATIONS (par user)
+// ROUTES API - PARAMÃƒË†TRES NOTIFICATIONS (par user)
 // ============================================
 
 app.get('/api/settings/notifications', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   try {
@@ -4278,7 +4274,7 @@ app.get('/api/settings/notifications', async (req, res) => {
 app.post('/api/settings/notifications', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
     try {
@@ -4297,7 +4293,7 @@ app.post('/api/settings/notifications', async (req, res) => {
     });
 
     res.json({
-      message: 'PrÃ©fÃ©rences de notifications mises Ã  jour',
+      message: 'PrÃƒÂ©fÃƒÂ©rences de notifications mises ÃƒÂ  jour',
       settings: saved,
     });
 
@@ -4330,7 +4326,7 @@ function formatDateTimeToICS(date) {
   return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
 }
 
-// ICS d'un logement : contient les rÃ©servations manuelles + blocages
+// ICS d'un logement : contient les rÃƒÂ©servations manuelles + blocages
 app.get('/ical/property/:propertyId.ics', async (req, res) => {
   try {
     const { propertyId } = req.params;
@@ -4341,7 +4337,7 @@ app.get('/ical/property/:propertyId.ics', async (req, res) => {
     }
 
     // On exporte uniquement ce qui est dans MANUAL_RESERVATIONS :
-    // - rÃ©servations manuelles (type: 'manual')
+    // - rÃƒÂ©servations manuelles (type: 'manual')
     // - blocages (type: 'block')
     const manual = MANUAL_RESERVATIONS[propertyId] || [];
 
@@ -4361,7 +4357,7 @@ app.get('/ical/property/:propertyId.ics', async (req, res) => {
       const summary =
         r.type === 'block' || r.source === 'BLOCK'
           ? 'Blocage Boostinghost'
-          : (r.guestName ? `RÃ©servation â€“ ${r.guestName}` : 'RÃ©servation Boostinghost');
+          : (r.guestName ? `RÃƒÂ©servation Ã¢â‚¬â€œ ${r.guestName}` : 'RÃƒÂ©servation Boostinghost');
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uid}`);
@@ -4383,14 +4379,14 @@ app.get('/ical/property/:propertyId.ics', async (req, res) => {
 });
 
 // ============================================
-// Fonction helper : GÃ©nÃ©rer un token de vÃ©rification
+// Fonction helper : GÃƒÂ©nÃƒÂ©rer un token de vÃƒÂ©rification
 // ============================================
 function generateVerificationToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
 // ============================================
-// Fonction helper : Envoyer l'email de vÃ©rification
+// Fonction helper : Envoyer l'email de vÃƒÂ©rification
 // ============================================
 async function sendVerificationEmail(email, firstName, token) {
   const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
@@ -4399,7 +4395,7 @@ async function sendVerificationEmail(email, firstName, token) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'âœ… VÃ©rifiez votre adresse email - Boostinghost',
+    subject: 'Ã¢Å“â€¦ VÃƒÂ©rifiez votre adresse email - Boostinghost',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4417,18 +4413,18 @@ async function sendVerificationEmail(email, firstName, token) {
       <body>
         <div class="container">
           <div class="header">
-            <h1>ðŸŽ‰ Bienvenue sur Boostinghost !</h1>
+            <h1>Ã°Å¸Å½â€° Bienvenue sur Boostinghost !</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName || 'nouveau membre'},</p>
             
-            <p>Merci de vous Ãªtre inscrit sur <strong>Boostinghost</strong> !</p>
+            <p>Merci de vous ÃƒÂªtre inscrit sur <strong>Boostinghost</strong> !</p>
             
-            <p>Pour activer votre compte et commencer Ã  utiliser notre plateforme de gestion de locations courte durÃ©e, veuillez vÃ©rifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
+            <p>Pour activer votre compte et commencer ÃƒÂ  utiliser notre plateforme de gestion de locations courte durÃƒÂ©e, veuillez vÃƒÂ©rifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
             
             <div style="text-align: center;">
               <a href="${verificationUrl}" class="button">
-                âœ… VÃ©rifier mon email
+                Ã¢Å“â€¦ VÃƒÂ©rifier mon email
               </a>
             </div>
             
@@ -4441,21 +4437,21 @@ async function sendVerificationEmail(email, firstName, token) {
               <strong>Ce lien est valide pendant 24 heures.</strong>
             </p>
             
-            <p>Une fois votre email vÃ©rifiÃ©, vous aurez accÃ¨s Ã  :</p>
+            <p>Une fois votre email vÃƒÂ©rifiÃƒÂ©, vous aurez accÃƒÂ¨s ÃƒÂ  :</p>
             <ul>
-              <li>âœ… Calendrier unifiÃ©</li>
-              <li>âœ… Synchronisation iCal (Airbnb, Booking)</li>
-              <li>âœ… Gestion des messages</li>
-              <li>âœ… Livret d'accueil personnalisÃ©</li>
-              <li>âœ… Gestion du mÃ©nage</li>
-              <li>âœ… Et bien plus encore !</li>
+              <li>Ã¢Å“â€¦ Calendrier unifiÃƒÂ©</li>
+              <li>Ã¢Å“â€¦ Synchronisation iCal (Airbnb, Booking)</li>
+              <li>Ã¢Å“â€¦ Gestion des messages</li>
+              <li>Ã¢Å“â€¦ Livret d'accueil personnalisÃƒÂ©</li>
+              <li>Ã¢Å“â€¦ Gestion du mÃƒÂ©nage</li>
+              <li>Ã¢Å“â€¦ Et bien plus encore !</li>
             </ul>
             
-            <p>Ã€ trÃ¨s bientÃ´t sur Boostinghost ! ðŸš€</p>
+            <p>Ãƒâ‚¬ trÃƒÂ¨s bientÃƒÂ´t sur Boostinghost ! Ã°Å¸Å¡â‚¬</p>
           </div>
           <div class="footer">
-            <p>Cet email a Ã©tÃ© envoyÃ© automatiquement par Boostinghost.</p>
-            <p>Si vous n'avez pas crÃ©Ã© de compte, vous pouvez ignorer cet email.</p>
+            <p>Cet email a ÃƒÂ©tÃƒÂ© envoyÃƒÂ© automatiquement par Boostinghost.</p>
+            <p>Si vous n'avez pas crÃƒÂ©ÃƒÂ© de compte, vous pouvez ignorer cet email.</p>
           </div>
         </div>
       </body>
@@ -4465,10 +4461,10 @@ async function sendVerificationEmail(email, firstName, token) {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('Email de vÃ©rification envoyÃ© Ã :', email);
+    console.log('Email de vÃƒÂ©rification envoyÃƒÂ© ÃƒÂ :', email);
     return true;
   } catch (error) {
-    console.error('Erreur envoi email vÃ©rification:', error);
+    console.error('Erreur envoi email vÃƒÂ©rification:', error);
     return false;
   }
 }
@@ -4477,7 +4473,7 @@ async function sendVerificationEmail(email, firstName, token) {
 // ============================================
 
 // ============================================
-// FONCTION : VÃ©rifier si un email a dÃ©jÃ  Ã©tÃ© envoyÃ©
+// FONCTION : VÃƒÂ©rifier si un email a dÃƒÂ©jÃƒÂ  ÃƒÂ©tÃƒÂ© envoyÃƒÂ©
 // ============================================
 async function hasEmailBeenSent(userId, emailType) {
   const result = await pool.query(
@@ -4500,13 +4496,13 @@ async function logEmailSent(userId, emailType, emailData = {}) {
 }
 
 // ============================================
-// EMAIL 1 : BIENVENUE APRÃˆS VÃ‰RIFICATION
+// EMAIL 1 : BIENVENUE APRÃƒË†S VÃƒâ€°RIFICATION
 // ============================================
 async function sendWelcomeEmail(email, firstName) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'ðŸŽ‰ Bienvenue sur Boostinghost !',
+    subject: 'Ã°Å¸Å½â€° Bienvenue sur Boostinghost !',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4526,33 +4522,33 @@ async function sendWelcomeEmail(email, firstName) {
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">ðŸŽ‰ Bienvenue !</h1>
+            <h1 style="margin: 0; font-size: 32px;">Ã°Å¸Å½â€° Bienvenue !</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
             <p><strong>Votre compte Boostinghost est maintenant actif !</strong></p>
             
-            <p>Vous avez accÃ¨s Ã  <strong>14 jours d'essai gratuit</strong> pour tester toutes les fonctionnalitÃ©s de notre plateforme de gestion de locations courte durÃ©e.</p>
+            <p>Vous avez accÃƒÂ¨s ÃƒÂ  <strong>14 jours d'essai gratuit</strong> pour tester toutes les fonctionnalitÃƒÂ©s de notre plateforme de gestion de locations courte durÃƒÂ©e.</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
-                ðŸš€ AccÃ©der Ã  mon espace
+                Ã°Å¸Å¡â‚¬ AccÃƒÂ©der ÃƒÂ  mon espace
               </a>
             </div>
             
-            <h3 style="color: #111827; margin-top: 30px;">âœ¨ Ce que vous pouvez faire dÃ¨s maintenant :</h3>
+            <h3 style="color: #111827; margin-top: 30px;">Ã¢Å“Â¨ Ce que vous pouvez faire dÃƒÂ¨s maintenant :</h3>
             
             <div class="feature">
-              <span class="feature-icon">ðŸ“…</span>
+              <span class="feature-icon">Ã°Å¸â€œâ€¦</span>
               <div>
                 <strong>Ajoutez vos logements</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">CrÃ©ez vos fiches de propriÃ©tÃ©s en quelques clics</span>
+                <span style="color: #6b7280; font-size: 14px;">CrÃƒÂ©ez vos fiches de propriÃƒÂ©tÃƒÂ©s en quelques clics</span>
               </div>
             </div>
             
             <div class="feature">
-              <span class="feature-icon">ðŸ”—</span>
+              <span class="feature-icon">Ã°Å¸â€â€”</span>
               <div>
                 <strong>Synchronisez vos calendriers</strong><br>
                 <span style="color: #6b7280; font-size: 14px;">Connectez Airbnb et Booking.com via iCal</span>
@@ -4560,35 +4556,35 @@ async function sendWelcomeEmail(email, firstName) {
             </div>
             
             <div class="feature">
-              <span class="feature-icon">ðŸ’¬</span>
+              <span class="feature-icon">Ã°Å¸â€™Â¬</span>
               <div>
-                <strong>GÃ©rez vos messages</strong><br>
+                <strong>GÃƒÂ©rez vos messages</strong><br>
                 <span style="color: #6b7280; font-size: 14px;">Centralisez toutes vos communications</span>
               </div>
             </div>
             
             <div class="feature">
-              <span class="feature-icon">ðŸ§¹</span>
+              <span class="feature-icon">Ã°Å¸Â§Â¹</span>
               <div>
-                <strong>Organisez le mÃ©nage</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">Planifiez et suivez les tÃ¢ches de nettoyage</span>
+                <strong>Organisez le mÃƒÂ©nage</strong><br>
+                <span style="color: #6b7280; font-size: 14px;">Planifiez et suivez les tÃƒÂ¢ches de nettoyage</span>
               </div>
             </div>
             
             <p style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
-              ðŸ’¡ <strong>Besoin d'aide ?</strong><br>
-              Notre Ã©quipe est lÃ  pour vous accompagner : <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a>
+              Ã°Å¸â€™Â¡ <strong>Besoin d'aide ?</strong><br>
+              Notre ÃƒÂ©quipe est lÃƒÂ  pour vous accompagner : <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a>
             </p>
             
-            <p>Ã€ trÃ¨s bientÃ´t sur Boostinghost ! ðŸš€</p>
+            <p>Ãƒâ‚¬ trÃƒÂ¨s bientÃƒÂ´t sur Boostinghost ! Ã°Å¸Å¡â‚¬</p>
             
             <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-              L'Ã©quipe Boostinghost
+              L'ÃƒÂ©quipe Boostinghost
             </p>
           </div>
           <div class="footer">
-            <p>Cet email a Ã©tÃ© envoyÃ© automatiquement par Boostinghost.</p>
-            <p>Â© ${new Date().getFullYear()} Boostinghost. Tous droits rÃ©servÃ©s.</p>
+            <p>Cet email a ÃƒÂ©tÃƒÂ© envoyÃƒÂ© automatiquement par Boostinghost.</p>
+            <p>Ã‚Â© ${new Date().getFullYear()} Boostinghost. Tous droits rÃƒÂ©servÃƒÂ©s.</p>
           </div>
         </div>
       </body>
@@ -4597,7 +4593,7 @@ async function sendWelcomeEmail(email, firstName) {
   };
 
   await transporter.sendMail(mailOptions);
-  console.log('âœ… Email de bienvenue envoyÃ© Ã :', email);
+  console.log('Ã¢Å“â€¦ Email de bienvenue envoyÃƒÂ© ÃƒÂ :', email);
 }
 
 // ============================================
@@ -4607,7 +4603,7 @@ async function sendTrialReminder7Days(email, firstName) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'â° Plus qu\'une semaine d\'essai gratuit',
+    subject: 'Ã¢ÂÂ° Plus qu\'une semaine d\'essai gratuit',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4625,22 +4621,22 @@ async function sendTrialReminder7Days(email, firstName) {
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">â° Plus qu'une semaine !</h1>
+            <h1 style="margin: 0; font-size: 28px;">Ã¢ÂÂ° Plus qu'une semaine !</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
             <p>Il vous reste <strong>7 jours</strong> d'essai gratuit sur Boostinghost !</p>
             
-            <p>C'est le moment idÃ©al pour :</p>
+            <p>C'est le moment idÃƒÂ©al pour :</p>
             <ul>
-              <li>Tester toutes les fonctionnalitÃ©s</li>
+              <li>Tester toutes les fonctionnalitÃƒÂ©s</li>
               <li>Synchroniser tous vos calendriers</li>
               <li>Configurer vos messages automatiques</li>
-              <li>Organiser votre planning de mÃ©nage</li>
+              <li>Organiser votre planning de mÃƒÂ©nage</li>
             </ul>
             
-            <p>Pour continuer Ã  profiter de Boostinghost aprÃ¨s votre essai, choisissez le plan qui vous convient :</p>
+            <p>Pour continuer ÃƒÂ  profiter de Boostinghost aprÃƒÂ¨s votre essai, choisissez le plan qui vous convient :</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
@@ -4653,7 +4649,7 @@ async function sendTrialReminder7Days(email, firstName) {
             </p>
           </div>
           <div class="footer">
-            <p>Â© ${new Date().getFullYear()} Boostinghost</p>
+            <p>Ã‚Â© ${new Date().getFullYear()} Boostinghost</p>
           </div>
         </div>
       </body>
@@ -4662,7 +4658,7 @@ async function sendTrialReminder7Days(email, firstName) {
   };
 
   await transporter.sendMail(mailOptions);
-  console.log('âœ… Email rappel J-7 envoyÃ© Ã :', email);
+  console.log('Ã¢Å“â€¦ Email rappel J-7 envoyÃƒÂ© ÃƒÂ :', email);
 }
 
 // ============================================
@@ -4672,7 +4668,7 @@ async function sendTrialReminder3Days(email, firstName) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'ðŸ”” Plus que 3 jours d\'essai gratuit !',
+    subject: 'Ã°Å¸â€â€ Plus que 3 jours d\'essai gratuit !',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4691,25 +4687,25 @@ async function sendTrialReminder3Days(email, firstName) {
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">ðŸ”” Plus que 3 jours !</h1>
+            <h1 style="margin: 0; font-size: 28px;">Ã°Å¸â€â€ Plus que 3 jours !</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
             <div class="alert">
-              <strong>âš ï¸ Attention !</strong><br>
+              <strong>Ã¢Å¡Â Ã¯Â¸Â Attention !</strong><br>
               Votre essai gratuit se termine dans <strong>3 jours</strong>.
             </div>
             
-            <p>Pour continuer Ã  utiliser Boostinghost sans interruption, choisissez votre plan dÃ¨s maintenant :</p>
+            <p>Pour continuer ÃƒÂ  utiliser Boostinghost sans interruption, choisissez votre plan dÃƒÂ¨s maintenant :</p>
             
             <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0 0 10px 0;"><strong>Plan Basic - 5,99â‚¬/mois</strong></p>
-              <p style="margin: 0; color: #6b7280; font-size: 14px;">Toutes les fonctionnalitÃ©s essentielles</p>
+              <p style="margin: 0 0 10px 0;"><strong>Plan Basic - 5,99Ã¢â€šÂ¬/mois</strong></p>
+              <p style="margin: 0; color: #6b7280; font-size: 14px;">Toutes les fonctionnalitÃƒÂ©s essentielles</p>
             </div>
             
             <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; border: 2px solid #10b981; margin: 20px 0;">
-              <p style="margin: 0 0 10px 0;"><strong>Plan Pro - 8,99â‚¬/mois</strong></p>
+              <p style="margin: 0 0 10px 0;"><strong>Plan Pro - 8,99Ã¢â€šÂ¬/mois</strong></p>
               <p style="margin: 0; color: #6b7280; font-size: 14px;">+ Gestion des cautions Stripe (commission 2%)</p>
             </div>
             
@@ -4720,7 +4716,7 @@ async function sendTrialReminder3Days(email, firstName) {
             </div>
           </div>
           <div class="footer">
-            <p>Â© ${new Date().getFullYear()} Boostinghost</p>
+            <p>Ã‚Â© ${new Date().getFullYear()} Boostinghost</p>
           </div>
         </div>
       </body>
@@ -4729,7 +4725,7 @@ async function sendTrialReminder3Days(email, firstName) {
   };
 
   await transporter.sendMail(mailOptions);
-  console.log('âœ… Email rappel J-3 envoyÃ© Ã :', email);
+  console.log('Ã¢Å“â€¦ Email rappel J-3 envoyÃƒÂ© ÃƒÂ :', email);
 }
 // ============================================
 // SERVICE D'EMAILS AUTOMATIQUES (SUITE)
@@ -4742,7 +4738,7 @@ async function sendTrialReminder1Day(email, firstName) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'ðŸš¨ Dernier jour d\'essai gratuit !',
+    subject: 'Ã°Å¸Å¡Â¨ Dernier jour d\'essai gratuit !',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4761,38 +4757,38 @@ async function sendTrialReminder1Day(email, firstName) {
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">ðŸš¨ Dernier jour !</h1>
+            <h1 style="margin: 0; font-size: 32px;">Ã°Å¸Å¡Â¨ Dernier jour !</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
             <div class="alert">
-              <strong style="font-size: 18px;">â° Votre essai gratuit se termine demain !</strong><br><br>
-              Pour continuer Ã  utiliser Boostinghost, souscrivez Ã  un plan dÃ¨s maintenant.
+              <strong style="font-size: 18px;">Ã¢ÂÂ° Votre essai gratuit se termine demain !</strong><br><br>
+              Pour continuer ÃƒÂ  utiliser Boostinghost, souscrivez ÃƒÂ  un plan dÃƒÂ¨s maintenant.
             </div>
             
-            <p style="font-size: 16px;">Sans abonnement actif, vous perdrez l'accÃ¨s Ã  :</p>
+            <p style="font-size: 16px;">Sans abonnement actif, vous perdrez l'accÃƒÂ¨s ÃƒÂ  :</p>
             <ul style="font-size: 16px;">
-              <li>Votre calendrier unifiÃ©</li>
+              <li>Votre calendrier unifiÃƒÂ©</li>
               <li>La synchronisation iCal</li>
               <li>La gestion des messages</li>
-              <li>Le suivi du mÃ©nage</li>
-              <li>Toutes vos donnÃ©es et rÃ©servations</li>
+              <li>Le suivi du mÃƒÂ©nage</li>
+              <li>Toutes vos donnÃƒÂ©es et rÃƒÂ©servations</li>
             </ul>
             
             <div style="text-align: center; margin: 40px 0;">
               <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
-                ðŸš€ Activer mon abonnement maintenant
+                Ã°Å¸Å¡â‚¬ Activer mon abonnement maintenant
               </a>
             </div>
             
             <p style="text-align: center; color: #6b7280; font-size: 14px;">
-              Seulement 5,99â‚¬/mois pour le plan Basic<br>
-              ou 8,99â‚¬/mois pour le plan Pro
+              Seulement 5,99Ã¢â€šÂ¬/mois pour le plan Basic<br>
+              ou 8,99Ã¢â€šÂ¬/mois pour le plan Pro
             </p>
           </div>
           <div class="footer">
-            <p>Â© ${new Date().getFullYear()} Boostinghost</p>
+            <p>Ã‚Â© ${new Date().getFullYear()} Boostinghost</p>
           </div>
         </div>
       </body>
@@ -4801,7 +4797,7 @@ async function sendTrialReminder1Day(email, firstName) {
   };
 
   await transporter.sendMail(mailOptions);
-  console.log('âœ… Email rappel J-1 envoyÃ© Ã :', email);
+  console.log('Ã¢Å“â€¦ Email rappel J-1 envoyÃƒÂ© ÃƒÂ :', email);
 }
 
 // ============================================
@@ -4814,7 +4810,7 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'âœ… Abonnement confirmÃ© - Merci !',
+    subject: 'Ã¢Å“â€¦ Abonnement confirmÃƒÂ© - Merci !',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4833,12 +4829,12 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">âœ… Abonnement confirmÃ© !</h1>
+            <h1 style="margin: 0; font-size: 32px;">Ã¢Å“â€¦ Abonnement confirmÃƒÂ© !</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
-            <p><strong>Merci pour votre confiance ! ðŸŽ‰</strong></p>
+            <p><strong>Merci pour votre confiance ! Ã°Å¸Å½â€°</strong></p>
             
             <p>Votre abonnement Boostinghost est maintenant actif.</p>
             
@@ -4846,41 +4842,41 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
               <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Votre plan</p>
               <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #10b981;">Plan ${planName}</p>
               <p style="margin: 0; font-size: 14px; color: #6b7280;">
-                <strong style="font-size: 18px; color: #111827;">${price}â‚¬</strong> / mois
+                <strong style="font-size: 18px; color: #111827;">${price}Ã¢â€šÂ¬</strong> / mois
               </p>
             </div>
             
-            <p>Vous avez maintenant accÃ¨s Ã  toutes les fonctionnalitÃ©s de Boostinghost :</p>
+            <p>Vous avez maintenant accÃƒÂ¨s ÃƒÂ  toutes les fonctionnalitÃƒÂ©s de Boostinghost :</p>
             <ul>
-              <li>âœ… Calendrier unifiÃ©</li>
-              <li>âœ… Synchronisation iCal (Airbnb, Booking)</li>
-              <li>âœ… Gestion des messages</li>
-              <li>âœ… Livret d'accueil personnalisÃ©</li>
-              <li>âœ… Gestion du mÃ©nage</li>
-              <li>âœ… Statistiques & rapports</li>
-              ${planType === 'pro' ? '<li>âœ… Gestion des cautions Stripe (2% commission)</li>' : ''}
+              <li>Ã¢Å“â€¦ Calendrier unifiÃƒÂ©</li>
+              <li>Ã¢Å“â€¦ Synchronisation iCal (Airbnb, Booking)</li>
+              <li>Ã¢Å“â€¦ Gestion des messages</li>
+              <li>Ã¢Å“â€¦ Livret d'accueil personnalisÃƒÂ©</li>
+              <li>Ã¢Å“â€¦ Gestion du mÃƒÂ©nage</li>
+              <li>Ã¢Å“â€¦ Statistiques & rapports</li>
+              ${planType === 'pro' ? '<li>Ã¢Å“â€¦ Gestion des cautions Stripe (2% commission)</li>' : ''}
             </ul>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
-                AccÃ©der Ã  mon espace
+                AccÃƒÂ©der ÃƒÂ  mon espace
               </a>
             </div>
             
             <p style="padding: 16px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #10b981; margin-top: 30px;">
-              ðŸ’¡ <strong>GÃ©rer mon abonnement</strong><br>
-              Vous pouvez modifier ou annuler votre abonnement Ã  tout moment depuis votre espace compte.
+              Ã°Å¸â€™Â¡ <strong>GÃƒÂ©rer mon abonnement</strong><br>
+              Vous pouvez modifier ou annuler votre abonnement ÃƒÂ  tout moment depuis votre espace compte.
             </p>
             
-            <p style="margin-top: 30px;">Merci encore et bonne gestion ! ðŸš€</p>
+            <p style="margin-top: 30px;">Merci encore et bonne gestion ! Ã°Å¸Å¡â‚¬</p>
             
             <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-              L'Ã©quipe Boostinghost
+              L'ÃƒÂ©quipe Boostinghost
             </p>
           </div>
           <div class="footer">
             <p>Questions ? Contactez-nous : support@boostinghost.com</p>
-            <p>Â© ${new Date().getFullYear()} Boostinghost. Tous droits rÃ©servÃ©s.</p>
+            <p>Ã‚Â© ${new Date().getFullYear()} Boostinghost. Tous droits rÃƒÂ©servÃƒÂ©s.</p>
           </div>
         </div>
       </body>
@@ -4889,7 +4885,7 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
   };
 
   await transporter.sendMail(mailOptions);
-  console.log('âœ… Email confirmation abonnement envoyÃ© Ã :', email);
+  console.log('Ã¢Å“â€¦ Email confirmation abonnement envoyÃƒÂ© ÃƒÂ :', email);
 }
 
 // ============================================
@@ -4907,7 +4903,7 @@ async function sendRenewalReminderEmail(email, firstName, planType, planAmount, 
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'ðŸ”„ Prochain renouvellement dans 3 jours',
+    subject: 'Ã°Å¸â€â€ž Prochain renouvellement dans 3 jours',
     html: `
       <!DOCTYPE html>
       <html>
@@ -4926,41 +4922,41 @@ async function sendRenewalReminderEmail(email, firstName, planType, planAmount, 
       <body>
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">ðŸ”„ Rappel de renouvellement</h1>
+            <h1 style="margin: 0; font-size: 28px;">Ã°Å¸â€â€ž Rappel de renouvellement</h1>
           </div>
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
-            <p>Votre abonnement Boostinghost <strong>Plan ${planName}</strong> sera automatiquement renouvelÃ© dans <strong>3 jours</strong>.</p>
+            <p>Votre abonnement Boostinghost <strong>Plan ${planName}</strong> sera automatiquement renouvelÃƒÂ© dans <strong>3 jours</strong>.</p>
             
             <div class="card">
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">Prochain prÃ©lÃ¨vement</p>
-              <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #3b82f6;">${price}â‚¬</p>
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">Prochain prÃƒÂ©lÃƒÂ¨vement</p>
+              <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #3b82f6;">${price}Ã¢â€šÂ¬</p>
               <p style="margin: 0; font-size: 14px; color: #6b7280;">
                 Date : <strong>${formattedDate}</strong>
               </p>
             </div>
             
-            <p>Aucune action n'est nÃ©cessaire de votre part. Le paiement sera effectuÃ© automatiquement.</p>
+            <p>Aucune action n'est nÃƒÂ©cessaire de votre part. Le paiement sera effectuÃƒÂ© automatiquement.</p>
             
             <p style="padding: 16px; background: #f0f9ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
-              ðŸ’¡ Vous souhaitez modifier ou annuler votre abonnement ? Rendez-vous dans votre espace compte.
+              Ã°Å¸â€™Â¡ Vous souhaitez modifier ou annuler votre abonnement ? Rendez-vous dans votre espace compte.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
-                GÃ©rer mon abonnement
+                GÃƒÂ©rer mon abonnement
               </a>
             </div>
             
             <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
               Merci de votre confiance !<br>
-              L'Ã©quipe Boostinghost
+              L'ÃƒÂ©quipe Boostinghost
             </p>
           </div>
           <div class="footer">
             <p>Questions ? Contactez-nous : support@boostinghost.com</p>
-            <p>Â© ${new Date().getFullYear()} Boostinghost</p>
+            <p>Ã‚Â© ${new Date().getFullYear()} Boostinghost</p>
           </div>
         </div>
       </body>
@@ -4969,7 +4965,7 @@ async function sendRenewalReminderEmail(email, firstName, planType, planAmount, 
   };
 
   await transporter.sendMail(mailOptions);
-  console.log('âœ… Email rappel renouvellement envoyÃ© Ã :', email);
+  console.log('Ã¢Å“â€¦ Email rappel renouvellement envoyÃƒÂ© ÃƒÂ :', email);
 }
 
 // ============================================
@@ -5001,7 +4997,7 @@ function defaultWelcomeData(user) {
 app.get('/api/welcome', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   try {
@@ -5012,7 +5008,7 @@ app.get('/api/welcome', async (req, res) => {
 
     let data;
     if (result.rows.length === 0) {
-      // Pas encore de livret pour cet utilisateur â†’ on crÃ©e un dÃ©faut
+      // Pas encore de livret pour cet utilisateur Ã¢â€ â€™ on crÃƒÂ©e un dÃƒÂ©faut
       data = defaultWelcomeData(user);
 
       await pool.query(
@@ -5037,7 +5033,7 @@ app.get('/api/welcome', async (req, res) => {
 app.post('/api/welcome', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   try {
@@ -5058,7 +5054,7 @@ app.post('/api/welcome', async (req, res) => {
     );
 
     res.json({
-      message: 'Livret sauvegardÃ©',
+      message: 'Livret sauvegardÃƒÂ©',
       data: newData
     });
   } catch (err) {
@@ -5071,12 +5067,12 @@ app.post('/api/welcome', async (req, res) => {
 // ROUTES API - GESTION DU MENAGE / CLEANERS
 // ============================================
 
-// GET - Liste des personnes de mÃ©nage de l'utilisateur
+// GET - Liste des personnes de mÃƒÂ©nage de l'utilisateur
 app.get('/api/cleaners', authenticateUser, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const result = await pool.query(
@@ -5096,12 +5092,12 @@ app.get('/api/cleaners', authenticateUser, checkSubscription, async (req, res) =
   }
 });
 
-// POST - CrÃ©er une nouvelle personne de mÃ©nage
+// POST - CrÃƒÂ©er une nouvelle personne de mÃƒÂ©nage
 app.post('/api/cleaners', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { name, phone, email, notes, isActive } = req.body || {};
@@ -5119,7 +5115,7 @@ app.post('/api/cleaners', async (req, res) => {
     );
 
     res.status(201).json({
-      message: 'Membre du mÃ©nage crÃ©Ã©',
+      message: 'Membre du mÃƒÂ©nage crÃƒÂ©ÃƒÂ©',
       cleaner: result.rows[0]
     });
   } catch (err) {
@@ -5128,12 +5124,12 @@ app.post('/api/cleaners', async (req, res) => {
   }
 });
 
-// PUT - Modifier une personne de mÃ©nage
+// PUT - Modifier une personne de mÃƒÂ©nage
 app.put('/api/cleaners/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { id } = req.params;
@@ -5153,11 +5149,11 @@ app.put('/api/cleaners/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Membre du mÃ©nage introuvable' });
+      return res.status(404).json({ error: 'Membre du mÃƒÂ©nage introuvable' });
     }
 
     res.json({
-      message: 'Membre du mÃ©nage mis Ã  jour',
+      message: 'Membre du mÃƒÂ©nage mis ÃƒÂ  jour',
       cleaner: result.rows[0]
     });
   } catch (err) {
@@ -5166,12 +5162,12 @@ app.put('/api/cleaners/:id', async (req, res) => {
   }
 });
 
-// DELETE - Supprimer une personne de mÃ©nage
+// DELETE - Supprimer une personne de mÃƒÂ©nage
 app.delete('/api/cleaners/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { id } = req.params;
@@ -5183,10 +5179,10 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Membre du mÃ©nage introuvable' });
+      return res.status(404).json({ error: 'Membre du mÃƒÂ©nage introuvable' });
     }
 
-    res.json({ message: 'Membre du mÃ©nage supprimÃ©' });
+    res.json({ message: 'Membre du mÃƒÂ©nage supprimÃƒÂ©' });
   } catch (err) {
     console.error('Erreur DELETE /api/cleaners/:id :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -5196,12 +5192,12 @@ app.delete('/api/cleaners/:id', async (req, res) => {
 // ROUTES API - ASSIGNATIONS MENAGE (par user)
 // ============================================
 
-// GET - Liste des assignations de mÃ©nage
+// GET - Liste des assignations de mÃƒÂ©nage
 app.get('/api/cleaning/assignments', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const result = await pool.query(
@@ -5229,12 +5225,12 @@ app.get('/api/cleaning/assignments', async (req, res) => {
   }
 });
 
-// POST - CrÃ©er / mettre Ã  jour / supprimer une assignation
+// POST - CrÃƒÂ©er / mettre ÃƒÂ  jour / supprimer une assignation
 app.post('/api/cleaning/assignments', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId, cleanerId } = req.body || {};
@@ -5243,25 +5239,25 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       return res.status(400).json({ error: 'propertyId requis' });
     }
 
-    // Si cleanerId vide â†’ on supprime l'assignation
+    // Si cleanerId vide Ã¢â€ â€™ on supprime l'assignation
     if (!cleanerId) {
       await pool.query(
         'DELETE FROM cleaning_assignments WHERE user_id = $1 AND property_id = $2',
         [user.id, propertyId]
       );
       return res.json({
-        message: 'Assignation mÃ©nage supprimÃ©e',
+        message: 'Assignation mÃƒÂ©nage supprimÃƒÂ©e',
         propertyId
       });
     }
 
-    // VÃ©rifier que le logement appartient bien Ã  l'utilisateur
+    // VÃƒÂ©rifier que le logement appartient bien ÃƒÂ  l'utilisateur
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvÃ© pour cet utilisateur' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ© pour cet utilisateur' });
     }
 
-    // VÃ©rifier que le cleaner appartient bien Ã  l'utilisateur
+    // VÃƒÂ©rifier que le cleaner appartient bien ÃƒÂ  l'utilisateur
     const cleanerResult = await pool.query(
       `SELECT id, name, email, phone
        FROM cleaners
@@ -5270,7 +5266,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     );
 
     if (cleanerResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Personne de mÃ©nage introuvable pour cet utilisateur' });
+      return res.status(404).json({ error: 'Personne de mÃƒÂ©nage introuvable pour cet utilisateur' });
     }
 
     await pool.query(
@@ -5285,7 +5281,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     );
 
     res.json({
-      message: 'Assignation mÃ©nage enregistrÃ©e',
+      message: 'Assignation mÃƒÂ©nage enregistrÃƒÂ©e',
       assignment: {
         propertyId,
         cleanerId
@@ -5305,7 +5301,7 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const userProps = getUserProperties(user.id);
@@ -5328,7 +5324,7 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
                 };
               }
 
-              // Nouveau format Ã©ventuel : dÃ©jÃ  un objet
+              // Nouveau format ÃƒÂ©ventuel : dÃƒÂ©jÃƒÂ  un objet
               if (item && typeof item === 'object' && item.url) {
                 return {
                   url: item.url,
@@ -5350,14 +5346,14 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
         name: p.name,
         color: p.color,
 
-        // ðŸ‘‡ nouveaux champs que le front attend
+        // Ã°Å¸â€˜â€¡ nouveaux champs que le front attend
         address: p.address || null,
         arrivalTime: p.arrival_time || p.arrivalTime || null,
         departureTime: p.departure_time || p.departureTime || null,
         depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
         photoUrl: p.photo_url || p.photoUrl || null,
 
-        // âœ… NOUVEAUX CHAMPS ENRICHIS
+        // Ã¢Å“â€¦ NOUVEAUX CHAMPS ENRICHIS
         welcomeBookUrl: p.welcome_book_url || null,
         accessCode: p.access_code || null,
         wifiName: p.wifi_name || null,
@@ -5379,14 +5375,14 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
 app.get('/api/properties/:propertyId', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const { propertyId } = req.params;
   const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
 
   if (!property) {
-    return res.status(404).json({ error: 'Logement non trouvÃ©' });
+    return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
   }
 
   res.json({
@@ -5399,7 +5395,7 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
     photoUrl: property.photo_url || property.photoUrl || null,
     
-    // âœ… NOUVEAUX CHAMPS ENRICHIS
+    // Ã¢Å“â€¦ NOUVEAUX CHAMPS ENRICHIS
     welcomeBookUrl: property.welcome_book_url || null,
     accessCode: property.access_code || null,
     wifiName: property.wifi_name || null,
@@ -5415,7 +5411,7 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     let body;
@@ -5452,7 +5448,7 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
 
     const id = `${user.id}-${baseId}`;
 
-    // Upload vers Cloudinary si un fichier est prÃ©sent
+    // Upload vers Cloudinary si un fichier est prÃƒÂ©sent
 let photoUrl = existingPhotoUrl || null;
 if (req.file) {
   photoUrl = await uploadPhotoToCloudinary(req.file);
@@ -5528,11 +5524,11 @@ await pool.query(
     const property = PROPERTIES.find(p => p.id === id);
 
     res.status(201).json({
-      message: 'Logement crÃ©Ã© avec succÃ¨s',
+      message: 'Logement crÃƒÂ©ÃƒÂ© avec succÃƒÂ¨s',
       property
     });
   } catch (err) {
-    console.error('Erreur crÃ©ation logement:', err);
+    console.error('Erreur crÃƒÂ©ation logement:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -5541,7 +5537,7 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId } = req.params;
@@ -5572,7 +5568,7 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
 
     const newName = name || property.name;
@@ -5704,7 +5700,7 @@ await pool.query(
     newWifiName,
     newWifiPassword,
     newAccessInstructions,
-    newOwnerId, // â† AJOUTE CETTE LIGNE
+    newOwnerId, // Ã¢â€ Â AJOUTE CETTE LIGNE
     propertyId,
     user.id
   ]
@@ -5714,7 +5710,7 @@ await pool.query(
     const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
 
     res.json({
-      message: 'Logement modifiÃ© avec succÃ¨s',
+      message: 'Logement modifiÃƒÂ© avec succÃƒÂ¨s',
       property: updated
     });
   } catch (err) {
@@ -5727,14 +5723,14 @@ app.delete('/api/properties/:propertyId', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId } = req.params;
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
 
     await pool.query(
@@ -5747,7 +5743,7 @@ app.delete('/api/properties/:propertyId', async (req, res) => {
     await loadProperties();
 
     res.json({
-      message: 'Logement supprimÃ© avec succÃ¨s',
+      message: 'Logement supprimÃƒÂ© avec succÃƒÂ¨s',
       property
     });
   } catch (err) {
@@ -5787,57 +5783,57 @@ app.post('/api/properties/test-ical', async (req, res) => {
     });
   }
   });
-  // RÃ©organiser l'ordre des logements
+  // RÃƒÂ©organiser l'ordre des logements
 app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId } = req.params;
     const { direction } = req.body; // 'up' ou 'down'
 
-    // RÃ©cupÃ©rer le logement actuel
+    // RÃƒÂ©cupÃƒÂ©rer le logement actuel
     const currentResult = await pool.query(
       'SELECT id, display_order FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, user.id]
     );
 
     if (currentResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
 
     const currentOrder = currentResult.rows[0].display_order;
     const newOrder = direction === 'up' ? currentOrder - 1 : currentOrder + 1;
 
     if (newOrder < 1) {
-      return res.status(400).json({ error: 'DÃ©jÃ  en premiÃ¨re position' });
+      return res.status(400).json({ error: 'DÃƒÂ©jÃƒÂ  en premiÃƒÂ¨re position' });
     }
 
-    // Trouver le logement Ã  Ã©changer
+    // Trouver le logement ÃƒÂ  ÃƒÂ©changer
     const swapResult = await pool.query(
       'SELECT id, display_order FROM properties WHERE user_id = $1 AND display_order = $2',
       [user.id, newOrder]
     );
 
     if (swapResult.rows.length === 0) {
-      return res.status(400).json({ error: 'DÃ©jÃ  en derniÃ¨re position' });
+      return res.status(400).json({ error: 'DÃƒÂ©jÃƒÂ  en derniÃƒÂ¨re position' });
     }
 
     const swapId = swapResult.rows[0].id;
 
-    // Ã‰changer les positions
+    // Ãƒâ€°changer les positions
     await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [newOrder, propertyId]);
     await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [currentOrder, swapId]);
 
-    // Recharger les propriÃ©tÃ©s
+    // Recharger les propriÃƒÂ©tÃƒÂ©s
     await loadProperties();
 
-    res.json({ success: true, message: 'Ordre mis Ã  jour' });
+    res.json({ success: true, message: 'Ordre mis ÃƒÂ  jour' });
 
   } catch (err) {
-    console.error('Erreur rÃ©organisation:', err);
+    console.error('Erreur rÃƒÂ©organisation:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -5849,7 +5845,7 @@ app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res
 app.post('/api/test-notification', async (req, res) => {
   try {
     await notificationService.sendTestNotification();
-    res.json({ message: 'Notification de test envoyÃ©e' });
+    res.json({ message: 'Notification de test envoyÃƒÂ©e' });
   } catch (error) {
     res.status(500).json({
       error: 'Erreur lors de l\'envoi de la notification',
@@ -5865,7 +5861,7 @@ app.post('/api/test-notification', async (req, res) => {
 app.get('/api/config', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const userProps = getUserProperties(user.id);
@@ -5898,27 +5894,27 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
     }
 
-    // VÃ©rifier si l'email existe dÃ©jÃ 
+    // VÃƒÂ©rifier si l'email existe dÃƒÂ©jÃƒÂ 
     const existing = await pool.query(
       'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
     
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'Un compte existe dÃ©jÃ  avec cet e-mail' });
+      return res.status(409).json({ error: 'Un compte existe dÃƒÂ©jÃƒÂ  avec cet e-mail' });
     }
 
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(password, 10);
     
-    // GÃ©nÃ©rer l'ID utilisateur
+    // GÃƒÂ©nÃƒÂ©rer l'ID utilisateur
     const id = `u_${Date.now().toString(36)}`;
 
-    // GÃ©nÃ©rer le token de vÃ©rification
+    // GÃƒÂ©nÃƒÂ©rer le token de vÃƒÂ©rification
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
 
-    // CrÃ©er l'utilisateur avec email_verified = FALSE
+    // CrÃƒÂ©er l'utilisateur avec email_verified = FALSE
     await pool.query(
       `INSERT INTO users (
         id, company, first_name, last_name, email, password_hash, 
@@ -5929,7 +5925,7 @@ app.post('/api/auth/register', async (req, res) => {
       [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires]
     );
 
-    // CrÃ©er l'abonnement trial (seulement s'il n'existe pas dÃ©jÃ )
+    // CrÃƒÂ©er l'abonnement trial (seulement s'il n'existe pas dÃƒÂ©jÃƒÂ )
     const existingSub = await pool.query(
       'SELECT id FROM subscriptions WHERE user_id = $1',
       [id]
@@ -5957,14 +5953,14 @@ app.post('/api/auth/register', async (req, res) => {
       );
     }
 
-    // Envoyer l'email de vÃ©rification
+    // Envoyer l'email de vÃƒÂ©rification
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
     const verificationUrl = `${appUrl}/verify-email.html?token=${verificationToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'âœ… VÃ©rifiez votre adresse email - Boostinghost',
+      subject: 'Ã¢Å“â€¦ VÃƒÂ©rifiez votre adresse email - Boostinghost',
       html: `
         <!DOCTYPE html>
         <html>
@@ -5982,18 +5978,18 @@ app.post('/api/auth/register', async (req, res) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>ðŸŽ‰ Bienvenue sur Boostinghost !</h1>
+              <h1>Ã°Å¸Å½â€° Bienvenue sur Boostinghost !</h1>
             </div>
             <div class="content">
               <p>Bonjour ${firstName},</p>
               
-              <p>Merci de vous Ãªtre inscrit sur <strong>Boostinghost</strong> !</p>
+              <p>Merci de vous ÃƒÂªtre inscrit sur <strong>Boostinghost</strong> !</p>
               
-              <p>Pour activer votre compte et commencer Ã  utiliser notre plateforme, veuillez vÃ©rifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
+              <p>Pour activer votre compte et commencer ÃƒÂ  utiliser notre plateforme, veuillez vÃƒÂ©rifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
               
               <div style="text-align: center;">
                 <a href="${verificationUrl}" class="button">
-                  âœ… VÃ©rifier mon email
+                  Ã¢Å“â€¦ VÃƒÂ©rifier mon email
                 </a>
               </div>
               
@@ -6006,10 +6002,10 @@ app.post('/api/auth/register', async (req, res) => {
                 <strong>Ce lien est valide pendant 24 heures.</strong>
               </p>
               
-              <p>Ã€ trÃ¨s bientÃ´t sur Boostinghost ! ðŸš€</p>
+              <p>Ãƒâ‚¬ trÃƒÂ¨s bientÃƒÂ´t sur Boostinghost ! Ã°Å¸Å¡â‚¬</p>
             </div>
             <div class="footer">
-              <p>Cet email a Ã©tÃ© envoyÃ© automatiquement par Boostinghost.</p>
+              <p>Cet email a ÃƒÂ©tÃƒÂ© envoyÃƒÂ© automatiquement par Boostinghost.</p>
             </div>
           </div>
         </body>
@@ -6019,15 +6015,15 @@ app.post('/api/auth/register', async (req, res) => {
 
     try {
       await transporter.sendMail(mailOptions);
-      console.log('Email de vÃ©rification envoyÃ© Ã :', email);
+      console.log('Email de vÃƒÂ©rification envoyÃƒÂ© ÃƒÂ :', email);
     } catch (emailErr) {
       console.error('Erreur envoi email:', emailErr);
-      // On continue quand mÃªme
+      // On continue quand mÃƒÂªme
     }
-// Retourner succÃ¨s
+// Retourner succÃƒÂ¨s
     res.status(201).json({
       success: true,
-      message: 'Compte crÃ©Ã© ! VÃ©rifiez votre email pour activer votre compte.',
+      message: 'Compte crÃƒÂ©ÃƒÂ© ! VÃƒÂ©rifiez votre email pour activer votre compte.',
       emailSent: true,
       email: email
     });
@@ -6064,10 +6060,10 @@ app.post('/api/auth/login', async (req, res) => {
     }
 if (!row.email_verified) {
   return res.status(403).json({ 
-    error: 'Email non vÃ©rifiÃ©',
+    error: 'Email non vÃƒÂ©rifiÃƒÂ©',
     emailNotVerified: true,
     email: row.email,
-    message: 'Veuillez vÃ©rifier votre email avant de vous connecter.'
+    message: 'Veuillez vÃƒÂ©rifier votre email avant de vous connecter.'
   });
 }
     const user = {
@@ -6130,10 +6126,10 @@ app.get('/api/auth/me', async (req, res) => {
     res.json({ user });
   } catch (err) {
     console.error('Erreur /api/auth/me:', err);
-    return res.status(401).json({ error: 'Token invalide ou expirÃ©' });
+    return res.status(401).json({ error: 'Token invalide ou expirÃƒÂ©' });
   }
 });
-// Route de vÃ©rification d'email
+// Route de vÃƒÂ©rification d'email
 app.get('/api/verify-email', async (req, res) => {
   try {
     const { token } = req.query;
@@ -6142,7 +6138,7 @@ app.get('/api/verify-email', async (req, res) => {
       return res.status(400).json({ error: 'Token manquant' });
     }
 
-    // VÃ©rifier le token
+    // VÃƒÂ©rifier le token
     const result = await pool.query(
       `SELECT id, email, first_name, verification_token_expires
        FROM users 
@@ -6156,9 +6152,9 @@ app.get('/api/verify-email', async (req, res) => {
 
     const user = result.rows[0];
 
-    // VÃ©rifier si le token est expirÃ©
+    // VÃƒÂ©rifier si le token est expirÃƒÂ©
     if (new Date() > new Date(user.verification_token_expires)) {
-      return res.status(400).json({ error: 'Token expirÃ©' });
+      return res.status(400).json({ error: 'Token expirÃƒÂ©' });
     }
 
     // Activer le compte
@@ -6172,15 +6168,15 @@ app.get('/api/verify-email', async (req, res) => {
       [user.id]
     );
 
-    console.log('âœ… Email vÃ©rifiÃ© pour:', user.email);
+    console.log('Ã¢Å“â€¦ Email vÃƒÂ©rifiÃƒÂ© pour:', user.email);
 
-    // âœ… Envoyer email de bienvenue
+    // Ã¢Å“â€¦ Envoyer email de bienvenue
     await sendWelcomeEmail(user.email, user.first_name || 'nouveau membre');
     await logEmailSent(user.id, 'welcome', { email: user.email });
 
     res.json({
       success: true,
-      message: 'Email vÃ©rifiÃ© avec succÃ¨s !',
+      message: 'Email vÃƒÂ©rifiÃƒÂ© avec succÃƒÂ¨s !',
       user: {
         email: user.email,
         firstName: user.first_name
@@ -6219,18 +6215,18 @@ app.post('/api/messages/generate', (req, res) => {
   }
 
   if (!reservation) {
-    return res.status(404).json({ error: 'RÃ©servation non trouvÃ©e' });
+    return res.status(404).json({ error: 'RÃƒÂ©servation non trouvÃƒÂ©e' });
   }
 
   const customData = {
-    propertyAddress: 'Adresse du logement Ã  dÃ©finir',
-    accessCode: 'Code Ã  dÃ©finir'
+    propertyAddress: 'Adresse du logement ÃƒÂ  dÃƒÂ©finir',
+    accessCode: 'Code ÃƒÂ  dÃƒÂ©finir'
   };
 
   const message = messagingService.generateQuickMessage(reservation, templateKey, customData);
 
   if (!message) {
-    return res.status(404).json({ error: 'Template non trouvÃ©' });
+    return res.status(404).json({ error: 'Template non trouvÃƒÂ©' });
   }
 
   res.json(message);
@@ -6239,7 +6235,7 @@ app.post('/api/messages/generate', (req, res) => {
 app.get('/api/messages/upcoming', async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+    return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
   }
 
   const allReservations = [];
@@ -6270,14 +6266,14 @@ app.get('/api/messages/upcoming', async (req, res) => {
 });
 
 // ============================================
-// ðŸ’³ ROUTES API - ABONNEMENTS (Stripe Billing)
+// Ã°Å¸â€™Â³ ROUTES API - ABONNEMENTS (Stripe Billing)
 // ============================================
 
 function getPriceIdForPlan(plan) {
   if (plan === 'pro') {
     return process.env.STRIPE_PRICE_PRO || null;
   }
-  // Par dÃ©faut : basic
+  // Par dÃƒÂ©faut : basic
   return process.env.STRIPE_PRICE_BASIC || null;
 }
 
@@ -6285,10 +6281,10 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
     if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configurÃ© (clÃ© secrÃ¨te manquante)' });
+      return res.status(500).json({ error: 'Stripe non configurÃƒÂ© (clÃƒÂ© secrÃƒÂ¨te manquante)' });
     }
     const { plan } = req.body || {};
     if (!plan) {
@@ -6296,7 +6292,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     }
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configurÃ©' });
+      return res.status(400).json({ error: 'Plan inconnu ou non configurÃƒÂ©' });
     }
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
     
@@ -6307,13 +6303,13 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
         price: priceId,
         quantity: 1
       }],
-      // âœ… AJOUTEZ LES METADATA ICI DIRECTEMENT
+      // Ã¢Å“â€¦ AJOUTEZ LES METADATA ICI DIRECTEMENT
       metadata: {
         userId: user.id,
         plan: plan
       },
       customer_email: user.email,
-      client_reference_id: user.id, // âœ… IMPORTANT pour le webhook
+      client_reference_id: user.id, // Ã¢Å“â€¦ IMPORTANT pour le webhook
       success_url: `${appUrl}/app.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing.html`,
     });
@@ -6321,31 +6317,31 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('Erreur /api/billing/create-checkout-session :', err);
-    res.status(500).json({ error: 'Impossible de crÃ©er la session de paiement' });
+    res.status(500).json({ error: 'Impossible de crÃƒÂ©er la session de paiement' });
   }
 });
 
 // ============================================
-// ðŸ’³ ROUTES API - STRIPE CONNECT (compte hÃ´te)
+// Ã°Å¸â€™Â³ ROUTES API - STRIPE CONNECT (compte hÃƒÂ´te)
 // ============================================
 
 app.get('/api/stripe/status', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     if (!stripe) {
-      // Stripe pas configurÃ© â†’ on indique juste "pas connectÃ©"
+      // Stripe pas configurÃƒÂ© Ã¢â€ â€™ on indique juste "pas connectÃƒÂ©"
       return res.json({
         connected: false,
-        error: 'Stripe non configurÃ© cÃ´tÃ© serveur'
+        error: 'Stripe non configurÃƒÂ© cÃƒÂ´tÃƒÂ© serveur'
       });
     }
 
     if (!user.stripeAccountId) {
-      // Lâ€™utilisateur nâ€™a encore jamais connectÃ© de compte Stripe
+      // LÃ¢â‚¬â„¢utilisateur nÃ¢â‚¬â„¢a encore jamais connectÃƒÂ© de compte Stripe
       return res.json({ connected: false });
     }
 
@@ -6363,10 +6359,10 @@ app.get('/api/stripe/status', async (req, res) => {
       });
     } catch (err) {
       console.error('Erreur retrieve Stripe account:', err);
-      // Si on nâ€™arrive pas Ã  rÃ©cupÃ©rer le compte, on considÃ¨re "non connectÃ©"
+      // Si on nÃ¢â‚¬â„¢arrive pas ÃƒÂ  rÃƒÂ©cupÃƒÂ©rer le compte, on considÃƒÂ¨re "non connectÃƒÂ©"
       return res.json({
         connected: false,
-        error: 'Impossible de rÃ©cupÃ©rer le compte Stripe'
+        error: 'Impossible de rÃƒÂ©cupÃƒÂ©rer le compte Stripe'
       });
     }
   } catch (err) {
@@ -6379,16 +6375,16 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configurÃ© (clÃ© secrÃ¨te manquante)' });
+      return res.status(500).json({ error: 'Stripe non configurÃƒÂ© (clÃƒÂ© secrÃƒÂ¨te manquante)' });
     }
 
     let accountId = user.stripeAccountId;
 
-    // 1) Si lâ€™utilisateur nâ€™a pas encore de compte Stripe, on en crÃ©e un
+    // 1) Si lÃ¢â‚¬â„¢utilisateur nÃ¢â‚¬â„¢a pas encore de compte Stripe, on en crÃƒÂ©e un
     if (!accountId) {
       const account = await stripe.accounts.create({
         type: 'express',
@@ -6401,14 +6397,14 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
 
       accountId = account.id;
 
-      // On sauvegarde lâ€™ID du compte Stripe en base
+      // On sauvegarde lÃ¢â‚¬â„¢ID du compte Stripe en base
       await pool.query(
         'UPDATE users SET stripe_account_id = $1 WHERE id = $2',
         [accountId, user.id]
       );
     }
 
-    // 2) On crÃ©e le lien dâ€™onboarding pour que lâ€™utilisateur complÃ¨te ses infos chez Stripe
+    // 2) On crÃƒÂ©e le lien dÃ¢â‚¬â„¢onboarding pour que lÃ¢â‚¬â„¢utilisateur complÃƒÂ¨te ses infos chez Stripe
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
     const accountLink = await stripe.accountLinks.create({
@@ -6422,7 +6418,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
   } catch (err) {
     console.error('Erreur /api/stripe/create-onboarding-link :', err);
     res.status(500).json({
-      error: 'Impossible de gÃ©nÃ©rer le lien Stripe : ' + (err.message || 'Erreur interne'),
+      error: 'Impossible de gÃƒÂ©nÃƒÂ©rer le lien Stripe : ' + (err.message || 'Erreur interne'),
       stripeType: err.type || null,
       stripeCode: err.code || null
     });
@@ -6430,7 +6426,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
 });
 
 // ============================================
-// ðŸš€ ROUTES API - CAUTIONS (Stripe)
+// Ã°Å¸Å¡â‚¬ ROUTES API - CAUTIONS (Stripe)
 // ============================================
 
 function findReservationByUidForUser(reservationUid, userId) {
@@ -6449,17 +6445,17 @@ function findReservationByUidForUser(reservationUid, userId) {
   return null;
 }
 
-// GET - RÃ©cupÃ©rer la caution liÃ©e Ã  une rÃ©servation (si existe)
+// GET - RÃƒÂ©cupÃƒÂ©rer la caution liÃƒÂ©e ÃƒÂ  une rÃƒÂ©servation (si existe)
 app.get('/api/deposits/:reservationUid', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { reservationUid } = req.params;
     
-    // ✅ NOUVEAU : Récupérer depuis PostgreSQL
+    // âœ… NOUVEAU : RÃ©cupÃ©rer depuis PostgreSQL
     const deposit = await getDepositByReservation(reservationUid);
     
     res.json({ deposit });
@@ -6468,16 +6464,16 @@ app.get('/api/deposits/:reservationUid', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// POST - CrÃ©er une caution Stripe pour une rÃ©servation (empreinte bancaire)
+// POST - CrÃƒÂ©er une caution Stripe pour une rÃƒÂ©servation (empreinte bancaire)
 app.post('/api/deposits', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configurÃ© (clÃ© secrÃ¨te manquante)' });
+      return res.status(500).json({ error: 'Stripe non configurÃƒÂ© (clÃƒÂ© secrÃƒÂ¨te manquante)' });
     }
 
     const { reservationUid, amount } = req.body;
@@ -6486,16 +6482,16 @@ app.post('/api/deposits', async (req, res) => {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
     }
 
-    // Retrouver la rÃ©servation dans les rÃ©servations du user
+    // Retrouver la rÃƒÂ©servation dans les rÃƒÂ©servations du user
     const result = findReservationByUidForUser(reservationUid, user.id);
     if (!result) {
-      return res.status(404).json({ error: 'RÃ©servation non trouvÃ©e pour cet utilisateur' });
+      return res.status(404).json({ error: 'RÃƒÂ©servation non trouvÃƒÂ©e pour cet utilisateur' });
     }
 
     const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
 
-    // CrÃ©er l'objet "caution" en mÃ©moire + fichier JSON
+    // CrÃƒÂ©er l'objet "caution" en mÃƒÂ©moire + fichier JSON
     const depositId = 'dep_' + Date.now().toString(36);
     const deposit = {
       id: depositId,
@@ -6507,7 +6503,7 @@ app.post('/api/deposits', async (req, res) => {
       checkoutUrl: null,
       createdAt: new Date().toISOString()
     };
-    // ✅ NOUVEAU : Sauvegarder en PostgreSQL
+    // âœ… NOUVEAU : Sauvegarder en PostgreSQL
   const saved = await saveDepositToDB(deposit, user.id, property.id);
   
   if (!saved) {
@@ -6523,14 +6519,14 @@ app.post('/api/deposits', async (req, res) => {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: `Caution séjour â€“ ${property ? property.name : 'Logement'}`,
+            name: `Caution sÃ©jour Ã¢â‚¬â€œ ${property ? property.name : 'Logement'}`,
             description: `Du ${reservation.start} au ${reservation.end}`
           },
           unit_amount: amountCents
         },
         quantity: 1
       }],
-      // ðŸ”¹ Empreinte bancaire : autorisation non capturÃ©e
+      // Ã°Å¸â€Â¹ Empreinte bancaire : autorisation non capturÃƒÂ©e
       payment_intent_data: {
         capture_method: 'manual',
         metadata: {
@@ -6551,21 +6547,21 @@ app.post('/api/deposits', async (req, res) => {
 
     let session;
 
-    // Si tu as un compte Stripe Connect liÃ©, on crÃ©e la session sur CE compte
+    // Si tu as un compte Stripe Connect liÃƒÂ©, on crÃƒÂ©e la session sur CE compte
     if (user.stripeAccountId) {
-      console.log('CrÃ©ation session de caution sur compte connectÃ© :', user.stripeAccountId);
+      console.log('CrÃƒÂ©ation session de caution sur compte connectÃƒÂ© :', user.stripeAccountId);
       session = await stripe.checkout.sessions.create(
         sessionParams,
         { stripeAccount: user.stripeAccountId }
       );
     } else {
-      console.log('CrÃ©ation session de caution sur le compte plateforme (pas de stripeAccountId)');
+      console.log('CrÃƒÂ©ation session de caution sur le compte plateforme (pas de stripeAccountId)');
       session = await stripe.checkout.sessions.create(sessionParams);
     }
 
     deposit.stripeSessionId = session.id;
     deposit.checkoutUrl = session.url;
-    // Mettre à jour après création de la session Stripe
+    // Mettre Ã  jour aprÃ¨s crÃ©ation de la session Stripe
 deposit.stripeSessionId = session.id;
 deposit.checkoutUrl = session.url;
 
@@ -6580,9 +6576,9 @@ await pool.query(`
       checkoutUrl: session.url
     });
   } catch (err) {
-    console.error('Erreur crÃ©ation caution:', err);
+    console.error('Erreur crÃƒÂ©ation caution:', err);
     return res.status(500).json({
-      error: 'Erreur lors de la crÃ©ation de la caution : ' + (err.message || 'Erreur interne Stripe')
+      error: 'Erreur lors de la crÃƒÂ©ation de la caution : ' + (err.message || 'Erreur interne Stripe')
     });
   }
 });
@@ -6591,7 +6587,7 @@ app.get('/api/deposits', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { status, propertyId } = req.query;
@@ -6605,18 +6601,18 @@ app.get('/api/deposits', async (req, res) => {
   }
 });
 
-// POST - Capturer une caution (débiter le client)
+// POST - Capturer une caution (dÃ©biter le client)
 app.post('/api/deposits/:depositId/capture', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { depositId } = req.params;
     const { amountCents } = req.body;
     
-    // Vérifier que le deposit appartient à l'utilisateur
+    // VÃ©rifier que le deposit appartient Ã  l'utilisateur
     const deposit = await pool.query(
       'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
       [depositId, user.id]
@@ -6632,24 +6628,24 @@ app.post('/api/deposits/:depositId/capture', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la capture' });
     }
 
-    res.json({ message: 'Caution capturée avec succès' });
+    res.json({ message: 'Caution capturÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/capture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// POST - Libérer une caution (annuler l'autorisation)
+// POST - LibÃ©rer une caution (annuler l'autorisation)
 app.post('/api/deposits/:depositId/release', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { depositId } = req.params;
     
-    // Vérifier que le deposit appartient à l'utilisateur
+    // VÃ©rifier que le deposit appartient Ã  l'utilisateur
     const deposit = await pool.query(
       'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
       [depositId, user.id]
@@ -6662,10 +6658,10 @@ app.post('/api/deposits/:depositId/release', async (req, res) => {
     const success = await releaseDeposit(depositId);
     
     if (!success) {
-      return res.status(500).json({ error: 'Erreur lors de la libération' });
+      return res.status(500).json({ error: 'Erreur lors de la libÃ©ration' });
     }
 
-    res.json({ message: 'Caution libérée avec succès' });
+    res.json({ message: 'Caution libÃ©rÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/release:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6680,7 +6676,7 @@ app.get('/api/checklists', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { propertyId, status, checklistType, reservationUid } = req.query;
@@ -6704,7 +6700,7 @@ app.get('/api/checklists/:checklistId', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { checklistId } = req.params;
@@ -6722,18 +6718,18 @@ app.get('/api/checklists/:checklistId', async (req, res) => {
   }
 });
 
-// POST - Créer une checklist
+// POST - CrÃ©er une checklist
 app.post('/api/checklists', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const checklist = await createChecklist(user.id, req.body);
     
     if (!checklist) {
-      return res.status(500).json({ error: 'Erreur lors de la création' });
+      return res.status(500).json({ error: 'Erreur lors de la crÃ©ation' });
     }
     
     res.status(201).json({ checklist });
@@ -6743,17 +6739,17 @@ app.post('/api/checklists', async (req, res) => {
   }
 });
 
-// PUT - Mettre à jour une tâche
+// PUT - Mettre Ã  jour une tÃ¢che
 app.put('/api/checklists/:checklistId/tasks/:taskId', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { checklistId, taskId } = req.params;
     
-    // Vérifier que la checklist appartient à l'utilisateur
+    // VÃ©rifier que la checklist appartient Ã  l'utilisateur
     const checklist = await getChecklistById(checklistId, user.id);
     if (!checklist) {
       return res.status(404).json({ error: 'Checklist introuvable' });
@@ -6762,7 +6758,7 @@ app.put('/api/checklists/:checklistId/tasks/:taskId', async (req, res) => {
     const updated = await updateChecklistTask(checklistId, taskId, req.body);
     
     if (!updated) {
-      return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+      return res.status(500).json({ error: 'Erreur lors de la mise Ã  jour' });
     }
     
     res.json({ checklist: updated });
@@ -6777,7 +6773,7 @@ app.delete('/api/checklists/:checklistId', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { checklistId } = req.params;
@@ -6788,7 +6784,7 @@ app.delete('/api/checklists/:checklistId', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
     
-    res.json({ message: 'Checklist supprimée avec succès' });
+    res.json({ message: 'Checklist supprimÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur DELETE /api/checklists:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6804,7 +6800,7 @@ app.get('/api/checklist-templates', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { propertyId, checklistType } = req.query;
@@ -6821,18 +6817,18 @@ app.get('/api/checklist-templates', async (req, res) => {
   }
 });
 
-// POST - Créer un template
+// POST - CrÃ©er un template
 app.post('/api/checklist-templates', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const template = await createChecklistTemplate(user.id, req.body);
     
     if (!template) {
-      return res.status(500).json({ error: 'Erreur lors de la création' });
+      return res.status(500).json({ error: 'Erreur lors de la crÃ©ation' });
     }
     
     res.status(201).json({ template });
@@ -6842,12 +6838,12 @@ app.post('/api/checklist-templates', async (req, res) => {
   }
 });
 
-// POST - Créer une checklist depuis un template
+// POST - CrÃ©er une checklist depuis un template
 app.post('/api/checklist-templates/:templateId/create', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { templateId } = req.params;
@@ -6855,7 +6851,7 @@ app.post('/api/checklist-templates/:templateId/create', async (req, res) => {
     const checklist = await createChecklistFromTemplate(user.id, templateId, req.body);
     
     if (!checklist) {
-      return res.status(500).json({ error: 'Erreur lors de la création' });
+      return res.status(500).json({ error: 'Erreur lors de la crÃ©ation' });
     }
     
     res.status(201).json({ checklist });
@@ -6865,12 +6861,12 @@ app.post('/api/checklist-templates/:templateId/create', async (req, res) => {
   }
 });
 
-// POST - Générer les checklists automatiques pour une réservation
+// POST - GÃ©nÃ©rer les checklists automatiques pour une rÃ©servation
 app.post('/api/reservations/:reservationUid/generate-checklists', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+      return res.status(401).json({ error: 'Non autorisÃ©' });
     }
 
     const { reservationUid } = req.params;
@@ -6878,7 +6874,7 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
     const checklists = await generateChecklistsForReservation(user.id, reservationUid);
     
     res.status(201).json({ 
-      message: `${checklists.length} checklists créées`,
+      message: `${checklists.length} checklists crÃ©Ã©es`,
       checklists 
     });
   } catch (err) {
@@ -6887,31 +6883,31 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
   }
 });
 // ============================================
-// ROUTES API - FACTURATION PROPRIÃ‰TAIRES
+// ROUTES API - FACTURATION PROPRIÃƒâ€°TAIRES
 // ============================================
-// Ã€ ajouter dans server.js
+// Ãƒâ‚¬ ajouter dans server.js
 // 
-// IMPORTANT : Ne pas re-dÃ©clarer ces variables si elles existent dÃ©jÃ  :
+// IMPORTANT : Ne pas re-dÃƒÂ©clarer ces variables si elles existent dÃƒÂ©jÃƒÂ  :
 // - const multer = require('multer');
 // - const path = require('path');
 // - const ExcelJS = require('exceljs');
 //
-// Chercher dans server.js si elles sont dÃ©jÃ  prÃ©sentes, sinon les ajouter EN HAUT du fichier
+// Chercher dans server.js si elles sont dÃƒÂ©jÃƒÂ  prÃƒÂ©sentes, sinon les ajouter EN HAUT du fichier
 // ============================================
 // ROUTES API - ABONNEMENTS STRIPE
-// Ã€ COPIER-COLLER DANS server.js APRÃˆS LES AUTRES ROUTES
+// Ãƒâ‚¬ COPIER-COLLER DANS server.js APRÃƒË†S LES AUTRES ROUTES
 // ============================================
 
-// Helper : RÃ©cupÃ©rer le Price ID selon le plan
+// Helper : RÃƒÂ©cupÃƒÂ©rer le Price ID selon le plan
 function getPriceIdForPlan(plan) {
   if (plan === 'pro') {
     return process.env.STRIPE_PRICE_PRO || null;
   }
-  // Par dÃ©faut : basic
+  // Par dÃƒÂ©faut : basic
   return process.env.STRIPE_PRICE_BASIC || null;
 }
 
-// POST - CrÃ©er une session de paiement Stripe
+// POST - CrÃƒÂ©er une session de paiement Stripe
 app.post('/api/billing/create-checkout-session', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -6935,7 +6931,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // CrÃ©er la session Stripe Checkout
+    // CrÃƒÂ©er la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -6965,7 +6961,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
   }
 });
 
-// GET - RÃ©cupÃ©rer le statut d'abonnement de l'utilisateur
+// GET - RÃƒÂ©cupÃƒÂ©rer le statut d'abonnement de l'utilisateur
 app.get('/api/subscription/status', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -7036,7 +7032,7 @@ app.get('/api/subscription/status', async (req, res) => {
   }
 });
 
-// POST - CrÃ©er un lien vers le portail client Stripe
+// POST - CrÃƒÂ©er un lien vers le portail client Stripe
 app.post('/api/billing/create-portal-session', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -7048,7 +7044,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
       return res.status(500).json({ error: 'Stripe non configure' });
     }
 
-    // RÃ©cupÃ©rer l'abonnement Stripe
+    // RÃƒÂ©cupÃƒÂ©rer l'abonnement Stripe
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
       [user.id]
@@ -7061,7 +7057,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     const customerId = result.rows[0].stripe_customer_id;
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // CrÃ©er la session du portail
+    // CrÃƒÂ©er la session du portail
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${appUrl}/settings-account.html?tab=subscription`
@@ -7097,19 +7093,19 @@ const uploadAttachment = multer({
     if (extname && mimetype) {
       return cb(null, true);
     }
-    cb(new Error('Format de fichier non supportÃ©'));
+    cb(new Error('Format de fichier non supportÃƒÂ©'));
   }
 });
 
 // ============================================
-// CLIENTS PROPRIÃ‰TAIRES - CRUD
+// CLIENTS PROPRIÃƒâ€°TAIRES - CRUD
 // ============================================
 
 // 1. LISTE DES CLIENTS
 app.get('/api/owner-clients', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const result = await pool.query(
       `SELECT * FROM owner_clients 
@@ -7126,11 +7122,11 @@ app.get('/api/owner-clients', async (req, res) => {
   }
 });
 
-// 2. DÃ‰TAIL D'UN CLIENT
+// 2. DÃƒâ€°TAIL D'UN CLIENT
 app.get('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const result = await pool.query(
       'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
@@ -7138,21 +7134,21 @@ app.get('/api/owner-clients/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvÃ©' });
+      return res.status(404).json({ error: 'Client non trouvÃƒÂ©' });
     }
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Erreur dÃ©tail client:', err);
+    console.error('Erreur dÃƒÂ©tail client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// 3. CRÃ‰ER UN CLIENT
+// 3. CRÃƒâ€°ER UN CLIENT
 app.post('/api/owner-clients', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const {
       clientType,
@@ -7171,7 +7167,7 @@ app.post('/api/owner-clients', async (req, res) => {
       return res.status(400).json({ error: "Nom d'entreprise requis" });
     }
     if (clientType === 'individual' && (!firstName || !lastName)) {
-      return res.status(400).json({ error: 'Nom et prÃ©nom requis' });
+      return res.status(400).json({ error: 'Nom et prÃƒÂ©nom requis' });
     }
 
     const result = await pool.query(
@@ -7204,14 +7200,14 @@ app.post('/api/owner-clients', async (req, res) => {
 
     res.json({ client: result.rows[0] });
   } catch (err) {
-    console.error('Erreur crÃ©ation client:', err);
+    console.error('Erreur crÃƒÂ©ation client:', err);
     res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
 app.put('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const clientId = req.params.id;
     const {
@@ -7247,7 +7243,7 @@ app.put('/api/owner-clients/:id', async (req, res) => {
     ]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvÃ©' });
+      return res.status(404).json({ error: 'Client non trouvÃƒÂ©' });
     }
 
     res.json({ client: result.rows[0] });
@@ -7259,11 +7255,11 @@ app.put('/api/owner-clients/:id', async (req, res) => {
 app.delete('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const clientId = req.params.id;
 
-    // OPTIONNEL : bloquer si des factures existent dÃ©jÃ  pour ce client
+    // OPTIONNEL : bloquer si des factures existent dÃƒÂ©jÃƒÂ  pour ce client
     const invRes = await pool.query(
       'SELECT COUNT(*) FROM owner_invoices WHERE client_id = $1 AND user_id = $2',
       [clientId, user.id]
@@ -7271,7 +7267,7 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
     const invCount = parseInt(invRes.rows[0].count, 10) || 0;
     if (invCount > 0) {
       return res.status(400).json({
-        error: 'Impossible de supprimer un client qui a dÃ©jÃ  des factures.'
+        error: 'Impossible de supprimer un client qui a dÃƒÂ©jÃƒÂ  des factures.'
       });
     }
 
@@ -7295,9 +7291,9 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
 app.delete('/api/owner-clients/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
-    // VÃ©rifier qu'il n'y a pas de factures liÃ©es
+    // VÃƒÂ©rifier qu'il n'y a pas de factures liÃƒÂ©es
     const checkInvoices = await pool.query(
       'SELECT COUNT(*) as count FROM owner_invoices WHERE client_id = $1',
       [req.params.id]
@@ -7305,7 +7301,7 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
 
     if (parseInt(checkInvoices.rows[0].count) > 0) {
       return res.status(400).json({ 
-        error: 'Impossible de supprimer : ce client a des factures associÃ©es' 
+        error: 'Impossible de supprimer : ce client a des factures associÃƒÂ©es' 
       });
     }
 
@@ -7315,10 +7311,10 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvÃ©' });
+      return res.status(404).json({ error: 'Client non trouvÃƒÂ©' });
     }
 
-    res.json({ message: 'Client supprimÃ©' });
+    res.json({ message: 'Client supprimÃƒÂ©' });
   } catch (err) {
     console.error('Erreur suppression client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7326,9 +7322,9 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
 });
 
 // ============================================
-// ROUTES API V2 - FACTURATION PROPRIÃ‰TAIRES
+// ROUTES API V2 - FACTURATION PROPRIÃƒâ€°TAIRES
 // ============================================
-// NOUVELLES ROUTES Ã  ajouter APRÃˆS les routes V1 existantes
+// NOUVELLES ROUTES ÃƒÂ  ajouter APRÃƒË†S les routes V1 existantes
 
 // ============================================
 // ARTICLES (CATALOGUE)
@@ -7338,7 +7334,7 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
 app.get('/api/owner-articles', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const result = await pool.query(
       `SELECT * FROM owner_articles 
@@ -7354,11 +7350,11 @@ app.get('/api/owner-articles', async (req, res) => {
   }
 });
 
-// 2. CRÃ‰ER UN ARTICLE
+// 2. CRÃƒâ€°ER UN ARTICLE
 app.post('/api/owner-articles', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const { articleType, name, description, unitPrice, commissionRate } = req.body;
 
@@ -7372,7 +7368,7 @@ app.post('/api/owner-articles', async (req, res) => {
 
     res.json({ article: result.rows[0] });
   } catch (err) {
-    console.error('Erreur crÃ©ation article:', err);
+    console.error('Erreur crÃƒÂ©ation article:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -7381,7 +7377,7 @@ app.post('/api/owner-articles', async (req, res) => {
 app.put('/api/owner-articles/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const { name, description, unitPrice, commissionRate } = req.body;
 
@@ -7393,7 +7389,7 @@ app.put('/api/owner-articles/:id', async (req, res) => {
     `, [name, description, unitPrice, commissionRate, req.params.id, user.id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Article non trouvÃ©' });
+      return res.status(404).json({ error: 'Article non trouvÃƒÂ©' });
     }
 
     res.json({ article: result.rows[0] });
@@ -7407,7 +7403,7 @@ app.put('/api/owner-articles/:id', async (req, res) => {
 app.delete('/api/owner-articles/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const result = await pool.query(
       'UPDATE owner_articles SET is_active = false WHERE id = $1 AND user_id = $2 RETURNING *',
@@ -7415,39 +7411,39 @@ app.delete('/api/owner-articles/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Article non trouvÃ©' });
+      return res.status(404).json({ error: 'Article non trouvÃƒÂ©' });
     }
 
-    res.json({ message: 'Article supprimÃ©' });
+    res.json({ message: 'Article supprimÃƒÂ©' });
   } catch (err) {
     console.error('Erreur suppression article:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// 5. CRÃ‰ER ARTICLES PAR DÃ‰FAUT
+// 5. CRÃƒâ€°ER ARTICLES PAR DÃƒâ€°FAUT
 app.post('/api/owner-articles/init-defaults', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     await pool.query('SELECT create_default_owner_articles($1)', [user.id]);
 
-    res.json({ message: 'Articles par dÃ©faut crÃ©Ã©s' });
+    res.json({ message: 'Articles par dÃƒÂ©faut crÃƒÂ©ÃƒÂ©s' });
   } catch (err) {
     console.error('Erreur init articles:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 // ============================================
-// FACTURES PROPRIÃ‰TAIRES - LISTE & CRÃ‰ATION
+// FACTURES PROPRIÃƒâ€°TAIRES - LISTE & CRÃƒâ€°ATION
 // ============================================
 
-// 1. LISTE DES FACTURES PROPRIÃ‰TAIRES
+// 1. LISTE DES FACTURES PROPRIÃƒâ€°TAIRES
 app.get('/api/owner-invoices', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const result = await pool.query(`
             SELECT
@@ -7467,18 +7463,18 @@ app.get('/api/owner-invoices', async (req, res) => {
 
     res.json({ invoices: result.rows });
   } catch (err) {
-    console.error('Erreur liste factures propriÃ©taires:', err);
+    console.error('Erreur liste factures propriÃƒÂ©taires:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// 2. CRÃ‰ER UNE NOUVELLE FACTURE PROPRIÃ‰TAIRE (BROUILLON PAR DÃ‰FAUT)
+// 2. CRÃƒâ€°ER UNE NOUVELLE FACTURE PROPRIÃƒâ€°TAIRE (BROUILLON PAR DÃƒâ€°FAUT)
 app.post('/api/owner-invoices', async (req, res) => {
   const client = await pool.connect();
 
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const {
       clientId,
@@ -7496,12 +7492,12 @@ app.post('/api/owner-invoices', async (req, res) => {
     } = req.body;
 
     if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'DonnÃ©es facture incomplÃ¨tes' });
+      return res.status(400).json({ error: 'DonnÃƒÂ©es facture incomplÃƒÂ¨tes' });
     }
 
     await client.query('BEGIN');
 
-    // Recalculer les totaux de la mÃªme faÃ§on que dans le PUT /api/owner-invoices/:id
+    // Recalculer les totaux de la mÃƒÂªme faÃƒÂ§on que dans le PUT /api/owner-invoices/:id
     let subtotalHt = 0;
     let subtotalDebours = 0;
 
@@ -7525,7 +7521,7 @@ app.post('/api/owner-invoices', async (req, res) => {
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100 || 0) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // CrÃ©ation de la facture (brouillon)
+    // CrÃƒÂ©ation de la facture (brouillon)
     const invoiceResult = await client.query(`
       INSERT INTO owner_invoices (
         user_id,
@@ -7609,7 +7605,7 @@ app.post('/api/owner-invoices', async (req, res) => {
         item.isDebours || false
       ]);
     }
-// Sauvegarder les logements liÃ©s
+// Sauvegarder les logements liÃƒÂ©s
 const propertyIds = req.body.propertyIds || [];
 if (Array.isArray(propertyIds) && propertyIds.length > 0) {
   for (const propId of propertyIds) {
@@ -7626,17 +7622,17 @@ if (Array.isArray(propertyIds) && propertyIds.length > 0) {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Erreur crÃ©ation facture propriÃ©taire:', err);
+    console.error('Erreur crÃƒÂ©ation facture propriÃƒÂ©taire:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   } finally {
     client.release();
   }
 });
-// 2bis. RÃ‰CUPÃ‰RER UNE FACTURE PROPRIÃ‰TAIRE PAR ID
+// 2bis. RÃƒâ€°CUPÃƒâ€°RER UNE FACTURE PROPRIÃƒâ€°TAIRE PAR ID
 app.get('/api/owner-invoices/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const invoiceId = req.params.id;
 
@@ -7647,13 +7643,13 @@ app.get('/api/owner-invoices/:id', async (req, res) => {
     );
 
     if (invResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     const invoice = invResult.rows[0];
 
     // Lignes
-    // RÃ©cupÃ©rer les logements liÃ©s
+    // RÃƒÂ©cupÃƒÂ©rer les logements liÃƒÂ©s
 const propertiesResult = await pool.query(
   `SELECT p.id, p.name, p.address 
    FROM owner_invoice_properties oip
@@ -7669,49 +7665,49 @@ res.json({
 });
 
   } catch (err) {
-    console.error('Erreur lecture facture propriÃ©taire:', err);
+    console.error('Erreur lecture facture propriÃƒÂ©taire:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// CRÃ‰ER UN AVOIR SUR UNE FACTURE EXISTANTE
+// CRÃƒâ€°ER UN AVOIR SUR UNE FACTURE EXISTANTE
 app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
   const client = await pool.connect();
 
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const invoiceId = req.params.id;
 
-    // RÃ©cupÃ©rer la facture d'origine
+    // RÃƒÂ©cupÃƒÂ©rer la facture d'origine
     const origResult = await client.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [invoiceId, user.id]
     );
 
     if (origResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     const orig = origResult.rows[0];
 
     if (orig.is_credit_note) {
-      return res.status(400).json({ error: 'Impossible de crÃ©er un avoir sur un avoir.' });
+      return res.status(400).json({ error: 'Impossible de crÃƒÂ©er un avoir sur un avoir.' });
     }
     if (orig.status === 'draft') {
-      return res.status(400).json({ error: 'On ne peut crÃ©er un avoir que sur une facture facturÃ©e.' });
+      return res.status(400).json({ error: 'On ne peut crÃƒÂ©er un avoir que sur une facture facturÃƒÂ©e.' });
     }
 
     await client.query('BEGIN');
 
-    // Totaux nÃ©gatifs pour l'avoir
+    // Totaux nÃƒÂ©gatifs pour l'avoir
     const creditSubtotalHt     = -Number(orig.subtotal_ht     || 0);
     const creditSubtotalDebours = -Number(orig.subtotal_debours || 0);
     const creditVatAmount      = -Number(orig.vat_amount      || 0);
     const creditTotalTtc       = -Number(orig.total_ttc       || 0);
     const creditDiscountAmount = -Number(orig.discount_amount || 0);
 
-    // CrÃ©er la facture d'avoir (statut "invoiced" directement)
+    // CrÃƒÂ©er la facture d'avoir (statut "invoiced" directement)
     const insertResult = await client.query(`
       INSERT INTO owner_invoices (
         user_id,
@@ -7773,7 +7769,7 @@ app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
     const credit = insertResult.rows[0];
     const creditId = credit.id;
 
-    // GÃ©nÃ©rer un numÃ©ro d'avoir type A-2025-0007
+    // GÃƒÂ©nÃƒÂ©rer un numÃƒÂ©ro d'avoir type A-2025-0007
     const year = new Date().getFullYear();
     const creditNumber = `A-${year}-${String(creditId).padStart(4, '0')}`;
 
@@ -7782,7 +7778,7 @@ app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
       [creditNumber, creditId]
     );
 
-    // Copier les lignes en nÃ©gatif
+    // Copier les lignes en nÃƒÂ©gatif
     await client.query(`
       INSERT INTO owner_invoice_items (
         invoice_id, item_type, description,
@@ -7807,12 +7803,12 @@ app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Renvoie l'avoir crÃ©Ã©
+    // Renvoie l'avoir crÃƒÂ©ÃƒÂ©
     res.json({ invoice: { ...credit, invoice_number: creditNumber } });
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Erreur crÃ©ation avoir propriÃ©taire:', err);
+    console.error('Erreur crÃƒÂ©ation avoir propriÃƒÂ©taire:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   } finally {
     client.release();
@@ -7829,7 +7825,7 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { 
@@ -7851,7 +7847,7 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
       sendEmail
     } = req.body;
 
-    // GÃ©nÃ©rer le numÃ©ro de facture
+    // GÃƒÂ©nÃƒÂ©rer le numÃƒÂ©ro de facture
     const invoiceNumber = 'FACT-' + Date.now();
     const invoiceId = 'inv_' + Date.now();
 
@@ -7863,7 +7859,7 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
     
 
     
-// GÃ©nÃ©rer un PDF simple (serveur) avec PDFKit
+// GÃƒÂ©nÃƒÂ©rer un PDF simple (serveur) avec PDFKit
     async function generateInvoicePdfToFile(outputPath) {
       return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -7873,7 +7869,7 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
         doc.fontSize(20).text(`FACTURE ${invoiceNumber}`, { align: 'center' });
         doc.moveDown();
 
-        doc.fontSize(12).text(`Ã‰metteur : ${user.company || 'Conciergerie'}`);
+        doc.fontSize(12).text(`Ãƒâ€°metteur : ${user.company || 'Conciergerie'}`);
         if (user.email) doc.text(`Email : ${user.email}`);
         doc.moveDown();
 
@@ -7890,17 +7886,17 @@ app.post('/api/invoice/create', authenticateUser, async (req, res) => {
         if (checkinDate && checkoutDate) {
           const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
           const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
-          doc.text(`SÃ©jour : du ${ci} au ${co} (${nights} nuit${nights > 1 ? 's' : ''})`);
+          doc.text(`SÃƒÂ©jour : du ${ci} au ${co} (${nights} nuit${nights > 1 ? 's' : ''})`);
         }
 
         doc.moveDown();
-        doc.fontSize(13).text('DÃ©tails', { underline: true });
+        doc.fontSize(13).text('DÃƒÂ©tails', { underline: true });
         doc.moveDown(0.5);
 
         const addLine = (label, value) => {
-          doc.fontSize(12).text(`${label} : ${Number(value).toFixed(2)} â‚¬`);
+          doc.fontSize(12).text(`${label} : ${Number(value).toFixed(2)} Ã¢â€šÂ¬`);
         };
-// âœ… Download facture PDF via token expirant
+// Ã¢Å“â€¦ Download facture PDF via token expirant
 app.get('/api/invoice/download/:token', async (req, res) => {
   try {
     const { token } = req.params;
@@ -7916,7 +7912,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 
     const row = r.rows[0];
     if (new Date(row.expires_at).getTime() < Date.now()) {
-      return res.status(410).send('Lien expirÃ©.');
+      return res.status(410).send('Lien expirÃƒÂ©.');
     }
 
     const absolutePath = path.resolve(row.file_path);
@@ -7932,19 +7928,19 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 
     fs.createReadStream(absolutePath).pipe(res);
   } catch (err) {
-    console.error('âŒ Erreur download invoice:', err);
+    console.error('Ã¢ÂÅ’ Erreur download invoice:', err);
     res.status(500).send('Erreur serveur.');
   }
 });
 
         if (parseFloat(rentAmount || 0) > 0) addLine('Loyer', rentAmount);
-        if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de séjour', touristTaxAmount);
-        if (parseFloat(cleaningFee || 0) > 0) addLine('Frais de mÃ©nage', cleaningFee);
+        if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de sÃ©jour', touristTaxAmount);
+        if (parseFloat(cleaningFee || 0) > 0) addLine('Frais de mÃƒÂ©nage', cleaningFee);
 
         doc.moveDown();
-        doc.fontSize(12).text(`Sous-total : ${subtotal.toFixed(2)} â‚¬`);
-        if (vatAmount > 0) doc.text(`TVA (${vatRate}%) : ${vatAmount.toFixed(2)} â‚¬`);
-        doc.fontSize(16).text(`TOTAL TTC : ${total.toFixed(2)} â‚¬`, { underline: true });
+        doc.fontSize(12).text(`Sous-total : ${subtotal.toFixed(2)} Ã¢â€šÂ¬`);
+        if (vatAmount > 0) doc.text(`TVA (${vatRate}%) : ${vatAmount.toFixed(2)} Ã¢â€šÂ¬`);
+        doc.fontSize(16).text(`TOTAL TTC : ${total.toFixed(2)} Ã¢â€šÂ¬`, { underline: true });
 
         doc.end();
 
@@ -7959,11 +7955,11 @@ app.get('/api/invoice/download/:token', async (req, res) => {
       const profile = user;
       
 
-      // 1) GÃ©nÃ©rer le fichier PDF
+      // 1) GÃƒÂ©nÃƒÂ©rer le fichier PDF
       const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
       await generateInvoicePdfToFile(pdfPath);
 
-      // 2) CrÃ©er un token expirant 24h
+      // 2) CrÃƒÂ©er un token expirant 24h
       const token = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -7973,38 +7969,38 @@ app.get('/api/invoice/download/:token', async (req, res) => {
         [token, user.id, invoiceNumber, pdfPath, expiresAt]
       );
 
-      // 3) Construire lâ€™URL de download (idÃ©alement via env)
+      // 3) Construire lÃ¢â‚¬â„¢URL de download (idÃƒÂ©alement via env)
       const origin = new URL(process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).origin;
 const pdfUrl = `${origin}/api/invoice/download/${token}`;
 
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #111827;">Facture NÂ° ${invoiceNumber}</h2>
+          <h2 style="color: #111827;">Facture NÃ‚Â° ${invoiceNumber}</h2>
           <p><strong>De :</strong> ${profile.company || 'Conciergerie'}</p>
           <p><strong>Pour :</strong> ${clientName}</p>
           <p><strong>Logement :</strong> ${propertyName}</p>
           ${propertyAddress ? `<p><strong>Adresse :</strong> ${propertyAddress}</p>` : ''}
-          ${checkinDate && checkoutDate ? `<p><strong>SÃ©jour :</strong> Du ${new Date(checkinDate).toLocaleDateString('fr-FR')} au ${new Date(checkoutDate).toLocaleDateString('fr-FR')} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
+          ${checkinDate && checkoutDate ? `<p><strong>SÃƒÂ©jour :</strong> Du ${new Date(checkinDate).toLocaleDateString('fr-FR')} au ${new Date(checkoutDate).toLocaleDateString('fr-FR')} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
           
-          <h3 style="margin-top: 24px; color: #374151;">DÃ©tails de la facture</h3>
+          <h3 style="margin-top: 24px; color: #374151;">DÃƒÂ©tails de la facture</h3>
           <table style="width: 100%; border-collapse: collapse;">
-            ${rentAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Loyer</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} â‚¬</td></tr>` : ''}
-            ${touristTaxAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Taxes de séjour</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(touristTaxAmount).toFixed(2)} â‚¬</td></tr>` : ''}
-            ${cleaningFee > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Frais de mÃ©nage</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(cleaningFee).toFixed(2)} â‚¬</td></tr>` : ''}
+            ${rentAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Loyer</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} Ã¢â€šÂ¬</td></tr>` : ''}
+            ${touristTaxAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Taxes de sÃ©jour</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(touristTaxAmount).toFixed(2)} Ã¢â€šÂ¬</td></tr>` : ''}
+            ${cleaningFee > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Frais de mÃƒÂ©nage</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(cleaningFee).toFixed(2)} Ã¢â€šÂ¬</td></tr>` : ''}
           </table>
           
-          <p style="margin-top: 16px; font-weight: 600;">Sous-total : ${subtotal.toFixed(2)} â‚¬</p>
-          ${vatAmount > 0 ? `<p style="font-weight: 600;">TVA (${vatRate}%) : ${vatAmount.toFixed(2)} â‚¬</p>` : ''}
-          <h3 style="font-size: 20px; color: #10B981; margin-top: 24px;">TOTAL TTC : ${total.toFixed(2)} â‚¬</h3>
+          <p style="margin-top: 16px; font-weight: 600;">Sous-total : ${subtotal.toFixed(2)} Ã¢â€šÂ¬</p>
+          ${vatAmount > 0 ? `<p style="font-weight: 600;">TVA (${vatRate}%) : ${vatAmount.toFixed(2)} Ã¢â€šÂ¬</p>` : ''}
+          <h3 style="font-size: 20px; color: #10B981; margin-top: 24px;">TOTAL TTC : ${total.toFixed(2)} Ã¢â€šÂ¬</h3>
           
           <div style="background: #ecfdf5; border: 2px solid #10B981; border-radius: 8px; padding: 16px; margin-top: 24px; text-align: center;">
-            <p style="color: #10B981; font-weight: bold; margin: 0; font-size: 18px;">âœ“ FACTURE ACQUITTÃ‰E</p>
+            <p style="color: #10B981; font-weight: bold; margin: 0; font-size: 18px;">Ã¢Å“â€œ FACTURE ACQUITTÃƒâ€°E</p>
           </div>
 
           <div style="margin-top: 18px; text-align: center;">
             <a href="${pdfUrl}"
               style="display:inline-block; padding:12px 18px; background:#111827; color:#fff; text-decoration:none; border-radius:10px; font-weight:700;">
-              TÃ©lÃ©charger la facture (PDF)
+              TÃƒÂ©lÃƒÂ©charger la facture (PDF)
             </a>
             <div style="font-size:12px; color:#6b7280; margin-top:10px;">
               Lien valable 24h.
@@ -8029,10 +8025,10 @@ const pdfUrl = `${origin}/api/invoice/download/${token}`;
           html: emailHtml
         });
         
-        console.log('âœ… Email facture client envoyÃ© Ã :', clientEmail);
+        console.log('Ã¢Å“â€¦ Email facture client envoyÃƒÂ© ÃƒÂ :', clientEmail);
 
       } catch (emailErr) {
-        console.error('âŒ Erreur envoi email facture client:', emailErr);
+        console.error('Ã¢ÂÅ’ Erreur envoi email facture client:', emailErr);
       }
     }
     
@@ -8040,16 +8036,16 @@ const pdfUrl = `${origin}/api/invoice/download/${token}`;
       success: true, 
       invoiceNumber,
       invoiceId,
-      message: 'Facture crÃ©Ã©e avec succÃ¨s' 
+      message: 'Facture crÃƒÂ©ÃƒÂ©e avec succÃƒÂ¨s' 
     });
     
   } catch (err) {
-    console.error('Erreur crÃ©ation facture:', err);
+    console.error('Erreur crÃƒÂ©ation facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 // ============================================
-// FACTURES - ROUTES MODIFIÃ‰ES (AVEC RÃ‰DUCTIONS)
+// FACTURES - ROUTES MODIFIÃƒâ€°ES (AVEC RÃƒâ€°DUCTIONS)
 // ============================================
 
 // 6. MODIFIER UNE FACTURE BROUILLON
@@ -8058,20 +8054,20 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
   
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
-    // VÃ©rifier que c'est un brouillon
+    // VÃƒÂ©rifier que c'est un brouillon
     const checkResult = await client.query(
       'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [req.params.id, user.id]
     );
 
     if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     if (checkResult.rows[0].status !== 'draft') {
-      return res.status(400).json({ error: 'Seuls les brouillons peuvent Ãªtre modifiÃ©s' });
+      return res.status(400).json({ error: 'Seuls les brouillons peuvent ÃƒÂªtre modifiÃƒÂ©s' });
     }
 
     await client.query('BEGIN');
@@ -8096,7 +8092,7 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
       }
     });
 
-    // Calculer rÃ©duction
+    // Calculer rÃƒÂ©duction
     let discountAmount = 0;
     if (discountType === 'percentage') {
       discountAmount = subtotalHt * (parseFloat(discountValue) / 100);
@@ -8108,7 +8104,7 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // Mettre Ã  jour facture
+    // Mettre ÃƒÂ  jour facture
     await client.query(`
       UPDATE owner_invoices SET
         vat_applicable = $1, vat_rate = $2,
@@ -8127,7 +8123,7 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
     // Supprimer anciennes lignes
     await client.query('DELETE FROM owner_invoice_items WHERE invoice_id = $1', [req.params.id]);
 
-    // InsÃ©rer nouvelles lignes
+    // InsÃƒÂ©rer nouvelles lignes
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       await client.query(`
@@ -8145,11 +8141,11 @@ app.put('/api/owner-invoices/:id', async (req, res) => {
 
     await client.query('COMMIT');
 
-    res.json({ success: true, message: 'Facture modifiÃ©e' });
+    res.json({ success: true, message: 'Facture modifiÃƒÂ©e' });
 
 
-// TÃ©lÃ©charger une facture PDF via token expirant
-    console.log('âœ… REGISTER: /api/invoice/download/:token');
+// TÃƒÂ©lÃƒÂ©charger une facture PDF via token expirant
+    console.log('Ã¢Å“â€¦ REGISTER: /api/invoice/download/:token');
 app.get('/api/invoice/download/:token', async (req, res) => {
   try {
     const { token } = req.params;
@@ -8165,7 +8161,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     const row = r.rows[0];
 
     if (new Date(row.expires_at).getTime() < Date.now()) {
-      return res.status(410).send('Lien expirÃ©.');
+      return res.status(410).send('Lien expirÃƒÂ©.');
     }
 
     const absolutePath = path.resolve(row.file_path);
@@ -8183,7 +8179,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     fs.createReadStream(absolutePath).pipe(res);
 
   } catch (err) {
-    console.error('âŒ Erreur download invoice:', err);
+    console.error('Ã¢ÂÅ’ Erreur download invoice:', err);
     res.status(500).send('Erreur serveur.');
   }
 });
@@ -8201,55 +8197,55 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 app.delete('/api/owner-invoices/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
-    // VÃ©rifier que c'est un brouillon
+    // VÃƒÂ©rifier que c'est un brouillon
     const checkResult = await pool.query(
       'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [req.params.id, user.id]
     );
 
     if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     if (checkResult.rows[0].status !== 'draft') {
-      return res.status(400).json({ error: 'Seuls les brouillons peuvent Ãªtre supprimÃ©s. CrÃ©ez un avoir pour annuler.' });
+      return res.status(400).json({ error: 'Seuls les brouillons peuvent ÃƒÂªtre supprimÃƒÂ©s. CrÃƒÂ©ez un avoir pour annuler.' });
     }
 
     await pool.query('DELETE FROM owner_invoices WHERE id = $1', [req.params.id]);
 
-    res.json({ message: 'Facture supprimÃ©e' });
+    res.json({ message: 'Facture supprimÃƒÂ©e' });
   } catch (err) {
     console.error('Erreur suppression facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// 2bis. VALIDER UNE FACTURE (BROUILLON -> FACTURÃ‰E)
+// 2bis. VALIDER UNE FACTURE (BROUILLON -> FACTURÃƒâ€°E)
 app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const invoiceId = req.params.id;
 
-    // RÃ©cupÃ©rer la facture
+    // RÃƒÂ©cupÃƒÂ©rer la facture
     const result = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [invoiceId, user.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     const invoice = result.rows[0];
 
     if (invoice.status !== 'draft') {
-      return res.status(400).json({ error: 'Seuls les brouillons peuvent Ãªtre validÃ©s.' });
+      return res.status(400).json({ error: 'Seuls les brouillons peuvent ÃƒÂªtre validÃƒÂ©s.' });
     }
 
-    // GÃ©nÃ©rer un numÃ©ro si absent
+    // GÃƒÂ©nÃƒÂ©rer un numÃƒÂ©ro si absent
     let invoiceNumber = invoice.invoice_number;
     if (!invoiceNumber) {
       const year = new Date().getFullYear();
@@ -8266,7 +8262,7 @@ app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
 
     res.json({ invoice: updateResult.rows[0] });
   } catch (err) {
-    console.error('Erreur finalisation facture propriÃ©taire:', err);
+    console.error('Erreur finalisation facture propriÃƒÂ©taire:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -8275,31 +8271,31 @@ app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
 app.post('/api/owner-invoices/:id/send', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
-    // RÃ©cupÃ©rer la facture
+    // RÃƒÂ©cupÃƒÂ©rer la facture
     const invoiceResult = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [req.params.id, user.id]
     );
 
     if (invoiceResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     const invoice = invoiceResult.rows[0];
 
     if (invoice.status !== 'draft') {
-      return res.status(400).json({ error: 'Cette facture a dÃ©jÃ  Ã©tÃ© envoyÃ©e' });
+      return res.status(400).json({ error: 'Cette facture a dÃƒÂ©jÃƒÂ  ÃƒÂ©tÃƒÂ© envoyÃƒÂ©e' });
     }
 
-    // RÃ©cupÃ©rer les items
+    // RÃƒÂ©cupÃƒÂ©rer les items
     const itemsResult = await pool.query(
       'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
       [req.params.id]
     );
 
-    // Mettre Ã  jour statut
+    // Mettre ÃƒÂ  jour statut
     await pool.query(
       'UPDATE owner_invoices SET status = $1, sent_at = NOW() WHERE id = $2',
       ['sent', req.params.id]
@@ -8324,29 +8320,29 @@ app.post('/api/owner-invoices/:id/send', async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: 'Facture envoyÃ©e' });
+    res.json({ success: true, message: 'Facture envoyÃƒÂ©e' });
 
   } catch (err) {
     console.error('Erreur envoi facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// MARQUER UNE FACTURE COMME ENCAISSÃ‰E
+// MARQUER UNE FACTURE COMME ENCAISSÃƒâ€°E
 app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const invoiceId = req.params.id;
 
-    // RÃ©cupÃ©rer la facture
+    // RÃƒÂ©cupÃƒÂ©rer la facture
     const result = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [invoiceId, user.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     const invoice = result.rows[0];
@@ -8355,7 +8351,7 @@ app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
       return res.status(400).json({ error: 'Vous devez d\'abord valider cette facture.' });
     }
 
-    // Marquer comme payÃ©e (sans paid_at)
+    // Marquer comme payÃƒÂ©e (sans paid_at)
     const updateResult = await pool.query(
       `UPDATE owner_invoices
        SET status = 'paid'
@@ -8366,7 +8362,7 @@ app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
 
     res.json({ success: true, invoice: updateResult.rows[0] });
   } catch (err) {
-    console.error('Erreur marquage facture payÃ©e:', err);
+    console.error('Erreur marquage facture payÃƒÂ©e:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -8374,19 +8370,19 @@ app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
 // AVOIRS
 // ============================================
 
-// 9. CRÃ‰ER UN AVOIR
+// 9. CRÃƒâ€°ER UN AVOIR
 app.post('/api/owner-credit-notes', async (req, res) => {
   const client = await pool.connect();
   
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     await client.query('BEGIN');
 
     const { invoiceId, reason } = req.body;
 
-    // RÃ©cupÃ©rer la facture d'origine
+    // RÃƒÂ©cupÃƒÂ©rer la facture d'origine
     const invoiceResult = await client.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
       [invoiceId, user.id]
@@ -8394,17 +8390,17 @@ app.post('/api/owner-credit-notes', async (req, res) => {
 
     if (invoiceResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Facture non trouvÃ©e' });
+      return res.status(404).json({ error: 'Facture non trouvÃƒÂ©e' });
     }
 
     const invoice = invoiceResult.rows[0];
 
     if (invoice.status !== 'sent' && invoice.status !== 'paid') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Seules les factures envoyÃ©es peuvent avoir un avoir' });
+      return res.status(400).json({ error: 'Seules les factures envoyÃƒÂ©es peuvent avoir un avoir' });
     }
 
-    // VÃ©rifier qu'il n'y a pas dÃ©jÃ  un avoir
+    // VÃƒÂ©rifier qu'il n'y a pas dÃƒÂ©jÃƒÂ  un avoir
     const existingCredit = await client.query(
       'SELECT id FROM owner_credit_notes WHERE original_invoice_id = $1',
       [invoiceId]
@@ -8412,17 +8408,17 @@ app.post('/api/owner-credit-notes', async (req, res) => {
 
     if (existingCredit.rows.length > 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Un avoir existe dÃ©jÃ  pour cette facture' });
+      return res.status(400).json({ error: 'Un avoir existe dÃƒÂ©jÃƒÂ  pour cette facture' });
     }
 
-    // GÃ©nÃ©rer numÃ©ro avoir
+    // GÃƒÂ©nÃƒÂ©rer numÃƒÂ©ro avoir
     const creditNumberResult = await client.query(
       'SELECT get_next_credit_note_number($1) as credit_note_number',
       [user.id]
     );
     const creditNoteNumber = creditNumberResult.rows[0].credit_note_number;
 
-    // CrÃ©er l'avoir (montants nÃ©gatifs)
+    // CrÃƒÂ©er l'avoir (montants nÃƒÂ©gatifs)
     const creditResult = await client.query(`
       INSERT INTO owner_credit_notes (
         credit_note_number, user_id, original_invoice_id, original_invoice_number,
@@ -8440,7 +8436,7 @@ app.post('/api/owner-credit-notes', async (req, res) => {
 
     const creditNoteId = creditResult.rows[0].id;
 
-    // Copier les lignes (nÃ©gatif)
+    // Copier les lignes (nÃƒÂ©gatif)
     const itemsResult = await client.query(
       'SELECT * FROM owner_invoice_items WHERE invoice_id = $1',
       [invoiceId]
@@ -8453,7 +8449,7 @@ app.post('/api/owner-credit-notes', async (req, res) => {
       `, [creditNoteId, item.item_type, item.description, -item.total, item.order_index]);
     }
 
-    // Mettre Ã  jour facture (lien vers avoir + statut cancelled)
+    // Mettre ÃƒÂ  jour facture (lien vers avoir + statut cancelled)
     await client.query(
       'UPDATE owner_invoices SET credit_note_id = $1, status = $2 WHERE id = $3',
       [creditNoteId, 'cancelled', invoiceId]
@@ -8465,12 +8461,12 @@ app.post('/api/owner-credit-notes', async (req, res) => {
       success: true,
       creditNoteId,
       creditNoteNumber,
-      message: 'Avoir crÃ©Ã© et facture annulÃ©e'
+      message: 'Avoir crÃƒÂ©ÃƒÂ© et facture annulÃƒÂ©e'
     });
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Erreur crÃ©ation avoir:', err);
+    console.error('Erreur crÃƒÂ©ation avoir:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   } finally {
     client.release();
@@ -8481,7 +8477,7 @@ app.post('/api/owner-credit-notes', async (req, res) => {
 app.get('/api/owner-credit-notes', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const result = await pool.query(
       `SELECT * FROM owner_credit_notes 
@@ -8497,11 +8493,11 @@ app.get('/api/owner-credit-notes', async (req, res) => {
   }
 });
 
-// 11. DÃ‰TAIL AVOIR
+// 11. DÃƒâ€°TAIL AVOIR
 app.get('/api/owner-credit-notes/:id', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisÃ©' });
+    if (!user) return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
 
     const creditResult = await pool.query(
       'SELECT * FROM owner_credit_notes WHERE id = $1 AND user_id = $2',
@@ -8509,7 +8505,7 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
     );
 
     if (creditResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Avoir non trouvÃ©' });
+      return res.status(404).json({ error: 'Avoir non trouvÃƒÂ©' });
     }
 
     const itemsResult = await pool.query(
@@ -8522,7 +8518,7 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
       items: itemsResult.rows
     });
   } catch (err) {
-    console.error('Erreur dÃ©tail avoir:', err);
+    console.error('Erreur dÃƒÂ©tail avoir:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -8531,55 +8527,51 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 // FIN DES ROUTES V2
 // ============================================
 // ============================================
-// âœ… NOUVEAU : ROUTES POUR LIVRETS D'ACCUEIL
+// Ã¢Å“â€¦ NOUVEAU : ROUTES POUR LIVRETS D'ACCUEIL
 // ============================================
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
-// ============================================
-// ROUTES CHAT
-// ============================================
-setupChatRoutes(app, pool, io, authenticateToken, checkSubscription);
 // ============================================
 // ============================================
 // NOTES D'INSTALLATION
 // ============================================
 
 /*
-1. Installer les dÃ©pendances :
+1. Installer les dÃƒÂ©pendances :
    npm install exceljs
 
-2. CrÃ©er le dossier uploads :
+2. CrÃƒÂ©er le dossier uploads :
    mkdir -p public/uploads/justificatifs
 
-3. Les dÃ©pendances nodemailer et pdfkit sont dÃ©jÃ  installÃ©es
+3. Les dÃƒÂ©pendances nodemailer et pdfkit sont dÃƒÂ©jÃƒÂ  installÃƒÂ©es
 */
 // ============================================
-// ROUTES STRIPE - Ã€ AJOUTER DANS server.js
-// Copier APRÃˆS les autres routes API, AVANT app.listen()
+// ROUTES STRIPE - Ãƒâ‚¬ AJOUTER DANS server.js
+// Copier APRÃƒË†S les autres routes API, AVANT app.listen()
 // ============================================
 
-// Helper : RÃ©cupÃ©rer le Price ID selon le plan
+// Helper : RÃƒÂ©cupÃƒÂ©rer le Price ID selon le plan
 function getPriceIdForPlan(plan) {
   if (plan === 'pro') {
     return process.env.STRIPE_PRICE_PRO || null;
   }
-  // Par dÃ©faut : basic
+  // Par dÃƒÂ©faut : basic
   return process.env.STRIPE_PRICE_BASIC || null;
 }
 
 // ============================================
 // POST /api/billing/create-checkout-session
-// CrÃ©er une session de paiement Stripe
+// CrÃƒÂ©er une session de paiement Stripe
 // ============================================
 app.post('/api/billing/create-checkout-session', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configurÃ©' });
+      return res.status(500).json({ error: 'Stripe non configurÃƒÂ©' });
     }
 
     const { plan } = req.body || {};
@@ -8589,12 +8581,12 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configurÃ©' });
+      return res.status(400).json({ error: 'Plan inconnu ou non configurÃƒÂ©' });
     }
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // CrÃ©er la session Stripe Checkout
+    // CrÃƒÂ©er la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -8620,19 +8612,19 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('Erreur create-checkout-session:', err);
-    res.status(500).json({ error: 'Impossible de crÃ©er la session de paiement' });
+    res.status(500).json({ error: 'Impossible de crÃƒÂ©er la session de paiement' });
   }
 });
 
 // ============================================
 // GET /api/subscription/status
-// RÃ©cupÃ©rer le statut d'abonnement de l'utilisateur
+// RÃƒÂ©cupÃƒÂ©rer le statut d'abonnement de l'utilisateur
 // ============================================
 app.get('/api/subscription/status', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const result = await pool.query(
@@ -8647,7 +8639,7 @@ app.get('/api/subscription/status', async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ 
-        error: 'Aucun abonnement trouvÃ©',
+        error: 'Aucun abonnement trouvÃƒÂ©',
         hasSubscription: false
       });
     }
@@ -8669,14 +8661,14 @@ app.get('/api/subscription/status', async (req, res) => {
       if (daysRemaining > 0) {
         displayMessage = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} d'essai restant${daysRemaining > 1 ? 's' : ''}`;
       } else {
-        displayMessage = 'PÃ©riode essai expirÃ©e';
+        displayMessage = 'PÃƒÂ©riode essai expirÃƒÂ©e';
       }
     } else if (subscription.status === 'active') {
       displayMessage = `Abonnement ${subscription.plan_type === 'pro' ? 'Pro' : 'Basic'} actif`;
     } else if (subscription.status === 'expired') {
-      displayMessage = 'Abonnement expirÃ©';
+      displayMessage = 'Abonnement expirÃƒÂ©';
     } else if (subscription.status === 'canceled') {
-      displayMessage = 'Abonnement annulÃ©';
+      displayMessage = 'Abonnement annulÃƒÂ©';
     }
 
     res.json({
@@ -8700,33 +8692,33 @@ app.get('/api/subscription/status', async (req, res) => {
 
 // ============================================
 // POST /api/billing/create-portal-session
-// CrÃ©er un lien vers le portail client Stripe
+// CrÃƒÂ©er un lien vers le portail client Stripe
 // ============================================
 app.post('/api/billing/create-portal-session', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configurÃ©' });
+      return res.status(500).json({ error: 'Stripe non configurÃƒÂ©' });
     }
 
-    // RÃ©cupÃ©rer l'abonnement Stripe
+    // RÃƒÂ©cupÃƒÂ©rer l'abonnement Stripe
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
       [user.id]
     );
 
     if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
-      return res.status(404).json({ error: 'Aucun client Stripe trouvÃ©' });
+      return res.status(404).json({ error: 'Aucun client Stripe trouvÃƒÂ©' });
     }
 
     const customerId = result.rows[0].stripe_customer_id;
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // CrÃ©er la session du portail
+    // CrÃƒÂ©er la session du portail
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${appUrl}/settings-account.html?tab=subscription`
@@ -8736,13 +8728,13 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
 
   } catch (err) {
     console.error('Erreur create-portal-session:', err);
-    res.status(500).json({ error: 'Impossible de crÃ©er la session portail' });
+    res.status(500).json({ error: 'Impossible de crÃƒÂ©er la session portail' });
   }
 });
 
 // ============================================
 // POST /api/webhooks/stripe
-// Webhook Stripe (Ã©vÃ©nements de paiement)
+// Webhook Stripe (ÃƒÂ©vÃƒÂ©nements de paiement)
 // ============================================
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -8758,11 +8750,11 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.error('Erreur vÃ©rification webhook:', err.message);
+    console.error('Erreur vÃƒÂ©rification webhook:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  console.log('Webhook Stripe reÃ§u:', event.type);
+  console.log('Webhook Stripe reÃƒÂ§u:', event.type);
 
   try {
     switch (event.type) {
@@ -8776,11 +8768,11 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           break;
         }
 
-        // RÃ©cupÃ©rer la subscription Stripe
+        // RÃƒÂ©cupÃƒÂ©rer la subscription Stripe
         const subscriptionId = session.subscription;
         const customerId = session.customer;
 
-        // Mettre Ã  jour la base de donnÃ©es
+        // Mettre ÃƒÂ  jour la base de donnÃƒÂ©es
         await pool.query(
           `UPDATE subscriptions 
            SET 
@@ -8793,7 +8785,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           [subscriptionId, customerId, plan, userId]
         );
 
-        console.log(`Abonnement crÃ©Ã© pour user ${userId} (plan: ${plan})`);
+        console.log(`Abonnement crÃƒÂ©ÃƒÂ© pour user ${userId} (plan: ${plan})`);
         break;
       }
 
@@ -8801,13 +8793,13 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         const subscription = event.data.object;
         const subscriptionId = subscription.id;
 
-        // DÃ©terminer le statut
+        // DÃƒÂ©terminer le statut
         let status = 'active';
         if (subscription.status === 'trialing') status = 'trial';
         else if (subscription.status === 'canceled') status = 'canceled';
         else if (subscription.status === 'past_due') status = 'past_due';
 
-        // Mettre Ã  jour en base
+        // Mettre ÃƒÂ  jour en base
         await pool.query(
           `UPDATE subscriptions 
            SET 
@@ -8818,7 +8810,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           [status, subscription.current_period_end, subscriptionId]
         );
 
-        console.log(`Abonnement ${subscriptionId} mis Ã  jour: ${status}`);
+        console.log(`Abonnement ${subscriptionId} mis ÃƒÂ  jour: ${status}`);
         break;
       }
 
@@ -8833,7 +8825,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           [subscriptionId]
         );
 
-        console.log(`Abonnement ${subscriptionId} annulÃ©`);
+        console.log(`Abonnement ${subscriptionId} annulÃƒÂ©`);
         break;
       }
 
@@ -8843,7 +8835,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
         if (!subscriptionId) break;
 
-        // Passer de trial Ã  active si c'Ã©tait le premier paiement
+        // Passer de trial ÃƒÂ  active si c'ÃƒÂ©tait le premier paiement
         await pool.query(
           `UPDATE subscriptions 
            SET 
@@ -8853,7 +8845,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           [subscriptionId]
         );
 
-        console.log(`Paiement rÃ©ussi pour subscription ${subscriptionId}`);
+        console.log(`Paiement rÃƒÂ©ussi pour subscription ${subscriptionId}`);
         break;
       }
 
@@ -8870,12 +8862,12 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           [subscriptionId]
         );
 
-        console.log(`Paiement Ã©chouÃ© pour subscription ${subscriptionId}`);
+        console.log(`Paiement ÃƒÂ©chouÃƒÂ© pour subscription ${subscriptionId}`);
         break;
       }
 
       default:
-        console.log(`Ã‰vÃ©nement non gÃ©rÃ©: ${event.type}`);
+        console.log(`Ãƒâ€°vÃƒÂ©nement non gÃƒÂ©rÃƒÂ©: ${event.type}`);
     }
 
     res.json({ received: true });
@@ -8891,18 +8883,18 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 // ============================================
 // ============================================
 // SCRIPT CRON : ENVOI AUTOMATIQUE DES EMAILS
-// Ã€ AJOUTER DANS server.js
+// Ãƒâ‚¬ AJOUTER DANS server.js
 // ============================================
 
 // ============================================
-// CRON JOB : VÃ©rifier et envoyer les emails automatiques
-// S'exÃ©cute toutes les heures
+// CRON JOB : VÃƒÂ©rifier et envoyer les emails automatiques
+// S'exÃƒÂ©cute toutes les heures
 // ============================================
 cron.schedule('0 * * * *', async () => {
-  console.log('ðŸ”„ VÃ©rification des emails automatiques Ã  envoyer...');
+  console.log('Ã°Å¸â€â€ž VÃƒÂ©rification des emails automatiques ÃƒÂ  envoyer...');
   
   try {
-    // RÃ©cupÃ©rer tous les utilisateurs avec leur abonnement
+    // RÃƒÂ©cupÃƒÂ©rer tous les utilisateurs avec leur abonnement
     const result = await pool.query(`
       SELECT 
         u.id as user_id,
@@ -8923,7 +8915,7 @@ cron.schedule('0 * * * *', async () => {
     for (const user of users) {
       try {
         // ============================================
-        // EMAIL 1 : BIENVENUE (si jamais envoyÃ©)
+        // EMAIL 1 : BIENVENUE (si jamais envoyÃƒÂ©)
         // ============================================
         const welcomeSent = await hasEmailBeenSent(user.user_id, 'welcome');
         if (!welcomeSent && user.status === 'trial') {
@@ -8976,7 +8968,7 @@ cron.schedule('0 * * * *', async () => {
           const daysUntilRenewal = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
           if (daysUntilRenewal === 3) {
-            // VÃ©rifier si un email de rappel a Ã©tÃ© envoyÃ© pour cette pÃ©riode
+            // VÃƒÂ©rifier si un email de rappel a ÃƒÂ©tÃƒÂ© envoyÃƒÂ© pour cette pÃƒÂ©riode
             const renewalKey = `renewal_reminder_${periodEnd.toISOString().split('T')[0]}`;
             const renewalSent = await hasEmailBeenSent(user.user_id, renewalKey);
             
@@ -9003,28 +8995,28 @@ cron.schedule('0 * * * *', async () => {
       }
     }
 
-    console.log('âœ… VÃ©rification des emails automatiques terminÃ©e');
+    console.log('Ã¢Å“â€¦ VÃƒÂ©rification des emails automatiques terminÃƒÂ©e');
 
   } catch (err) {
-    console.error('âŒ Erreur cron emails automatiques:', err);
+    console.error('Ã¢ÂÅ’ Erreur cron emails automatiques:', err);
   }
 });
 
-console.log('â° TÃ¢che CRON emails automatiques activÃ©e (toutes les heures)');
+console.log('Ã¢ÂÂ° TÃƒÂ¢che CRON emails automatiques activÃƒÂ©e (toutes les heures)');
 
 // ============================================
 // MODIFIER LE WEBHOOK : ENVOYER EMAIL CONFIRMATION
 // ============================================
 // Dans le case 'checkout.session.completed' de votre webhook,
-// ajoutez ceci aprÃ¨s la mise Ã  jour de la base de donnÃ©es :
+// ajoutez ceci aprÃƒÂ¨s la mise ÃƒÂ  jour de la base de donnÃƒÂ©es :
 
 /*
 case 'checkout.session.completed': {
   // ... votre code existant ...
   
-  await pool.query(...); // Mise Ã  jour de la base
+  await pool.query(...); // Mise ÃƒÂ  jour de la base
 
-  // âœ… AJOUTER ICI : Envoyer email de confirmation
+  // Ã¢Å“â€¦ AJOUTER ICI : Envoyer email de confirmation
   const userResult = await pool.query(
     'SELECT email, first_name FROM users WHERE id = $1',
     [userId]
@@ -9044,7 +9036,7 @@ case 'checkout.session.completed': {
     await logEmailSent(userId, 'subscription_confirmed', { plan, planAmount });
   }
 
-  console.log(`âœ… Abonnement ACTIF crÃ©Ã© pour user ${userId} (plan: ${plan})`);
+  console.log(`Ã¢Å“â€¦ Abonnement ACTIF crÃƒÂ©ÃƒÂ© pour user ${userId} (plan: ${plan})`);
   break;
 }
 */
@@ -9053,24 +9045,24 @@ case 'checkout.session.completed': {
 // FIN DU SCRIPT CRON
 // ============================================
 
-// Route pour supprimer une rÃ©servation manuelle ou un blocage
+// Route pour supprimer une rÃƒÂ©servation manuelle ou un blocage
 app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      console.log('âŒ Suppression refusÃ©e : utilisateur non authentifiÃ©');
-      return res.status(401).json({ error: 'Non autorisÃ©' });
+      console.log('Ã¢ÂÅ’ Suppression refusÃƒÂ©e : utilisateur non authentifiÃƒÂ©');
+      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
     }
 
     const { propertyId, uid } = req.body || {};
-    console.log('ðŸ—‘ Demande de suppression manuelle reÃ§ue :', {
+    console.log('Ã°Å¸â€”â€˜ Demande de suppression manuelle reÃƒÂ§ue :', {
       userId: user.id,
       propertyId,
       uid
     });
 
     if (!propertyId || !uid) {
-      console.log('âŒ RequÃªte invalide pour suppression : propertyId ou uid manquant', {
+      console.log('Ã¢ÂÅ’ RequÃƒÂªte invalide pour suppression : propertyId ou uid manquant', {
         propertyId,
         uid
       });
@@ -9081,19 +9073,19 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       (p) => p.id === propertyId && p.userId === user.id
     );
     if (!property) {
-      console.log('âŒ Logement non trouvÃ© pour suppression', {
+      console.log('Ã¢ÂÅ’ Logement non trouvÃƒÂ© pour suppression', {
         propertyId,
         userId: user.id
       });
-      return res.status(404).json({ error: 'Logement non trouvÃ©' });
+      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
     }
 
     if (!MANUAL_RESERVATIONS[propertyId] || MANUAL_RESERVATIONS[propertyId].length === 0) {
-      console.log('âŒ Aucune rÃ©servation/blocage trouvÃ© pour ce logement', {
+      console.log('Ã¢ÂÅ’ Aucune rÃƒÂ©servation/blocage trouvÃƒÂ© pour ce logement', {
         propertyId,
         uid
       });
-      return res.status(404).json({ error: 'RÃ©servation/blocage non trouvÃ©' });
+      return res.status(404).json({ error: 'RÃƒÂ©servation/blocage non trouvÃƒÂ©' });
     }
 
     const initialLength = MANUAL_RESERVATIONS[propertyId].length;
@@ -9101,7 +9093,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       MANUAL_RESERVATIONS[propertyId].filter((r) => r.uid !== uid);
     const newLength = MANUAL_RESERVATIONS[propertyId].length;
 
-    console.log('ðŸ“Š Suppression dans MANUAL_RESERVATIONS :', {
+    console.log('Ã°Å¸â€œÅ  Suppression dans MANUAL_RESERVATIONS :', {
       propertyId,
       uid,
       initialLength,
@@ -9110,14 +9102,14 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
 
     if (initialLength === newLength) {
       console.log(
-        'âŒ Aucune entrÃ©e supprimÃ©e (uid non trouvÃ© dans MANUAL_RESERVATIONS)',
+        'Ã¢ÂÅ’ Aucune entrÃƒÂ©e supprimÃƒÂ©e (uid non trouvÃƒÂ© dans MANUAL_RESERVATIONS)',
         { propertyId, uid }
       );
-      return res.status(404).json({ error: 'RÃ©servation/blocage non trouvÃ©' });
+      return res.status(404).json({ error: 'RÃƒÂ©servation/blocage non trouvÃƒÂ©' });
     }
 
     await saveManualReservations();
-    console.log('ðŸ’¾ MANUAL_RESERVATIONS sauvegardÃ© aprÃ¨s suppression');
+    console.log('Ã°Å¸â€™Â¾ MANUAL_RESERVATIONS sauvegardÃƒÂ© aprÃƒÂ¨s suppression');
 
     if (reservationsStore.properties[propertyId]) {
       const initialStoreLength = reservationsStore.properties[propertyId].length;
@@ -9125,7 +9117,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
         reservationsStore.properties[propertyId].filter((r) => r.uid !== uid);
       const newStoreLength = reservationsStore.properties[propertyId].length;
 
-      console.log('ðŸ§® reservationsStore mis Ã  jour :', {
+      console.log('Ã°Å¸Â§Â® reservationsStore mis ÃƒÂ  jour :', {
         propertyId,
         uid,
         initialStoreLength,
@@ -9133,21 +9125,21 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       });
     } else {
       console.log(
-        'â„¹ï¸ Aucun entry dans reservationsStore pour ce propertyId au moment de la suppression',
+        'Ã¢â€žÂ¹Ã¯Â¸Â Aucun entry dans reservationsStore pour ce propertyId au moment de la suppression',
         { propertyId }
       );
     }
 
     res.status(200).json({
       success: true,
-      message: 'RÃ©servation/blocage supprimÃ©'
+      message: 'RÃƒÂ©servation/blocage supprimÃƒÂ©'
     });
   } catch (err) {
-    console.error('Erreur suppression rÃ©servation manuelle:', err);
+    console.error('Erreur suppression rÃƒÂ©servation manuelle:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// DEBUG: vÃ©rifier que les GET fonctionnent et lister les routes chargÃ©es
+// DEBUG: vÃƒÂ©rifier que les GET fonctionnent et lister les routes chargÃƒÂ©es
 app.get('/api/health', (req, res) => res.status(200).send('ok'));
 
 app.get('/api/_routes', (req, res) => {
@@ -9165,13 +9157,13 @@ app.get('/api/_routes', (req, res) => {
   }
 });
 // ============================================
-// âœ… ROUTE PUBLIQUE LIVRET D'ACCUEIL (VERSION PREMIUM)
+// Ã¢Å“â€¦ ROUTE PUBLIQUE LIVRET D'ACCUEIL (VERSION PREMIUM)
 // ============================================
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
     
-    // 1. Récupération des données
+    // 1. RÃ©cupÃ©ration des donnÃ©es
     const result = await pool.query(
       `SELECT data FROM welcome_books_v2 WHERE unique_id = $1`, 
       [uniqueId]
@@ -9183,12 +9175,12 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     
     const d = result.rows[0].data || {};
 
-    // 2. Préparation des variables (Correction du Titre ici)
+    // 2. PrÃ©paration des variables (Correction du Titre ici)
     // On s'assure que si une info manque, on met un texte vide
     const title = d.propertyName || "Mon Livret d'Accueil";
     const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
     
-    // 3. Génération du HTML "Design Moderne"
+    // 3. GÃ©nÃ©ration du HTML "Design Moderne"
     const html = `
     <!DOCTYPE html>
     <html lang="fr">
@@ -9280,7 +9272,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           color: var(--primary);
         }
 
-        /* GRID INFO CLÃ‰S */
+        /* GRID INFO CLÃƒâ€°S */
         .key-info-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -9305,7 +9297,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .wifi-ssid { font-size: 1.2rem; margin-bottom: 0.5rem; }
         .wifi-pass { font-family: monospace; font-size: 1.4rem; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; }
 
-        /* LISTES (Restaurants, PiÃ¨ces) */
+        /* LISTES (Restaurants, PiÃƒÂ¨ces) */
         .list-item {
           border-bottom: 1px solid #f1f5f9;
           padding: 1rem 0;
@@ -9378,21 +9370,21 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       
         <div class="card">
           <div class="section-title"><i class="fas fa-hand-sparkles"></i> Bienvenue</div>
-          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent séjour.').replace(/\n/g, '<br>')}</p>
+          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent sÃ©jour.').replace(/\n/g, '<br>')}</p>
         </div>
 
         <div class="key-info-grid">
           <div class="info-item">
-            <div class="info-label">Arrivée</div>
-            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'Dès 15h'}</div>
+            <div class="info-label">ArrivÃ©e</div>
+            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'DÃ¨s 15h'}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Départ</div>
+            <div class="info-label">DÃ©part</div>
             <div class="info-value">Avant ${d.checkoutTime || '11h00'}</div>
           </div>
           ${d.keyboxCode ? `
           <div class="info-item">
-            <div class="info-label">BoÃ®te Ã  clÃ©s</div>
+            <div class="info-label">BoÃƒÂ®te ÃƒÂ  clÃƒÂ©s</div>
             <div class="info-value">${d.keyboxCode}</div>
           </div>` : ''}
         </div>
@@ -9408,7 +9400,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
         ${d.accessInstructions ? `
         <div class="card">
-          <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
+          <div class="section-title"><i class="fas fa-key"></i> AccÃ¨s au logement</div>
           <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
           ${d.photos && d.photos.entrance ? `
             <div class="gallery">
@@ -9439,9 +9431,9 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         </div>` : ''}
 
         <div class="card">
-           <div class="section-title"><i class="fas fa-clipboard-check"></i> Règles & Départ</div>
-           ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
-           ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
+           <div class="section-title"><i class="fas fa-clipboard-check"></i> RÃ¨gles & DÃ©part</div>
+           ${d.importantRules ? `<p><strong>Ã€ savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
+           ${d.checkoutInstructions ? `<p><strong>Au dÃ©part :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
         </div>
 
         ${(d.restaurants?.length > 0 || d.places?.length > 0) ? `
@@ -9449,7 +9441,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           <div class="section-title"><i class="fas fa-map-signs"></i> Guide Local</div>
           
           ${d.restaurants && d.restaurants.length > 0 ? `
-            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">ðŸ½ï¸ Restaurants</h4>
+            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">Ã°Å¸ÂÂ½Ã¯Â¸Â Restaurants</h4>
             ${d.restaurants.map(resto => `
               <div class="list-item">
                 <div class="item-header">
@@ -9463,7 +9455,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           ` : ''}
 
           ${d.places && d.places.length > 0 ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">ðŸ›ï¸ À visiter</h4>
+            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">Ã°Å¸Ââ€ºÃ¯Â¸Â Ã€ visiter</h4>
             ${d.places.map(place => `
               <div class="list-item">
                 <div class="item-title">${place.name}</div>
@@ -9474,13 +9466,13 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         </div>` : ''}
 
         <div class="footer">
-          <p>Livret propulsé par BoostingHost</p>
+          <p>Livret propulsÃ© par BoostingHost</p>
         </div>
 
       </div>
 
       ${d.contactPhone ? `
-      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte">
+      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hÃ´te">
         <i class="fas fa-phone"></i>
       </a>` : ''}
 
@@ -9498,73 +9490,88 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 });
 
 // ============================================
-// DÃ‰MARRAGE (TOUJOURS EN DERNIER)
+// ✅ CRÉATION DU SERVEUR HTTP + SOCKET.IO
+// ============================================
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.APP_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// ============================================
+// ✅ INITIALISATION DES ROUTES DU CHAT
+// ============================================
+setupChatRoutes(app, pool, io, authenticateToken, checkSubscription);
+console.log('✅ Routes du chat initialisées');
+
+// ============================================
+// DÉMARRAGE (TOUJOURS EN DERNIER)
 // ============================================
 
-server.listen(PORT, () => {  // ← Utilisez 'server' au lieu de 'app'
-  console.log(`✅ Serveur démarré sur le port ${PORT}`);
-  console.log(`🔌 Socket.IO prêt pour le chat en temps réel`);
-});
+server.listen(PORT, async () => {
   console.log('');
-  console.log('â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
-  console.log('â•‘   ðŸ  LCC Booking Manager - SystÃ¨me de RÃ©servations    â•‘');
-  console.log('â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+  console.log('Ã¢â€¢â€Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢â€”');
+  console.log('Ã¢â€¢â€˜   Ã°Å¸ÂÂ  LCC Booking Manager - SystÃƒÂ¨me de RÃƒÂ©servations    Ã¢â€¢â€˜');
+  console.log('Ã¢â€¢Å¡Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â');
   console.log('');
-  console.log(`ðŸš€ Serveur dÃ©marrÃ© sur http://localhost:${PORT}`);
+  console.log(`Ã°Å¸Å¡â‚¬ Serveur dÃƒÂ©marrÃƒÂ© sur http://localhost:${PORT}`);
   console.log('');
 
   await initDb();
-  // âœ… NOUVEAU : Initialiser les tables livrets d'accueil
+  // Ã¢Å“â€¦ NOUVEAU : Initialiser les tables livrets d'accueil
   app.locals.pool = pool;
   await initWelcomeBookTables(pool);
-  console.log('âœ… Tables welcome_books initialisÃ©es');
+  console.log('Ã¢Å“â€¦ Tables welcome_books initialisÃƒÂ©es');
   await loadProperties();
-    // ✅ NOUVEAU : Charger les réservations depuis PostgreSQL
+    // âœ… NOUVEAU : Charger les rÃ©servations depuis PostgreSQL
   await loadReservationsFromDB();
   
-  // Migration one-time (à décommenter UNE SEULE FOIS pour migrer)
+  // Migration one-time (Ã  dÃ©commenter UNE SEULE FOIS pour migrer)
   // await migrateManualReservationsToPostgres();
   await loadManualReservations();
-  // ✅ NOUVEAU : Charger depuis PostgreSQL
+  // âœ… NOUVEAU : Charger depuis PostgreSQL
   await loadDepositsFromDB();
   
-  // Migration one-time (à décommenter UNE SEULE FOIS)
+  // Migration one-time (Ã  dÃ©commenter UNE SEULE FOIS)
   // await migrateDepositsToPostgres();
   await loadChecklists();
 
-  console.log('Logements configurÃ©s:');
+  console.log('Logements configurÃƒÂ©s:');
   PROPERTIES.forEach(p => {
-    const status = p.icalUrls && p.icalUrls.length > 0 ? 'âœ…' : 'âš ï¸';
+    const status = p.icalUrls && p.icalUrls.length > 0 ? 'Ã¢Å“â€¦' : 'Ã¢Å¡Â Ã¯Â¸Â';
     console.log(`  ${status} ${p.name} (${p.icalUrls.length} source${p.icalUrls.length > 1 ? 's' : ''})`);
   });
   console.log('');
 
-  console.log('ðŸ”„ Synchronisation initiale...');
+  console.log('Ã°Å¸â€â€ž Synchronisation initiale...');
   await syncAllCalendars();
 
   const syncInterval = parseInt(process.env.SYNC_INTERVAL) || 15;
   cron.schedule(`*/${syncInterval} * * * *`, async () => {
     console.log('');
-    console.log('â° Synchronisation automatique programmÃ©e');
+    console.log('Ã¢ÂÂ° Synchronisation automatique programmÃƒÂ©e');
     await syncAllCalendars();
   });
 
-  const cleaningPlanHour = parseInt(process.env.CLEANING_PLAN_HOUR || '18', 10); // heure FR (18h par dÃ©faut)
+  const cleaningPlanHour = parseInt(process.env.CLEANING_PLAN_HOUR || '18', 10); // heure FR (18h par dÃƒÂ©faut)
   cron.schedule(`0 ${cleaningPlanHour} * * *`, async () => {
     console.log('');
-    console.log(`â° Envoi du planning mÃ©nage quotidien (pour demain) Ã  ${cleaningPlanHour}h`);
+    console.log(`Ã¢ÂÂ° Envoi du planning mÃƒÂ©nage quotidien (pour demain) ÃƒÂ  ${cleaningPlanHour}h`);
     try {
       await sendDailyCleaningPlan();
     } catch (err) {
-      console.error('âŒ Erreur lors de lâ€™envoi du planning mÃ©nage quotidien :', err);
+      console.error('Ã¢ÂÅ’ Erreur lors de lÃ¢â‚¬â„¢envoi du planning mÃƒÂ©nage quotidien :', err);
     }
   });
 
   console.log('');
-  console.log(`â° Synchronisation automatique: toutes les ${syncInterval} minutes`);
+  console.log(`Ã¢ÂÂ° Synchronisation automatique: toutes les ${syncInterval} minutes`);
   console.log('');
-  console.log('ðŸ“§ Notifications configurÃ©es:', process.env.EMAIL_USER ? 'âœ… OUI' : 'âš ï¸  NON');
-  console.log('ðŸ’³ Stripe configurÃ© :', STRIPE_SECRET_KEY ? 'âœ… OUI' : 'âš ï¸  NON (pas de crÃ©ation de cautions possible)');
+  console.log('Ã°Å¸â€œÂ§ Notifications configurÃƒÂ©es:', process.env.EMAIL_USER ? 'Ã¢Å“â€¦ OUI' : 'Ã¢Å¡Â Ã¯Â¸Â  NON');
+  console.log('Ã°Å¸â€™Â³ Stripe configurÃƒÂ© :', STRIPE_SECRET_KEY ? 'Ã¢Å“â€¦ OUI' : 'Ã¢Å¡Â Ã¯Â¸Â  NON (pas de crÃƒÂ©ation de cautions possible)');
   console.log('');
 });
 
