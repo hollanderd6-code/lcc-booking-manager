@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Pragm</head>a" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1620,6 +1620,7 @@
     }
   </style>
 <style>
+  <style>
   /* ✨ Fix calendrier MOBILE
      - la page ne glisse plus en horizontal
      - la colonne LOGEMENTS reste alignée avec les lignes de réservations
@@ -1678,6 +1679,7 @@
   }
 </style>
 <style>
+  <style>
 /* =================================================================
    FIX CALENDRIER ULTRA-ROBUSTE (Mobile + Desktop)
    ================================================================= */
@@ -2298,9 +2300,27 @@
               <button class="period-nav-btn" id="nextPeriod">
                 <i class="fas fa-chevron-right"></i>
               </button>
-            </div>
-            
-            <!-- Calendar Container -->
+</div>
+
+<!-- Risk legend + filter -->
+<div class="risk-legend-bar" id="riskLegendBar">
+  <div class="risk-legend">
+    <span class="risk-legend-item"><span class="risk-dot risk-dot-green"></span> OK (0–30)</span>
+    <span class="risk-legend-item"><span class="risk-dot risk-dot-orange"></span> À surveiller (31–60)</span>
+    <span class="risk-legend-item"><span class="risk-dot risk-dot-red"></span> Risque élevé (61–100)</span>
+  </div>
+  <div class="risk-actions">
+    <button class="btn btn-ghost" id="riskFilterToggle" type="button" title="Afficher uniquement les réservations à surveiller / à risque">
+      <i class="fas fa-filter"></i> Risques uniquement
+    </button>
+    <button class="btn btn-ghost" id="riskSortToggle" type="button" title="Trier les réservations par risque décroissant">
+      <i class="fas fa-sort-amount-down"></i> Trier par risque
+    </button>
+  </div>
+</div>
+
+<!-- Calendar Container -->
+
             <div class="calendar-container">
               <!-- Property List Column -->
               <div class="property-list-column">
@@ -3752,13 +3772,6 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (!v) return null;
     return String(v).slice(0, 10);
   }
-  function formatDateFR(iso) {
-    if (!iso) return '';
-    const s = String(iso).slice(0,10);
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return s;
-    return `${m[3]}/${m[2]}/${m[1]}`;
-  }
   function startOfDay(d) {
     const x = new Date(d);
     x.setHours(0,0,0,0);
@@ -3878,21 +3891,26 @@ function populateEditBookingProperties(selectedPropertyId) {
           <i class="fas fa-times"></i>
         </button>
       </div>
-      <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div>
-      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid rgba(0,0,0,.08);">
-        <button class="btn btn-ghost" data-close="1">Fermer</button>
-      </div>
-    </div>
+      <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div></div>
   `;
   document.body.appendChild(overlay);
 
-  const close = () => { overlay.classList.remove('active'); overlay.style.display = 'none'; };
+  const close = () => { overlay.classList.remove('active'); };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
 }
 
 
-  function openTodayMovesModal(reservations) {
+  
+function formatDateFR(raw) {
+  if (!raw) return '';
+  const s = String(raw).slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return s;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+function openTodayMovesModal(reservations) {
     const modalId = 'todayMovesModal';
     ensureGenericModal(modalId, "Check-in / Check-out du jour");
 
@@ -3920,8 +3938,8 @@ function populateEditBookingProperties(selectedPropertyId) {
           who: r.guestName || r.summary || 'Réservation',
           prop: r.propertyName || r.propertyId || '',
           src: r.source || r.platform || '',
-          startStr: formatDateFR(s),
-          endStr: formatDateFR(e),
+          startStr: s,
+          endStr: e,
           riskLevel: r.riskLevel || 'green',
           riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
           riskSummary: r.riskSummary || ''
@@ -3954,7 +3972,7 @@ function populateEditBookingProperties(selectedPropertyId) {
                       <div style="font-weight:900;">${score}</div>
                     </div>
                     <div style="opacity:.8; margin-top:2px;">
-                      ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${r.startStr} → ${r.endStr}
+                      ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${formatDateFR(r.startStr)} → ${formatDateFR(r.endStr)}
                     </div>
                     ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
                   </div>
@@ -3999,8 +4017,8 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         return {
           end,
-          startStr: formatDateFR(dateOnlyStr(rawStart)),
-          endStr: formatDateFR(dateOnlyStr(rawEnd)),
+          startStr: dateOnlyStr(rawStart),
+          endStr: dateOnlyStr(rawEnd),
           who: r.guestName || r.summary || 'Réservation',
           prop: r.propertyName || r.propertyId || '',
           src: r.source || r.platform || '',
@@ -4023,11 +4041,11 @@ function populateEditBookingProperties(selectedPropertyId) {
             <div style="margin-top:4px;">${dot}</div>
             <div style="flex:1;">
               <div style="display:flex; justify-content:space-between; gap:12px;">
-                <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${r.endStr}</div>
+                <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${formatDateFR(r.endStr)}</div>
                 <div style="font-weight:900;">${score}</div>
               </div>
               <div style="opacity:.8; margin-top:2px;">
-                ${r.who}${r.src ? ' • ' + r.src : ''} • ${r.startStr} → ${r.endStr}
+                ${r.who}${r.src ? ' • ' + r.src : ''} • ${formatDateFR(r.startStr)} → ${formatDateFR(r.endStr)}
               </div>
               ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
             </div>
@@ -4135,8 +4153,8 @@ function updateTopRisksKpi(reservations) {
         const g = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModal'+'Content');
         if (g) {
           g.innerHTML = top5.length ? top5.map(r=>{
-            const start = formatDateFR(dateOnlyStr(r.start||r.startDate));
-            const end = formatDateFR(dateOnlyStr(r.end||r.endDate));
+            const start = dateOnlyStr(r.start||r.startDate);
+            const end = dateOnlyStr(r.end||r.endDate);
             const prop = r.propertyName || r.propertyId || 'Logement';
             const name = r.guestName || 'Voyageur';
             const score = Math.round(r.riskScore||0);
@@ -4196,8 +4214,68 @@ function updateTopRisksKpi(reservations) {
       // store latest for click handlers
       window.__LCC_KPI_STATE = { reservations, properties };
 
-      if (window.renderModernCalendar) {
-        window.renderModernCalendar(reservations, properties);
+      if (
+// ==========================
+// Risk UI state (filter/sort)
+// ==========================
+window.__LCC_RISK_UI = window.__LCC_RISK_UI || { filterOnly: false, sortByRisk: false };
+
+function normalizeStartEnd(r){
+  const start = r.start || r.startDate;
+  const end = r.end || r.endDate;
+  return { start, end };
+}
+
+function applyRiskUi(reservations){
+  let list = Array.isArray(reservations) ? [...reservations] : [];
+  const state = window.__LCC_RISK_UI;
+
+  if (state.filterOnly){
+    list = list.filter(r =>
+      r.riskLevel === 'red' ||
+      r.riskLevel === 'orange' ||
+      (typeof r.riskScore === 'number' && r.riskScore >= 31)
+    );
+  }
+
+  if (state.sortByRisk){
+    list.sort((a,b) => ((b.riskScore||0)-(a.riskScore||0)) || (new Date(normalizeStartEnd(a).start||0) - new Date(normalizeStartEnd(b).start||0)));
+  } else {
+    list.sort((a,b) => (new Date(normalizeStartEnd(a).start||0) - new Date(normalizeStartEnd(b).start||0)));
+  }
+  return list;
+}
+
+function bindRiskUiControls(){
+  const btnFilter = document.getElementById('riskFilterToggle');
+  const btnSort = document.getElementById('riskSortToggle');
+
+  if (btnFilter && !btnFilter.dataset.bound){
+    btnFilter.dataset.bound = '1';
+    btnFilter.addEventListener('click', () => {
+      window.__LCC_RISK_UI.filterOnly = !window.__LCC_RISK_UI.filterOnly;
+      btnFilter.classList.toggle('btn-active', window.__LCC_RISK_UI.filterOnly);
+      const res = window.LCC_RESERVATIONS || [];
+      const props = window.LCC_PROPERTIES || [];
+      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
+    });
+  }
+
+  if (btnSort && !btnSort.dataset.bound){
+    btnSort.dataset.bound = '1';
+    btnSort.addEventListener('click', () => {
+      window.__LCC_RISK_UI.sortByRisk = !window.__LCC_RISK_UI.sortByRisk;
+      btnSort.classList.toggle('btn-active', window.__LCC_RISK_UI.sortByRisk);
+      const res = window.LCC_RESERVATIONS || [];
+      const props = window.LCC_PROPERTIES || [];
+      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
+    });
+  }
+}
+
+window.renderModernCalendar) {
+        bindRiskUiControls();
+      window.renderModernCalendar(applyRiskUi(reservations), properties);
       }
 
       computeKpis(reservations, properties);
@@ -4219,7 +4297,7 @@ function updateTopRisksKpi(reservations) {
     }
   }
 
-  document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+  document.addEventListener('DOMContentLoaded', () => { bindRiskUiControls(); loadDataAndUpdateKpis(); });
 })();
 </script>
 
