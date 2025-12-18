@@ -1871,6 +1871,259 @@ async function loadProperties() {
 function getUserProperties(userId) {
   return PROPERTIES.filter(p => p.userId === userId);
 }
+// ============================================
+// CODE COMPLET À AJOUTER DANS server-23.js
+// ============================================
+// Position : Après la fonction getUserProperties() (ligne ~1619)
+
+// Variable globale pour cache en mémoire (performance)
+let RESERVATIONS_CACHE = {}; // { [propertyId]: [reservations] }
+
+/**
+ * Charger toutes les réservations depuis PostgreSQL
+ */
+async function loadReservationsFromDB() {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, uid, property_id, user_id,
+        start_date, end_date,
+        guest_name, guest_email, guest_phone,
+        source, platform, reservation_type,
+        price, currency, status,
+        raw_ical_data, notes,
+        created_at, updated_at, synced_at
+      FROM reservations
+      WHERE status != 'cancelled'
+      ORDER BY start_date ASC
+    `);
+
+    RESERVATIONS_CACHE = {};
+    
+    result.rows.forEach(row => {
+      const reservation = {
+        id: row.id,
+        uid: row.uid,
+        start: row.start_date,
+        end: row.end_date,
+        guestName: row.guest_name,
+        guestEmail: row.guest_email,
+        guestPhone: row.guest_phone,
+        source: row.source,
+        platform: row.platform,
+        type: row.reservation_type,
+        price: parseFloat(row.price) || 0,
+        currency: row.currency,
+        status: row.status,
+        rawData: row.raw_ical_data,
+        notes: row.notes,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        syncedAt: row.synced_at
+      };
+
+      if (!RESERVATIONS_CACHE[row.property_id]) {
+        RESERVATIONS_CACHE[row.property_id] = [];
+      }
+      RESERVATIONS_CACHE[row.property_id].push(reservation);
+    });
+
+    console.log(`✅ Réservations chargées : ${result.rows.length} réservations`);
+    
+    reservationsStore.properties = RESERVATIONS_CACHE;
+    reservationsStore.lastSync = new Date().toISOString();
+    
+  } catch (error) {
+    console.error('❌ Erreur loadReservationsFromDB:', error);
+    RESERVATIONS_CACHE = {};
+  }
+}
+
+/**
+ * Sauvegarder une réservation en base
+ */
+async function saveReservationToDB(reservation, propertyId, userId) {
+  try {
+    await pool.query(`
+      INSERT INTO reservations (
+        uid, property_id, user_id,
+        start_date, end_date,
+        guest_name, guest_email, guest_phone,
+        source, platform, reservation_type,
+        price, currency, status,
+        raw_ical_data, synced_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+      ON CONFLICT (uid) 
+      DO UPDATE SET
+        start_date = EXCLUDED.start_date,
+        end_date = EXCLUDED.end_date,
+        guest_name = EXCLUDED.guest_name,
+        source = EXCLUDED.source,
+        platform = EXCLUDED.platform,
+        price = EXCLUDED.price,
+        status = EXCLUDED.status,
+        raw_ical_data = EXCLUDED.raw_ical_data,
+        synced_at = NOW(),
+        updated_at = NOW()
+    `, [
+      reservation.uid,
+      propertyId,
+      userId,
+      reservation.start,
+      reservation.end,
+      reservation.guestName || null,
+      reservation.guestEmail || null,
+      reservation.guestPhone || null,
+      reservation.source || 'MANUEL',
+      reservation.platform || 'direct',
+      reservation.type || 'manual',
+      reservation.price || 0,
+      reservation.currency || 'EUR',
+      reservation.status || 'confirmed',
+      reservation.rawData ? JSON.stringify(reservation.rawData) : null
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur saveReservationToDB:', error);
+    return false;
+  }
+}
+
+/**
+ * Sauvegarder toutes les réservations d'une propriété (après synchro iCal)
+ */
+async function savePropertyReservations(propertyId, reservations, userId) {
+  try {
+    for (const reservation of reservations) {
+      await saveReservationToDB(reservation, propertyId, userId);
+    }
+    console.log(`✅ ${reservations.length} réservations sauvegardées pour ${propertyId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur savePropertyReservations:', error);
+    return false;
+  }
+}
+
+/**
+ * Supprimer une réservation (soft delete)
+ */
+async function deleteReservationFromDB(uid) {
+  try {
+    await pool.query(`
+      UPDATE reservations 
+      SET status = 'cancelled', updated_at = NOW()
+      WHERE uid = $1
+    `, [uid]);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur deleteReservationFromDB:', error);
+    return false;
+  }
+}
+
+/**
+ * Récupérer les réservations d'un utilisateur
+ */
+async function getUserReservations(userId, filters = {}) {
+  try {
+    let query = `
+      SELECT 
+        r.*,
+        p.name as property_name,
+        p.color as property_color
+      FROM reservations r
+      JOIN properties p ON r.property_id = p.id
+      WHERE r.user_id = $1
+      AND r.status != 'cancelled'
+    `;
+    
+    const params = [userId];
+    let paramCount = 1;
+
+    if (filters.propertyId) {
+      paramCount++;
+      query += ` AND r.property_id = $${paramCount}`;
+      params.push(filters.propertyId);
+    }
+
+    if (filters.startDate) {
+      paramCount++;
+      query += ` AND r.end_date >= $${paramCount}`;
+      params.push(filters.startDate);
+    }
+
+    if (filters.endDate) {
+      paramCount++;
+      query += ` AND r.start_date <= $${paramCount}`;
+      params.push(filters.endDate);
+    }
+
+    query += ` ORDER BY r.start_date ASC`;
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Erreur getUserReservations:', error);
+    return [];
+  }
+}
+
+/**
+ * Migrer les réservations du JSON vers PostgreSQL (une seule fois)
+ */
+async function migrateManualReservationsToPostgres() {
+  try {
+    console.log('🔄 Migration des réservations manuelles vers PostgreSQL...');
+    
+    let migratedCount = 0;
+    
+    for (const [propertyId, reservations] of Object.entries(MANUAL_RESERVATIONS)) {
+      const property = PROPERTIES.find(p => p.id === propertyId);
+      if (!property) {
+        console.log(`⚠️  Propriété ${propertyId} introuvable, skip`);
+        continue;
+      }
+
+      for (const reservation of reservations) {
+        const success = await saveReservationToDB(reservation, propertyId, property.userId);
+        if (success) migratedCount++;
+      }
+    }
+
+    console.log(`✅ Migration terminée : ${migratedCount} réservations migrées`);
+    
+    // Backup du fichier JSON
+    const backupFile = MANUAL_RES_FILE.replace('.json', '.backup.json');
+    await fsp.rename(MANUAL_RES_FILE, backupFile);
+    console.log(`📦 Backup créé : ${backupFile}`);
+    
+  } catch (error) {
+    console.error('❌ Erreur migration:', error);
+  }
+}
+
+/**
+ * Nouvelle fonction de synchronisation iCal avec sauvegarde en base
+ */
+async function syncCalendarAndSaveToPostgres(property) {
+  try {
+    const reservations = await icalService.fetchAllReservations(property.icalUrls || []);
+    
+    // Sauvegarder en PostgreSQL
+    await savePropertyReservations(property.id, reservations, property.userId);
+    
+    // Mettre à jour le cache
+    RESERVATIONS_CACHE[property.id] = reservations;
+    reservationsStore.properties[property.id] = reservations;
+    
+    return reservations;
+  } catch (error) {
+    console.error(`❌ Erreur synchro ${property.name}:`, error);
+    return [];
+  }
+}
 
 async function syncAllCalendars() {
   console.log('ðŸ”„ DÃ©marrage de la synchronisation iCal...');
@@ -2329,23 +2582,46 @@ app.post('/api/bookings', async (req, res) => {
         global.MANUAL_RESERVATIONS = {};
       }
       
-      if (!MANUAL_RESERVATIONS[propertyId]) {
-        MANUAL_RESERVATIONS[propertyId] = [];
-      }
-      MANUAL_RESERVATIONS[propertyId].push(reservation);
-      
-      // Sauvegarde sur disque (si la fonction existe)
-      if (typeof saveManualReservations === 'function') {
-        await saveManualReservations();
-        console.log('âœ… Sauvegarde MANUAL_RESERVATIONS OK');
-      } else {
-        console.log('âš ï¸  Fonction saveManualReservations non trouvÃ©e');
-      }
-    } catch (saveErr) {
-      console.error('âš ï¸  Erreur sauvegarde MANUAL_RESERVATIONS:', saveErr);
-      // On continue quand mÃªme
+     if (!MANUAL_RESERVATIONS[propertyId]) {
+  MANUAL_RESERVATIONS[propertyId] = [];
+}
+MANUAL_RESERVATIONS[propertyId].push(reservation);
+
+// Sauvegarde sur disque (si la fonction existe)
+if (typeof saveManualReservations === 'function') {
+  await saveManualReservations();
+  console.log('✅ Sauvegarde MANUAL_RESERVATIONS OK');
+} else {
+  console.log('⚠️  Fonction saveManualReservations non trouvée');
+}
+} catch (saveErr) {
+  console.error('⚠️  Erreur sauvegarde MANUAL_RESERVATIONS:', saveErr);
+  // On continue quand même
+}
+    // DELETE - Supprimer une réservation
+app.delete('/api/bookings/:uid', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
     }
+
+    const { uid } = req.params;
     
+    const deleted = await deleteReservationFromDB(uid);
+    
+    if (!deleted) {
+      return res.status(500).json({ error: 'Erreur lors de la suppression' });
+    }
+
+    await loadReservationsFromDB();
+    
+    res.json({ message: 'Réservation supprimée avec succès' });
+  } catch (err) {
+    console.error('Erreur DELETE /api/bookings:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
     // 6. AJOUT AU STORE DES RÃ‰SERVATIONS
     try {
       if (typeof reservationsStore === 'undefined') {
@@ -8187,6 +8463,11 @@ app.listen(PORT, async () => {
   await initWelcomeBookTables(pool);
   console.log('âœ… Tables welcome_books initialisÃ©es');
   await loadProperties();
+    // ✅ NOUVEAU : Charger les réservations depuis PostgreSQL
+  await loadReservationsFromDB();
+  
+  // Migration one-time (à décommenter UNE SEULE FOIS pour migrer)
+  // await migrateManualReservationsToPostgres();
   await loadManualReservations();
   await loadDeposits();
   await loadChecklists();
