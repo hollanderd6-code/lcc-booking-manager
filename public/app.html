@@ -2300,27 +2300,9 @@
               <button class="period-nav-btn" id="nextPeriod">
                 <i class="fas fa-chevron-right"></i>
               </button>
-</div>
-
-<!-- Risk legend + filter -->
-<div class="risk-legend-bar" id="riskLegendBar">
-  <div class="risk-legend">
-    <span class="risk-legend-item"><span class="risk-dot risk-dot-green"></span> OK (0–30)</span>
-    <span class="risk-legend-item"><span class="risk-dot risk-dot-orange"></span> À surveiller (31–60)</span>
-    <span class="risk-legend-item"><span class="risk-dot risk-dot-red"></span> Risque élevé (61–100)</span>
-  </div>
-  <div class="risk-actions">
-    <button class="btn btn-ghost" id="riskFilterToggle" type="button" title="Afficher uniquement les réservations à surveiller / à risque">
-      <i class="fas fa-filter"></i> Risques uniquement
-    </button>
-    <button class="btn btn-ghost" id="riskSortToggle" type="button" title="Trier les réservations par risque décroissant">
-      <i class="fas fa-sort-amount-down"></i> Trier par risque
-    </button>
-  </div>
-</div>
-
-<!-- Calendar Container -->
-
+            </div>
+            
+            <!-- Calendar Container -->
             <div class="calendar-container">
               <!-- Property List Column -->
               <div class="property-list-column">
@@ -3767,99 +3749,154 @@ function populateEditBookingProperties(selectedPropertyId) {
 (function () {
   const API_URL = 'https://lcc-booking-manager.onrender.com';
 
-  // ---------- helpers ----------
-  function dateOnlyStr(v) {
-    if (!v) return null;
-    return String(v).slice(0, 10);
+  // ============
+  // Global utils
+  // ============
+  function safeJsonParse(raw, fallback) {
+    try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
   }
-  function startOfDay(d) {
-    const x = new Date(d);
-    x.setHours(0,0,0,0);
-    return x;
+  function getStoredArray(key) {
+    const v = safeJsonParse(localStorage.getItem(key), []);
+    return Array.isArray(v) ? v : [];
   }
-  function addDays(d, n) {
-    const x = new Date(d);
-    x.setDate(x.getDate() + n);
-    return x;
-  }
-  function parseDateSafe(v) {
-    if (!v) return null;
-    // if "YYYY-MM-DD", create local date (avoids timezone surprises)
-    const s = String(v);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      const [y,m,dd] = s.split('-').map(Number);
-      return new Date(y, m-1, dd, 0, 0, 0, 0);
-    }
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? null : d;
-  }
+  function normStart(r){ return r?.start || r?.startDate; }
+  function normEnd(r){ return r?.end || r?.endDate; }
 
-  // Make riskColor available everywhere (calendar, etc.)
-  window.riskColor = function riskColor(level) {
+  // Global for calendar + UI
+  function riskColor(level) {
     if (level === 'red') return '#ef4444';
     if (level === 'orange') return '#f59e0b';
     return '#10b981';
-  };
+  }
+  window.riskColor = riskColor;
 
-  // ---------- KPI compute ----------
+  function formatDateFR(raw) {
+    if (!raw) return '';
+    const s = String(raw).slice(0, 10);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+  }
+
+  function parseDate(raw) {
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // ==========================
+  // Risk UI state (filter/sort)
+  // ==========================
+  window.__LCC_RISK_UI = window.__LCC_RISK_UI || { filterOnly: false, sortByRisk: false };
+
+  function applyRiskUi(reservations) {
+    let list = Array.isArray(reservations) ? [...reservations] : [];
+    const state = window.__LCC_RISK_UI;
+
+    if (state.filterOnly) {
+      list = list.filter(r =>
+        r.riskLevel === 'red' ||
+        r.riskLevel === 'orange' ||
+        (typeof r.riskScore === 'number' && r.riskScore >= 31)
+      );
+    }
+
+    const byDate = (a,b) => {
+      const da = parseDate(normStart(a)) || new Date(0);
+      const db = parseDate(normStart(b)) || new Date(0);
+      return da - db;
+    };
+
+    if (state.sortByRisk) {
+      list.sort((a,b) => ((b.riskScore||0)-(a.riskScore||0)) || byDate(a,b));
+    } else {
+      list.sort(byDate);
+    }
+    return list;
+  }
+
+  function bindRiskUiControls() {
+    const btnFilter = document.getElementById('riskFilterToggle');
+    const btnSort = document.getElementById('riskSortToggle');
+
+    if (btnFilter && !btnFilter.dataset.bound) {
+      btnFilter.dataset.bound = '1';
+      btnFilter.addEventListener('click', () => {
+        window.__LCC_RISK_UI.filterOnly = !window.__LCC_RISK_UI.filterOnly;
+        btnFilter.classList.toggle('btn-active', window.__LCC_RISK_UI.filterOnly);
+
+        const res = window.LCC_RESERVATIONS || getStoredArray('LCC_RESERVATIONS');
+        const props = window.LCC_PROPERTIES || getStoredArray('LCC_PROPERTIES');
+        if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
+      });
+    }
+
+    if (btnSort && !btnSort.dataset.bound) {
+      btnSort.dataset.bound = '1';
+      btnSort.addEventListener('click', () => {
+        window.__LCC_RISK_UI.sortByRisk = !window.__LCC_RISK_UI.sortByRisk;
+        btnSort.classList.toggle('btn-active', window.__LCC_RISK_UI.sortByRisk);
+
+        const res = window.LCC_RESERVATIONS || getStoredArray('LCC_RESERVATIONS');
+        const props = window.LCC_PROPERTIES || getStoredArray('LCC_PROPERTIES');
+        if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
+      });
+    }
+  }
+
+  // ==========================
+  // KPI calculations
+  // ==========================
   function computeKpis(reservations, properties) {
     const now = new Date();
-    const today0 = startOfDay(now);
-    const todayStr = today0.toISOString().slice(0,10);
+    const todayStr = now.toISOString().slice(0, 10);
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
-    const window48End = addDays(today0, 2); // today + 48h window as dates (today & tomorrow)
-
-    // Occupation mois en cours
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const monthStart = new Date(y, m, 1, 0, 0, 0, 0);
-    const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
+    const daysInMonth = monthEnd.getDate();
     const totalNightsPossible = (properties.length || 1) * daysInMonth;
-    let nightsBooked = 0;
 
+    let nightsBooked = 0;
     let checkinsToday = 0;
     let checkoutsToday = 0;
     let cleaning48h = 0;
 
     (reservations || []).forEach((r) => {
-      const rawStart = r.start || r.startDate;
-      const rawEnd = r.end || r.endDate;
-      if (!rawStart || !rawEnd) return;
+      const sRaw = normStart(r);
+      const eRaw = normEnd(r);
+      if (!sRaw || !eRaw) return;
 
-      const start = parseDateSafe(rawStart);
-      const end = parseDateSafe(rawEnd);
+      const start = parseDate(sRaw);
+      const end = parseDate(eRaw);
       if (!start || !end) return;
 
-      // Occupation (clamp dans le mois)
       const startClamped = start < monthStart ? monthStart : start;
       const endClamped = end > monthEnd ? monthEnd : end;
       if (endClamped > startClamped) {
         nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
       }
 
-      // Check-in / out du jour (date-only)
-      const sStr = dateOnlyStr(rawStart);
-      const eStr = dateOnlyStr(rawEnd);
-      if (sStr === todayStr) checkinsToday += 1;
-      if (eStr === todayStr) checkoutsToday += 1;
+      const startStr = String(sRaw).slice(0,10);
+      const endStr = String(eRaw).slice(0,10);
+      if (startStr === todayStr) checkinsToday += 1;
+      if (endStr === todayStr) checkoutsToday += 1;
 
-      // Ménages à prévoir (48h) : départ aujourd'hui ou demain (date-only)
-      const endDay = startOfDay(end);
-      if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
+      // date-only friendly: treat YYYY-MM-DD as end of day for window check
+      const endForWindow = (String(eRaw).length === 10) ? new Date(String(eRaw) + 'T23:59:59') : end;
+      if (endForWindow >= now && endForWindow <= in48h) cleaning48h += 1;
     });
 
-    // taux d’occupation
-    let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
-    if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
-    if (occupancy > 100) occupancy = 100;
+    let occ = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+    if (!isFinite(occ) || occ < 0) occ = 0;
+    if (occ > 100) occ = 100;
 
-    // inject DOM
     const propEl = document.getElementById('kpiPropertiesValue');
     if (propEl) propEl.textContent = properties.length || 0;
 
     const occEl = document.getElementById('kpiOccupancyValue');
-    if (occEl) occEl.textContent = occupancy + '%';
+    if (occEl) occEl.textContent = occ + '%';
 
     const movesVal = document.getElementById('kpiTodayMovesValue');
     const movesSub = document.getElementById('kpiTodayMovesSub');
@@ -3872,109 +3909,94 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
   }
 
-  // ---------- Top risks KPI ----------
+  // ======================
+  // Modals (X only)
+  // ======================
   function ensureGenericModal(modalId, titleText) {
-  if (document.getElementById(modalId)) return;
+    if (document.getElementById(modalId)) return;
 
-  const overlay = document.createElement('div');
-  overlay.id = modalId;
-
-  // IMPORTANT: on utilise la classe "modal" existante (overlay plein écran)
-  overlay.className = 'modal';
-  overlay.innerHTML = `
-    <div class="modal-box" style="background:#fff; border-radius:16px; width:min(720px, 92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
-      <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.08);">
-        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
-          <i class="fas fa-list"></i> ${titleText}
-        </h3>
-        <button class="btn btn-ghost" data-close="1">
-          <i class="fas fa-times"></i>
-        </button>
+    const overlay = document.createElement('div');
+    overlay.id = modalId;
+    overlay.className = 'modal';
+    overlay.innerHTML = `
+      <div class="modal-box" style="background:#fff; border-radius:16px; width:min(720px, 92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.08);">
+          <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-list"></i> ${titleText}
+          </h3>
+          <button type="button" class="btn btn-ghost" data-close="1" aria-label="Fermer">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div>
       </div>
-      <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div></div>
-  `;
-  document.body.appendChild(overlay);
+    `;
+    document.body.appendChild(overlay);
 
-  const close = () => { overlay.classList.remove('active'); };
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
-}
+    const close = () => overlay.classList.remove('active');
 
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); close(); }));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('active')) close(); });
+  }
 
-  
-function formatDateFR(raw) {
-  if (!raw) return '';
-  const s = String(raw).slice(0, 10);
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return s;
-  return `${m[3]}/${m[2]}/${m[1]}`;
-}
-
-function openTodayMovesModal(reservations) {
+  function openTodayMovesModal(reservations) {
     const modalId = 'todayMovesModal';
-    ensureGenericModal(modalId, "Check-in / Check-out du jour");
+    ensureGenericModal(modalId, 'Check-in / Check-out du jour');
 
-    const modal = document.getElementById(modalId);
+    const overlay = document.getElementById(modalId);
     const content = document.getElementById(modalId + 'Content');
-    if (!modal || !content) return;
+    if (!overlay || !content) return;
 
-    const todayStr = startOfDay(new Date()).toISOString().slice(0,10);
+    const todayStr = new Date().toISOString().slice(0,10);
 
-    const rows = (reservations || [])
-      .map(r => {
-        const rawStart = r.start || r.startDate;
-        const rawEnd = r.end || r.endDate;
-        if (!rawStart || !rawEnd) return null;
+    const rows = (reservations || []).map(r => {
+      const s = normStart(r); const e = normEnd(r);
+      if (!s || !e) return null;
+      const sStr = String(s).slice(0,10);
+      const eStr = String(e).slice(0,10);
+      const isIn = sStr === todayStr;
+      const isOut = eStr === todayStr;
+      if (!isIn && !isOut) return null;
 
-        const s = dateOnlyStr(rawStart);
-        const e = dateOnlyStr(rawEnd);
-
-        const isIn = s === todayStr;
-        const isOut = e === todayStr;
-        if (!isIn && !isOut) return null;
-
-        return {
-          type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
-          who: r.guestName || r.summary || 'Réservation',
-          prop: r.propertyName || r.propertyId || '',
-          src: r.source || r.platform || '',
-          startStr: s,
-          endStr: e,
-          riskLevel: r.riskLevel || 'green',
-          riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
-          riskSummary: r.riskSummary || ''
-        };
-      })
-      .filter(Boolean);
+      return {
+        who: r.guestName || r.summary || 'Réservation',
+        prop: r.propertyName || r.propertyId || '',
+        src: r.source || r.platform || '',
+        start: sStr,
+        end: eStr,
+        kind: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
+        riskLevel: r.riskLevel || 'green',
+        riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
+        riskSummary: r.riskSummary || ''
+      };
+    }).filter(Boolean);
 
     if (!rows.length) {
       content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
     } else {
-      const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
-      const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
-
-      const renderList = (list, label, icon) => {
+      const render = (list, title, icon) => {
         if (!list.length) return '';
         return `
           <div style="margin-bottom:14px;">
             <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-              <i class="fas ${icon}"></i> ${label} (${list.length})
+              <i class="fas ${icon}"></i> ${title} (${list.length})
             </div>
-            ${list.map(r => {
-              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
-              const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+            ${list.map(x => {
+              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${riskColor(x.riskLevel)};margin-right:10px;"></span>`;
+              const score = x.riskScore != null ? `${x.riskScore}/100` : '';
               return `
                 <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
                   <div style="margin-top:4px;">${dot}</div>
                   <div style="flex:1;">
                     <div style="display:flex; justify-content:space-between; gap:12px;">
-                      <div style="font-weight:800;">${r.who}</div>
+                      <div style="font-weight:800;">${x.who}</div>
                       <div style="font-weight:900;">${score}</div>
                     </div>
                     <div style="opacity:.8; margin-top:2px;">
-                      ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${formatDateFR(r.startStr)} → ${formatDateFR(r.endStr)}
+                      ${x.prop ? x.prop + ' • ' : ''}${x.src ? x.src + ' • ' : ''}${formatDateFR(x.start)} → ${formatDateFR(x.end)}
                     </div>
-                    ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+                    ${x.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${x.riskSummary}</div>` : ''}
                   </div>
                 </div>
               `;
@@ -3983,263 +4005,121 @@ function openTodayMovesModal(reservations) {
         `;
       };
 
-      content.innerHTML =
-        renderList(inRows, "Arrivées", "fa-right-to-bracket") +
-        renderList(outRows, "Départs", "fa-right-from-bracket");
+      const ins = rows.filter(r => r.kind === 'in' || r.kind === 'inout');
+      const outs = rows.filter(r => r.kind === 'out' || r.kind === 'inout');
+
+      content.innerHTML = render(ins, 'Arrivées', 'fa-right-to-bracket') + render(outs, 'Départs', 'fa-right-from-bracket');
     }
 
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    overlay.classList.add('active');
   }
 
   function openCleaning48hModal(reservations) {
     const modalId = 'cleaning48hModal';
-    ensureGenericModal(modalId, "Ménages à prévoir (48h)");
+    ensureGenericModal(modalId, 'Ménages à prévoir (48h)');
 
-    const modal = document.getElementById(modalId);
+    const overlay = document.getElementById(modalId);
     const content = document.getElementById(modalId + 'Content');
-    if (!modal || !content) return;
+    if (!overlay || !content) return;
 
-    const today0 = startOfDay(new Date());
-    const window48End = addDays(today0, 2);
+    const now = new Date();
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
-    const rows = (reservations || [])
-      .map(r => {
-        const rawEnd = r.end || r.endDate;
-        const rawStart = r.start || r.startDate;
-        if (!rawEnd || !rawStart) return null;
+    const rows = (reservations || []).map(r => {
+      const s = normStart(r); const e = normEnd(r);
+      if (!s || !e) return null;
 
-        const end = parseDateSafe(rawEnd);
-        if (!end) return null;
+      const end = parseDate(e);
+      if (!end) return null;
 
-        const endDay = startOfDay(end);
-        if (!(endDay >= today0 && endDay < window48End)) return null;
+      const endForWindow = (String(e).length === 10) ? new Date(String(e) + 'T23:59:59') : end;
+      if (!(endForWindow >= now && endForWindow <= in48h)) return null;
 
-        return {
-          end,
-          startStr: dateOnlyStr(rawStart),
-          endStr: dateOnlyStr(rawEnd),
-          who: r.guestName || r.summary || 'Réservation',
-          prop: r.propertyName || r.propertyId || '',
-          src: r.source || r.platform || '',
-          riskLevel: r.riskLevel || 'green',
-          riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
-          riskSummary: r.riskSummary || ''
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.end - b.end);
+      return {
+        who: r.guestName || r.summary || 'Voyageur',
+        prop: r.propertyName || r.propertyId || 'Logement',
+        src: r.source || r.platform || '',
+        start: String(s).slice(0,10),
+        end: String(e).slice(0,10),
+        riskLevel: r.riskLevel || 'green',
+        riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
+        riskSummary: r.riskSummary || '',
+        endSort: endForWindow
+      };
+    }).filter(Boolean).sort((a,b) => a.endSort - b.endSort);
 
     if (!rows.length) {
       content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
     } else {
-      content.innerHTML = rows.map(r => {
-        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
-        const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+      content.innerHTML = rows.map(x => {
+        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${riskColor(x.riskLevel)};margin-right:10px;"></span>`;
+        const score = x.riskScore != null ? `${x.riskScore}/100` : '';
         return `
           <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
             <div style="margin-top:4px;">${dot}</div>
             <div style="flex:1;">
               <div style="display:flex; justify-content:space-between; gap:12px;">
-                <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${formatDateFR(r.endStr)}</div>
+                <div style="font-weight:800;">${x.prop} — départ ${formatDateFR(x.end)}</div>
                 <div style="font-weight:900;">${score}</div>
               </div>
               <div style="opacity:.8; margin-top:2px;">
-                ${r.who}${r.src ? ' • ' + r.src : ''} • ${formatDateFR(r.startStr)} → ${formatDateFR(r.endStr)}
+                ${x.who}${x.src ? ' • ' + x.src : ''} • ${formatDateFR(x.start)} → ${formatDateFR(x.end)}
               </div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+              ${x.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${x.riskSummary}</div>` : ''}
             </div>
           </div>
         `;
       }).join('');
     }
 
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    overlay.classList.add('active');
   }
 
-  
-  // =========================
-  // Expose helpers globally (debug + onclick fallback)
-  // =========================
+  // Expose for other scripts
   window.openTodayMovesModal = openTodayMovesModal;
   window.openCleaning48hModal = openCleaning48hModal;
 
-  function getLatestReservationsForKpi(fallback) {
-    try {
-      if (window.__LCC_KPI_STATE && Array.isArray(window.__LCC_KPI_STATE.reservations)) {
-        return window.__LCC_KPI_STATE.reservations;
-      }
-      if (Array.isArray(window.LCC_RESERVATIONS)) return window.LCC_RESERVATIONS;
-      const raw = localStorage.getItem('LCC_RESERVATIONS');
-      if (raw) {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) return arr;
-      }
-    } catch (e) {}
-    return Array.isArray(fallback) ? fallback : [];
+  // ======================
+  // Click binding (robust)
+  // ======================
+  function getLatestReservations() {
+    if (window.__LCC_KPI_STATE?.reservations) return window.__LCC_KPI_STATE.reservations;
+    if (Array.isArray(window.LCC_RESERVATIONS)) return window.LCC_RESERVATIONS;
+    return getStoredArray('LCC_RESERVATIONS');
   }
 
-  function bindKpiModalClicksOnce() {
-    const movesCard = document.getElementById('kpiTodayMovesCard');
-    if (movesCard && !movesCard.dataset.bound2) {
-      movesCard.dataset.bound2 = '1';
-      const handler = (e) => {
-        try {
-          const data = getLatestReservationsForKpi([]);
-          window.openTodayMovesModal(data);
-        } catch (err) { console.warn('todayMovesModal click error', err); }
-      };
-      movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
-movesCard.addEventListener('touchstart', handler, { passive: true });
-      movesCard.onclick = handler;
-    }
+  function bindKpiClicksOnce() {
+    if (document.body.dataset.kpiBound === '1') return;
+    document.body.dataset.kpiBound = '1';
 
-    const cleaningCard = document.getElementById('kpiCleaning48hCard');
-    if (cleaningCard && !cleaningCard.dataset.bound2) {
-      cleaningCard.dataset.bound2 = '1';
-      const handler = (e) => {
-        try {
-          const data = getLatestReservationsForKpi([]);
-          window.openCleaning48hModal(data);
-        } catch (err) { console.warn('cleaning48hModal click error', err); }
-      };
-      cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
-cleaningCard.addEventListener('touchstart', handler, { passive: true });
-      cleaningCard.onclick = handler;
-    }
+    const handler = (e) => {
+      const card = e.target.closest('#kpiTodayMovesCard, #kpiCleaning48hCard');
+      if (!card) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const res = getLatestReservations();
+      if (card.id === 'kpiTodayMovesCard') window.openTodayMovesModal(res);
+      if (card.id === 'kpiCleaning48hCard') window.openCleaning48hModal(res);
+    };
+
+    document.addEventListener('click', handler, true);
+    document.addEventListener('touchstart', handler, { capture: true, passive: true });
   }
 
-  document.addEventListener('DOMContentLoaded', bindKpiModalClicksOnce);
-function updateTopRisksKpi(reservations) {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-    const monthRes = (reservations || []).filter(r => {
-      const rawS = r.start || r.startDate;
-      const rawE = r.end || r.endDate;
-      if (!rawS || !rawE) return false;
-      const s = parseDateSafe(rawS);
-      const e = parseDateSafe(rawE);
-      if (!s || !e) return false;
-      return e > monthStart && s < monthEnd;
-    });
-
-    const scored = monthRes.filter(r => typeof r.riskScore === 'number');
-    scored.sort((a, b) => (b.riskScore - a.riskScore));
-    const top5 = scored.slice(0, 5);
-
-    const redCount = scored.filter(r => r.riskLevel === 'red').length;
-    const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
-
-    const valEl = document.getElementById('kpiTopRisksValue');
-    const subEl = document.getElementById('kpiTopRisksSub');
-    if (valEl) valEl.textContent = top5.length;
-    if (subEl) subEl.textContent = `${redCount} rouge • ${orangeCount} orange (mois en cours)`;
-
-    const card = document.getElementById('kpiTopRisksCard');
-    if (card) {
-      card.onclick = () => {
-        // reuse your existing modal if present
-        if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
-        // fallback modal
-        ensureGenericModal('topRisksModal', 'Top risques du mois');
-        const modal = document.getElementById('topRisksModal');
-        const content = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent'.replace('Content',''));
-        const body = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
-        const c = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
-        // simple: open generic
-        const g = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModal'+'Content');
-        if (g) {
-          g.innerHTML = top5.length ? top5.map(r=>{
-            const start = dateOnlyStr(r.start||r.startDate);
-            const end = dateOnlyStr(r.end||r.endDate);
-            const prop = r.propertyName || r.propertyId || 'Logement';
-            const name = r.guestName || 'Voyageur';
-            const score = Math.round(r.riskScore||0);
-            const color = window.riskColor(r.riskLevel);
-            return `<div style="border-left:6px solid ${color}; padding-left:12px; margin-bottom:10px;">
-              <div style="font-weight:900;">${score}/100 • ${prop}</div>
-              <div style="opacity:.85;">${start} → ${end} • ${name}</div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
-            </div>`;
-          }).join('') : `<div style="opacity:.8">Aucun risque détecté sur le mois en cours.</div>`;
-        }
-        const mm = document.getElementById('topRisksModal');
-        if (mm) { mm.style.display='flex'; mm.classList.add('active'); }
-      };
-    }
-  }
-// ==========================
-// Risk UI state (filter/sort)
-// ==========================
-window.__LCC_RISK_UI = window.__LCC_RISK_UI || { filterOnly: false, sortByRisk: false };
-
-function normalizeStartEnd(r) {
-  const start = r.start || r.startDate;
-  const end = r.end || r.endDate;
-  return { start, end };
-}
-
-function applyRiskUi(reservations) {
-  let list = Array.isArray(reservations) ? [...reservations] : [];
-  const state = window.__LCC_RISK_UI;
-
-  if (state.filterOnly) {
-    list = list.filter(r =>
-      r.riskLevel === 'red' ||
-      r.riskLevel === 'orange' ||
-      (typeof r.riskScore === 'number' && r.riskScore >= 31)
-    );
-  }
-
-  const sortByDate = (a, b) => new Date(normalizeStartEnd(a).start || 0) - new Date(normalizeStartEnd(b).start || 0);
-
-  if (state.sortByRisk) {
-    list.sort((a, b) => ((b.riskScore || 0) - (a.riskScore || 0)) || sortByDate(a, b));
-  } else {
-    list.sort(sortByDate);
-  }
-
-  return list;
-}
-
-function bindRiskUiControls() {
-  const btnFilter = document.getElementById('riskFilterToggle');
-  const btnSort = document.getElementById('riskSortToggle');
-
-  if (btnFilter && !btnFilter.dataset.bound) {
-    btnFilter.dataset.bound = '1';
-    btnFilter.addEventListener('click', () => {
-      window.__LCC_RISK_UI.filterOnly = !window.__LCC_RISK_UI.filterOnly;
-      btnFilter.classList.toggle('btn-active', window.__LCC_RISK_UI.filterOnly);
-
-      const res = window.LCC_RESERVATIONS || [];
-      const props = window.LCC_PROPERTIES || [];
-      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
-    });
-  }
-
-  if (btnSort && !btnSort.dataset.bound) {
-    btnSort.dataset.bound = '1';
-    btnSort.addEventListener('click', () => {
-      window.__LCC_RISK_UI.sortByRisk = !window.__LCC_RISK_UI.sortByRisk;
-      btnSort.classList.toggle('btn-active', window.__LCC_RISK_UI.sortByRisk);
-
-      const res = window.LCC_RESERVATIONS || [];
-      const props = window.LCC_PROPERTIES || [];
-      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
-    });
-  }
-}
-
-  // ---------- Data loading + binding ----------
+  // ======================
+  // Data loading + binding
+  // ======================
   async function loadDataAndUpdateKpis() {
     try {
       const token = localStorage.getItem('lcc_token');
       let reservations = [];
       let properties = [];
+
+      // Always have something (so KPIs don't stick to 0 if fetch order changes)
+      reservations = Array.isArray(window.LCC_RESERVATIONS) ? window.LCC_RESERVATIONS : getStoredArray('LCC_RESERVATIONS');
+      properties = Array.isArray(window.LCC_PROPERTIES) ? window.LCC_PROPERTIES : getStoredArray('LCC_PROPERTIES');
 
       if (token) {
         const baseRes = await fetch(`${API_URL}/api/reservations`, {
@@ -4248,8 +4128,8 @@ function bindRiskUiControls() {
         let baseData = {};
         if (baseRes.ok) baseData = await baseRes.json().catch(() => ({}));
 
-        properties = Array.isArray(baseData.properties) ? baseData.properties : [];
-        const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
+        properties = Array.isArray(baseData.properties) ? baseData.properties : properties;
+        const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : reservations;
 
         const enrRes = await fetch(`${API_URL}/api/reservations/enriched`, {
           headers: { Authorization: 'Bearer ' + token }
@@ -4266,101 +4146,39 @@ function bindRiskUiControls() {
         localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
         window.LCC_RESERVATIONS = reservations;
         window.LCC_PROPERTIES = properties;
-      } else {
-        const rRaw = localStorage.getItem('LCC_RESERVATIONS');
-        const pRaw = localStorage.getItem('LCC_PROPERTIES');
-        reservations = rRaw ? JSON.parse(rRaw) : [];
-        properties = pRaw ? JSON.parse(pRaw) : [];
       }
 
-      // store latest for click handlers
       window.__LCC_KPI_STATE = { reservations, properties };
 
-// ==========================
-// Risk UI state (filter/sort)
-// ==========================
-window.__LCC_RISK_UI = window.__LCC_RISK_UI || { filterOnly: false, sortByRisk: false };
-
-function normalizeStartEnd(r){
-  const start = r.start || r.startDate;
-  const end = r.end || r.endDate;
-  return { start, end };
-}
-
-function applyRiskUi(reservations){
-  let list = Array.isArray(reservations) ? [...reservations] : [];
-  const state = window.__LCC_RISK_UI;
-
-  if (state.filterOnly){
-    list = list.filter(r =>
-      r.riskLevel === 'red' ||
-      r.riskLevel === 'orange' ||
-      (typeof r.riskScore === 'number' && r.riskScore >= 31)
-    );
-  }
-
-  if (state.sortByRisk){
-    list.sort((a,b) => ((b.riskScore||0)-(a.riskScore||0)) || (new Date(normalizeStartEnd(a).start||0) - new Date(normalizeStartEnd(b).start||0)));
-  } else {
-    list.sort((a,b) => (new Date(normalizeStartEnd(a).start||0) - new Date(normalizeStartEnd(b).start||0)));
-  }
-  return list;
-}
-
-function bindRiskUiControls(){
-  const btnFilter = document.getElementById('riskFilterToggle');
-  const btnSort = document.getElementById('riskSortToggle');
-
-  if (btnFilter && !btnFilter.dataset.bound){
-    btnFilter.dataset.bound = '1';
-    btnFilter.addEventListener('click', () => {
-      window.__LCC_RISK_UI.filterOnly = !window.__LCC_RISK_UI.filterOnly;
-      btnFilter.classList.toggle('btn-active', window.__LCC_RISK_UI.filterOnly);
-      const res = window.LCC_RESERVATIONS || [];
-      const props = window.LCC_PROPERTIES || [];
-      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
-    });
-  }
-
-  if (btnSort && !btnSort.dataset.bound){
-    btnSort.dataset.bound = '1';
-    btnSort.addEventListener('click', () => {
-      window.__LCC_RISK_UI.sortByRisk = !window.__LCC_RISK_UI.sortByRisk;
-      btnSort.classList.toggle('btn-active', window.__LCC_RISK_UI.sortByRisk);
-      const res = window.LCC_RESERVATIONS || [];
-      const props = window.LCC_PROPERTIES || [];
-      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
-    });
-  }
-}
-
-window.renderModernCalendar) {
-        bindRiskUiControls();
-      window.renderModernCalendar(applyRiskUi(reservations), properties);
+      // calendar
+      if (window.renderModernCalendar) {
+        window.renderModernCalendar(applyRiskUi(reservations), properties);
       }
 
+      // KPIs
       computeKpis(reservations, properties);
-      updateTopRisksKpi(reservations);
 
-      const movesCard = document.getElementById('kpiTodayMovesCard');
-      if (movesCard && !movesCard.dataset.bound) {
-        movesCard.dataset.bound = '1';
-        movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
-}
+      // bind UI
+      bindRiskUiControls();
+      bindKpiClicksOnce();
 
-      const cleaningCard = document.getElementById('kpiCleaning48hCard');
-      if (cleaningCard && !cleaningCard.dataset.bound) {
-        cleaningCard.dataset.bound = '1';
-        cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
-}
     } catch (e) {
       console.warn('Erreur KPI dashboard', e);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => { bindRiskUiControls(); loadDataAndUpdateKpis(); });
+  document.addEventListener('DOMContentLoaded', () => {
+    bindKpiClicksOnce();
+    bindRiskUiControls();
+    loadDataAndUpdateKpis();
+    // retry (script order / mobile)
+    setTimeout(loadDataAndUpdateKpis, 600);
+    setTimeout(bindRiskUiControls, 800);
+  });
+
 })();
 </script>
+
 
 
   <script>
