@@ -1,5 +1,12 @@
 require('dotenv').config();
 const express = require('express')
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.APP_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST']
+  }
+});
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -26,7 +33,10 @@ const PDFDocument = require('pdfkit');
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ============================================
-
+// ============================================
+// SYSTÈME DE CHAT
+// ============================================
+const { setupChatRoutes } = require('./routes/chat_routes');
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY) 
@@ -8526,6 +8536,10 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
 // ============================================
+// ROUTES CHAT
+// ============================================
+setupChatRoutes(app, pool, io, authenticateToken, checkSubscription);
+// ============================================
 // ============================================
 // NOTES D'INSTALLATION
 // ============================================
@@ -9487,7 +9501,10 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 // DÃ‰MARRAGE (TOUJOURS EN DERNIER)
 // ============================================
 
-app.listen(PORT, async () => {
+server.listen(PORT, () => {  // ← Utilisez 'server' au lieu de 'app'
+  console.log(`✅ Serveur démarré sur le port ${PORT}`);
+  console.log(`🔌 Socket.IO prêt pour le chat en temps réel`);
+});
   console.log('');
   console.log('â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
   console.log('â•‘   ðŸ  LCC Booking Manager - SystÃ¨me de RÃ©servations    â•‘');
