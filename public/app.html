@@ -5074,7 +5074,6 @@ if (j === 0 || cells.length === 1) {
       <button type="button" class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;">
         <i class="fas fa-trash"></i> Supprimer
       </button>
-      <button type="button" class="btn btn-ghost" id="closeDetailsBtn">Fermer</button>
       <button type="button" class="btn btn-primary" id="editBookingBtn">
         <i class="fas fa-edit"></i> Modifier
       </button>
@@ -6630,7 +6629,6 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
   document.addEventListener('DOMContentLoaded', function () {
     const detailsModal    = document.getElementById('reservationDetailsModal');
     const closeDetailsX   = document.getElementById('closeDetailsModal');   // croix
-    const closeDetailsBtn = document.getElementById('closeDetailsBtn');     // bouton "Fermer"
     const detailsOverlay  = document.getElementById('detailsModalOverlay'); // fond gris
 
     function closeDetailsModalSafe() {
@@ -6646,13 +6644,6 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       });
     }
 
-    if (closeDetailsBtn) {
-      closeDetailsBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        closeDetailsModalSafe();
-      });
-    }
-
     if (detailsOverlay) {
       detailsOverlay.addEventListener('click', function (e) {
         if (e.target === detailsOverlay) {
@@ -6663,7 +6654,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
     // Touche Échap
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && detailsModal && detailsModal.classList.contains('active')) {
         closeDetailsModalSafe();
       }
     });
@@ -7042,6 +7033,141 @@ overlay && overlay.addEventListener('click', close);
       clearInterval(t);
     }
   }, 700);
+})();
+</script>
+
+<!-- Fix: Gestionnaire de clic sur les événements du calendrier -->
+<script>
+(function() {
+  console.log('🔧 Fix: Gestionnaire calendrier chargé');
+  
+  // Attendre que FullCalendar soit initialisé
+  let checkCalendarAttempts = 0;
+  const maxAttempts = 20;
+  
+  const checkCalendar = setInterval(function() {
+    checkCalendarAttempts++;
+    
+    // Chercher l'instance du calendrier
+    const calendarEl = document.getElementById('calendar');
+    
+    if (calendarEl && window.FullCalendar) {
+      console.log('✅ Calendrier trouvé, ajout du gestionnaire de clic');
+      
+      // Attendre que le calendrier soit complètement chargé
+      setTimeout(function() {
+        // Ajouter un event listener sur le conteneur du calendrier
+        calendarEl.addEventListener('click', function(e) {
+          // Chercher si on a cliqué sur un événement
+          const eventEl = e.target.closest('.fc-event');
+          
+          if (eventEl) {
+            console.log('🎯 Clic sur une réservation détecté');
+            
+            // Extraire l'ID de l'événement si disponible
+            const eventId = eventEl.getAttribute('data-event-id') || 
+                           eventEl.getAttribute('data-uid') ||
+                           eventEl.querySelector('[data-uid]')?.getAttribute('data-uid');
+            
+            if (eventId) {
+              console.log('📋 ID événement:', eventId);
+              
+              // Ouvrir le modal de détails si la fonction existe
+              if (typeof window.showReservationDetails === 'function') {
+                window.showReservationDetails(eventId);
+              } else if (typeof window.openReservationModal === 'function') {
+                window.openReservationModal(eventId);
+              } else {
+                console.warn('⚠️ Aucune fonction pour afficher les détails de la réservation');
+                
+                // Ouvrir le modal manuellement
+                const modal = document.getElementById('reservationDetailsModal');
+                if (modal) {
+                  modal.style.display = 'flex';
+                  modal.classList.add('active');
+                  
+                  // Charger les données de la réservation
+                  const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+                  const reservation = reservations.find(r => r.uid === eventId);
+                  
+                  if (reservation) {
+                    // Afficher les détails
+                    const content = document.getElementById('reservationDetailsContent');
+                    if (content) {
+                      content.innerHTML = `
+                        <div class="detail-group">
+                          <label>Voyageur</label>
+                          <p class="detail-value">${reservation.guestName || reservation.name || 'Non renseigné'}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Dates</label>
+                          <p class="detail-value">Du ${new Date(reservation.start).toLocaleDateString('fr-FR')} au ${new Date(reservation.end).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <div class="detail-group">
+                          <label>Plateforme</label>
+                          <p class="detail-value">${reservation.platform || 'Non renseigné'}</p>
+                        </div>
+                      `;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        clearInterval(checkCalendar);
+      }, 1000);
+      
+    } else if (checkCalendarAttempts >= maxAttempts) {
+      console.warn('⚠️ Calendrier non trouvé après', maxAttempts, 'tentatives');
+      clearInterval(checkCalendar);
+    }
+  }, 500);
+  
+  // Vérifier que les modals se ferment correctement
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 Vérification fermeture des modals');
+    
+    // Modal de détails
+    const detailsModal = document.getElementById('reservationDetailsModal');
+    const closeDetailsX = document.getElementById('closeDetailsModal');
+    const detailsOverlay = document.getElementById('detailsModalOverlay');
+    
+    if (closeDetailsX && detailsModal) {
+      console.log('✅ Modal détails: croix trouvée');
+      // La croix est déjà gérée dans le script précédent
+    }
+    
+    if (detailsOverlay && detailsModal) {
+      console.log('✅ Modal détails: overlay trouvé');
+      // L'overlay est déjà géré dans le script précédent
+    }
+    
+    // Modal de ménage
+    const cleaningModal = document.getElementById('cleaningTodayModal');
+    const closeCleaningX = document.getElementById('closeCleaningTodayModal');
+    const cleaningOverlay = document.getElementById('cleaningTodayOverlay');
+    
+    if (closeCleaningX && cleaningModal) {
+      console.log('✅ Modal ménage: croix trouvée');
+      // Ajouter un listener supplémentaire au cas où
+      closeCleaningX.addEventListener('click', function() {
+        console.log('🔒 Fermeture modal ménage via croix');
+        cleaningModal.style.display = 'none';
+        cleaningModal.classList.remove('active');
+      });
+    }
+    
+    if (cleaningOverlay && cleaningModal) {
+      console.log('✅ Modal ménage: overlay trouvé');
+      cleaningOverlay.addEventListener('click', function() {
+        console.log('🔒 Fermeture modal ménage via overlay');
+        cleaningModal.style.display = 'none';
+        cleaningModal.classList.remove('active');
+      });
+    }
+  });
 })();
 </script>
 
