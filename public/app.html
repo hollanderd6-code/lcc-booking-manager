@@ -7171,11 +7171,12 @@ overlay && overlay.addEventListener('click', close);
 })();
 </script>
 <!-- ============================================ -->
-<!-- FIX MODALS + CALENDRIER - À AJOUTER À LA FIN DE APP.HTML -->
+<!-- FIX MODALS + CALENDRIER V2 - AVEC DEBUG -->
+<!-- REMPLACE LE SCRIPT PRÉCÉDENT -->
 <!-- ============================================ -->
 <script>
 (function() {
-  console.log('🔧 Fix Modals + Calendrier - Chargement...');
+  console.log('🔧 Fix Modals V2 - Chargement avec debug...');
   
   // ============================================
   // 1. FIX FERMETURE MODAL MÉNAGE
@@ -7190,42 +7191,79 @@ overlay && overlay.addEventListener('click', close);
       return;
     }
     
+    console.log('📍 Modal ménage trouvé');
+    
     function closeCleaningModalForce() {
-      console.log('🔒 Fermeture modal ménage');
+      console.log('🔒 TENTATIVE fermeture modal ménage');
+      console.log('   - display avant:', cleaningModal.style.display);
+      console.log('   - classes avant:', cleaningModal.className);
+      
       cleaningModal.style.display = 'none';
       cleaningModal.classList.remove('active');
+      cleaningModal.style.visibility = 'hidden';
+      cleaningModal.style.opacity = '0';
+      cleaningModal.style.pointerEvents = 'none';
+      
+      console.log('   - display après:', cleaningModal.style.display);
+      console.log('   - classes après:', cleaningModal.className);
+      
+      // Vérifier après 100ms si ça a marché
+      setTimeout(function() {
+        const isStillVisible = window.getComputedStyle(cleaningModal).display !== 'none';
+        if (isStillVisible) {
+          console.error('❌ ÉCHEC: Le modal est encore visible!');
+          console.log('   - computed display:', window.getComputedStyle(cleaningModal).display);
+        } else {
+          console.log('✅ SUCCÈS: Modal bien fermé');
+        }
+      }, 100);
     }
     
-    // Croix
+    // Croix - méthode agressive
     if (closeCleaningX) {
-      // Supprimer tous les listeners existants en clonant l'élément
+      console.log('📍 Croix ménage trouvée, ID:', closeCleaningX.id);
+      
+      // Supprimer TOUS les listeners existants
       const newCloseBtn = closeCleaningX.cloneNode(true);
       closeCleaningX.parentNode.replaceChild(newCloseBtn, closeCleaningX);
       
       newCloseBtn.addEventListener('click', function(e) {
+        console.log('🎯 CLIC SUR CROIX MÉNAGE détecté');
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         closeCleaningModalForce();
-      });
-      console.log('✅ Modal ménage: croix fixée');
+        return false;
+      }, true); // Capture phase
+      
+      console.log('✅ Modal ménage: croix fixée (V2)');
+    } else {
+      console.warn('⚠️ Croix ménage non trouvée');
     }
     
     // Overlay
     if (cleaningOverlay) {
+      console.log('📍 Overlay ménage trouvé, ID:', cleaningOverlay.id);
+      
       const newOverlay = cleaningOverlay.cloneNode(true);
       cleaningOverlay.parentNode.replaceChild(newOverlay, cleaningOverlay);
       
       newOverlay.addEventListener('click', function(e) {
+        console.log('🎯 CLIC SUR OVERLAY MÉNAGE détecté');
         if (e.target === newOverlay) {
           closeCleaningModalForce();
         }
-      });
-      console.log('✅ Modal ménage: overlay fixé');
+      }, true);
+      
+      console.log('✅ Modal ménage: overlay fixé (V2)');
+    } else {
+      console.warn('⚠️ Overlay ménage non trouvé');
     }
     
     // Touche Échap
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && cleaningModal.classList.contains('active')) {
+        console.log('⌨️ TOUCHE ÉCHAP détectée pour modal ménage');
         closeCleaningModalForce();
       }
     });
@@ -7245,54 +7283,91 @@ overlay && overlay.addEventListener('click', close);
       return;
     }
     
+    console.log('📍 Modal détails trouvé');
+    
     function closeDetailsModalForce() {
-      console.log('🔒 Fermeture modal détails');
+      console.log('🔒 TENTATIVE fermeture modal détails');
+      console.log('   - display avant:', detailsModal.style.display);
+      console.log('   - classes avant:', detailsModal.className);
+      
       detailsModal.style.display = 'none';
       detailsModal.classList.remove('active');
+      detailsModal.style.visibility = 'hidden';
+      detailsModal.style.opacity = '0';
+      detailsModal.style.pointerEvents = 'none';
+      
+      console.log('   - display après:', detailsModal.style.display);
+      console.log('   - classes après:', detailsModal.className);
+      
+      setTimeout(function() {
+        const isStillVisible = window.getComputedStyle(detailsModal).display !== 'none';
+        if (isStillVisible) {
+          console.error('❌ ÉCHEC: Le modal est encore visible!');
+        } else {
+          console.log('✅ SUCCÈS: Modal bien fermé');
+        }
+      }, 100);
     }
     
     // Croix
     if (closeDetailsX) {
+      console.log('📍 Croix détails trouvée, ID:', closeDetailsX.id);
+      
       const newCloseBtn = closeDetailsX.cloneNode(true);
       closeDetailsX.parentNode.replaceChild(newCloseBtn, closeDetailsX);
       
       newCloseBtn.addEventListener('click', function(e) {
+        console.log('🎯 CLIC SUR CROIX DÉTAILS détecté');
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         closeDetailsModalForce();
-      });
-      console.log('✅ Modal détails: croix fixée');
+        return false;
+      }, true);
+      
+      console.log('✅ Modal détails: croix fixée (V2)');
     }
     
-    // Bouton Fermer (si existe)
+    // Bouton Fermer
     if (closeDetailsBtn) {
+      console.log('📍 Bouton Fermer trouvé, ID:', closeDetailsBtn.id);
+      
       const newBtn = closeDetailsBtn.cloneNode(true);
       closeDetailsBtn.parentNode.replaceChild(newBtn, closeDetailsBtn);
       
       newBtn.addEventListener('click', function(e) {
+        console.log('🎯 CLIC SUR BOUTON FERMER détecté');
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         closeDetailsModalForce();
-      });
-      console.log('✅ Modal détails: bouton Fermer fixé');
+        return false;
+      }, true);
+      
+      console.log('✅ Modal détails: bouton Fermer fixé (V2)');
     }
     
     // Overlay
     if (detailsOverlay) {
+      console.log('📍 Overlay détails trouvé, ID:', detailsOverlay.id);
+      
       const newOverlay = detailsOverlay.cloneNode(true);
       detailsOverlay.parentNode.replaceChild(newOverlay, detailsOverlay);
       
       newOverlay.addEventListener('click', function(e) {
+        console.log('🎯 CLIC SUR OVERLAY DÉTAILS détecté');
         if (e.target === newOverlay) {
           closeDetailsModalForce();
         }
-      });
-      console.log('✅ Modal détails: overlay fixé');
+      }, true);
+      
+      console.log('✅ Modal détails: overlay fixé (V2)');
     }
     
     // Touche Échap
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && detailsModal.classList.contains('active')) {
+        console.log('⌨️ TOUCHE ÉCHAP détectée pour modal détails');
         closeDetailsModalForce();
       }
     });
@@ -7308,23 +7383,21 @@ overlay && overlay.addEventListener('click', close);
     const checkCalendar = setInterval(function() {
       attempts++;
       
-      const calendarEl = document.getElementById('calendar');
+      // CORRECTION: Utiliser calendarGrid au lieu de calendar
+      const calendarEl = document.getElementById('calendarGrid') || document.getElementById('calendar');
       
       if (calendarEl) {
-        console.log('✅ Calendrier trouvé, ajout du gestionnaire de clic');
+        console.log('✅ Calendrier trouvé (ID:', calendarEl.id, ')');
         
-        // Ajouter un gestionnaire de clic global
         calendarEl.addEventListener('click', function(e) {
           const eventEl = e.target.closest('.fc-event');
           
           if (eventEl) {
-            console.log('🎯 Clic sur réservation détecté');
+            console.log('🎯 CLIC SUR RÉSERVATION détecté');
             
-            // Extraire l'ID de l'événement
             let eventId = eventEl.getAttribute('data-event-id') || 
                          eventEl.getAttribute('data-uid');
             
-            // Chercher dans les enfants
             if (!eventId) {
               const uidEl = eventEl.querySelector('[data-uid]');
               if (uidEl) eventId = uidEl.getAttribute('data-uid');
@@ -7333,13 +7406,15 @@ overlay && overlay.addEventListener('click', close);
             if (eventId) {
               console.log('📋 ID événement:', eventId);
               
-              // Ouvrir le modal
               const modal = document.getElementById('reservationDetailsModal');
               if (modal) {
+                console.log('📂 Ouverture modal détails...');
                 modal.style.display = 'flex';
                 modal.classList.add('active');
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
                 
-                // Charger les données
                 try {
                   const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
                   const reservation = reservations.find(r => r.uid === eventId);
@@ -7381,8 +7456,8 @@ overlay && overlay.addEventListener('click', close);
                         ` : ''}
                       `;
                       
-                      // Stocker l'ID pour les boutons Modifier/Supprimer
                       window.currentReservationId = eventId;
+                      console.log('✅ Contenu du modal mis à jour');
                     }
                   } else {
                     console.warn('⚠️ Réservation non trouvée:', eventId);
@@ -7390,7 +7465,11 @@ overlay && overlay.addEventListener('click', close);
                 } catch (error) {
                   console.error('❌ Erreur chargement réservation:', error);
                 }
+              } else {
+                console.error('❌ Modal détails non trouvé!');
               }
+            } else {
+              console.warn('⚠️ Aucun ID événement trouvé');
             }
           }
         });
@@ -7399,6 +7478,7 @@ overlay && overlay.addEventListener('click', close);
         
       } else if (attempts >= maxAttempts) {
         console.warn('⚠️ Calendrier non trouvé après', maxAttempts, 'tentatives');
+        console.log('   IDs recherchés: calendar, calendarGrid');
         clearInterval(checkCalendar);
       }
     }, 500);
@@ -7407,30 +7487,17 @@ overlay && overlay.addEventListener('click', close);
   // ============================================
   // 4. INITIALISATION
   // ============================================
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Initialisation des fix...');
-    
-    // Attendre un peu que tout soit chargé
-    setTimeout(function() {
-      fixCleaningModal();
-      fixDetailsModal();
-      fixCalendarClick();
-      console.log('✅ Tous les fix sont actifs');
-    }, 1000);
-  });
+  setTimeout(function() {
+    console.log('🚀 Initialisation des fix V2...');
+    fixCleaningModal();
+    fixDetailsModal();
+    fixCalendarClick();
+    console.log('✅ Tous les fix V2 sont actifs');
+  }, 2000); // Attendre 2 secondes
   
-  // Si DOMContentLoaded a déjà été déclenché
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(function() {
-      fixCleaningModal();
-      fixDetailsModal();
-      fixCalendarClick();
-      console.log('✅ Tous les fix sont actifs (chargement tardif)');
-    }, 1000);
-  }
 })();
 </script>
-<!-- FIN DU FIX -->
+<!-- FIN DU FIX V2 -->
 
 </body>
 </html>
