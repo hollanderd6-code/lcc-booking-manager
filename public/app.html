@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-<meta http-equiv="Pragm</head>a" content="no-cache">
+<meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1620,7 +1620,6 @@
     }
   </style>
 <style>
-  <style>
   /* ✨ Fix calendrier MOBILE
      - la page ne glisse plus en horizontal
      - la colonne LOGEMENTS reste alignée avec les lignes de réservations
@@ -1679,7 +1678,6 @@
   }
 </style>
 <style>
-  <style>
 /* =================================================================
    FIX CALENDRIER ULTRA-ROBUSTE (Mobile + Desktop)
    ================================================================= */
@@ -3754,6 +3752,13 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (!v) return null;
     return String(v).slice(0, 10);
   }
+  function formatDateFR(iso) {
+    if (!iso) return '';
+    const s = String(iso).slice(0,10);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return s;
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
   function startOfDay(d) {
     const x = new Date(d);
     x.setHours(0,0,0,0);
@@ -3881,7 +3886,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   `;
   document.body.appendChild(overlay);
 
-  const close = () => { overlay.classList.remove('active'); };
+  const close = () => { overlay.classList.remove('active'); overlay.style.display = 'none'; };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
 }
@@ -3915,8 +3920,8 @@ function populateEditBookingProperties(selectedPropertyId) {
           who: r.guestName || r.summary || 'Réservation',
           prop: r.propertyName || r.propertyId || '',
           src: r.source || r.platform || '',
-          startStr: s,
-          endStr: e,
+          startStr: formatDateFR(s),
+          endStr: formatDateFR(e),
           riskLevel: r.riskLevel || 'green',
           riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
           riskSummary: r.riskSummary || ''
@@ -3994,8 +3999,8 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         return {
           end,
-          startStr: dateOnlyStr(rawStart),
-          endStr: dateOnlyStr(rawEnd),
+          startStr: formatDateFR(dateOnlyStr(rawStart)),
+          endStr: formatDateFR(dateOnlyStr(rawEnd)),
           who: r.guestName || r.summary || 'Réservation',
           prop: r.propertyName || r.propertyId || '',
           src: r.source || r.platform || '',
@@ -4130,8 +4135,8 @@ function updateTopRisksKpi(reservations) {
         const g = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModal'+'Content');
         if (g) {
           g.innerHTML = top5.length ? top5.map(r=>{
-            const start = dateOnlyStr(r.start||r.startDate);
-            const end = dateOnlyStr(r.end||r.endDate);
+            const start = formatDateFR(dateOnlyStr(r.start||r.startDate));
+            const end = formatDateFR(dateOnlyStr(r.end||r.endDate));
             const prop = r.propertyName || r.propertyId || 'Logement';
             const name = r.guestName || 'Voyageur';
             const score = Math.round(r.riskScore||0);
