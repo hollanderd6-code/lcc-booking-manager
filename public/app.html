@@ -4171,68 +4171,6 @@ function updateTopRisksKpi(reservations) {
       };
     }
   }
-// ==========================
-// Risk UI state (filter/sort)
-// ==========================
-window.__LCC_RISK_UI = window.__LCC_RISK_UI || { filterOnly: false, sortByRisk: false };
-
-function normalizeStartEnd(r) {
-  const start = r.start || r.startDate;
-  const end = r.end || r.endDate;
-  return { start, end };
-}
-
-function applyRiskUi(reservations) {
-  let list = Array.isArray(reservations) ? [...reservations] : [];
-  const state = window.__LCC_RISK_UI;
-
-  if (state.filterOnly) {
-    list = list.filter(r =>
-      r.riskLevel === 'red' ||
-      r.riskLevel === 'orange' ||
-      (typeof r.riskScore === 'number' && r.riskScore >= 31)
-    );
-  }
-
-  const sortByDate = (a, b) => new Date(normalizeStartEnd(a).start || 0) - new Date(normalizeStartEnd(b).start || 0);
-
-  if (state.sortByRisk) {
-    list.sort((a, b) => ((b.riskScore || 0) - (a.riskScore || 0)) || sortByDate(a, b));
-  } else {
-    list.sort(sortByDate);
-  }
-
-  return list;
-}
-
-function bindRiskUiControls() {
-  const btnFilter = document.getElementById('riskFilterToggle');
-  const btnSort = document.getElementById('riskSortToggle');
-
-  if (btnFilter && !btnFilter.dataset.bound) {
-    btnFilter.dataset.bound = '1';
-    btnFilter.addEventListener('click', () => {
-      window.__LCC_RISK_UI.filterOnly = !window.__LCC_RISK_UI.filterOnly;
-      btnFilter.classList.toggle('btn-active', window.__LCC_RISK_UI.filterOnly);
-
-      const res = window.LCC_RESERVATIONS || [];
-      const props = window.LCC_PROPERTIES || [];
-      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
-    });
-  }
-
-  if (btnSort && !btnSort.dataset.bound) {
-    btnSort.dataset.bound = '1';
-    btnSort.addEventListener('click', () => {
-      window.__LCC_RISK_UI.sortByRisk = !window.__LCC_RISK_UI.sortByRisk;
-      btnSort.classList.toggle('btn-active', window.__LCC_RISK_UI.sortByRisk);
-
-      const res = window.LCC_RESERVATIONS || [];
-      const props = window.LCC_PROPERTIES || [];
-      if (window.renderModernCalendar) window.renderModernCalendar(applyRiskUi(res), props);
-    });
-  }
-}
 
   // ---------- Data loading + binding ----------
   async function loadDataAndUpdateKpis() {
@@ -4276,6 +4214,7 @@ function bindRiskUiControls() {
       // store latest for click handlers
       window.__LCC_KPI_STATE = { reservations, properties };
 
+      if (
 // ==========================
 // Risk UI state (filter/sort)
 // ==========================
