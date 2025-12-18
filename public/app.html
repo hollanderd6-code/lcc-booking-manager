@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Pragm</head>a" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1620,6 +1620,7 @@
     }
   </style>
 <style>
+  <style>
   /* ✨ Fix calendrier MOBILE
      - la page ne glisse plus en horizontal
      - la colonne LOGEMENTS reste alignée avec les lignes de réservations
@@ -1678,6 +1679,7 @@
   }
 </style>
 <style>
+  <style>
 /* =================================================================
    FIX CALENDRIER ULTRA-ROBUSTE (Mobile + Desktop)
    ================================================================= */
@@ -1907,7 +1909,7 @@
              </a>
 
           <div class="nav-section">
-  <div class="nav-section-title">Facturation</div>
+  <div class="nav-section-title"><Facturation></Facturation></div>
   <a href="/factures.html" class="nav-item">
     <i class="fas fa-file-invoice"></i>
     <span>Factures clients</span>
@@ -3338,8 +3340,8 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         if (cleaningCard && modal && contentEl) {
           cleaningCard.style.cursor = 'pointer';
-          cleaningCard.addEventListener('click', openCleaningTodayModal);
-        }
+          cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+}
         if (overlay) {
           overlay.addEventListener('click', closeCleaningTodayModal);
         }
@@ -3754,7 +3756,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   }
   function startOfDay(d) {
     const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
+    x.setHours(0,0,0,0);
     return x;
   }
   function addDays(d, n) {
@@ -3764,11 +3766,11 @@ function populateEditBookingProperties(selectedPropertyId) {
   }
   function parseDateSafe(v) {
     if (!v) return null;
+    // if "YYYY-MM-DD", create local date (avoids timezone surprises)
     const s = String(v);
-    // if "YYYY-MM-DD", create local date at 00:00 (avoids timezone surprises)
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      const [y, m, dd] = s.split('-').map(Number);
-      return new Date(y, m - 1, dd, 0, 0, 0, 0);
+      const [y,m,dd] = s.split('-').map(Number);
+      return new Date(y, m-1, dd, 0, 0, 0, 0);
     }
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
@@ -3781,6 +3783,78 @@ function populateEditBookingProperties(selectedPropertyId) {
     return '#10b981';
   };
 
+  // ---------- KPI compute ----------
+  function computeKpis(reservations, properties) {
+    const now = new Date();
+    const today0 = startOfDay(now);
+    const todayStr = today0.toISOString().slice(0,10);
+
+    const window48End = addDays(today0, 2); // today + 48h window as dates (today & tomorrow)
+
+    // Occupation mois en cours
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const monthStart = new Date(y, m, 1, 0, 0, 0, 0);
+    const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const totalNightsPossible = (properties.length || 1) * daysInMonth;
+    let nightsBooked = 0;
+
+    let checkinsToday = 0;
+    let checkoutsToday = 0;
+    let cleaning48h = 0;
+
+    (reservations || []).forEach((r) => {
+      const rawStart = r.start || r.startDate;
+      const rawEnd = r.end || r.endDate;
+      if (!rawStart || !rawEnd) return;
+
+      const start = parseDateSafe(rawStart);
+      const end = parseDateSafe(rawEnd);
+      if (!start || !end) return;
+
+      // Occupation (clamp dans le mois)
+      const startClamped = start < monthStart ? monthStart : start;
+      const endClamped = end > monthEnd ? monthEnd : end;
+      if (endClamped > startClamped) {
+        nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+      }
+
+      // Check-in / out du jour (date-only)
+      const sStr = dateOnlyStr(rawStart);
+      const eStr = dateOnlyStr(rawEnd);
+      if (sStr === todayStr) checkinsToday += 1;
+      if (eStr === todayStr) checkoutsToday += 1;
+
+      // Ménages à prévoir (48h) : départ aujourd'hui ou demain (date-only)
+      const endDay = startOfDay(end);
+      if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
+    });
+
+    // taux d’occupation
+    let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+    if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
+    if (occupancy > 100) occupancy = 100;
+
+    // inject DOM
+    const propEl = document.getElementById('kpiPropertiesValue');
+    if (propEl) propEl.textContent = properties.length || 0;
+
+    const occEl = document.getElementById('kpiOccupancyValue');
+    if (occEl) occEl.textContent = occupancy + '%';
+
+    const movesVal = document.getElementById('kpiTodayMovesValue');
+    const movesSub = document.getElementById('kpiTodayMovesSub');
+    if (movesVal) movesVal.textContent = (checkinsToday + checkoutsToday);
+    if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
+
+    const cleanVal = document.getElementById('kpiCleaning48hValue');
+    const cleanSub = document.getElementById('kpiCleaning48hSub');
+    if (cleanVal) cleanVal.textContent = cleaning48h;
+    if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
+  }
+
+  // ---------- Top risks KPI ----------
   function ensureGenericModal(modalId, titleText) {
     if (document.getElementById(modalId)) return;
 
@@ -3806,14 +3880,9 @@ function populateEditBookingProperties(selectedPropertyId) {
     `;
     document.body.appendChild(modal);
 
-    const close = () => {
-      modal.style.display = 'none';
-      modal.classList.remove('active');
-    };
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) close();
-    });
-    modal.querySelectorAll('[data-close="1"]').forEach((btn) => btn.addEventListener('click', close));
+    const close = () => { modal.style.display = 'none'; modal.classList.remove('active'); };
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    modal.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
   }
 
   function openTodayMovesModal(reservations) {
@@ -3824,32 +3893,28 @@ function populateEditBookingProperties(selectedPropertyId) {
     const content = document.getElementById(modalId + 'Content');
     if (!modal || !content) return;
 
-    const todayStr = startOfDay(new Date()).toISOString().slice(0, 10);
+    const todayStr = startOfDay(new Date()).toISOString().slice(0,10);
 
     const rows = (reservations || [])
-      .map((r) => {
+      .map(r => {
         const rawStart = r.start || r.startDate;
         const rawEnd = r.end || r.endDate;
         if (!rawStart || !rawEnd) return null;
 
-        const startStr = dateOnlyStr(rawStart);
-        const endStr = dateOnlyStr(rawEnd);
+        const s = dateOnlyStr(rawStart);
+        const e = dateOnlyStr(rawEnd);
 
-        const isCheckin = startStr === todayStr;
-        const isCheckout = endStr === todayStr;
-        if (!isCheckin && !isCheckout) return null;
-
-        const who = r.guestName || r.summary || 'Réservation';
-        const prop = r.propertyName || r.propertyId || '';
-        const src = r.source || r.platform || '';
+        const isIn = s === todayStr;
+        const isOut = e === todayStr;
+        if (!isIn && !isOut) return null;
 
         return {
-          type: isCheckin && isCheckout ? 'inout' : (isCheckin ? 'in' : 'out'),
-          startStr,
-          endStr,
-          who,
-          prop,
-          src,
+          type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
+          who: r.guestName || r.summary || 'Réservation',
+          prop: r.propertyName || r.propertyId || '',
+          src: r.source || r.platform || '',
+          startStr: s,
+          endStr: e,
           riskLevel: r.riskLevel || 'green',
           riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
           riskSummary: r.riskSummary || ''
@@ -3860,8 +3925,8 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (!rows.length) {
       content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
     } else {
-      const inRows = rows.filter((x) => x.type === 'in' || x.type === 'inout');
-      const outRows = rows.filter((x) => x.type === 'out' || x.type === 'inout');
+      const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
+      const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
 
       const renderList = (list, label, icon) => {
         if (!list.length) return '';
@@ -3870,7 +3935,7 @@ function populateEditBookingProperties(selectedPropertyId) {
             <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
               <i class="fas ${icon}"></i> ${label} (${list.length})
             </div>
-            ${list.map((r) => {
+            ${list.map(r => {
               const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
               return `
@@ -3911,31 +3976,27 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (!modal || !content) return;
 
     const today0 = startOfDay(new Date());
-    const windowEnd = addDays(today0, 2); // today + tomorrow
+    const window48End = addDays(today0, 2);
 
     const rows = (reservations || [])
-      .map((r) => {
+      .map(r => {
         const rawEnd = r.end || r.endDate;
         const rawStart = r.start || r.startDate;
         if (!rawEnd || !rawStart) return null;
 
-        const end = parseDateSafe(dateOnlyStr(rawEnd));
+        const end = parseDateSafe(rawEnd);
         if (!end) return null;
 
-        // checkout date in [today, today+2)  => today or tomorrow
-        if (!(end >= today0 && end < windowEnd)) return null;
-
-        const who = r.guestName || r.summary || 'Réservation';
-        const prop = r.propertyName || r.propertyId || '';
-        const src = r.source || r.platform || '';
+        const endDay = startOfDay(end);
+        if (!(endDay >= today0 && endDay < window48End)) return null;
 
         return {
           end,
           startStr: dateOnlyStr(rawStart),
           endStr: dateOnlyStr(rawEnd),
-          who,
-          prop,
-          src,
+          who: r.guestName || r.summary || 'Réservation',
+          prop: r.propertyName || r.propertyId || '',
+          src: r.source || r.platform || '',
           riskLevel: r.riskLevel || 'green',
           riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
           riskSummary: r.riskSummary || ''
@@ -3947,7 +4008,7 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (!rows.length) {
       content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
     } else {
-      content.innerHTML = rows.map((r) => {
+      content.innerHTML = rows.map(r => {
         const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
         const score = r.riskScore != null ? `${r.riskScore}/100` : '';
         return `
@@ -3972,122 +4033,118 @@ function populateEditBookingProperties(selectedPropertyId) {
     modal.classList.add('active');
   }
 
-  // ---------- KPI compute ----------
-  function computeKpis(reservations, properties) {
-    const now = new Date();
-    const today0 = startOfDay(now);
-    const todayStr = today0.toISOString().slice(0, 10);
-    const window48End = addDays(today0, 2); // today & tomorrow
+  
+  // =========================
+  // Expose helpers globally (debug + onclick fallback)
+  // =========================
+  window.openTodayMovesModal = openTodayMovesModal;
+  window.openCleaning48hModal = openCleaning48hModal;
 
-    // Occupation mois en cours
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const monthStart = new Date(y, m, 1, 0, 0, 0, 0);
-    const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
-    const totalNightsPossible = (properties.length || 1) * daysInMonth;
-
-    let nightsBooked = 0;
-    let checkinsToday = 0;
-    let checkoutsToday = 0;
-    let cleaning48h = 0;
-
-    (reservations || []).forEach((r) => {
-      const rawStart = r.start || r.startDate;
-      const rawEnd = r.end || r.endDate;
-      if (!rawStart || !rawEnd) return;
-
-      const start = parseDateSafe(rawStart);
-      const end = parseDateSafe(rawEnd);
-      if (!start || !end) return;
-
-      // Occupation (clamp dans le mois)
-      const startClamped = start < monthStart ? monthStart : start;
-      const endClamped = end > monthEnd ? monthEnd : end;
-      if (endClamped > startClamped) {
-        nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+  function getLatestReservationsForKpi(fallback) {
+    try {
+      if (window.__LCC_KPI_STATE && Array.isArray(window.__LCC_KPI_STATE.reservations)) {
+        return window.__LCC_KPI_STATE.reservations;
       }
-
-      // Check-in/out du jour (date-only)
-      if (dateOnlyStr(rawStart) === todayStr) checkinsToday += 1;
-      if (dateOnlyStr(rawEnd) === todayStr) checkoutsToday += 1;
-
-      // Ménage à prévoir (48h) : départ aujourd'hui ou demain (date-only)
-      const endDateOnly = parseDateSafe(dateOnlyStr(rawEnd));
-      if (endDateOnly && endDateOnly >= today0 && endDateOnly < window48End) {
-        cleaning48h += 1;
+      if (Array.isArray(window.LCC_RESERVATIONS)) return window.LCC_RESERVATIONS;
+      const raw = localStorage.getItem('LCC_RESERVATIONS');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return arr;
       }
-    });
-
-    let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
-    if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
-    if (occupancy > 100) occupancy = 100;
-
-    const occEl = document.getElementById('kpiOccupancyValue');
-    const propEl = document.getElementById('kpiPropertiesValue');
-    const movesValEl = document.getElementById('kpiTodayMovesValue');
-    const movesSubEl = document.getElementById('kpiTodayMovesSub');
-    const cleanValEl = document.getElementById('kpiCleaning48hValue');
-    const cleanSubEl = document.getElementById('kpiCleaning48hSub');
-
-    if (occEl) occEl.textContent = occupancy + '%';
-    if (propEl) propEl.textContent = (properties && properties.length) ? properties.length : 0;
-
-    if (movesValEl) movesValEl.textContent = (checkinsToday + checkoutsToday);
-    if (movesSubEl) movesSubEl.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
-
-    if (cleanValEl) cleanValEl.textContent = cleaning48h;
-    if (cleanSubEl) cleanSubEl.textContent = `départs à nettoyer sous 48h`;
+    } catch (e) {}
+    return Array.isArray(fallback) ? fallback : [];
   }
 
-  function updateTopRisksKpi(reservations) {
-    // Top 5 sur le mois en cours
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const monthStartStr = new Date(y, m, 1).toISOString().slice(0, 10);
-    const monthEndStr = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+  function bindKpiModalClicksOnce() {
+    const movesCard = document.getElementById('kpiTodayMovesCard');
+    if (movesCard && !movesCard.dataset.bound2) {
+      movesCard.dataset.bound2 = '1';
+      const handler = (e) => {
+        try {
+          const data = getLatestReservationsForKpi([]);
+          window.openTodayMovesModal(data);
+        } catch (err) { console.warn('todayMovesModal click error', err); }
+      };
+      movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
+movesCard.addEventListener('touchstart', handler, { passive: true });
+      movesCard.onclick = handler;
+    }
 
-    const monthRes = (reservations || []).filter((r) => {
-      const s = dateOnlyStr(r.start || r.startDate);
-      if (!s) return false;
-      return s >= monthStartStr && s <= monthEndStr;
+    const cleaningCard = document.getElementById('kpiCleaning48hCard');
+    if (cleaningCard && !cleaningCard.dataset.bound2) {
+      cleaningCard.dataset.bound2 = '1';
+      const handler = (e) => {
+        try {
+          const data = getLatestReservationsForKpi([]);
+          window.openCleaning48hModal(data);
+        } catch (err) { console.warn('cleaning48hModal click error', err); }
+      };
+      cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+cleaningCard.addEventListener('touchstart', handler, { passive: true });
+      cleaningCard.onclick = handler;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', bindKpiModalClicksOnce);
+function updateTopRisksKpi(reservations) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const monthRes = (reservations || []).filter(r => {
+      const rawS = r.start || r.startDate;
+      const rawE = r.end || r.endDate;
+      if (!rawS || !rawE) return false;
+      const s = parseDateSafe(rawS);
+      const e = parseDateSafe(rawE);
+      if (!s || !e) return false;
+      return e > monthStart && s < monthEnd;
     });
 
-    const scored = monthRes.filter((r) => typeof r.riskScore === 'number');
+    const scored = monthRes.filter(r => typeof r.riskScore === 'number');
     scored.sort((a, b) => (b.riskScore - a.riskScore));
     const top5 = scored.slice(0, 5);
 
-    const redCount = scored.filter((r) => r.riskLevel === 'red').length;
-    const orangeCount = scored.filter((r) => r.riskLevel === 'orange').length;
+    const redCount = scored.filter(r => r.riskLevel === 'red').length;
+    const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
 
     const valEl = document.getElementById('kpiTopRisksValue');
     const subEl = document.getElementById('kpiTopRisksSub');
     if (valEl) valEl.textContent = top5.length;
     if (subEl) subEl.textContent = `${redCount} rouge • ${orangeCount} orange (mois en cours)`;
-  }
 
-  function bindKpiClicks() {
-    const stateRes = (window.__LCC_KPI_STATE || {}).reservations || window.LCC_RESERVATIONS || [];
-    const reservations = Array.isArray(stateRes) ? stateRes : [];
-
-    const bind = (id, openFn) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.add('kpi-card--clickable');
-      el.style.cursor = 'pointer';
-      if (el.dataset.bound === '1') return;
-      el.dataset.bound = '1';
-
-      el.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try { openFn(reservations); } catch (err) { console.warn('KPI click error', err); }
-      }, true); // capture to avoid overlays blocking clicks
-    };
-
-    bind('kpiTodayMovesCard', openTodayMovesModal);
-    bind('kpiCleaning48hCard', openCleaning48hModal);
+    const card = document.getElementById('kpiTopRisksCard');
+    if (card) {
+      card.onclick = () => {
+        // reuse your existing modal if present
+        if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
+        // fallback modal
+        ensureGenericModal('topRisksModal', 'Top risques du mois');
+        const modal = document.getElementById('topRisksModal');
+        const content = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent'.replace('Content',''));
+        const body = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
+        const c = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
+        // simple: open generic
+        const g = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModal'+'Content');
+        if (g) {
+          g.innerHTML = top5.length ? top5.map(r=>{
+            const start = dateOnlyStr(r.start||r.startDate);
+            const end = dateOnlyStr(r.end||r.endDate);
+            const prop = r.propertyName || r.propertyId || 'Logement';
+            const name = r.guestName || 'Voyageur';
+            const score = Math.round(r.riskScore||0);
+            const color = window.riskColor(r.riskLevel);
+            return `<div style="border-left:6px solid ${color}; padding-left:12px; margin-bottom:10px;">
+              <div style="font-weight:900;">${score}/100 • ${prop}</div>
+              <div style="opacity:.85;">${start} → ${end} • ${name}</div>
+              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+            </div>`;
+          }).join('') : `<div style="opacity:.8">Aucun risque détecté sur le mois en cours.</div>`;
+        }
+        const mm = document.getElementById('topRisksModal');
+        if (mm) { mm.style.display='flex'; mm.classList.add('active'); }
+      };
+    }
   }
 
   // ---------- Data loading + binding ----------
@@ -4129,6 +4186,7 @@ function populateEditBookingProperties(selectedPropertyId) {
         properties = pRaw ? JSON.parse(pRaw) : [];
       }
 
+      // store latest for click handlers
       window.__LCC_KPI_STATE = { reservations, properties };
 
       if (window.renderModernCalendar) {
@@ -4138,25 +4196,25 @@ function populateEditBookingProperties(selectedPropertyId) {
       computeKpis(reservations, properties);
       updateTopRisksKpi(reservations);
 
-      // bind clicks (always, even if 0)
-      bindKpiClicks();
-      setTimeout(bindKpiClicks, 400);
-      setTimeout(bindKpiClicks, 1200);
+      const movesCard = document.getElementById('kpiTodayMovesCard');
+      if (movesCard && !movesCard.dataset.bound) {
+        movesCard.dataset.bound = '1';
+        movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
+}
+
+      const cleaningCard = document.getElementById('kpiCleaning48hCard');
+      if (cleaningCard && !cleaningCard.dataset.bound) {
+        cleaningCard.dataset.bound = '1';
+        cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+}
     } catch (e) {
       console.warn('Erreur KPI dashboard', e);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadDataAndUpdateKpis();
-    // extra safety: bind also if something re-renders
-    bindKpiClicks();
-    setTimeout(bindKpiClicks, 400);
-    setTimeout(bindKpiClicks, 1200);
-  });
+  document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 })();
 </script>
-
 
 
   <script>
@@ -6925,8 +6983,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       modal.style.display = 'none';
     }
 
-    cleaningCard.addEventListener('click', open);
-    overlay && overlay.addEventListener('click', close);
+    cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
+overlay && overlay.addEventListener('click', close);
     closeBtn && closeBtn.addEventListener('click', close);
   }
 
