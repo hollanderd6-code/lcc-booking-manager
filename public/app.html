@@ -2053,57 +2053,78 @@
 
                 <!-- KPI PRINCIPAUX -->
         <section class="kpi-grid">
-          <!-- KPI 1 : Taux d'occupation -->
-          <article class="kpi-card kpi-card--clickable" id="kpiOccupancyCard">
-            <div class="kpi-header">
-              <span class="kpi-label">Taux d'occupation</span>
-            </div>
-            <div class="kpi-main">
-              <span class="kpi-value" id="kpiOccupancyValue">0%</span>
-              <span class="kpi-sub">sur le mois en cours</span>
-            </div>
-          </article>
 
-          <!-- KPI 2 : Logements actifs -->
-          <article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
-            <div class="kpi-header">
-              <span class="kpi-label">Logements actifs</span>
-              <span class="kpi-pill kpi-pill-neutral">
-                <i class="fas fa-home"></i>
-                synchronisés
-              </span>
-            </div>
-            <div class="kpi-main">
-              <span class="kpi-value" id="kpiPropertiesValue">0</span>
-              <span class="kpi-sub">connectés à au moins un OTA</span>
-            </div>
-          </article>
+  <!-- KPI 1 : Logements actifs -->
+  <article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
+    <div class="kpi-header">
+      <span class="kpi-label">Logements actifs</span>
+      <span class="kpi-pill">
+        <i class="fas fa-home"></i> synchronisés
+      </span>
+    </div>
+    <div class="kpi-main">
+      <span class="kpi-value" id="kpiPropertiesValue">0</span>
+      <span class="kpi-sub">connectés à au moins un OTA</span>
+    </div>
+  </article>
 
-          <!-- KPI 3 : Ménages du jour -->
-          <article class="kpi-card" id="kpiCleaningTodayCard">
-            <div class="kpi-header">
-              <span class="kpi-label">Ménages du jour</span>
-            </div>
-            <div class="kpi-main">
-              <span class="kpi-value" id="kpiCleaningTodayValue">0</span>
-              <span class="kpi-sub">départs à nettoyer aujourd’hui</span>
-            </div>
-          </article>
-          <!-- KPI 4 : Top risques du mois -->
-<article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
-  <div class="kpi-header">
-    <span class="kpi-label">Top risques du mois</span>
-    <span class="kpi-pill kpi-pill-neutral">
-      <i class="fas fa-shield-alt"></i>
-      IA Risk
-    </span>
-  </div>
-  <div class="kpi-main">
-    <span class="kpi-value" id="kpiTopRisksValue">0</span>
-    <span class="kpi-sub" id="kpiTopRisksSub">réservations à surveiller</span>
-  </div>
-</article>
-        </section>
+  <!-- KPI 2 : Check-in / Check-out du jour -->
+  <article class="kpi-card kpi-card--clickable" id="kpiTodayMovesCard">
+    <div class="kpi-header">
+      <span class="kpi-label">Check-in / Check-out du jour</span>
+      <span class="kpi-pill kpi-pill-neutral">
+        <i class="fas fa-right-left"></i> aujourd’hui
+      </span>
+    </div>
+    <div class="kpi-main">
+      <span class="kpi-value" id="kpiTodayMovesValue">0</span>
+      <span class="kpi-sub" id="kpiTodayMovesSub">0 arrivées • 0 départs</span>
+    </div>
+  </article>
+
+  <!-- KPI 3 : Ménages à prévoir dans les 48h -->
+  <article class="kpi-card kpi-card--clickable" id="kpiCleaning48hCard">
+    <div class="kpi-header">
+      <span class="kpi-label">Ménages à prévoir (48h)</span>
+      <span class="kpi-pill kpi-pill-neutral">
+        <i class="fas fa-broom"></i> planning
+      </span>
+    </div>
+    <div class="kpi-main">
+      <span class="kpi-value" id="kpiCleaning48hValue">0</span>
+      <span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
+    </div>
+  </article>
+
+  <!-- KPI 4 : Top risques du mois -->
+  <article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
+    <div class="kpi-header">
+      <span class="kpi-label">Top risques du mois</span>
+      <span class="kpi-pill kpi-pill-neutral">
+        <i class="fas fa-shield-alt"></i> IA Risk
+      </span>
+    </div>
+    <div class="kpi-main">
+      <span class="kpi-value" id="kpiTopRisksValue">0</span>
+      <span class="kpi-sub" id="kpiTopRisksSub">0 rouge • 0 orange</span>
+    </div>
+  </article>
+
+  <!-- KPI 5 : Taux d'occupation -->
+  <article class="kpi-card kpi-card--clickable" id="kpiOccupancyCard">
+    <div class="kpi-header">
+      <span class="kpi-label">Taux d'occupation</span>
+      <span class="kpi-pill kpi-pill-neutral">
+        <i class="fas fa-calendar"></i> mois
+      </span>
+    </div>
+    <div class="kpi-main">
+      <span class="kpi-value" id="kpiOccupancyValue">0%</span>
+      <span class="kpi-sub">sur le mois en cours</span>
+    </div>
+  </article>
+
+</section>
 
         <section class="onboarding-section" id="onboardingSection">
           <header class="onboarding-header">
@@ -3730,54 +3751,76 @@ function populateEditBookingProperties(selectedPropertyId) {
 
     function computeKpis(reservations, properties) {
   const now = new Date();
+
+  // Dates utiles
+  const todayStr = now.toISOString().slice(0, 10);
+  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+  // Occupation mois en cours
   const year = now.getFullYear();
   const month = now.getMonth();
-
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0);
   const daysInMonth = monthEnd.getDate();
-
   const totalNightsPossible = (properties.length || 1) * daysInMonth;
-
   let nightsBooked = 0;
-  let futureRevenue = 0;
-  let cleaningToday = 0;
 
-  const todayStr = now.toISOString().slice(0, 10);
-  const horizon = new Date(now);
-  horizon.setDate(now.getDate() + 30);
+  // Aujourd’hui: arrivées/départs
+  let checkinsToday = 0;
+  let checkoutsToday = 0;
+
+  // Ménages 48h (basé sur départs)
+  let cleaning48h = 0;
 
   (reservations || []).forEach((r) => {
-    // ✅ Supporte start/end OU startDate/endDate
     const rawStart = r.start || r.startDate;
-    const rawEnd = r.end || r.endDate;
+    const rawEnd   = r.end   || r.endDate;
     if (!rawStart || !rawEnd) return;
 
     const start = new Date(rawStart);
     const end = new Date(rawEnd);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
-    // Nuits réservées sur le mois en cours (clamp dans [monthStart, monthEnd])
+    // Occupation (clamp dans le mois)
     const startClamped = start < monthStart ? monthStart : start;
     const endClamped = end > monthEnd ? monthEnd : end;
-
     if (endClamped > startClamped) {
-      const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
-      nightsBooked += d;
+      nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
     }
 
-    // Revenus à venir sur 30 jours (✅ supporte amount OU price)
-    const amount = Number(r.amount ?? r.price ?? 0) || 0;
-    if (end >= now && start <= horizon) {
-      futureRevenue += amount;
-    }
-
-    // Ménage du jour : départ aujourd'hui
+    // Check-in / out du jour
+    const startStr = String(rawStart).slice(0, 10);
     const endStr = String(rawEnd).slice(0, 10);
-    if (endStr === todayStr) {
-      cleaningToday += 1;
-    }
+    if (startStr === todayStr) checkinsToday += 1;
+    if (endStr === todayStr) checkoutsToday += 1;
+
+    // Ménage à prévoir dans les 48h = départ entre maintenant et +48h (inclus)
+    if (end >= now && end <= in48h) cleaning48h += 1;
   });
+
+  // Calcul taux d’occupation
+  let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
+  if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
+  if (occupancy > 100) occupancy = 100;
+
+  // Inject DOM
+  const propEl = document.getElementById('kpiPropertiesValue');
+  if (propEl) propEl.textContent = properties.length || 0;
+
+  const occEl = document.getElementById('kpiOccupancyValue');
+  if (occEl) occEl.textContent = occupancy + '%';
+
+  const movesVal = document.getElementById('kpiTodayMovesValue');
+  const movesSub = document.getElementById('kpiTodayMovesSub');
+  if (movesVal) movesVal.textContent = (checkinsToday + checkoutsToday);
+  if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
+
+  const cleanVal = document.getElementById('kpiCleaning48hValue');
+  const cleanSub = document.getElementById('kpiCleaning48hSub');
+  if (cleanVal) cleanVal.textContent = cleaning48h;
+  if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
+}
+
 
   let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
   if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
