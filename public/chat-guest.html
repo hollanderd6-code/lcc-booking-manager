@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat – Votre réservation</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary-color: #10B981;
+      --primary-hover: #059669;
+      --primary-light: #D1FAE5;
+      --danger-color: #ef4444;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9fafb;
+      --border-color: #e5e7eb;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    /* ===== PAGE DE VÉRIFICATION ===== */
+    .verification-card {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 40px;
+      text-align: center;
+    }
+
+    .verification-header {
+      margin-bottom: 32px;
+    }
+
+    .verification-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 36px;
+      color: var(--primary-color);
+    }
+
+    .verification-card h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .verification-card .subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .form-group select,
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .form-group input[type="text"]#pinCode {
+      font-size: 24px;
+      letter-spacing: 8px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      background: #FEE2E2;
+      color: #991B1B;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .warning-message {
+      background: #FEF3C7;
+      color: #92400E;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .warning-message.show {
+      display: block;
+    }
+
+    /* ===== INTERFACE DE CHAT ===== */
+    .chat-container {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      height: 80vh;
+      max-height: 700px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-container.active {
+      display: flex;
+    }
+
+    .chat-header {
+      background: var(--primary-color);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-header .property-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .chat-header .property-info h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .chat-header .property-info p {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 80%;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.owner,
+    .message.bot {
+      align-self: flex-start;
+    }
+
+    .message.guest {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .message.bot .message-avatar {
+      background: #8B5CF6;
+    }
+
+    .message.guest .message-avatar {
+      background: #3B82F6;
+    }
+
+    .message-content {
+      flex: 1;
+    }
+
+    .message-sender {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .message-bubble {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .message.guest .message-bubble {
+      background: #DBEAFE;
+    }
+
+    .message.bot .message-bubble {
+      background: #EDE9FE;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: white;
+      border-radius: 12px;
+      width: fit-content;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .typing-indicator.show {
+      display: flex;
+    }
+
+    .typing-indicator .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite;
+    }
+
+    .typing-indicator .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-indicator .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes bounce {
+      0%, 60%, 100% {
+        transform: translateY(0);
+      }
+      30% {
+        transform: translateY(-8px);
+      }
+    }
+
+    .chat-input-container {
+      padding: 16px;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      resize: none;
+      max-height: 120px;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .send-btn:hover {
+      background: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .loading i {
+      font-size: 32px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      body {
+        padding: 0;
+      }
+
+      .container {
+        max-width: 100%;
+      }
+
+      .verification-card {
+        border-radius: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .chat-container {
+        border-radius: 0;
+        height: 100vh;
+        max-height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- PAGE DE VÉRIFICATION -->
+    <div class="verification-card" id="verificationPage">
+      <div class="verification-header">
+        <div class="verification-icon">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <h1>Accès sécurisé</h1>
+        <p class="subtitle">Vérifiez votre identité pour accéder au chat</p>
+      </div>
+
+      <form id="verificationForm">
+        <div class="form-group">
+          <label>🏠 Logement réservé</label>
+          <select id="propertySelect" required>
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>📅 Date d'arrivée (check-in)</label>
+          <input type="date" id="checkinDate" required>
+        </div>
+
+        <div class="form-group">
+          <label>🌐 Plateforme de réservation</label>
+          <select id="platformSelect" required>
+            <option value="">-- Sélectionnez --</option>
+            <option value="airbnb">Airbnb</option>
+            <option value="booking">Booking.com</option>
+            <option value="abritel">Abritel</option>
+            <option value="vrbo">VRBO</option>
+            <option value="direct">Réservation directe</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>🔢 Code de vérification (4 chiffres)</label>
+          <input 
+            type="text" 
+            id="pinCode" 
+            maxlength="4" 
+            pattern="[0-9]{4}" 
+            placeholder="0000" 
+            required
+            autocomplete="off"
+          >
+        </div>
+
+        <button type="submit" class="btn" id="verifyBtn">
+          <i class="fas fa-check-circle"></i> Vérifier et accéder
+        </button>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="warning-message" id="warningMessage"></div>
+      </form>
+    </div>
+
+    <!-- INTERFACE DE CHAT -->
+    <div class="chat-container" id="chatContainer">
+      <div class="chat-header">
+        <div class="property-icon">
+          <i class="fas fa-home"></i>
+        </div>
+        <div class="property-info">
+          <h2 id="chatPropertyName">Votre logement</h2>
+          <p>Chat avec le propriétaire</p>
+        </div>
+      </div>
+
+      <div class="messages-container" id="messagesContainer">
+        <div class="loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Chargement des messages...</p>
+        </div>
+      </div>
+
+      <div class="typing-indicator" id="typingIndicator">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <span style="font-size: 12px; color: var(--text-secondary); margin-left: 4px;">
+          Le propriétaire écrit...
+        </span>
+      </div>
+
+      <div class="chat-input-container">
+        <textarea 
+          class="chat-input" 
+          id="messageInput" 
+          placeholder="Écrivez votre message..."
+          rows="1"
+        ></textarea>
+        <button class="send-btn" id="sendBtn">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+  <script>
+    const API_URL = window.location.origin;
+    const token = window.location.pathname.split('/chat/')[1];
+    
+    let conversationId = null;
+    let socket = null;
+    let typingTimeout = null;
+
+    // ============================================
+    // INITIALISATION
+    // ============================================
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 Initialisation du chat, token:', token);
+      
+      // Charger les propriétés
+      await loadProperties();
+      
+      // Event listeners
+      document.getElementById('verificationForm').addEventListener('submit', handleVerification);
+      document.getElementById('sendBtn').addEventListener('click', sendMessage);
+      document.getElementById('messageInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // Typing indicator
+      document.getElementById('messageInput').addEventListener('input', () => {
+        if (socket && conversationId) {
+          socket.emit('typing', { conversationId, senderName: 'Voyageur' });
+          
+          clearTimeout(typingTimeout);
+          typingTimeout = setTimeout(() => {
+            socket.emit('stop_typing', { conversationId });
+          }, 1000);
+        }
+      });
+
+      // Auto-resize textarea
+      const messageInput = document.getElementById('messageInput');
+      messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      });
+    });
+
+    // ============================================
+    // CHARGEMENT DES PROPRIÉTÉS
+    // ============================================
+
+    async function loadProperties() {
+      try {
+        const response = await fetch(`${API_URL}/api/chat/properties`);
+        const data = await response.json();
+        
+        const select = document.getElementById('propertySelect');
+        select.innerHTML = '<option value="">-- Sélectionnez votre logement --</option>';
+        
+        data.properties.forEach(property => {
+          const option = document.createElement('option');
+          option.value = property.id;
+          option.textContent = property.name;
+          select.appendChild(option);
+        });
+        
+      } catch (error) {
+        console.error('❌ Erreur chargement propriétés:', error);
+        showError('Erreur de chargement. Veuillez rafraîchir la page.');
+      }
+    }
+
+    // ============================================
+    // VÉRIFICATION
+    // ============================================
+
+    async function handleVerification(e) {
+      e.preventDefault();
+      
+      const propertyId = document.getElementById('propertySelect').value;
+      const checkinDate = document.getElementById('checkinDate').value;
+      const platform = document.getElementById('platformSelect').value;
+      const pinCode = document.getElementById('pinCode').value;
+
+      if (!propertyId || !checkinDate || !platform || !pinCode) {
+        showError('Tous les champs sont requis');
+        return;
+      }
+
+      if (pinCode.length !== 4 || !/^\d+$/.test(pinCode)) {
+        showError('Le code doit contenir exactement 4 chiffres');
+        return;
+      }
+
+      const verifyBtn = document.getElementById('verifyBtn');
+      verifyBtn.disabled = true;
+      verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+
+      try {
+        const response = await fetch(`${API_URL}/api/chat/verify/${token}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            property_id: propertyId,
+            checkin_date: checkinDate,
+            platform: platform,
+            pin_code: pinCode
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (data.max_attempts_reached) {
+            showError('Trop de tentatives. Veuillez contacter le propriétaire.');
+            verifyBtn.disabled = true;
+            return;
+          }
+          
+          if (data.attempts) {
+            showWarning(`Informations incorrectes. Tentative ${data.attempts}/3`);
+          } else {
+            showError(data.error || 'Erreur de vérification');
+          }
+          
+          verifyBtn.disabled = false;
+          verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder';
+          return;
+        }
+
+        // ✅ Vérification réussie !
+        conversationId = data.conversation_id;
+        
+        // Afficher le chat
+        document.getElementById('verificationPage').style.display = 'none';
+        document.getElementById('chatContainer').classList.add('active');
+        
+        // Charger les messages et connecter Socket.IO
+        await loadMessages();
+        connectSocket();
+
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        showError('Erreur de connexion. Veuillez réessayer.');
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder';
+      }
+    }
+
+    // ============================================
+    // CHARGEMENT DES MESSAGES
+    // ============================================
+
+    async function loadMessages() {
+      try {
+        const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`);
+        const data = await response.json();
+        
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '';
+        
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach(message => {
+            appendMessage(message);
+          });
+        } else {
+          container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Aucun message pour le moment</p>';
+        }
+        
+        scrollToBottom();
+        
+      } catch (error) {
+        console.error('❌ Erreur chargement messages:', error);
+        showError('Erreur de chargement des messages');
+      }
+    }
+
+    // ============================================
+    // SOCKET.IO
+    // ============================================
+
+    function connectSocket() {
+      socket = io(API_URL);
+      
+      socket.on('connect', () => {
+        console.log('✅ Socket connecté');
+        socket.emit('join_conversation', conversationId);
+      });
+      
+      socket.on('new_message', (message) => {
+        appendMessage(message);
+        scrollToBottom();
+      });
+      
+      socket.on('user_typing', () => {
+        document.getElementById('typingIndicator').classList.add('show');
+        scrollToBottom();
+      });
+      
+      socket.on('user_stop_typing', () => {
+        document.getElementById('typingIndicator').classList.remove('show');
+      });
+      
+      socket.on('disconnect', () => {
+        console.log('❌ Socket déconnecté');
+      });
+    }
+
+    // ============================================
+    // ENVOI DE MESSAGE
+    // ============================================
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const content = input.value.trim();
+      
+      if (!content) return;
+      
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+      
+      try {
+        const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content: content,
+            sender_name: 'Voyageur'
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erreur envoi message');
+        }
+        
+        input.value = '';
+        input.style.height = 'auto';
+        
+      } catch (error) {
+        console.error('❌ Erreur envoi:', error);
+        showError('Erreur lors de l\'envoi du message');
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    // ============================================
+    // AFFICHAGE DES MESSAGES
+    // ============================================
+
+    function appendMessage(message) {
+      const container = document.getElementById('messagesContainer');
+      
+      // Supprimer le message "Aucun message" si présent
+      if (container.querySelector('p')) {
+        container.innerHTML = '';
+      }
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${message.sender_type}`;
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = message.sender_type === 'guest' ? 'V' : 
+                          message.sender_type === 'bot' ? '🤖' : 'P';
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      
+      const senderName = document.createElement('div');
+      senderName.className = 'message-sender';
+      senderName.textContent = message.sender_name || 
+                              (message.sender_type === 'guest' ? 'Vous' : 
+                               message.sender_type === 'bot' ? 'Assistant' : 'Propriétaire');
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      bubble.textContent = message.content;
+      
+      const time = document.createElement('div');
+      time.className = 'message-time';
+      time.textContent = formatTime(message.created_at);
+      
+      contentDiv.appendChild(senderName);
+      contentDiv.appendChild(bubble);
+      contentDiv.appendChild(time);
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(contentDiv);
+      
+      container.appendChild(messageDiv);
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('messagesContainer');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ============================================
+    // AFFICHAGE DES ERREURS
+    // ============================================
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+      
+      setTimeout(() => {
+        errorDiv.classList.remove('show');
+      }, 5000);
+    }
+
+    function showWarning(message) {
+      const warningDiv = document.getElementById('warningMessage');
+      warningDiv.textContent = message;
+      warningDiv.classList.add('show');
+      
+      setTimeout(() => {
+        warningDiv.classList.remove('show');
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
