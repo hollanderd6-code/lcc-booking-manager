@@ -2124,6 +2124,327 @@ async function syncCalendarAndSaveToPostgres(property) {
     return [];
   }
 }
+// ============================================
+// GESTION DES DEPOSITS (CAUTIONS) EN POSTGRESQL
+// ============================================
+// À ajouter dans server-23.js après les fonctions des réservations
+
+// Variable globale pour cache en mémoire
+let DEPOSITS_CACHE = {}; // { [reservationUid]: deposit }
+
+/**
+ * Charger tous les deposits depuis PostgreSQL
+ */
+async function loadDepositsFromDB() {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, user_id, reservation_uid, property_id,
+        amount_cents, currency,
+        stripe_session_id, stripe_payment_intent_id, stripe_charge_id,
+        checkout_url, status,
+        authorized_at, captured_at, released_at, cancelled_at,
+        notes, metadata,
+        created_at, updated_at
+      FROM deposits
+      ORDER BY created_at DESC
+    `);
+
+    // Reconstruire DEPOSITS pour compatibilité avec le code existant
+    DEPOSITS = result.rows.map(row => ({
+      id: row.id,
+      reservationUid: row.reservation_uid,
+      amountCents: row.amount_cents,
+      currency: row.currency,
+      status: row.status,
+      stripeSessionId: row.stripe_session_id,
+      stripePaymentIntentId: row.stripe_payment_intent_id,
+      stripeChargeId: row.stripe_charge_id,
+      checkoutUrl: row.checkout_url,
+      authorizedAt: row.authorized_at,
+      capturedAt: row.captured_at,
+      releasedAt: row.released_at,
+      cancelledAt: row.cancelled_at,
+      notes: row.notes,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+
+    // Créer un cache indexé par reservation_uid
+    DEPOSITS_CACHE = {};
+    result.rows.forEach(row => {
+      DEPOSITS_CACHE[row.reservation_uid] = row;
+    });
+
+    console.log(`✅ Deposits chargés : ${result.rows.length} cautions`);
+    
+  } catch (error) {
+    console.error('❌ Erreur loadDepositsFromDB:', error);
+    DEPOSITS = [];
+    DEPOSITS_CACHE = {};
+  }
+}
+
+/**
+ * Sauvegarder un deposit en base
+ */
+async function saveDepositToDB(deposit, userId, propertyId = null) {
+  try {
+    await pool.query(`
+      INSERT INTO deposits (
+        id, user_id, reservation_uid, property_id,
+        amount_cents, currency,
+        stripe_session_id, stripe_payment_intent_id,
+        checkout_url, status,
+        metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (id) 
+      DO UPDATE SET
+        stripe_payment_intent_id = EXCLUDED.stripe_payment_intent_id,
+        status = EXCLUDED.status,
+        checkout_url = EXCLUDED.checkout_url,
+        updated_at = NOW()
+    `, [
+      deposit.id,
+      userId,
+      deposit.reservationUid,
+      propertyId,
+      deposit.amountCents,
+      deposit.currency || 'eur',
+      deposit.stripeSessionId || null,
+      deposit.stripePaymentIntentId || null,
+      deposit.checkoutUrl || null,
+      deposit.status || 'pending',
+      deposit.metadata ? JSON.stringify(deposit.metadata) : null
+    ]);
+
+    console.log(`✅ Deposit ${deposit.id} sauvegardé en PostgreSQL`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur saveDepositToDB:', error);
+    return false;
+  }
+}
+
+/**
+ * Mettre à jour le statut d'un deposit
+ */
+async function updateDepositStatus(depositId, status, additionalData = {}) {
+  try {
+    const updates = ['status = $2', 'updated_at = NOW()'];
+    const params = [depositId, status];
+    let paramCount = 2;
+
+    if (status === 'authorized' && !additionalData.authorized_at) {
+      paramCount++;
+      updates.push(`authorized_at = $${paramCount}`);
+      params.push(new Date());
+    }
+
+    if (status === 'captured' && !additionalData.captured_at) {
+      paramCount++;
+      updates.push(`captured_at = $${paramCount}`);
+      params.push(new Date());
+    }
+
+    if (status === 'released' && !additionalData.released_at) {
+      paramCount++;
+      updates.push(`released_at = $${paramCount}`);
+      params.push(new Date());
+    }
+
+    if (status === 'cancelled' && !additionalData.cancelled_at) {
+      paramCount++;
+      updates.push(`cancelled_at = $${paramCount}`);
+      params.push(new Date());
+    }
+
+    if (additionalData.stripePaymentIntentId) {
+      paramCount++;
+      updates.push(`stripe_payment_intent_id = $${paramCount}`);
+      params.push(additionalData.stripePaymentIntentId);
+    }
+
+    if (additionalData.stripeChargeId) {
+      paramCount++;
+      updates.push(`stripe_charge_id = $${paramCount}`);
+      params.push(additionalData.stripeChargeId);
+    }
+
+    const query = `UPDATE deposits SET ${updates.join(', ')} WHERE id = $1`;
+    
+    await pool.query(query, params);
+
+    console.log(`✅ Deposit ${depositId} mis à jour : ${status}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur updateDepositStatus:', error);
+    return false;
+  }
+}
+
+/**
+ * Récupérer un deposit par reservation_uid
+ */
+async function getDepositByReservation(reservationUid) {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM deposits WHERE reservation_uid = $1 LIMIT 1
+    `, [reservationUid]);
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error('❌ Erreur getDepositByReservation:', error);
+    return null;
+  }
+}
+
+/**
+ * Récupérer tous les deposits d'un utilisateur
+ */
+async function getUserDeposits(userId, filters = {}) {
+  try {
+    let query = `
+      SELECT 
+        d.*,
+        r.guest_name,
+        r.start_date,
+        r.end_date,
+        p.name as property_name
+      FROM deposits d
+      LEFT JOIN reservations r ON d.reservation_uid = r.uid
+      LEFT JOIN properties p ON d.property_id = p.id
+      WHERE d.user_id = $1
+    `;
+    
+    const params = [userId];
+    let paramCount = 1;
+
+    if (filters.status) {
+      paramCount++;
+      query += ` AND d.status = $${paramCount}`;
+      params.push(filters.status);
+    }
+
+    if (filters.propertyId) {
+      paramCount++;
+      query += ` AND d.property_id = $${paramCount}`;
+      params.push(filters.propertyId);
+    }
+
+    query += ` ORDER BY d.created_at DESC`;
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Erreur getUserDeposits:', error);
+    return [];
+  }
+}
+
+/**
+ * Migrer les deposits du JSON vers PostgreSQL (une seule fois)
+ */
+async function migrateDepositsToPostgres() {
+  try {
+    console.log('🔄 Migration des deposits vers PostgreSQL...');
+    
+    let migratedCount = 0;
+    
+    for (const deposit of DEPOSITS) {
+      // Trouver la réservation pour récupérer user_id et property_id
+      const reservation = await pool.query(`
+        SELECT user_id, property_id FROM reservations WHERE uid = $1
+      `, [deposit.reservationUid]);
+
+      if (reservation.rows.length === 0) {
+        console.log(`⚠️  Réservation ${deposit.reservationUid} introuvable pour deposit ${deposit.id}`);
+        continue;
+      }
+
+      const { user_id, property_id } = reservation.rows[0];
+      
+      const success = await saveDepositToDB(deposit, user_id, property_id);
+      if (success) migratedCount++;
+    }
+
+    console.log(`✅ Migration terminée : ${migratedCount} deposits migrés`);
+    
+    // Backup du fichier JSON
+    const backupFile = DEPOSITS_FILE.replace('.json', '.backup.json');
+    await fsp.rename(DEPOSITS_FILE, backupFile);
+    console.log(`📦 Backup créé : ${backupFile}`);
+    
+  } catch (error) {
+    console.error('❌ Erreur migration deposits:', error);
+  }
+}
+
+/**
+ * Capturer une caution (débiter le client)
+ */
+async function captureDeposit(depositId, amountCents = null) {
+  try {
+    const deposit = await pool.query('SELECT * FROM deposits WHERE id = $1', [depositId]);
+    
+    if (deposit.rows.length === 0) {
+      throw new Error('Deposit introuvable');
+    }
+
+    const depositData = deposit.rows[0];
+    
+    if (!depositData.stripe_payment_intent_id) {
+      throw new Error('Pas de Payment Intent associé');
+    }
+
+    // Capturer via Stripe
+    const capture = await stripe.paymentIntents.capture(
+      depositData.stripe_payment_intent_id,
+      amountCents ? { amount_to_capture: amountCents } : {}
+    );
+
+    // Mettre à jour en base
+    await updateDepositStatus(depositId, 'captured', {
+      stripeChargeId: capture.charges.data[0]?.id
+    });
+
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur captureDeposit:', error);
+    return false;
+  }
+}
+
+/**
+ * Libérer une caution (annuler l'autorisation)
+ */
+async function releaseDeposit(depositId) {
+  try {
+    const deposit = await pool.query('SELECT * FROM deposits WHERE id = $1', [depositId]);
+    
+    if (deposit.rows.length === 0) {
+      throw new Error('Deposit introuvable');
+    }
+
+    const depositData = deposit.rows[0];
+    
+    if (!depositData.stripe_payment_intent_id) {
+      throw new Error('Pas de Payment Intent associé');
+    }
+
+    // Annuler via Stripe
+    await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
+
+    // Mettre à jour en base
+    await updateDepositStatus(depositId, 'released');
+
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur releaseDeposit:', error);
+    return false;
+  }
+}
 
 async function syncAllCalendars() {
   console.log('ðŸ”„ DÃ©marrage de la synchronisation iCal...');
@@ -5722,16 +6043,23 @@ function findReservationByUidForUser(reservationUid, userId) {
 
 // GET - RÃ©cupÃ©rer la caution liÃ©e Ã  une rÃ©servation (si existe)
 app.get('/api/deposits/:reservationUid', async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisÃ©' });
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { reservationUid } = req.params;
+    
+    // ✅ NOUVEAU : Récupérer depuis PostgreSQL
+    const deposit = await getDepositByReservation(reservationUid);
+    
+    res.json({ deposit });
+  } catch (err) {
+    console.error('Erreur GET /api/deposits:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-
-  const { reservationUid } = req.params;
-  const deposit = DEPOSITS.find(d => d.reservationUid === reservationUid) || null;
-  res.json({ deposit });
 });
-
 // POST - CrÃ©er une caution Stripe pour une rÃ©servation (empreinte bancaire)
 app.post('/api/deposits', async (req, res) => {
   try {
@@ -5771,7 +6099,12 @@ app.post('/api/deposits', async (req, res) => {
       checkoutUrl: null,
       createdAt: new Date().toISOString()
     };
-    DEPOSITS.push(deposit);
+    // ✅ NOUVEAU : Sauvegarder en PostgreSQL
+  const saved = await saveDepositToDB(deposit, user.id, property.id);
+  
+  if (!saved) {
+    return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
+  }
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
@@ -5824,7 +6157,15 @@ app.post('/api/deposits', async (req, res) => {
 
     deposit.stripeSessionId = session.id;
     deposit.checkoutUrl = session.url;
-    await saveDeposits();
+    // Mettre à jour après création de la session Stripe
+deposit.stripeSessionId = session.id;
+deposit.checkoutUrl = session.url;
+
+await pool.query(`
+  UPDATE deposits 
+  SET stripe_session_id = $1, checkout_url = $2, updated_at = NOW()
+  WHERE id = $3
+`, [session.id, session.url, deposit.id]);
 
     return res.json({
       deposit,
@@ -5835,6 +6176,91 @@ app.post('/api/deposits', async (req, res) => {
     return res.status(500).json({
       error: 'Erreur lors de la crÃ©ation de la caution : ' + (err.message || 'Erreur interne Stripe')
     });
+  }
+});
+// GET - Liste des cautions d'un utilisateur
+app.get('/api/deposits', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { status, propertyId } = req.query;
+    
+    const deposits = await getUserDeposits(user.id, { status, propertyId });
+    
+    res.json({ deposits });
+  } catch (err) {
+    console.error('Erreur GET /api/deposits:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Capturer une caution (débiter le client)
+app.post('/api/deposits/:depositId/capture', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { depositId } = req.params;
+    const { amountCents } = req.body;
+    
+    // Vérifier que le deposit appartient à l'utilisateur
+    const deposit = await pool.query(
+      'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
+      [depositId, user.id]
+    );
+
+    if (deposit.rows.length === 0) {
+      return res.status(404).json({ error: 'Caution introuvable' });
+    }
+
+    const success = await captureDeposit(depositId, amountCents);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Erreur lors de la capture' });
+    }
+
+    res.json({ message: 'Caution capturée avec succès' });
+  } catch (err) {
+    console.error('Erreur POST /api/deposits/capture:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Libérer une caution (annuler l'autorisation)
+app.post('/api/deposits/:depositId/release', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { depositId } = req.params;
+    
+    // Vérifier que le deposit appartient à l'utilisateur
+    const deposit = await pool.query(
+      'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
+      [depositId, user.id]
+    );
+
+    if (deposit.rows.length === 0) {
+      return res.status(404).json({ error: 'Caution introuvable' });
+    }
+
+    const success = await releaseDeposit(depositId);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Erreur lors de la libération' });
+    }
+
+    res.json({ message: 'Caution libérée avec succès' });
+  } catch (err) {
+    console.error('Erreur POST /api/deposits/release:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 // ============================================
@@ -8469,7 +8895,11 @@ app.listen(PORT, async () => {
   // Migration one-time (à décommenter UNE SEULE FOIS pour migrer)
   // await migrateManualReservationsToPostgres();
   await loadManualReservations();
-  await loadDeposits();
+  // ✅ NOUVEAU : Charger depuis PostgreSQL
+  await loadDepositsFromDB();
+  
+  // Migration one-time (à décommenter UNE SEULE FOIS)
+  // await migrateDepositsToPostgres();
   await loadChecklists();
 
   console.log('Logements configurÃ©s:');
