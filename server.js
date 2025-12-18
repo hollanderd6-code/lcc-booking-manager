@@ -2445,6 +2445,404 @@ async function releaseDeposit(depositId) {
     return false;
   }
 }
+// ============================================
+// GESTION DES CHECKLISTS EN POSTGRESQL
+// ============================================
+// À ajouter dans server-23.js après les fonctions des deposits
+
+/**
+ * Créer une checklist
+ */
+async function createChecklist(userId, data) {
+  try {
+    const {
+      propertyId,
+      reservationUid,
+      checklistType,
+      title,
+      tasks,
+      dueDate,
+      assignedTo,
+      assignedToName
+    } = data;
+
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.completed).length;
+    const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const result = await pool.query(`
+      INSERT INTO checklists (
+        user_id, property_id, reservation_uid,
+        checklist_type, title, tasks,
+        total_tasks, completed_tasks, progress_percentage,
+        assigned_to, assigned_to_name,
+        due_date, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `, [
+      userId,
+      propertyId,
+      reservationUid || null,
+      checklistType,
+      title,
+      JSON.stringify(tasks),
+      totalTasks,
+      completedTasks,
+      progressPercentage,
+      assignedTo || null,
+      assignedToName || null,
+      dueDate || null,
+      'pending'
+    ]);
+
+    console.log(`✅ Checklist créée : ${result.rows[0].id}`);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Erreur createChecklist:', error);
+    return null;
+  }
+}
+
+/**
+ * Mettre à jour une tâche dans une checklist
+ */
+async function updateChecklistTask(checklistId, taskId, updates) {
+  try {
+    // Récupérer la checklist
+    const checklist = await pool.query(
+      'SELECT * FROM checklists WHERE id = $1',
+      [checklistId]
+    );
+
+    if (checklist.rows.length === 0) {
+      throw new Error('Checklist introuvable');
+    }
+
+    const tasks = checklist.rows[0].tasks || [];
+    const taskIndex = tasks.findIndex(t => t.id === taskId);
+
+    if (taskIndex === -1) {
+      throw new Error('Tâche introuvable');
+    }
+
+    // Mettre à jour la tâche
+    tasks[taskIndex] = {
+      ...tasks[taskIndex],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Recalculer la progression
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.completed).length;
+    const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Déterminer le statut
+    let status = checklist.rows[0].status;
+    if (completedTasks === 0) {
+      status = 'pending';
+    } else if (completedTasks === totalTasks) {
+      status = 'completed';
+    } else {
+      status = 'in_progress';
+    }
+
+    // Sauvegarder
+    const result = await pool.query(`
+      UPDATE checklists 
+      SET 
+        tasks = $1,
+        completed_tasks = $2,
+        progress_percentage = $3,
+        status = $4,
+        completed_at = $5,
+        updated_at = NOW()
+      WHERE id = $6
+      RETURNING *
+    `, [
+      JSON.stringify(tasks),
+      completedTasks,
+      progressPercentage,
+      status,
+      status === 'completed' ? new Date() : null,
+      checklistId
+    ]);
+
+    console.log(`✅ Tâche mise à jour : ${taskId} dans checklist ${checklistId}`);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Erreur updateChecklistTask:', error);
+    return null;
+  }
+}
+
+/**
+ * Récupérer les checklists d'un utilisateur
+ */
+async function getUserChecklists(userId, filters = {}) {
+  try {
+    let query = `
+      SELECT 
+        c.*,
+        p.name as property_name,
+        r.guest_name,
+        r.start_date,
+        r.end_date
+      FROM checklists c
+      JOIN properties p ON c.property_id = p.id
+      LEFT JOIN reservations r ON c.reservation_uid = r.uid
+      WHERE c.user_id = $1
+    `;
+    
+    const params = [userId];
+    let paramCount = 1;
+
+    if (filters.propertyId) {
+      paramCount++;
+      query += ` AND c.property_id = $${paramCount}`;
+      params.push(filters.propertyId);
+    }
+
+    if (filters.status) {
+      paramCount++;
+      query += ` AND c.status = $${paramCount}`;
+      params.push(filters.status);
+    }
+
+    if (filters.checklistType) {
+      paramCount++;
+      query += ` AND c.checklist_type = $${paramCount}`;
+      params.push(filters.checklistType);
+    }
+
+    if (filters.reservationUid) {
+      paramCount++;
+      query += ` AND c.reservation_uid = $${paramCount}`;
+      params.push(filters.reservationUid);
+    }
+
+    query += ` ORDER BY c.due_date ASC NULLS LAST, c.created_at DESC`;
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Erreur getUserChecklists:', error);
+    return [];
+  }
+}
+
+/**
+ * Récupérer une checklist par ID
+ */
+async function getChecklistById(checklistId, userId) {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        c.*,
+        p.name as property_name,
+        r.guest_name,
+        r.start_date,
+        r.end_date
+      FROM checklists c
+      JOIN properties p ON c.property_id = p.id
+      LEFT JOIN reservations r ON c.reservation_uid = r.uid
+      WHERE c.id = $1 AND c.user_id = $2
+    `, [checklistId, userId]);
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error('❌ Erreur getChecklistById:', error);
+    return null;
+  }
+}
+
+/**
+ * Supprimer une checklist
+ */
+async function deleteChecklist(checklistId, userId) {
+  try {
+    await pool.query(
+      'DELETE FROM checklists WHERE id = $1 AND user_id = $2',
+      [checklistId, userId]
+    );
+    
+    console.log(`✅ Checklist supprimée : ${checklistId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur deleteChecklist:', error);
+    return false;
+  }
+}
+
+/**
+ * Créer un template de checklist
+ */
+async function createChecklistTemplate(userId, data) {
+  try {
+    const { propertyId, name, checklistType, tasks } = data;
+
+    const result = await pool.query(`
+      INSERT INTO checklist_templates (
+        user_id, property_id, name, checklist_type, tasks
+      ) VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [
+      userId,
+      propertyId || null,
+      name,
+      checklistType,
+      JSON.stringify(tasks)
+    ]);
+
+    console.log(`✅ Template créé : ${result.rows[0].id}`);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Erreur createChecklistTemplate:', error);
+    return null;
+  }
+}
+
+/**
+ * Récupérer les templates d'un utilisateur
+ */
+async function getUserChecklistTemplates(userId, filters = {}) {
+  try {
+    let query = `
+      SELECT * FROM checklist_templates
+      WHERE user_id = $1 AND is_active = true
+    `;
+    
+    const params = [userId];
+    let paramCount = 1;
+
+    if (filters.propertyId) {
+      paramCount++;
+      query += ` AND (property_id = $${paramCount} OR property_id IS NULL)`;
+      params.push(filters.propertyId);
+    }
+
+    if (filters.checklistType) {
+      paramCount++;
+      query += ` AND checklist_type = $${paramCount}`;
+      params.push(filters.checklistType);
+    }
+
+    query += ` ORDER BY name ASC`;
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Erreur getUserChecklistTemplates:', error);
+    return [];
+  }
+}
+
+/**
+ * Créer une checklist depuis un template
+ */
+async function createChecklistFromTemplate(userId, templateId, data) {
+  try {
+    // Récupérer le template
+    const template = await pool.query(
+      'SELECT * FROM checklist_templates WHERE id = $1 AND user_id = $2',
+      [templateId, userId]
+    );
+
+    if (template.rows.length === 0) {
+      throw new Error('Template introuvable');
+    }
+
+    const templateData = template.rows[0];
+    
+    // Générer des IDs uniques pour les tâches
+    const tasks = templateData.tasks.map(task => ({
+      ...task,
+      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      completed: false,
+      completedAt: null,
+      completedBy: null
+    }));
+
+    // Créer la checklist
+    return await createChecklist(userId, {
+      propertyId: data.propertyId,
+      reservationUid: data.reservationUid,
+      checklistType: templateData.checklist_type,
+      title: data.title || templateData.name,
+      tasks,
+      dueDate: data.dueDate,
+      assignedTo: data.assignedTo,
+      assignedToName: data.assignedToName
+    });
+  } catch (error) {
+    console.error('❌ Erreur createChecklistFromTemplate:', error);
+    return null;
+  }
+}
+
+/**
+ * Générer automatiquement des checklists pour une réservation
+ */
+async function generateChecklistsForReservation(userId, reservationUid) {
+  try {
+    // Récupérer la réservation
+    const reservation = await pool.query(
+      'SELECT * FROM reservations WHERE uid = $1 AND user_id = $2',
+      [reservationUid, userId]
+    );
+
+    if (reservation.rows.length === 0) {
+      throw new Error('Réservation introuvable');
+    }
+
+    const res = reservation.rows[0];
+    
+    const checklists = [];
+
+    // Checklist d'arrivée (J-1)
+    const arrivalDueDate = new Date(res.start_date);
+    arrivalDueDate.setDate(arrivalDueDate.getDate() - 1);
+
+    const arrivalChecklist = await createChecklist(userId, {
+      propertyId: res.property_id,
+      reservationUid,
+      checklistType: 'arrival',
+      title: `Préparation arrivée - ${res.guest_name || 'Client'}`,
+      tasks: [
+        { id: 'task_1', title: 'Vérifier le ménage', completed: false },
+        { id: 'task_2', title: 'Vérifier les équipements', completed: false },
+        { id: 'task_3', title: 'Préparer les clés/accès', completed: false },
+        { id: 'task_4', title: 'Vérifier les consommables', completed: false }
+      ],
+      dueDate: arrivalDueDate
+    });
+
+    if (arrivalChecklist) checklists.push(arrivalChecklist);
+
+    // Checklist de départ (jour du départ)
+    const departureChecklist = await createChecklist(userId, {
+      propertyId: res.property_id,
+      reservationUid,
+      checklistType: 'departure',
+      title: `Contrôle départ - ${res.guest_name || 'Client'}`,
+      tasks: [
+        { id: 'task_1', title: 'État des lieux', completed: false },
+        { id: 'task_2', title: 'Vérifier les dégâts éventuels', completed: false },
+        { id: 'task_3', title: 'Récupérer les clés', completed: false },
+        { id: 'task_4', title: 'Photos de l\'état', completed: false }
+      ],
+      dueDate: new Date(res.end_date)
+    });
+
+    if (departureChecklist) checklists.push(departureChecklist);
+
+    console.log(`✅ ${checklists.length} checklists générées pour ${reservationUid}`);
+    return checklists;
+  } catch (error) {
+    console.error('❌ Erreur generateChecklistsForReservation:', error);
+    return [];
+  }
+}
 
 async function syncAllCalendars() {
   console.log('ðŸ”„ DÃ©marrage de la synchronisation iCal...');
@@ -6260,6 +6658,221 @@ app.post('/api/deposits/:depositId/release', async (req, res) => {
     res.json({ message: 'Caution libérée avec succès' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/release:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+// ============================================
+// ROUTES API - CHECKLISTS
+// ============================================
+
+// GET - Liste des checklists
+app.get('/api/checklists', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, status, checklistType, reservationUid } = req.query;
+    
+    const checklists = await getUserChecklists(user.id, {
+      propertyId,
+      status,
+      checklistType,
+      reservationUid
+    });
+    
+    res.json({ checklists });
+  } catch (err) {
+    console.error('Erreur GET /api/checklists:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET - Une checklist par ID
+app.get('/api/checklists/:checklistId', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { checklistId } = req.params;
+    
+    const checklist = await getChecklistById(checklistId, user.id);
+    
+    if (!checklist) {
+      return res.status(404).json({ error: 'Checklist introuvable' });
+    }
+    
+    res.json({ checklist });
+  } catch (err) {
+    console.error('Erreur GET /api/checklists/:id:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer une checklist
+app.post('/api/checklists', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const checklist = await createChecklist(user.id, req.body);
+    
+    if (!checklist) {
+      return res.status(500).json({ error: 'Erreur lors de la création' });
+    }
+    
+    res.status(201).json({ checklist });
+  } catch (err) {
+    console.error('Erreur POST /api/checklists:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT - Mettre à jour une tâche
+app.put('/api/checklists/:checklistId/tasks/:taskId', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { checklistId, taskId } = req.params;
+    
+    // Vérifier que la checklist appartient à l'utilisateur
+    const checklist = await getChecklistById(checklistId, user.id);
+    if (!checklist) {
+      return res.status(404).json({ error: 'Checklist introuvable' });
+    }
+    
+    const updated = await updateChecklistTask(checklistId, taskId, req.body);
+    
+    if (!updated) {
+      return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+    }
+    
+    res.json({ checklist: updated });
+  } catch (err) {
+    console.error('Erreur PUT /api/checklists/tasks:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE - Supprimer une checklist
+app.delete('/api/checklists/:checklistId', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { checklistId } = req.params;
+    
+    const deleted = await deleteChecklist(checklistId, user.id);
+    
+    if (!deleted) {
+      return res.status(500).json({ error: 'Erreur lors de la suppression' });
+    }
+    
+    res.json({ message: 'Checklist supprimée avec succès' });
+  } catch (err) {
+    console.error('Erreur DELETE /api/checklists:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// ROUTES API - CHECKLIST TEMPLATES
+// ============================================
+
+// GET - Liste des templates
+app.get('/api/checklist-templates', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId, checklistType } = req.query;
+    
+    const templates = await getUserChecklistTemplates(user.id, {
+      propertyId,
+      checklistType
+    });
+    
+    res.json({ templates });
+  } catch (err) {
+    console.error('Erreur GET /api/checklist-templates:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer un template
+app.post('/api/checklist-templates', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const template = await createChecklistTemplate(user.id, req.body);
+    
+    if (!template) {
+      return res.status(500).json({ error: 'Erreur lors de la création' });
+    }
+    
+    res.status(201).json({ template });
+  } catch (err) {
+    console.error('Erreur POST /api/checklist-templates:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Créer une checklist depuis un template
+app.post('/api/checklist-templates/:templateId/create', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { templateId } = req.params;
+    
+    const checklist = await createChecklistFromTemplate(user.id, templateId, req.body);
+    
+    if (!checklist) {
+      return res.status(500).json({ error: 'Erreur lors de la création' });
+    }
+    
+    res.status(201).json({ checklist });
+  } catch (err) {
+    console.error('Erreur POST /api/checklist-templates/create:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Générer les checklists automatiques pour une réservation
+app.post('/api/reservations/:reservationUid/generate-checklists', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { reservationUid } = req.params;
+    
+    const checklists = await generateChecklistsForReservation(user.id, reservationUid);
+    
+    res.status(201).json({ 
+      message: `${checklists.length} checklists créées`,
+      checklists 
+    });
+  } catch (err) {
+    console.error('Erreur POST /api/reservations/generate-checklists:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
