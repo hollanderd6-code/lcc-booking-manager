@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages — Boostinghost</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS plateforme -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .main-content {
+      padding-top: 24px !important;
+    }
+
+    .page-content {
+      margin-top: 0 !important;
+    }
+
+    .messages-page-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .messages-page-title i {
+      color: var(--primary-color);
+    }
+
+    /* ===== Filtres ===== */
+    .filters-section {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .filter-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      background: white;
+      cursor: pointer;
+    }
+
+    .filter-group select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    /* ===== Stats ===== */
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: white;
+    }
+
+    .stat-content h3 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .stat-content p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ===== Liste des conversations ===== */
+    .conversations-section {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .conversations-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .conversations-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .conversation-item {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+      cursor: pointer;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .conversation-item:hover {
+      background: var(--bg-secondary);
+    }
+
+    .conversation-item:last-child {
+      border-bottom: none;
+    }
+
+    .conversation-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .conversation-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .conversation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .conversation-info h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .conversation-info .meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .conversation-info .meta .property-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--primary-light);
+      color: var(--primary-color);
+    }
+
+    .conversation-status {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-badge.active {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .status-badge.pending {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .status-badge.closed {
+      background: #F3F4F6;
+      color: #6B7280;
+    }
+
+    .unread-badge {
+      background: #EF4444;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .conversation-preview {
+      font-size: 14px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .conversation-time {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .conversation-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-action {
+      padding: 8px 14px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-action.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .btn-action.secondary:hover {
+      background: var(--border-color);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      opacity: 0.3;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    /* ===== Modal Chat ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9998;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .chat-modal {
+      background: white;
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 700px;
+      height: 80vh;
+      max-height: 700px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-md);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .chat-modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-modal-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .close-modal {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-secondary);
+      transition: var(--transition-fast);
+    }
+
+    .close-modal:hover {
+      background: var(--border-color);
+    }
+
+    .chat-modal-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-message {
+      display: flex;
+      gap: 12px;
+      max-width: 70%;
+      animation: slideIn 0.3s ease;
+    }
+
+    .chat-message.owner {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .chat-message.guest,
+    .chat-message.bot {
+      align-self: flex-start;
+    }
+
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .chat-message.guest .chat-avatar {
+      background: #3B82F6;
+    }
+
+    .chat-message.bot .chat-avatar {
+      background: #8B5CF6;
+    }
+
+    .chat-bubble {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .chat-message.owner .chat-bubble {
+      background: #DBEAFE;
+    }
+
+    .chat-message.bot .chat-bubble {
+      background: #EDE9FE;
+    }
+
+    .chat-sender {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .chat-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .chat-modal-input {
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      background: white;
+      display: flex;
+      gap: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      resize: none;
+      max-height: 120px;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .send-btn:hover {
+      background: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 768px) {
+      .chat-modal {
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body data-page="messages">
+  <!-- MOBILE HEADER -->
+  <div class="mobile-header">
+    <a href="/app.html" class="mobile-logo">
+      <i class="fas fa-calendar-check"></i>
+      <span class="mobile-logo-text">Bookingmanage</span>
+    </a>
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-container">
+   <!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="/" class="sidebar-logo">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
+              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 36V26H24V36"
+              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
+              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
+      </svg>
+
+      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
+        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
+          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+        </span>
+        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
+          Smart Property Manager
+        </span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- PRINCIPAL -->
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+
+      <a href="/app.html" class="nav-item" data-page="app">
+        <i class="fas fa-th-large"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
+        <i class="fas fa-calendar"></i>
+        <span>Calendrier</span>
+        <span class="nav-badge" id="navTotalReservations">0</span>
+      </a>
+
+      <a href="/messages.html" class="nav-item active" data-page="messages">
+        <i class="fas fa-comment-dots"></i>
+        <span>Messages</span>
+        <span class="nav-badge" id="unreadCount">0</span>
+      </a>
+    </div>
+
+    <!-- GESTION -->
+    <div class="nav-section">
+      <div class="nav-section-title">Gestion</div>
+
+      <a href="/settings.html" class="nav-item" data-page="settings">
+        <i class="fas fa-home"></i>
+        <span>Mes logements</span>
+      </a>
+
+      <a href="/welcome.html" class="nav-item" data-page="welcome">
+        <i class="fas fa-book-open"></i>
+        <span>Livret d'accueil</span>
+      </a>
+
+      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
+        <i class="fas fa-broom"></i>
+        <span>Gestion du ménage</span>
+      </a>
+    </div>
+
+    <!-- FACTURATION -->
+    <div class="nav-section">
+      <div class="nav-section-title">Facturation</div>
+
+      <a href="/factures.html" class="nav-item" data-page="factures">
+        <i class="fas fa-file-invoice"></i>
+        <span>Factures clients</span>
+      </a>
+
+      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span>Factures propriétaires</span>
+      </a>
+
+      <a href="/deposits.html" class="nav-item" data-page="deposits">
+        <i class="fas fa-hand-holding-usd"></i>
+        <span>Cautions</span>
+      </a>
+    </div>
+
+    <!-- SUPPORT -->
+    <div class="nav-section">
+      <div class="nav-section-title">Support</div>
+
+      <a href="/help.html" class="nav-item" data-page="help">
+        <i class="fas fa-question-circle"></i>
+        <span>Centre d'aide</span>
+      </a>
+
+      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
+        <i class="fas fa-cog"></i>
+        <span>Paramètres</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile">
+      <div class="user-avatar" id="sidebarUserAvatar">C</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Utilisateur</div>
+        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+      </div>
+
+      <button class="btn btn-ghost btn-xs" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="page-kicker">Communication</div>
+          <h1 class="page-title messages-page-title">
+            <i class="fas fa-comment-dots"></i>
+            Messages & Chat
+          </h1>
+          <p class="page-subtitle">
+            Gérez vos conversations avec les voyageurs en temps réel
+          </p>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Stats -->
+        <div class="stats-section">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #10B981;">
+              <i class="fas fa-comments"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statTotal">0</h3>
+              <p>Conversations totales</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #EF4444;">
+              <i class="fas fa-bell"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statUnread">0</h3>
+              <p>Messages non lus</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #3B82F6;">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3 id="statActive">0</h3>
+              <p>Conversations actives</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filters-section">
+          <div class="filter-group">
+            <label>Statut</label>
+            <select id="filterStatus">
+              <option value="">Tous</option>
+              <option value="active" selected>Actives</option>
+              <option value="pending">En attente</option>
+              <option value="closed">Fermées</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Logement</label>
+            <select id="filterProperty">
+              <option value="">Tous les logements</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Liste des conversations -->
+        <div class="conversations-section">
+          <div class="conversations-header">
+            <h2>Vos conversations</h2>
+          </div>
+
+          <div id="conversationsList">
+            <div class="empty-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Chargement...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Chat -->
+  <div class="modal-overlay" id="chatModal">
+    <div class="chat-modal">
+      <div class="chat-modal-header">
+        <h2 id="chatModalTitle">Conversation</h2>
+        <button class="close-modal" onclick="closeChat()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="chat-modal-messages" id="chatMessages">
+        <div class="loading" style="text-align: center; padding: 40px;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 32px;"></i>
+          <p>Chargement des messages...</p>
+        </div>
+      </div>
+
+      <div class="chat-modal-input">
+        <textarea 
+          class="chat-input" 
+          id="chatInput" 
+          placeholder="Écrivez votre message..."
+          rows="1"
+        ></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement...</p>
+    </div>
+  </div>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+  <!-- Script -->
+  <script src="/js/chat-owner.js"></script>
+
+  <!-- Auth + User -->
+  <script>
+    (async function checkSubscriptionAccess() {
+    const token = localStorage.getItem('lcc_token');
+    
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/subscription/status', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('lcc_token');
+          localStorage.removeItem('lcc_user');
+          window.location.href = '/login.html';
+        }
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.status === 'expired' || data.status === 'canceled') {
+        window.location.href = '/subscription-expired.html';
+        return;
+      }
+
+      if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
+        window.location.href = '/subscription-expired.html';
+        return;
+      }
+
+    } catch (err) {
+      console.error('Erreur vérification abonnement:', err);
+    }
+  })();
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
+
+      if (user) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const companyEl = document.getElementById('sidebarUserCompany');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+
+        if (nameEl) {
+          nameEl.textContent = user.firstName
+            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+            : (user.email || 'Mon compte');
+        }
+
+        if (companyEl) {
+          companyEl.textContent = user.company || 'Mon espace';
+        }
+
+        if (avatarEl) {
+          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+          avatarEl.textContent = initial.toUpperCase();
+        }
+      }
+
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          localStorage.removeItem('lcc_token');
+          localStorage.removeItem('lcc_user');
+          window.location.href = '/login.html';
+        });
+      }
+
+      // Mobile menu
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+
+      // Nav active
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="messages"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
