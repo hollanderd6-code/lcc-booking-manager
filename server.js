@@ -5823,16 +5823,34 @@ app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res
 
     const swapId = swapResult.rows[0].id;
 
-    // Ãƒâ€°changer les positions
-    await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [newOrder, propertyId]);
-    await pool.query('UPDATE properties SET display_order = $1 WHERE id = $2', [currentOrder, swapId]);
+    // Échanger les positions (transaction + valeur temporaire pour éviter conflits)
+    await pool.query('BEGIN');
+    try {
+      // Valeur temporaire hors plage
+      await pool.query(
+        'UPDATE properties SET display_order = -9999 WHERE id = $1 AND user_id = $2',
+        [propertyId, user.id]
+      );
 
-    // Recharger les propriÃƒÂ©tÃƒÂ©s
-    await loadProperties();
+      await pool.query(
+        'UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = $3',
+        [currentOrder, swapId, user.id]
+      );
 
-    res.json({ success: true, message: 'Ordre mis ÃƒÂ  jour' });
+      await pool.query(
+        'UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = $3',
+        [newOrder, propertyId, user.id]
+      );
 
-  } catch (err) {
+      await pool.query('COMMIT');
+    } catch (e) {
+      try { await pool.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    }
+
+    res.json({ success: true, message: 'Ordre mis à jour' });
+
+} catch (err) {
     console.error('Erreur rÃƒÂ©organisation:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
