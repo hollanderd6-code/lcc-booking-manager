@@ -144,7 +144,7 @@ router.post('/create', authenticateUser, upload.fields([
 
     // 1. RÃ©cupÃ©ration de l'ID existant
     const existingCheck = await pool.query(
-      'SELECT data FROM public.welcome_books_v2 WHERE user_id = $1',
+      'SELECT unique_id, data FROM public.welcome_books_v2 WHERE user_id = $1 LIMIT 1',
       [req.userId]
     );
 
@@ -152,9 +152,19 @@ router.post('/create', authenticateUser, upload.fields([
     let oldPhotos = {};
 
     if (existingCheck.rows.length > 0) {
-      const oldData = existingCheck.rows[0].data || {};
-      uniqueId = oldData.uniqueId;
+      const row = existingCheck.rows[0] || {};
+      const oldData = row.data || {};
+      uniqueId = row.unique_id || oldData.uniqueId;
       oldPhotos = oldData.photos || {};
+
+      // Si, pour une raison quelconque, l'ID n'est pas récupéré, on en génère un nouveau
+      if (!uniqueId) uniqueId = crypto.randomBytes(16).toString('hex');
+
+      console.log(`♻️ Mise à jour du livret existant : ${uniqueId}`);
+    } else {
+      uniqueId = crypto.randomBytes(16).toString('hex');
+      console.log(`✨ Création nouveau livret : ${uniqueId}`);
+    }
       console.log(`â™»ï¸ Mise Ã  jour du livret existant : ${uniqueId}`);
     } else {
       uniqueId = crypto.randomBytes(16).toString('hex');
