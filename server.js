@@ -3348,7 +3348,7 @@ app.delete('/api/bookings/:uid', async (req, res) => {
 
     await loadReservationsFromDB();
     
-    res.json({ message: 'RÃ©servation supprimÃ©e avec succÃ¨s' });
+    res.json({ message: 'Logement modifié avec succès' });
   } catch (err) {
     console.error('Erreur DELETE /api/bookings:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -5189,7 +5189,7 @@ app.delete('/api/cleaners/:id', async (req, res) => {
       return res.status(404).json({ error: 'Membre du mÃƒÂ©nage introuvable' });
     }
 
-    res.json({ message: 'Membre du mÃƒÂ©nage supprimÃƒÂ©' });
+    res.json({ message: 'Membre du ménage supprimé' });
   } catch (err) {
     console.error('Erreur DELETE /api/cleaners/:id :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6673,7 +6673,7 @@ app.post('/api/deposits/:depositId/capture', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la capture' });
     }
 
-    res.json({ message: 'Caution capturÃ©e avec succÃ¨s' });
+    res.json({ message: 'Caution capturée avec succès' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/capture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6706,7 +6706,7 @@ app.post('/api/deposits/:depositId/release', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la libÃ©ration' });
     }
 
-    res.json({ message: 'Caution libÃ©rÃ©e avec succÃ¨s' });
+    res.json({ message: 'Caution libérée avec succès' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/release:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6829,7 +6829,7 @@ app.delete('/api/checklists/:checklistId', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
     
-    res.json({ message: 'Checklist supprimÃ©e avec succÃ¨s' });
+    res.json({ message: 'Checklist supprimée avec succès' });
   } catch (err) {
     console.error('Erreur DELETE /api/checklists:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7359,7 +7359,7 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
       return res.status(404).json({ error: 'Client non trouvÃƒÂ©' });
     }
 
-    res.json({ message: 'Client supprimÃƒÂ©' });
+    res.json({ message: 'Client supprimé' });
   } catch (err) {
     console.error('Erreur suppression client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7459,7 +7459,7 @@ app.delete('/api/owner-articles/:id', async (req, res) => {
       return res.status(404).json({ error: 'Article non trouvÃƒÂ©' });
     }
 
-    res.json({ message: 'Article supprimÃƒÂ©' });
+    res.json({ message: 'Article supprimé' });
   } catch (err) {
     console.error('Erreur suppression article:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7474,7 +7474,7 @@ app.post('/api/owner-articles/init-defaults', async (req, res) => {
 
     await pool.query('SELECT create_default_owner_articles($1)', [user.id]);
 
-    res.json({ message: 'Articles par dÃƒÂ©faut crÃƒÂ©ÃƒÂ©s' });
+    res.json({ message: 'Articles par défaut crés' });
   } catch (err) {
     console.error('Erreur init articles:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -8260,7 +8260,7 @@ app.delete('/api/owner-invoices/:id', async (req, res) => {
 
     await pool.query('DELETE FROM owner_invoices WHERE id = $1', [req.params.id]);
 
-    res.json({ message: 'Facture supprimÃƒÂ©e' });
+    res.json({ message: 'Facture supprimée' });
   } catch (err) {
     console.error('Erreur suppression facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
