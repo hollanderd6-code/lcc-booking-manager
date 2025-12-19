@@ -1323,7 +1323,7 @@ function viewLivret(uniqueId) {
 }
 
 // Supprimer un livret
-async // Modifier un livret (chargement + remplissage du formulaire)
+// Modifier un livret (chargement + remplissage du formulaire)
 async function editLivret(uniqueId) {
   try {
     currentUniqueId = uniqueId;
@@ -1345,7 +1345,7 @@ async function editLivret(uniqueId) {
   }
 }
 
-async function deleteLivret(uniqueId) {
+async async function deleteLivret(uniqueId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
   try {
