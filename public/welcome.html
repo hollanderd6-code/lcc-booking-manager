@@ -1617,6 +1617,9 @@ function collectFormData() {
   const fields = ['propertyName','welcomeDescription','contactPhone','address','postalCode','city','keyboxCode','accessInstructions','parkingInfo','wifiSSID','wifiPassword','checkoutTime','checkoutInstructions','equipmentList','importantRules','transportInfo','shopsList'];
   fields.forEach(f => formData.append(f, document.querySelector(`[name="${f}"]`)?.value || ''));
 
+  // Si on édite un livret existant, on envoie son identifiant
+  if (currentUniqueId) formData.append("uniqueId", currentUniqueId);
+
   // Fichiers principaux
   const cover = document.getElementById('coverPhoto').files[0];
   if(cover) formData.append('coverPhoto', cover);
