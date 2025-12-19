@@ -1808,9 +1808,7 @@
 }
 </style>
 
-  <!-- Auth: inject Bearer token automatically for /api calls -->
   <script src="/js/auth-fetch.js"></script>
-
 </head>
 <body data-page="app">
   <div style="
@@ -4175,18 +4173,8 @@ function updateTopRisksKpi(reservations) {
         properties = Array.isArray(baseData.properties) ? baseData.properties : [];
         const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
 
-        const enrRes = await fetch(`${API_URL}/api/reservations/enriched`, {
-          headers: { Authorization: 'Bearer ' + token }
-        });
-
-        if (enrRes.ok) {
-          const enrData = await enrRes.json().catch(() => ({}));
-          reservations = Array.isArray(enrData.reservations) ? enrData.reservations : reservationsBasic;
-        } else {
-          reservations = reservationsBasic;
-        }
-
-        localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
+        reservations = reservationsBasic;
+localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
         localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
         window.LCC_RESERVATIONS = reservations;
         window.LCC_PROPERTIES = properties;
