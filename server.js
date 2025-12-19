@@ -5847,17 +5847,27 @@ app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res
 
     const swap = swapResult.rows[0];
 
-    // ✅ Swap atomique (évite les collisions sur l’unicité)
-    await pool.query(
-      `UPDATE properties
-       SET display_order = CASE
-         WHEN id = $1 THEN $2
-         WHEN id = $3 THEN $4
-         ELSE display_order
-       END
-       WHERE user_id = $5 AND id IN ($1, $3)`,
-      [current.id, swap.display_order, swap.id, currentOrder, user.id]
+     // ✅ Trouver le voisin à échanger (tolère les trous dans display_order)
+    const swapResult = await pool.query(
+      direction === 'up'
+        ? `SELECT id, display_order FROM properties
+           WHERE user_id = $1 AND display_order < $2
+           ORDER BY display_order DESC, created_at DESC
+           LIMIT 1`
+        : `SELECT id, display_order FROM properties
+           WHERE user_id = $1 AND display_order > $2
+           ORDER BY display_order ASC, created_at ASC
+           LIMIT 1`,
+      [user.id, currentOrder]
     );
+
+    if (swapResult.rows.length === 0) {
+      return res.status(400).json({
+        error: direction === 'up' ? 'Déjà en première position' : 'Déjà en dernière position'
+      });
+    }
+
+    const swap = swapResult.rows[0];
 
     await loadProperties();
 
