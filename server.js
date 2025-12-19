@@ -5824,84 +5824,84 @@ app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res
     if (!Number.isFinite(currentOrder)) {
       return res.status(400).json({ error: "Ordre du logement invalide (display_order)" });
     }
+// ✅ Trouver le voisin à échanger (tolère les trous dans display_order)
+const swapResult = await pool.query(
+  direction === 'up'
+    ? `SELECT id, display_order, created_at
+       FROM properties
+       WHERE user_id = $1 AND display_order < $2
+       ORDER BY display_order DESC, created_at DESC
+       LIMIT 1`
+    : `SELECT id, display_order, created_at
+       FROM properties
+       WHERE user_id = $1 AND display_order > $2
+       ORDER BY display_order ASC, created_at ASC
+       LIMIT 1`,
+  [user.id, currentOrder]
+);
 
-    // ✅ Trouver le voisin à échanger (tolère les trous dans display_order)
-    const swapResult = await pool.query(
-      direction === 'up'
-        ? `SELECT id, display_order FROM properties
-           WHERE user_id = $1 AND display_order < $2
-           ORDER BY display_order DESC, created_at DESC
-           LIMIT 1`
-        : `SELECT id, display_order FROM properties
-           WHERE user_id = $1 AND display_order > $2
-           ORDER BY display_order ASC, created_at ASC
-           LIMIT 1`,
-      [user.id, currentOrder]
-    );
+if (swapResult.rows.length === 0) {
+  return res.status(400).json({
+    error: direction === 'up' ? 'Déjà en première position' : 'Déjà en dernière position'
+  });
+}
 
-    if (swapResult.rows.length === 0) {
-      return res.status(400).json({
-        error: direction === 'up' ? 'Déjà en première position' : 'Déjà en dernière position'
-      });
-    }
+const swap = swapResult.rows[0];
 
-    const swap = swapResult.rows[0];
+// ✅ Swap robuste (transaction + verrou + swap atomique)
+await pool.query('BEGIN');
 
-     // ✅ Trouver le voisin à échanger (tolère les trous dans display_order)
-    const swapResult = await pool.query(
-      direction === 'up'
-        ? `SELECT id, display_order FROM properties
-           WHERE user_id = $1 AND display_order < $2
-           ORDER BY display_order DESC, created_at DESC
-           LIMIT 1`
-        : `SELECT id, display_order FROM properties
-           WHERE user_id = $1 AND display_order > $2
-           ORDER BY display_order ASC, created_at ASC
-           LIMIT 1`,
-      [user.id, currentOrder]
-    );
+try {
+  // Verrouille les deux lignes pour éviter les courses (double clic, etc.)
+  await pool.query(
+    `SELECT id FROM properties
+     WHERE user_id = $1 AND id IN ($2, $3)
+     FOR UPDATE`,
+    [user.id, current.id, swap.id]
+  );
 
-    if (swapResult.rows.length === 0) {
-      return res.status(400).json({
-        error: direction === 'up' ? 'Déjà en première position' : 'Déjà en dernière position'
-      });
-    }
+  const upd = await pool.query(
+    `UPDATE properties
+     SET display_order = CASE
+       WHEN id = $2 THEN $3
+       WHEN id = $4 THEN $5
+       ELSE display_order
+     END,
+     updated_at = now()
+     WHERE user_id = $1 AND id IN ($2, $4)`,
+    [user.id, current.id, Number(swap.display_order), swap.id, currentOrder]
+  );
 
-    const swap = swapResult.rows[0];
-
-    await loadProperties();
-
-    return res.json({ success: true, message: 'Ordre mis à jour' });
-  } catch (err) {
-    console.error('Erreur réorganisation:', err);
-
-    // Cas fréquent : conflit d'unicité (si données DB déjà cassées)
-    if (err && err.code === '23505') {
-      return res.status(409).json({
-        error: "Conflit d'ordre (display_order). Lance la renumérotation SQL (1..N) puis réessaie."
-      });
-    }
-
-    return res.status(500).json({ error: 'Erreur serveur' });
+  // On veut exactement 2 lignes modifiées (les 2 logements swappés)
+  if (upd.rowCount !== 2) {
+    throw new Error(`Swap incomplet (rowCount=${upd.rowCount})`);
   }
-});
 
-// ============================================
-// ROUTES API - NOTIFICATIONS TEST
-// ============================================
+  await pool.query('COMMIT');
 
-app.post('/api/test-notification', async (req, res) => {
-  try {
-    await notificationService.sendTestNotification();
-    res.json({ message: 'Notification de test envoyÃƒÂ©e' });
-  } catch (error) {
-    res.status(500).json({
-      error: 'Erreur lors de l\'envoi de la notification',
-      details: error.message
+  return res.json({
+    success: true,
+    message: 'Ordre mis à jour',
+    propertyId: current.id,
+    swappedWith: swap.id,
+    from: currentOrder,
+    to: Number(swap.display_order)
+  });
+
+} catch (err) {
+  try { await pool.query('ROLLBACK'); } catch (_) {}
+
+  console.error('Erreur réorganisation:', err);
+
+  // Cas fréquent : conflit d'unicité (si DB cassée)
+  if (err && err.code === '23505') {
+    return res.status(409).json({
+      error: "Conflit d'ordre (display_order). Lance la renumérotation SQL (1..N) puis réessaie."
     });
   }
-});
 
+  return res.status(500).json({ error: 'Erreur serveur' });
+}
 // ============================================
 // ROUTES API - CONFIG (par user)
 // ============================================
