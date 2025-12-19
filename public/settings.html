@@ -1240,5 +1240,313 @@
       }
     })();
   </script>
+  // ============================================
+// PATCH : Correction du owner_id qui ne se sauvegarde pas
+// À ajouter dans settings.js ou à la fin de settings.html
+// ============================================
+
+(function() {
+  console.log('🔧 Patch owner_id activé');
+
+  // ============================================
+  // 1. CHARGER LA LISTE DES PROPRIÉTAIRES
+  // ============================================
+  async function loadOwnerClients() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+
+      const res = await fetch('https://lcc-booking-manager.onrender.com/api/owner-clients', {
+        headers: { 
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        console.warn('Impossible de charger les propriétaires');
+        return;
+      }
+
+      const data = await res.json();
+      const clients = data.clients || [];
+      
+      console.log('✅ Propriétaires chargés:', clients.length);
+      
+      // Stocker en global pour réutilisation
+      window.ownerClients = clients;
+      
+      // Remplir le select
+      fillOwnerSelect(clients);
+      
+    } catch (err) {
+      console.error('❌ Erreur chargement propriétaires:', err);
+    }
+  }
+
+  // ============================================
+  // 2. REMPLIR LE SELECT AVEC LES PROPRIÉTAIRES
+  // ============================================
+  function fillOwnerSelect(clients) {
+    const select = document.getElementById('propertyOwnerId');
+    if (!select) {
+      console.warn('Select propertyOwnerId introuvable');
+      return;
+    }
+
+    // Vider les options existantes (sauf la première "Aucun propriétaire")
+    select.innerHTML = '<option value="">Aucun propriétaire</option>';
+    
+    // Ajouter chaque propriétaire
+    clients.forEach(client => {
+      const option = document.createElement('option');
+      option.value = client.id;
+      option.textContent = client.name || client.email || `Propriétaire ${client.id}`;
+      select.appendChild(option);
+    });
+    
+    console.log('✅ Select rempli avec', clients.length, 'propriétaires');
+  }
+
+  // ============================================
+  // 3. INTERCEPTER L'OUVERTURE DU MODAL
+  // ============================================
+  
+  // Surveiller les changements sur le modal
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      const modal = document.getElementById('editPropertyModal');
+      if (modal && modal.classList.contains('active')) {
+        onModalOpened();
+      }
+    });
+  });
+
+  // Démarrer l'observation
+  window.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editPropertyModal');
+    if (modal) {
+      observer.observe(modal, { 
+        attributes: true, 
+        attributeFilter: ['class'] 
+      });
+    }
+  });
+
+  // Fonction appelée quand le modal s'ouvre
+  function onModalOpened() {
+    console.log('📝 Modal ouvert, pré-remplissage owner_id...');
+    
+    // Attendre un peu que le modal soit complètement rempli
+    setTimeout(() => {
+      // Récupérer l'ID de la propriété en cours d'édition
+      const propertyIdInput = document.getElementById('propertyId');
+      if (!propertyIdInput || !propertyIdInput.value) {
+        console.log('Aucune propriété en cours d\'édition');
+        return;
+      }
+
+      const propertyId = propertyIdInput.value;
+      
+      // Trouver la propriété dans la liste globale
+      const allProperties = window.allProperties || [];
+      const property = allProperties.find(p => String(p.id) === String(propertyId));
+      
+      if (!property) {
+        console.warn('Propriété', propertyId, 'introuvable');
+        return;
+      }
+
+      // Pré-remplir le select avec owner_id
+      const select = document.getElementById('propertyOwnerId');
+      if (select && property.owner_id) {
+        select.value = property.owner_id;
+        console.log('✅ owner_id pré-rempli:', property.owner_id);
+      } else if (select) {
+        select.value = '';
+        console.log('✅ Aucun propriétaire pour cette propriété');
+      }
+    }, 100);
+  }
+
+  // ============================================
+  // 4. INTERCEPTER LA SAUVEGARDE
+  // ============================================
+  
+  // Sauvegarder la fonction saveProperty originale
+  const originalSaveProperty = window.saveProperty;
+  
+  // Remplacer par une version améliorée
+  window.saveProperty = async function(event) {
+    if (event) event.preventDefault();
+    
+    console.log('💾 Sauvegarde de la propriété...');
+    
+    // Récupérer la valeur du select owner_id
+    const ownerSelect = document.getElementById('propertyOwnerId');
+    const ownerId = ownerSelect ? ownerSelect.value : null;
+    
+    console.log('📌 owner_id sélectionné:', ownerId || '(aucun)');
+    
+    // Si la fonction originale existe, l'appeler
+    if (typeof originalSaveProperty === 'function') {
+      // Ajouter l'ownerId avant d'appeler la fonction originale
+      // On va intercepter le fetch
+      interceptNextFetch(ownerId);
+      return originalSaveProperty(event);
+    }
+    
+    // Sinon, faire la sauvegarde nous-mêmes
+    return savePropertyManually(ownerId);
+  };
+
+  // ============================================
+  // 5. INTERCEPTER LE FETCH POUR AJOUTER OWNER_ID
+  // ============================================
+  let nextFetchOwnerId = null;
+  
+  function interceptNextFetch(ownerId) {
+    nextFetchOwnerId = ownerId;
+  }
+
+  // Sauvegarder le fetch original
+  const originalFetch = window.fetch;
+  
+  // Remplacer fetch pour intercepter les requêtes vers /api/properties
+  window.fetch = async function(...args) {
+    const [url, options] = args;
+    
+    // Si c'est une requête vers /api/properties avec un body
+    if (url && url.includes('/api/properties') && options && options.body) {
+      try {
+        const body = JSON.parse(options.body);
+        
+        // Si on a un ownerId en attente, l'ajouter
+        if (nextFetchOwnerId !== null) {
+          body.ownerId = nextFetchOwnerId || null;
+          options.body = JSON.stringify(body);
+          console.log('✅ owner_id ajouté à la requête:', body.ownerId);
+          nextFetchOwnerId = null; // Reset
+        }
+      } catch (e) {
+        // Si le body n'est pas JSON, on ignore
+      }
+    }
+    
+    // Appeler le fetch original
+    return originalFetch.apply(this, args);
+  };
+
+  // ============================================
+  // 6. SAUVEGARDE MANUELLE (fallback)
+  // ============================================
+  async function savePropertyManually(ownerId) {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) {
+      alert('Non authentifié');
+      return;
+    }
+
+    const propertyId = document.getElementById('propertyId').value;
+    const name = document.getElementById('propertyName').value;
+    const color = document.getElementById('propertyColor').value;
+    const address = document.getElementById('propertyAddress').value;
+    const arrivalTime = document.getElementById('propertyArrivalTime').value;
+    const departureTime = document.getElementById('propertyDepartureTime').value;
+    const deposit = document.getElementById('propertyDeposit').value;
+    const photoUrl = document.getElementById('propertyPhotoUrl').value;
+    const welcomeBookUrl = document.getElementById('propertyWelcomeBookUrl').value;
+    const accessCode = document.getElementById('propertyAccessCode').value;
+    const accessInstructions = document.getElementById('propertyAccessInstructions').value;
+    const wifiName = document.getElementById('propertyWifiName').value;
+    const wifiPassword = document.getElementById('propertyWifiPassword').value;
+
+    const payload = {
+      name,
+      color,
+      address: address || null,
+      arrival_time: arrivalTime || null,
+      departure_time: departureTime || null,
+      deposit_amount: deposit ? parseFloat(deposit) : null,
+      photo_url: photoUrl || null,
+      welcome_book_url: welcomeBookUrl || null,
+      access_code: accessCode || null,
+      access_instructions: accessInstructions || null,
+      wifi_name: wifiName || null,
+      wifi_password: wifiPassword || null,
+      ownerId: ownerId || null  // 🆕 AJOUT DU OWNER_ID
+    };
+
+    console.log('📦 Payload envoyé:', payload);
+
+    try {
+      const url = propertyId 
+        ? `https://lcc-booking-manager.onrender.com/api/properties/${propertyId}`
+        : 'https://lcc-booking-manager.onrender.com/api/properties';
+      
+      const method = propertyId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Erreur serveur');
+      }
+
+      console.log('✅ Propriété sauvegardée avec owner_id');
+      alert('✅ Propriété sauvegardée avec succès !');
+      
+      // Fermer le modal
+      if (typeof closeEditModal === 'function') {
+        closeEditModal();
+      }
+      
+      // Recharger la page
+      location.reload();
+
+    } catch (err) {
+      console.error('❌ Erreur sauvegarde:', err);
+      alert('❌ Erreur : ' + err.message);
+    }
+  }
+
+  // ============================================
+  // 7. INITIALISATION AU CHARGEMENT
+  // ============================================
+  window.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initialisation du patch owner_id');
+    
+    // Charger la liste des propriétaires
+    loadOwnerClients();
+    
+    // Recharger à chaque fois que la page des propriétaires est affichée
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) {
+        loadOwnerClients();
+      }
+    });
+  });
+
+  // ============================================
+  // 8. EXPOSER LES FONCTIONS POUR DEBUG
+  // ============================================
+  window.debugOwnerPatch = {
+    loadOwnerClients,
+    fillOwnerSelect,
+    clients: () => window.ownerClients
+  };
+
+  console.log('✅ Patch owner_id installé avec succès');
+  console.log('💡 Debug disponible via window.debugOwnerPatch');
+
+})();
 </body>
 </html>
