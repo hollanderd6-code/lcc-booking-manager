@@ -1256,14 +1256,16 @@
   </div>
 <script>
 const API_BASE = 'https://lcc-booking-manager.onrender.com';
+
+window.getAuthToken = window.getAuthToken || (() => localStorage.getItem('lcc_token') || '');
 let currentUniqueId = null; // Pour savoir si on modifie ou on crée
 
 // Charger la liste des livrets au démarrage
 async function loadLivretsList() {
   try {
     const response = await fetch(`${API_BASE}/api/welcome-books/user/list`, {
-  headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
-});
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
+    });
     
     const data = await response.json();
     
@@ -1321,18 +1323,42 @@ function viewLivret(uniqueId) {
 }
 
 // Supprimer un livret
-async function deleteLivret(uniqueId) {
+async // Modifier un livret (chargement + remplissage du formulaire)
+async function editLivret(uniqueId) {
+  try {
+    currentUniqueId = uniqueId;
+
+    const response = await fetch(`${API_BASE}/api/welcome-books/public/${uniqueId}`);
+    const data = await response.json();
+
+    if (data && data.success && data.book) {
+      fillFormWithData(data.book);
+      document.getElementById('livretsListSection').style.display = 'none';
+      document.getElementById('welcomeFormSection').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      alert((data && data.error) ? data.error : "Impossible de charger ce livret.");
+    }
+  } catch (err) {
+    console.error("Erreur editLivret:", err);
+    alert("Erreur lors du chargement du livret.");
+  }
+}
+
+function deleteLivret(uniqueId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
   try {
     const response = await fetch(`${API_BASE}/api/welcome/by-unique/${uniqueId}`, {
-  method: 'DELETE',
-  headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
-});
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
+    });
     
-    const data = await response.json();
-    
-    if (data.success) {
+    const raw = await response.text();
+      let data = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = null; }
+
+      if (data && data.success) {
       alert('Livret supprimé avec succès');
       loadLivretsList();
     } else {
