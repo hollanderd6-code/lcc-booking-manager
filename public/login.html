@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/auth-fetch.js"></script>
 </head>
 <body class="auth-body">
   <div class="auth-container">
@@ -144,20 +145,10 @@
         loginSubmit.disabled = false;
         loginSubmit.textContent = 'Se connecter';
       }
-      if (!res.ok) {
-  const errorData = await res.json();
-  
-  if (errorData.emailNotVerified) {
-    // Email non vérifié
-    alert('Veuillez vérifier votre email avant de vous connecter. Un email de vérification vous a été envoyé.');
-    // Optionnel : proposer de renvoyer l'email
-  } else {
-    alert(errorData.error || 'Erreur de connexion');
-  }
-  return;
-}
-    });
+      
+    }
   </script>
+
 
   <style>
     .auth-body {
