@@ -1831,7 +1831,8 @@ async function loadProperties() {
         wifi_name,
         wifi_password,
         access_instructions,
-        owner_id
+        owner_id,
+        display_order
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -5496,9 +5497,16 @@ await pool.query(
      id, user_id, name, color, ical_urls,
      address, arrival_time, departure_time, deposit_amount, photo_url,
      welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
-     owner_id, created_at
+     owner_id, display_order, created_at
    )
-   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
+   VALUES (
+     $1, $2, $3, $4, $5,
+     $6, $7, $8, $9, $10,
+     $11, $12, $13, $14, $15,
+     $16,
+     (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
+     NOW()
+   )`,
   [
     id,
     user.id,
@@ -5784,75 +5792,87 @@ app.post('/api/properties/test-ical', async (req, res) => {
   }
   });
   // RÃƒÂ©organiser l'ordre des logements
+
+  // Réorganiser l'ordre des logements (swap robuste, supporte les trous de display_order)
 app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: 'Non autorisÃƒÂ©' });
+      return res.status(401).json({ error: 'Non autorisé' });
     }
 
     const { propertyId } = req.params;
     const { direction } = req.body; // 'up' ou 'down'
 
-    // RÃƒÂ©cupÃƒÂ©rer le logement actuel
+    if (direction !== 'up' && direction !== 'down') {
+      return res.status(400).json({ error: 'Direction invalide' });
+    }
+
+    // Logement actuel
     const currentResult = await pool.query(
-      'SELECT id, display_order FROM properties WHERE id = $1 AND user_id = $2',
+      'SELECT id, display_order, created_at FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, user.id]
     );
 
     if (currentResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Logement non trouvÃƒÂ©' });
+      return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
-    const currentOrder = currentResult.rows[0].display_order;
-    const newOrder = direction === 'up' ? currentOrder - 1 : currentOrder + 1;
+    const current = currentResult.rows[0];
+    const currentOrder = Number(current.display_order);
 
-    if (newOrder < 1) {
-      return res.status(400).json({ error: 'DÃƒÂ©jÃƒÂ  en premiÃƒÂ¨re position' });
+    if (!Number.isFinite(currentOrder)) {
+      return res.status(400).json({ error: "Ordre du logement invalide (display_order)" });
     }
 
-    // Trouver le logement ÃƒÂ  ÃƒÂ©changer
+    // ✅ Trouver le voisin à échanger (tolère les trous dans display_order)
     const swapResult = await pool.query(
-      'SELECT id, display_order FROM properties WHERE user_id = $1 AND display_order = $2',
-      [user.id, newOrder]
+      direction === 'up'
+        ? `SELECT id, display_order FROM properties
+           WHERE user_id = $1 AND display_order < $2
+           ORDER BY display_order DESC, created_at DESC
+           LIMIT 1`
+        : `SELECT id, display_order FROM properties
+           WHERE user_id = $1 AND display_order > $2
+           ORDER BY display_order ASC, created_at ASC
+           LIMIT 1`,
+      [user.id, currentOrder]
     );
 
     if (swapResult.rows.length === 0) {
-      return res.status(400).json({ error: 'DÃƒÂ©jÃƒÂ  en derniÃƒÂ¨re position' });
+      return res.status(400).json({
+        error: direction === 'up' ? 'Déjà en première position' : 'Déjà en dernière position'
+      });
     }
 
-    const swapId = swapResult.rows[0].id;
+    const swap = swapResult.rows[0];
 
-    // Échanger les positions (transaction + valeur temporaire pour éviter conflits)
-    await pool.query('BEGIN');
-    try {
-      // Valeur temporaire hors plage
-      await pool.query(
-        'UPDATE properties SET display_order = -9999 WHERE id = $1 AND user_id = $2',
-        [propertyId, user.id]
-      );
+    // ✅ Swap atomique (évite les collisions sur l’unicité)
+    await pool.query(
+      `UPDATE properties
+       SET display_order = CASE
+         WHEN id = $1 THEN $2
+         WHEN id = $3 THEN $4
+         ELSE display_order
+       END
+       WHERE user_id = $5 AND id IN ($1, $3)`,
+      [current.id, swap.display_order, swap.id, currentOrder, user.id]
+    );
 
-      await pool.query(
-        'UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = $3',
-        [currentOrder, swapId, user.id]
-      );
+    await loadProperties();
 
-      await pool.query(
-        'UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = $3',
-        [newOrder, propertyId, user.id]
-      );
+    return res.json({ success: true, message: 'Ordre mis à jour' });
+  } catch (err) {
+    console.error('Erreur réorganisation:', err);
 
-      await pool.query('COMMIT');
-    } catch (e) {
-      try { await pool.query('ROLLBACK'); } catch (_) {}
-      throw e;
+    // Cas fréquent : conflit d'unicité (si données DB déjà cassées)
+    if (err && err.code === '23505') {
+      return res.status(409).json({
+        error: "Conflit d'ordre (display_order). Lance la renumérotation SQL (1..N) puis réessaie."
+      });
     }
 
-    res.json({ success: true, message: 'Ordre mis à jour' });
-
-} catch (err) {
-    console.error('Erreur rÃƒÂ©organisation:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
