@@ -564,8 +564,10 @@ function renderProperties() {
   emptyState.style.display = "none";
 
   const cardsHtml = properties
-    .map((p) => {
+    .map((p, idx) => {
       const id = p._id || p.id || "";
+      const isFirst = idx === 0;
+      const isLast = idx === properties.length - 1;
       const color = p.color || "#059669";
       const name = p.name || "Sans nom";
       const address = p.address || "";
@@ -836,20 +838,22 @@ document.addEventListener('click', async function(e) {
       
       const response = await fetch(`${API_URL}/api/properties/${propertyId}/reorder`, {
         method: 'PUT',
-        headers: {
-  'Content-Type': 'application/json',
-  'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
-},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direction })
       });
       
-      const data = await response.json();
-      
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la réorganisation');
+        const msg = (data && (data.error || data.message)) || 'Erreur serveur';
+        // Cas attendu : déjà en première / dernière position → info, pas une erreur bloquante
+        if (response.status === 400 && /premi|derni|first|last/i.test(msg)) {
+          showToast(msg, 'success'); // toast léger
+          return;
+        }
+        throw new Error(msg);
       }
-      
-      // Recharger les logements
+// Recharger les logements
       await loadProperties();
       
       showToast('Ordre mis à jour !', 'success');
