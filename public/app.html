@@ -4545,8 +4545,23 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
       var range = getCurrentRange();
       renderDaysHeader(range);
       renderGrid(range);
+      setTimeout(scrollCalendarToToday, 0);
     }
+function scrollCalendarToToday() {
+  const grid = document.getElementById('calendarGrid');
+  if (!grid) return;
 
+  // On prend la 1ère cellule "today" (il y en a une par logement)
+  const todayCell = grid.querySelector('.calendar-cell.today');
+  if (!todayCell) return;
+
+  // Position horizontale de la colonne "today"
+  const targetLeft = todayCell.offsetLeft;
+
+  // On centre un peu (optionnel)
+  const padding = Math.max(0, (grid.clientWidth / 2) - 80);
+  grid.scrollLeft = Math.max(0, targetLeft - padding);
+}
         function renderDaysHeader(range) {
       var header = document.getElementById('daysHeader');
       if (!header) return;
