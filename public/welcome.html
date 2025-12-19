@@ -1388,6 +1388,85 @@ function showExistingImage(containerId, url) {
   container.appendChild(wrapper);
 }
 
+// Compteurs pour les sections répétables
+let roomCounter = 0;
+let restaurantCounter = 0;
+let placeCounter = 0;
+
+function addRoom() {
+  const container = document.getElementById('roomsContainer');
+  if (!container) return;
+  roomCounter += 1;
+
+  const block = document.createElement('div');
+  block.className = 'repeat-block room-block';
+
+  block.innerHTML = `
+    <div class="field">
+      <label>Nom de la pièce</label>
+      <input type="text" name="room[${roomCounter}][name]" placeholder="Ex: Chambre 1">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea name="room[${roomCounter}][description]" rows="3" placeholder="Lit, rangement, etc."></textarea>
+    </div>
+    <hr/>
+  `;
+  container.appendChild(block);
+}
+
+function addRestaurant() {
+  const container = document.getElementById('restaurantsContainer');
+  if (!container) return;
+  restaurantCounter += 1;
+
+  const block = document.createElement('div');
+  block.className = 'repeat-block restaurant-block';
+
+  block.innerHTML = `
+    <div class="field">
+      <label>Nom</label>
+      <input type="text" name="restaurant[${restaurantCounter}][name]" placeholder="Nom du restaurant">
+    </div>
+    <div class="field">
+      <label>Téléphone</label>
+      <input type="text" name="restaurant[${restaurantCounter}][phone]" placeholder="01 23 45 67 89">
+    </div>
+    <div class="field">
+      <label>Adresse</label>
+      <input type="text" name="restaurant[${restaurantCounter}][address]" placeholder="Adresse">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea name="restaurant[${restaurantCounter}][description]" rows="3" placeholder="Pourquoi tu le recommandes"></textarea>
+    </div>
+    <hr/>
+  `;
+  container.appendChild(block);
+}
+
+function addPlace() {
+  const container = document.getElementById('placesContainer');
+  if (!container) return;
+  placeCounter += 1;
+
+  const block = document.createElement('div');
+  block.className = 'repeat-block place-block';
+
+  block.innerHTML = `
+    <div class="field">
+      <label>Nom</label>
+      <input type="text" name="place[${placeCounter}][name]" placeholder="Lieu à visiter">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea name="place[${placeCounter}][description]" rows="3" placeholder="Infos utiles"></textarea>
+    </div>
+    <hr/>
+  `;
+  container.appendChild(block);
+}
+
 function fillFormWithData(data) {
   if (!data) return;
 
