@@ -5791,60 +5791,108 @@ app.post('/api/properties/test-ical', async (req, res) => {
     });
   }
   });
-  // RÃƒÂ©organiser l'ordre des logements
 
-  // Réorganiser l'ordre des logements (swap robuste, supporte les trous de display_order)
+  // ============================================
+// Réorganiser l'ordre des logements (SAFE)
+// ============================================
 app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
+    const user = req.user;
     const { propertyId } = req.params;
-    const { direction } = req.body; // 'up' ou 'down'
+    const { direction } = req.body; // 'up' | 'down'
 
-    if (direction !== 'up' && direction !== 'down') {
+    if (!['up', 'down'].includes(direction)) {
       return res.status(400).json({ error: 'Direction invalide' });
     }
 
-    // Logement actuel
-    const currentResult = await pool.query(
-      'SELECT id, display_order, created_at FROM properties WHERE id = $1 AND user_id = $2',
+    // 🔹 Logement courant
+    const currentRes = await pool.query(
+      `SELECT id, display_order
+       FROM properties
+       WHERE id = $1 AND user_id = $2`,
       [propertyId, user.id]
     );
 
-    if (currentResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Logement non trouvé' });
+    if (currentRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Logement introuvable' });
     }
 
-    const current = currentResult.rows[0];
+    const current = currentRes.rows[0];
     const currentOrder = Number(current.display_order);
 
-    if (!Number.isFinite(currentOrder)) {
-      return res.status(400).json({ error: "Ordre du logement invalide (display_order)" });
-    }
-// ✅ Trouver le voisin à échanger (tolère les trous dans display_order)
-const swapResult = await pool.query(
-  direction === 'up'
-    ? `SELECT id, display_order, created_at
-       FROM properties
-       WHERE user_id = $1 AND display_order < $2
-       ORDER BY display_order DESC, created_at DESC
-       LIMIT 1`
-    : `SELECT id, display_order, created_at
-       FROM properties
-       WHERE user_id = $1 AND display_order > $2
-       ORDER BY display_order ASC, created_at ASC
-       LIMIT 1`,
-  [user.id, currentOrder]
-);
+    // 🔹 Voisin à échanger
+    const neighborRes = await pool.query(
+      direction === 'up'
+        ? `
+          SELECT id, display_order
+          FROM properties
+          WHERE user_id = $1 AND display_order < $2
+          ORDER BY display_order DESC
+          LIMIT 1
+        `
+        : `
+          SELECT id, display_order
+          FROM properties
+          WHERE user_id = $1 AND display_order > $2
+          ORDER BY display_order ASC
+          LIMIT 1
+        `,
+      [user.id, currentOrder]
+    );
 
-if (swapResult.rows.length === 0) {
-  return res.status(400).json({
-    error: direction === 'up' ? 'Déjà en première position' : 'Déjà en dernière position'
-  });
-}
+    if (neighborRes.rows.length === 0) {
+      return res.status(400).json({
+        error: direction === 'up'
+          ? 'Déjà en première position'
+          : 'Déjà en dernière position'
+      });
+    }
+
+    const neighbor = neighborRes.rows[0];
+
+    // 🔁 SWAP SÉCURISÉ (anti conflit UNIQUE)
+    await pool.query('BEGIN');
+
+    // 1️⃣ Mettre le courant en temporaire
+    await pool.query(
+      `UPDATE properties
+       SET display_order = -1
+       WHERE id = $1`,
+      [current.id]
+    );
+
+    // 2️⃣ Déplacer le voisin
+    await pool.query(
+      `UPDATE properties
+       SET display_order = $1
+       WHERE id = $2`,
+      [currentOrder, neighbor.id]
+    );
+
+    // 3️⃣ Mettre le courant à la place du voisin
+    await pool.query(
+      `UPDATE properties
+       SET display_order = $1
+       WHERE id = $2`,
+      [neighbor.display_order, current.id]
+    );
+
+    await pool.query('COMMIT');
+
+    // 🔄 Recharger le cache mémoire
+    await loadProperties();
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Erreur réorganisation logements:', err);
+
+    return res.status(500).json({
+      error: 'Erreur serveur lors de la réorganisation'
+    });
+  }
+});
 
 const swap = swapResult.rows[0];
 
