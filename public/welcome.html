@@ -1260,6 +1260,200 @@ const API_BASE = 'https://lcc-booking-manager.onrender.com';
 window.getAuthToken = window.getAuthToken || (() => localStorage.getItem('lcc_token') || '');
 let currentUniqueId = null; // Pour savoir si on modifie ou on crée
 
+// ----------------------------
+// Navigation par sections (wizard)
+// ----------------------------
+let currentSectionIndex = 0;
+
+function getSections() {
+  return Array.from(document.querySelectorAll('.form-section'));
+}
+
+function showSection(index) {
+  const sections = getSections();
+  if (!sections.length) return;
+
+  currentSectionIndex = Math.max(0, Math.min(index, sections.length - 1));
+  sections.forEach((sec, i) => sec.classList.toggle('active', i === currentSectionIndex));
+
+  // Scroll top du formulaire
+  const form = document.getElementById('welcomeForm');
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function nextSection() {
+  showSection(currentSectionIndex + 1);
+}
+
+function prevSection() {
+  showSection(currentSectionIndex - 1);
+}
+
+// ----------------------------
+// Upload + preview images
+// ----------------------------
+function setupImageUpload(inputId, previewId, multiple = false) {
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if (!input || !preview) return;
+
+  input.addEventListener('change', () => {
+    // Reset preview
+    preview.innerHTML = '';
+
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+
+    files.forEach(file => {
+      if (!file.type || !file.type.startsWith('image/')) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const div = document.createElement('div');
+        div.className = 'image-preview-item';
+        div.innerHTML = `
+          <img src="${ev.target.result}" alt="preview">
+        `;
+        preview.appendChild(div);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+}
+
+// ----------------------------
+// Collecte des données + sauvegarde
+// ----------------------------
+function collectFormData() {
+  const formData = new FormData();
+
+  // Champs texte simples
+  const fields = [
+    'propertyName','welcomeDescription','contactPhone',
+    'address','postalCode','city','keyboxCode',
+    'accessInstructions','parkingInfo','wifiSSID',
+    'wifiPassword','checkoutTime','checkoutInstructions',
+    'equipmentList','importantRules','transportInfo','shopsList'
+  ];
+  fields.forEach(f => formData.append(f, document.querySelector(`[name="${f}"]`)?.value || ''));
+
+  // Pièces
+  const rooms = [];
+  document.querySelectorAll('#roomsContainer .room-block').forEach(block => {
+    const name = block.querySelector('input[name*="[name]"]')?.value || '';
+    const description = block.querySelector('textarea[name*="[description]"]')?.value || '';
+    rooms.push({ name, description });
+  });
+  formData.append('rooms', JSON.stringify(rooms));
+
+  // Restaurants
+  const restaurants = [];
+  document.querySelectorAll('#restaurantsContainer .restaurant-block').forEach(block => {
+    const name = block.querySelector('input[name*="[name]"]')?.value || '';
+    const phone = block.querySelector('input[name*="[phone]"]')?.value || '';
+    const address = block.querySelector('input[name*="[address]"]')?.value || '';
+    const description = block.querySelector('textarea[name*="[description]"]')?.value || '';
+    restaurants.push({ name, phone, address, description });
+  });
+  formData.append('restaurants', JSON.stringify(restaurants));
+
+  // Lieux
+  const places = [];
+  document.querySelectorAll('#placesContainer .place-block').forEach(block => {
+    const name = block.querySelector('input[name*="[name]"]')?.value || '';
+    const description = block.querySelector('textarea[name*="[description]"]')?.value || '';
+    places.push({ name, description });
+  });
+  formData.append('places', JSON.stringify(places));
+
+  // Fichiers
+  const cover = document.getElementById('coverPhoto')?.files?.[0];
+  if (cover) formData.append('coverPhoto', cover);
+
+  const entrance = document.getElementById('entrancePhotos')?.files || [];
+  for (const f of entrance) formData.append('entrancePhotos', f);
+
+  const parking = document.getElementById('parkingPhotos')?.files || [];
+  for (const f of parking) formData.append('parkingPhotos', f);
+
+  // uniqueId si édition
+  if (currentUniqueId) formData.append('uniqueId', currentUniqueId);
+
+  return formData;
+}
+
+async function saveWelcomeBook(e) {
+  if (e) e.preventDefault();
+
+  try {
+    const formData = collectFormData();
+
+    const response = await fetch(`${API_BASE}/api/welcome-books/create`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const raw = await response.text();
+    let data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+    if (!response.ok || !data || !data.success) {
+      alert((data && (data.error || data.message)) ? (data.error || data.message) : `Erreur sauvegarde (${response.status})`);
+      return;
+    }
+
+    // Si le backend renvoie un uniqueId, on le garde
+    if (data.uniqueId) currentUniqueId = data.uniqueId;
+
+    // Affichage succès
+    document.getElementById('welcomeFormSection').style.display = 'none';
+    document.getElementById('successMessage').style.display = 'block';
+
+    // Recharge la liste pour voir le livret
+    await loadLivretsList();
+  } catch (err) {
+    console.error("Erreur sauvegarde:", err);
+    alert("Erreur lors de la sauvegarde.");
+  }
+}
+
+function createAnother() {
+  currentUniqueId = null;
+  const form = document.getElementById('welcomeForm');
+  if (form) form.reset();
+
+  // Reset previews + containers
+  const previews = ['coverPhotoPreview','entrancePhotosPreview','parkingPhotosPreview'];
+  previews.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+
+  const rooms = document.getElementById('roomsContainer'); if (rooms) rooms.innerHTML = '';
+  const rests = document.getElementById('restaurantsContainer'); if (rests) rests.innerHTML = '';
+  const places = document.getElementById('placesContainer'); if (places) places.innerHTML = '';
+
+  roomCounter = 0; restaurantCounter = 0; placeCounter = 0;
+  addRoom(); addRestaurant(); addPlace();
+
+  document.getElementById('successMessage').style.display = 'none';
+  document.getElementById('welcomeFormSection').style.display = 'block';
+  showSection(0);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  setupImageUpload('coverPhoto', 'coverPhotoPreview', false);
+  setupImageUpload('entrancePhotos', 'entrancePhotosPreview', true);
+  setupImageUpload('parkingPhotos', 'parkingPhotosPreview', true);
+
+  const form = document.getElementById('welcomeForm');
+  if (form) form.addEventListener('submit', saveWelcomeBook);
+
+  // Sections default
+  showSection(0);
+
+  // Prépare les blocs par défaut
+  try { addRoom(); addRestaurant(); addPlace(); } catch (_) {}
+});
+
 // Charger la liste des livrets au démarrage
 async function loadLivretsList() {
   try {
