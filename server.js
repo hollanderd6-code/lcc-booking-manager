@@ -74,7 +74,6 @@ async function sendEmail(mailOptions) {
       const sendSmtpEmail = new brevo.SendSmtpEmail();
       sendSmtpEmail.subject = mailOptions.subject;
       sendSmtpEmail.htmlContent = mailOptions.html || mailOptions.text;
-      sendSmtpEmail.charset = "UTF-8";
       
       // GÃƒÂ©rer l'expÃƒÂ©diteur (CORRIGÃƒâ€°)
       let senderEmail = process.env.EMAIL_FROM;
@@ -1308,11 +1307,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
-// Force UTF-8 pour toutes les réponses JSON
-app.use((req, res, next) => {
-res.charset = 'utf-8';
-next();
-});
 
 // Store for reservations (en mÃƒÂ©moire)
 let reservationsStore = {
@@ -3348,7 +3342,7 @@ app.delete('/api/bookings/:uid', async (req, res) => {
 
     await loadReservationsFromDB();
     
-    res.json({ message: 'Logement modifié avec succès' });
+    res.json({ message: 'RÃ©servation supprimÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur DELETE /api/bookings:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -5189,7 +5183,7 @@ app.delete('/api/cleaners/:id', async (req, res) => {
       return res.status(404).json({ error: 'Membre du mÃƒÂ©nage introuvable' });
     }
 
-    res.json({ message: 'Membre du ménage supprimé' });
+    res.json({ message: 'Membre du mÃƒÂ©nage supprimÃƒÂ©' });
   } catch (err) {
     console.error('Erreur DELETE /api/cleaners/:id :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6673,7 +6667,7 @@ app.post('/api/deposits/:depositId/capture', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la capture' });
     }
 
-    res.json({ message: 'Caution capturée avec succès' });
+    res.json({ message: 'Caution capturÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/capture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6706,7 +6700,7 @@ app.post('/api/deposits/:depositId/release', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la libÃ©ration' });
     }
 
-    res.json({ message: 'Caution libérée avec succès' });
+    res.json({ message: 'Caution libÃ©rÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/release:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -6829,7 +6823,7 @@ app.delete('/api/checklists/:checklistId', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
     
-    res.json({ message: 'Checklist supprimée avec succès' });
+    res.json({ message: 'Checklist supprimÃ©e avec succÃ¨s' });
   } catch (err) {
     console.error('Erreur DELETE /api/checklists:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7359,7 +7353,7 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
       return res.status(404).json({ error: 'Client non trouvÃƒÂ©' });
     }
 
-    res.json({ message: 'Client supprimé' });
+    res.json({ message: 'Client supprimÃƒÂ©' });
   } catch (err) {
     console.error('Erreur suppression client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7459,7 +7453,7 @@ app.delete('/api/owner-articles/:id', async (req, res) => {
       return res.status(404).json({ error: 'Article non trouvÃƒÂ©' });
     }
 
-    res.json({ message: 'Article supprimé' });
+    res.json({ message: 'Article supprimÃƒÂ©' });
   } catch (err) {
     console.error('Erreur suppression article:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -7474,7 +7468,7 @@ app.post('/api/owner-articles/init-defaults', async (req, res) => {
 
     await pool.query('SELECT create_default_owner_articles($1)', [user.id]);
 
-    res.json({ message: 'Articles par défaut crés' });
+    res.json({ message: 'Articles par dÃƒÂ©faut crÃƒÂ©ÃƒÂ©s' });
   } catch (err) {
     console.error('Erreur init articles:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -8260,7 +8254,7 @@ app.delete('/api/owner-invoices/:id', async (req, res) => {
 
     await pool.query('DELETE FROM owner_invoices WHERE id = $1', [req.params.id]);
 
-    res.json({ message: 'Facture supprimée' });
+    res.json({ message: 'Facture supprimÃƒÂ©e' });
   } catch (err) {
     console.error('Erreur suppression facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -8574,6 +8568,7 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 // ============================================
 // Ã¢Å“â€¦ NOUVEAU : ROUTES POUR LIVRETS D'ACCUEIL
 // ============================================
+app.locals.pool = pool;
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
 // ============================================
@@ -9567,7 +9562,6 @@ server.listen(PORT, async () => {
 
   await initDb();
   // Ã¢Å“â€¦ NOUVEAU : Initialiser les tables livrets d'accueil
-  app.locals.pool = pool;
   await initWelcomeBookTables(pool);
   console.log('Ã¢Å“â€¦ Tables welcome_books initialisÃƒÂ©es');
   await loadProperties();
