@@ -144,31 +144,41 @@ router.post('/create', authenticateUser, upload.fields([
 
     // 1. RÃ©cupÃ©ration de l'ID existant
     const existingCheck = await pool.query(
-      'SELECT unique_id, data FROM public.welcome_books_v2 WHERE user_id = $1 LIMIT 1',
+      'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id = $1 ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC LIMIT 1',
       [req.userId]
     );
 
     let uniqueId;
     let oldPhotos = {};
 
+    // Priorité: uniqueId envoyé par le client (édition), sinon valeur DB, sinon fallback dans data
+    const clientUniqueId = req.body?.uniqueId || req.body?.unique_id;
+
     if (existingCheck.rows.length > 0) {
-      const row = existingCheck.rows[0] || {};
+      const row = existingCheck.rows[0];
       const oldData = row.data || {};
-      uniqueId = row.unique_id || oldData.uniqueId;
+      const dbUniqueId = row.unique_id;
+
       oldPhotos = oldData.photos || {};
+      uniqueId = clientUniqueId || dbUniqueId || oldData.uniqueId;
 
-      // Si, pour une raison quelconque, l'ID n'est pas récupéré, on en génère un nouveau
-      if (!uniqueId) uniqueId = crypto.randomBytes(16).toString('hex');
+      if (!uniqueId) {
+        uniqueId = crypto.randomBytes(16).toString('hex');
+        console.log(`✨ Aucun uniqueId trouvé, génération : ${uniqueId}`);
+      } else {
+        console.log(`♻️ Mise à jour du livret existant : ${uniqueId}`);
+      }
 
-      console.log(`♻️ Mise à jour du livret existant : ${uniqueId}`);
+      // Si la ligne DB n'avait pas de unique_id (ancien bug), on le fixe une bonne fois pour toutes
+      if (!dbUniqueId) {
+        await pool.query(
+          'UPDATE public.welcome_books_v2 SET unique_id = $1, updated_at = NOW() WHERE id = $2',
+          [uniqueId, row.id]
+        );
+      }
     } else {
-      uniqueId = crypto.randomBytes(16).toString('hex');
+      uniqueId = clientUniqueId || crypto.randomBytes(16).toString('hex');
       console.log(`✨ Création nouveau livret : ${uniqueId}`);
-    }
-      console.log(`â™»ï¸ Mise Ã  jour du livret existant : ${uniqueId}`);
-    } else {
-      uniqueId = crypto.randomBytes(16).toString('hex');
-      console.log(`âœ¨ CrÃ©ation nouveau livret : ${uniqueId}`);
     }
 
     const body = req.body || {};
@@ -241,7 +251,11 @@ router.post('/create', authenticateUser, upload.fields([
       updatedAt: new Date().toISOString()
     };
 
-    // Insert OU Mise Ã  jour si Ã§a existe dÃ©jÃ 
+    if (!uniqueId) {
+      throw new Error('uniqueId manquant (null/undefined) : sauvegarde impossible');
+    }
+
+    // Insert OU Mise à jour si ça existe déjà
     await pool.query(
       `INSERT INTO public.welcome_books_v2 (user_id, unique_id, property_name, data, created_at, updated_at)
        VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
