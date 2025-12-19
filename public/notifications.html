@@ -547,24 +547,46 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
 
-    function applyToForm(settings) {
-      document.getElementById('newResInApp').checked = settings.newResInApp;
-      document.getElementById('newResEmailEnabled').checked = settings.newResEmailEnabled;
-      document.getElementById('newResEmailRecipients').value = settings.newResEmailRecipients || '';
-
-      document.getElementById('roleAdmin').checked = !!settings.roles.admin;
-      document.getElementById('roleManager').checked = !!settings.roles.manager;
-      document.getElementById('roleReception').checked = !!settings.roles.reception;
-      document.getElementById('roleHousekeeping').checked = !!settings.roles.housekeeping;
-
-      const radios = document.querySelectorAll('input[name="newResCondition"]');
-      radios.forEach(r => {
-        r.checked = (r.value === settings.newResCondition);
-      });
-
-      document.getElementById('smsEnabled').checked = settings.smsEnabled;
-      document.getElementById('smsNumbers').value = settings.smsNumbers || '';
+   function applyToForm(settings) {
+  function safeCheck(id, value) {
+    const el = document.getElementById(id);
+    if (!el) {
+      console.warn('⚠️ Champ introuvable:', id);
+      return;
     }
+    el.checked = !!value;
+  }
+
+  function safeValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) {
+      console.warn('⚠️ Champ introuvable:', id);
+      return;
+    }
+    el.value = value || '';
+  }
+
+  // Réservations
+  safeCheck('newResInApp', settings.newResInApp);
+  safeCheck('newResEmailEnabled', settings.newResEmailEnabled);
+  safeValue('newResEmailRecipients', settings.newResEmailRecipients);
+
+  // Rôles
+  safeCheck('roleAdmin', settings.roles?.admin);
+  safeCheck('roleManager', settings.roles?.manager);
+  safeCheck('roleReception', settings.roles?.reception);
+  safeCheck('roleHousekeeping', settings.roles?.housekeeping);
+
+  // Conditions radio
+  const radios = document.querySelectorAll('input[name="newResCondition"]');
+  radios.forEach(r => {
+    r.checked = (r.value === settings.newResCondition);
+  });
+
+  // SMS
+  safeCheck('smsEnabled', settings.smsEnabled);
+  safeValue('smsNumbers', settings.smsNumbers);
+}
 
     function readFromForm() {
       const radios = document.querySelectorAll('input[name="newResCondition"]');
