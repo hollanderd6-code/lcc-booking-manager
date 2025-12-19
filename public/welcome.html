@@ -1346,551 +1346,78 @@ async function deleteLivret(uniqueId) {
 
 // Remplir le formulaire avec les données d'un livret
 function fillFormWithData(data) {
-  document.querySelector('[name="propertyName"]').value = data.propertyName || '';
-  document.querySelector('[name="welcomeDescription"]').value = data.welcomeDescription || '';
-  document.querySelector('[name="contactPhone"]').value = data.contactPhone || '';
-  document.querySelector('[name="address"]').value = data.address || '';
-  document.querySelector('[name="postalCode"]').value = data.postalCode || '';
-  document.querySelector('[name="city"]').value = data.city || '';
-  // ... ajoute les autres champs si besoin
-}
+  if (!data) return;
 
-// Charger la liste au démarrage de la page
-document.addEventListener('DOMContentLoaded', function() {
-  loadLivretsList();
-});
-// --- 1. GESTION AUTHENTIFICATION ---
-function getAuthToken() {
-  const t = localStorage.getItem('lcc_token');
-  return (t && t !== 'undefined' && t !== 'null') ? t : null;
-}
+  // Champs simples
+  const fields = [
+    'propertyName', 'welcomeDescription', 'contactPhone',
+    'address', 'postalCode', 'city', 'keyboxCode',
+    'accessInstructions', 'parkingInfo', 'wifiSSID',
+    'wifiPassword', 'checkoutTime', 'checkoutInstructions',
+    'equipmentList', 'importantRules', 'transportInfo', 'shopsList'
+  ];
 
-async function checkAuth({ redirect = true } = {}) {
-  const token = getAuthToken();
-  if (!token) {
-    if (redirect) window.location.href = '/login.html';
-    return false;
+  fields.forEach(f => {
+    const el = document.querySelector(`[name="${f}"]`);
+    if (!el) return;
+    // On accepte 0 / false / "" : on teste uniquement undefined/null
+    if (data[f] !== undefined && data[f] !== null) el.value = data[f];
+  });
+
+  // Photos existantes (si présentes en URL)
+  if (data.photos) {
+    if (data.photos.cover) showExistingImage('coverPhotoPreview', data.photos.cover);
+    if (Array.isArray(data.photos.entrance)) data.photos.entrance.forEach(u => showExistingImage('entrancePhotosPreview', u));
+    if (Array.isArray(data.photos.parking)) data.photos.parking.forEach(u => showExistingImage('parkingPhotosPreview', u));
   }
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
+
+  // Pièces
+  document.getElementById('roomsContainer').innerHTML = '';
+  roomCounter = 0;
+  if (Array.isArray(data.rooms) && data.rooms.length) {
+    data.rooms.forEach(r => {
+      addRoom();
+      document.querySelector(`[name="room[${roomCounter}][name]"]`).value = r.name || '';
+      document.querySelector(`[name="room[${roomCounter}][description]"]`).value = r.description || '';
     });
-    if (!res.ok) throw new Error('Auth failed');
-    return true;
-  } catch (err) {
-    console.error('Erreur auth:', err);
-    localStorage.removeItem('lcc_token');
-    if (redirect) window.location.href = '/login.html';
-    return false;
+  } else {
+    addRoom();
   }
-}
 
-function initLogout() {
-  const btn = document.getElementById('logoutBtn');
-  if (btn) btn.addEventListener('click', () => {
-    localStorage.removeItem('lcc_token');
-    window.location.href = '/login.html';
-  });
-}
-
-// --- 2. GESTION DU FORMULAIRE (Navigation & Uploads) ---
-let currentSection = 1;
-const totalSections = 5;
-let roomCounter = 0;
-let restaurantCounter = 0;
-let placeCounter = 0;
-
-function nextSection() {
-  if (currentSection < totalSections) {
-    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
-    document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('completed');
-    document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
-    currentSection++;
-    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
-    document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}
-
-function prevSection() {
-  if (currentSection > 1) {
-    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.remove('active');
-    document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('active');
-    currentSection--;
-    document.querySelector(`.form-section[data-section="${currentSection}"]`).classList.add('active');
-    document.querySelector(`.step[data-step="${currentSection}"]`).classList.add('active');
-    document.querySelector(`.step[data-step="${currentSection}"]`).classList.remove('completed');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}
-
-function setupImageUpload(inputId, previewId) {
-  const input = document.getElementById(inputId);
-  const preview = document.getElementById(previewId);
-  if (!input || !preview) return;
-
-  input.addEventListener('change', function(e) {
-    // Si c'est input unique (cover), on vide avant
-    if (!input.multiple) preview.innerHTML = '';
-    
-    Array.from(e.target.files || []).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        const div = document.createElement('div');
-        div.className = 'image-preview-item';
-        div.innerHTML = `<img src="${ev.target.result}"><button type="button" class="remove-btn" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
-        preview.appendChild(div);
-      };
-      reader.readAsDataURL(file);
+  // Restaurants
+  document.getElementById('restaurantsContainer').innerHTML = '';
+  restaurantCounter = 0;
+  if (Array.isArray(data.restaurants) && data.restaurants.length) {
+    data.restaurants.forEach(r => {
+      addRestaurant();
+      document.querySelector(`[name="restaurant[${restaurantCounter}][name]"]`).value = r.name || '';
+      document.querySelector(`[name="restaurant[${restaurantCounter}][phone]"]`).value = r.phone || '';
+      document.querySelector(`[name="restaurant[${restaurantCounter}][address]"]`).value = r.address || '';
+      document.querySelector(`[name="restaurant[${restaurantCounter}][description]"]`).value = r.description || '';
     });
-  });
-}
-
-function showExistingImage(containerId, url) {
-    const container = document.getElementById(containerId);
-    if (!container || !url) return;
-    const div = document.createElement('div');
-    div.className = 'image-preview-item';
-    div.innerHTML = `<img src="${url}" style="object-fit:cover"><div style="position:absolute;bottom:0;background:rgba(0,0,0,0.5);color:white;width:100%;font-size:10px;text-align:center;">Image actuelle</div>`;
-    container.appendChild(div);
-}
-
-// Initialisation des uploads statiques
-setupImageUpload('coverPhoto', 'coverPhotoPreview');
-setupImageUpload('entrancePhotos', 'entrancePhotosPreview');
-setupImageUpload('parkingPhotos', 'parkingPhotosPreview');
-
-// --- 3. GESTION DYNAMIQUE (Pièces, Restos, Lieux) ---
-function addRoom() {
-  roomCounter++;
-  const container = document.getElementById('roomsContainer');
-  const html = `
-    <div class="repeatable-item" id="room-${roomCounter}">
-      <div class="repeatable-item-header">
-        <div class="repeatable-item-title"><i class="fas fa-door-closed"></i> Pièce ${roomCounter}</div>
-        <button type="button" class="remove-item-btn" onclick="document.getElementById('room-${roomCounter}').remove()"><i class="fas fa-trash"></i></button>
-      </div>
-      <div class="form-group"><label>Nom</label><input type="text" class="form-control" name="room[${roomCounter}][name]"></div>
-      <div class="form-group"><label>Description</label><textarea class="form-control" name="room[${roomCounter}][description]" rows="2"></textarea></div>
-      <div class="form-group"><label>Photos</label>
-        <div class="image-upload-area" onclick="document.getElementById('roomPhotos-${roomCounter}').click()"><i class="fas fa-camera"></i><p>Ajouter photos</p></div>
-        <input type="file" id="roomPhotos-${roomCounter}" accept="image/*" multiple style="display:none;">
-        <div class="image-preview" id="roomPhotosPreview-${roomCounter}"></div>
-      </div>
-    </div>`;
-  container.insertAdjacentHTML('beforeend', html);
-  setupImageUpload(`roomPhotos-${roomCounter}`, `roomPhotosPreview-${roomCounter}`);
-}
-
-function addRestaurant() {
-  restaurantCounter++;
-  const html = `
-    <div class="repeatable-item" id="restaurant-${restaurantCounter}">
-      <div class="repeatable-item-header">
-         <div class="repeatable-item-title"><i class="fas fa-utensils"></i> Restaurant ${restaurantCounter}</div>
-         <button type="button" class="remove-item-btn" onclick="document.getElementById('restaurant-${restaurantCounter}').remove()"><i class="fas fa-trash"></i></button>
-      </div>
-      <div class="form-grid">
-        <div class="form-group"><label>Nom</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][name]"></div>
-        <div class="form-group"><label>Tél</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][phone]"></div>
-      </div>
-      <div class="form-group"><label>Adresse</label><input type="text" class="form-control" name="restaurant[${restaurantCounter}][address]"></div>
-      <div class="form-group"><label>Description</label><textarea class="form-control" name="restaurant[${restaurantCounter}][description]" rows="2"></textarea></div>
-    </div>`;
-  document.getElementById('restaurantsContainer').insertAdjacentHTML('beforeend', html);
-}
-
-function addPlace() {
-  placeCounter++;
-  const html = `
-    <div class="repeatable-item" id="place-${placeCounter}">
-      <div class="repeatable-item-header">
-         <div class="repeatable-item-title"><i class="fas fa-map-marker-alt"></i> Lieu ${placeCounter}</div>
-         <button type="button" class="remove-item-btn" onclick="document.getElementById('place-${placeCounter}').remove()"><i class="fas fa-trash"></i></button>
-      </div>
-      <div class="form-group"><label>Nom</label><input type="text" class="form-control" name="place[${placeCounter}][name]"></div>
-      <div class="form-group"><label>Description</label><textarea class="form-control" name="place[${placeCounter}][description]" rows="2"></textarea></div>
-      <div class="form-group"><label>Photo</label>
-        <div class="image-upload-area" onclick="document.getElementById('placePhoto-${placeCounter}').click()"><i class="fas fa-image"></i><p>Photo</p></div>
-        <input type="file" id="placePhoto-${placeCounter}" accept="image/*" style="display:none;">
-        <div class="image-preview" id="placePhotoPreview-${placeCounter}"></div>
-      </div>
-    </div>`;
-  document.getElementById('placesContainer').insertAdjacentHTML('beforeend', html);
-  setupImageUpload(`placePhoto-${placeCounter}`, `placePhotoPreview-${placeCounter}`);
-}
-
-// --- 4. CHARGEMENT DES DONNÉES EXISTANTES ---
-async function loadExistingData() {
-    const token = getAuthToken();
-    if (!token) return;
-
-    try {
-        // On utilise la route principale de server-22.js qui est fiable
-        const response = await fetch(`${API_BASE}/api/welcome`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) return;
-        const data = await response.json();
-
-        // Si on a des données, on remplit
-        if (data && (data.propertyName || data.uniqueId)) {
-            console.log("Données récupérées:", data);
-
-            // Champs simples
-            const fields = [
-                'propertyName', 'welcomeDescription', 'contactPhone', 
-                'address', 'postalCode', 'city', 'keyboxCode', 
-                'accessInstructions', 'parkingInfo', 'wifiSSID', 
-                'wifiPassword', 'checkoutTime', 'checkoutInstructions', 
-                'equipmentList', 'importantRules', 'transportInfo', 'shopsList'
-            ];
-            fields.forEach(f => {
-                const el = document.querySelector(`[name="${f}"]`);
-                if (el && data[f]) el.value = data[f];
-            });
-
-            // Images existantes
-            if (data.photos) {
-                if(data.photos.cover) showExistingImage('coverPhotoPreview', data.photos.cover);
-                if(Array.isArray(data.photos.entrance)) data.photos.entrance.forEach(u => showExistingImage('entrancePhotosPreview', u));
-                if(Array.isArray(data.photos.parking)) data.photos.parking.forEach(u => showExistingImage('parkingPhotosPreview', u));
-            }
-
-            // Pièces
-            document.getElementById('roomsContainer').innerHTML = '';
-            roomCounter = 0;
-            if (Array.isArray(data.rooms)) {
-                data.rooms.forEach(r => {
-                    addRoom();
-                    document.querySelector(`[name="room[${roomCounter}][name]"]`).value = r.name || '';
-                    document.querySelector(`[name="room[${roomCounter}][description]"]`).value = r.description || '';
-                });
-            } else { addRoom(); } // Une vide par défaut
-
-            // Restaurants
-            document.getElementById('restaurantsContainer').innerHTML = '';
-            restaurantCounter = 0;
-            if (Array.isArray(data.restaurants)) {
-                data.restaurants.forEach(r => {
-                    addRestaurant();
-                    document.querySelector(`[name="restaurant[${restaurantCounter}][name]"]`).value = r.name || '';
-                    document.querySelector(`[name="restaurant[${restaurantCounter}][phone]"]`).value = r.phone || '';
-                    document.querySelector(`[name="restaurant[${restaurantCounter}][address]"]`).value = r.address || '';
-                    document.querySelector(`[name="restaurant[${restaurantCounter}][description]"]`).value = r.description || '';
-                });
-            } else { addRestaurant(); }
-
-            // Lieux
-            document.getElementById('placesContainer').innerHTML = '';
-            placeCounter = 0;
-            if (Array.isArray(data.places)) {
-                data.places.forEach(p => {
-                    addPlace();
-                    document.querySelector(`[name="place[${placeCounter}][name]"]`).value = p.name || '';
-                    document.querySelector(`[name="place[${placeCounter}][description]"]`).value = p.description || '';
-                });
-            } else { addPlace(); }
-
-            // URL Public
-            if (data.uniqueId) {
-                window.welcomeBookUrl = `${API_BASE}/welcome/${data.uniqueId}`;
-            }
-        } else {
-            // Pas de données : on initialise les champs vides
-            addRoom();
-            addRestaurant();
-            addPlace();
-        }
-    } catch (e) {
-        console.error("Erreur chargement:", e);
-        // Fallback
-        addRoom(); addRestaurant(); addPlace();
-    }
-}
-
-// --- 5. SOUMISSION ET INITIALISATION ---
-function collectFormData() {
-  const formData = new FormData();
-  // Champs textes simples
-  const fields = ['propertyName','welcomeDescription','contactPhone','address','postalCode','city','keyboxCode','accessInstructions','parkingInfo','wifiSSID','wifiPassword','checkoutTime','checkoutInstructions','equipmentList','importantRules','transportInfo','shopsList'];
-  fields.forEach(f => formData.append(f, document.querySelector(`[name="${f}"]`)?.value || ''));
-
-  // Si on édite un livret existant, on envoie son identifiant
-  if (currentUniqueId) formData.append("uniqueId", currentUniqueId);
-
-  // Fichiers principaux
-  const cover = document.getElementById('coverPhoto').files[0];
-  if(cover) formData.append('coverPhoto', cover);
-  
-  const entrance = document.getElementById('entrancePhotos').files;
-  for(let f of entrance) formData.append('entrancePhotos', f);
-  
-  const parking = document.getElementById('parkingPhotos').files;
-  for(let f of parking) formData.append('parkingPhotos', f);
-
-  // Arrays (Rooms, etc)
-  const rooms = [];
-  document.querySelectorAll('[id^="room-"]').forEach(el => {
-     // On extrait l'index depuis l'ID "room-1", "room-2"
-     const idParts = el.id.split('-');
-     const idx = idParts[1];
-     rooms.push({
-        name: el.querySelector(`[name="room[${idx}][name]"]`)?.value || '',
-        description: el.querySelector(`[name="room[${idx}][description]"]`)?.value || ''
-     });
-     const files = document.getElementById(`roomPhotos-${idx}`)?.files;
-     if(files) for(let f of files) formData.append('roomPhotos', f);
-  });
-  formData.append('rooms', JSON.stringify(rooms));
-
-  const restos = [];
-  document.querySelectorAll('[id^="restaurant-"]').forEach(el => {
-     const idx = el.id.split('-')[1];
-     restos.push({
-        name: el.querySelector(`[name="restaurant[${idx}][name]"]`)?.value || '',
-        phone: el.querySelector(`[name="restaurant[${idx}][phone]"]`)?.value || '',
-        address: el.querySelector(`[name="restaurant[${idx}][address]"]`)?.value || '',
-        description: el.querySelector(`[name="restaurant[${idx}][description]"]`)?.value || ''
-     });
-  });
-  formData.append('restaurants', JSON.stringify(restos));
-
-  const places = [];
-  document.querySelectorAll('[id^="place-"]').forEach(el => {
-     const idx = el.id.split('-')[1];
-     places.push({
-        name: el.querySelector(`[name="place[${idx}][name]"]`)?.value || '',
-        description: el.querySelector(`[name="place[${idx}][description]"]`)?.value || ''
-     });
-     const file = document.getElementById(`placePhoto-${idx}`)?.files[0];
-     if(file) formData.append('placePhotos', file);
-  });
-  formData.append('places', JSON.stringify(places));
-
-  return formData;
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const isAuth = await checkAuth({ redirect: false });
-  initLogout();
-  
-  const form = document.getElementById('welcomeForm');
-  if (form) {
-      form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const btn = form.querySelector('button[type="submit"]');
-          const oldText = btn.innerHTML;
-          btn.disabled = true;
-          btn.innerHTML = '<div class="spinner"></div> Sauvegarde...';
-
-          try {
-              const token = getAuthToken();
-              const formData = collectFormData();
-              const res = await fetch(`${API_BASE}/api/welcome-books/create`, {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${token}` },
-                  body: formData
-              });
-              
-              const result = await res.json();
-             if (result.success) {
-  document.getElementById('successMessage').classList.add('show');
-  window.scrollTo({top:0, behavior:'smooth'});
-  if(result.uniqueId) {
-    window.welcomeBookUrl = `${API_BASE}/welcome/${result.uniqueId}`;
-    // Générer le QR Code
-    setTimeout(() => generateQRCode(window.welcomeBookUrl), 100);
-  }
-              } else {
-                  alert("Erreur: " + (result.error || "Inconnue"));
-              }
-          } catch (err) {
-              console.error(err);
-              alert("Erreur technique");
-          } finally {
-              btn.disabled = false;
-              btn.innerHTML = oldText;
-          }
-      });
+  } else {
+    addRestaurant();
   }
 
-  // Si connecté, on charge les données
-  if (isAuth) {
-      await loadExistingData();
-  }
-});
-
-function viewWelcomeBook() {
-    if(window.welcomeBookUrl) window.open(window.welcomeBookUrl, '_blank');
-}
-
-// Fonction pour copier le lien du livret
-function copyWelcomeBookLink(button) {
-  if (!window.welcomeBookUrl) {
-    alert('URL du livret introuvable');
-    return;
-  }
-  
-  // Copier dans le presse-papier
-  navigator.clipboard.writeText(window.welcomeBookUrl).then(() => {
-    // Changer temporairement le texte du bouton
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    button.style.background = '#10B981';
-    button.style.color = 'white';
-    
-    setTimeout(() => {
-      button.innerHTML = originalText;
-      button.style.background = '';
-      button.style.color = '';
-    }, 2000);
-  }).catch(err => {
-    console.error('Erreur copie:', err);
-    alert('Erreur lors de la copie du lien');
-  });
-}
-
-// Fonction pour modifier le livret (revenir au formulaire)
-function createAnother() {
-  // Cacher le message de succès
-  document.getElementById('successMessage').classList.remove('show');
-  
-  // Afficher le formulaire
-  document.getElementById('welcomeForm').style.display = 'block';
-  
-  // Recharger les données existantes
-  loadExistingData();
-  
-  // Remonter en haut
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-// Générer le QR Code
-function generateQRCode(url) {
-  const qrContainer = document.getElementById('qrcode');
-  qrContainer.innerHTML = ''; // Vider le conteneur
-  
-  new QRCode(qrContainer, {
-    text: url,
-    width: 200,
-    height: 200,
-    colorDark: "#000000",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-  });
-}
-
-// Télécharger le QR Code
-function downloadQRCode() {
-  const qrCanvas = document.querySelector('#qrcode canvas');
-  if (!qrCanvas) {
-    alert('QR Code introuvable');
-    return;
-  }
-  
-  // Convertir le canvas en image
-  const url = qrCanvas.toDataURL('image/png');
-  
-  // Créer un lien de téléchargement
-  const link = document.createElement('a');
-  link.download = `qrcode-${window.welcomeBookUrl ? window.welcomeBookUrl.split('/').pop() : 'livret'}.png`;
-  link.href = url;
-  link.click();
-}
-// Afficher la liste des livrets
-function displayLivretsList(livrets) {
-  const html = livrets.map(livret => `
-    <div style="border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <strong>${livret.propertyName || 'Sans nom'}</strong>
-        <br>
-        <small style="color: #64748b;">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</small>
-      </div>
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-secondary btn-sm" onclick="editLivret('${livret.uniqueId}')">
-          <i class="fas fa-edit"></i> Modifier
-        </button>
-<button class="btn btn-secondary btn-sm" onclick="viewLivret('${livret.uniqueId}')">
-<i class="fas fa-eye"></i> Voir
-        </button>
-        <button class="btn btn-secondary btn-sm" onclick="deleteLivret('${livret.uniqueId}')">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-  
-  document.getElementById('livretsList').innerHTML = html;
-}
-
-// Créer un nouveau livret
-function createNewLivret() {
-  currentUniqueId = null;
-  document.getElementById('welcomeForm').reset();
-  document.getElementById('livretsListSection').style.display = 'none';
-  document.querySelector('form').style.display = 'block';
-}
-
-// Modifier un livret existant
-async function editLivret(uniqueId) {
-  currentUniqueId = uniqueId;
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome-books/public/${uniqueId}`);
-    
-    const data = await response.json();
-    
-    if (data.success && data.book) {
-      fillFormWithData(data.book);
-      document.getElementById('livretsListSection').style.display = 'none';
-      document.getElementById('welcomeForm').style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  } catch (error) {
-    console.error('Erreur chargement livret:', error);
-    alert('Erreur lors du chargement du livret');
-  }
-}
-
-// Voir un livret
-function viewLivret(uniqueId) {
-  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
-}
-
-// Supprimer un livret
-async function deleteLivret(uniqueId) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+  // Lieux
+  document.getElementById('placesContainer').innerHTML = '';
+  placeCounter = 0;
+  if (Array.isArray(data.places) && data.places.length) {
+    data.places.forEach(p => {
+      addPlace();
+      document.querySelector(`[name="place[${placeCounter}][name]"]`).value = p.name || '';
+      document.querySelector(`[name="place[${placeCounter}][description]"]`).value = p.description || '';
     });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      alert('Livret supprimé avec succès');
-      loadLivretsList();
-    } else {
-      alert('Erreur lors de la suppression');
-    }
-  } catch (error) {
-    console.error('Erreur suppression:', error);
-    alert('Erreur lors de la suppression');
+  } else {
+    addPlace();
   }
+
+  // URL public / QR (on se base sur currentUniqueId si on édite)
+  const uid = currentUniqueId || data.uniqueId;
+  if (uid) window.welcomeBookUrl = `${API_BASE}/welcome/${uid}`;
 }
 
-// Remplir le formulaire avec les données d'un livret
-function fillFormWithData(data) {
-  // À compléter selon tes champs
-  document.querySelector('[name="propertyName"]').value = data.propertyName || '';
-  document.querySelector('[name="welcomeDescription"]').value = data.welcomeDescription || '';
-  // ... etc pour tous les champs
-}
-
-// Appeler loadLivretsList() au chargement de la page
+// Appeler loadLivretsList() au chargement de la page() au chargement de la page
 document.addEventListener('DOMContentLoaded', loadLivretsList);
 </script>
 </main>
