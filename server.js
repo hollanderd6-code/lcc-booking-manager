@@ -5893,63 +5893,6 @@ app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res
     });
   }
 });
-
-const swap = swapResult.rows[0];
-
-// ✅ Swap robuste (transaction + verrou + swap atomique)
-await pool.query('BEGIN');
-
-try {
-  // Verrouille les deux lignes pour éviter les courses (double clic, etc.)
-  await pool.query(
-    `SELECT id FROM properties
-     WHERE user_id = $1 AND id IN ($2, $3)
-     FOR UPDATE`,
-    [user.id, current.id, swap.id]
-  );
-
-  const upd = await pool.query(
-    `UPDATE properties
-     SET display_order = CASE
-       WHEN id = $2 THEN $3
-       WHEN id = $4 THEN $5
-       ELSE display_order
-     END,
-     updated_at = now()
-     WHERE user_id = $1 AND id IN ($2, $4)`,
-    [user.id, current.id, Number(swap.display_order), swap.id, currentOrder]
-  );
-
-  // On veut exactement 2 lignes modifiées (les 2 logements swappés)
-  if (upd.rowCount !== 2) {
-    throw new Error(`Swap incomplet (rowCount=${upd.rowCount})`);
-  }
-
-  await pool.query('COMMIT');
-
-  return res.json({
-    success: true,
-    message: 'Ordre mis à jour',
-    propertyId: current.id,
-    swappedWith: swap.id,
-    from: currentOrder,
-    to: Number(swap.display_order)
-  });
-
-} catch (err) {
-  try { await pool.query('ROLLBACK'); } catch (_) {}
-
-  console.error('Erreur réorganisation:', err);
-
-  // Cas fréquent : conflit d'unicité (si DB cassée)
-  if (err && err.code === '23505') {
-    return res.status(409).json({
-      error: "Conflit d'ordre (display_order). Lance la renumérotation SQL (1..N) puis réessaie."
-    });
-  }
-
-  return res.status(500).json({ error: 'Erreur serveur' });
-}
 // ============================================
 // ROUTES API - CONFIG (par user)
 // ============================================
