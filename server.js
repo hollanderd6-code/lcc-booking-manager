@@ -5360,7 +5360,7 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
         wifiName: p.wifi_name || null,
         wifiPassword: p.wifi_password || null,
         accessInstructions: p.access_instructions || null,
-
+        ownerId: p.owner_id || null,  
         icalUrls,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
