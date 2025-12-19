@@ -74,6 +74,7 @@ async function sendEmail(mailOptions) {
       const sendSmtpEmail = new brevo.SendSmtpEmail();
       sendSmtpEmail.subject = mailOptions.subject;
       sendSmtpEmail.htmlContent = mailOptions.html || mailOptions.text;
+      sendSmtpEmail.charset = "UTF-8";
       
       // GÃƒÂ©rer l'expÃƒÂ©diteur (CORRIGÃƒâ€°)
       let senderEmail = process.env.EMAIL_FROM;
@@ -1307,6 +1308,11 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
+// Force UTF-8 pour toutes les réponses JSON
+app.use((req, res, next) => {
+res.charset = 'utf-8';
+next();
+});
 
 // Store for reservations (en mÃƒÂ©moire)
 let reservationsStore = {
