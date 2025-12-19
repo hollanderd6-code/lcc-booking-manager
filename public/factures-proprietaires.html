@@ -663,7 +663,7 @@ input[type="number"] {
   function getAuthToken() {
     return localStorage.getItem('lcc_token');
   }
-
+<script src="/js/auth-fetch.js"></script>
   async function apiFetch(url, options = {}) {
     const token = getAuthToken();
     const headers = { ...(options.headers || {}) };
