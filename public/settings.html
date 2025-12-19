@@ -1243,15 +1243,48 @@
     <!-- 🆕 PATCH OWNER_ID -->
   <script>
   // ============================================
-// PATCH : Correction du owner_id qui ne se sauvegarde pas
-// À ajouter dans settings.js ou à la fin de settings.html
+// PATCH AMÉLIORÉ : Correction du owner_id
+// Remplace le patch précédent par celui-ci
 // ============================================
 
 (function() {
-  console.log('🔧 Patch owner_id activé');
+  console.log('🔧 Patch owner_id V2 activé');
 
   // ============================================
-  // 1. CHARGER LA LISTE DES PROPRIÉTAIRES
+  // 1. CHARGER LES PROPRIÉTÉS
+  // ============================================
+  async function loadAllProperties() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+
+      const res = await fetch('https://lcc-booking-manager.onrender.com/api/properties', {
+        headers: { 
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        console.warn('Impossible de charger les propriétés');
+        return;
+      }
+
+      const data = await res.json();
+      const properties = data.properties || [];
+      
+      // Stocker en global
+      window.allProperties = properties;
+      
+      console.log('✅ Propriétés chargées:', properties.length);
+      
+    } catch (err) {
+      console.error('❌ Erreur chargement propriétés:', err);
+    }
+  }
+
+  // ============================================
+  // 2. CHARGER LA LISTE DES PROPRIÉTAIRES
   // ============================================
   async function loadOwnerClients() {
     try {
@@ -1287,7 +1320,7 @@
   }
 
   // ============================================
-  // 2. REMPLIR LE SELECT AVEC LES PROPRIÉTAIRES
+  // 3. REMPLIR LE SELECT AVEC LES PROPRIÉTAIRES
   // ============================================
   function fillOwnerSelect(clients) {
     const select = document.getElementById('propertyOwnerId');
@@ -1311,7 +1344,7 @@
   }
 
   // ============================================
-  // 3. INTERCEPTER L'OUVERTURE DU MODAL
+  // 4. INTERCEPTER L'OUVERTURE DU MODAL
   // ============================================
   
   // Surveiller les changements sur le modal
@@ -1352,10 +1385,20 @@
       
       // Trouver la propriété dans la liste globale
       const allProperties = window.allProperties || [];
-      const property = allProperties.find(p => String(p.id) === String(propertyId));
       
+      // Chercher avec plusieurs formats d'ID possibles
+      let property = allProperties.find(p => String(p.id) === String(propertyId));
+      
+      // Si pas trouvé, essayer avec property_id
       if (!property) {
-        console.warn('Propriété', propertyId, 'introuvable');
+        property = allProperties.find(p => String(p.property_id) === String(propertyId));
+      }
+      
+      // Si toujours pas trouvé, logger pour debug
+      if (!property) {
+        console.warn('Propriété', propertyId, 'introuvable dans allProperties');
+        console.log('IDs disponibles:', allProperties.map(p => p.id));
+        // On continue quand même, le select reste vide c'est pas grave
         return;
       }
 
@@ -1372,7 +1415,7 @@
   }
 
   // ============================================
-  // 4. INTERCEPTER LA SAUVEGARDE
+  // 5. INTERCEPTER LA SAUVEGARDE
   // ============================================
   
   // Sauvegarder la fonction saveProperty originale
@@ -1403,7 +1446,7 @@
   };
 
   // ============================================
-  // 5. INTERCEPTER LE FETCH POUR AJOUTER OWNER_ID
+  // 6. INTERCEPTER LE FETCH POUR AJOUTER OWNER_ID
   // ============================================
   let nextFetchOwnerId = null;
   
@@ -1440,7 +1483,7 @@
   };
 
   // ============================================
-  // 6. SAUVEGARDE MANUELLE (fallback)
+  // 7. SAUVEGARDE MANUELLE (fallback)
   // ============================================
   async function savePropertyManually(ownerId) {
     const token = localStorage.getItem('lcc_token');
@@ -1521,32 +1564,40 @@
   }
 
   // ============================================
-  // 7. INITIALISATION AU CHARGEMENT
+  // 8. INITIALISATION AU CHARGEMENT
   // ============================================
   window.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Initialisation du patch owner_id');
+    console.log('🚀 Initialisation du patch owner_id V2');
     
-    // Charger la liste des propriétaires
-    loadOwnerClients();
+    // Charger les propriétés ET les propriétaires
+    Promise.all([
+      loadAllProperties(),
+      loadOwnerClients()
+    ]).then(() => {
+      console.log('✅ Toutes les données chargées');
+    });
     
     // Recharger à chaque fois que la page des propriétaires est affichée
     document.addEventListener('visibilitychange', function() {
       if (!document.hidden) {
+        loadAllProperties();
         loadOwnerClients();
       }
     });
   });
 
   // ============================================
-  // 8. EXPOSER LES FONCTIONS POUR DEBUG
+  // 9. EXPOSER LES FONCTIONS POUR DEBUG
   // ============================================
   window.debugOwnerPatch = {
+    loadAllProperties,
     loadOwnerClients,
     fillOwnerSelect,
+    properties: () => window.allProperties,
     clients: () => window.ownerClients
   };
 
-  console.log('✅ Patch owner_id installé avec succès');
+  console.log('✅ Patch owner_id V2 installé avec succès');
   console.log('💡 Debug disponible via window.debugOwnerPatch');
 
 })();
