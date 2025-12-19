@@ -1349,7 +1349,7 @@ async function deleteLivret(uniqueId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
   try {
-    const response = await fetch(`${API_BASE}/api/welcome/by-unique/${uniqueId}`, {
+    const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
     });
@@ -1371,6 +1371,23 @@ async function deleteLivret(uniqueId) {
 }
 
 // Remplir le formulaire avec les données d'un livret
+// Affiche une image déjà existante (URL) dans un container de preview
+function showExistingImage(containerId, url) {
+  const container = document.getElementById(containerId);
+  if (!container || !url) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'preview-thumb';
+
+  const img = document.createElement('img');
+  img.src = url;
+  img.alt = 'Photo existante';
+  img.loading = 'lazy';
+
+  wrapper.appendChild(img);
+  container.appendChild(wrapper);
+}
+
 function fillFormWithData(data) {
   if (!data) return;
 
