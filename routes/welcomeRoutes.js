@@ -109,7 +109,11 @@ router.get('/my-book', authenticateUser, async (req, res) => {
     
     // On cherche le livret de l'utilisateur connectÃ©
     const result = await pool.query(
-      `SELECT data FROM welcome_books_v2 WHERE user_id = $1`,
+      `SELECT unique_id, data
+       FROM welcome_books_v2
+       WHERE user_id = $1
+       ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+       LIMIT 1`,
       [req.userId]
     );
 
@@ -122,7 +126,7 @@ router.get('/my-book', authenticateUser, async (req, res) => {
     res.json({ 
       success: true, 
       exists: true, 
-      data: result.rows[0].data 
+      data: { ...(result.rows[0].data || {}), uniqueId: result.rows[0].unique_id } 
     });
 
   } catch (error) {
@@ -357,7 +361,11 @@ router.get('/public/:uniqueId', async (req, res) => {
 
     if (bookRes.rows.length === 0) return res.status(404).json({ error: 'Livret introuvable' });
 
-    res.json({ success: true, book: bookRes.rows[0].data, updatedAt: bookRes.rows[0].updated_at });
+    res.json({
+      success: true,
+      book: { ...(bookRes.rows[0].data || {}), uniqueId },
+      updatedAt: bookRes.rows[0].updated_at
+    });
   } catch (e) {
     console.error('PUBLIC welcome error:', e);
     res.status(500).json({ error: 'Erreur serveur', details: e.message });
