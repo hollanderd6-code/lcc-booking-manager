@@ -658,39 +658,9 @@ input[type="number"] {
   </div>
 </div>
 
-
-<<script>
-  function getAuthToken() {
-    return localStorage.getItem('lcc_token');
-  }
 <script src="/js/auth-fetch.js"></script>
-  async function apiFetch(url, options = {}) {
-    const token = getAuthToken();
-    const headers = { ...(options.headers || {}) };
-
-    if (token) {
-      headers.Authorization = 'Bearer ' + token;
-    }
-
-    if (options.body && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    const res = await fetch(url, { ...options, headers });
-
-    if (res.status === 401) {
-      // session expirée ou invalide
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
-      throw new Error('Unauthorized');
-    }
-
-    return res;
-  }
-</script>
-  
-  let token = localStorage.getItem('lcc_token');
+<script>
+let token = localStorage.getItem('lcc_token');
   let clients = [];
   let prestations = [];
   let prestationCounter = 0;
@@ -2043,7 +2013,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     localStorage.removeItem('lcc_token');
     window.location.href = '/login.html';
   };
-</script>
 
+</script>
 </body>
 </html>
