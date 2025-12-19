@@ -1404,8 +1404,8 @@
 
       // Pré-remplir le select avec owner_id
       const select = document.getElementById('propertyOwnerId');
-      if (select && property.owner_id) {
-        select.value = property.owner_id;
+      iif (select && (property.ownerId || property.owner_id)) {
+        select.value = property.ownerId || property.owner_id;
         console.log('✅ owner_id pré-rempli:', property.owner_id);
       } else if (select) {
         select.value = '';
