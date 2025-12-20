@@ -306,7 +306,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   // 3. RÉCUPÉRATION DES PROPRIÉTÉS (pour liste déroulante)
   // ============================================
 
-  app.get('/api/chat/properties', authenticateToken, async (req, res) => {
+  app.get('/api/chat/properties', async (req, res) => {
     try {
       // Récupérer toutes les propriétés actives
       const result = await pool.query(
