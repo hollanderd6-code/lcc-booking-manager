@@ -1563,7 +1563,31 @@ async function deleteLivret(uniqueId) {
     alert('Erreur lors de la suppression');
   }
 }
+function downloadQRCode(uniqueId) {
+  try {
+    // 1) Si tu as un <img id="qrCodeImg-UNIQUEID"> (cas fréquent)
+    const img =
+      document.getElementById(`qrCodeImg-${uniqueId}`) ||
+      document.querySelector(`[data-qr="${uniqueId}"]`);
 
+    if (img && img.src) {
+      const a = document.createElement("a");
+      a.href = img.src;
+      a.download = `qr-${uniqueId}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+
+    // 2) Sinon, fallback: on ouvre l’URL publique (tu peux adapter si tu as un endpoint QR)
+    const url = `${API_BASE}/welcome/${uniqueId}`;
+    window.open(url, "_blank");
+  } catch (e) {
+    console.error("downloadQRCode error:", e);
+    alert("Impossible de télécharger le QR code.");
+  }
+}
 // Remplir le formulaire avec les données d'un livret
 // Affiche une image déjà existante (URL) dans un container de preview
 function showExistingImage(containerId, url) {
