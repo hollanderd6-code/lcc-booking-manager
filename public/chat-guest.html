@@ -450,68 +450,129 @@
         height: 100vh;
         max-height: 100vh;
       }
+
+.pin-input {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.pin-input::placeholder {
+  letter-spacing: 4px;
+}
+
+.form-help {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
     }
   </style>
   <script src="/js/auth-fetch.js"></script>
 </head>
 <body>
   <div class="container">
-    <!-- PAGE DE VÉRIFICATION -->
-    <div class="verification-card" id="verificationPage">
-      <div class="verification-header">
-        <div class="verification-icon">
-          <i class="fas fa-shield-alt"></i>
-        </div>
-        <h1>Accès sécurisé</h1>
-        <p class="subtitle">Vérifiez votre identité pour accéder au chat</p>
+    <!-- Section de vérification -->
+<div class="verification-container" id="verificationContainer">
+  <div class="verification-card">
+    <div class="verification-header">
+      <div class="verification-icon">
+        <i class="fas fa-shield-check"></i>
+      </div>
+      <h1 class="verification-title">Accès au Chat</h1>
+      <p class="verification-subtitle">
+        Vérifiez votre réservation pour accéder au chat sécurisé
+      </p>
+    </div>
+
+    <form id="verificationForm" class="verification-form">
+      <!-- Code PIN -->
+      <div class="form-group">
+        <label class="form-label">
+          <i class="fas fa-lock"></i>
+          Code PIN à 4 chiffres
+        </label>
+        <input 
+          type="text" 
+          id="pinCode" 
+          class="form-input pin-input" 
+          placeholder="0000"
+          maxlength="4"
+          pattern="\d{4}"
+          required
+          autocomplete="off"
+        />
+        <p class="form-help">Le code PIN vous a été fourni par le propriétaire</p>
       </div>
 
-      <form id="verificationForm">
-        <div class="form-group">
-          <label>🏠 Logement réservé</label>
-          <select id="propertySelect" required>
-            <option value="">Chargement...</option>
-          </select>
-        </div>
+      <!-- Date d'arrivée (Check-in) -->
+      <div class="form-group">
+        <label class="form-label">
+          <i class="fas fa-calendar-check"></i>
+          Date d'arrivée
+        </label>
+        <input 
+          type="date" 
+          id="checkinDate" 
+          class="form-input" 
+          required
+        />
+      </div>
 
-        <div class="form-group">
-          <label>📅 Date d'arrivée (check-in)</label>
-          <input type="date" id="checkinDate" required>
-        </div>
+      <!-- Date de départ (Check-out) - OPTIONNEL -->
+      <div class="form-group">
+        <label class="form-label">
+          <i class="fas fa-calendar-times"></i>
+          Date de départ (optionnel)
+        </label>
+        <input 
+          type="date" 
+          id="checkoutDate" 
+          class="form-input"
+        />
+        <p class="form-help">Peut aider à identifier votre réservation plus précisément</p>
+      </div>
 
-        <div class="form-group">
-          <label>🌐 Plateforme de réservation</label>
-          <select id="platformSelect" required>
-            <option value="">-- Sélectionnez --</option>
-            <option value="airbnb">Airbnb</option>
-            <option value="booking">Booking.com</option>
-            <option value="abritel">Abritel</option>
-            <option value="vrbo">VRBO</option>
-            <option value="direct">Réservation directe</option>
-          </select>
-        </div>
+      <!-- Plateforme de réservation -->
+      <div class="form-group">
+        <label class="form-label">
+          <i class="fas fa-building"></i>
+          Plateforme de réservation
+        </label>
+        <select id="platform" class="form-input" required>
+          <option value="">Sélectionnez votre plateforme</option>
+          <option value="Airbnb">Airbnb</option>
+          <option value="Booking.com">Booking.com</option>
+          <option value="VRBO">VRBO</option>
+          <option value="Abritel">Abritel</option>
+          <option value="HomeAway">HomeAway</option>
+          <option value="Direct">Réservation directe</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </div>
 
-        <div class="form-group">
-          <label>🔢 Code de vérification (4 chiffres)</label>
-          <input 
-            type="text" 
-            id="pinCode" 
-            maxlength="4" 
-            pattern="[0-9]{4}" 
-            placeholder="0000" 
-            required
-            autocomplete="off"
-          >
-        </div>
+      <!-- Message d'erreur -->
+      <div id="verificationError" class="error-message" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="errorText"></span>
+      </div>
 
-        <button type="submit" class="btn" id="verifyBtn">
-          <i class="fas fa-check-circle"></i> Vérifier et accéder
-        </button>
+      <!-- Bouton de vérification -->
+      <button type="submit" class="btn-verify" id="verifyBtn">
+        <i class="fas fa-check-circle"></i>
+        Vérifier et accéder au chat
+      </button>
+    </form>
 
-        <div class="error-message" id="errorMessage"></div>
-        <div class="warning-message" id="warningMessage"></div>
-      </form>
+    <!-- Note de sécurité -->
+    <div class="security-note">
+      <i class="fas fa-info-circle"></i>
+      <span>Vos informations sont vérifiées de manière sécurisée</span>
     </div>
+  </div>
+</div>
 
     <!-- INTERFACE DE CHAT -->
     <div class="chat-container" id="chatContainer">
@@ -892,6 +953,128 @@
         warningDiv.classList.remove('show');
       }, 5000);
     }
+// Récupérer l'ID du logement depuis l'URL
+const urlParams = new URLSearchParams(window.location.search);
+const propertyId = urlParams.get('property');
+
+if (!propertyId) {
+  document.getElementById('verificationContainer').innerHTML = `
+    <div class="verification-card">
+      <div class="error-message" style="display: flex;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.</span>
+      </div>
+    </div>
+  `;
+}
+
+// Gestion du formulaire de vérification
+document.getElementById('verificationForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const pinCode = document.getElementById('pinCode').value.trim();
+  const checkinDate = document.getElementById('checkinDate').value;
+  const checkoutDate = document.getElementById('checkoutDate').value || null;
+  const platform = document.getElementById('platform').value;
+  const errorDiv = document.getElementById('verificationError');
+  const errorText = document.getElementById('errorText');
+  const verifyBtn = document.getElementById('verifyBtn');
+  
+  // Validation
+  if (!/^\d{4}$/.test(pinCode)) {
+    errorDiv.style.display = 'flex';
+    errorText.textContent = 'Le code PIN doit être composé de 4 chiffres';
+    return;
+  }
+  
+  if (!checkinDate || !platform) {
+    errorDiv.style.display = 'flex';
+    errorText.textContent = 'Veuillez remplir tous les champs requis';
+    return;
+  }
+  
+  // Désactiver le bouton pendant la vérification
+  verifyBtn.disabled = true;
+  verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+  errorDiv.style.display = 'none';
+  
+  try {
+    const response = await fetch('/api/chat/verify-by-property', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        property_id: propertyId,
+        chat_pin: pinCode,
+        checkin_date: checkinDate,
+        checkout_date: checkoutDate,
+        platform: platform
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Erreur de vérification');
+    }
+    
+    // ✅ Vérification réussie !
+    // Stocker les infos dans sessionStorage
+    sessionStorage.setItem('chat_conversation_id', data.conversation_id);
+    sessionStorage.setItem('chat_property_id', data.property_id);
+    sessionStorage.setItem('chat_property_name', data.property_name || 'Logement');
+    sessionStorage.setItem('chat_verified', 'true');
+    
+    // Afficher le chat
+    showChatInterface();
+    
+  } catch (error) {
+    console.error('Erreur:', error);
+    errorDiv.style.display = 'flex';
+    errorText.textContent = error.message || 'Erreur lors de la vérification. Vérifiez vos informations.';
+    
+    verifyBtn.disabled = false;
+    verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder au chat';
+  }
+});
+
+// Fonction pour afficher l'interface de chat après vérification
+function showChatInterface() {
+  const verificationContainer = document.getElementById('verificationContainer');
+  const chatContainer = document.getElementById('chatContainer');
+  
+  if (verificationContainer) verificationContainer.style.display = 'none';
+  if (chatContainer) chatContainer.style.display = 'flex';
+  
+  // Charger les messages
+  loadMessages();
+  
+  // Initialiser Socket.IO
+  initializeSocketIO();
+}
+
+// Auto-formater le PIN (ajouter des espaces tous les 2 chiffres pour la lisibilité)
+document.getElementById('pinCode')?.addEventListener('input', (e) => {
+  let value = e.target.value.replace(/\D/g, ''); // Garder uniquement les chiffres
+  e.target.value = value;
+});
+
+// Définir la date minimale comme aujourd'hui - 30 jours (on peut avoir des réservations passées récentes)
+const checkinInput = document.getElementById('checkinDate');
+if (checkinInput) {
+  const today = new Date();
+  today.setDate(today.getDate() - 30);
+  checkinInput.min = today.toISOString().split('T')[0];
+}
+
+// Limiter la date de checkout basée sur le checkin
+document.getElementById('checkinDate')?.addEventListener('change', (e) => {
+  const checkoutInput = document.getElementById('checkoutDate');
+  if (checkoutInput && e.target.value) {
+    checkoutInput.min = e.target.value;
+  }
+});
   </script>
 </body>
 </html>
