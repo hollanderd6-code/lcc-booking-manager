@@ -1406,7 +1406,7 @@ async function saveWelcomeBook(e) {
     if (data.uniqueId) currentUniqueId = data.uniqueId;
 
     // Affichage succès
-    document.getElementById('welcomeFormSection').style.display = 'none';
+    hideFormShowSuccess();
     document.getElementById('successMessage').style.display = 'block';
 
     // Recharge la liste pour voir le livret
@@ -1434,7 +1434,7 @@ function createAnother() {
   addRoom(); addRestaurant(); addPlace();
 
   document.getElementById('successMessage').style.display = 'none';
-  document.getElementById('welcomeFormSection').style.display = 'block';
+  setDisplayById('welcomeForm','block');
   showSection(0);
 }
 
@@ -1528,7 +1528,7 @@ async function editLivret(uniqueId) {
     if (data && data.success && data.book) {
       fillFormWithData(data.book);
       document.getElementById('livretsListSection').style.display = 'none';
-      document.getElementById('welcomeFormSection').style.display = 'block';
+      setDisplayById('welcomeForm','block');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       alert((data && data.error) ? data.error : "Impossible de charger ce livret.");
@@ -1739,4 +1739,22 @@ document.addEventListener('DOMContentLoaded', loadLivretsList);
 </main>
 </div>
 </body>
-</html>
+</html>function setDisplayById(id, display) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = display;
+}
+
+function hideFormShowSuccess() {
+  // Le form n'a pas de wrapper welcomeFormSection dans cette page, on masque directement le form
+  setDisplayById('welcomeForm', 'none');
+  setDisplayById('successMessage', 'block');
+}
+
+function showFormHideLists() {
+  setDisplayById('livretsListSection', 'none');
+  setDisplayById('successMessage', 'none');
+  setDisplayById('welcomeForm', 'block');
+  showSection(0);
+}
+
+
