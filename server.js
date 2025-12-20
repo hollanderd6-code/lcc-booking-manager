@@ -1832,7 +1832,8 @@ async function loadProperties() {
         wifi_password,
         access_instructions,
         owner_id,
-        display_order
+        display_order,
+        chat_pin
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -1865,7 +1866,8 @@ async function loadProperties() {
         wifi_password: row.wifi_password,
         access_instructions: row.access_instructions,
         owner_id: row.owner_id,
-        display_order: row.display_order
+        display_order: row.display_order,
+        chat_pin: row.chat_pin
       };
     });
     console.log(`Ã¢Å“â€¦ PROPERTIES chargÃƒ©es : ${PROPERTIES.length} logements`); 
