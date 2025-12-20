@@ -874,6 +874,8 @@ const chatSectionHtml = `
           </div>
 
           ${boostinghostHtml}
+          
+          ${chatSectionHtml}
         </div>
       `;
     })
