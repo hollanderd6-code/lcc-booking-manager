@@ -589,62 +589,34 @@
 }
 
     function readFromForm() {
-      const radios = document.querySelectorAll('input[name="newResCondition"]');
-      let condition = 'confirmed';
-      radios.forEach(r => {
-        if (r.checked) condition = r.value;
-      });
+  const getChecked = (id, fallback = false) => {
+    const el = document.getElementById(id);
+    return el ? !!el.checked : fallback;
+  };
 
-      return {
-        newResInApp: document.getElementById('newResInApp').checked,
-        newResEmailEnabled: document.getElementById('newResEmailEnabled').checked,
-        newResEmailRecipients: document.getElementById('newResEmailRecipients').value.trim(),
-        roles: {
-          admin: document.getElementById('roleAdmin').checked,
-          manager: document.getElementById('roleManager').checked,
-          reception: document.getElementById('roleReception').checked,
-          housekeeping: document.getElementById('roleHousekeeping').checked
-        },
-        newResCondition: condition,
-        smsEnabled: document.getElementById('smsEnabled').checked,
-        smsNumbers: document.getElementById('smsNumbers').value.trim()
-      };
-    }
+  const getValue = (id, fallback = '') => {
+    const el = document.getElementById(id);
+    return el ? (el.value || '').trim() : fallback;
+  };
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const saveBtn = document.getElementById('saveBtn');
-      const resetBtn = document.getElementById('resetBtn');
-      const saveStatus = document.getElementById('saveStatus');
+  const radios = document.querySelectorAll('input[name="newResCondition"]');
+  let condition = 'confirmed';
+  radios.forEach(r => { if (r.checked) condition = r.value; });
 
-      const settings = loadSettings();
+  return {
+    newResInApp: getChecked('newResInApp', true),
+    newResEmailEnabled: getChecked('newResEmailEnabled', true),
+    newResEmailRecipients: getValue('newResEmailRecipients', ''),
 
-const token = localStorage.getItem('lcc_token');
-if (token) {
-  fetch(`${API_URL}/api/settings/notifications`, {
-    headers: {
-      'Authorization': 'Bearer ' + token
-    }
-  })
-    .then(res => res.json())
-    .then(serverSettings => {
-      // on fusionne ce qui vient du backend dans notre objet front
-      settings.smsEnabled =
-        typeof serverSettings.whatsappEnabled === 'boolean'
-          ? serverSettings.whatsappEnabled
-          : settings.smsEnabled;
+    roles: {
+      admin: getChecked('roleAdmin', true),
+      manager: getChecked('roleManager', true),
+      reception: getChecked('roleReception', true),
+      housekeeping: getChecked('roleHousekeeping', false)
+    },
 
-      settings.smsNumbers =
-        typeof serverSettings.whatsappNumber === 'string'
-          ? serverSettings.whatsappNumber
-          : settings.smsNumbers;
-
-      applyToForm(settings);
-      saveSettings(settings);
-    })
-    .catch(err => {
-      console.error('Erreur chargement settings serveur', err);
-      applyToForm(settings);
-    });
+    newResCondition: condition
+  };
 } else {
   applyToForm(settings);
 }
