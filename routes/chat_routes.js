@@ -405,7 +405,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 
       // Récupérer les messages
       const messages = await pool.query(
-        `SELECT id, sender_type, sender_name, content, is_read, is_bot_response, created_at 
+        `SELECT id, sender_type, sender_name, message, is_read, is_bot_response, created_at 
          FROM messages 
          WHERE conversation_id = $1 
          ORDER BY created_at ASC`,
@@ -437,9 +437,9 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   app.post('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
-      const { content, sender_name } = req.body;
+      const { message, sender_name } = req.body;
 
-      if (!content || !content.trim()) {
+      if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message vide' });
       }
 
@@ -468,10 +468,10 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 
       // Insérer le message
       const result = await pool.query(
-        `INSERT INTO messages (conversation_id, sender_type, sender_name, content, is_read)
+        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, sender_type, sender_name, content, is_read, is_bot_response, created_at`,
-        [conversationId, senderType, sender_name, content.trim(), senderType === 'owner']
+         RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+        [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
       );
 
       const message = result.rows[0];
@@ -487,14 +487,14 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 
       // Si message du voyageur, vérifier si une réponse auto est applicable
       if (senderType === 'guest') {
-        const autoResponse = await findAutoResponse(pool, conv.user_id, conv.property_id, content);
+        const autoResponse = await findAutoResponse(pool, conv.user_id, conv.property_id, message);
         
         if (autoResponse) {
           // Envoyer réponse automatique
           const botResult = await pool.query(
-            `INSERT INTO messages (conversation_id, sender_type, sender_name, content, is_read, is_bot_response)
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
              VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-             RETURNING id, sender_type, sender_name, content, is_read, is_bot_response, created_at`,
+             RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
             [conversationId, autoResponse]
           );
 
@@ -707,7 +707,7 @@ async function sendWelcomeMessage(pool, conversationId, propertyId, userId) {
 
     // Insérer le message de bienvenue
     await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, sender_name, content, is_read, is_bot_response)
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
        VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)`,
       [conversationId, welcomeContent]
     );
