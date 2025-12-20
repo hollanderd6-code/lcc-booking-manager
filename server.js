@@ -5435,9 +5435,11 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
   accessCode,
   wifiName,
   wifiPassword,
-  accessInstructions
+  accessInstructions,
+      chatPin 
     } = body;
-
+// Générer automatiquement un PIN si non fourni
+const finalChatPin = chatPin || Math.floor(1000 + Math.random() * 9000).toString();
     if (!name || !color) {
       return res.status(400).json({ error: 'Nom et couleur requis' });
     }
@@ -5497,7 +5499,7 @@ await pool.query(
      id, user_id, name, color, ical_urls,
      address, arrival_time, departure_time, deposit_amount, photo_url,
      welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
-     owner_id, display_order, created_at
+     owner_id, display_order, chat_pin, created_at
    )
    VALUES (
      $1, $2, $3, $4, $5,
@@ -5523,7 +5525,8 @@ await pool.query(
     wifiName || null,
     wifiPassword || null,
     accessInstructions || null,
-    ownerId
+    ownerId,
+    finalChatPin
   ]
 );
       
@@ -5571,8 +5574,14 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   wifiName,
   wifiPassword,
   accessInstructions,
-  ownerId
+  ownerId,
+      chatPin 
     } = body;
+// Gérer la mise à jour du PIN (garder l'ancien si non fourni)
+const newChatPin = 
+  chatPin !== undefined 
+    ? (chatPin || property.chat_pin) 
+    : (property.chat_pin || null);
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
@@ -5692,8 +5701,9 @@ await pool.query(
      wifi_name = $11,
      wifi_password = $12,
      access_instructions = $13,
-     owner_id = $14
-   WHERE id = $15 AND user_id = $16`,
+     owner_id = $14,
+     chat_pin = $15
+   WHERE id = $16 AND user_id = $17`,
   [
     newName,
     newColor,
@@ -5708,7 +5718,8 @@ await pool.query(
     newWifiName,
     newWifiPassword,
     newAccessInstructions,
-    newOwnerId, // Ã¢â€  AJOUTE CETTE LIGNE
+    newOwnerId,
+    newChatPin,
     propertyId,
     user.id
   ]
@@ -5999,7 +6010,7 @@ app.post('/api/auth/register', async (req, res) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Ã¢Å“â€¦ VÃƒ©rifiez votre adresse email - Boostinghost',
+      subject: 'Vérif¦ Vérifiez votre adresse email - Boostinghost',
       html: `
         <!DOCTYPE html>
         <html>
@@ -6028,7 +6039,7 @@ app.post('/api/auth/register', async (req, res) => {
               
               <div style="text-align: center;">
                 <a href="${verificationUrl}" class="button">
-                  Ã¢Å“â€¦ VÃƒ©rifier mon email
+                  Ã¢Å“â€¦ Vérifier mon email
                 </a>
               </div>
               
@@ -6057,7 +6068,7 @@ app.post('/api/auth/register', async (req, res) => {
       console.log('Email de vÃƒ©rification envoyÃƒ© Ãƒ :', email);
     } catch (emailErr) {
       console.error('Erreur envoi email:', emailErr);
-      // On continue quand mÃƒªme
+      // On continue quand même
     }
 // Retourner succÃƒ¨s
     res.status(201).json({
