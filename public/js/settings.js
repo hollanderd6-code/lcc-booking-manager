@@ -584,7 +584,9 @@ function renderProperties() {
       const hasAccessInfo = accessCode || p.accessInstructions;
       const welcomeBookUrl = p.welcomeBookUrl || "";
       const photoUrl = p.photoUrl || p.photo || null;
-
+const chatPin = p.chatPin || p.chat_pin || 'Non défini';
+const chatLink = `${window.location.origin}/chat-guest.html?property=${id}`;
+      
       let urls = p.icalUrls || [];
       if (!Array.isArray(urls)) urls = [];
 
@@ -630,6 +632,94 @@ function renderProperties() {
           <span style="margin-left:6px;">Aucune URL iCal configurée</span>
         </div>
       `;
+const chatSectionHtml = `
+  <div class="chat-link-section" style="margin-top: 16px; padding: 14px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 14px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+      <i class="fas fa-comments" style="color: #fff; font-size: 16px;"></i>
+      <span style="color: #fff; font-weight: 600; font-size: 14px;">Lien de chat voyageurs</span>
+    </div>
+    
+    <!-- Lien unique -->
+    <div class="chat-link-item" style="background: rgba(255,255,255,0.15); padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+        <i class="fas fa-link" style="color: #fff; font-size: 12px;"></i>
+        <span style="color: #fff; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Lien unique</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input 
+          type="text" 
+          value="${escapeHtml(chatLink)}" 
+          readonly 
+          class="chat-link-input"
+          style="flex: 1; background: rgba(255,255,255,0.9); border: none; padding: 8px 10px; border-radius: 8px; font-size: 12px; color: #374151; font-family: 'Courier New', monospace;"
+        />
+        <button 
+          type="button" 
+          class="btn-copy-chat-link" 
+          data-link="${escapeHtml(chatLink)}"
+          style="background: #fff; color: #059669; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;"
+          onmouseover="this.style.background='#f0fdf4'" 
+          onmouseout="this.style.background='#fff'"
+        >
+          <i class="fas fa-copy"></i> Copier
+        </button>
+      </div>
+    </div>
+    
+    <!-- Code PIN -->
+    <div class="chat-pin-item" style="background: rgba(255,255,255,0.15); padding: 10px 12px; border-radius: 10px; margin-bottom: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+        <i class="fas fa-lock" style="color: #fff; font-size: 12px;"></i>
+        <span style="color: #fff; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Code PIN (4 chiffres)</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input 
+          type="text" 
+          value="${escapeHtml(chatPin)}" 
+          maxlength="4"
+          class="chat-pin-input"
+          data-property-id="${escapeHtml(id)}"
+          style="width: 80px; background: rgba(255,255,255,0.9); border: none; padding: 8px 12px; border-radius: 8px; font-size: 16px; font-weight: 700; color: #374151; text-align: center; font-family: 'Courier New', monospace;"
+        />
+        <button 
+          type="button" 
+          class="btn-update-pin" 
+          data-property-id="${escapeHtml(id)}"
+          style="background: #fff; color: #059669; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;"
+          onmouseover="this.style.background='#f0fdf4'" 
+          onmouseout="this.style.background='#fff'"
+        >
+          <i class="fas fa-save"></i> Modifier
+        </button>
+        <button 
+          type="button" 
+          class="btn-regenerate-pin" 
+          data-property-id="${escapeHtml(id)}"
+          style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
+          onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+          title="Générer un nouveau code aléatoire"
+        >
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Bouton copier message automatique -->
+    <button 
+      type="button" 
+      class="btn-copy-auto-message" 
+      data-link="${escapeHtml(chatLink)}" 
+      data-pin="${escapeHtml(chatPin)}"
+      data-property-name="${escapeHtml(name)}"
+      style="width: 100%; background: #fff; color: #059669; border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;"
+      onmouseover="this.style.background='#f0fdf4'; this.style.transform='translateY(-1px)'" 
+      onmouseout="this.style.background='#fff'; this.style.transform='translateY(0)'"
+    >
+      <i class="fas fa-copy"></i>
+      <span>Copier le message automatique</span>
+    </button>
+  </div>
 
       const addressBadge = address
         ? `<span class="meta-badge"><i class="fas fa-location-dot"></i>${escapeHtml(
@@ -864,5 +954,114 @@ document.addEventListener('click', async function(e) {
     } finally {
       hideLoading();
     }
+  }
+});
+// Copier le lien de chat
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.btn-copy-chat-link')) {
+    const btn = e.target.closest('.btn-copy-chat-link');
+    const link = btn.dataset.link;
+    
+    navigator.clipboard.writeText(link).then(() => {
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+      }, 2000);
+    }).catch(err => {
+      console.error('Erreur copie:', err);
+      showToast('Erreur lors de la copie', 'error');
+    });
+  }
+});
+
+// Modifier le PIN
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('.btn-update-pin')) {
+    const btn = e.target.closest('.btn-update-pin');
+    const propertyId = btn.dataset.propertyId;
+    const pinInput = document.querySelector(`.chat-pin-input[data-property-id="${propertyId}"]`);
+    const newPin = pinInput.value.trim();
+    
+    // Validation
+    if (!/^\d{4}$/.test(newPin)) {
+      showToast('Le code PIN doit être composé de 4 chiffres', 'error');
+      return;
+    }
+    
+    try {
+      showLoading();
+      const token = localStorage.getItem('lcc_token');
+      const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ chatPin: newPin })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la mise à jour');
+      }
+      
+      showToast('Code PIN mis à jour avec succès', 'success');
+      await loadProperties(); // Recharger la liste
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+      showToast('Erreur lors de la mise à jour du PIN', 'error');
+    } finally {
+      hideLoading();
+    }
+  }
+});
+
+// Régénérer le PIN automatiquement
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('.btn-regenerate-pin')) {
+    const btn = e.target.closest('.btn-regenerate-pin');
+    const propertyId = btn.dataset.propertyId;
+    const newPin = Math.floor(1000 + Math.random() * 9000).toString();
+    
+    const pinInput = document.querySelector(`.chat-pin-input[data-property-id="${propertyId}"]`);
+    pinInput.value = newPin;
+    
+    // Déclencher la sauvegarde automatique
+    const updateBtn = document.querySelector(`.btn-update-pin[data-property-id="${propertyId}"]`);
+    updateBtn.click();
+  }
+});
+
+// Copier le message automatique pour les plateformes
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.btn-copy-auto-message')) {
+    const btn = e.target.closest('.btn-copy-auto-message');
+    const link = btn.dataset.link;
+    const pin = btn.dataset.pin;
+    const propertyName = btn.dataset.propertyName;
+    
+    const message = `🎉 Bienvenue dans votre logement "${propertyName}" !
+
+Pour toute question ou information durant votre séjour, vous pouvez me contacter directement via notre chat sécurisé :
+
+🔗 Lien : ${link}
+🔐 Code PIN : ${pin}
+
+Il vous suffit de cliquer sur le lien, d'entrer le code PIN ainsi que vos dates de réservation et la plateforme utilisée pour accéder au chat.
+
+À très bientôt ! 😊`;
+    
+    navigator.clipboard.writeText(message).then(() => {
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Message copié !';
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+      }, 2000);
+      showToast('Message copié ! Vous pouvez le coller sur Airbnb, Booking, etc.', 'success');
+    }).catch(err => {
+      console.error('Erreur copie:', err);
+      showToast('Erreur lors de la copie', 'error');
+    });
   }
 });
