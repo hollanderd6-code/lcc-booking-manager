@@ -1418,19 +1418,25 @@ async function saveWelcomeBook(e) {
 }
 
 function createAnother() {
-  // "Modifier" depuis l'écran de succès
+  currentUniqueId = null;
+  const form = document.getElementById('welcomeForm');
+  if (form) form.reset();
+
+  // Reset previews + containers
+  const previews = ['coverPhotoPreview','entrancePhotosPreview','parkingPhotosPreview'];
+  previews.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+
+  const rooms = document.getElementById('roomsContainer'); if (rooms) rooms.innerHTML = '';
+  const rests = document.getElementById('restaurantsContainer'); if (rests) rests.innerHTML = '';
+  const places = document.getElementById('placesContainer'); if (places) places.innerHTML = '';
+
+  roomCounter = 0; restaurantCounter = 0; placeCounter = 0;
+  addRoom(); addRestaurant(); addPlace();
+
   document.getElementById('successMessage').style.display = 'none';
   setDisplayById('welcomeForm','block');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  // Recharge le livret courant pour éviter un formulaire vide
-  if (currentUniqueId) {
-    editLivret(currentUniqueId);
-  } else {
-    showSection(0);
-  }
+  showSection(0);
 }
-
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
@@ -1452,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadLivretsList() {
   try {
     const response = await fetch(`${API_BASE}/api/welcome-books/user/list`, {
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
     });
     
     const data = await response.json();
@@ -1539,7 +1545,7 @@ async function deleteLivret(uniqueId) {
   try {
     const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
     });
     
     const raw = await response.text();
@@ -1557,60 +1563,82 @@ async function deleteLivret(uniqueId) {
     alert('Erreur lors de la suppression');
   }
 }
-// Générer le QR Code (qrcodejs)
-function generateQRCode(url) {
-  const qrContainer = document.getElementById('qrcode');
-  if (!qrContainer) return;
-  qrContainer.innerHTML = '';
-  new QRCode(qrContainer, {
-    text: url,
-    width: 200,
-    height: 200,
-    correctLevel: QRCode.CorrectLevel.H
-  });
+function downloadQRCode(uniqueId) {
+  try {
+    // 0) Si on a un uniqueId, on peut toujours reconstruire l'URL
+    const url = uniqueId ? `${API_BASE}/welcome/${uniqueId}` : (window.welcomeBookUrl || null);
+
+    // 1) Cas 1: un <img> dédié (si tu l'utilises dans une liste)
+    const img =
+      (uniqueId && document.getElementById(`qrCodeImg-${uniqueId}`)) ||
+      (uniqueId && document.querySelector(`[data-qr="${uniqueId}"]`)) ||
+      document.querySelector('#qrcode img');
+
+    if (img && img.src) {
+      const a = document.createElement('a');
+      a.href = img.src;
+      a.download = `qr-${uniqueId || 'welcome-book'}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+
+    // 2) Cas 2: QRCodeJS rend souvent un <canvas>
+    const canvas = document.querySelector('#qrcode canvas');
+    if (canvas && canvas.toDataURL) {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `qr-${uniqueId || 'welcome-book'}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+
+    // 3) Fallback: si on a l'URL mais pas de rendu, on génère un QR temporaire puis on télécharge
+    if (url && window.QRCode) {
+      const tmp = document.createElement('div');
+      tmp.style.position = 'fixed';
+      tmp.style.left = '-9999px';
+      tmp.style.top = '-9999px';
+      document.body.appendChild(tmp);
+
+      new QRCode(tmp, { text: url, width: 256, height: 256 });
+
+      // QRCodeJS peut mettre un img ou un canvas
+      const tmpImg = tmp.querySelector('img');
+      const tmpCanvas = tmp.querySelector('canvas');
+
+      const dataUrl = tmpImg?.src || (tmpCanvas?.toDataURL ? tmpCanvas.toDataURL('image/png') : null);
+      document.body.removeChild(tmp);
+
+      if (dataUrl) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `qr-${uniqueId || 'welcome-book'}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+    }
+
+    alert("QR Code introuvable");
+  } catch (e) {
+    console.error("downloadQRCode error:", e);
+    alert("Impossible de télécharger le QR Code.");
+  }
 }
 
-function viewWelcomeBook() {
-  const url = window.welcomeBookUrl || (currentUniqueId ? `${API_BASE}/welcome/${currentUniqueId}` : null);
-  if (!url) return alert('URL du livret introuvable');
-  window.open(url, '_blank');
+    // 2) Sinon, fallback: on ouvre l’URL publique (tu peux adapter si tu as un endpoint QR)
+    const url = `${API_BASE}/welcome/${uniqueId}`;
+    window.open(url, "_blank");
+  } catch (e) {
+    console.error("downloadQRCode error:", e);
+    alert("Impossible de télécharger le QR code.");
+  }
 }
-
-// Copier le lien du livret (utilise le bouton pour feedback UI)
-function copyWelcomeBookLink(button) {
-  const url = window.welcomeBookUrl || (currentUniqueId ? `${API_BASE}/welcome/${currentUniqueId}` : null);
-  if (!url) return alert('URL du livret introuvable');
-
-  navigator.clipboard.writeText(url).then(() => {
-    if (!button) return alert('Lien copié ✅');
-    const original = button.innerHTML;
-    const originalBg = button.style.background;
-    const originalColor = button.style.color;
-    button.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    button.style.background = '#10B981';
-    button.style.color = 'white';
-    setTimeout(() => {
-      button.innerHTML = original;
-      button.style.background = originalBg;
-      button.style.color = originalColor;
-    }, 1600);
-  }).catch(() => {
-    prompt('Copie le lien :', url);
-  });
-}
-
-// Télécharger le QR Code (canvas généré par qrcodejs)
-function downloadQRCode() {
-  const qrCanvas = document.querySelector('#qrcode canvas');
-  if (!qrCanvas) return alert('QR Code introuvable');
-  const pngUrl = qrCanvas.toDataURL('image/png');
-  const link = document.createElement('a');
-  const slug = (currentUniqueId || 'livret');
-  link.download = `qrcode-${slug}.png`;
-  link.href = pngUrl;
-  link.click();
-}
-
 // Remplir le formulaire avec les données d'un livret
 // Affiche une image déjà existante (URL) dans un container de preview
 function showExistingImage(containerId, url) {
