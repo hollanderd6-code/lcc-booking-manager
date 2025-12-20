@@ -513,153 +513,163 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'lcc_notifications_settings';
+  const STORAGE_KEY = 'lcc_notifications_settings';
 
-    function defaultSettings() {
-      return {
-        newResInApp: true,
-        newResEmailEnabled: true,
-        newResEmailRecipients: 'reservations@exemple.com',
-        roles: {
-          admin: true,
-          manager: true,
-          reception: true,
-          housekeeping: false,
-        },
-        newResCondition: 'confirmed',
-        smsEnabled: false,
-        smsNumbers: ''
-      };
+  function defaultSettings() {
+    return {
+      newResInApp: true,
+      newResEmailEnabled: true,
+      newResEmailRecipients: '',
+      roles: {
+        admin: true,
+        manager: true,
+        reception: true,
+        housekeeping: false
+      },
+      newResCondition: 'confirmed'
+    };
+  }
+
+  function loadSettings() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultSettings();
+    try {
+      return { ...defaultSettings(), ...JSON.parse(raw) };
+    } catch (e) {
+      console.error('Erreur lecture settings notifications', e);
+      return defaultSettings();
     }
+  }
 
-    function loadSettings() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaultSettings();
+  function saveSettings(settings) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  }
+
+  function applyToForm(settings) {
+    const safeCheck = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!value;
+    };
+    const safeValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value || '';
+    };
+
+    safeCheck('newResInApp', settings.newResInApp);
+    safeCheck('newResEmailEnabled', settings.newResEmailEnabled);
+    safeValue('newResEmailRecipients', settings.newResEmailRecipients);
+
+    safeCheck('roleAdmin', settings.roles?.admin);
+    safeCheck('roleManager', settings.roles?.manager);
+    safeCheck('roleReception', settings.roles?.reception);
+    safeCheck('roleHousekeeping', settings.roles?.housekeeping);
+
+    const cond = settings.newResCondition || 'confirmed';
+    const radio = document.querySelector(`input[name="newResCondition"][value="${cond}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  function readFromForm() {
+    const getChecked = (id, fallback = false) => {
+      const el = document.getElementById(id);
+      return el ? !!el.checked : fallback;
+    };
+    const getValue = (id, fallback = '') => {
+      const el = document.getElementById(id);
+      return el ? (el.value || '').trim() : fallback;
+    };
+
+    const radios = document.querySelectorAll('input[name="newResCondition"]');
+    let condition = 'confirmed';
+    radios.forEach(r => { if (r.checked) condition = r.value; });
+
+    return {
+      newResInApp: getChecked('newResInApp', true),
+      newResEmailEnabled: getChecked('newResEmailEnabled', true),
+      newResEmailRecipients: getValue('newResEmailRecipients', ''),
+      roles: {
+        admin: getChecked('roleAdmin', true),
+        manager: getChecked('roleManager', true),
+        reception: getChecked('roleReception', true),
+        housekeeping: getChecked('roleHousekeeping', false)
+      },
+      newResCondition: condition
+    };
+  }
+
+  function validateEmailList(value) {
+    if (!value) return true;
+    const emails = value.split(',').map(s => s.trim()).filter(Boolean);
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emails.every(e => re.test(e));
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const saveStatus = document.getElementById('saveStatus');
+
+    const local = loadSettings();
+    applyToForm(local);
+
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
       try {
-        return { ...defaultSettings(), ...JSON.parse(raw) };
+        const resp = await fetch('/api/settings/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const serverData = await resp.json();
+          if (serverData && serverData.settings) {
+            const merged = { ...defaultSettings(), ...serverData.settings };
+            saveSettings(merged);
+            applyToForm(merged);
+          }
+        }
       } catch (e) {
-        console.error('Erreur lecture settings notifications', e);
-        return defaultSettings();
+        console.warn('Chargement notifications serveur impossible', e);
       }
     }
 
-    function saveSettings(settings) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    }
+    saveBtn?.addEventListener('click', async () => {
+      const newSettings = readFromForm();
 
-   function applyToForm(settings) {
-  function safeCheck(id, value) {
-    const el = document.getElementById(id);
-    if (!el) {
-      console.warn('⚠️ Champ introuvable:', id);
-      return;
-    }
-    el.checked = !!value;
-  }
+      if (!validateEmailList(newSettings.newResEmailRecipients)) {
+        saveStatus.textContent = "Adresse(s) email invalide(s). Sépare par des virgules.";
+        setTimeout(() => (saveStatus.textContent = ''), 2500);
+        return;
+      }
 
-  function safeValue(id, value) {
-    const el = document.getElementById(id);
-    if (!el) {
-      console.warn('⚠️ Champ introuvable:', id);
-      return;
-    }
-    el.value = value || '';
-  }
+      saveSettings(newSettings);
 
-  // Réservations
-  safeCheck('newResInApp', settings.newResInApp);
-  safeCheck('newResEmailEnabled', settings.newResEmailEnabled);
-  safeValue('newResEmailRecipients', settings.newResEmailRecipients);
+      if (token) {
+        try {
+          await fetch('/api/settings/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ settings: newSettings })
+          });
+        } catch (e) {
+          console.warn('Sauvegarde serveur notifications impossible', e);
+        }
+      }
 
-  // Rôles
-  safeCheck('roleAdmin', settings.roles?.admin);
-  safeCheck('roleManager', settings.roles?.manager);
-  safeCheck('roleReception', settings.roles?.reception);
-  safeCheck('roleHousekeeping', settings.roles?.housekeeping);
+      saveStatus.textContent = 'Préférences enregistrées.';
+      setTimeout(() => (saveStatus.textContent = ''), 2500);
+    });
 
-  // Conditions radio
-  const radios = document.querySelectorAll('input[name="newResCondition"]');
-  radios.forEach(r => {
-    r.checked = (r.value === settings.newResCondition);
+    resetBtn?.addEventListener('click', () => {
+      const defaults = defaultSettings();
+      applyToForm(defaults);
+      saveSettings(defaults);
+      saveStatus.textContent = 'Préférences réinitialisées.';
+      setTimeout(() => (saveStatus.textContent = ''), 2500);
+    });
   });
-
-  // SMS
-  safeCheck('smsEnabled', settings.smsEnabled);
-  safeValue('smsNumbers', settings.smsNumbers);
-}
-
-    function readFromForm() {
-  const getChecked = (id, fallback = false) => {
-    const el = document.getElementById(id);
-    return el ? !!el.checked : fallback;
-  };
-
-  const getValue = (id, fallback = '') => {
-    const el = document.getElementById(id);
-    return el ? (el.value || '').trim() : fallback;
-  };
-
-  const radios = document.querySelectorAll('input[name="newResCondition"]');
-  let condition = 'confirmed';
-  radios.forEach(r => { if (r.checked) condition = r.value; });
-
-  return {
-    newResInApp: getChecked('newResInApp', true),
-    newResEmailEnabled: getChecked('newResEmailEnabled', true),
-    newResEmailRecipients: getValue('newResEmailRecipients', ''),
-
-    roles: {
-      admin: getChecked('roleAdmin', true),
-      manager: getChecked('roleManager', true),
-      reception: getChecked('roleReception', true),
-      housekeeping: getChecked('roleHousekeeping', false)
-    },
-
-    newResCondition: condition
-  };
-} else {
-  applyToForm(settings);
-}
-
-      saveBtn.addEventListener('click', () => {
-  const newSettings = readFromForm();
-  saveSettings(newSettings); // garde le localStorage
-
-  const token = localStorage.getItem('lcc_token');
-
-  if (token) {
-    fetch(`${API_URL}/api/settings/notifications`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({
-        newReservation: newSettings.newResEmailEnabled,
-        reminder: false,
-        whatsappEnabled: newSettings.smsEnabled,
-        whatsappNumber: newSettings.smsNumbers
-      })
-    }).catch(err => {
-      console.error('Erreur sauvegarde notifications serveur', err);
-    });
-  }
-
-  saveStatus.textContent = 'Préférences enregistrées.';
-  setTimeout(() => saveStatus.textContent = '', 2500);
-});
-
-
-
-      resetBtn.addEventListener('click', () => {
-        const defaults = defaultSettings();
-        applyToForm(defaults);
-        saveSettings(defaults);
-        saveStatus.textContent = 'Préférences réinitialisées.';
-        setTimeout(() => saveStatus.textContent = '', 2500);
-      });
-    });
-  </script>
+</script>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
