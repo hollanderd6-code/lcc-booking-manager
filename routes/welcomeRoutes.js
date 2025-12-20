@@ -295,7 +295,7 @@ router.get('/user/list', authenticateUser, async (req, res) => {
     if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
 
     const result = await pool.query(
-      `SELECT unique_id, property_name, data->>'coverPhoto' as cover_photo, updated_at
+      `SELECT unique_id, property_name, data->'photos'->>'cover' as cover_photo, updated_at
        FROM public.welcome_books_v2
        WHERE user_id = $1
        ORDER BY updated_at DESC`,
