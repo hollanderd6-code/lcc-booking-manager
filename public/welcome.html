@@ -1579,7 +1579,17 @@ function downloadQRCode(uniqueId) {
       a.remove();
       return;
     }
-
+async function copyWelcomeBookLink(uniqueId) {
+  try {
+    const url = `${API_BASE}/welcome/${uniqueId}`;
+    await navigator.clipboard.writeText(url);
+    alert("Lien copié ✅");
+  } catch (e) {
+    // fallback si clipboard bloqué
+    const url = `${API_BASE}/welcome/${uniqueId}`;
+    prompt("Copie le lien :", url);
+  }
+}
     // 2) Sinon, fallback: on ouvre l’URL publique (tu peux adapter si tu as un endpoint QR)
     const url = `${API_BASE}/welcome/${uniqueId}`;
     window.open(url, "_blank");
