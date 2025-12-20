@@ -474,7 +474,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
         [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
       );
 
-      const message = result.rows[0];
+      const savedMessage = result.rows[0];
 
       // Mettre à jour last_message_at
       await pool.query(
@@ -483,7 +483,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       );
 
       // Émettre le message via Socket.io
-      io.to(`conversation_${conversationId}`).emit('new_message', message);
+      io.to(`conversation_${conversationId}`).emit('new_message', savedMessage);
 
       // Si message du voyageur, vérifier si une réponse auto est applicable
       if (senderType === 'guest') {
@@ -502,11 +502,11 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
           io.to(`conversation_${conversationId}`).emit('new_message', botMessage);
         } else {
           // Pas de réponse auto -> notifier le propriétaire
-          await createNotification(pool, io, conv.user_id, conversationId, message.id, 'new_message');
+          await createNotification(pool, io, conv.user_id, conversationId, savedMessage.id, 'new_message');
         }
       }
 
-      res.json({ success: true, message });
+      res.json({ success: true, message: savedMessage });
 
     } catch (error) {
       console.error('❌ Erreur envoi message:', error);
