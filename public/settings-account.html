@@ -1388,7 +1388,18 @@ if (logoInput && logoPreview) {
 
   <!-- SCRIPT ABONNEMENT -->
   <script>
-    async function loadSubscriptionStatus() {
+    function formatEUR(amount) {
+  const n = Number(amount || 0);
+  return n.toFixed(2).replace('.', ',') + '€';
+}
+
+function priceForPlan(planType) {
+  const p = (planType || 'basic').toLowerCase();
+  if (p === 'pro') return 8.99;
+  return 5.99; // basic
+}
+
+async function loadSubscriptionStatus() {
       const token = localStorage.getItem('lcc_token');
       const subscriptionCard = document.getElementById('subscriptionCard');
 
@@ -1517,7 +1528,7 @@ if (logoInput && logoPreview) {
               </div>
               <div class="detail-row">
                 <span class="detail-label">Prix</span>
-                <span class="detail-value">${(data.planAmount / 100).toFixed(2)}€ / mois</span>
+                <span class="detail-value">${formatEUR(priceForPlan(data.planType))} / mois</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Prochain renouvellement</span>
@@ -1562,12 +1573,39 @@ if (logoInput && logoPreview) {
     }
 
     async function openStripePortal() {
-      const token = localStorage.getItem('lcc_token');
-      try {
-        const res = await fetch('/api/billing/create-portal-session', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    alert("Session expirée, reconnecte-toi.");
+    window.location.href = '/login.html';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/billing/create-portal-session', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    // Si l'utilisateur est en essai / pas encore client Stripe, on redirige vers la page de plans
+    if (res.status === 404) {
+      alert("Le portail de facturation est disponible après souscription (hors essai).");
+      window.location.href = '/pricing.html';
+      return;
+    }
+
+    if (!res.ok) throw new Error('Erreur');
+
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert("Impossible d'ouvrir le portail.");
+    }
+  } catch (err) {
+    console.error('Erreur:', err);
+    alert("Impossible d'ouvrir le portail.");
+  }
+});
         if (!res.ok) throw new Error('Erreur');
         const data = await res.json();
         if (data.url) window.location.href = data.url;
