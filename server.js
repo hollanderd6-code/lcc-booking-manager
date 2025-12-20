@@ -9520,8 +9520,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     </html>
     `;
     
-    res.send(html);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+return res.send(html);
 
   } catch (error) {
     console.error('Erreur affichage livret:', error);
