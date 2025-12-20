@@ -627,18 +627,23 @@
     let typingTimeout = null;
 
     // ============================================
-    // INITIALISATION
-    // ============================================
+// INITIALISATION
+// ============================================
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      console.log('🚀 Initialisation du chat, token:', token);
-      
-      // Charger les propriétés
-      await loadProperties(); // Pas nécessaire pour le chat voyageur
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 Initialisation du chat, token:', token);
 
-Le voyageur arrive déjà avec `?property=XXX` dans l'URL, pas besoin de charger toute la liste !
-      
-      // Event listeners
+  // Le voyageur arrive déjà avec `?property=XXX` dans l'URL :
+  // pas besoin de charger toute la liste des propriétés.
+  const urlParams = new URLSearchParams(window.location.search);
+  const propertyFromUrl = urlParams.get('property');
+
+  if (!propertyFromUrl) {
+    // Cas fallback (admin, page sans param, etc.)
+    await loadProperties();
+  }
+
+  // Event listeners
       document.getElementById('verificationForm').addEventListener('submit', handleVerification);
       document.getElementById('sendBtn').addEventListener('click', sendMessage);
       document.getElementById('messageInput').addEventListener('keypress', (e) => {
