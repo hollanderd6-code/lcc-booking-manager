@@ -5499,13 +5499,13 @@ await pool.query(
      id, user_id, name, color, ical_urls,
      address, arrival_time, departure_time, deposit_amount, photo_url,
      welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
-     owner_id, display_order, chat_pin, created_at
+     owner_id, chat_pin, display_order, created_at
    )
    VALUES (
      $1, $2, $3, $4, $5,
      $6, $7, $8, $9, $10,
      $11, $12, $13, $14, $15,
-     $16,
+     $16, $17,
      (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
      NOW()
    )`,
@@ -5577,16 +5577,17 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   ownerId,
       chatPin 
     } = body;
-// Gérer la mise à jour du PIN (garder l'ancien si non fourni)
-const newChatPin = 
-  chatPin !== undefined 
-    ? (chatPin || property.chat_pin) 
-    : (property.chat_pin || null);
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvÃƒ©' });
     }
+
+// Gérer la mise à jour du PIN (garder l'ancien si non fourni)
+const newChatPin = 
+  chatPin !== undefined 
+    ? (chatPin || property.chat_pin) 
+    : (property.chat_pin || null);
 
     const newName = name || property.name;
     const newColor = color || property.color;
