@@ -720,6 +720,7 @@ const chatSectionHtml = `
       <span>Copier le message automatique</span>
     </button>
   </div>
+`;
 
       const addressBadge = address
         ? `<span class="meta-badge"><i class="fas fa-location-dot"></i>${escapeHtml(
