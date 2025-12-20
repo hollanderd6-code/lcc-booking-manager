@@ -1538,7 +1538,42 @@ async function editLivret(uniqueId) {
     alert("Erreur lors du chargement du livret.");
   }
 }
+async function copyWelcomeBookLink(buttonEl) {
+    try {
+      const url =
+        window.welcomeBookUrl ||
+        (typeof currentUniqueId !== "undefined" && currentUniqueId
+          ? `${API_BASE}/welcome/${currentUniqueId}`
+          : "");
 
+      if (!url) {
+        alert("Lien indisponible (uniqueId manquant)");
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+
+      if (buttonEl) {
+        const old = buttonEl.innerHTML;
+        buttonEl.innerHTML = '<i class="fas fa-check"></i> Lien copié';
+        setTimeout(() => (buttonEl.innerHTML = old), 1500);
+      } else {
+        alert("Lien copié ✅");
+      }
+    } catch (e) {
+      const url =
+        window.welcomeBookUrl ||
+        (currentUniqueId ? `${API_BASE}/welcome/${currentUniqueId}` : "");
+      prompt("Copie le lien :", url);
+    }
+  }
+  async function modifyCurrentLivret() {
+  if (!currentUniqueId) {
+    alert("Impossible de modifier : identifiant manquant.");
+    return;
+  }
+  await editLivret(currentUniqueId);
+}
 async function deleteLivret(uniqueId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
   
