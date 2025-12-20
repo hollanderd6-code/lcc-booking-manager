@@ -1630,14 +1630,6 @@ function downloadQRCode(uniqueId) {
     alert("Impossible de télécharger le QR Code.");
   }
 }
-
-    // 2) Sinon, fallback: on ouvre l’URL publique (tu peux adapter si tu as un endpoint QR)
-    const url = `${API_BASE}/welcome/${uniqueId}`;
-    window.open(url, "_blank");
-  } catch (e) {
-    console.error("downloadQRCode error:", e);
-    alert("Impossible de télécharger le QR code.");
-  }
 }
 // Remplir le formulaire avec les données d'un livret
 // Affiche une image déjà existante (URL) dans un container de preview
