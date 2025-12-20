@@ -637,27 +637,37 @@
 // await loadProperties(); // Pas nécessaire pour le chat voyageur
 // Le voyageur arrive déjà avec ?property=XXX dans l'URL, pas besoin de charger toute la liste !
       
-      // Event listeners
-      document.getElementById('verificationForm').addEventListener('submit', handleVerification);
-      document.getElementById('sendBtn').addEventListener('click', sendMessage);
-      document.getElementById('messageInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      });
+      // Event listeners (safe)
+const verificationForm = document.getElementById('verificationForm');
+if (verificationForm) {
+  verificationForm.addEventListener('submit', handleVerification);
+} else {
+  console.warn("⚠️ #verificationForm introuvable (normal si pas d'écran PIN sur cette page).");
+}
 
-      // Typing indicator
-      document.getElementById('messageInput').addEventListener('input', () => {
-        if (socket && conversationId) {
-          socket.emit('typing', { conversationId, senderName: 'Voyageur' });
-          
-          clearTimeout(typingTimeout);
-          typingTimeout = setTimeout(() => {
-            socket.emit('stop_typing', { conversationId });
-          }, 1000);
-        }
-      });
+const sendBtn = document.getElementById('sendBtn');
+if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+
+const messageInput = document.getElementById('messageInput');
+if (messageInput) {
+  messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Typing indicator
+  messageInput.addEventListener('input', () => {
+    if (socket && conversationId) {
+      socket.emit('typing', { conversationId, senderName: 'Voyageur' });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('stop_typing', { conversationId });
+      }, 1000);
+    }
+  });
+}
 
       // Auto-resize textarea
       const messageInput = document.getElementById('messageInput');
