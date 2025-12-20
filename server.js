@@ -5360,7 +5360,8 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
         wifiName: p.wifi_name || null,
         wifiPassword: p.wifi_password || null,
         accessInstructions: p.access_instructions || null,
-        ownerId: p.owner_id || null,  
+        ownerId: p.owner_id || null,
+        chatPin: p.chat_pin || null,
         icalUrls,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
@@ -5402,6 +5403,7 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     wifiName: property.wifi_name || null,
     wifiPassword: property.wifi_password || null,
     accessInstructions: property.access_instructions || null,
+    chatPin: property.chat_pin || null,
     
     icalUrls: property.icalUrls || property.ical_urls || [],
     reservationCount: (reservationsStore.properties[property.id] || []).length
