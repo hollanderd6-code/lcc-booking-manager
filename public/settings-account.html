@@ -1605,14 +1605,6 @@ async function loadSubscriptionStatus() {
     console.error('Erreur:', err);
     alert("Impossible d'ouvrir le portail.");
   }
-});
-        if (!res.ok) throw new Error('Erreur');
-        const data = await res.json();
-        if (data.url) window.location.href = data.url;
-      } catch (err) {
-        console.error('Erreur:', err);
-        alert('Impossible d\'ouvrir le portail.');
-      }
     }
 
     // Charger au clic
