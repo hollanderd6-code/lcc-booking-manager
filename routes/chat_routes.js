@@ -310,7 +310,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     try {
       // Récupérer toutes les propriétés actives
       const result = await pool.query(
-        `SELECT id, name, color FROM properties WHERE is_active = TRUE ORDER BY name`
+        `SELECT id, name, color FROM properties ORDER BY name`
       );
 
       res.json({ properties: result.rows });
