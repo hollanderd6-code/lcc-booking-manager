@@ -1024,7 +1024,7 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
     sessionStorage.setItem('chat_property_id', data.property_id);
     sessionStorage.setItem('chat_property_name', data.property_name || 'Logement');
     sessionStorage.setItem('chat_verified', 'true');
-    
+    conversationId = data.conversation_id;
     // Afficher le chat
     showChatInterface();
     
@@ -1049,8 +1049,6 @@ function showChatInterface() {
   // Charger les messages
   loadMessages();
   
-  // Initialiser Socket.IO
-  initializeSocketIO();
 }
 
 // Auto-formater le PIN (ajouter des espaces tous les 2 chiffres pour la lisibilité)
