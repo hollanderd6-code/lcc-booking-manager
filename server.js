@@ -9524,9 +9524,10 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 return res.send(html);
 
   } catch (error) {
-    console.error('Erreur affichage livret:', error);
-    res.status(500).send('Erreur lors de l\'affichage du livret');
-  }
+  console.error('Erreur affichage livret:', error);
+  if (res.headersSent) return;
+  return res.status(500).send("Erreur lors de l'affichage du livret");
+}
 });
 
 // ============================================
