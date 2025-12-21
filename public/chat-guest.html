@@ -647,26 +647,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     showChatInterface();
   }
 });
-    
-    // Typing indicator
-    messageInput.addEventListener('input', () => {
-      if (socket && conversationId) {
-        socket.emit('typing', { conversationId, senderName: 'Voyageur' });
-        
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-          socket.emit('stop_typing', { conversationId });
-        }, 1000);
-      }
-    });
-    
-    // Auto-resize textarea
-    messageInput.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    });
-  }
-});
 
     // ============================================
     // CHARGEMENT DES PROPRIÉTÉS
