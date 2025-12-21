@@ -549,7 +549,76 @@
         border-radius: 0;
       }
     }
-  </style>
+  
+
+/* =========================
+   WHATSAPP STYLE (Owner modal)
+   ========================= */
+#chatMessages {
+  background: #efeae2 !important;
+  background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.chat-avatar { display: none !important; }
+.chat-sender { display: none !important; }
+
+.chat-message { max-width: 72% !important; margin-bottom: 8px !important; }
+
+.chat-bubble {
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 10px 12px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08) !important;
+  position: relative;
+  line-height: 1.25;
+}
+
+/* Propriétaire (vous) à droite, vert */
+.chat-message.owner { margin-left: auto !important; }
+.chat-message.owner .chat-bubble { background: #dcf8c6 !important; }
+.chat-message.owner .chat-bubble::before {
+  content: "";
+  position: absolute;
+  right: -6px;
+  bottom: 6px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #dcf8c6;
+}
+
+/* Voyageur à gauche, blanc */
+.chat-message.guest { margin-right: auto !important; }
+.chat-message.guest .chat-bubble { background: #ffffff !important; }
+.chat-message.guest .chat-bubble::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  bottom: 6px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid #ffffff;
+}
+
+/* Bot centré */
+.chat-message.bot { margin-left: auto !important; margin-right: auto !important; max-width: 92% !important; }
+.chat-message.bot .chat-bubble { background: rgba(227,242,253,0.95) !important; color: #1976d2 !important; text-align: center !important; }
+.chat-message.bot .chat-bubble::before { display: none !important; }
+
+/* Meta (heure + statut) */
+.chat-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 3px;
+}
+.chat-message.owner .chat-meta { justify-content: flex-end; }
+.chat-message.guest .chat-meta { justify-content: flex-start; }
+
+</style>
   <script src="/js/auth-fetch.js"></script>
 </head>
 <body data-page="messages">
