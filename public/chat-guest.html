@@ -780,26 +780,6 @@ async function handleVerification(e) {
   }
 }
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (data.max_attempts_reached) {
-            showError('Trop de tentatives. Veuillez contacter le propriétaire.');
-            verifyBtn.disabled = true;
-            return;
-          }
-          
-          if (data.attempts) {
-            showWarning(`Informations incorrectes. Tentative ${data.attempts}/3`);
-          } else {
-            showError(data.error || 'Erreur de vérification');
-          }
-          
-          verifyBtn.disabled = false;
-          verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder';
-          return;
-        }
-
         // ✅ Vérification réussie !
         conversationId = data.conversation_id;
         
