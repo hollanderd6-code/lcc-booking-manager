@@ -352,6 +352,7 @@ function appendMessage(message) {
   }
   
   const messageDiv = document.createElement('div');
+  if (message && message.id) messageDiv.dataset.messageId = String(message.id);
   messageDiv.className = `chat-message ${message.sender_type}`;
   
   const avatar = document.createElement('div');
@@ -386,7 +387,18 @@ status.className = 'chat-status';
 
 // Placeholder : on affiche "Envoyé" uniquement pour les messages du propriétaire (vous)
 // (on rendra Distribué/Lu réel ensuite côté backend)
-status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
+
+// Statut WhatsApp :
+// - Envoyé = rien reçu par l'autre (fallback)
+// - ✓ = distribué (delivered_at)
+// - ✓✓ = lu (read_at / is_read)
+if (message.sender_type === 'owner') {
+  const delivered = !!message.delivered_at;
+  const read = !!message.read_at || !!message.is_read;
+  status.textContent = read ? '✓✓' : (delivered ? '✓' : 'Envoyé');
+} else {
+  status.textContent = '';
+}
 
 meta.appendChild(time);
 meta.appendChild(status);
@@ -478,8 +490,29 @@ function connectSocket() {
     }
     
     // Mettre à jour le compteur de messages non lus
-    loadConversations();
-  });
+  loadConversations();
+
+  // Si on est dans la conversation ouverte et que le message vient de l'autre, on confirme "Distribué"
+  if (currentConversationId && message.conversation_id === currentConversationId && message.sender_type !== 'owner') {
+    socket.emit('message_delivered', { conversationId: currentConversationId, messageId: message.id, reader_type: 'owner' });
+    // Si le chat est ouvert et en bas, on marque aussi "Lu"
+    setTimeout(markVisibleAsRead, 50);
+  }
+});
+
+// ✅ Le serveur confirme qu'un message a été distribué : mettre ✓ sur nos messages
+socket.on('message_delivered', ({ messageId }) => {
+  updateMessageStatus(messageId, { delivered: true });
+});
+
+// ✅ Le serveur confirme une lecture : mettre ✓✓ sur nos messages jusqu'à upTo
+socket.on('messages_read', ({ conversationId, upToMessageId, reader_type }) => {
+  if (!currentConversationId || conversationId !== currentConversationId) return;
+  // Si l'autre a lu, alors nos messages envoyés (owner) deviennent ✓✓
+  if (reader_type === 'guest') {
+    updateMessagesReadUpTo(upToMessageId);
+  }
+});
   
   socket.on('new_notification', (notification) => {
     console.log('🔔 Nouvelle notification:', notification);
@@ -543,4 +576,67 @@ document.getElementById('chatModal').addEventListener('click', function(e) {
   if (e.target === this) {
     closeChat();
   }
+});
+
+
+// ============================================
+// ✅ STATUTS : helpers DOM
+// ============================================
+function updateMessageStatus(messageId, { delivered = false, read = false } = {}) {
+  const el = document.querySelector(`.chat-message[data-message-id="${messageId}"] .chat-status`);
+  if (!el) return;
+
+  const current = el.textContent || '';
+  if (read) { el.textContent = '✓✓'; return; }
+  if (delivered) {
+    // si déjà ✓✓, ne pas rétrograder
+    if (current.includes('✓✓')) return;
+    el.textContent = '✓';
+  }
+}
+
+function updateMessagesReadUpTo(upToMessageId) {
+  document.querySelectorAll('.chat-message.owner[data-message-id]').forEach(msgEl => {
+    const id = parseInt(msgEl.dataset.messageId, 10);
+    if (!Number.isFinite(id)) return;
+    if (id <= upToMessageId) {
+      const statusEl = msgEl.querySelector('.chat-status');
+      if (statusEl) statusEl.textContent = '✓✓';
+    }
+  });
+}
+
+// Marquer comme "Lu" si l'utilisateur regarde la conversation et est en bas (ou presque)
+function markVisibleAsRead() {
+  if (!socket || !currentConversationId) return;
+
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+
+  const nearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 40;
+  if (!nearBottom) return;
+
+  // Dernier message de l'autre partie visible : on marque lu jusqu'à ce message
+  const msgs = Array.from(document.querySelectorAll('.chat-message.guest[data-message-id]'));
+  if (msgs.length === 0) return;
+  const lastId = parseInt(msgs[msgs.length - 1].dataset.messageId, 10);
+  if (!Number.isFinite(lastId)) return;
+
+  socket.emit('messages_read', { conversationId: currentConversationId, upToMessageId: lastId, reader_type: 'owner' });
+}
+
+// Quand l'utilisateur scrolle jusqu'en bas, on marque lu
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.getElementById('chatMessages');
+  if (container) {
+    container.addEventListener('scroll', () => {
+      // throttle léger
+      window.clearTimeout(window.__readThrottle);
+      window.__readThrottle = window.setTimeout(markVisibleAsRead, 120);
+    });
+  }
+  window.addEventListener('focus', () => setTimeout(markVisibleAsRead, 120));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) setTimeout(markVisibleAsRead, 120);
+  });
 });
