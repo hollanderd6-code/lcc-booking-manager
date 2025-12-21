@@ -631,7 +631,14 @@
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initialisation du chat, token:', token);
-  
+  const savedConversationId = sessionStorage.getItem('chat_conversation_id');
+const isVerified = sessionStorage.getItem('chat_verified');
+
+if (savedConversationId && isVerified === 'true') {
+  conversationId = savedConversationId;
+  showChatInterface();
+  return; // Passer directement au chat
+}
   // Event listeners avec vérification
   const verificationForm = document.getElementById('verificationForm');
   const sendBtn = document.getElementById('sendBtn');
@@ -867,7 +874,12 @@ async function handleVerification(e) {
     if (!response.ok) {
       throw new Error('Erreur envoi message');
     }
-    
+    const data = await response.json();
+if (data.message) {
+  appendMessage(data.message);
+  scrollToBottom();
+}
+
     input.value = '';
     input.style.height = 'auto';
     
