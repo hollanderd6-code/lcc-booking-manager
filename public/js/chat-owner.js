@@ -352,19 +352,7 @@ function appendMessage(message) {
   }
   
   const messageDiv = document.createElement('div');
-  
-// Normaliser sender_type (backend peut renvoyer host/proprietaire/etc.)
-const rawType = (message.sender_type || '').toString().trim().toLowerCase()
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const rawName = (message.sender_name || '').toString().trim().toLowerCase()
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-let normalizedType = 'bot';
-if (rawType.includes('guest') || rawType.includes('voyageur') || rawName.includes('voyageur') || rawName.includes('guest')) normalizedType = 'guest';
-else if (rawType.includes('owner') || rawType.includes('host') || rawType.includes('propriet') || rawName.includes('propri') || rawName.includes('host')) normalizedType = 'owner';
-else if (rawType.includes('bot') || rawType.includes('assistant') || rawName.includes('assistant') || rawName.includes('bot')) normalizedType = 'bot';
-
-messageDiv.className = `chat-message ${normalizedType}`;
+  messageDiv.className = `chat-message ${message.sender_type}`;
   
   const avatar = document.createElement('div');
   avatar.className = 'chat-avatar';
@@ -385,7 +373,7 @@ messageDiv.className = `chat-message ${normalizedType}`;
   bubble.textContent = message.message;
   
   
-// Meta : heure + statut (placeholder côté front tant que le backend ne renvoie pas delivered/read)
+// Meta : heure + statut (même taille que côté guest)
 const meta = document.createElement('div');
 meta.className = 'chat-meta';
 
@@ -396,18 +384,16 @@ time.textContent = formatTime(message.created_at);
 const status = document.createElement('span');
 status.className = 'chat-status';
 
-// On affiche un statut uniquement pour les messages envoyés par le propriétaire (vous)
-// (à rendre "Distribué/Lu" réel quand on modifie le backend)
-const isOwnerMsg = (messageDiv.classList.contains('owner'));
-status.textContent = isOwnerMsg ? 'Envoyé' : '';
+// Placeholder : on affiche "Envoyé" uniquement pour les messages du propriétaire (vous)
+// (on rendra Distribué/Lu réel ensuite côté backend)
+status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
 
 meta.appendChild(time);
 meta.appendChild(status);
 
 contentDiv.appendChild(sender);
 contentDiv.appendChild(bubble);
-contentDiv.appendChild(meta);  
-  messageDiv.appendChild(avatar);
+contentDiv.appendChild(meta);messageDiv.appendChild(avatar);
   messageDiv.appendChild(contentDiv);
   
   container.appendChild(messageDiv);
