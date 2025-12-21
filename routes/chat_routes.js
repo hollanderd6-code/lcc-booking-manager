@@ -11,6 +11,24 @@ const crypto = require('crypto');
  * @param {Object} io - Socket.io instance
  */
 function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
+
+// ============================================
+// ✅ HOTFIX: assurer les colonnes receipts (delivered_at / read_at)
+// (évite les 500 si la migration n'a pas encore été appliquée en prod)
+// ============================================
+let __receiptsColsReady = false;
+async function ensureReceiptColumns() {
+  if (__receiptsColsReady) return;
+  try {
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE`);
+    __receiptsColsReady = true;
+    console.log('✅ Colonnes receipts OK (messages.delivered_at/read_at/is_read)');
+  } catch (e) {
+    console.error('❌ ensureReceiptColumns failed:', e);
+  }
+}
   
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
@@ -378,6 +396,8 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     try {
       const { conversationId } = req.params;
 
+      await ensureReceiptColumns();
+
       // Si authentifié = propriétaire, sinon = voyageur (vérification token conversation)
       const userId = req.user ? req.user.id : null;
 
@@ -405,7 +425,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 
       // Récupérer les messages
       const messages = await pool.query(
-        `SELECT id, sender_type, sender_name, message, is_read, is_bot_response, created_at 
+        `SELECT id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at 
          FROM messages 
          WHERE conversation_id = $1 
          ORDER BY created_at ASC`,
@@ -437,6 +457,8 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   app.post('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
+
+      await ensureReceiptColumns();
       const { message, sender_name } = req.body;
 
       if (!message || !message.trim()) {
@@ -470,8 +492,8 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, conversation_id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
-        [conversationId, senderType, sender_name, message.trim(), false]
+         RETURNING id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
+        [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
       );
 
       const savedMessage = result.rows[0];
@@ -494,7 +516,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
           const botResult = await pool.query(
             `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
              VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-             RETURNING id, conversation_id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
+             RETURNING id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
             [conversationId, autoResponse]
           );
 
@@ -650,69 +672,6 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     socket.on('stop_typing', ({ conversationId }) => {
       socket.to(`conversation_${conversationId}`).emit('user_stop_typing');
     });
-
-    
-
-// =====================================================
-// ✅ Statuts WhatsApp : Distribué (✓) / Lu (✓✓)
-// =====================================================
-
-// Le client récepteur confirme qu'il a REÇU le message (✓)
-socket.on('message_delivered', async ({ conversationId, messageId, reader_type }) => {
-  try {
-    if (!conversationId || !messageId) return;
-
-    // On marque delivered_at uniquement si vide
-    const upd = await pool.query(
-      `UPDATE messages
-       SET delivered_at = COALESCE(delivered_at, NOW())
-       WHERE id = $1 AND conversation_id = $2
-       RETURNING id, conversation_id, sender_type, delivered_at`,
-      [messageId, conversationId]
-    );
-    if (!upd.rows[0]) return;
-
-    io.to(`conversation_${conversationId}`).emit('message_delivered', {
-      messageId: upd.rows[0].id,
-      conversationId: upd.rows[0].conversation_id,
-      sender_type: upd.rows[0].sender_type,
-      delivered_at: upd.rows[0].delivered_at,
-      reader_type: reader_type || null
-    });
-  } catch (e) {
-    console.error('❌ message_delivered error:', e);
-  }
-});
-
-// Le client récepteur marque "LU" tous les messages jusqu'à un id (✓✓)
-socket.on('messages_read', async ({ conversationId, upToMessageId, reader_type }) => {
-  try {
-    if (!conversationId || !upToMessageId) return;
-    const reader = (reader_type || '').toString().toLowerCase();
-
-    // On met read_at/is_read sur les messages de l'AUTRE (pas les siens)
-    const upd = await pool.query(
-      `UPDATE messages
-       SET read_at = COALESCE(read_at, NOW()),
-           is_read = TRUE
-       WHERE conversation_id = $1
-         AND id <= $2
-         AND sender_type <> $3
-         AND sender_type <> 'bot'
-       RETURNING id`,
-      [conversationId, upToMessageId, reader || 'guest']
-    );
-
-    io.to(`conversation_${conversationId}`).emit('messages_read', {
-      conversationId,
-      upToMessageId,
-      reader_type: reader || null,
-      updatedCount: upd.rowCount
-    });
-  } catch (e) {
-    console.error('❌ messages_read error:', e);
-  }
-});
 
     socket.on('disconnect', () => {
       console.log('🔌 Client déconnecté:', socket.id);
