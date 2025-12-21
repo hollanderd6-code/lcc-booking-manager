@@ -22,28 +22,17 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
    */
   const optionalAuth = async (req, res, next) => {
     try {
-      // 1) Token via header Authorization: Bearer ...
-const authHeader = req.headers.authorization;
-
-// 2) Token via cookies (utile si tu stockes le JWT en cookie)
-const cookieToken =
-  (req.cookies && (req.cookies.lcc_token || req.cookies.token || req.cookies.auth_token || req.cookies.jwt)) || null;
-
-// 3) Token via querystring ?token=... (fallback)
-const queryToken = (req.query && req.query.token) ? String(req.query.token) : null;
-
-let token = null;
-if (authHeader && authHeader.startsWith('Bearer ')) token = authHeader.substring(7);
-else if (cookieToken) token = String(cookieToken);
-else if (queryToken) token = queryToken;
-
-if (!token) {
-  // Pas de token = continue comme invité
-  req.user = null;
-  return next();
-}
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Pas de token = continue comme invité
+        req.user = null;
+        return next();
+      }
+      
+      const token = authHeader.substring(7);
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
       
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
@@ -455,12 +444,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       }
 
       const userId = req.user ? req.user.id : null;
-const senderType = userId ? 'owner' : 'guest';
-
-const safeSenderName =
-  senderType === 'owner'
-    ? 'Propriétaire'
-    : (sender_name && String(sender_name).trim() ? String(sender_name).trim() : 'Voyageur');
+      const senderType = userId ? 'owner' : 'guest';
 
       // Vérifier l'accès
       const convCheck = await pool.query(
@@ -486,8 +470,8 @@ const safeSenderName =
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
-        [conversationId, senderType, safeSenderName, message.trim(), senderType === 'owner']
+         RETURNING id, conversation_id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
+        [conversationId, senderType, sender_name, message.trim(), false]
       );
 
       const savedMessage = result.rows[0];
@@ -510,7 +494,7 @@ const safeSenderName =
           const botResult = await pool.query(
             `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
              VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-             RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+             RETURNING id, conversation_id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
             [conversationId, autoResponse]
           );
 
@@ -666,6 +650,69 @@ const safeSenderName =
     socket.on('stop_typing', ({ conversationId }) => {
       socket.to(`conversation_${conversationId}`).emit('user_stop_typing');
     });
+
+    
+
+// =====================================================
+// ✅ Statuts WhatsApp : Distribué (✓) / Lu (✓✓)
+// =====================================================
+
+// Le client récepteur confirme qu'il a REÇU le message (✓)
+socket.on('message_delivered', async ({ conversationId, messageId, reader_type }) => {
+  try {
+    if (!conversationId || !messageId) return;
+
+    // On marque delivered_at uniquement si vide
+    const upd = await pool.query(
+      `UPDATE messages
+       SET delivered_at = COALESCE(delivered_at, NOW())
+       WHERE id = $1 AND conversation_id = $2
+       RETURNING id, conversation_id, sender_type, delivered_at`,
+      [messageId, conversationId]
+    );
+    if (!upd.rows[0]) return;
+
+    io.to(`conversation_${conversationId}`).emit('message_delivered', {
+      messageId: upd.rows[0].id,
+      conversationId: upd.rows[0].conversation_id,
+      sender_type: upd.rows[0].sender_type,
+      delivered_at: upd.rows[0].delivered_at,
+      reader_type: reader_type || null
+    });
+  } catch (e) {
+    console.error('❌ message_delivered error:', e);
+  }
+});
+
+// Le client récepteur marque "LU" tous les messages jusqu'à un id (✓✓)
+socket.on('messages_read', async ({ conversationId, upToMessageId, reader_type }) => {
+  try {
+    if (!conversationId || !upToMessageId) return;
+    const reader = (reader_type || '').toString().toLowerCase();
+
+    // On met read_at/is_read sur les messages de l'AUTRE (pas les siens)
+    const upd = await pool.query(
+      `UPDATE messages
+       SET read_at = COALESCE(read_at, NOW()),
+           is_read = TRUE
+       WHERE conversation_id = $1
+         AND id <= $2
+         AND sender_type <> $3
+         AND sender_type <> 'bot'
+       RETURNING id`,
+      [conversationId, upToMessageId, reader || 'guest']
+    );
+
+    io.to(`conversation_${conversationId}`).emit('messages_read', {
+      conversationId,
+      upToMessageId,
+      reader_type: reader || null,
+      updatedCount: upd.rowCount
+    });
+  } catch (e) {
+    console.error('❌ messages_read error:', e);
+  }
+});
 
     socket.on('disconnect', () => {
       console.log('🔌 Client déconnecté:', socket.id);
