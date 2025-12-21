@@ -627,19 +627,13 @@
     let typingTimeout = null;
 
     // ============================================
-    // INITIALISATION
-    // ============================================
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      console.log('🚀 Initialisation du chat, token:', token);
-      
-      // Charger les propriétés
-      await loadProperties(); // Pas nécessaire pour le chat voyageur
-
-Le voyageur arrive déjà avec ?property=XXX dans l'URL, pas besoin de charger toute la liste !
-      
-      // Event listeners
-      document.getElementById('verificationForm').addEventListener('submit', handleVerification);
+// INITIALISATION
+// ============================================
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 Initialisation du chat, token:', token);
+  
+  // Event listeners (enlever loadProperties)
+  document.getElementById('verificationForm').addEventListener('submit', handleVerification);
       document.getElementById('sendBtn').addEventListener('click', sendMessage);
       document.getElementById('messageInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
