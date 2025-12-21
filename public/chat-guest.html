@@ -860,7 +860,7 @@ async function handleVerification(e) {
   sendBtn.disabled = true;
   
   try {
-    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {  // ← Corrigé : fetch( au lieu de fetch`
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
