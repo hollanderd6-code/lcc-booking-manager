@@ -548,7 +548,21 @@
         max-height: 100vh;
         border-radius: 0;
       }
+      /* Meta (heure + statut) = même taille que côté guest */
+.chat-meta{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  font-size:10px;      /* ✅ même taille */
+  opacity:.7;
+  margin-top:3px;
 }
+
+.chat-status{
+  font-size:inherit;   /* ✅ hérite du 10px */
+  font-weight:400;     /* ✅ pas en gras */
+}
+    }
   
 
 /* =========================
@@ -620,20 +634,17 @@
 
 
 
-/* ===== PATCH : taille "Envoyé" identique au chat guest (desktop + mobile) ===== */
-.chat-meta {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  font-size: 10px !important;
-  opacity: 0.7;
-  margin-top: 3px;
+/* ===== PATCH v2 : meta heure/statut taille WhatsApp (comme guest) ===== */
+.chat-meta{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  font-size:10px !important;
+  opacity:.7;
+  margin-top:3px;
 }
-
-.chat-status {
-  font-size: inherit !important;
-  font-weight: 400 !important;
-}
+.chat-time{ font-size: inherit !important; font-weight: 400 !important; }
+.chat-status{ font-size: inherit !important; font-weight: 400 !important; }
 
 </style>
   <script src="/js/auth-fetch.js"></script>
