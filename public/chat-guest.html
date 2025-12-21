@@ -468,6 +468,62 @@
   color: #6b7280;
   margin-top: 4px;
 }
+      /* Messages style WhatsApp */
+.message {
+  display: flex;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+/* Messages du propriétaire (à gauche, gris) */
+.message.owner {
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.message.owner .message-bubble {
+  background: #f0f0f0;
+  color: #000;
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* Messages du voyageur (à droite, vert) */
+.message.guest {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+.message.guest .message-bubble {
+  background: #dcf8c6;
+  color: #000;
+  border-radius: 18px 18px 4px 18px;
+}
+
+.message.guest .message-avatar {
+  order: 1;
+}
+
+.message.guest .message-content {
+  align-items: flex-end;
+}
+
+.message.guest .message-sender,
+.message.guest .message-time {
+  text-align: right;
+}
+
+/* Messages du bot (centré, bleu clair) */
+.message.bot {
+  flex-direction: row;
+  justify-content: center;
+}
+
+.message.bot .message-bubble {
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 18px;
+  text-align: center;
+}
     }
   </style>
 </head>
