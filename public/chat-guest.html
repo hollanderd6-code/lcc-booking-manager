@@ -910,7 +910,7 @@ async function handleVerification(e) {
       
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
-      bubble.textContent = message.content;
+      bubble.textContent = message.message;  // ✅
       
       const time = document.createElement('div');
       time.className = 'message-time';
