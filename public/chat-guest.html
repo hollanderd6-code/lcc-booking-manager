@@ -664,15 +664,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 1000);
       }
     });
+    
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
   }
 });
-      // Auto-resize textarea
-      const messageInput = document.getElementById('messageInput');
-      messageInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-      });
-    });
 
     // ============================================
     // CHARGEMENT DES PROPRIÉTÉS
