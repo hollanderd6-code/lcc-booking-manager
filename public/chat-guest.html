@@ -632,28 +632,40 @@
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initialisation du chat, token:', token);
   
-  // Event listeners (enlever loadProperties)
-  document.getElementById('verificationForm').addEventListener('submit', handleVerification);
-      document.getElementById('sendBtn').addEventListener('click', sendMessage);
-      document.getElementById('messageInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      });
-
-      // Typing indicator
-      document.getElementById('messageInput').addEventListener('input', () => {
-        if (socket && conversationId) {
-          socket.emit('typing', { conversationId, senderName: 'Voyageur' });
-          
-          clearTimeout(typingTimeout);
-          typingTimeout = setTimeout(() => {
-            socket.emit('stop_typing', { conversationId });
-          }, 1000);
-        }
-      });
-
+  // Event listeners avec vérification
+  const verificationForm = document.getElementById('verificationForm');
+  const sendBtn = document.getElementById('sendBtn');
+  const messageInput = document.getElementById('messageInput');
+  
+  if (verificationForm) {
+    verificationForm.addEventListener('submit', handleVerification);
+  }
+  
+  if (sendBtn) {
+    sendBtn.addEventListener('click', sendMessage);
+  }
+  
+  if (messageInput) {
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    
+    // Typing indicator
+    messageInput.addEventListener('input', () => {
+      if (socket && conversationId) {
+        socket.emit('typing', { conversationId, senderName: 'Voyageur' });
+        
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          socket.emit('stop_typing', { conversationId });
+        }, 1000);
+      }
+    });
+  }
+});
       // Auto-resize textarea
       const messageInput = document.getElementById('messageInput');
       messageInput.addEventListener('input', function() {
