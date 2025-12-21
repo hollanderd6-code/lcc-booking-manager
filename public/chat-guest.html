@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // ============================================
+ // ============================================
 // VÉRIFICATION
 // ============================================
 async function handleVerification(e) {
@@ -760,7 +760,7 @@ async function handleVerification(e) {
       return;
     }
     
-    // Stocker les infos
+    // ✅ Vérification réussie !
     conversationId = data.conversation_id;
     sessionStorage.setItem('chat_conversation_id', data.conversation_id);
     sessionStorage.setItem('chat_property_id', data.property_id);
@@ -779,25 +779,6 @@ async function handleVerification(e) {
     }
   }
 }
-
-        // ✅ Vérification réussie !
-        conversationId = data.conversation_id;
-        
-        // Afficher le chat
-        document.getElementById('verificationPage').style.display = 'none';
-        document.getElementById('chatContainer').classList.add('active');
-        
-        // Charger les messages et connecter Socket.IO
-        await loadMessages();
-        connectSocket();
-
-      } catch (error) {
-        console.error('❌ Erreur:', error);
-        showError('Erreur de connexion. Veuillez réessayer.');
-        verifyBtn.disabled = false;
-        verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder';
-      }
-    }
 
     // ============================================
     // CHARGEMENT DES MESSAGES
