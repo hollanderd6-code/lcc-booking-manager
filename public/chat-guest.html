@@ -699,44 +699,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ============================================
-    // VÉRIFICATION
-    // ============================================
-
-    async function handleVerification(e) {
-      e.preventDefault();
-      
-      const propertyId = document.getElementById('propertySelect').value;
-      const checkinDate = document.getElementById('checkinDate').value;
-      const platform = document.getElementById('platformSelect').value;
-      const pinCode = document.getElementById('pinCode').value;
-
-      if (!propertyId || !checkinDate || !platform || !pinCode) {
-        showError('Tous les champs sont requis');
-        return;
+// VÉRIFICATION
+// ============================================
+async function handleVerification(e) {
+  e.preventDefault();
+  
+  // Récupérer property_id depuis l'URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const propertyId = urlParams.get('property');
+  
+  const pinCode = document.getElementById('pinCode').value;
+  const checkinDate = document.getElementById('checkinDate').value;
+  const checkoutDate = document.getElementById('checkoutDate').value;
+  const platform = document.getElementById('platform').value;
+  
+  if (!propertyId) {
+    showError('Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.');
+    return;
+  }
+  
+  if (!pinCode || !checkinDate || !platform) {
+    showError('Tous les champs obligatoires doivent être remplis');
+    return;
+  }
+  
+  if (pinCode.length !== 4 || !/^\d+$/.test(pinCode)) {
+    showError('Le code PIN doit contenir exactement 4 chiffres');
+    return;
+  }
+  
+  const verifyBtn = document.querySelector('button[type="submit"]');
+  if (verifyBtn) {
+    verifyBtn.disabled = true;
+    verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/api/chat/verify-by-property`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        property_id: propertyId,
+        chat_pin: pinCode,
+        checkin_date: checkinDate,
+        checkout_date: checkoutDate || null,
+        platform: platform
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      showError(data.error || 'Erreur de vérification');
+      if (verifyBtn) {
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
       }
-
-      if (pinCode.length !== 4 || !/^\d+$/.test(pinCode)) {
-        showError('Le code doit contenir exactement 4 chiffres');
-        return;
-      }
-
-      const verifyBtn = document.getElementById('verifyBtn');
-      verifyBtn.disabled = true;
-      verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
-
-      try {
-        const response = await fetch(`${API_URL}/api/chat/verify/${token}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            property_id: propertyId,
-            checkin_date: checkinDate,
-            platform: platform,
-            pin_code: pinCode
-          })
-        });
+      return;
+    }
+    
+    // Stocker les infos
+    conversationId = data.conversation_id;
+    sessionStorage.setItem('chat_conversation_id', data.conversation_id);
+    sessionStorage.setItem('chat_property_id', data.property_id);
+    sessionStorage.setItem('chat_property_name', data.property_name);
+    sessionStorage.setItem('chat_verified', 'true');
+    
+    // Afficher le chat
+    showChatInterface();
+    
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur de connexion au serveur');
+    if (verifyBtn) {
+      verifyBtn.disabled = false;
+      verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
+    }
+  }
+}
 
         const data = await response.json();
 
