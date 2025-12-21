@@ -898,8 +898,6 @@ async function handleVerification(e) {
     sessionStorage.setItem('chat_property_id', data.property_id);
     sessionStorage.setItem('chat_property_name', data.property_name);
     sessionStorage.setItem('chat_verified', 'true');
-    
-    }
 
   // Afficher le chat
     showChatInterface();
@@ -1237,60 +1235,45 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
 
 // Fonction pour afficher l'interface de chat après vérification
 function showChatInterface() {
-  if (chatListenersAttached) {
-    // Déjà initialisé (évite double listeners)
-  }
-  // Attacher les event listeners du chat
+  // Empêcher les doubles listeners (qui provoquent l'envoi en double)
   if (!chatListenersAttached) {
-    chatListenersAttached = true;
-  const sendBtn = document.getElementById('sendBtn');
-  const messageInput = document.getElementById('messageInput');
-  
-  if (sendBtn) {
-    sendBtn.addEventListener('click', sendMessage);
-  }
-  
-  if (messageInput) {
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+    const form = document.getElementById('chatForm'); // si présent
+    const sendBtn = document.getElementById('sendBtn');
+    const messageInput = document.getElementById('messageInput');
+
+    // On privilégie le submit du form (un seul point d'entrée)
+    if (form) {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        sendMessage();
-      }
-    });
-    
-    messageInput.addEventListener('input', () => {
-      if (socket && conversationId) {
-        socket.emit('typing', { conversationId, senderName: 'Voyageur' });
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-          socket.emit('stop_typing', { conversationId });
-        }, 1000);
-      }
-    });
-    
-    messageInput.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    });
+        await sendMessage();
+      });
+    } else if (sendBtn) {
+      // Fallback si pas de <form>
+      sendBtn.addEventListener('click', sendMessage);
+    }
+
+    // Enter = envoyer, Shift+Enter = nouvelle ligne
+    if (messageInput) {
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    chatListenersAttached = true;
   }
-  
-  // Afficher le chat
-  const verificationContainer = document.getElementById('verificationContainer');
-  const chatContainer = document.getElementById('chatContainer');
-  
-  if (verificationContainer) verificationContainer.style.display = 'none';
-  if (chatContainer) chatContainer.style.display = 'flex';
-  
-  // Charger les messages
+
+  // Afficher le container de chat
+  document.getElementById('verificationContainer').style.display = 'none';
+  document.getElementById('chatContainer').style.display = 'flex';
+
+  // Charger messages + connecter socket
   loadMessages();
   connectSocket();
+  scrollToBottom();
 }
-
-// Auto-formater le PIN (ajouter des espaces tous les 2 chiffres pour la lisibilité)
-document.getElementById('pinCode')?.addEventListener('input', (e) => {
-  let value = e.target.value.replace(/\D/g, ''); // Garder uniquement les chiffres
-  e.target.value = value;
-});
 
 // Définir la date minimale comme aujourd'hui - 30 jours (on peut avoir des réservations passées récentes)
 const checkinInput = document.getElementById('checkinDate');
