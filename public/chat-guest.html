@@ -768,18 +768,33 @@
     let socket = null;
     let typingTimeout = null;
 
+
+let chatListenersAttached = false;
+let sendingInProgress = false;
+const seenMessageKeys = new Set();
+
+function messageKey(m) {
+  if (!m) return null;
+  if (m.id) return `id:${m.id}`;
+  const t = m.created_at || m.timestamp || '';
+  const s = m.sender_type || '';
+  const n = m.sender_name || '';
+  const c = m.message || m.content || '';
+  return `k:${s}|${n}|${t}|${c}`;
+}
+
+function appendMessageSafe(m) {
+  const k = messageKey(m);
+  if (k && seenMessageKeys.has(k)) return;
+  if (k) seenMessageKeys.add(k);
+  appendMessage(m);
+}
+
     // ============================================
 // INITIALISATION
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initialisation du chat, token:', token);
-  
-  // Event listener du formulaire de vérification
-  const verificationForm = document.getElementById('verificationForm');
-  if (verificationForm) {
-    verificationForm.addEventListener('submit', handleVerification);
-  }
-  
   // Vérifier si déjà connecté
   const savedConversationId = sessionStorage.getItem('chat_conversation_id');
   const isVerified = sessionStorage.getItem('chat_verified');
@@ -884,7 +899,9 @@ async function handleVerification(e) {
     sessionStorage.setItem('chat_property_name', data.property_name);
     sessionStorage.setItem('chat_verified', 'true');
     
-    // Afficher le chat
+    }
+
+  // Afficher le chat
     showChatInterface();
     
   } catch (error) {
@@ -911,7 +928,7 @@ async function handleVerification(e) {
         
         if (data.messages && data.messages.length > 0) {
           data.messages.forEach(message => {
-            appendMessage(message);
+            appendMessageSafe(message);
           });
         } else {
           container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Aucun message pour le moment</p>';
@@ -938,7 +955,7 @@ async function handleVerification(e) {
       });
       
       socket.on('new_message', (message) => {
-        appendMessage(message);
+        appendMessageSafe(message);
         scrollToBottom();
       });
       
@@ -961,34 +978,51 @@ async function handleVerification(e) {
     // ============================================
 
    async function sendMessage() {
-console.log('🚀 sendMessage appelée !');
+  if (sendingInProgress) return;
+  sendingInProgress = true;
+
+  console.log('🚀 sendMessage appelée !');
   const input = document.getElementById('messageInput');
-  const message = input.value.trim();  // ← Renommé en message
-  
-  if (!message) return;
-  
+  const message = input.value.trim();
+
+  if (!message) {
+    sendingInProgress = false;
+    return;
+  }
+
   const sendBtn = document.getElementById('sendBtn');
   sendBtn.disabled = true;
-  
+
   try {
     const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: message,  // ← Changé : message au lieu de content
+        message: message,
         sender_name: 'Voyageur'
       })
     });
-    
-    if (!response.ok) {
-      throw new Error('Erreur envoi message');
-    }
+
+    if (!response.ok) throw new Error('Erreur envoi message');
     const data = await response.json();
-if (data.message) {
-  appendMessage(data.message);
-  scrollToBottom();
+
+    // IMPORTANT:
+    // - Si le serveur émet le message via Socket.IO, il arrivera dans socket.on('new_message')
+    // - Sinon, on l'affiche ici en fallback (avec déduplication)
+    if (data && data.message) {
+      appendMessageSafe(data.message);
+      scrollToBottom();
+    }
+
+    input.value = '';
+    input.style.height = 'auto';
+  } catch (error) {
+    console.error('❌ Erreur envoi:', error);
+    showError('Erreur lors de l\'envoi du message');
+  } finally {
+    sendBtn.disabled = false;
+    sendingInProgress = false;
+  }
 }
 
     input.value = '';
@@ -1203,7 +1237,12 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
 
 // Fonction pour afficher l'interface de chat après vérification
 function showChatInterface() {
+  if (chatListenersAttached) {
+    // Déjà initialisé (évite double listeners)
+  }
   // Attacher les event listeners du chat
+  if (!chatListenersAttached) {
+    chatListenersAttached = true;
   const sendBtn = document.getElementById('sendBtn');
   const messageInput = document.getElementById('messageInput');
   
