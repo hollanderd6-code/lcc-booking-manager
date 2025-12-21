@@ -22,10 +22,10 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
    */
   const optionalAuth = async (req, res, next) => {
     try {
-// 1) Token via header Authorization: Bearer ...
+      // 1) Token via header Authorization: Bearer ...
 const authHeader = req.headers.authorization;
 
-// 2) Token via cookies (utile quand le front n'envoie pas l'header)
+// 2) Token via cookies (utile si tu stockes le JWT en cookie)
 const cookieToken =
   (req.cookies && (req.cookies.lcc_token || req.cookies.token || req.cookies.auth_token || req.cookies.jwt)) || null;
 
@@ -33,21 +33,17 @@ const cookieToken =
 const queryToken = (req.query && req.query.token) ? String(req.query.token) : null;
 
 let token = null;
-
-if (authHeader && authHeader.startsWith('Bearer ')) {
-  token = authHeader.substring(7);
-} else if (cookieToken) {
-  token = String(cookieToken);
-} else if (queryToken) {
-  token = queryToken;
-}
+if (authHeader && authHeader.startsWith('Bearer ')) token = authHeader.substring(7);
+else if (cookieToken) token = String(cookieToken);
+else if (queryToken) token = queryToken;
 
 if (!token) {
   // Pas de token = continue comme invité
   req.user = null;
   return next();
-}const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+}
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
       
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
@@ -453,15 +449,14 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     try {
       const { conversationId } = req.params;
       const { message, sender_name } = req.body;
-if (!message || !message.trim()) {
+
+      if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message vide' });
       }
 
-      
-const userId = req.user ? req.user.id : null;
+      const userId = req.user ? req.user.id : null;
 const senderType = userId ? 'owner' : 'guest';
 
-// Nom d'expéditeur fiable côté serveur (évite que tout arrive en "guest" par erreur)
 const safeSenderName =
   senderType === 'owner'
     ? 'Propriétaire'
