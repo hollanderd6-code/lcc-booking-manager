@@ -316,15 +316,19 @@ async function sendMessageOwner() {
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({
-        content: content,
-        sender_name: 'Propriétaire'
-      })
+  message: content,
+  sender_name: 'Propriétaire'
+})
     });
     
     if (!response.ok) {
       throw new Error('Erreur envoi message');
     }
-    
+    const data = await response.json();
+if (data.message) {
+  appendMessage(data.message);
+  scrollToBottom();
+}
     input.value = '';
     input.style.height = 'auto';
     
@@ -366,7 +370,7 @@ function appendMessage(message) {
   
   const bubble = document.createElement('div');
   bubble.className = 'chat-bubble';
-  bubble.textContent = message.content;
+  bubble.textContent = message.message;
   
   const time = document.createElement('div');
   time.className = 'chat-time';
