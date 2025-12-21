@@ -1015,7 +1015,20 @@ if (data.message) {
       }
       
       const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${message.sender_type}`;
+      // Normaliser le type de sender (backend peut renvoyer des variantes)
+const rawType = (message.sender_type || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+let normalizedType = 'bot';
+
+if (['guest','voyageur','traveler','client'].includes(rawType)) normalizedType = 'guest';
+else if (['owner','host','proprietaire','propriétaire','admin','manager'].includes(rawType)) normalizedType = 'owner';
+else if (['bot','assistant','system'].includes(rawType)) normalizedType = 'bot';
+else {
+  // Fallback basé sur le nom si sender_type est absent / inattendu
+  const n = (message.sender_name || '').toString().toLowerCase();
+  normalizedType = n.includes('propri') || n.includes('host') ? 'owner' : 'guest';
+}
+
+messageDiv.className = `message ${normalizedType}`;
       
       const avatar = document.createElement('div');
       avatar.className = 'message-avatar';
