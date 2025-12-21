@@ -843,41 +843,41 @@ async function handleVerification(e) {
     // ENVOI DE MESSAGE
     // ============================================
 
-    async function sendMessage() {
-      const input = document.getElementById('messageInput');
-      const content = input.value.trim();
-      
-      if (!content) return;
-      
-      const sendBtn = document.getElementById('sendBtn');
-      sendBtn.disabled = true;
-      
-      try {
-        const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            content: content,
-            sender_name: 'Voyageur'
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Erreur envoi message');
-        }
-        
-        input.value = '';
-        input.style.height = 'auto';
-        
-      } catch (error) {
-        console.error('❌ Erreur envoi:', error);
-        showError('Erreur lors de l\'envoi du message');
-      } finally {
-        sendBtn.disabled = false;
-      }
+   async function sendMessage() {
+  const input = document.getElementById('messageInput');
+  const message = input.value.trim();  // ← Renommé en message
+  
+  if (!message) return;
+  
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  
+  try {
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {  // ← Corrigé : fetch( au lieu de fetch`
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: message,  // ← Changé : message au lieu de content
+        sender_name: 'Voyageur'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur envoi message');
     }
+    
+    input.value = '';
+    input.style.height = 'auto';
+    
+  } catch (error) {
+    console.error('❌ Erreur envoi:', error);
+    showError('Erreur lors de l\'envoi du message');
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
 
     // ============================================
     // AFFICHAGE DES MESSAGES
