@@ -1135,16 +1135,9 @@ status.className = 'message-status';
 
 // Statut visible uniquement pour les messages du voyageur
 if (message.sender_type === 'guest') {
-  const s = message.status || (message.read_at ? 'read' : (message.delivered_at ? 'delivered' : 'sent'));
-  if (s === 'read') // Statut WhatsApp :
-// - Envoyé = rien reçu par l'autre (fallback)
-// - ✓ = distribué (delivered_at)
-// - ✓✓ = lu (read_at / is_read)
-const delivered = !!message.delivered_at;
-const read = !!message.read_at || !!message.is_read;
-status.textContent = read ? '✓✓' : (delivered ? '✓' : 'Envoyé');
-  else if (s === 'delivered') status.textContent = 'Distribué';
-  else status.textContent = 'Envoyé';
+  const delivered = !!message.delivered_at;
+  const read = !!message.read_at || !!message.is_read;
+  status.textContent = read ? '✓✓' : (delivered ? '✓' : 'Envoyé');
 } else {
   status.textContent = '';
 }
