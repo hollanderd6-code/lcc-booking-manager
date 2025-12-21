@@ -634,17 +634,20 @@
 
 
 
-/* ===== PATCH v2 : meta heure/statut taille WhatsApp (comme guest) ===== */
-.chat-meta{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  font-size:10px !important;
-  opacity:.7;
-  margin-top:3px;
+/* ===== FORCE : "Envoyé" même taille que côté voyageur ===== */
+.chat-meta,
+.chat-time,
+.chat-status,
+.chat-time *,
+.chat-status * {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  opacity: 0.7;
+  line-height: 1.2;
 }
-.chat-time{ font-size: inherit !important; font-weight: 400 !important; }
-.chat-status{ font-size: inherit !important; font-weight: 400 !important; }
+
+/* Si "Envoyé" est rendu dans un élément avec .chat-time uniquement */
+.chat-time { display: inline-flex; gap: 6px; align-items: center; }
 
 </style>
   <script src="/js/auth-fetch.js"></script>
