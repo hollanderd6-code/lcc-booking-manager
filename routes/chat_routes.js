@@ -22,16 +22,31 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
    */
   const optionalAuth = async (req, res, next) => {
     try {
-      const authHeader = req.headers.authorization;
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        // Pas de token = continue comme invité
-        req.user = null;
-        return next();
-      }
-      
-      const token = authHeader.substring(7);
-      const jwt = require('jsonwebtoken');
+// 1) Token via header Authorization: Bearer ...
+const authHeader = req.headers.authorization;
+
+// 2) Token via cookies (utile quand le front n'envoie pas l'header)
+const cookieToken =
+  (req.cookies && (req.cookies.lcc_token || req.cookies.token || req.cookies.auth_token || req.cookies.jwt)) || null;
+
+// 3) Token via querystring ?token=... (fallback)
+const queryToken = (req.query && req.query.token) ? String(req.query.token) : null;
+
+let token = null;
+
+if (authHeader && authHeader.startsWith('Bearer ')) {
+  token = authHeader.substring(7);
+} else if (cookieToken) {
+  token = String(cookieToken);
+} else if (queryToken) {
+  token = queryToken;
+}
+
+if (!token) {
+  // Pas de token = continue comme invité
+  req.user = null;
+  return next();
+}const jwt = require('jsonwebtoken');
       const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
       
       try {
@@ -438,13 +453,19 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     try {
       const { conversationId } = req.params;
       const { message, sender_name } = req.body;
-
-      if (!message || !message.trim()) {
+if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message vide' });
       }
 
-      const userId = req.user ? req.user.id : null;
-      const senderType = userId ? 'owner' : 'guest';
+      
+const userId = req.user ? req.user.id : null;
+const senderType = userId ? 'owner' : 'guest';
+
+// Nom d'expéditeur fiable côté serveur (évite que tout arrive en "guest" par erreur)
+const safeSenderName =
+  senderType === 'owner'
+    ? 'Propriétaire'
+    : (sender_name && String(sender_name).trim() ? String(sender_name).trim() : 'Voyageur');
 
       // Vérifier l'accès
       const convCheck = await pool.query(
@@ -471,7 +492,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
         `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
-        [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
+        [conversationId, senderType, safeSenderName, message.trim(), senderType === 'owner']
       );
 
       const savedMessage = result.rows[0];
