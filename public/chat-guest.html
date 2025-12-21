@@ -631,34 +631,22 @@
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initialisation du chat, token:', token);
-  const savedConversationId = sessionStorage.getItem('chat_conversation_id');
-const isVerified = sessionStorage.getItem('chat_verified');
-
-if (savedConversationId && isVerified === 'true') {
-  conversationId = savedConversationId;
-  showChatInterface();
-  return; // Passer directement au chat
-}
-  // Event listeners avec vérification
-  const verificationForm = document.getElementById('verificationForm');
-  const sendBtn = document.getElementById('sendBtn');
-  const messageInput = document.getElementById('messageInput');
   
+  // Event listener du formulaire de vérification
+  const verificationForm = document.getElementById('verificationForm');
   if (verificationForm) {
     verificationForm.addEventListener('submit', handleVerification);
   }
   
-  if (sendBtn) {
-    sendBtn.addEventListener('click', sendMessage);
-  }
+  // Vérifier si déjà connecté
+  const savedConversationId = sessionStorage.getItem('chat_conversation_id');
+  const isVerified = sessionStorage.getItem('chat_verified');
   
-  if (messageInput) {
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
+  if (savedConversationId && isVerified === 'true') {
+    conversationId = savedConversationId;
+    showChatInterface();
+  }
+});
     
     // Typing indicator
     messageInput.addEventListener('input', () => {
@@ -1063,6 +1051,39 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
 
 // Fonction pour afficher l'interface de chat après vérification
 function showChatInterface() {
+  // Attacher les event listeners du chat
+  const sendBtn = document.getElementById('sendBtn');
+  const messageInput = document.getElementById('messageInput');
+  
+  if (sendBtn) {
+    sendBtn.addEventListener('click', sendMessage);
+  }
+  
+  if (messageInput) {
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    
+    messageInput.addEventListener('input', () => {
+      if (socket && conversationId) {
+        socket.emit('typing', { conversationId, senderName: 'Voyageur' });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          socket.emit('stop_typing', { conversationId });
+        }, 1000);
+      }
+    });
+    
+    messageInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+  }
+  
+  // Afficher le chat
   const verificationContainer = document.getElementById('verificationContainer');
   const chatContainer = document.getElementById('chatContainer');
   
@@ -1071,7 +1092,7 @@ function showChatInterface() {
   
   // Charger les messages
   loadMessages();
-  
+  connectSocket();
 }
 
 // Auto-formater le PIN (ajouter des espaces tous les 2 chiffres pour la lisibilité)
