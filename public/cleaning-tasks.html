@@ -741,32 +741,35 @@
       for (const file of files) {
         if (!file.type.startsWith('image/')) continue;
         
-        // Convert to base64
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const photoData = e.target.result;
-          uploadedPhotos.push(photoData);
-          
-          // Add preview
-          const preview = document.createElement('div');
-          preview.className = 'photo-preview-item';
-          preview.innerHTML = `
-            <img src="${photoData}" alt="Photo">
-            <button class="remove-photo" onclick="removePhoto(${uploadedPhotos.length - 1})">
-              <i class="fas fa-times"></i>
-            </button>
-          `;
-          document.getElementById('photosPreview').appendChild(preview);
-        };
-        reader.readAsDataURL(file);
-      }
-      
-      // Reset input
-      event.target.value = '';
+        function removePhoto(index) {
+  uploadedPhotos.splice(index, 1);
+  renderPhotoPreviews();
+}
+
+// Fonction de compression d'image
+function compressImage(base64, callback, maxWidth = 1200, quality = 0.7) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    let width = img.width;
+    let height = img.height;
+    
+    // Redimensionner si trop large
+    if (width > maxWidth) {
+      height = (height * maxWidth) / width;
+      width = maxWidth;
     }
     
-    function removePhoto(index) {
-      uploadedPhotos.splice(index, 1);
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    // Convertir en JPEG avec compression
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = base64;
+}
       
       // Re-render previews
       const previewContainer = document.getElementById('photosPreview');
