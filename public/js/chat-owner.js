@@ -240,7 +240,7 @@ async function openChat(conversationId) {
   
   // Rejoindre la room Socket.IO
   if (socket) {
-    socket.emit('join_conversation', conversationId);
+    socket.emit('join_conversation', { conversationId });
   }
 }
 
