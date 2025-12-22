@@ -7427,6 +7427,16 @@ async function openChecklistDetails(checklistId) {
   const checklist = cleaningChecklists.find(c => c.id == checklistId);
   if (!checklist) return;
   
+  // Attendre que le DOM soit prêt
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  // Vérifier que la modale existe
+  const modal = document.getElementById('checklistModal');
+  if (!modal) {
+    console.error('Modale non trouvée dans le DOM');
+    return;
+  }
+  
   // Récupérer les détails complets depuis l'API
   try {
     const token = localStorage.getItem('lcc_token');
@@ -7445,7 +7455,7 @@ async function openChecklistDetails(checklistId) {
     populateChecklistModal(fullChecklist);
     
     // Afficher la modale
-    document.getElementById('checklistModal').classList.add('active');
+    modal.classList.add('active');
     document.body.style.overflow = 'hidden';
     
   } catch (err) {
