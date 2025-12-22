@@ -650,16 +650,17 @@
 
       function loadLocalData() {
         try {
-          cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
+          // Les cleaners sont maintenant chargés depuis l'API dans loadRemoteData()
+          // On garde seulement les assignations en localStorage pour la compatibilité
           assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
         } catch (e) {
-          cleaners = [];
           assignments = {};
         }
       }
 
       function saveLocalData() {
-        localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
+        // On ne sauvegarde plus les cleaners en localStorage
+        // Ils sont maintenant gérés uniquement via l'API
         localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
       }
 
@@ -718,6 +719,7 @@
           const token = localStorage.getItem('lcc_token');
           if (!token) return;
 
+          // Charger les réservations et propriétés
           const response = await fetch(`${API_URL}/api/reservations`, {
             headers: {
               Authorization: 'Bearer ' + token
@@ -725,7 +727,7 @@
           });
 
           if (!response.ok) {
-            console.warn('Erreur lors du chargement des rÃ©servations pour le mÃ©nage', response.status);
+            console.warn('Erreur lors du chargement des réservations pour le ménage', response.status);
             return;
           }
 
@@ -734,20 +736,37 @@
           RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
           PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
 
-          // Fallback de dÃ©mo si aucune propriÃ©tÃ©
+          // Charger les cleaners depuis l'API
+          const cleanersResponse = await fetch(`${API_URL}/api/cleaners`, {
+            headers: {
+              Authorization: 'Bearer ' + token
+            }
+          });
+
+          if (cleanersResponse.ok) {
+            const cleanersData = await cleanersResponse.json().catch(() => ({}));
+            if (Array.isArray(cleanersData.cleaners)) {
+              cleaners = cleanersData.cleaners;
+            }
+          }
+
+          // Fallback de démo si aucune propriété
           if (!PROPERTIES.length) {
             PROPERTIES = [
-              { id: 'apt-demo-1', name: 'Appartement dÃ©mo 1' },
-              { id: 'apt-demo-2', name: 'Appartement dÃ©mo 2' }
+              { id: 'apt-demo-1', name: 'Appartement démo 1' },
+              { id: 'apt-demo-2', name: 'Appartement démo 2' }
             ];
           }
         } catch (e) {
           console.error('Erreur loadRemoteData()', e);
           if (!PROPERTIES.length) {
             PROPERTIES = [
-              { id: 'apt-demo-1', name: 'Appartement dÃ©mo 1' },
-              { id: 'apt-demo-2', name: 'Appartement dÃ©mo 2' }
+              { id: 'apt-demo-1', name: 'Appartement démo 1' },
+              { id: 'apt-demo-2', name: 'Appartement démo 2' }
             ];
+          }
+        }
+      }
           }
         }
       }
@@ -1006,9 +1025,9 @@
         });
       }
 
-      // Ajout dâ€™un membre
+      // Ajout d'un membre
       if (cleanerForm) {
-        cleanerForm.addEventListener('submit', (e) => {
+        cleanerForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           const name = document.getElementById('cleanerName').value.trim();
           const email = document.getElementById('cleanerEmail').value.trim();
@@ -1017,40 +1036,95 @@
 
           if (!name) return;
 
-          cleaners.push({
-            id: 'c_' + Date.now(),
-            name,
-            email,
-            phone,
-            notes
-          });
+          const token = localStorage.getItem('lcc_token');
+          if (!token) {
+            alert('Session expirée, veuillez vous reconnecter');
+            return;
+          }
 
-          cleanerForm.reset();
-          saveLocalData();
-          renderCleaners();
-          renderAssignments();
+          try {
+            const response = await fetch(`${API_URL}/api/cleaners`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                name,
+                email: email || null,
+                phone: phone || null,
+                notes: notes || null,
+                isActive: true
+              })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Erreur lors de la création');
+            }
+
+            // Ajouter à la liste locale
+            cleaners.push(data.cleaner);
+            
+            cleanerForm.reset();
+            renderCleaners();
+            renderAssignments();
+          } catch (err) {
+            console.error('Erreur création cleaner:', err);
+            alert('Erreur lors de la création: ' + err.message);
+          }
         });
       }
 
-      // Suppression dâ€™un membre
+      // Suppression d'un membre
       if (cleanerList) {
-        cleanerList.addEventListener('click', (e) => {
+        cleanerList.addEventListener('click', async (e) => {
           const btn = e.target.closest('[data-action="deleteCleaner"]');
           if (!btn) return;
 
           const id = btn.getAttribute('data-id');
-          cleaners = cleaners.filter((c) => c.id !== id);
+          
+          if (!confirm('Êtes-vous sûr de vouloir supprimer cette personne ?')) {
+            return;
+          }
 
-          // On enlÃ¨ve les assignations liÃ©es
-          Object.keys(assignments).forEach((pid) => {
-            if (assignments[pid] === id) {
-              delete assignments[pid];
+          const token = localStorage.getItem('lcc_token');
+          if (!token) {
+            alert('Session expirée, veuillez vous reconnecter');
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_URL}/api/cleaners/${id}`, {
+              method: 'DELETE',
+              headers: {
+                Authorization: 'Bearer ' + token
+              }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Erreur lors de la suppression');
             }
-          });
 
-          saveLocalData();
-          renderCleaners();
-          renderAssignments();
+            // Retirer de la liste locale
+            cleaners = cleaners.filter((c) => c.id !== id);
+
+            // On enlève les assignations liées
+            Object.keys(assignments).forEach((pid) => {
+              if (assignments[pid] === id) {
+                delete assignments[pid];
+              }
+            });
+
+            renderCleaners();
+            renderAssignments();
+          } catch (err) {
+            console.error('Erreur suppression cleaner:', err);
+            alert('Erreur lors de la suppression: ' + err.message);
+          }
         });
       }
 
