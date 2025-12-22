@@ -1544,3 +1544,81 @@ html, body {
   border-radius: 999px !important;
   font-weight: 800 !important;
 }
+
+
+/* =========================
+   WHATSAPP CHAT STYLE (OWNER)
+   ========================= */
+
+/* Background */
+#chatMessages, .chat-messages, .chat-modal-messages{
+  background: #efeae2 !important;
+  background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Hide avatar + sender label */
+.chat-avatar{ display:none !important; }
+.chat-sender{ display:none !important; }
+
+/* Layout */
+.chat-message{
+  display:flex;
+  flex-direction:column;
+  max-width:72%;
+  margin: 0 0 8px 0;
+}
+
+/* Right for owner */
+.chat-message.owner{ margin-left:auto !important; align-items:flex-end; }
+/* Left for guest */
+.chat-message.guest{ margin-right:auto !important; align-items:flex-start; }
+
+/* Bubble */
+.chat-bubble{
+  width: fit-content;
+  max-width: 100%;
+  padding: 10px 12px;
+  border-radius: 18px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  position: relative;
+  line-height: 1.25;
+}
+
+/* Colors */
+.chat-message.owner .chat-bubble{ background:#dcf8c6 !important; }
+.chat-message.guest .chat-bubble{ background:#ffffff !important; }
+
+/* Bubble tail */
+.chat-message.owner .chat-bubble::before{
+  content:"";
+  position:absolute;
+  right:-6px;
+  bottom:6px;
+  border-top:6px solid transparent;
+  border-bottom:6px solid transparent;
+  border-left:6px solid #dcf8c6;
+}
+.chat-message.guest .chat-bubble::before{
+  content:"";
+  position:absolute;
+  left:-6px;
+  bottom:6px;
+  border-top:6px solid transparent;
+  border-bottom:6px solid transparent;
+  border-right:6px solid #ffffff;
+}
+
+/* Meta (heure + statut) */
+.chat-meta{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  font-size:10px !important;
+  opacity:.7 !important;
+  margin-top:3px !important;
+}
+.chat-time, .chat-status{
+  font-size:inherit !important;
+  font-weight:400 !important;
+}
