@@ -765,8 +765,13 @@
               { id: 'apt-demo-2', name: 'Appartement démo 2' }
             ];
           }
-        }
-      }
+        } catch (e) {
+          console.error('Erreur loadRemoteData()', e);
+          if (!PROPERTIES.length) {
+            PROPERTIES = [
+              { id: 'apt-demo-1', name: 'Appartement démo 1' },
+              { id: 'apt-demo-2', name: 'Appartement démo 2' }
+            ];
           }
         }
       }
