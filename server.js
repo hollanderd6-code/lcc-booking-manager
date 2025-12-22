@@ -5411,9 +5411,9 @@ if (reservation_key && reservation_key !== null) {
     return rKey === reservation_key;
   });
   
-  const propertyName = reservation?.propertyName || 
-                      (reservation?.property && reservation.property.name) || 
-                      property_id;
+  // Récupérer le nom du logement depuis PROPERTIES
+const property = PROPERTIES.find(p => p.id === property_id);
+const propertyName = property?.name || property?.title || property?.label || property_id;
   const guestName = reservation?.guestName || reservation?.name || '';
   
   tasks.push({
