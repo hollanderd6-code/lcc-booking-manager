@@ -758,64 +758,7 @@
   </div>
 
   <!-- Socket.IO -->
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js">// ============================================
-// ✅ STATUTS : helpers DOM
-// ============================================
-function updateMessageStatus(messageId, { delivered = false, read = false } = {}) {
-  const el = document.querySelector(`.message[data-message-id="${messageId}"] .message-status`);
-  if (!el) return;
-  const current = el.textContent || '';
-  if (read) { el.textContent = '✓✓'; return; }
-  if (delivered) {
-    if (current.includes('✓✓')) return;
-    el.textContent = '✓';
-  }
-}
-
-function updateMessagesReadUpTo(upToMessageId) {
-  document.querySelectorAll('.message.guest[data-message-id]').forEach(msgEl => {
-    const id = parseInt(msgEl.dataset.messageId, 10);
-    if (!Number.isFinite(id)) return;
-    if (id <= upToMessageId) {
-      const statusEl = msgEl.querySelector('.message-status');
-      if (statusEl) statusEl.textContent = '✓✓';
-    }
-  });
-}
-
-function markVisibleAsRead() {
-  if (!socket || !conversationId) return;
-  const container = document.getElementById('messagesContainer');
-  if (!container) return;
-
-  const nearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 40;
-  if (!nearBottom) return;
-
-  const msgs = Array.from(document.querySelectorAll('.message.owner[data-message-id]'));
-  if (msgs.length === 0) return;
-
-  const lastId = parseInt(msgs[msgs.length - 1].dataset.messageId, 10);
-  if (!Number.isFinite(lastId)) return;
-
-  socket.emit('messages_read', { conversationId, upToMessageId: lastId, reader_type: 'guest' });
-}
-
-// Scrolling / focus / visibility
-document.addEventListener('DOMContentLoaded', () => {
-  const container = document.getElementById('messagesContainer');
-  if (container) {
-    container.addEventListener('scroll', () => {
-      clearTimeout(window.__readThrottleGuest);
-      window.__readThrottleGuest = setTimeout(markVisibleAsRead, 120);
-    });
-  }
-  window.addEventListener('focus', () => setTimeout(markVisibleAsRead, 120));
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) setTimeout(markVisibleAsRead, 120);
-  });
-});
-
-</script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
   <script>
     const API_URL = window.location.origin;
@@ -825,18 +768,33 @@ document.addEventListener('DOMContentLoaded', () => {
     let socket = null;
     let typingTimeout = null;
 
+
+let chatListenersAttached = false;
+let sendingInProgress = false;
+const seenMessageKeys = new Set();
+
+function messageKey(m) {
+  if (!m) return null;
+  if (m.id) return `id:${m.id}`;
+  const t = m.created_at || m.timestamp || '';
+  const s = m.sender_type || '';
+  const n = m.sender_name || '';
+  const c = m.message || m.content || '';
+  return `k:${s}|${n}|${t}|${c}`;
+}
+
+function appendMessageSafe(m) {
+  const k = messageKey(m);
+  if (k && seenMessageKeys.has(k)) return;
+  if (k) seenMessageKeys.add(k);
+  appendMessage(m);
+}
+
     // ============================================
 // INITIALISATION
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initialisation du chat, token:', token);
-  
-  // Event listener du formulaire de vérification
-  const verificationForm = document.getElementById('verificationForm');
-  if (verificationForm) {
-    verificationForm.addEventListener('submit', handleVerification);
-  }
-  
   // Vérifier si déjà connecté
   const savedConversationId = sessionStorage.getItem('chat_conversation_id');
   const isVerified = sessionStorage.getItem('chat_verified');
@@ -940,8 +898,8 @@ async function handleVerification(e) {
     sessionStorage.setItem('chat_property_id', data.property_id);
     sessionStorage.setItem('chat_property_name', data.property_name);
     sessionStorage.setItem('chat_verified', 'true');
-    
-    // Afficher le chat
+
+  // Afficher le chat
     showChatInterface();
     
   } catch (error) {
@@ -968,7 +926,7 @@ async function handleVerification(e) {
         
         if (data.messages && data.messages.length > 0) {
           data.messages.forEach(message => {
-            appendMessage(message);
+            appendMessageSafe(message);
           });
         } else {
           container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Aucun message pour le moment</p>';
@@ -995,26 +953,9 @@ async function handleVerification(e) {
       });
       
       socket.on('new_message', (message) => {
-  appendMessage(message);
-  scrollToBottom();
-
-  // Confirmer "Distribué" si le message vient de l'autre
-  if (message && message.id && message.sender_type !== 'guest') {
-    socket.emit('message_delivered', { conversationId, messageId: message.id, reader_type: 'guest' });
-    setTimeout(markVisibleAsRead, 50);
-  }
-});
-
-socket.on('message_delivered', ({ messageId }) => {
-  updateMessageStatus(messageId, { delivered: true });
-});
-
-socket.on('messages_read', ({ conversationId: cid, upToMessageId, reader_type }) => {
-  if (cid !== conversationId) return;
-  if (reader_type === 'owner') {
-    updateMessagesReadUpTo(upToMessageId);
-  }
-});
+        appendMessageSafe(message);
+        scrollToBottom();
+      });
       
       socket.on('user_typing', () => {
         document.getElementById('typingIndicator').classList.add('show');
@@ -1035,44 +976,50 @@ socket.on('messages_read', ({ conversationId: cid, upToMessageId, reader_type })
     // ============================================
 
    async function sendMessage() {
-console.log('🚀 sendMessage appelée !');
+  if (sendingInProgress) return;
+  sendingInProgress = true;
+
+  console.log('🚀 sendMessage appelée !');
+
   const input = document.getElementById('messageInput');
-  const message = input.value.trim();  // ← Renommé en message
-  
-  if (!message) return;
-  
+  const message = (input?.value || '').trim();
+  if (!message) {
+    sendingInProgress = false;
+    return;
+  }
+
   const sendBtn = document.getElementById('sendBtn');
-  sendBtn.disabled = true;
-  
+  if (sendBtn) sendBtn.disabled = true;
+
   try {
     const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: message,  // ← Changé : message au lieu de content
+        message,
         sender_name: 'Voyageur'
       })
     });
-    
-    if (!response.ok) {
-      throw new Error('Erreur envoi message');
-    }
-    const data = await response.json();
-if (data.message) {
-  appendMessage(data.message);
-  scrollToBottom();
-}
 
-    input.value = '';
-    input.style.height = 'auto';
-    
+    if (!response.ok) throw new Error('Erreur envoi message');
+    const data = await response.json().catch(() => ({}));
+
+    // Si le serveur renvoie le message dans la réponse, on l'affiche en fallback (dédupliqué).
+    if (data && data.message) {
+      appendMessageSafe(data.message);
+      scrollToBottom();
+    }
+
+    if (input) {
+      input.value = '';
+      input.style.height = 'auto';
+    }
   } catch (error) {
     console.error('❌ Erreur envoi:', error);
-    showError('Erreur lors de l\'envoi du message');
+    showError("Erreur lors de l'envoi du message");
   } finally {
-    sendBtn.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
+    sendingInProgress = false;
   }
 }
 
@@ -1089,7 +1036,6 @@ if (data.message) {
       }
       
       const messageDiv = document.createElement('div');
-      if (message && message.id) messageDiv.dataset.messageId = String(message.id);
       // Normaliser le type de sender (backend peut renvoyer des variantes)
 const rawType = (message.sender_type || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 let normalizedType = 'bot';
@@ -1135,9 +1081,10 @@ status.className = 'message-status';
 
 // Statut visible uniquement pour les messages du voyageur
 if (message.sender_type === 'guest') {
-  const delivered = !!message.delivered_at;
-  const read = !!message.read_at || !!message.is_read;
-  status.textContent = read ? '✓✓' : (delivered ? '✓' : 'Envoyé');
+  const s = message.status || (message.read_at ? 'read' : (message.delivered_at ? 'delivered' : 'sent'));
+  if (s === 'read') status.textContent = 'Lu';
+  else if (s === 'delivered') status.textContent = 'Distribué';
+  else status.textContent = 'Envoyé';
 } else {
   status.textContent = '';
 }
@@ -1277,55 +1224,45 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
 
 // Fonction pour afficher l'interface de chat après vérification
 function showChatInterface() {
-  // Attacher les event listeners du chat
-  const sendBtn = document.getElementById('sendBtn');
-  const messageInput = document.getElementById('messageInput');
-  
-  if (sendBtn) {
-    sendBtn.addEventListener('click', sendMessage);
-  }
-  
-  if (messageInput) {
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+  // Empêcher les doubles listeners (qui provoquent l'envoi en double)
+  if (!chatListenersAttached) {
+    const form = document.getElementById('chatForm'); // si présent
+    const sendBtn = document.getElementById('sendBtn');
+    const messageInput = document.getElementById('messageInput');
+
+    // On privilégie le submit du form (un seul point d'entrée)
+    if (form) {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        sendMessage();
-      }
-    });
-    
-    messageInput.addEventListener('input', () => {
-      if (socket && conversationId) {
-        socket.emit('typing', { conversationId, senderName: 'Voyageur' });
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-          socket.emit('stop_typing', { conversationId });
-        }, 1000);
-      }
-    });
-    
-    messageInput.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    });
+        await sendMessage();
+      });
+    } else if (sendBtn) {
+      // Fallback si pas de <form>
+      sendBtn.addEventListener('click', sendMessage);
+    }
+
+    // Enter = envoyer, Shift+Enter = nouvelle ligne
+    if (messageInput) {
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    chatListenersAttached = true;
   }
-  
-  // Afficher le chat
-  const verificationContainer = document.getElementById('verificationContainer');
-  const chatContainer = document.getElementById('chatContainer');
-  
-  if (verificationContainer) verificationContainer.style.display = 'none';
-  if (chatContainer) chatContainer.style.display = 'flex';
-  
-  // Charger les messages
+
+  // Afficher le container de chat
+  document.getElementById('verificationContainer').style.display = 'none';
+  document.getElementById('chatContainer').style.display = 'flex';
+
+  // Charger messages + connecter socket
   loadMessages();
   connectSocket();
+  scrollToBottom();
 }
-
-// Auto-formater le PIN (ajouter des espaces tous les 2 chiffres pour la lisibilité)
-document.getElementById('pinCode')?.addEventListener('input', (e) => {
-  let value = e.target.value.replace(/\D/g, ''); // Garder uniquement les chiffres
-  e.target.value = value;
-});
 
 // Définir la date minimale comme aujourd'hui - 30 jours (on peut avoir des réservations passées récentes)
 const checkinInput = document.getElementById('checkinDate');
