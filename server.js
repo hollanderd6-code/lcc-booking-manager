@@ -5385,10 +5385,13 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     
     for (const assignment of assignmentsResult.rows) {
       const { reservation_key, property_id } = assignment;
+      console.log('🔍 Assignment:', { reservation_key, property_id });
+  console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
       
       // Vérifier si c'est une assignation par réservation (nouveau système)
       if (reservation_key && reservation_key !== null) {
         const parts = reservation_key.split('_');
+        console.log('🔍 Parts:', parts);
         if (parts.length !== 3) continue;
         
         const [keyPropertyId, startDate, endDate] = parts;
