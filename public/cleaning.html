@@ -781,20 +781,15 @@ function formatDateFr(dateStr) {
       }
 
       function getReservationKey(reservation) {
-        if (!reservation) return null;
-        if (reservation.uid) return reservation.uid;
-        if (reservation.id != null) return String(reservation.id);
-        if (reservation.propertyId && reservation.start && reservation.end) {
-          return (
-            reservation.propertyId +
-            '::' +
-            String(reservation.start).slice(0, 10) +
-            '>' +
-            String(reservation.end).slice(0, 10)
-          );
-        }
-        return null;
-      }
+  if (!reservation || !reservation.start || !reservation.end) return null;
+  
+  const propertyId = getReservationPropertyId(reservation);
+  if (!propertyId) return null;
+  
+  const startStr = String(reservation.start).slice(0, 10);
+  const endStr = String(reservation.end).slice(0, 10);
+  return `${propertyId}_${startStr}_${endStr}`;
+}
 
       function getPropertyNameById(propertyId) {
         if (!propertyId) return 'Logement';
