@@ -11,24 +11,6 @@ const crypto = require('crypto');
  * @param {Object} io - Socket.io instance
  */
 function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
-
-// ============================================
-// ✅ HOTFIX: assurer les colonnes receipts (delivered_at / read_at)
-// (évite les 500 si la migration n'a pas encore été appliquée en prod)
-// ============================================
-let __receiptsColsReady = false;
-async function ensureReceiptColumns() {
-  if (__receiptsColsReady) return;
-  try {
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`);
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ`);
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE`);
-    __receiptsColsReady = true;
-    console.log('✅ Colonnes receipts OK (messages.delivered_at/read_at/is_read)');
-  } catch (e) {
-    console.error('❌ ensureReceiptColumns failed:', e);
-  }
-}
   
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
@@ -350,7 +332,13 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       let query = `
         SELECT 
           c.*,
-          COUNT(m.id) FILTER (WHERE m.is_read = FALSE AND m.sender_type = 'guest') as unread_count,
+          (
+            SELECT COUNT(1)
+            FROM chat_notifications cn
+            WHERE cn.user_id = c.user_id
+              AND cn.conversation_id = c.id
+              AND COALESCE(cn.is_read, FALSE) = FALSE
+          ) as unread_count,
           COUNT(m.id) as total_messages,
           MAX(m.created_at) as last_message_time,
           p.name as property_name,
@@ -389,14 +377,80 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   });
 
   // ============================================
+  // 4bis. Compteur global de notifications non lues (sidebar)
+  // ============================================
+  app.get('/api/chat/unread-count', authenticateToken, checkSubscription, async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      const result = await pool.query(
+        `SELECT COUNT(1) AS unread_count
+         FROM chat_notifications
+         WHERE user_id = $1
+           AND COALESCE(is_read, FALSE) = FALSE`,
+        [userId]
+      );
+
+      res.json({ unread_count: parseInt(result.rows[0].unread_count || 0, 10) });
+    } catch (error) {
+      console.error('❌ Erreur unread-count:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // 4ter. Marquer une conversation comme lue (toutes notifications)
+  // ============================================
+  app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, checkSubscription, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { conversationId } = req.params;
+
+      // Sécurité : vérifier que la conversation appartient au user
+      const convCheck = await pool.query(
+        'SELECT user_id FROM conversations WHERE id = $1',
+        [conversationId]
+      );
+      if (convCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation introuvable' });
+      }
+      if (parseInt(convCheck.rows[0].user_id, 10) !== parseInt(userId, 10)) {
+        return res.status(403).json({ error: 'Accès non autorisé' });
+      }
+
+      await pool.query(
+        `UPDATE chat_notifications
+         SET is_read = TRUE
+         WHERE user_id = $1
+           AND conversation_id = $2
+           AND COALESCE(is_read, FALSE) = FALSE`,
+        [userId, conversationId]
+      );
+
+      // On conserve aussi la logique existante sur messages.is_read (pour cohérence)
+      await pool.query(
+        `UPDATE messages
+         SET is_read = TRUE
+         WHERE conversation_id = $1
+           AND sender_type = 'guest'
+           AND COALESCE(is_read, FALSE) = FALSE`,
+        [conversationId]
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur mark-read:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
   // 5. MESSAGES D'UNE CONVERSATION
   // ============================================
 
   app.get('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
-
-      await ensureReceiptColumns();
 
       // Si authentifié = propriétaire, sinon = voyageur (vérification token conversation)
       const userId = req.user ? req.user.id : null;
@@ -425,7 +479,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 
       // Récupérer les messages
       const messages = await pool.query(
-        `SELECT id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at 
+        `SELECT id, sender_type, sender_name, message, is_read, is_bot_response, created_at 
          FROM messages 
          WHERE conversation_id = $1 
          ORDER BY created_at ASC`,
@@ -439,6 +493,16 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
            SET is_read = TRUE 
            WHERE conversation_id = $1 AND sender_type = 'guest' AND is_read = FALSE`,
           [conversationId]
+        );
+
+        // Marquer les notifications associées comme lues (pour que le compteur se mette à 0)
+        await pool.query(
+          `UPDATE chat_notifications
+           SET is_read = TRUE
+           WHERE user_id = $1
+             AND conversation_id = $2
+             AND COALESCE(is_read, FALSE) = FALSE`,
+          [userId, conversationId]
         );
       }
 
@@ -457,8 +521,6 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   app.post('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
     try {
       const { conversationId } = req.params;
-
-      await ensureReceiptColumns();
       const { message, sender_name } = req.body;
 
       if (!message || !message.trim()) {
@@ -492,7 +554,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
+         RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
         [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
       );
 
@@ -516,7 +578,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
           const botResult = await pool.query(
             `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
              VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-             RETURNING id, sender_type, sender_name, message, is_read, delivered_at, read_at, is_bot_response, created_at`,
+             RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
             [conversationId, autoResponse]
           );
 
