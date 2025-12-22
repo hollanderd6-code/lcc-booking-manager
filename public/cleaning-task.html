@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mes tâches de ménage - Boostinghost</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+    
+    /* PIN Login Screen */
+    .login-card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    
+    .login-card h1 {
+      font-size: 28px;
+      color: #1a202c;
+      margin-bottom: 10px;
+    }
+    
+    .login-card p {
+      color: #718096;
+      margin-bottom: 30px;
+    }
+    
+    .pin-input {
+      width: 200px;
+      padding: 15px 20px;
+      font-size: 24px;
+      text-align: center;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 0 auto 20px;
+      letter-spacing: 8px;
+      font-weight: 600;
+    }
+    
+    .pin-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .btn {
+      padding: 12px 32px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+      background: #f7fafc;
+      color: #4a5568;
+      margin-left: 10px;
+    }
+    
+    .btn-secondary:hover {
+      background: #edf2f7;
+    }
+    
+    .error-message {
+      color: #e53e3e;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    
+    /* Tasks Dashboard */
+    .tasks-dashboard {
+      display: none;
+    }
+    
+    .header-card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header-info h2 {
+      font-size: 24px;
+      color: #1a202c;
+      margin-bottom: 5px;
+    }
+    
+    .header-info p {
+      color: #718096;
+    }
+    
+    .logout-btn {
+      padding: 10px 20px;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #4a5568;
+      transition: all 0.2s;
+    }
+    
+    .logout-btn:hover {
+      background: #edf2f7;
+    }
+    
+    .tasks-grid {
+      display: grid;
+      gap: 15px;
+    }
+    
+    .task-card {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .task-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+    
+    .task-property {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a202c;
+    }
+    
+    .task-date {
+      font-size: 14px;
+      color: #718096;
+      background: #f7fafc;
+      padding: 5px 12px;
+      border-radius: 8px;
+    }
+    
+    .task-guest {
+      font-size: 14px;
+      color: #4a5568;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .task-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    
+    .status-pending {
+      background: #fef5e7;
+      color: #d97706;
+    }
+    
+    .status-completed {
+      background: #d1fae5;
+      color: #059669;
+    }
+    
+    .no-tasks {
+      background: white;
+      border-radius: 15px;
+      padding: 60px 30px;
+      text-align: center;
+      color: #718096;
+    }
+    
+    .no-tasks i {
+      font-size: 48px;
+      color: #cbd5e0;
+      margin-bottom: 15px;
+    }
+    
+    /* Checklist Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 30px;
+      position: relative;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f7fafc;
+    }
+    
+    .modal-header h3 {
+      font-size: 22px;
+      color: #1a202c;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #a0aec0;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    
+    .close-modal:hover {
+      background: #f7fafc;
+      color: #4a5568;
+    }
+    
+    .checklist-section {
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title i {
+      color: #667eea;
+    }
+    
+    .task-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      background: #f7fafc;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+    
+    .task-item:hover {
+      background: #edf2f7;
+    }
+    
+    .task-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      cursor: pointer;
+      accent-color: #667eea;
+    }
+    
+    .task-item label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 15px;
+      color: #2d3748;
+    }
+    
+    .photo-upload-zone {
+      border: 2px dashed #cbd5e0;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      background: #f7fafc;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 15px;
+    }
+    
+    .photo-upload-zone:hover {
+      border-color: #667eea;
+      background: #edf2f7;
+    }
+    
+    .photo-upload-zone i {
+      font-size: 32px;
+      color: #a0aec0;
+      margin-bottom: 10px;
+    }
+    
+    .photo-upload-zone p {
+      color: #718096;
+      font-size: 14px;
+    }
+    
+    .photo-upload-zone input[type="file"] {
+      display: none;
+    }
+    
+    .photos-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .photo-preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .photo-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .remove-photo {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    
+    .notes-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .notes-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .submit-checklist {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+    
+    .submit-checklist:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .submit-checklist:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .validation-message {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+    }
+    
+    .validation-error {
+      background: #fee;
+      color: #c53030;
+    }
+    
+    .validation-success {
+      background: #d1fae5;
+      color: #059669;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+      .header-card {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+      
+      .modal-content {
+        padding: 20px;
+      }
+      
+      .photos-preview {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- PIN Login -->
+    <div class="login-card" id="loginScreen">
+      <h1><i class="fas fa-broom"></i> Mes tâches de ménage</h1>
+      <p>Entrez votre code PIN à 4 chiffres</p>
+      <input type="text" 
+             class="pin-input" 
+             id="pinInput" 
+             maxlength="4" 
+             placeholder="••••"
+             inputmode="numeric"
+             pattern="[0-9]*">
+      <div>
+        <button class="btn btn-primary" onclick="verifyPin()">
+          <i class="fas fa-sign-in-alt"></i> Accéder
+        </button>
+      </div>
+      <div class="error-message" id="loginError"></div>
+    </div>
+    
+    <!-- Tasks Dashboard -->
+    <div class="tasks-dashboard" id="tasksDashboard">
+      <div class="header-card">
+        <div class="header-info">
+          <h2>Bonjour <span id="cleanerName"></span> 👋</h2>
+          <p>Voici vos tâches de ménage à venir</p>
+        </div>
+        <button class="logout-btn" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </button>
+      </div>
+      
+      <div class="tasks-grid" id="tasksGrid">
+        <!-- Tasks will be loaded here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Checklist Modal -->
+  <div class="modal-overlay" id="checklistModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Checklist de ménage</h3>
+        <button class="close-modal" onclick="closeModal()">×</button>
+      </div>
+      
+      <div class="checklist-section">
+        <div class="section-title">
+          <i class="fas fa-check-square"></i>
+          Tâches à effectuer
+        </div>
+        <div id="tasksList">
+          <!-- Default tasks -->
+          <div class="task-item">
+            <input type="checkbox" id="task1" data-task="Chambre nettoyée">
+            <label for="task1">Chambre nettoyée et rangée</label>
+          </div>
+          <div class="task-item">
+            <input type="checkbox" id="task2" data-task="Salle de bain désinfectée">
+            <label for="task2">Salle de bain désinfectée</label>
+          </div>
+          <div class="task-item">
+            <input type="checkbox" id="task3" data-task="Cuisine nettoyée">
+            <label for="task3">Cuisine nettoyée et désinfectée</label>
+          </div>
+          <div class="task-item">
+            <input type="checkbox" id="task4" data-task="Sol aspiré et lavé">
+            <label for="task4">Sol aspiré et lavé</label>
+          </div>
+          <div class="task-item">
+            <input type="checkbox" id="task5" data-task="Poubelles vidées">
+            <label for="task5">Poubelles vidées</label>
+          </div>
+          <div class="task-item">
+            <input type="checkbox" id="task6" data-task="Linge changé">
+            <label for="task6">Linge de lit et serviettes changés</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="checklist-section">
+        <div class="section-title">
+          <i class="fas fa-camera"></i>
+          Photos du logement (minimum 5)
+        </div>
+        <label for="photoInput" class="photo-upload-zone">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p><strong>Cliquez pour ajouter des photos</strong><br>
+          ou glissez-déposez vos images ici</p>
+          <input type="file" 
+                 id="photoInput" 
+                 accept="image/*" 
+                 multiple 
+                 onchange="handlePhotoUpload(event)">
+        </label>
+        <div class="photos-preview" id="photosPreview"></div>
+      </div>
+      
+      <div class="checklist-section">
+        <div class="section-title">
+          <i class="fas fa-comment"></i>
+          Notes complémentaires (optionnel)
+        </div>
+        <textarea class="notes-textarea" 
+                  id="notesInput" 
+                  placeholder="Ajouter des remarques ou observations..."></textarea>
+      </div>
+      
+      <button class="submit-checklist" onclick="submitChecklist()">
+        <i class="fas fa-check"></i> Valider la checklist
+      </button>
+      
+      <div class="validation-message" id="validationMessage" style="display: none;"></div>
+    </div>
+  </div>
+  
+  <script>
+    const API_URL = window.location.origin;
+    let currentPinCode = null;
+    let currentCleanerData = null;
+    let currentTask = null;
+    let uploadedPhotos = [];
+    
+    // PIN Input formatting
+    document.getElementById('pinInput').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+    
+    document.getElementById('pinInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        verifyPin();
+      }
+    });
+    
+    async function verifyPin() {
+      const pinCode = document.getElementById('pinInput').value.trim();
+      const errorEl = document.getElementById('loginError');
+      
+      if (pinCode.length !== 4) {
+        errorEl.textContent = 'Le code PIN doit contenir 4 chiffres';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/api/cleaning/tasks/${pinCode}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          errorEl.textContent = data.error || 'Code PIN invalide';
+          return;
+        }
+        
+        currentPinCode = pinCode;
+        currentCleanerData = data;
+        
+        // Show dashboard
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('tasksDashboard').style.display = 'block';
+        document.getElementById('cleanerName').textContent = data.cleaner.name;
+        
+        renderTasks(data.tasks);
+      } catch (err) {
+        console.error('Erreur de connexion:', err);
+        errorEl.textContent = 'Erreur de connexion au serveur';
+      }
+    }
+    
+    function renderTasks(tasks) {
+      const grid = document.getElementById('tasksGrid');
+      
+      if (tasks.length === 0) {
+        grid.innerHTML = `
+          <div class="no-tasks">
+            <i class="fas fa-clipboard-check"></i>
+            <h3>Aucune tâche pour le moment</h3>
+            <p>Les tâches apparaîtront ici dès qu'elles seront assignées</p>
+          </div>
+        `;
+        return;
+      }
+      
+      grid.innerHTML = tasks.map(task => {
+        const statusClass = task.completed ? 'status-completed' : 'status-pending';
+        const statusIcon = task.completed ? 'fa-check-circle' : 'fa-clock';
+        const statusText = task.completed ? 'Complété' : 'À faire';
+        
+        return `
+          <div class="task-card" onclick="${task.completed ? '' : `openChecklist('${task.reservationKey}')`}">
+            <div class="task-header">
+              <div class="task-property">${task.propertyName}</div>
+              <div class="task-date">
+                <i class="fas fa-calendar"></i> ${formatDate(task.checkoutDate)}
+              </div>
+            </div>
+            <div class="task-guest">
+              <i class="fas fa-user"></i>
+              <span>${task.guestName || 'Voyageur'}</span>
+            </div>
+            <div class="task-status ${statusClass}">
+              <i class="fas ${statusIcon}"></i>
+              ${statusText}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    }
+    
+    function openChecklist(reservationKey) {
+      const task = currentCleanerData.tasks.find(t => t.reservationKey === reservationKey);
+      if (!task || task.completed) return;
+      
+      currentTask = task;
+      uploadedPhotos = [];
+      
+      document.getElementById('modalTitle').textContent = `Checklist - ${task.propertyName}`;
+      document.getElementById('checklistModal').style.display = 'block';
+      document.getElementById('photosPreview').innerHTML = '';
+      document.getElementById('notesInput').value = '';
+      document.getElementById('validationMessage').style.display = 'none';
+      
+      // Reset checkboxes
+      document.querySelectorAll('#tasksList input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
+    }
+    
+    function closeModal() {
+      document.getElementById('checklistModal').style.display = 'none';
+      currentTask = null;
+      uploadedPhotos = [];
+    }
+    
+    async function handlePhotoUpload(event) {
+      const files = Array.from(event.target.files);
+      
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        
+        // Convert to base64
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const photoData = e.target.result;
+          uploadedPhotos.push(photoData);
+          
+          // Add preview
+          const preview = document.createElement('div');
+          preview.className = 'photo-preview-item';
+          preview.innerHTML = `
+            <img src="${photoData}" alt="Photo">
+            <button class="remove-photo" onclick="removePhoto(${uploadedPhotos.length - 1})">
+              <i class="fas fa-times"></i>
+            </button>
+          `;
+          document.getElementById('photosPreview').appendChild(preview);
+        };
+        reader.readAsDataURL(file);
+      }
+      
+      // Reset input
+      event.target.value = '';
+    }
+    
+    function removePhoto(index) {
+      uploadedPhotos.splice(index, 1);
+      
+      // Re-render previews
+      const previewContainer = document.getElementById('photosPreview');
+      previewContainer.innerHTML = '';
+      
+      uploadedPhotos.forEach((photo, idx) => {
+        const preview = document.createElement('div');
+        preview.className = 'photo-preview-item';
+        preview.innerHTML = `
+          <img src="${photo}" alt="Photo">
+          <button class="remove-photo" onclick="removePhoto(${idx})">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+        previewContainer.appendChild(preview);
+      });
+    }
+    
+    async function submitChecklist() {
+      const validationEl = document.getElementById('validationMessage');
+      const submitBtn = document.querySelector('.submit-checklist');
+      
+      // Validate tasks
+      const checkboxes = document.querySelectorAll('#tasksList input[type="checkbox"]');
+      const tasks = Array.from(checkboxes).map(cb => ({
+        name: cb.dataset.task,
+        checked: cb.checked
+      }));
+      
+      const allChecked = tasks.every(t => t.checked);
+      if (!allChecked) {
+        validationEl.className = 'validation-message validation-error';
+        validationEl.textContent = 'Toutes les tâches doivent être complétées';
+        validationEl.style.display = 'block';
+        return;
+      }
+      
+      // Validate photos
+      if (uploadedPhotos.length < 5) {
+        validationEl.className = 'validation-message validation-error';
+        validationEl.textContent = `Minimum 5 photos requises (${uploadedPhotos.length}/5)`;
+        validationEl.style.display = 'block';
+        return;
+      }
+      
+      const notes = document.getElementById('notesInput').value.trim();
+      
+      // Submit
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading"></span> Envoi en cours...';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/cleaning/checklist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pinCode: currentPinCode,
+            reservationKey: currentTask.reservationKey,
+            propertyId: currentTask.propertyId,
+            tasks: tasks,
+            photos: uploadedPhotos,
+            notes: notes || null
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de l\'envoi');
+        }
+        
+        validationEl.className = 'validation-message validation-success';
+        validationEl.textContent = '✓ Checklist validée avec succès !';
+        validationEl.style.display = 'block';
+        
+        setTimeout(() => {
+          closeModal();
+          // Refresh tasks
+          verifyPin();
+        }, 1500);
+        
+      } catch (err) {
+        console.error('Erreur:', err);
+        validationEl.className = 'validation-message validation-error';
+        validationEl.textContent = err.message || 'Erreur lors de l\'envoi';
+        validationEl.style.display = 'block';
+        
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> Valider la checklist';
+      }
+    }
+    
+    function logout() {
+      currentPinCode = null;
+      currentCleanerData = null;
+      uploadedPhotos = [];
+      
+      document.getElementById('pinInput').value = '';
+      document.getElementById('loginError').textContent = '';
+      document.getElementById('tasksDashboard').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+    }
+    
+    // Close modal on overlay click
+    document.getElementById('checklistModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+</html>
