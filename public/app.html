@@ -7533,7 +7533,7 @@ function populateChecklistModal(checklist) {
   document.getElementById('modalCheckoutDate').textContent = formatChecklistDate(checklist.checkout_date);
   
   // Tasks
-  const tasks = checklist.tasks ? JSON.parse(checklist.tasks) : [];
+  const tasks = typeof checklist.tasks === 'string' ? JSON.parse(checklist.tasks) : (checklist.tasks || []);
   const tasksHTML = tasks.map(task => `
     <div class="task-item-modal ${task.checked ? 'checked' : ''}">
       <div class="task-checkbox">
@@ -7545,7 +7545,7 @@ function populateChecklistModal(checklist) {
   document.getElementById('modalTasksList').innerHTML = tasksHTML || '<p style="color: var(--text-tertiary); font-style: italic;">Aucune tâche</p>';
   
   // Photos
-  const photos = checklist.photos ? JSON.parse(checklist.photos) : [];
+  cconst photos = typeof checklist.photos === 'string' ? JSON.parse(checklist.photos) : (checklist.photos || []);
   const photosHTML = photos.map((photo, idx) => `
     <div class="photo-item" onclick="viewPhotoFullscreen('${photo}', ${idx})">
       <img src="${photo}" alt="Photo ${idx + 1}">
