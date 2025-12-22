@@ -1580,7 +1580,187 @@
       border-width: 0;
     }
   }
-</style>
+  /* ===== WIDGET CHECKLISTS DE MÉNAGE ===== */
+.cleaning-checklists-widget {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.widget-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.widget-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.checklists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.checklist-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.checklist-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.checklist-card-pending {
+  border-color: #F59E0B;
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+}
+
+.checklist-card-completed {
+  border-color: #10B981;
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+}
+
+.checklist-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.checklist-property {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.checklist-badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.checklist-badge-pending {
+  background: #F59E0B;
+  color: white;
+}
+
+.checklist-badge-completed {
+  background: #10B981;
+  color: white;
+}
+
+.checklist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.checklist-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.checklist-info-row i {
+  width: 14px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.checklist-footer {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.checklist-footer .btn {
+  width: 100%;
+}
+
+.loading-state,
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--spacing-xl) var(--spacing-md);
+  color: var(--text-secondary);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.loading-state i {
+  font-size: 28px;
+  color: var(--primary-color);
+}
+
+.empty-state i {
+  font-size: 56px;
+  margin-bottom: 16px;
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.empty-state small {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cleaning-checklists-widget {
+    padding: var(--spacing-lg);
+  }
+  
+  .checklists-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .widget-title {
+    font-size: 20px;
+  }
+}
   <style>
     /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
     @media (max-width: 768px) {
@@ -2181,37 +2361,26 @@
           </div>
         </section>
 
-        <!-- Vue d’ensemble arrivées / séjours / départs -->
-        <section class="overview-card">
-          <div class="overview-header">
-            <div>
-              <div class="overview-kicker">Vue d’ensemble</div>
-              <div class="overview-title">Aujourd’hui &amp; à venir</div>
-            </div>
-            <button class="overview-chip">
-              Dashboard temps réel
-            </button>
-          </div>
-
-          <div class="overview-metrics">
-            <div class="overview-metric">
-              <div class="overview-metric-label">Réservations à venir</div>
-              <div class="overview-metric-value" id="ovUpcoming">-</div>
-            </div>
-            <div class="overview-metric">
-              <div class="overview-metric-label">Séjours en cours</div>
-              <div class="overview-metric-value" id="ovCurrent">-</div>
-            </div>
-            <div class="overview-metric">
-              <div class="overview-metric-label">Taux d’occupation</div>
-              <div class="overview-metric-value" id="ovOccupancy">78%</div>
-            </div>
-          </div>
-
-          <div class="overview-timeline" id="overviewTimeline">
-            <p class="overview-empty">Aucun mouvement aujourd’hui.</p>
-          </div>
-        </section>
+        <!-- CHECKLISTS DE MÉNAGE -->
+<section class="cleaning-checklists-widget">
+  <div class="widget-header">
+    <div>
+      <div class="widget-kicker">Suivi du ménage</div>
+      <div class="widget-title">Checklists validées</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='/cleaning.html'">
+      <i class="fas fa-cog"></i> Gérer
+    </button>
+  </div>
+  
+  <div id="checklistsContainer" class="checklists-grid">
+    <!-- Les checklists seront chargées ici -->
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Chargement...</span>
+    </div>
+  </div>
+</section>
 
         <!-- Property Filters -->
         <section class="card mb-lg" id="calendarFiltersSection">
@@ -7025,6 +7194,154 @@ overlay && overlay.addEventListener('click', close);
     }
   }, 700);
 })();
+  // ===== WIDGET CHECKLISTS DE MÉNAGE =====
+
+let cleaningChecklists = [];
+
+async function loadCleaningChecklists() {
+  const container = document.getElementById('checklistsContainer');
+  
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    
+    const response = await fetch(`${API_URL}/api/cleaning/checklists`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement des checklists');
+    }
+    
+    const data = await response.json();
+    cleaningChecklists = data.checklists || [];
+    
+    renderCleaningChecklists();
+  } catch (err) {
+    console.error('Erreur chargement checklists:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Erreur lors du chargement</p>
+      </div>
+    `;
+  }
+}
+
+function renderCleaningChecklists() {
+  const container = document.getElementById('checklistsContainer');
+  
+  if (cleaningChecklists.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-broom"></i>
+        <p>Aucune checklist</p>
+        <small>Les checklists validées par vos équipes apparaîtront ici</small>
+      </div>
+    `;
+    return;
+  }
+  
+  // Afficher les 6 plus récentes
+  const recent = cleaningChecklists.slice(0, 6);
+  
+  container.innerHTML = recent.map(checklist => {
+    const isCompleted = checklist.is_validated || checklist.completed_at;
+    const cardClass = isCompleted ? 'checklist-card-completed' : 'checklist-card-pending';
+    const badgeClass = isCompleted ? 'checklist-badge-completed' : 'checklist-badge-pending';
+    const badgeIcon = isCompleted ? 'fa-check-circle' : 'fa-clock';
+    const badgeText = isCompleted ? 'Validé' : 'En attente';
+    
+    // Extraire infos de la reservation_key
+    const parts = (checklist.reservation_key || '').split('_');
+    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : checklist.checkout_date;
+    const formattedDate = checkoutDate ? formatChecklistDate(checkoutDate) : 'Date inconnue';
+    
+    // Nom du logement
+    const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key) || 
+                         checklist.property_id || 
+                         'Logement';
+    
+    return `
+      <div class="checklist-card ${cardClass}" onclick="openChecklistDetails('${checklist.id}')">
+        <div class="checklist-card-header">
+          <div class="checklist-property">${propertyName}</div>
+          <span class="checklist-badge ${badgeClass}">
+            <i class="fas ${badgeIcon}"></i>
+            ${badgeText}
+          </span>
+        </div>
+        
+        <div class="checklist-info">
+          <div class="checklist-info-row">
+            <i class="fas fa-calendar"></i>
+            <span>Départ : ${formattedDate}</span>
+          </div>
+          <div class="checklist-info-row">
+            <i class="fas fa-user"></i>
+            <span>${checklist.guest_name || 'Voyageur'}</span>
+          </div>
+          <div class="checklist-info-row">
+            <i class="fas fa-user-check"></i>
+            <span>${checklist.cleaner_name || 'Non assigné'}</span>
+          </div>
+        </div>
+        
+        <div class="checklist-footer">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openChecklistDetails('${checklist.id}')">
+            <i class="fas fa-eye"></i> Voir les détails
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getPropertyNameFromChecklistKey(reservationKey) {
+  if (!reservationKey || !PROPERTIES) return null;
+  
+  const parts = reservationKey.split('_');
+  if (parts.length < 3) return null;
+  
+  const propertyId = parts.slice(0, parts.length - 2).join('_');
+  const property = PROPERTIES.find(p => 
+    p.id === propertyId || 
+    p.propertyId === propertyId
+  );
+  
+  return property?.name || property?.title || property?.label || null;
+}
+
+function formatChecklistDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
+
+function openChecklistDetails(checklistId) {
+  const checklist = cleaningChecklists.find(c => c.id == checklistId);
+  if (!checklist) return;
+  
+  // TODO: Créer une belle modale
+  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key) || 'Logement';
+  
+  alert(`📋 Détails de la checklist\n\n` +
+        `🏠 Logement: ${propertyName}\n` +
+        `👤 Voyageur: ${checklist.guest_name || 'N/A'}\n` +
+        `✨ Personne de ménage: ${checklist.cleaner_name || 'N/A'}\n` +
+        `📅 Date: ${formatChecklistDate(checklist.checkout_date)}\n\n` +
+        `[TODO: Afficher photos, tâches, notes dans une modale]`);
+}
+
+// Charger au démarrage
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadCleaningChecklists);
+} else {
+  loadCleaningChecklists();
 </script>
 
 </body>
