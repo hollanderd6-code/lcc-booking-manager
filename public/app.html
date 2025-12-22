@@ -1547,6 +1547,313 @@
       object-fit: contain;
       display: block;
     }
+    /* ===== MODALE DÉTAILS CHECKLIST ===== */
+
+.checklist-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.checklist-modal-overlay.active {
+  display: flex;
+}
+
+.checklist-modal {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.checklist-modal-header {
+  padding: var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.checklist-modal-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.checklist-modal-meta {
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.separator {
+  opacity: 0.3;
+}
+
+.close-modal-btn {
+  background: var(--bg-secondary);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.checklist-modal-status {
+  margin: 0 var(--spacing-xl);
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checklist-modal-status.status-completed {
+  background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+  color: #065F46;
+  border: 2px solid #10B981;
+}
+
+.checklist-modal-status.status-pending {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  color: #92400E;
+  border: 2px solid #F59E0B;
+}
+
+.checklist-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+}
+
+.modal-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.modal-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-section-title i {
+  color: var(--primary-color);
+}
+
+.modal-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.modal-info-item {
+  background: var(--bg-secondary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-info-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+.modal-info-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item-modal {
+  background: var(--bg-secondary);
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 2px solid transparent;
+}
+
+.task-item-modal.checked {
+  border-color: #10B981;
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+}
+
+.task-item-modal .task-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  border: 2px solid #D1D5DB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.task-item-modal.checked .task-checkbox {
+  background: #10B981;
+  border-color: #10B981;
+  color: white;
+}
+
+.task-item-modal .task-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.photo-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photo-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-zoom-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.photo-item:hover .photo-zoom-icon {
+  opacity: 1;
+}
+
+.notes-content {
+  background: var(--bg-secondary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.checklist-modal-footer {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .checklist-modal {
+    max-height: 95vh;
+    margin: 0;
+  }
+  
+  .checklist-modal-header {
+    padding: var(--spacing-lg);
+  }
+  
+  .checklist-modal-body {
+    padding: var(--spacing-lg);
+  }
+  
+  .photos-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .checklist-modal-footer {
+    flex-direction: column-reverse;
+  }
+  
+  .checklist-modal-footer .btn {
+    width: 100%;
+  }
+}
   </style>
   <!-- Simplification mobile : KPI + calendrier uniquement -->
 <style>
@@ -7116,20 +7423,107 @@ function formatChecklistDate(dateStr) {
   return `${day}/${month}/${year}`;
 }
 
-function openChecklistDetails(checklistId) {
+async function openChecklistDetails(checklistId) {
   const checklist = cleaningChecklists.find(c => c.id == checklistId);
   if (!checklist) return;
   
-  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
-  
-  alert(`📋 Détails de la checklist\n\n` +
-        `🏠 Logement: ${propertyName}\n` +
-        `👤 Voyageur: ${checklist.guest_name || 'N/A'}\n` +
-        `✨ Personne de ménage: ${checklist.cleaner_name || 'N/A'}\n` +
-        `📅 Date: ${formatChecklistDate(checklist.checkout_date)}\n\n` +
-        `[TODO: Afficher photos, tâches, notes dans une modale]`);
+  // Récupérer les détails complets depuis l'API
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const response = await fetch(`${API_URL}/api/cleaning/checklists/${checklistId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur chargement détails');
+    }
+    
+    const data = await response.json();
+    const fullChecklist = data.checklist;
+    
+    // Remplir la modale
+    populateChecklistModal(fullChecklist);
+    
+    // Afficher la modale
+    document.getElementById('checklistModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+  } catch (err) {
+    console.error('Erreur chargement checklist:', err);
+    alert('Erreur lors du chargement des détails de la checklist');
+  }
 }
 
+function populateChecklistModal(checklist) {
+  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
+  
+  // Header
+  document.getElementById('modalChecklistProperty').textContent = propertyName;
+  document.getElementById('modalChecklistDate').textContent = `Départ: ${formatChecklistDate(checklist.checkout_date)}`;
+  document.getElementById('modalChecklistCleaner').textContent = `Par ${checklist.cleaner_name || 'N/A'}`;
+  
+  // Status
+  const isCompleted = checklist.is_validated || checklist.completed_at;
+  const statusEl = document.getElementById('modalChecklistStatus');
+  statusEl.className = 'checklist-modal-status ' + (isCompleted ? 'status-completed' : 'status-pending');
+  statusEl.innerHTML = `
+    <i class="fas ${isCompleted ? 'fa-check-circle' : 'fa-clock'}"></i>
+    ${isCompleted ? 'Checklist validée' : 'En attente de validation'}
+  `;
+  
+  // Guest info
+  document.getElementById('modalGuestName').textContent = checklist.guest_name || 'Non renseigné';
+  document.getElementById('modalCheckoutDate').textContent = formatChecklistDate(checklist.checkout_date);
+  
+  // Tasks
+  const tasks = checklist.tasks ? JSON.parse(checklist.tasks) : [];
+  const tasksHTML = tasks.map(task => `
+    <div class="task-item-modal ${task.checked ? 'checked' : ''}">
+      <div class="task-checkbox">
+        ${task.checked ? '<i class="fas fa-check"></i>' : ''}
+      </div>
+      <span class="task-name">${task.name}</span>
+    </div>
+  `).join('');
+  document.getElementById('modalTasksList').innerHTML = tasksHTML || '<p style="color: var(--text-tertiary); font-style: italic;">Aucune tâche</p>';
+  
+  // Photos
+  const photos = checklist.photos ? JSON.parse(checklist.photos) : [];
+  const photosHTML = photos.map((photo, idx) => `
+    <div class="photo-item" onclick="viewPhotoFullscreen('${photo}', ${idx})">
+      <img src="${photo}" alt="Photo ${idx + 1}">
+      <div class="photo-zoom-icon">
+        <i class="fas fa-search-plus"></i>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('modalPhotosList').innerHTML = photosHTML || '<p style="color: var(--text-tertiary); font-style: italic;">Aucune photo</p>';
+  
+  // Notes
+  if (checklist.notes && checklist.notes.trim()) {
+    document.getElementById('modalNotesSection').style.display = 'block';
+    document.getElementById('modalNotes').textContent = checklist.notes;
+  } else {
+    document.getElementById('modalNotesSection').style.display = 'none';
+  }
+}
+
+function closeChecklistModal(event) {
+  if (event && event.target.classList.contains('checklist-modal')) return;
+  
+  document.getElementById('checklistModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function viewPhotoFullscreen(photoSrc, index) {
+  // TODO: Créer une lightbox pour visualiser les photos en plein écran
+  window.open(photoSrc, '_blank');
+}
+
+function downloadChecklistPDF() {
+  // TODO: Générer un PDF de la checklist
+  alert('Fonctionnalité à venir : téléchargement PDF de la checklist');
+}
 // Charger au démarrage
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', loadCleaningChecklists);
@@ -7522,5 +7916,92 @@ if (document.readyState === 'loading') {
 } else {
   loadCleaningChecklists();
 }
+  <!-- MODALE DÉTAILS CHECKLIST -->
+<div class="checklist-modal-overlay" id="checklistModal" onclick="closeChecklistModal(event)">
+  <div class="checklist-modal" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="checklist-modal-header">
+      <div>
+        <h2 id="modalChecklistProperty">Logement</h2>
+        <div class="checklist-modal-meta">
+          <span id="modalChecklistDate"></span>
+          <span class="separator">•</span>
+          <span id="modalChecklistCleaner"></span>
+        </div>
+      </div>
+      <button class="close-modal-btn" onclick="closeChecklistModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="checklist-modal-status" id="modalChecklistStatus"></div>
+
+    <!-- Content -->
+    <div class="checklist-modal-body">
+      
+      <!-- Guest Info -->
+      <div class="modal-section">
+        <h3 class="modal-section-title">
+          <i class="fas fa-user"></i>
+          Informations voyageur
+        </h3>
+        <div class="modal-info-grid">
+          <div class="modal-info-item">
+            <span class="modal-info-label">Nom</span>
+            <span class="modal-info-value" id="modalGuestName">-</span>
+          </div>
+          <div class="modal-info-item">
+            <span class="modal-info-label">Date de départ</span>
+            <span class="modal-info-value" id="modalCheckoutDate">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks -->
+      <div class="modal-section">
+        <h3 class="modal-section-title">
+          <i class="fas fa-check-square"></i>
+          Tâches effectuées
+        </h3>
+        <div id="modalTasksList" class="tasks-list">
+          <!-- Généré dynamiquement -->
+        </div>
+      </div>
+
+      <!-- Photos -->
+      <div class="modal-section">
+        <h3 class="modal-section-title">
+          <i class="fas fa-camera"></i>
+          Photos du logement
+        </h3>
+        <div id="modalPhotosList" class="photos-grid">
+          <!-- Généré dynamiquement -->
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="modal-section" id="modalNotesSection" style="display: none;">
+        <h3 class="modal-section-title">
+          <i class="fas fa-sticky-note"></i>
+          Notes complémentaires
+        </h3>
+        <div class="notes-content" id="modalNotes"></div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="checklist-modal-footer">
+      <button class="btn btn-ghost" onclick="closeChecklistModal()">
+        Fermer
+      </button>
+      <button class="btn btn-primary" onclick="downloadChecklistPDF()">
+        <i class="fas fa-download"></i>
+        Télécharger PDF
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
