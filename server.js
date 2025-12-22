@@ -5385,35 +5385,62 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     for (const assignment of assignmentsResult.rows) {
       const { reservation_key, property_id } = assignment;
       
-      // Parser le reservation_key pour extraire les dates
-      // Format attendu : propertyId_startDate_endDate
-      // Vérifier si c'est une assignation par réservation (nouveau système)
+     // Parser le reservation_key pour extraire les dates
+// Format attendu : propertyId_startDate_endDate
+// Vérifier si c'est une assignation par réservation (nouveau système)
 if (reservation_key && reservation_key !== null) {
   const parts = reservation_key.split('_');
   if (parts.length !== 3) continue;
   
   const [keyPropertyId, startDate, endDate] = parts;
-  // ... ton code existant pour gérer les réservations assignées
+  
+  // Ne garder que les réservations avec départ futur ou aujourd'hui
+  if (endDate < todayStr) continue;
+  
+  // Trouver la réservation complète dans reservationsStore
+  const propertyReservations = reservationsStore.properties[property_id] || [];
+  const reservation = propertyReservations.find(r => {
+    const rKey = `${property_id}_${r.start}_${r.end}`;
+    return rKey === reservation_key;
+  });
+  
+  const propertyName = reservation?.propertyName || 
+                      (reservation?.property && reservation.property.name) || 
+                      property_id;
+  const guestName = reservation?.guestName || reservation?.name || '';
+  
+  tasks.push({
+    reservationKey: reservation_key,
+    propertyId: property_id,
+    propertyName,
+    guestName,
+    checkoutDate: endDate,
+    completed: false
+  });
 }
 // Sinon, c'est une ancienne assignation par logement
 else if (property_id) {
   // Récupérer toutes les réservations de ce logement
   const propertyReservations = reservationsStore.properties[property_id] || [];
-  // ... ton code pour gérer toutes les réservations du logement
+  propertyReservations.forEach(r => {
+    if (!r.end) return;
+    const endStr = String(r.end).slice(0, 10);
+    if (endStr < todayStr) return;
+    
+    const reservationKey = `${property_id}_${r.start}_${r.end}`;
+    const propertyName = r.propertyName || (r.property && r.property.name) || property_id;
+    const guestName = r.guestName || r.name || '';
+    
+    tasks.push({
+      reservationKey,
+      propertyId: property_id,
+      propertyName,
+      guestName,
+      checkoutDate: endStr,
+      completed: false
+    });
+  });
 }
-      if (parts.length !== 3) continue;
-      
-      const [keyPropertyId, startDate, endDate] = parts;
-      
-      // Ne garder que les réservations avec départ futur ou aujourd'hui
-      if (endDate < todayStr) continue;
-      
-      // Trouver la réservation complète dans reservationsStore
-      const propertyReservations = reservationsStore.properties[property_id] || [];
-      const reservation = propertyReservations.find(r => {
-        const rKey = `${property_id}_${r.start}_${r.end}`;
-        return rKey === reservation_key;
-      });
       
       const propertyName = reservation?.propertyName || 
                           (reservation?.property && reservation.property.name) || 
