@@ -741,35 +741,34 @@
       for (const file of files) {
         if (!file.type.startsWith('image/')) continue;
         
-        function removePhoto(index) {
-  uploadedPhotos.splice(index, 1);
-  renderPhotoPreviews();
-}
-
-// Fonction de compression d'image
-function compressImage(base64, callback, maxWidth = 1200, quality = 0.7) {
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    let width = img.width;
-    let height = img.height;
-    
-    // Redimensionner si trop large
-    if (width > maxWidth) {
-      height = (height * maxWidth) / width;
-      width = maxWidth;
+        // Convert to base64
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // Compresser l'image avant de l'ajouter
+          compressImage(e.target.result, (compressed) => {
+            uploadedPhotos.push(compressed);
+            
+            // Add preview
+            const preview = document.createElement('div');
+            preview.className = 'photo-preview-item';
+            preview.innerHTML = `
+              <img src="${compressed}" alt="Photo">
+              <button class="remove-photo" onclick="removePhoto(${uploadedPhotos.length - 1})">
+                <i class="fas fa-times"></i>
+              </button>
+            `;
+            document.getElementById('photosPreview').appendChild(preview);
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+      
+      // Reset input
+      event.target.value = '';
     }
     
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, width, height);
-    
-    // Convertir en JPEG avec compression
-    callback(canvas.toDataURL('image/jpeg', quality));
-  };
-  img.src = base64;
-}
+    function removePhoto(index) {
+      uploadedPhotos.splice(index, 1);
       
       // Re-render previews
       const previewContainer = document.getElementById('photosPreview');
@@ -788,6 +787,30 @@ function compressImage(base64, callback, maxWidth = 1200, quality = 0.7) {
       });
     }
     
+    // Fonction de compression d'image
+    function compressImage(base64, callback, maxWidth = 1200, quality = 0.7) {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Redimensionner si trop large
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convertir en JPEG avec compression
+        callback(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = base64;
+    }
     async function submitChecklist() {
       const validationEl = document.getElementById('validationMessage');
       const submitBtn = document.querySelector('.submit-checklist');
