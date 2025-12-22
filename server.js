@@ -5387,7 +5387,20 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
       
       // Parser le reservation_key pour extraire les dates
       // Format attendu : propertyId_startDate_endDate
-      const parts = reservation_key.split('_');
+      // Vérifier si c'est une assignation par réservation (nouveau système)
+if (reservation_key && reservation_key !== null) {
+  const parts = reservation_key.split('_');
+  if (parts.length !== 3) continue;
+  
+  const [keyPropertyId, startDate, endDate] = parts;
+  // ... ton code existant pour gérer les réservations assignées
+}
+// Sinon, c'est une ancienne assignation par logement
+else if (property_id) {
+  // Récupérer toutes les réservations de ce logement
+  const propertyReservations = reservationsStore.properties[property_id] || [];
+  // ... ton code pour gérer toutes les réservations du logement
+}
       if (parts.length !== 3) continue;
       
       const [keyPropertyId, startDate, endDate] = parts;
