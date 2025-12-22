@@ -1167,8 +1167,11 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // ============================================
 // APP / STRIPE / STORE
 // ============================================
-
 const app = express();
+
+// Augmenter la limite pour les uploads de photos
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
