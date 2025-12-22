@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Gestion du ménage</title>
+  <title>Boostinghost â€“ Gestion du mÃ©nage</title>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
       scroll-behavior: smooth;
     }
 
-    /* Mise en page spécifique ménage */
+    /* Mise en page spÃ©cifique mÃ©nage */
     .cleaning-page-grid {
       display: grid;
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
@@ -144,7 +144,7 @@
       margin-bottom: var(--spacing-sm);
     }
 
-    /* Planning IA ménage */
+    /* Planning IA mÃ©nage */
     .planning-controls {
       display: flex;
       flex-wrap: wrap;
@@ -361,7 +361,7 @@
         </span>
       </div>
     </a>
-  </div> <!-- ✅ IMPORTANT -->
+  </div> <!-- âœ… IMPORTANT -->
 
   <nav class="sidebar-nav">
     <!-- PRINCIPAL -->
@@ -401,7 +401,7 @@
 
       <a href="/cleaning.html" class="nav-item active" data-page="cleaning">
         <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
+        <span>Gestion du mÃ©nage</span>
       </a>
     </div>
 
@@ -416,7 +416,7 @@
 
       <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
         <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
+        <span>Factures propriÃ©taires</span>
       </a>
     </div>
 
@@ -435,13 +435,13 @@
       </a>
     </div>
 
-    <!-- PARAMÈTRES -->
+    <!-- PARAMÃˆTRES -->
     <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
+      <div class="nav-section-title">ParamÃ¨tres</div>
 
       <a href="/settings-account.html" class="nav-item" data-page="settings-account">
         <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
+        <span>ParamÃ¨tres</span>
       </a>
 
       <a href="/help.html" class="nav-item" data-page="help">
@@ -472,9 +472,9 @@
       <header class="main-header">
         <div class="header-left">
           <div class="page-kicker">Gestion</div>
-          <h1 class="page-title">Gestion du ménage</h1>
+          <h1 class="page-title">Gestion du mÃ©nage</h1>
           <p class="page-subtitle">
-            Assignez-la à vos logements et générez un planning intelligent.
+            Assignez-la Ã  vos logements et gÃ©nÃ©rez un planning intelligent.
           </p>
         </div>
         <div class="header-actions">
@@ -488,21 +488,21 @@
       <!-- Contenu -->
       <div class="page-content">
 
-        <!-- Grid équipe + assignation -->
+        <!-- Grid Ã©quipe + assignation -->
         <section class="cleaning-page-grid">
 
-          <!-- Colonne gauche : équipe ménage -->
+          <!-- Colonne gauche : Ã©quipe mÃ©nage -->
           <section class="card">
             <div class="card-header">
               <div class="card-title">
                 <i class="fas fa-users"></i>
-                Équipe de ménage
+                Ã‰quipe de mÃ©nage
               </div>
             </div>
 
             <form id="cleanerForm" class="form-grid">
               <div class="form-row">
-                <label for="cleanerName">Nom & prénom</label>
+                <label for="cleanerName">Nom & prÃ©nom</label>
                 <input type="text" id="cleanerName" required>
               </div>
               <div class="form-row">
@@ -510,17 +510,17 @@
                 <input type="email" id="cleanerEmail" placeholder="exemple@mail.com">
               </div>
               <div class="form-row">
-                <label for="cleanerPhone">Téléphone</label>
+                <label for="cleanerPhone">TÃ©lÃ©phone</label>
                 <input type="tel" id="cleanerPhone" placeholder="+33 6 00 00 00 00">
               </div>
               <div class="form-row">
-                <label for="cleanerNotes">Notes / zone d’intervention</label>
+                <label for="cleanerNotes">Notes / zone dâ€™intervention</label>
                 <textarea id="cleanerNotes" rows="2" placeholder="Ex : intervient uniquement sur les appartements du centre-ville"></textarea>
               </div>
               <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
                 <button type="submit" class="btn btn-primary">
                   <i class="fas fa-user-plus"></i>
-                  Ajouter à l’équipe
+                  Ajouter Ã  lâ€™Ã©quipe
                 </button>
               </div>
             </form>
@@ -529,27 +529,27 @@
 
             <div>
               <div class="text-secondary" style="font-size:13px; margin-bottom:8px;">
-                Membres de l’équipe
+                Membres de lâ€™Ã©quipe
               </div>
               <div id="cleanerList" class="cleaner-list">
                 <p class="text-secondary" style="font-size:13px;">
-                  Aucun membre pour l’instant. Ajoutez votre première personne de ménage.
+                  Aucun membre pour lâ€™instant. Ajoutez votre premiÃ¨re personne de mÃ©nage.
                 </p>
               </div>
             </div>
           </section>
 
-          <!-- Colonne droite : assignation par réservation -->
+          <!-- Colonne droite : assignation par rÃ©servation -->
           <section class="card">
             <div class="card-header">
               <div class="card-title">
                 <i class="fas fa-broom"></i>
-                Assignation par réservation
+                Assignation par rÃ©servation
               </div>
             </div>
 
             <p class="assign-hint">
-              Assignez une personne de ménage à chaque départ de réservation. 
+              Assignez une personne de mÃ©nage Ã  chaque dÃ©part de rÃ©servation. 
               Ces assignations seront visibles dans le dashboard et dans le calendrier.
             </p>
 
@@ -565,7 +565,7 @@
 
             <div id="assignContainer">
               <p class="text-secondary" style="font-size:13px;">
-                Chargement des réservations…
+                Chargement des rÃ©servationsâ€¦
               </p>
             </div>
           </section>
@@ -578,7 +578,7 @@
 
   <!-- Scripts -->
   <script>
-    // Auth / user (même logique que app.html)
+    // Auth / user (mÃªme logique que app.html)
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
@@ -663,7 +663,7 @@
         localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
       }
 
-      // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
+      // Charge les assignations mÃ©nage depuis le backend et les injecte dans "assignments"
       async function loadAssignmentsFromApi() {
   try {
     const token = localStorage.getItem('lcc_token');
@@ -676,14 +676,14 @@
     });
 
     if (!res.ok) {
-      console.warn('Erreur lors du chargement des assignations ménage', res.status);
+      console.warn('Erreur lors du chargement des assignations mÃ©nage', res.status);
       return;
     }
 
     const data = await res.json();
     const apiMap = {};
 
-    // On reconstruit une map à partir de ce que renvoie l’API
+    // On reconstruit une map Ã  partir de ce que renvoie lâ€™API
     (data.assignments || []).forEach((row) => {
       const key =
         row.reservation_key ||
@@ -698,17 +698,17 @@
     const apiKeys = Object.keys(apiMap);
 
     if (apiKeys.length > 0) {
-      // ✅ On FUSIONNE les assignations API avec les locales
-      // Les données API prennent le dessus si conflit
+      // âœ… On FUSIONNE les assignations API avec les locales
+      // Les donnÃ©es API prennent le dessus si conflit
       assignments = Object.assign({}, assignments, apiMap);
       saveLocalData();
     } else {
-      // ✅ Aucune assignation retournée → on NE TOUCHE PAS aux assignations locales
-      console.log("ℹ️ Aucune assignation ménage renvoyée par l’API, on garde les assignations locales.");
+      // âœ… Aucune assignation retournÃ©e â†’ on NE TOUCHE PAS aux assignations locales
+      console.log("â„¹ï¸ Aucune assignation mÃ©nage renvoyÃ©e par lâ€™API, on garde les assignations locales.");
     }
   } catch (e) {
     console.error('Erreur loadAssignmentsFromApi()', e);
-    // En cas d'erreur réseau, on ne touche pas non plus aux assignations locales
+    // En cas d'erreur rÃ©seau, on ne touche pas non plus aux assignations locales
   }
 }
 
@@ -725,7 +725,7 @@
           });
 
           if (!response.ok) {
-            console.warn('Erreur lors du chargement des réservations pour le ménage', response.status);
+            console.warn('Erreur lors du chargement des rÃ©servations pour le mÃ©nage', response.status);
             return;
           }
 
@@ -734,19 +734,19 @@
           RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
           PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
 
-          // Fallback de démo si aucune propriété
+          // Fallback de dÃ©mo si aucune propriÃ©tÃ©
           if (!PROPERTIES.length) {
             PROPERTIES = [
-              { id: 'apt-demo-1', name: 'Appartement démo 1' },
-              { id: 'apt-demo-2', name: 'Appartement démo 2' }
+              { id: 'apt-demo-1', name: 'Appartement dÃ©mo 1' },
+              { id: 'apt-demo-2', name: 'Appartement dÃ©mo 2' }
             ];
           }
         } catch (e) {
           console.error('Erreur loadRemoteData()', e);
           if (!PROPERTIES.length) {
             PROPERTIES = [
-              { id: 'apt-demo-1', name: 'Appartement démo 1' },
-              { id: 'apt-demo-2', name: 'Appartement démo 2' }
+              { id: 'apt-demo-1', name: 'Appartement dÃ©mo 1' },
+              { id: 'apt-demo-2', name: 'Appartement dÃ©mo 2' }
             ];
           }
         }
@@ -813,7 +813,7 @@
           });
         }
 
-        // Restaure la sélection précédente si possible
+        // Restaure la sÃ©lection prÃ©cÃ©dente si possible
         if (previousValue) {
           select.value = previousValue;
         }
@@ -829,7 +829,7 @@
       function renderCleaners() {
         if (!cleanerList) return;
         if (!cleaners.length) {
-          cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour l’instant. Ajoutez votre première personne de ménage.</p>';
+          cleanerList.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun membre pour lâ€™instant. Ajoutez votre premiÃ¨re personne de mÃ©nage.</p>';
           return;
         }
 
@@ -837,6 +837,9 @@
         cleaners.forEach((c) => {
           const div = document.createElement('div');
           div.className = 'cleaner-item';
+          
+          const taskUrl = c.pin_code ? `${window.location.origin}/cleaning-tasks.html` : '';
+          
           div.innerHTML = `
             <div class="cleaner-item-header">
               <div>
@@ -844,6 +847,7 @@
                 <div class="cleaner-tags">
                   ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
                   ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
+                  ${c.pin_code ? `<span class="cleaner-pill" style="background: #d1fae5; color: #059669; font-weight: 600;"><i class="fas fa-key"></i> PIN: ${c.pin_code}</span>` : ''}
                 </div>
               </div>
               <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
@@ -851,6 +855,7 @@
               </button>
             </div>
             ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
+            ${taskUrl ? `<div style="font-size:12px; margin-top:8px;"><a href="${taskUrl}" target="_blank" style="color: #667eea; text-decoration: none;"><i class="fas fa-external-link-alt"></i> Lien d'accès aux tâches</a></div>` : ''}
           `;
           cleanerList.appendChild(div);
         });
@@ -859,7 +864,7 @@
       function renderAssignments() {
         if (!assignContainer) return;
 
-        // Initialisation du filtre logement (une seule fois, quand on a des données)
+        // Initialisation du filtre logement (une seule fois, quand on a des donnÃ©es)
         if (!propertyFilterInitialized) {
           initReservationPropertyFilter();
         }
@@ -867,14 +872,14 @@
         if (!RESERVATIONS.length) {
           assignContainer.innerHTML = `
             <p class="text-secondary" style="font-size:13px;">
-              Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
+              Aucune rÃ©servation future dÃ©tectÃ©e. Les dÃ©parts apparaÃ®tront ici dÃ¨s quâ€™ils seront synchronisÃ©s.
             </p>`;
           return;
         }
 
         const todayStr = new Date().toISOString().slice(0, 10);
 
-        // Réservations avec départ aujourd’hui ou plus tard
+        // RÃ©servations avec dÃ©part aujourdâ€™hui ou plus tard
         const upcoming = (RESERVATIONS || [])
   .filter((r) => {
     if (!r.end) return false;
@@ -882,7 +887,7 @@
     const propertyId = getReservationPropertyId(r);
     if (!propertyId) return false;
 
-    // Si un logement est sélectionné, on ne garde que celui-là
+    // Si un logement est sÃ©lectionnÃ©, on ne garde que celui-lÃ 
     if (
       selectedReservationPropertyFilter &&
       String(propertyId) !== String(selectedReservationPropertyFilter)
@@ -890,7 +895,7 @@
       return false;
     }
 
-    const endStr = String(r.end).slice(0, 10); // ⚠️ on garde le format AAAA-MM-JJ pour filtrer
+    const endStr = String(r.end).slice(0, 10); // âš ï¸ on garde le format AAAA-MM-JJ pour filtrer
     return endStr >= todayStr;
   })
   .sort((a, b) => {
@@ -903,7 +908,7 @@
         if (!upcoming.length) {
           assignContainer.innerHTML = `
             <p class="text-secondary" style="font-size:13px;">
-              Aucune réservation future détectée. Les départs apparaîtront ici dès qu’ils seront synchronisés.
+              Aucune rÃ©servation future dÃ©tectÃ©e. Les dÃ©parts apparaÃ®tront ici dÃ¨s quâ€™ils seront synchronisÃ©s.
             </p>`;
           return;
         }
@@ -912,7 +917,7 @@
           <table class="assign-table">
             <thead>
               <tr>
-                <th>Départ le</th>
+                <th>DÃ©part le</th>
                 <th>Logement</th>
                 <th>Client</th>
                 <th>Personne en charge</th>
@@ -995,13 +1000,13 @@
                 })
               });
             } catch (err) {
-              console.error('Erreur sauvegarde assignation ménage', err);
+              console.error('Erreur sauvegarde assignation mÃ©nage', err);
             }
           });
         });
       }
 
-      // Ajout d’un membre
+      // Ajout dâ€™un membre
       if (cleanerForm) {
         cleanerForm.addEventListener('submit', (e) => {
           e.preventDefault();
@@ -1027,7 +1032,7 @@
         });
       }
 
-      // Suppression d’un membre
+      // Suppression dâ€™un membre
       if (cleanerList) {
         cleanerList.addEventListener('click', (e) => {
           const btn = e.target.closest('[data-action="deleteCleaner"]');
@@ -1036,7 +1041,7 @@
           const id = btn.getAttribute('data-id');
           cleaners = cleaners.filter((c) => c.id !== id);
 
-          // On enlève les assignations liées
+          // On enlÃ¨ve les assignations liÃ©es
           Object.keys(assignments).forEach((pid) => {
             if (assignments[pid] === id) {
               delete assignments[pid];
