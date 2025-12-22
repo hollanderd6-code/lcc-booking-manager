@@ -124,7 +124,7 @@ async function sendEmail(mailOptions) {
       return await smtpTransporter.sendMail(mailOptions);
     }
   } catch (error) {
-    console.error("❌ Erreur envoi email:", error.response?.body || error.message);
+    console.error('❌ Erreur envoi email:', error.response?.body || error.message);
     throw error;
   }
 }
@@ -153,7 +153,7 @@ try {
   }
   console.log('📁 Dossier uploads initialisé :', UPLOAD_DIR);
 } catch (err) {
-  console.error('âÅ' Impossible de créer le dossier uploads :', UPLOAD_DIR, err);
+  console.error('❌ Impossible de créer le dossier uploads :', UPLOAD_DIR, err);
   // On essaie un dernier fallback dans /tmp
   if (UPLOAD_DIR !== path.join('/tmp', 'uploads', 'properties')) {
     UPLOAD_DIR = path.join('/tmp', 'uploads', 'properties');
@@ -163,7 +163,7 @@ try {
       }
       console.log('📁 Dossier uploads fallback :', UPLOAD_DIR);
     } catch (e2) {
-      console.error('âÅ' Échec du fallback pour le dossier uploads :', e2);
+      console.error('❌ Échec du fallback pour le dossier uploads :', e2);
     }
   }
 }
@@ -181,7 +181,7 @@ try {
   }
   console.log('📁 Dossier factures PDF initialisé :', INVOICE_PDF_DIR);
 } catch (err) {
-  console.error('âÅ' Impossible de créer le dossier factures PDF :', INVOICE_PDF_DIR, err);
+  console.error('❌ Impossible de créer le dossier factures PDF :', INVOICE_PDF_DIR, err);
 }
 
 
@@ -211,7 +211,7 @@ const upload = multer({
       return cb(null, true);
     }
     
-    console.log('âÅ' Fichier rejeté:', {
+    console.log('❌ Fichier rejeté:', {
       mimetype: file.mimetype,
       extension: fileExtension,
       filename: file.originalname
@@ -471,7 +471,7 @@ ON invoice_download_tokens(token);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments & cleaning_checklists OK dans Postgres');
   } catch (err) {
-    console.error('âÅ' Erreur initDb (Postgres):', err);
+    console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
   }
 }
@@ -549,7 +549,7 @@ function getBrevoSender() {
 async function sendEmailViaBrevo({ to, subject, text, html }) {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    throw new Error('BREVO_API_KEY manquant pour l'envoi via Brevo');
+    throw new Error('BREVO_API_KEY manquant pour l’envoi via Brevo');
   }
 
   const sender = getBrevoSender();
@@ -580,7 +580,7 @@ async function sendEmailViaBrevo({ to, subject, text, html }) {
     return response.data;
   } catch (err) {
     console.error(
-      'âÅ' Erreur envoi email via Brevo :',
+      '❌ Erreur envoi email via Brevo :',
       err.response?.data || err.message || err
     );
     throw err;
@@ -869,7 +869,7 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
           );
         } catch (err) {
           console.error(
-            `âÅ' Erreur envoi email de notification "${type}" à ${user.email} :`,
+            `❌' Erreur envoi email de notification "${type}" à ${user.email} :`,
             err
           );
         }
@@ -1019,7 +1019,7 @@ L'équipe Boostinghost`;
               );
             })
             .catch((err) => {
-              console.error('âÅ' Erreur envoi email notification ménage :', err);
+              console.error('❌ Erreur envoi email notification ménage :', err);
             })
         );
       }
@@ -1152,7 +1152,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
         );
       })
       .catch((err) => {
-        console.error('âÅ' Erreur envoi planning ménage (email) :', err);
+        console.error('❌ Erreur envoi planning ménage (email) :', err);
       })
   );
   }
@@ -1320,7 +1320,7 @@ const userResult = await pool.query(
           [subscriptionId]
         );
 
-        console.log(`âÅ' Paiement échoué pour subscription ${subscriptionId}`);
+        console.log(`❌' Paiement échoué pour subscription ${subscriptionId}`);
         break;
       }
 
@@ -1331,7 +1331,7 @@ const userResult = await pool.query(
     res.json({ received: true });
 
   } catch (err) {
-    console.error('âÅ' Erreur traitement webhook:', err);
+    console.error('❌ Erreur traitement webhook:', err);
     res.status(500).json({ error: 'Erreur traitement webhook' });
   }
 });
@@ -1382,7 +1382,7 @@ async function saveManualReservations() {
     await fsp.writeFile(MANUAL_RES_FILE, JSON.stringify(MANUAL_RESERVATIONS, null, 2));
     console.log('✅ Réservations manuelles sauvegardées');
   } catch (error) {
-    console.error('âÅ' Erreur lors de la sauvegarde des réservations manuelles:', error.message);
+    console.error('❌ Erreur lors de la sauvegarde des réservations manuelles:', error.message);
   }
 }
 
@@ -1402,7 +1402,7 @@ async function saveDeposits() {
     await fsp.writeFile(DEPOSITS_FILE, JSON.stringify(DEPOSITS, null, 2));
     console.log('✅ Cautions sauvegardées');
   } catch (error) {
-    console.error('âÅ' Erreur lors de la sauvegarde des cautions:', error.message);
+    console.error('❌ Erreur lors de la sauvegarde des cautions:', error.message);
   }
 }
 
@@ -1878,7 +1878,7 @@ async function loadProperties() {
         try {
           icalUrls = JSON.parse(icalUrls);
         } catch (e) {
-          console.error(`âÅ' Erreur parse ical_urls pour ${row.name}:`, e.message);
+          console.error(`❌' Erreur parse ical_urls pour ${row.name}:`, e.message);
           icalUrls = [];
         }
       }
@@ -1906,7 +1906,7 @@ async function loadProperties() {
     });
     console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`); 
   } catch (error) {
-    console.error('âÅ' Erreur loadProperties :', error);
+    console.error('❌ Erreur loadProperties :', error);
     PROPERTIES = [];
   }
 }
@@ -2969,7 +2969,7 @@ async function syncAllCalendars() {
         `réservations (iCal + manuelles)`
       );
     } catch (error) {
-      console.error(`âÅ' Erreur lors de la synchronisation de ${property.name}:`, error.message);
+      console.error(`❌' Erreur lors de la synchronisation de ${property.name}:`, error.message);
     }
   }
 
@@ -2984,14 +2984,14 @@ async function syncAllCalendars() {
     try {
       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
     } catch (err) {
-      console.error('âÅ' Erreur lors de l'envoi des notifications propriétaires:', err);
+      console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
     }
 
     if (newReservations.length > 0) {
       try {
         await notifyCleanersAboutNewBookings(newReservations);
       } catch (err) {
-        console.error('âÅ' Erreur lors de l'envoi des notifications ménage:', err);
+        console.error('❌ Erreur lors de l’envoi des notifications ménage:', err);
       }
     }
   } else if (isFirstSync) {
@@ -3036,7 +3036,7 @@ app.get('/api/test-whatsapp', async (req, res) => {
       result: result
     });
   } catch (err) {
-    console.error('âÅ' Erreur /api/test-whatsapp :', err);
+    console.error('❌ Erreur /api/test-whatsapp :', err);
     res.status(500).json({ 
       ok: false,
       error: err.message,
@@ -3088,7 +3088,7 @@ app.get('/api/test-whatsapp-user', async (req, res) => {
     });
     
   } catch (err) {
-    console.error('âÅ' Erreur /api/test-whatsapp-user :', err);
+    console.error('❌ Erreur /api/test-whatsapp-user :', err);
     res.status(500).json({ 
       ok: false,
       error: err.message 
@@ -3163,7 +3163,7 @@ app.post('/api/reservations/manual', async (req, res) => {
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      console.log('âÅ' Logement non trouvé:', propertyId);
+      console.log('❌ Logement non trouvé:', propertyId);
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
     console.log('✅ Logement trouvé:', property.name);
@@ -3228,7 +3228,7 @@ app.post('/api/reservations/manual', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('âÅ' Erreur /api/reservations/manual:', err);
+    console.error('❌ Erreur /api/reservations/manual:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erreur serveur' });
     }
@@ -3279,7 +3279,7 @@ app.post('/api/bookings', async (req, res) => {
     // 1. VÉRIFICATION AUTHENTIFICATION
     const user = await getUserFromRequest(req);
     if (!user) {
-      console.log('âÅ' Utilisateur non authentifié');
+      console.log('❌ Utilisateur non authentifié');
       return res.status(401).json({ error: 'Non autorisé' });
     }
     console.log('✅ Utilisateur authentifié:', user.id);
@@ -3289,27 +3289,27 @@ app.post('/api/bookings', async (req, res) => {
     console.log('📦 Données reçues:', { propertyId, checkIn, checkOut, guestName, platform, price });
     
     if (!propertyId) {
-      console.log('âÅ' propertyId manquant');
+      console.log('❌ propertyId manquant');
       return res.status(400).json({ error: 'propertyId est requis' });
     }
     if (!checkIn) {
-      console.log('âÅ' checkIn manquant');
+      console.log('❌ checkIn manquant');
       return res.status(400).json({ error: 'checkIn est requis' });
     }
     if (!checkOut) {
-      console.log('âÅ' checkOut manquant');
+      console.log('❌ checkOut manquant');
       return res.status(400).json({ error: 'checkOut est requis' });
     }
     
     // 3. VÉRIFICATION DU LOGEMENT
     if (!Array.isArray(PROPERTIES)) {
-      console.error('âÅ' PROPERTIES n\'est pas un tableau');
+      console.error('❌ PROPERTIES n\'est pas un tableau');
       return res.status(500).json({ error: 'Erreur de configuration serveur (PROPERTIES)' });
     }
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      console.log('âÅ' Logement non trouvé:', propertyId);
+      console.log('❌ Logement non trouvé:', propertyId);
       console.log('📋 Logements disponibles pour cet utilisateur:', 
         PROPERTIES.filter(p => p.userId === user.id).map(p => ({ id: p.id, name: p.name }))
       );
@@ -3451,7 +3451,7 @@ app.delete('/api/bookings/:uid', async (req, res) => {
     });
     
   } catch (err) {
-    console.error('âÅ' ERREUR CRITIQUE POST /api/bookings:', err);
+    console.error('❌ ERREUR CRITIQUE POST /api/bookings:', err);
     console.error('Message:', err.message);
     console.error('Stack:', err.stack);
     
@@ -3576,7 +3576,7 @@ async function uploadPhotoToCloudinary(file) {
     console.log('✅ Image uploadée vers Cloudinary:', cloudinaryUrl);
     return cloudinaryUrl;
   } catch (error) {
-    console.error('âÅ' Erreur upload Cloudinary:', error);
+    console.error('❌ Erreur upload Cloudinary:', error);
     throw error;
   }
 }
@@ -4522,7 +4522,7 @@ async function hasEmailBeenSent(userId, emailType) {
 }
 
 // ============================================
-// FONCTION : Enregistrer l'envoi d'un email
+// FONCTION : Enregistrer l’envoi d'un email
 // ============================================
 async function logEmailSent(userId, emailType, emailData = {}) {
   await pool.query(
@@ -8216,7 +8216,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 
     fs.createReadStream(absolutePath).pipe(res);
   } catch (err) {
-    console.error('âÅ' Erreur download invoice:', err);
+    console.error('❌ Erreur download invoice:', err);
     res.status(500).send('Erreur serveur.');
   }
 });
@@ -8316,7 +8316,7 @@ const pdfUrl = `${origin}/api/invoice/download/${token}`;
         console.log('✅ Email facture client envoyé à:', clientEmail);
 
       } catch (emailErr) {
-        console.error('âÅ' Erreur envoi email facture client:', emailErr);
+        console.error('❌ Erreur envoi email facture client:', emailErr);
       }
     }
     
@@ -8467,7 +8467,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     fs.createReadStream(absolutePath).pipe(res);
 
   } catch (err) {
-    console.error('âÅ' Erreur download invoice:', err);
+    console.error('❌ Erreur download invoice:', err);
     res.status(500).send('Erreur serveur.');
   }
 });
@@ -9287,7 +9287,7 @@ cron.schedule('0 * * * *', async () => {
     console.log('✅ Vérification des emails automatiques terminée');
 
   } catch (err) {
-    console.error('âÅ' Erreur cron emails automatiques:', err);
+    console.error('❌ Erreur cron emails automatiques:', err);
   }
 });
 
@@ -9339,7 +9339,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      console.log('âÅ' Suppression refusée : utilisateur non authentifié');
+      console.log('❌ Suppression refusée : utilisateur non authentifié');
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -9351,7 +9351,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     });
 
     if (!propertyId || !uid) {
-      console.log('âÅ' Requête invalide pour suppression : propertyId ou uid manquant', {
+      console.log('❌ Requête invalide pour suppression : propertyId ou uid manquant', {
         propertyId,
         uid
       });
@@ -9362,7 +9362,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       (p) => p.id === propertyId && p.userId === user.id
     );
     if (!property) {
-      console.log('âÅ' Logement non trouvé pour suppression', {
+      console.log('❌ Logement non trouvé pour suppression', {
         propertyId,
         userId: user.id
       });
@@ -9370,7 +9370,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     }
 
     if (!MANUAL_RESERVATIONS[propertyId] || MANUAL_RESERVATIONS[propertyId].length === 0) {
-      console.log('âÅ' Aucune réservation/blocage trouvé pour ce logement', {
+      console.log('❌ Aucune réservation/blocage trouvé pour ce logement', {
         propertyId,
         uid
       });
@@ -9391,7 +9391,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
 
     if (initialLength === newLength) {
       console.log(
-        'âÅ' Aucune entrée supprimée (uid non trouvé dans MANUAL_RESERVATIONS)',
+        '❌ Aucune entrée supprimée (uid non trouvé dans MANUAL_RESERVATIONS)',
         { propertyId, uid }
       );
       return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
@@ -9803,7 +9803,7 @@ console.log('✅ Routes du chat initialisées');
 
 server.listen(PORT, async () => {
   console.log('');
-  console.log('╔════════════════════════════════════════════════════════â•—');
+  console.log('╔════════════════════════════════════════════════════════╗');
   console.log('║   🏠 LCC Booking Manager - Système de Réservations    ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
@@ -9852,7 +9852,7 @@ server.listen(PORT, async () => {
     try {
       await sendDailyCleaningPlan();
     } catch (err) {
-      console.error('âÅ' Erreur lors de l'envoi du planning ménage quotidien :', err);
+      console.error('❌ Erreur lors de l’envoi du planning ménage quotidien :', err);
     }
   });
 
