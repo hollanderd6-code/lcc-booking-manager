@@ -5551,7 +5551,40 @@ const guestName = reservation ? (reservation.guestName || reservation.name || ''
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// GET - Détails d'une checklist spécifique
+app.get('/api/cleaning/checklists/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+        cc.*,
+        c.name as cleaner_name,
+        c.email as cleaner_email,
+        c.phone as cleaner_phone
+       FROM cleaning_checklists cc
+       LEFT JOIN cleaners c ON c.id = cc.cleaner_id
+       WHERE cc.id = $1 AND cc.user_id = $2`,
+      [id, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Checklist non trouvée' });
+    }
+
+    res.json({
+      checklist: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/checklists/:id :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // GET - Récupérer une checklist par reservation_key
 app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
   try {
