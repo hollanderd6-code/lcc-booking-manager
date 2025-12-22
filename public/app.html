@@ -6978,7 +6978,166 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       });
     }
   });
-  </script>
+
+// ===== WIDGET CHECKLISTS DE MÉNAGE =====
+
+let cleaningChecklists = [];
+
+async function loadCleaningChecklists() {
+  const container = document.getElementById('checklistsContainer');
+  
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    
+    const response = await fetch(`${API_URL}/api/cleaning/checklists`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement des checklists');
+    }
+    
+    const data = await response.json();
+    cleaningChecklists = data.checklists || [];
+    
+    renderCleaningChecklists();
+  } catch (err) {
+    console.error('Erreur chargement checklists:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Erreur lors du chargement</p>
+      </div>
+    `;
+  }
+}
+
+function renderCleaningChecklists() {
+  const container = document.getElementById('checklistsContainer');
+  
+  if (cleaningChecklists.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-broom"></i>
+        <p>Aucune checklist</p>
+        <small>Les checklists validées par vos équipes apparaîtront ici</small>
+      </div>
+    `;
+    return;
+  }
+  
+  // Afficher les 6 plus récentes
+  const recent = cleaningChecklists.slice(0, 6);
+  
+  container.innerHTML = recent.map(checklist => {
+    const isCompleted = checklist.is_validated || checklist.completed_at;
+    const cardClass = isCompleted ? 'checklist-card-completed' : 'checklist-card-pending';
+    const badgeClass = isCompleted ? 'checklist-badge-completed' : 'checklist-badge-pending';
+    const badgeIcon = isCompleted ? 'fa-check-circle' : 'fa-clock';
+    const badgeText = isCompleted ? 'Validé' : 'En attente';
+    
+    // Extraire infos de la reservation_key
+    const parts = (checklist.reservation_key || '').split('_');
+    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : checklist.checkout_date;
+    const formattedDate = checkoutDate ? formatChecklistDate(checkoutDate) : 'Date inconnue';
+    
+    // Nom du logement
+    const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
+    
+    return `
+      <div class="checklist-card ${cardClass}" onclick="openChecklistDetails('${checklist.id}')">
+        <div class="checklist-card-header">
+          <div class="checklist-property">${propertyName}</div>
+          <span class="checklist-badge ${badgeClass}">
+            <i class="fas ${badgeIcon}"></i>
+            ${badgeText}
+          </span>
+        </div>
+        
+        <div class="checklist-info">
+          <div class="checklist-info-row">
+            <i class="fas fa-calendar"></i>
+            <span>Départ : ${formattedDate}</span>
+          </div>
+          <div class="checklist-info-row">
+            <i class="fas fa-user"></i>
+            <span>${checklist.guest_name || 'Voyageur'}</span>
+          </div>
+          <div class="checklist-info-row">
+            <i class="fas fa-user-check"></i>
+            <span>${checklist.cleaner_name || 'Non assigné'}</span>
+          </div>
+        </div>
+        
+        <div class="checklist-footer">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openChecklistDetails('${checklist.id}')">
+            <i class="fas fa-eye"></i> Voir les détails
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getPropertyNameFromChecklistKey(reservationKey, fallbackPropertyId) {
+  if (!reservationKey) {
+    return fallbackPropertyId || 'Logement';
+  }
+  
+  const parts = reservationKey.split('_');
+  if (parts.length < 3) {
+    return fallbackPropertyId || 'Logement';
+  }
+  
+  const propertyId = parts.slice(0, parts.length - 2).join('_');
+  
+  if (window.LCC_PROPERTIES && Array.isArray(window.LCC_PROPERTIES)) {
+    const property = window.LCC_PROPERTIES.find(p => 
+      p.id === propertyId || 
+      p.propertyId === propertyId
+    );
+    
+    if (property) {
+      return property.name || property.title || property.label || propertyId;
+    }
+  }
+  
+  return propertyId;
+}
+
+function formatChecklistDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
+
+function openChecklistDetails(checklistId) {
+  const checklist = cleaningChecklists.find(c => c.id == checklistId);
+  if (!checklist) return;
+  
+  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
+  
+  alert(`📋 Détails de la checklist\n\n` +
+        `🏠 Logement: ${propertyName}\n` +
+        `👤 Voyageur: ${checklist.guest_name || 'N/A'}\n` +
+        `✨ Personne de ménage: ${checklist.cleaner_name || 'N/A'}\n` +
+        `📅 Date: ${formatChecklistDate(checklist.checkout_date)}\n\n` +
+        `[TODO: Afficher photos, tâches, notes dans une modale]`);
+}
+
+// Charger au démarrage
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadCleaningChecklists);
+} else {
+  loadCleaningChecklists();
+}
+
+</script>
 
 
 <script>
@@ -7194,24 +7353,27 @@ overlay && overlay.addEventListener('click', close);
     }
   }, 700);
 })();
-</script>
 
-  <!-- SCRIPT WIDGET CHECKLISTS -->
-  <script>
-
-let cleaningChecklists = [];
-
-async function loadCleaningChecklists() {
-  const container = document.getElementById('checklistsContainer');
-  
-  try {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) return;
-    
-    const response = await fetch(`${API_URL}/api/cleaning/checklists`, {
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
+        <!-- CHECKLISTS DE MÉNAGE -->
+        <section class="cleaning-checklists-widget">
+          <div class="widget-header">
+            <div>
+              <div class="widget-kicker">Suivi du ménage</div>
+              <div class="widget-title">Checklists validées</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/cleaning.html'">
+              <i class="fas fa-cog"></i> Gérer
+            </button>
+          </div>
+          
+          <div id="checklistsContainer" class="checklists-grid">
+            <!-- Les checklists seront chargées ici -->
+            <div class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Chargement...</span>
+            </div>
+          </div>
+        </section>
     });
     
     if (!response.ok) {
