@@ -7289,6 +7289,63 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 // ===== WIDGET CHECKLISTS DE MÉNAGE =====
 
 let cleaningChecklists = [];
+    // Créer la modale dynamiquement au chargement
+(function() {
+  const modalHTML = `
+<div class="checklist-modal-overlay" id="checklistModal">
+  <div class="checklist-modal" onclick="event.stopPropagation()">
+    <div class="checklist-modal-header">
+      <div>
+        <h2 id="modalChecklistProperty">Logement</h2>
+        <div class="checklist-modal-meta">
+          <span id="modalChecklistDate"></span>
+          <span class="separator">•</span>
+          <span id="modalChecklistCleaner"></span>
+        </div>
+      </div>
+      <button class="close-modal-btn" onclick="closeChecklistModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="checklist-modal-status" id="modalChecklistStatus"></div>
+    <div class="checklist-modal-body">
+      <div class="modal-section">
+        <h3 class="modal-section-title"><i class="fas fa-user"></i> Informations voyageur</h3>
+        <div class="modal-info-grid">
+          <div class="modal-info-item">
+            <span class="modal-info-label">Nom</span>
+            <span class="modal-info-value" id="modalGuestName">-</span>
+          </div>
+          <div class="modal-info-item">
+            <span class="modal-info-label">Date de départ</span>
+            <span class="modal-info-value" id="modalCheckoutDate">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <h3 class="modal-section-title"><i class="fas fa-check-square"></i> Tâches effectuées</h3>
+        <div id="modalTasksList" class="tasks-list"></div>
+      </div>
+      <div class="modal-section">
+        <h3 class="modal-section-title"><i class="fas fa-camera"></i> Photos du logement</h3>
+        <div id="modalPhotosList" class="photos-grid"></div>
+      </div>
+      <div class="modal-section" id="modalNotesSection" style="display: none;">
+        <h3 class="modal-section-title"><i class="fas fa-sticky-note"></i> Notes complémentaires</h3>
+        <div class="notes-content" id="modalNotes"></div>
+      </div>
+    </div>
+    <div class="checklist-modal-footer">
+      <button class="btn btn-ghost" onclick="closeChecklistModal()">Fermer</button>
+      <button class="btn btn-primary" onclick="downloadChecklistPDF()">
+        <i class="fas fa-download"></i> Télécharger PDF
+      </button>
+    </div>
+  </div>
+</div>`;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+})();
 
 async function loadCleaningChecklists() {
   const container = document.getElementById('checklistsContainer');
