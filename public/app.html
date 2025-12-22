@@ -7194,7 +7194,7 @@ overlay && overlay.addEventListener('click', close);
     }
   }, 700);
 })();
-  // ===== WIDGET CHECKLISTS DE MÉNAGE =====
+// ===== WIDGET CHECKLISTS DE MÉNAGE (VERSION CORRIGÉE) =====
 
 let cleaningChecklists = [];
 
@@ -7259,10 +7259,9 @@ function renderCleaningChecklists() {
     const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : checklist.checkout_date;
     const formattedDate = checkoutDate ? formatChecklistDate(checkoutDate) : 'Date inconnue';
     
-    // Nom du logement
-    const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key) || 
-                         checklist.property_id || 
-                         'Logement';
+    // Nom du logement - utilise directement property_id pour l'instant
+    // On pourra améliorer plus tard en cherchant dans window.LCC_PROPERTIES
+    const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
     
     return `
       <div class="checklist-card ${cardClass}" onclick="openChecklistDetails('${checklist.id}')">
@@ -7299,19 +7298,34 @@ function renderCleaningChecklists() {
   }).join('');
 }
 
-function getPropertyNameFromChecklistKey(reservationKey) {
-  if (!reservationKey || !PROPERTIES) return null;
+function getPropertyNameFromChecklistKey(reservationKey, fallbackPropertyId) {
+  // Si pas de reservation_key, utiliser le fallback
+  if (!reservationKey) {
+    return fallbackPropertyId || 'Logement';
+  }
   
+  // Extraire le property_id de la reservation_key
   const parts = reservationKey.split('_');
-  if (parts.length < 3) return null;
+  if (parts.length < 3) {
+    return fallbackPropertyId || 'Logement';
+  }
   
   const propertyId = parts.slice(0, parts.length - 2).join('_');
-  const property = PROPERTIES.find(p => 
-    p.id === propertyId || 
-    p.propertyId === propertyId
-  );
   
-  return property?.name || property?.title || property?.label || null;
+  // Essayer de trouver le nom dans window.LCC_PROPERTIES
+  if (window.LCC_PROPERTIES && Array.isArray(window.LCC_PROPERTIES)) {
+    const property = window.LCC_PROPERTIES.find(p => 
+      p.id === propertyId || 
+      p.propertyId === propertyId
+    );
+    
+    if (property) {
+      return property.name || property.title || property.label || propertyId;
+    }
+  }
+  
+  // Sinon retourner le propertyId tel quel
+  return propertyId;
 }
 
 function formatChecklistDate(dateStr) {
@@ -7321,12 +7335,13 @@ function formatChecklistDate(dateStr) {
   const [year, month, day] = parts;
   return `${day}/${month}/${year}`;
 }
+
 function openChecklistDetails(checklistId) {
   const checklist = cleaningChecklists.find(c => c.id == checklistId);
   if (!checklist) return;
   
   // TODO: Créer une belle modale
-  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key) || 'Logement';
+  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
   
   alert(`📋 Détails de la checklist\n\n` +
         `🏠 Logement: ${propertyName}\n` +
@@ -7342,6 +7357,5 @@ if (document.readyState === 'loading') {
 } else {
   loadCleaningChecklists();
 }
-</script>
 </body>
 </html>
