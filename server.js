@@ -5512,14 +5512,6 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       return res.status(400).json({ error: 'Toutes les tâches doivent être complétées' });
     }
     
-    // Récupérer les infos de la réservation depuis reservationsStore
-    let reservation = null;
-    const propertyReservations = reservationsStore.properties[propertyId] || [];
-    reservation = propertyReservations.find(r => {
-      const rKey = `${propertyId}_${r.start}_${r.end}`;
-      return rKey === reservationKey;
-    });
-    
     // Extraire la date de fin depuis reservation_key (format: propertyId_startDate_endDate)
 const parts = reservationKey.split('_');
 const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
