@@ -5577,7 +5577,35 @@ app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// GET - Liste des checklists pour un utilisateur
+app.get('/api/cleaning/checklists', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
+    const result = await pool.query(
+      `SELECT 
+        cc.*,
+        c.name as cleaner_name,
+        c.email as cleaner_email
+       FROM cleaning_checklists cc
+       LEFT JOIN cleaners c ON c.id = cc.cleaner_id
+       WHERE cc.user_id = $1
+       ORDER BY cc.completed_at DESC
+       LIMIT 50`,
+      [user.id]
+    );
+
+    res.json({
+      checklists: result.rows
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/checklists :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 // ============================================
