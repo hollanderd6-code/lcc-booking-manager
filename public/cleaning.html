@@ -955,44 +955,42 @@ function formatDateFr(dateStr) {
             <tbody>
         `;
 
-        upcoming.forEach((r) => {
-          const key = getReservationKey(r);
-          const assignedId = key && assignments[key] ? assignments[key] : '';
-
-          const propertyId = getReservationPropertyId(r);
-          const propertyName =
-            r.propertyName ||
-            (r.property && (r.property.name || r.property.title || r.property.label)) ||
-            getPropertyNameById(propertyId);
-
-          const guestName = r.guestName || r.name || '';
-          const endStr = String(r.end).slice(0, 10);
-
-          html += `
-            <tr>
-              <td>${endDateFr}</td>
-              <td>${propertyName}</td>
-              <td>${guestName || '-'}</td>
-              <td>
-                <select class="assign-select"
-                        data-reservation-key="${key || ''}"
-                        data-property-id="${propertyId || ''}">
-                  <option value="">Aucun</option>
-                  ${cleaners
-                    .map(
-                      (c) => `
-                    <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
-                      ${c.name || c.email || c.phone || c.id}
-                    </option>
-                  `
-                    )
-                    .join('')}
-                </select>
-              </td>
-            </tr>
-          `;
-        });
-
+     upcoming.forEach((r) => {
+  const key = getReservationKey(r);
+  const assignedId = key && assignments[key] ? assignments[key] : '';
+  const propertyId = getReservationPropertyId(r);
+  const propertyName =
+    r.propertyName ||
+    (r.property && (r.property.name || r.property.title || r.property.label)) ||
+    getPropertyNameById(propertyId);
+  const guestName = r.guestName || r.name || '';
+  const endStr = String(r.end).slice(0, 10);
+  const endDateFr = formatDateFr(endStr);  // ← AJOUTE CETTE LIGNE ICI
+  
+  html += `
+    <tr>
+      <td>${endDateFr}</td>
+      <td>${propertyName}</td>
+      <td>${guestName || '-'}</td>
+      <td>
+        <select class="assign-select"
+                data-reservation-key="${key || ''}"
+                data-property-id="${propertyId || ''}">
+          <option value="">Aucun</option>
+          ${cleaners
+            .map(
+              (c) => `
+            <option value="${c.id}" ${c.id === assignedId ? 'selected' : ''}>
+              ${c.name || c.email || c.phone || c.id}
+            </option>
+          `
+            )
+            .join('')}
+        </select>
+      </td>
+    </tr>
+  `;
+});
         html += '</tbody></table>';
         assignContainer.innerHTML = html;
 
