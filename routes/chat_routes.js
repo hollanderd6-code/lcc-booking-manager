@@ -32,7 +32,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       
       const token = authHeader.substring(7);
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
       
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
@@ -513,7 +513,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+         RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
         [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
       );
 
@@ -537,7 +537,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
           const botResult = await pool.query(
             `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
              VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-             RETURNING id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+             RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
             [conversationId, autoResponse]
           );
 
