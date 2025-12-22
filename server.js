@@ -5380,14 +5380,20 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     // Récupérer les réservations avec départ futur pour ces logements
     const todayStr = new Date().toISOString().slice(0, 10);
     
-    // Filtrer les réservations pertinentes du cache RESERVATIONS
-    const relevantReservations = RESERVATIONS.filter(r => {
-      if (!r.end) return false;
-      const endStr = String(r.end).slice(0, 10);
-      if (endStr < todayStr) return false;
-      
-      const propertyId = r.propertyId || (r.property && r.property.id);
-      return assignedPropertyIds.includes(propertyId);
+    // Collecter toutes les réservations des propriétés assignées
+    const relevantReservations = [];
+    assignedPropertyIds.forEach(propertyId => {
+      const propertyReservations = reservationsStore.properties[propertyId] || [];
+      propertyReservations.forEach(r => {
+        if (!r.end) return;
+        const endStr = String(r.end).slice(0, 10);
+        if (endStr >= todayStr) {
+          relevantReservations.push({
+            ...r,
+            propertyId: propertyId
+          });
+        }
+      });
     });
     
     // Vérifier quelles checklists existent déjà
@@ -5460,9 +5466,11 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       return res.status(400).json({ error: 'Toutes les tâches doivent être complétées' });
     }
     
-    // Récupérer les infos de la réservation
-    const reservation = RESERVATIONS.find(r => {
-      const rKey = `${r.propertyId}_${r.start}_${r.end}`;
+    // Récupérer les infos de la réservation depuis reservationsStore
+    let reservation = null;
+    const propertyReservations = reservationsStore.properties[propertyId] || [];
+    reservation = propertyReservations.find(r => {
+      const rKey = `${propertyId}_${r.start}_${r.end}`;
       return rKey === reservationKey;
     });
     
