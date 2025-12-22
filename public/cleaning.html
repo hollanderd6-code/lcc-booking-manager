@@ -655,7 +655,14 @@
       const cleanerForm = document.getElementById('cleanerForm');
       const cleanerList = document.getElementById('cleanerList');
       const assignContainer = document.getElementById('assignContainer');
-
+      
+function formatDateFr(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
       function loadLocalData() {
         try {
           // Les cleaners sont maintenant chargés depuis l'API dans loadRemoteData()
@@ -917,7 +924,6 @@
     }
 
     const endStr = String(r.end).slice(0, 10); // ⚠️ on garde le format AAAA-MM-JJ pour filtrer
-    // Format de date français DD/MM/YYYY
           const endDateFr = formatDateFr(endStr);
     return endStr >= todayStr;
   })
