@@ -7321,7 +7321,6 @@ function formatChecklistDate(dateStr) {
   const [year, month, day] = parts;
   return `${day}/${month}/${year}`;
 }
-
 function openChecklistDetails(checklistId) {
   const checklist = cleaningChecklists.find(c => c.id == checklistId);
   if (!checklist) return;
@@ -7342,7 +7341,7 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', loadCleaningChecklists);
 } else {
   loadCleaningChecklists();
+}
 </script>
-
 </body>
 </html>
