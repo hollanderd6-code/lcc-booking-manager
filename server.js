@@ -441,6 +441,17 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS idx_cleaning_checklists_user_id ON cleaning_checklists(user_id);
       CREATE INDEX IF NOT EXISTS idx_cleaning_checklists_cleaner_id ON cleaning_checklists(cleaner_id);
       CREATE INDEX IF NOT EXISTS idx_cleaning_checklists_reservation_key ON cleaning_checklists(reservation_key);
+      
+      -- Ajouter la colonne pin_code si elle n'existe pas déjà
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaners' AND column_name = 'pin_code'
+        ) THEN
+          ALTER TABLE cleaners ADD COLUMN pin_code TEXT UNIQUE;
+        END IF;
+      END $$;
     
 
 CREATE TABLE IF NOT EXISTS invoice_download_tokens (
