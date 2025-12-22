@@ -1544,3 +1544,13 @@ html, body {
   border-radius: 999px !important;
   font-weight: 800 !important;
 }
+
+
+/* ===== Global override: chat meta hour/status size ===== */
+.chat-meta,
+.chat-time,
+.chat-status{
+  font-size:10px !important;
+  font-weight:400 !important;
+  opacity:.7 !important;
+}
