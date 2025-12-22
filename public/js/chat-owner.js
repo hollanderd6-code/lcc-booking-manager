@@ -352,7 +352,9 @@ function appendMessage(message) {
   }
   
   const messageDiv = document.createElement('div');
-  messageDiv.className = `chat-message ${message.sender_type}`;
+// OWNER VIEW : moi = sender_type === 'owner'
+const isSelf = message.sender_type === 'owner';
+messageDiv.className = `chat-message ${isSelf ? 'owner' : 'guest'}`;
   
   const avatar = document.createElement('div');
   avatar.className = 'chat-avatar';
