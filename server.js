@@ -5254,6 +5254,7 @@ app.get('/api/cleaning/assignments', async (req, res) => {
     const result = await pool.query(
       `
       SELECT
+        ca.reservation_key,
         ca.property_id,
         ca.cleaner_id,
         c.name  AS cleaner_name,
@@ -5262,7 +5263,7 @@ app.get('/api/cleaning/assignments', async (req, res) => {
       FROM cleaning_assignments ca
       LEFT JOIN cleaners c ON c.id = ca.cleaner_id
       WHERE ca.user_id = $1
-      ORDER BY ca.property_id ASC
+      ORDER BY ca.reservation_key ASC
       `,
       [user.id]
     );
@@ -5284,21 +5285,21 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { propertyId, cleanerId } = req.body || {};
+    const { reservationKey, propertyId, cleanerId } = req.body || {};
 
-    if (!propertyId) {
-      return res.status(400).json({ error: 'propertyId requis' });
+    if (!reservationKey || !propertyId) {
+      return res.status(400).json({ error: 'reservationKey et propertyId requis' });
     }
 
     // Si cleanerId vide → on supprime l'assignation
     if (!cleanerId) {
       await pool.query(
-        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND property_id = $2',
-        [user.id, propertyId]
+        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+        [user.id, reservationKey]
       );
       return res.json({
         message: 'Assignation ménage supprimée',
-        propertyId
+        reservationKey
       });
     }
 
@@ -5322,18 +5323,20 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 
     await pool.query(
       `
-      INSERT INTO cleaning_assignments (user_id, property_id, cleaner_id, created_at, updated_at)
-      VALUES ($1, $2, $3, NOW(), NOW())
-      ON CONFLICT (user_id, property_id) DO UPDATE
+      INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      ON CONFLICT (user_id, reservation_key) DO UPDATE
         SET cleaner_id = EXCLUDED.cleaner_id,
+            property_id = EXCLUDED.property_id,
             updated_at = NOW()
       `,
-      [user.id, propertyId, cleanerId]
+      [user.id, propertyId, reservationKey, cleanerId]
     );
 
     res.json({
       message: 'Assignation ménage enregistrée',
       assignment: {
+        reservationKey,
         propertyId,
         cleanerId
       }
@@ -5343,7 +5346,6 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 // ============================================
 // ROUTES API - CHECKLISTS MENAGE
 // ============================================
@@ -5365,36 +5367,55 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     
     const cleaner = cleanerResult.rows[0];
     
-    // Récupérer les assignations de ce cleaner
+    // Récupérer les assignations PAR RÉSERVATION de ce cleaner
     const assignmentsResult = await pool.query(
-      'SELECT property_id FROM cleaning_assignments WHERE cleaner_id = $1',
+      'SELECT reservation_key, property_id FROM cleaning_assignments WHERE cleaner_id = $1',
       [cleaner.id]
     );
     
-    const assignedPropertyIds = assignmentsResult.rows.map(r => r.property_id);
-    
-    if (assignedPropertyIds.length === 0) {
+    if (assignmentsResult.rows.length === 0) {
       return res.json({ tasks: [], cleaner: { id: cleaner.id, name: cleaner.name } });
     }
     
-    // Récupérer les réservations avec départ futur pour ces logements
     const todayStr = new Date().toISOString().slice(0, 10);
     
-    // Collecter toutes les réservations des propriétés assignées
-    const relevantReservations = [];
-    assignedPropertyIds.forEach(propertyId => {
-      const propertyReservations = reservationsStore.properties[propertyId] || [];
-      propertyReservations.forEach(r => {
-        if (!r.end) return;
-        const endStr = String(r.end).slice(0, 10);
-        if (endStr >= todayStr) {
-          relevantReservations.push({
-            ...r,
-            propertyId: propertyId
-          });
-        }
+    // Construire la liste des tâches uniquement pour les réservations assignées
+    const tasks = [];
+    
+    for (const assignment of assignmentsResult.rows) {
+      const { reservation_key, property_id } = assignment;
+      
+      // Parser le reservation_key pour extraire les dates
+      // Format attendu : propertyId_startDate_endDate
+      const parts = reservation_key.split('_');
+      if (parts.length !== 3) continue;
+      
+      const [keyPropertyId, startDate, endDate] = parts;
+      
+      // Ne garder que les réservations avec départ futur ou aujourd'hui
+      if (endDate < todayStr) continue;
+      
+      // Trouver la réservation complète dans reservationsStore
+      const propertyReservations = reservationsStore.properties[property_id] || [];
+      const reservation = propertyReservations.find(r => {
+        const rKey = `${property_id}_${r.start}_${r.end}`;
+        return rKey === reservation_key;
       });
-    });
+      
+      const propertyName = reservation?.propertyName || 
+                          (reservation?.property && reservation.property.name) || 
+                          property_id;
+      const guestName = reservation?.guestName || reservation?.name || '';
+      
+      tasks.push({
+        reservationKey: reservation_key,
+        propertyId: property_id,
+        propertyName,
+        guestName,
+        checkoutDate: endDate,
+        completed: false // On vérifiera après
+      });
+    }
     
     // Vérifier quelles checklists existent déjà
     const existingChecklists = await pool.query(
@@ -5406,23 +5427,13 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     
     const completedKeys = new Set(existingChecklists.rows.map(c => c.reservation_key));
     
-    // Créer la liste des tâches
-    const tasks = relevantReservations.map(r => {
-      const reservationKey = `${r.propertyId}_${r.start}_${r.end}`;
-      const propertyId = r.propertyId || (r.property && r.property.id);
-      const propertyName = r.propertyName || (r.property && r.property.name) || propertyId;
-      const guestName = r.guestName || r.name || '';
-      const endStr = String(r.end).slice(0, 10);
-      
-      return {
-        reservationKey,
-        propertyId,
-        propertyName,
-        guestName,
-        checkoutDate: endStr,
-        completed: completedKeys.has(reservationKey)
-      };
-    }).sort((a, b) => a.checkoutDate.localeCompare(b.checkoutDate));
+    // Marquer les tâches complétées
+    tasks.forEach(task => {
+      task.completed = completedKeys.has(task.reservationKey);
+    });
+    
+    // Trier par date de départ
+    tasks.sort((a, b) => a.checkoutDate.localeCompare(b.checkoutDate));
     
     res.json({
       cleaner: { id: cleaner.id, name: cleaner.name },
