@@ -5520,8 +5520,19 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       return rKey === reservationKey;
     });
     
-    const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
-    const checkoutDate = reservation ? String(reservation.end).slice(0, 10) : null;
+    // Extraire la date de fin depuis reservation_key (format: propertyId_startDate_endDate)
+const parts = reservationKey.split('_');
+const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
+
+// Récupérer les infos de la réservation depuis reservationsStore
+let reservation = null;
+const propertyReservations = reservationsStore.properties[propertyId] || [];
+reservation = propertyReservations.find(r => {
+  const rKey = `${propertyId}_${r.start}_${r.end}`;
+  return rKey === reservationKey;
+});
+
+const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
     
     // Insérer ou mettre à jour la checklist
     const result = await pool.query(
