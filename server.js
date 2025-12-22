@@ -124,7 +124,7 @@ async function sendEmail(mailOptions) {
       return await smtpTransporter.sendMail(mailOptions);
     }
   } catch (error) {
-    console.error('âÅ' Erreur envoi email:', error.response?.body || error.message);
+    console.error("❌ Erreur envoi email:", error.response?.body || error.message);
     throw error;
   }
 }
