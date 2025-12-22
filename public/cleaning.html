@@ -630,6 +630,14 @@
     // GESTION EQUIPE + ASSIGNATION + PLANNING
     // --------------------------
     document.addEventListener('DOMContentLoaded', () => {
+      // NOUVELLE FONCTION : Formater une date YYYY-MM-DD en DD/MM/YYYY
+      function formatDateFr(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        const [year, month, day] = parts;
+        return `${day}/${month}/${year}`;
+      }
       const API_URL = 'https://lcc-booking-manager.onrender.com';
       const STORAGE_CLEANERS = 'lcc_cleaners';
       const STORAGE_ASSIGN = 'lcc_cleaning_assignments';
@@ -686,10 +694,7 @@
 
     // On reconstruit une map à partir de ce que renvoie l'API
     (data.assignments || []).forEach((row) => {
-      const key =
-        row.reservation_key ||
-        row.reservation_uid ||
-        (row.reservationId != null ? String(row.reservationId) : null);
+      const key = row.reservation_key;
 
       if (key && row.cleaner_id) {
         apiMap[key] = row.cleaner_id;
@@ -912,6 +917,8 @@
     }
 
     const endStr = String(r.end).slice(0, 10); // ⚠️ on garde le format AAAA-MM-JJ pour filtrer
+    // Format de date français DD/MM/YYYY
+          const endDateFr = formatDateFr(endStr);
     return endStr >= todayStr;
   })
   .sort((a, b) => {
@@ -957,7 +964,7 @@
 
           html += `
             <tr>
-              <td>${endStr}</td>
+              <td>${endDateFr}</td>
               <td>${propertyName}</td>
               <td>${guestName || '-'}</td>
               <td>
@@ -1109,10 +1116,10 @@
             // Retirer de la liste locale
             cleaners = cleaners.filter((c) => c.id !== id);
 
-            // On enlève les assignations liées
-            Object.keys(assignments).forEach((pid) => {
-              if (assignments[pid] === id) {
-                delete assignments[pid];
+            // On enlève les assignations liées (maintenant par reservation_key)
+            Object.keys(assignments).forEach((resKey) => {
+              if (assignments[resKey] === id) {
+                delete assignments[resKey];
               }
             });
 
