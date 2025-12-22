@@ -5321,17 +5321,18 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       return res.status(404).json({ error: 'Personne de ménage introuvable pour cet utilisateur' });
     }
 
-    await pool.query(
-      `
-      INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      ON CONFLICT (user_id, reservation_key) DO UPDATE
-        SET cleaner_id = EXCLUDED.cleaner_id,
-            property_id = EXCLUDED.property_id,
-            updated_at = NOW()
-      `,
-      [user.id, propertyId, reservationKey, cleanerId]
-    );
+    // D'abord, supprimer toute assignation existante pour cette réservation
+await pool.query(
+  'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+  [user.id, reservationKey]
+);
+
+// Puis insérer la nouvelle assignation
+await pool.query(
+  `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
+   VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+  [user.id, propertyId, reservationKey, cleanerId]
+);
 
     res.json({
       message: 'Assignation ménage enregistrée',
