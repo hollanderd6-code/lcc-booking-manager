@@ -885,6 +885,9 @@ function formatDateFr(dateStr) {
       }
 
       function renderAssignments() {
+         console.log('🔍 RESERVATIONS:', RESERVATIONS);
+  console.log('🔍 PROPERTIES:', PROPERTIES);
+  console.log('🔍 assignments:', assignments);
         if (!assignContainer) return;
 
         // Initialisation du filtre logement (une seule fois, quand on a des données)
