@@ -7427,16 +7427,6 @@ async function openChecklistDetails(checklistId) {
   const checklist = cleaningChecklists.find(c => c.id == checklistId);
   if (!checklist) return;
   
-  // Attendre que le DOM soit prêt
-  await new Promise(resolve => setTimeout(resolve, 10));
-  
-  // Vérifier que la modale existe
-  const modal = document.getElementById('checklistModal');
-  if (!modal) {
-    console.error('Modale non trouvée dans le DOM');
-    return;
-  }
-  
   // Récupérer les détails complets depuis l'API
   try {
     const token = localStorage.getItem('lcc_token');
@@ -7455,7 +7445,7 @@ async function openChecklistDetails(checklistId) {
     populateChecklistModal(fullChecklist);
     
     // Afficher la modale
-    modal.classList.add('active');
+    document.getElementById('checklistModal').classList.add('active');
     document.body.style.overflow = 'hidden';
     
   } catch (err) {
@@ -7927,6 +7917,8 @@ if (document.readyState === 'loading') {
   loadCleaningChecklists();
 }
   <!-- MODALE DÉTAILS CHECKLIST -->
+
+<!-- MODALE DÉTAILS CHECKLIST -->
 <div class="checklist-modal-overlay" id="checklistModal" onclick="closeChecklistModal(event)">
   <div class="checklist-modal" onclick="event.stopPropagation()">
     <!-- Header -->
@@ -7974,9 +7966,7 @@ if (document.readyState === 'loading') {
           <i class="fas fa-check-square"></i>
           Tâches effectuées
         </h3>
-        <div id="modalTasksList" class="tasks-list">
-          <!-- Généré dynamiquement -->
-        </div>
+        <div id="modalTasksList" class="tasks-list"></div>
       </div>
 
       <!-- Photos -->
@@ -7985,9 +7975,7 @@ if (document.readyState === 'loading') {
           <i class="fas fa-camera"></i>
           Photos du logement
         </h3>
-        <div id="modalPhotosList" class="photos-grid">
-          <!-- Généré dynamiquement -->
-        </div>
+        <div id="modalPhotosList" class="photos-grid"></div>
       </div>
 
       <!-- Notes -->
@@ -8013,6 +8001,6 @@ if (document.readyState === 'loading') {
     </div>
   </div>
 </div>
-          
+
 </body>
 </html>
