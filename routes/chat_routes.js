@@ -202,6 +202,49 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
+
+// ===================================
+// Unread count (sidebar badge)
+// ===================================
+app.get('/api/chat/unread-count', authenticateToken, checkSubscription, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const r = await pool.query(
+      `SELECT COALESCE(COUNT(*),0)::int AS unread
+       FROM chat_notifications
+       WHERE user_id = $1 AND is_read = FALSE`,
+      [userId]
+    );
+    res.json({ unread: r.rows[0]?.unread ?? 0 });
+  } catch (error) {
+    console.error('❌ Erreur unread-count:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ===================================
+// Mark conversation as read (notifications)
+// ===================================
+app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, checkSubscription, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const conversationId = Number(req.params.conversationId);
+    if (!conversationId) return res.status(400).json({ error: 'conversationId invalide' });
+
+    // Mark notifications read for this conversation
+    await pool.query(
+      `UPDATE chat_notifications
+       SET is_read = TRUE
+       WHERE user_id = $1 AND conversation_id = $2 AND is_read = FALSE`,
+      [userId, conversationId]
+    );
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Erreur mark-read:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 /**
  * Vérification du chat basée sur le PIN du logement
  */
@@ -332,14 +375,13 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       let query = `
         SELECT 
           c.*,
-          COUNT(n.id) FILTER (WHERE n.is_read = FALSE) as unread_count,
+          (SELECT COUNT(*) FROM chat_notifications n WHERE n.user_id = $1 AND n.conversation_id = c.id AND n.is_read = FALSE) as unread_count,
           COUNT(m.id) as total_messages,
           MAX(m.created_at) as last_message_time,
           p.name as property_name,
           p.color as property_color
         FROM conversations c
         LEFT JOIN messages m ON c.id = m.conversation_id
-        LEFT JOIN chat_notifications n ON n.conversation_id = c.id AND n.user_id = $1
         LEFT JOIN properties p ON c.property_id = p.id
         WHERE c.user_id = $1
       `;
@@ -370,59 +412,6 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
-
-// ============================================
-// 4bis. COMPTEUR GLOBAL NON-LUS (chat_notifications)
-// ============================================
-app.get('/api/chat/unread-count', authenticateToken, checkSubscription, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const r = await pool.query(
-      `SELECT COUNT(*)::int AS unread
-       FROM chat_notifications
-       WHERE user_id = $1 AND is_read = FALSE`,
-      [userId]
-    );
-    res.json({ unread: r.rows[0]?.unread ?? 0 });
-  } catch (error) {
-    console.error('❌ Erreur unread-count:', error);
-    res.status(500).json({ error: 'Erreur unread-count' });
-  }
-});
-
-// ============================================
-// 4ter. MARQUER UNE CONVERSATION COMME LUE (chat_notifications)
-// ============================================
-app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, checkSubscription, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const conversationId = Number(req.params.conversationId);
-
-    // Marque les notifications comme lues
-    await pool.query(
-      `UPDATE chat_notifications
-       SET is_read = TRUE
-       WHERE user_id = $1 AND conversation_id = $2 AND is_read = FALSE`,
-      [userId, conversationId]
-    );
-
-    // Optionnel : marque aussi les messages entrants comme lus (si la colonne existe)
-    // (On ignore l'erreur si la colonne n'existe pas pour rester safe)
-    try {
-      await pool.query(
-        `UPDATE messages
-         SET is_read = TRUE
-         WHERE conversation_id = $1 AND sender_type = 'guest' AND is_read = FALSE`,
-        [conversationId]
-      );
-    } catch (e) {}
-
-    res.json({ ok: true });
-  } catch (error) {
-    console.error('❌ Erreur mark-read:', error);
-    res.status(500).json({ error: 'Erreur mark-read' });
-  }
-});
 
   // ============================================
   // 5. MESSAGES D'UNE CONVERSATION
