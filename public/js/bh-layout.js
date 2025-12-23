@@ -124,10 +124,23 @@
 
     // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
+
+    // 1) Active by data-page (preferred)
     if (page) {
       document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
       const match = document.querySelector(`.nav-item[data-page="${page}"]`);
       if (match) match.classList.add("active");
+    }
+
+    // 2) Fallback: active by URL (useful for links without data-page, ex: factures)
+    const currentPath = (window.location.pathname || "").toLowerCase();
+    if (currentPath) {
+      const byHref = Array.from(document.querySelectorAll(".nav-item[href]"))
+        .find(a => (a.getAttribute("href") || "").toLowerCase() === currentPath);
+      if (byHref) {
+        document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
+        byHref.classList.add("active");
+      }
     }
 
     // Mobile menu toggle (works if elements exist)
