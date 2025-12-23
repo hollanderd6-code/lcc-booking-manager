@@ -1622,3 +1622,28 @@ html, body {
   font-size:inherit !important;
   font-weight:400 !important;
 }
+/* ✅ Fix global mobile : éviter le contenu sous le header */
+@media (max-width: 768px) {
+  body {
+    padding-top: 72px; /* ajuste si ton header est + grand */
+  }
+
+  .app-container {
+    min-height: 100vh;
+  }
+
+  /* Sécurise le header et le menu */
+  .mobile-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1300;
+  }
+
+  #sidebarOverlay.sidebar-overlay {
+    z-index: 1100;
+  }
+
+  aside.sidebar {
+    z-index: 1200;
+  }
+}
