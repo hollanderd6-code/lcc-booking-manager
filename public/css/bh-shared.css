@@ -1,0 +1,64 @@
+/* bh-shared.css — styles communs header + petites harmonisations */
+
+.main-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 20px;
+  margin-bottom:20px;
+  border-radius:20px;
+  background: linear-gradient(135deg, #f9fafb, #eff6ff);
+  border:1px solid rgba(148,163,184,.40);
+  box-shadow: 0 18px 40px rgba(15,23,42,.06);
+}
+
+[data-theme="dark"] .main-header{
+  background: linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.92));
+  border-color: rgba(148,163,184,.45);
+  box-shadow: 0 24px 60px rgba(15,23,42,.70);
+}
+
+.header-left{ max-width:60%; }
+.page-kicker{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.18em;
+  color:#9ca3af;
+  margin-bottom:4px;
+  font-weight:600;
+}
+.page-title{
+  margin:0;
+  font-size:24px;
+  font-weight:700;
+  letter-spacing:.01em;
+}
+.page-subtitle{
+  margin-top:6px;
+  font-size:13px;
+  color:#6b7280;
+}
+[data-theme="dark"] .page-subtitle{ color:#9ca3af; }
+
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.btn-ghost{
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.45);
+  background:transparent;
+  padding-inline:14px;
+}
+
+.btn-ghost:hover{ background: rgba(15,23,42,.06); }
+[data-theme="dark"] .btn-ghost:hover{ background: rgba(15,23,42,.90); }
+
+@media (max-width:768px){
+  .main-header{ flex-direction:column; align-items:flex-start; }
+  .header-left{ max-width:100%; }
+}
