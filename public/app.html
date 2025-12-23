@@ -4566,14 +4566,16 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
   }
 
   document.addEventListener('DOMContentLoaded', bindKpiModalClicksOnce);
-function updateTopRisksKpi(reservations) {
+function updateTopRisksKpi(bookings) {
+    console.log('🎯 updateTopRisksKpi appelé avec', bookings ? bookings.length : 0, 'bookings');
+    
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    const monthRes = (reservations || []).filter(r => {
-      const rawS = r.start || r.startDate;
-      const rawE = r.end || r.endDate;
+    const monthRes = (bookings || []).filter(r => {
+      const rawS = r.startDate || r.start;
+      const rawE = r.endDate || r.end;
       if (!rawS || !rawE) return false;
       const s = parseDateSafe(rawS);
       const e = parseDateSafe(rawE);
@@ -4581,9 +4583,15 @@ function updateTopRisksKpi(reservations) {
       return e > monthStart && s < monthEnd;
     });
 
+    console.log('📅 Réservations du mois:', monthRes.length);
+
     const scored = monthRes.filter(r => typeof r.riskScore === 'number');
+    console.log('💯 Réservations avec score:', scored.length, scored);
+    
     scored.sort((a, b) => (b.riskScore - a.riskScore));
     const top5 = scored.slice(0, 5);
+    
+    console.log('🔝 Top 5:', top5);
 
     const criticalCount = scored.filter(r => r.riskLevel === 'critical').length;
     const redCount = scored.filter(r => r.riskLevel === 'red').length;
@@ -4614,8 +4622,8 @@ function updateTopRisksKpi(reservations) {
         
         if (g) {
           g.innerHTML = top5.length ? top5.map(r=>{
-            const start = formatDateFR(dateOnlyStr(r.start||r.startDate));
-            const end = formatDateFR(dateOnlyStr(r.end||r.endDate));
+            const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
+            const end = formatDateFR(dateOnlyStr(r.endDate||r.end));
             const prop = r.propertyName || r.propertyId || 'Logement';
             const name = r.guestName || 'Voyageur';
             const score = Math.round(r.riskScore||0);
@@ -4984,6 +4992,12 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
 
         renderPropertyList();
         renderCalendar();
+        
+        // Mettre à jour le KPI des risques avec les bookings qui ont les scores calculés
+        if (typeof updateTopRisksKpi === 'function') {
+          updateTopRisksKpi(state.bookings);
+        }
+        
         // S'assurer que le scroll vers aujourd'hui se fait après le rendu
         setTimeout(scrollCalendarToToday, 200);
       } catch (e) {
