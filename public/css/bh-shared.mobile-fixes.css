@@ -1,0 +1,23 @@
+/* bh-shared.mobile-fixes.css — correctifs responsive globaux */
+
+/* 1) Evite que le header soit “coupé” sous le mobile-header */
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 90px !important; /* hauteur mobile header + marge */
+  }
+}
+
+/* 2) Le menu doit pouvoir s’ouvrir sur welcome (certaines pages forçaient display:none) */
+@media (max-width: 768px) {
+  body .sidebar {
+    display: flex !important;
+  }
+}
+
+/* 3) Sidebar au-dessus de l’overlay (sinon menu grisé / non cliquable) */
+.sidebar {
+  z-index: 60 !important;
+}
+.sidebar-overlay {
+  z-index: 55 !important;
+}
