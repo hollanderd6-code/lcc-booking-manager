@@ -6055,24 +6055,28 @@ function findReservationForBlock(bookingBlock) {
   const bookingIdAttr = bookingBlock.getAttribute('data-booking-id');
   if (!bookingIdAttr) return null;
 
-  // On récupère les réservations depuis window ou le localStorage
-  let reservations = [];
-  if (Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length) {
-    reservations = window.LCC_RESERVATIONS;
+  // Priorité 1: Chercher dans state.bookings (avec les scores de risque calculés)
+  let bookings = [];
+  if (typeof state !== 'undefined' && Array.isArray(state.bookings) && state.bookings.length) {
+    bookings = state.bookings;
+  }
+  // Fallback: réservations brutes si state.bookings n'est pas disponible
+  else if (Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length) {
+    bookings = window.LCC_RESERVATIONS;
   } else {
     try {
-      reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      bookings = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
     } catch (e) {
-      reservations = [];
+      bookings = [];
     }
   }
 
   const idStr = String(bookingIdAttr);
   let found = null;
 
-  if (Array.isArray(reservations)) {
+  if (Array.isArray(bookings)) {
     // 1) Correspondance par id / uid / reservationKey
-    found = reservations.find((r) => {
+    found = bookings.find((r) => {
       if (!r) return false;
       const rid = r.id != null ? String(r.id) : null;
       const uid = r.uid != null ? String(r.uid) : null;
@@ -6083,8 +6087,8 @@ function findReservationForBlock(bookingBlock) {
     // 2) Fallback : data-booking-id est juste l'INDEX dans le tableau
     if (!found) {
       const idx = parseInt(idStr, 10);
-      if (!Number.isNaN(idx) && reservations[idx]) {
-        found = reservations[idx];
+      if (!Number.isNaN(idx) && bookings[idx]) {
+        found = bookings[idx];
       }
     }
   }
