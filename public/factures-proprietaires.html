@@ -258,7 +258,31 @@ input[type="number"] {
 .user-email{ font-size:11px; color:#6b7280; }
 
 </style>
-</head>
+<style>
+/* ✅ Uniformisation du bouton "Retour au dashboard" (header) */
+.main-header .header-actions .btn.btn-ghost{
+  border-radius: 999px !important;
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
+  background: transparent !important;
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+.main-header .header-actions .btn.btn-ghost i{
+  font-size: 16px !important;
+}
+.main-header .header-actions .btn.btn-ghost:hover{
+  background: rgba(15, 23, 42, 0.06) !important;
+}
+[data-theme="dark"] .main-header .header-actions .btn.btn-ghost:hover{
+  background: rgba(15, 23, 42, 0.90) !important;
+}
+</style></head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures-proprietaires" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires"><div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
 <i class="fas fa-calendar-check"></i>
@@ -287,7 +311,6 @@ input[type="number"] {
 </button></div><div id="bhHeader"></div>
 <div class="dashboard-header">
 <div><h1 class="page-title">Facturation Propriétaires</h1><p class="page-subtitle" style="color:#6b7280; font-size:14px; margin-top:4px;">Gérez vos revenus et commissions.</p></div>
-
 </div>
 <div class="stats-row">
 <div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
