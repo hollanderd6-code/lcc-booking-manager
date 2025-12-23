@@ -641,6 +641,8 @@
 
 .main-content-welcome {
   flex: 1;
+  margin-left: 260px;
+  width: calc(100% - 260px);
   background: var(--gray-50);
   min-height: 100vh;
 }
@@ -754,6 +756,36 @@
   #sidebarOverlay.sidebar-overlay{ position:fixed !important; inset:0 !important; z-index:1100 !important; pointer-events:none; }
   #sidebarOverlay.sidebar-overlay.active{ pointer-events:auto; }
   .mobile-header{ position:fixed !important; top:0; left:0; right:0; z-index:1300 !important; }
+}
+</style>
+<style>
+/* 🔥 FIX DEFINITIF pour l'espacement desktop - NE PAS SUPPRIMER */
+.main-content-welcome {
+  margin-left: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.container {
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+/* Sur très grand écran, limiter la largeur pour le confort */
+@media (min-width: 1600px) {
+  .container {
+    max-width: 1400px !important;
+  }
+}
+
+/* Mobile : padding réduit */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
 }
 </style>
 </head>
