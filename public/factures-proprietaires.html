@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Facturation</title>
-  
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="/css/style.css">
 
-  <style>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
+<meta content="no-cache" http-equiv="Pragma"/>
+<meta content="0" http-equiv="Expires"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boostinghost – Facturation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
     /* DESIGN SYSTEM "FACTURE PRO" */
     :root { --primary: #10B981; --primary-dark: #059669; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
@@ -260,404 +259,268 @@ input[type="number"] {
 
 </style>
 </head>
-<body>
-
-<div class="app-container">
-  <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div>
-
-  <nav class="sidebar-nav" style="flex:1; overflow-y:auto;">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-
-      <div class="nav-section">
-        <div class="nav-section-title"><Facturation></Facturation></div>
-        <a href="/factures.html" class="nav-item">
-          <i class="fas fa-file-invoice"></i>
-          <span>Factures clients</span>
-        </a>
-        <a href="/factures-proprietaires.html" class="nav-item active">
-          <i class="fas fa-file-invoice-dollar"></i>
-          <span>Factures propriétaires</span>
-        </a>
-      </div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
-    </div>
-  </div>
-</aside>
-
-  <div class="main-wrapper">
-    <header class="top-bar">
-      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i></button>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="text-align:right;">
-          <div style="font-weight:600; font-size:14px;" id="userName">Mon Compte</div>
-          <div style="font-size:11px; color:#6b7280;">Propriétaire</div>
-        </div>
-        <div style="width:36px; height:36px; background:#e5e7eb; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#374151;">U</div>
-      </div>
-    </header>
-
-    <main class="main-content">
-      <div class="dashboard-header">
-        <div><h1 class="page-title">Facturation Propriétaires</h1><p class="page-subtitle" style="color:#6b7280; font-size:14px; margin-top:4px;">Gérez vos revenus et commissions.</p></div>
-        <button class="btn btn-primary" onclick="createNewInvoice()">
-  <i class="fa fa-plus"></i> Nouvelle Facture
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures-proprietaires" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires"><div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Boostinghost</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
 </button>
-      </div>
+</div><div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<div class="main-wrapper">
+<header class="top-bar">
+<button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i></button>
+<div style="display:flex; align-items:center; gap:12px;">
+<div style="text-align:right;">
+<div id="userName" style="font-weight:600; font-size:14px;">Mon Compte</div>
+<div style="font-size:11px; color:#6b7280;">Propriétaire</div>
+</div>
+<div style="width:36px; height:36px; background:#e5e7eb; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#374151;">U</div>
+</div>
+</header>
+<main class="main-content"><div id="bhHeaderActions" style="display:none;"><button class="btn btn-primary" onclick="createNewInvoice()">
+<i class="fa fa-plus"></i> Nouvelle Facture
+</button></div><div id="bhHeader"></div>
+<div class="dashboard-header">
+<div><h1 class="page-title">Facturation Propriétaires</h1><p class="page-subtitle" style="color:#6b7280; font-size:14px; margin-top:4px;">Gérez vos revenus et commissions.</p></div>
 
-      <div class="stats-row">
-        <div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
-          <span class="stat-label">Total Facturé (Mois)</span>
-          <span class="stat-value" id="statsRevenue">0,00 €</span>
-        </div>
-        <div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
-          <span class="stat-label">En attente</span>
-          <span class="stat-value" style="color:#f59e0b;" id="statsPending">0,00 €</span>
-        </div>
-        <div class="stat-card" onclick="openStatsModal('clients')" style="cursor:pointer;">
-          <span class="stat-label">Clients Propriétaires</span>
-          <span class="stat-value" id="statsClients">0</span>
-        </div>
-      </div>
-
-      <div class="nav-tabs">
-        <button class="nav-tab active" onclick="switchTab('dashboard')" id="btn-dashboard">Historique</button>
-        <button class="nav-tab" onclick="switchTab('create')" id="btn-create">Éditeur</button>
-        <button class="nav-tab" onclick="switchTab('clients')" id="btn-clients">Mes Clients</button>
-      </div>
-
-      <div id="tab-dashboard" class="tab-content active">
-        <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
-          <table style="width:100%; border-collapse:collapse;">
-            <thead>
-              <tr style="background:#f9fafb; text-align:left; font-size:12px; text-transform:uppercase; color:#6b7280;">
-                <th style="padding:16px;">N°</th><th style="padding:16px;">Client</th><th style="padding:16px;">Date</th>
-                <th style="padding:16px;">Montant TTC</th><th style="padding:16px;">Statut</th><th style="padding:16px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="invoicesTableBody"><tr><td colspan="6" style="padding:40px; text-align:center;">Chargement...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="tab-create" class="tab-content">
-        <div class="invoice-editor-layout">
-          <div class="editor-sidebar" id="editorSidebar">
-            <!-- Bannière READ-ONLY (masquée par défaut) -->
-<div id="readonlyBanner" class="readonly-banner" style="display:none;">
+</div>
+<div class="stats-row">
+<div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
+<span class="stat-label">Total Facturé (Mois)</span>
+<span class="stat-value" id="statsRevenue">0,00 €</span>
+</div>
+<div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
+<span class="stat-label">En attente</span>
+<span class="stat-value" id="statsPending" style="color:#f59e0b;">0,00 €</span>
+</div>
+<div class="stat-card" onclick="openStatsModal('clients')" style="cursor:pointer;">
+<span class="stat-label">Clients Propriétaires</span>
+<span class="stat-value" id="statsClients">0</span>
+</div>
+</div>
+<div class="nav-tabs">
+<button class="nav-tab active" id="btn-dashboard" onclick="switchTab('dashboard')">Historique</button>
+<button class="nav-tab" id="btn-create" onclick="switchTab('create')">Éditeur</button>
+<button class="nav-tab" id="btn-clients" onclick="switchTab('clients')">Mes Clients</button>
+</div>
+<div class="tab-content active" id="tab-dashboard">
+<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+<table style="width:100%; border-collapse:collapse;">
+<thead>
+<tr style="background:#f9fafb; text-align:left; font-size:12px; text-transform:uppercase; color:#6b7280;">
+<th style="padding:16px;">N°</th><th style="padding:16px;">Client</th><th style="padding:16px;">Date</th>
+<th style="padding:16px;">Montant TTC</th><th style="padding:16px;">Statut</th><th style="padding:16px;">Actions</th>
+</tr>
+</thead>
+<tbody id="invoicesTableBody"><tr><td colspan="6" style="padding:40px; text-align:center;">Chargement...</td></tr></tbody>
+</table>
+</div>
+</div>
+<div class="tab-content" id="tab-create">
+<div class="invoice-editor-layout">
+<div class="editor-sidebar" id="editorSidebar">
+<!-- Bannière READ-ONLY (masquée par défaut) -->
+<div class="readonly-banner" id="readonlyBanner" style="display:none;">
   ⚠️ Facture en lecture seule - Déjà émise
 </div>
-            <div class="editor-section">
-              <div class="editor-section-title">Informations Facture</div>
-              <div class="form-group">
-                <label>Client</label>
-                <select class="form-control" id="invoiceClientId" onchange="loadClientDefaults(); ;">
-                  <option value="">Sélectionner...</option>
-                </select>
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group"><label>Émission</label><input type="date" class="form-control" id="invoiceIssueDate" onchange=""></div>
-                <div class="form-group"><label>Échéance</label><input type="date" class="form-control" id="invoiceDueDate" onchange="updatePreview()"></div>
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group"><label>Période Du</label><input type="date" class="form-control" id="invoicePeriodStart" onchange="updatePreview()"></div>
-                <div class="form-group"><label>Au</label><input type="date" class="form-control" id="invoicePeriodEnd" onchange="updatePreview()"></div>
-              </div>
-            </div>
+<div class="editor-section">
+<div class="editor-section-title">Informations Facture</div>
+<div class="form-group">
+<label>Client</label>
+<select class="form-control" id="invoiceClientId" onchange="loadClientDefaults(); ;">
+<option value="">Sélectionner...</option>
+</select>
+</div>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+<div class="form-group"><label>Émission</label><input class="form-control" id="invoiceIssueDate" onchange="" type="date"/></div>
+<div class="form-group"><label>Échéance</label><input class="form-control" id="invoiceDueDate" onchange="updatePreview()" type="date"/></div>
+</div>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+<div class="form-group"><label>Période Du</label><input class="form-control" id="invoicePeriodStart" onchange="updatePreview()" type="date"/></div>
+<div class="form-group"><label>Au</label><input class="form-control" id="invoicePeriodEnd" onchange="updatePreview()" type="date"/></div>
+</div>
+</div>
 <div class="form-group" id="propertySelectSection" style="display:none;margin-top:12px;">
-  <label>Logements concernés</label>
-  <div id="propertyCheckboxList" style="max-height:150px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
-    <!-- Cases à cocher générées dynamiquement -->
-  </div>
-  <small style="display:block;margin-top:4px;font-size:11px;color:#6b7280;">
+<label>Logements concernés</label>
+<div id="propertyCheckboxList" style="max-height:150px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
+<!-- Cases à cocher générées dynamiquement -->
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#6b7280;">
     Sélectionnez le(s) logement(s) concerné(s) par cette facture
   </small>
 </div>
-            <div class="editor-section">
-                            <div class="editor-section-title">Profil émetteur</div>
-
-              <div class="form-group">
-                <label>Nom de l'entreprise</label>
-                <input type="text" id="emitterCompany" class="form-control" placeholder="Conciergerie" oninput="updateEmitterProfile()">
-              </div>
-
-              <div class="form-group">
-                <label>Adresse</label>
-                <input type="text" id="emitterAddress" class="form-control" placeholder="boulevard de la République" oninput="updateEmitterProfile()">
-              </div>
-
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group">
-                  <label>Code postal</label>
-                  <input type="text" id="emitterPostalCode" class="form-control" placeholder="75000" oninput="updateEmitterProfile()">
-                </div>
-                <div class="form-group">
-                  <label>Ville</label>
-                  <input type="text" id="emitterCity" class="form-control" placeholder="Paris" oninput="updateEmitterProfile()">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>SIRET</label>
-                <input type="text" id="emitterSiret" class="form-control" placeholder="534 392 600" oninput="updateEmitterProfile()">
-              </div>
+<div class="editor-section">
+<div class="editor-section-title">Profil émetteur</div>
 <div class="form-group">
-  <label>Logo entreprise (optionnel)</label>
-  <div style="display:flex;gap:12px;align-items:center;">
-    <div style="width:60px;height:60px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
-      <img id="logoPreviewImg" style="display:none;width:100%;height:100%;object-fit:contain;">
-      <i class="fas fa-image" style="color:#9ca3af;font-size:20px;" id="logoPlaceholder"></i>
-    </div>
-    <input type="file" id="logoInput" accept="image/*" class="form-control" onchange="updateLogoPreview()" style="flex:1;">
-  </div>
+<label>Nom de l'entreprise</label>
+<input class="form-control" id="emitterCompany" oninput="updateEmitterProfile()" placeholder="Conciergerie" type="text"/>
 </div>
-
-              <div class="form-group">
-                <label>Adresse affichée sur la facture</label>
-                <textarea id="senderAddressInput" rows="2" class="form-control" placeholder="Votre adresse..." oninput="updatePreview()"></textarea>
-                <div style="font-size:11px; color:#6b7280; margin-top:4px;">
+<div class="form-group">
+<label>Adresse</label>
+<input class="form-control" id="emitterAddress" oninput="updateEmitterProfile()" placeholder="boulevard de la République" type="text"/>
+</div>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+<div class="form-group">
+<label>Code postal</label>
+<input class="form-control" id="emitterPostalCode" oninput="updateEmitterProfile()" placeholder="75000" type="text"/>
+</div>
+<div class="form-group">
+<label>Ville</label>
+<input class="form-control" id="emitterCity" oninput="updateEmitterProfile()" placeholder="Paris" type="text"/>
+</div>
+</div>
+<div class="form-group">
+<label>SIRET</label>
+<input class="form-control" id="emitterSiret" oninput="updateEmitterProfile()" placeholder="534 392 600" type="text"/>
+</div>
+<div class="form-group">
+<label>Logo entreprise (optionnel)</label>
+<div style="display:flex;gap:12px;align-items:center;">
+<div style="width:60px;height:60px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+<img id="logoPreviewImg" style="display:none;width:100%;height:100%;object-fit:contain;"/>
+<i class="fas fa-image" id="logoPlaceholder" style="color:#9ca3af;font-size:20px;"></i>
+</div>
+<input accept="image/*" class="form-control" id="logoInput" onchange="updateLogoPreview()" style="flex:1;" type="file"/>
+</div>
+</div>
+<div class="form-group">
+<label>Adresse affichée sur la facture</label>
+<textarea class="form-control" id="senderAddressInput" oninput="updatePreview()" placeholder="Votre adresse..." rows="2"></textarea>
+<div style="font-size:11px; color:#6b7280; margin-top:4px;">
                   Elle est pré-remplie automatiquement avec les champs ci-dessus, mais vous pouvez la modifier pour une facture précise.
                 </div>
-              </div>
-            </div>
-<div class="editor-section">
-              <div class="editor-section-title">Prestations</div>
-              <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:12px;">
-                <button class="btn-xs btn-secondary" onclick="addPrestation('commission')">% Com</button>
-                <button class="btn-xs btn-secondary" onclick="addPrestation('cleaning')">Ménage</button>
-                <button class="btn-xs btn-secondary" onclick="addPrestation('debours')">Débours</button>
-                <button class="btn-xs btn-secondary" onclick="addPrestation('other')">Autre</button>
-              </div>
-              <div id="prestationsListEditor"></div>
-            </div>
-
-            <div class="editor-section">
-              <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-                  <input type="checkbox" id="invoiceVatApplicable" onchange="updatePreview()"> TVA
-                </label>
-                <input type="number" id="invoiceVatRate" value="20" style="width:50px; display:none;" onchange="updatePreview()">
-              </div>
-              <div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
-                <div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-top:4px;"><span>TVA</span><strong id="displayTotalVAT">0.00 €</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb; color:var(--primary); font-size:15px;"><span>NET À PAYER</span><strong id="displayTotalTTC">0.00 €</strong></div>
-              </div>
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
-                <button class="btn btn-secondary" onclick="createInvoice(false)">Brouillon</button>
-                <button class="btn btn-primary" onclick="createInvoice(true)">Envoyer</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="invoice-preview-container">
-            <div class="invoice-paper">
-              <div class="paper-header">
-                <div>
-                  <div id="paperLogoContainer" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
-  <img id="previewLogoImg" style="display:none;width:100%;height:100%;object-fit:contain;">
-  <i class="fas fa-image" style="color:#9ca3af;font-size:24px;" id="previewLogoPlaceholder"></i>
 </div>
-                  <div id="paperSenderInfo" style="margin-top:10px;">
-                    <strong style="font-size:16px; color:#111827;" id="previewSenderName">Votre Entreprise</strong>
-                    <div class="paper-sender-address" id="previewSenderAddress">Adresse...</div>
-                  </div>
-                </div>
-                <div class="paper-meta">
-                  <div class="paper-title" style="margin:0; font-size:32px; font-weight:800;">FACTURE</div>
-                  <div class="paper-number" style="color:#6b7280;">N° BROUILLON</div>
-                  <div style="margin-top:8px; font-size:12px; color:#4b5563;">Date : <span id="previewDate">-</span></div>
-                </div>
-              </div>
-
-              <div class="paper-client" style="margin-bottom:40px; padding:20px; background:#f9fafb; border-radius:8px;">
-                <div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase;">Facturé à</div>
-                <div style="font-weight:700; font-size:16px; margin-top:4px;" id="previewClientName">Sélectionnez un client...</div>
-                <div style="font-size:13px; color:#4b5563;" id="previewClientDetails"></div>
-              </div>
-
-              <div style="font-size:12px; color:#6b7280; margin-bottom:10px;">Période : <span id="previewPeriod">-</span></div>
+</div>
+<div class="editor-section">
+<div class="editor-section-title">Prestations</div>
+<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:12px;">
+<button class="btn-xs btn-secondary" onclick="addPrestation('commission')">% Com</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('cleaning')">Ménage</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('debours')">Débours</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('other')">Autre</button>
+</div>
+<div id="prestationsListEditor"></div>
+</div>
+<div class="editor-section">
+<div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+<label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+<input id="invoiceVatApplicable" onchange="updatePreview()" type="checkbox"/> TVA
+                </label>
+<input id="invoiceVatRate" onchange="updatePreview()" style="width:50px; display:none;" type="number" value="20"/>
+</div>
+<div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
+<div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
+<div style="display:flex; justify-content:space-between; margin-top:4px;"><span>TVA</span><strong id="displayTotalVAT">0.00 €</strong></div>
+<div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb; color:var(--primary); font-size:15px;"><span>NET À PAYER</span><strong id="displayTotalTTC">0.00 €</strong></div>
+</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
+<button class="btn btn-secondary" onclick="createInvoice(false)">Brouillon</button>
+<button class="btn btn-primary" onclick="createInvoice(true)">Envoyer</button>
+</div>
+</div>
+</div>
+<div class="invoice-preview-container">
+<div class="invoice-paper">
+<div class="paper-header">
+<div>
+<div id="paperLogoContainer" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+<img id="previewLogoImg" style="display:none;width:100%;height:100%;object-fit:contain;"/>
+<i class="fas fa-image" id="previewLogoPlaceholder" style="color:#9ca3af;font-size:24px;"></i>
+</div>
+<div id="paperSenderInfo" style="margin-top:10px;">
+<strong id="previewSenderName" style="font-size:16px; color:#111827;">Votre Entreprise</strong>
+<div class="paper-sender-address" id="previewSenderAddress">Adresse...</div>
+</div>
+</div>
+<div class="paper-meta">
+<div class="paper-title" style="margin:0; font-size:32px; font-weight:800;">FACTURE</div>
+<div class="paper-number" style="color:#6b7280;">N° BROUILLON</div>
+<div style="margin-top:8px; font-size:12px; color:#4b5563;">Date : <span id="previewDate">-</span></div>
+</div>
+</div>
+<div class="paper-client" style="margin-bottom:40px; padding:20px; background:#f9fafb; border-radius:8px;">
+<div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase;">Facturé à</div>
+<div id="previewClientName" style="font-weight:700; font-size:16px; margin-top:4px;">Sélectionnez un client...</div>
+<div id="previewClientDetails" style="font-size:13px; color:#4b5563;"></div>
+</div>
+<div style="font-size:12px; color:#6b7280; margin-bottom:10px;">Période : <span id="previewPeriod">-</span></div>
 <p style="font-size:13px;color:#6b7280;margin:16px 0;display:none;">
   Logement(s) : <strong><span id="previewProperties">--</span></strong>
 </p>
-              <table class="paper-table">
-                <thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
-                <tbody id="previewBody"></tbody>
-              </table>
-
-              <div class="paper-totals">
-                <div class="totals-box">
-                  <div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
-                  <div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
-                  <div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
-                  <div id="previewVatLegalMention"
-     style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
+<table class="paper-table">
+<thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
+<tbody id="previewBody"></tbody>
+</table>
+<div class="paper-totals">
+<div class="totals-box">
+<div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
+<div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
+<div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
+<div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
   TVA non applicable, art. 293 B du CGI
 </div>
-
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="tab-clients" class="tab-content">
-        <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:24px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0;">Liste des propriétaires</h3>
-            <button class="btn btn-primary" onclick="openClientModal()">+ Nouveau Client</button>
-          </div>
-          <div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:16px;"></div>
-        </div>
-      </div>
-
-    </main>
-  </div>
 </div>
-
-
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="tab-content" id="tab-clients">
+<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:24px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<h3 style="margin:0;">Liste des propriétaires</h3>
+<button class="btn btn-primary" onclick="openClientModal()">+ Nouveau Client</button>
+</div>
+<div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:16px;"></div>
+</div>
+</div>
+</main>
+</div>
+</div>
 <div class="modal-overlay" id="statsModal">
-  <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-      <h3 id="statsModalTitle" style="margin:0;">Détails</h3>
-      <button onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
-    </div>
-    <div id="statsModalBody" style="font-size:14px;">
-      <!-- Contenu injecté en JS -->
-    </div>
-  </div>
+<div class="modal-content">
+<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+<h3 id="statsModalTitle" style="margin:0;">Détails</h3>
+<button onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
 </div>
-
+<div id="statsModalBody" style="font-size:14px;">
+<!-- Contenu injecté en JS -->
+</div>
+</div>
+</div>
 <div class="modal-overlay" id="clientModal">
-  <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-      <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
-      <button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
-    </div>
-    
-    <div style="display:flex; gap:16px; margin-bottom:16px;">
-      <label><input type="radio" name="clientType" value="individual" checked onchange="toggleClientType()"> Particulier</label>
-      <label><input type="radio" name="clientType" value="business" onchange="toggleClientType()"> Entreprise</label>
-    </div>
-
-    <div id="individualFields">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-        <div><label style="font-size:12px;">Prénom</label><input type="text" id="clientFirstName" class="form-control"></div>
-        <div><label style="font-size:12px;">Nom</label><input type="text" id="clientLastName" class="form-control"></div>
-      </div>
-    </div>
-    <div id="businessFields" style="display:none; margin-bottom:12px;">
-      <div><label style="font-size:12px;">Société</label><input type="text" id="clientCompanyName" class="form-control"></div>
-    </div>
-
-    <div class="form-group"><label>Email</label><input type="email" id="clientEmail" class="form-control"></div>
-    <div class="form-group"><label>Adresse</label><input type="text" id="clientAddress" class="form-control"></div>
-    <div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:12px;">
-      <div><label style="font-size:12px;">CP</label><input type="text" id="clientPostalCode" class="form-control"></div>
-      <div><label style="font-size:12px;">Ville</label><input type="text" id="clientCity" class="form-control"></div>
-    </div>
-    
-    <button onclick="saveClient()" class="btn btn-primary" style="width:100%;">Enregistrer</button>
-  </div>
+<div class="modal-content">
+<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+<h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
+<button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
 </div>
-
+<div style="display:flex; gap:16px; margin-bottom:16px;">
+<label><input checked="" name="clientType" onchange="toggleClientType()" type="radio" value="individual"/> Particulier</label>
+<label><input name="clientType" onchange="toggleClientType()" type="radio" value="business"/> Entreprise</label>
+</div>
+<div id="individualFields">
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+<div><label style="font-size:12px;">Prénom</label><input class="form-control" id="clientFirstName" type="text"/></div>
+<div><label style="font-size:12px;">Nom</label><input class="form-control" id="clientLastName" type="text"/></div>
+</div>
+</div>
+<div id="businessFields" style="display:none; margin-bottom:12px;">
+<div><label style="font-size:12px;">Société</label><input class="form-control" id="clientCompanyName" type="text"/></div>
+</div>
+<div class="form-group"><label>Email</label><input class="form-control" id="clientEmail" type="email"/></div>
+<div class="form-group"><label>Adresse</label><input class="form-control" id="clientAddress" type="text"/></div>
+<div style="display:grid; grid-template-columns:1fr 2fr; gap:12px; margin-bottom:12px;">
+<div><label style="font-size:12px;">CP</label><input class="form-control" id="clientPostalCode" type="text"/></div>
+<div><label style="font-size:12px;">Ville</label><input class="form-control" id="clientCity" type="text"/></div>
+</div>
+<button class="btn btn-primary" onclick="saveClient()" style="width:100%;">Enregistrer</button>
+</div>
+</div>
 <script src="/js/auth-fetch.js"></script>
 <script>
 let token = localStorage.getItem('lcc_token');
@@ -2015,5 +1878,5 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   };
 
 </script>
-</body>
+<script src="/js/bh-layout.js"></script></body>
 </html>
