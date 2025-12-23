@@ -6436,12 +6436,14 @@ try {
 
       try {
         assignments = JSON.parse(localStorage.getItem('lcc_cleaning_assignments') || '{}');
+        console.log('📋 Assignments chargés:', assignments);
       } catch (e) {
         assignments = {};
       }
 
       try {
         cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
+        console.log('👷 Cleaners chargés:', cleaners);
       } catch (e) {
         cleaners = [];
       }
@@ -6473,10 +6475,30 @@ try {
       }
 
       const reservationKey = getReservationKey(booking);
-      const assignedId =
-        reservationKey && assignments && assignments[reservationKey]
-          ? assignments[reservationKey]
-          : null;
+      
+      // Essayer plusieurs formats de clés
+      let assignedId = null;
+      
+      if (reservationKey && assignments) {
+        // Format 1: uid
+        assignedId = assignments[reservationKey];
+        
+        // Format 2: propertyId::date>date
+        if (!assignedId) {
+          const start = booking.startDate || booking.start;
+          const end = booking.endDate || booking.end;
+          if (booking.propertyId && start && end) {
+            const altKey = booking.propertyId + '::' + String(start).slice(0, 10) + '>' + String(end).slice(0, 10);
+            assignedId = assignments[altKey];
+            console.log('🔑 Essai clé alternative:', altKey, '→', assignedId);
+          }
+        }
+        
+        // Format 3: id
+        if (!assignedId && booking.id) {
+          assignedId = assignments[String(booking.id)];
+        }
+      }
 
       const cleanerName = getCleanerNameById(assignedId);
       const statusText = cleanerName
