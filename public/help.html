@@ -1,20 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Aide</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- CSS plateforme -->
-  <link rel="stylesheet" href="/css/style.css">
 
-  <style>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boostinghost – Aide</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -158,296 +155,138 @@
       margin-bottom: 20px;
     }
   </style>
-  <script src="/js/auth-fetch.js"></script>
+<script src="/js/auth-fetch.js"></script>
 </head>
-<body data-page="help">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Bookingmanage</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Support" data-page="help" data-subtitle="Retrouvez les réponses aux questions fréquentes et comment contacter le support." data-title="Centre d’aide">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Bookingmanage</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- Main Content -->
+<main class="main-content"><div id="bhHeader"></div>
+<!-- Header -->
 
-  <div class="app-container">
-    
-   <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div>
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- FACTURATION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
-
-      <a href="/factures.html" class="nav-item" data-page="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures clients</span>
-      </a>
-
-      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
-        <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
-      </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item active" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Support</div>
-          <h1 class="page-title">Centre d’aide</h1>
-          <p class="page-subtitle">
-            Retrouvez les réponses aux questions fréquentes et comment contacter le support.
-          </p>
-        </div>
-        <div class="header-actions">
-    <button class="btn btn-ghost" onclick="window.location.href='/app.html'">
-      <i class="fas fa-arrow-left"></i>
-      Retour au dashboard
-    </button>
-  </div>
-      </header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-        
-        <!-- Bloc FAQ -->
-        <section class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-circle-question"></i>
+<!-- Page Content -->
+<div class="page-content">
+<!-- Bloc FAQ -->
+<section class="card mb-lg">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-circle-question"></i>
               Questions fréquentes
             </div>
-          </div>
-          <div class="card-body">
-            <div class="form-row" style="margin-bottom: 16px;">
-              <input
-                type="text"
-                id="faqSearch"
-                placeholder="Rechercher une question..."
-              >
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <span>📅 Comment synchroniser mes calendriers iCal ?</span>
-                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-              </button>
-              <div class="faq-answer">
-                <p>
+</div>
+<div class="card-body">
+<div class="form-row" style="margin-bottom: 16px;">
+<input id="faqSearch" placeholder="Rechercher une question..." type="text"/>
+</div>
+<div class="faq-item">
+<button class="faq-question">
+<span>📅 Comment synchroniser mes calendriers iCal ?</span>
+<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+</button>
+<div class="faq-answer">
+<p>
                   Allez dans <strong>Mes logements &gt; Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal
                   fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de
                   <strong>synchronisation</strong> dans le Dashboard.
                 </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <span>➕ Comment ajouter une réservation manuelle ?</span>
-                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-              </button>
-              <div class="faq-answer">
-                <p>
+</div>
+</div>
+<div class="faq-item">
+<button class="faq-question">
+<span>➕ Comment ajouter une réservation manuelle ?</span>
+<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+</button>
+<div class="faq-answer">
+<p>
                   Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations
                   du séjour (logement, dates, nom du client) puis enregistrez. La réservation apparaîtra dans le calendrier.
                 </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <span>🔔 Comment fonctionnent les notifications ?</span>
-                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-              </button>
-              <div class="faq-answer">
-                <p>
+</div>
+</div>
+<div class="faq-item">
+<button class="faq-question">
+<span>🔔 Comment fonctionnent les notifications ?</span>
+<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+</button>
+<div class="faq-answer">
+<p>
                   Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez accéder au détail
                   depuis le panneau Notifications et ajuster vos préférences dans la page <strong>Paramètres</strong>.
                 </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <span>👤 Comment modifier mes informations de compte ?</span>
-                <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-              </button>
-              <div class="faq-answer">
-                <p>
+</div>
+</div>
+<div class="faq-item">
+<button class="faq-question">
+<span>👤 Comment modifier mes informations de compte ?</span>
+<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+</button>
+<div class="faq-answer">
+<p>
                   Rendez-vous dans la page <strong>Paramètres</strong>, puis mettez à jour votre nom, email ou
                   nom de conciergerie. Les informations seront prises en compte sur l’ensemble de la plateforme.
                 </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Bloc Contact -->
-        <section class="card mb-lg">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-envelope"></i>
+</div>
+</div>
+</div>
+</section>
+<!-- Bloc Contact -->
+<section class="card mb-lg">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-envelope"></i>
               Contacter le support
             </div>
-          </div>
-          <div class="card-body">
-            <p>
+</div>
+<div class="card-body">
+<p>
               Vous ne trouvez pas la réponse à votre question ou vous avez détecté un bug ?
             </p>
-            <p>
+<p>
               Vous pouvez envoyer un email à :
-              <a href="/cdn-cgi/l/email-protection#b5c6c0c5c5dac7c1f5d9d6d698d7dadadedcdbd29bd3c7"><span class="__cf_email__" data-cfemail="8efdfbfefee1fcfacee2ededa3ece1e1e5e7e0e9a0e8fc">[email&#160;protected]</span></a>
-            </p>
-            <p style="margin-top: 12px;">
+              <a href="/cdn-cgi/l/email-protection#b5c6c0c5c5dac7c1f5d9d6d698d7dadadedcdbd29bd3c7"><span class="__cf_email__" data-cfemail="8efdfbfefee1fcfacee2ededa3ece1e1e5e7e0e9a0e8fc">[email protected]</span></a>
+</p>
+<p style="margin-top: 12px;">
               Pensez à préciser :
             </p>
-            <ul>
-              <li>l’adresse email de votre compte,</li>
-              <li>le logement ou la réservation concernée,</li>
-              <li>une capture d’écran si possible.</li>
-            </ul>
-          </div>
-        </section>
-
-        <!-- Bloc Ressources -->
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-book-open"></i>
-              Ressources & guide
+<ul>
+<li>l’adresse email de votre compte,</li>
+<li>le logement ou la réservation concernée,</li>
+<li>une capture d’écran si possible.</li>
+</ul>
+</div>
+</section>
+<!-- Bloc Ressources -->
+<section class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-book-open"></i>
+              Ressources &amp; guide
             </div>
-          </div>
-          <div class="card-body">
-            <p>
+</div>
+<div class="card-body">
+<p>
               Prochainement : un guide utilisateur détaillé et des vidéos tutoriels pour tirer le maximum
               de Bookingmanage.
             </p>
-          </div>
-        </section>
-
-      </div>
-    </main>
-  </div>
-
-  <!-- Script auth + user + logout -->
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Script auth + user + logout -->
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
@@ -495,27 +334,5 @@
       }
     })();
   </script>
-
-  <!-- Script FAQ (dépliable + recherche) -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const faqItems = Array.from(document.querySelectorAll('.faq-item'));
-      const searchInput = document.getElementById('faqSearch');
-
-      // Toggle FAQ
-      faqItems.forEach(item => {
-        const btn = item.querySelector('.faq-question');
-        if (!btn) return;
-        btn.addEventListener('click', function () {
-          const isOpen = item.classList.contains('open');
-          faqItems.forEach(i => i.classList.remove('open'));
-          if (!isOpen) {
-            item.classList.add('open');
-          }
-        });
-      });
-
-      // Recherche
-      if (searchInput) {
-        searchInput.addEventListener('input', function () {
-          const q = searchInput.value.
+<!-- Script FAQ (dépliable + recherche) -->
+<script></script><script src="/js/bh-layout.js"></script></body></html>
