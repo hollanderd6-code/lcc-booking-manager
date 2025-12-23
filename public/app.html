@@ -7313,7 +7313,7 @@ let cleaningChecklists = [];
         <h3 class="modal-section-title"><i class="fas fa-user"></i> Informations voyageur</h3>
         <div class="modal-info-grid">
           <div class="modal-info-item">
-            <span class="modal-info-label">Nom</span>
+            <span class="modal-info-label">Date d'arrivée</span>
             <span class="modal-info-value" id="modalGuestName">-</span>
           </div>
           <div class="modal-info-item">
@@ -7474,6 +7474,12 @@ function getPropertyNameFromChecklistKey(reservationKey, fallbackPropertyId) {
 
 function formatChecklistDate(dateStr) {
   if (!dateStr) return '';
+  
+  // Gérer les dates ISO (ex: 2025-12-25T00:00:00.000Z)
+  if (dateStr.includes('T')) {
+    dateStr = dateStr.split('T')[0];
+  }
+  
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
   const [year, month, day] = parts;
@@ -7516,7 +7522,7 @@ function populateChecklistModal(checklist) {
   
   // Header
   document.getElementById('modalChecklistProperty').textContent = propertyName;
-  document.getElementById('modalChecklistDate').textContent = `Départ: ${formatChecklistDate(checklist.checkout_date)}`;
+  document.getElementById('modalChecklistDate').textContent = `Départ : ${formatChecklistDate(checklist.checkout_date)}`;
   document.getElementById('modalChecklistCleaner').textContent = `Par ${checklist.cleaner_name || 'N/A'}`;
   
   // Status
@@ -7528,8 +7534,8 @@ function populateChecklistModal(checklist) {
     ${isCompleted ? 'Checklist validée' : 'En attente de validation'}
   `;
   
-  // Guest info
-  document.getElementById('modalGuestName').textContent = checklist.guest_name || 'Non renseigné';
+  // Guest info - Display checkin date instead of guest name
+  document.getElementById('modalGuestName').textContent = formatChecklistDate(checklist.checkin_date) || 'Non renseignée';
   document.getElementById('modalCheckoutDate').textContent = formatChecklistDate(checklist.checkout_date);
   
   // Tasks
@@ -7946,6 +7952,12 @@ function getPropertyNameFromChecklistKey(reservationKey, fallbackPropertyId) {
 
 function formatChecklistDate(dateStr) {
   if (!dateStr) return '';
+  
+  // Gérer les dates ISO (ex: 2025-12-25T00:00:00.000Z)
+  if (dateStr.includes('T')) {
+    dateStr = dateStr.split('T')[0];
+  }
+  
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
   const [year, month, day] = parts;
