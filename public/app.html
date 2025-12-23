@@ -4696,7 +4696,7 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
       }
 
       computeKpis(reservations, properties);
-      updateTopRisksKpi(reservations);
+      // updateTopRisksKpi est maintenant appelé dans renderModernCalendar avec state.bookings
 
       const movesCard = document.getElementById('kpiTodayMovesCard');
       if (movesCard && !movesCard.dataset.bound) {
@@ -4973,6 +4973,8 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
           });
         }
         
+        console.log('🎲 Calcul de risque pour', bookings.length, 'réservations...');
+        
         // Calculer le risque pour chaque réservation
         bookings = bookings.map(function(booking) {
           var risk = calculateBookingRisk(booking);
@@ -4984,6 +4986,13 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
           booking.riskRecommendations = risk.recommendations;
           return booking;
         });
+        
+        console.log('✅ Risques calculés:', bookings.map(b => ({ 
+          name: b.guestName, 
+          score: b.riskScore, 
+          level: b.riskLevel,
+          tags: b.riskTags 
+        })));
         
         state.bookings = bookings;
 
