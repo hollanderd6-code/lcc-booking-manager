@@ -1,20 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+
+<html data-theme="light" lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookingmanage – Mes logements</title>
-
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- Global CSS de l'app -->
-  <link rel="stylesheet" href="/css/style.css">
-
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bookingmanage – Mes logements</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- Global CSS de l'app -->
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -721,9 +718,8 @@
       }
     }
   </style>
-
-  <!-- Script auth + user + logout -->
-  <script src="/js/auth-fetch.js"></script>
+<!-- Script auth + user + logout -->
+<script src="/js/auth-fetch.js"></script>
 <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
@@ -775,418 +771,237 @@
     })();
   </script>
 </head>
-<body data-page="settings">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Bookingmanage</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="settings" data-subtitle="Ajoutez, modifiez et organisez vos logements." data-title="Mes logements">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Bookingmanage</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- MAIN -->
+<main class="main-content"><div id="bhHeader"></div>
 
-  <div class="app-container">
-
-  <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div> <!-- ✅ IMPORTANT -->
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item active" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- FACTURATION (propre) -->
-    <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
-
-      <a href="/factures.html" class="nav-item" data-page="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures clients</span>
-      </a>
-
-      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
-        <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
-      </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-
-    <!-- MAIN -->
-    <main class="main-content">
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Configuration</div>
-          <h1 class="page-title">Mes logements</h1>
-          <p class="page-subtitle">
-            Gérez les logements de votre conciergerie et leurs connexions iCal (Airbnb, Booking, etc.).
-          </p>
-        </div>
-
-        <div class="header-actions">
-          <button class="btn btn-primary" onclick="openAddPropertyModal()">
-            <i class="fas fa-plus"></i>
-            <span>Ajouter un logement</span>
-          </button>
-        </div>
-      </header>
-
-      <div class="page-content">
-        <section class="card settings-container">
-          <div class="properties-header">
-            <h2 class="card-title" style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;">
-              <i class="fas fa-home"></i>
-              <span>Logements configurés</span>
-            </h2>
-          </div>
-
-          <div class="properties-grid" id="propertiesGrid">
-            <!-- Logements injectés ici par settings.js -->
-          </div>
-
-          <div class="empty-state" id="propertiesEmptyState" style="display:none;">
-            <i class="fas fa-home"></i>
-            <p>Aucun logement configuré pour le moment.</p>
-            <p>Commencez par ajouter votre premier logement.</p>
-          </div>
-
-          <div style="margin-top:10px;">
-            <button class="btn-add-property" onclick="openAddPropertyModal()">
-              <i class="fas fa-plus"></i>
+<div class="page-content">
+<section class="card settings-container">
+<div class="properties-header">
+<h2 class="card-title" style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;">
+<i class="fas fa-home"></i>
+<span>Logements configurés</span>
+</h2>
+</div>
+<div class="properties-grid" id="propertiesGrid">
+<!-- Logements injectés ici par settings.js -->
+</div>
+<div class="empty-state" id="propertiesEmptyState" style="display:none;">
+<i class="fas fa-home"></i>
+<p>Aucun logement configuré pour le moment.</p>
+<p>Commencez par ajouter votre premier logement.</p>
+</div>
+<div style="margin-top:10px;">
+<button class="btn-add-property" onclick="openAddPropertyModal()">
+<i class="fas fa-plus"></i>
               Ajouter un logement
             </button>
-          </div>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <!-- MODAL: Éditer / Ajouter un logement -->
-  <div class="modal" id="editPropertyModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modalTitle">
-          <i class="fas fa-home"></i>
-          <span>Modifier le logement</span>
-        </h2>
-        <button class="modal-close" onclick="closeEditModal()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form class="modal-form" id="propertyForm" onsubmit="saveProperty(event)">
-          <input type="hidden" id="propertyId">
-          <input type="hidden" id="propertyPhotoUrl">
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label for="propertyName">
-                <i class="fas fa-home"></i>
-                <span>Nom du logement</span>
-              </label>
-              <input type="text" id="propertyName" required placeholder="Ex: Saint-Gratien - RDC">
-            </div>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- MODAL: Éditer / Ajouter un logement -->
+<div class="modal" id="editPropertyModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="modalTitle">
+<i class="fas fa-home"></i>
+<span>Modifier le logement</span>
+</h2>
+<button class="modal-close" onclick="closeEditModal()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="modal-body">
+<form class="modal-form" id="propertyForm" onsubmit="saveProperty(event)">
+<input id="propertyId" type="hidden"/>
+<input id="propertyPhotoUrl" type="hidden"/>
+<div class="form-grid-2">
 <div class="form-group">
-  <label for="propertyOwnerId">
-    <i class="fas fa-user"></i>
-    <span>Propriétaire (optionnel)</span>
-  </label>
-  <select id="propertyOwnerId" class="form-control">
-    <option value="">Aucun propriétaire</option>
-    <!-- Options remplies dynamiquement -->
-  </select>
-  <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+<label for="propertyName">
+<i class="fas fa-home"></i>
+<span>Nom du logement</span>
+</label>
+<input id="propertyName" placeholder="Ex: Saint-Gratien - RDC" required="" type="text"/>
+</div>
+<div class="form-group">
+<label for="propertyOwnerId">
+<i class="fas fa-user"></i>
+<span>Propriétaire (optionnel)</span>
+</label>
+<select class="form-control" id="propertyOwnerId">
+<option value="">Aucun propriétaire</option>
+<!-- Options remplies dynamiquement -->
+</select>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
     Lier ce logement à un client propriétaire
   </small>
 </div>
-            <div class="form-group">
-              <label for="propertyAddress">
-                <i class="fas fa-location-dot"></i>
-                <span>Adresse</span>
-              </label>
-              <input type="text" id="propertyAddress" placeholder="Ex : 25 boulevard de la République, Saint-Gratien">
-            </div>
-          </div>
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label for="propertyArrivalTime">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>Heure d’arrivée</span>
-              </label>
-              <input type="time" id="propertyArrivalTime" placeholder="16:00">
-            </div>
-
-            <div class="form-group">
-              <label for="propertyDepartureTime">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Heure de départ</span>
-              </label>
-              <input type="time" id="propertyDepartureTime" placeholder="11:00">
-            </div>
-          </div>
-
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label for="propertyDeposit">
-                <i class="fas fa-shield-alt"></i>
-                <span>Montant de la caution</span>
-              </label>
-              <div class="input-with-suffix">
-                <input type="number" id="propertyDeposit" min="0" step="1" placeholder="Laisser vide si aucune">
-                <span>€</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="propertyColor">
-                <i class="fas fa-palette"></i>
-                <span>Couleur</span>
-              </label>
-              <div class="color-picker-wrapper">
-                <input type="color" id="propertyColor" class="color-picker" value="#E67E50">
-                <div class="color-preview" id="colorPreview">#E67E50</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ✅ SECTION : LIVRET D'ACCUEIL -->
-          <div class="form-group">
-            <label for="propertyWelcomeBookUrl">
-              <i class="fas fa-book"></i>
-              <span>URL du livret d'accueil</span>
-            </label>
-            <input 
-              type="url" 
-              id="propertyWelcomeBookUrl" 
-              placeholder="https://monsite.com/livret-appartement-paris">
-            <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+<div class="form-group">
+<label for="propertyAddress">
+<i class="fas fa-location-dot"></i>
+<span>Adresse</span>
+</label>
+<input id="propertyAddress" placeholder="Ex : 25 boulevard de la République, Saint-Gratien" type="text"/>
+</div>
+</div>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyArrivalTime">
+<i class="fas fa-sign-in-alt"></i>
+<span>Heure d’arrivée</span>
+</label>
+<input id="propertyArrivalTime" placeholder="16:00" type="time"/>
+</div>
+<div class="form-group">
+<label for="propertyDepartureTime">
+<i class="fas fa-sign-out-alt"></i>
+<span>Heure de départ</span>
+</label>
+<input id="propertyDepartureTime" placeholder="11:00" type="time"/>
+</div>
+</div>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyDeposit">
+<i class="fas fa-shield-alt"></i>
+<span>Montant de la caution</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyDeposit" min="0" placeholder="Laisser vide si aucune" step="1" type="number"/>
+<span>€</span>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyColor">
+<i class="fas fa-palette"></i>
+<span>Couleur</span>
+</label>
+<div class="color-picker-wrapper">
+<input class="color-picker" id="propertyColor" type="color" value="#E67E50"/>
+<div class="color-preview" id="colorPreview">#E67E50</div>
+</div>
+</div>
+</div>
+<!-- ✅ SECTION : LIVRET D'ACCUEIL -->
+<div class="form-group">
+<label for="propertyWelcomeBookUrl">
+<i class="fas fa-book"></i>
+<span>URL du livret d'accueil</span>
+</label>
+<input id="propertyWelcomeBookUrl" placeholder="https://monsite.com/livret-appartement-paris" type="url"/>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
               Lien vers le livret d'accueil que vous avez créé pour vos voyageurs
             </small>
-          </div>
-
-          <!-- ✅ SECTION : ACCÈS AU LOGEMENT -->
-          <div class="form-group">
-            <label for="propertyAccessCode">
-              <i class="fas fa-key"></i>
-              <span>Code d'accès</span>
-            </label>
-            <input 
-              type="text" 
-              id="propertyAccessCode" 
-              placeholder="Ex: 1234# ou code boîte à clés">
-            <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+</div>
+<!-- ✅ SECTION : ACCÈS AU LOGEMENT -->
+<div class="form-group">
+<label for="propertyAccessCode">
+<i class="fas fa-key"></i>
+<span>Code d'accès</span>
+</label>
+<input id="propertyAccessCode" placeholder="Ex: 1234# ou code boîte à clés" type="text"/>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
               Code de la serrure connectée ou de la boîte à clés
             </small>
-          </div>
-
-          <div class="form-group">
-            <label for="propertyAccessInstructions">
-              <i class="fas fa-route"></i>
-              <span>Instructions d'accès</span>
-            </label>
-            <textarea 
-              id="propertyAccessInstructions" 
-              rows="3" 
-              placeholder="Ex: Prenez l'ascenseur jusqu'au 3ème étage, porte à droite..."></textarea>
-            <small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+</div>
+<div class="form-group">
+<label for="propertyAccessInstructions">
+<i class="fas fa-route"></i>
+<span>Instructions d'accès</span>
+</label>
+<textarea id="propertyAccessInstructions" placeholder="Ex: Prenez l'ascenseur jusqu'au 3ème étage, porte à droite..." rows="3"></textarea>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
               Détails pour accéder au logement (étage, porte, etc.)
             </small>
-          </div>
-
-          <!-- ✅ SECTION : WIFI -->
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label for="propertyWifiName">
-                <i class="fas fa-wifi"></i>
-                <span>Nom du réseau WiFi</span>
-              </label>
-              <input 
-                type="text" 
-                id="propertyWifiName" 
-                placeholder="Ex: FreeWiFi_Secure">
-            </div>
-
-            <div class="form-group">
-              <label for="propertyWifiPassword">
-                <i class="fas fa-lock"></i>
-                <span>Mot de passe WiFi</span>
-              </label>
-              <input 
-                type="text" 
-                id="propertyWifiPassword" 
-                placeholder="Ex: MonMotDePasse123">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="propertyPhoto">
-              <i class="fas fa-image"></i>
-              <span>Photo du logement</span>
-            </label>
-            <div class="photo-preview-wrapper">
-              <div class="photo-preview-box" id="photoPreviewBox">
-                <span class="photo-preview-placeholder" id="photoPreviewPlaceholder">
-                  <i class="fas fa-image"></i>
-                </span>
-              </div>
-              <div>
-                <input type="file" id="propertyPhoto" accept="image/*">
-                <div class="photo-preview-text">
+</div>
+<!-- ✅ SECTION : WIFI -->
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyWifiName">
+<i class="fas fa-wifi"></i>
+<span>Nom du réseau WiFi</span>
+</label>
+<input id="propertyWifiName" placeholder="Ex: FreeWiFi_Secure" type="text"/>
+</div>
+<div class="form-group">
+<label for="propertyWifiPassword">
+<i class="fas fa-lock"></i>
+<span>Mot de passe WiFi</span>
+</label>
+<input id="propertyWifiPassword" placeholder="Ex: MonMotDePasse123" type="text"/>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyPhoto">
+<i class="fas fa-image"></i>
+<span>Photo du logement</span>
+</label>
+<div class="photo-preview-wrapper">
+<div class="photo-preview-box" id="photoPreviewBox">
+<span class="photo-preview-placeholder" id="photoPreviewPlaceholder">
+<i class="fas fa-image"></i>
+</span>
+</div>
+<div>
+<input accept="image/*" id="propertyPhoto" type="file"/>
+<div class="photo-preview-text">
                   Ajoutez une photo pour la vignette de la carte logement.
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>
-              <i class="fas fa-link"></i>
-              <span>URLs iCal (Airbnb, Booking, etc.)</span>
-            </label>
-            <div class="url-list" id="urlList">
-              <!-- URLs ajoutées ici via JS -->
-            </div>
-            <button type="button" class="btn-add-url" onclick="addUrlField()">
-              <i class="fas fa-plus"></i>
-              <span>Ajouter une URL iCal</span>
-            </button>
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" class="btn-cancel" onclick="closeEditModal()">Annuler</button>
-            <button type="submit" class="btn-save">
-              <i class="fas fa-save"></i>
-              <span>Enregistrer</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast & Loading -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Chargement...</p>
-    </div>
-  </div>
-
-  <!-- JS page -->
-  <script src="/js/settings.js"></script>
-
-  <!-- MOBILE MENU SCRIPT + nav active -->
-  <script>
+</div>
+</div>
+</div>
+<div class="form-group">
+<label>
+<i class="fas fa-link"></i>
+<span>URLs iCal (Airbnb, Booking, etc.)</span>
+</label>
+<div class="url-list" id="urlList">
+<!-- URLs ajoutées ici via JS -->
+</div>
+<button class="btn-add-url" onclick="addUrlField()" type="button">
+<i class="fas fa-plus"></i>
+<span>Ajouter une URL iCal</span>
+</button>
+</div>
+<div class="modal-actions">
+<button class="btn-cancel" onclick="closeEditModal()" type="button">Annuler</button>
+<button class="btn-save" type="submit">
+<i class="fas fa-save"></i>
+<span>Enregistrer</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- Toast & Loading -->
+<div class="toast-container" id="toastContainer"></div>
+<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-spinner">
+<i class="fas fa-spinner fa-spin"></i>
+<p>Chargement...</p>
+</div>
+</div>
+<!-- JS page -->
+<script src="/js/settings.js"></script>
+<!-- MOBILE MENU SCRIPT + nav active -->
+<script>
     (function() {
       const menuBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
@@ -1240,8 +1055,8 @@
       }
     })();
   </script>
-    <!-- 🆕 PATCH OWNER_ID -->
-  <script>
+<!-- 🆕 PATCH OWNER_ID -->
+<script>
   // ============================================
 // PATCH AMÉLIORÉ : Correction du owner_id
 // Remplace le patch précédent par celui-ci
@@ -1602,5 +1417,5 @@
 
 })();
     </script>
-</body>
+<script src="/js/bh-layout.js"></script></body>
 </html>
