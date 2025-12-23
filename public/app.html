@@ -4613,12 +4613,15 @@ function updateTopRisksKpi(bookings) {
     const card = document.getElementById('kpiTopRisksCard');
     if (card) {
       card.onclick = () => {
+        console.log('🖱️ Click sur Top Risques, top5:', top5);
         // reuse your existing modal if present
         if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
         // fallback modal
         ensureGenericModal('topRisksModal', 'Top risques du mois');
         const modal = document.getElementById('topRisksModal');
         const g = document.getElementById('topRisksModalContent');
+        
+        console.log('📦 Modal element:', modal, 'Content element:', g);
         
         if (g) {
           g.innerHTML = top5.length ? top5.map(r=>{
@@ -6438,13 +6441,15 @@ try {
         if (!reservation) return null;
         if (reservation.uid) return reservation.uid;
         if (reservation.id != null) return String(reservation.id);
-        if (reservation.propertyId && reservation.start && reservation.end) {
+        const start = reservation.startDate || reservation.start;
+        const end = reservation.endDate || reservation.end;
+        if (reservation.propertyId && start && end) {
           return (
             reservation.propertyId +
             '::' +
-            String(reservation.start).slice(0, 10) +
+            String(start).slice(0, 10) +
             '>' +
-            String(reservation.end).slice(0, 10)
+            String(end).slice(0, 10)
           );
         }
         return null;
