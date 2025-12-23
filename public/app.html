@@ -5040,15 +5040,16 @@ function scrollCalendarToToday() {
     return;
   }
 
-  // Position horizontale de la colonne "today"
-  const targetLeft = todayCell.offsetLeft;
-  console.log('📍 Position today:', targetLeft, 'Grid width:', grid.clientWidth);
-
-  // On centre un peu (optionnel)
-  const padding = Math.max(0, (grid.clientWidth / 2) - 80);
-  const scrollPosition = Math.max(0, targetLeft - padding);
-  grid.scrollLeft = scrollPosition;
-  console.log('✅ Scroll à:', scrollPosition);
+  console.log('✅ Cellule today trouvée, scroll en cours...');
+  
+  // Utiliser scrollIntoView pour un meilleur contrôle
+  todayCell.scrollIntoView({ 
+    behavior: 'auto',
+    block: 'nearest', 
+    inline: 'center' 
+  });
+  
+  console.log('✅ Scroll effectué via scrollIntoView');
 }
         function renderDaysHeader(range) {
       var header = document.getElementById('daysHeader');
@@ -6098,19 +6099,53 @@ try {
     // Chercher la checklist dans le tableau cleaningChecklists
     console.log('🔍 Recherche checklist pour reservationUid:', reservationUid);
     console.log('📋 Checklists disponibles:', window.cleaningChecklists);
+    console.log('📦 Booking complet:', booking);
     
     const matchingChecklist = window.cleaningChecklists ? 
       window.cleaningChecklists.find(c => {
-        // Essayer de matcher par reservation_key ou checkout_date
-        const checkoutDate = booking.checkoutDate || booking.checkout || booking.end;
-        console.log('  Comparaison:', {
-          'reservation_key': c.reservation_key,
-          'reservationUid': reservationUid,
-          'checkout_date': c.checkout_date,
-          'checkoutDate': checkoutDate
-        });
-        return c.reservation_key === reservationUid || 
-               (checkoutDate && c.checkout_date === checkoutDate);
+        // Stratégie 1: Match par reservation_key exact
+        if (c.reservation_key === reservationUid) {
+          console.log('✅ Match par reservation_key exact:', c.reservation_key);
+          return true;
+        }
+        
+        // Stratégie 2: Match par checkout_date (formats variés)
+        const checkoutDate = booking.checkoutDate || booking.checkout || booking.end || booking.endDate;
+        if (checkoutDate && c.checkout_date) {
+          // Normaliser les dates (enlever l'heure)
+          const normalizeDate = (d) => {
+            if (!d) return null;
+            if (typeof d === 'string') {
+              return d.split('T')[0]; // Format ISO
+            }
+            if (d instanceof Date) {
+              return d.toISOString().split('T')[0];
+            }
+            return null;
+          };
+          
+          const bookingDateNorm = normalizeDate(checkoutDate);
+          const checklistDateNorm = normalizeDate(c.checkout_date);
+          
+          if (bookingDateNorm === checklistDateNorm) {
+            console.log('✅ Match par checkout_date:', bookingDateNorm);
+            return true;
+          }
+        }
+        
+        // Stratégie 3: Match par property + checkout_date
+        const bookingPropId = booking.propertyId || booking.property_id;
+        const checklistPropId = c.property_id;
+        if (bookingPropId && checklistPropId && bookingPropId === checklistPropId) {
+          const bookingDateNorm = (booking.checkoutDate || booking.checkout || booking.end || '').split('T')[0];
+          const checklistDateNorm = (c.checkout_date || '').split('T')[0];
+          if (bookingDateNorm === checklistDateNorm) {
+            console.log('✅ Match par property_id + checkout_date');
+            return true;
+          }
+        }
+        
+        return false;
       }) : null;
 
     console.log('✅ Checklist trouvée:', matchingChecklist);
