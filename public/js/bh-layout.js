@@ -111,6 +111,16 @@
     if (!ph) return;
 
     ph.innerHTML = SIDEBAR_HTML;
+    // Ensure Messages badge exists for chat-owner.js
+    const messagesLink = document.querySelector('.nav-item[data-page="messages"]');
+    if (messagesLink && !document.getElementById('unreadCount')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      badge.id = 'unreadCount';
+      badge.textContent = '0';
+      messagesLink.appendChild(badge);
+    }
+
 
     // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
