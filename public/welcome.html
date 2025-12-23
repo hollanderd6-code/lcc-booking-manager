@@ -1,22 +1,19 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Créateur de Livret d'Accueil – Boostinghost</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="/js/auth-fetch.js"></script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Créateur de Livret d'Accueil – Boostinghost</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Cormorant+Garamond:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<script src="/js/auth-fetch.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Platform CSS -->
-<link rel="stylesheet" href="/css/style.css?v=3">
-  
-  
-  <style>
+<!-- Platform CSS -->
+<link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
     * {
       margin: 0;
       padding: 0;
@@ -669,591 +666,444 @@
 }
   </style>
 </head>
-<body>
- <!-- Sidebar Overlay (pour mobile) -->
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="welcome" data-subtitle="Créez et gérez vos livrets d’accueil." data-title="Livret d'accueil"><div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Boostinghost</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<!-- Sidebar Overlay (pour mobile) -->
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
 <div class="app-container">
-  
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <a href="/" class="sidebar-logo">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-          <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" 
-                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M16 36V26H24V36" 
-                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M20 4L4 18H10V22H30V18H36L20 4Z" 
-                fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-        </svg>
-        <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
-          <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
-            <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
-          </span>
-          <span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
-            Smart Property Manager
-          </span>
-        </div>
-      </a>
-    </div>
-    
-    <nav class="sidebar-nav">
-      <!-- PRINCIPAL -->
-      <div class="nav-section">
-        <div class="nav-section-title">Principal</div>
-
-        <a href="/app.html" class="nav-item" data-page="app">
-          <i class="fas fa-th-large"></i>
-          <span>Dashboard</span>
-        </a>
-
-        <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-          <i class="fas fa-calendar"></i>
-          <span>Calendrier</span>
-        </a>
-
-        <a href="/messages.html" class="nav-item" data-page="messages">
-          <i class="fas fa-comment-dots"></i>
-          <span>Messages</span>
-        </a>
-      </div>
-
-      <!-- GESTION -->
-      <div class="nav-section">
-        <div class="nav-section-title">Gestion</div>
-
-        <a href="/settings.html" class="nav-item" data-page="settings">
-          <i class="fas fa-home"></i>
-          <span>Mes logements</span>
-        </a>
-
-        <a href="/welcome.html" class="nav-item active" data-page="welcome">
-          <i class="fas fa-book-open"></i>
-          <span>Livret d'accueil</span>
-        </a>
-
-        <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-          <i class="fas fa-broom"></i>
-          <span>Gestion du ménage</span>
-        </a>
-
-        <a href="/factures.html" class="nav-item">
-          <i class="fas fa-file-invoice"></i>
-          <span>Factures clients</span>
-        </a>
-
-        <a href="/notifications.html" class="nav-item" data-page="notifications">
-          <i class="fas fa-bell"></i>
-          <span>Notifications</span>
-        </a>
-      </div>
-
-      <!-- PARAMÈTRES -->
-      <div class="nav-section">
-        <div class="nav-section-title">Paramètres</div>
-
-        <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-          <i class="fas fa-cog"></i>
-          <span>Paramètres</span>
-        </a>
-
-        <a href="/help.html" class="nav-item" data-page="help">
-          <i class="fas fa-question-circle"></i>
-          <span>Aide</span>
-        </a>
-      </div>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <div class="user-profile">
-        <div class="user-avatar" id="sidebarUserAvatar">C</div>
-        <div class="user-info">
-          <div class="user-name" id="sidebarUserName">Utilisateur</div>
-          <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-        </div>
-
-        <button class="btn btn-ghost btn-xs" id="logoutBtn">
-          <i class="fas fa-sign-out-alt"></i>
-        </button>
-      </div>
-    </div>
-  </aside>
-  
-  <!-- Main Content -->
-  <main class="main-content-welcome">
-
-  <div class="container">
-    <!-- Page Title -->
-    <div class="page-title">
-      <h1>Créer un Livret d'Accueil</h1>
-      <p>Créez un livret d'accueil personnalisé et professionnel pour vos voyageurs</p>
-    </div>
-
-    <!-- Progress Steps -->
-    <div class="progress-steps">
-      <div class="steps-container">
-        <div class="step active" data-step="1">
-          <div class="step-number">1</div>
-          <div class="step-label">Informations<br>générales</div>
-        </div>
-        <div class="step" data-step="2">
-          <div class="step-number">2</div>
-          <div class="step-label">Accès &<br>Arrivée</div>
-        </div>
-        <div class="step" data-step="3">
-          <div class="step-number">3</div>
-          <div class="step-label">Le<br>Logement</div>
-        </div>
-        <div class="step" data-step="4">
-          <div class="step-number">4</div>
-          <div class="step-label">Informations<br>pratiques</div>
-        </div>
-        <div class="step" data-step="5">
-          <div class="step-number">5</div>
-          <div class="step-label">Aux<br>Alentours</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Liste des livrets existants -->
-<div id="livretsListSection" class="form-card" style="margin-bottom: 2rem;">
-  <h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--gray-700);">
-    <i class="fas fa-list"></i>
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- Main Content -->
+<main class="main-content-welcome">
+<div class="container">
+<!-- Page Title -->
+<div class="page-title">
+<h1>Créer un Livret d'Accueil</h1>
+<p>Créez un livret d'accueil personnalisé et professionnel pour vos voyageurs</p>
+</div>
+<!-- Progress Steps -->
+<div class="progress-steps">
+<div class="steps-container">
+<div class="step active" data-step="1">
+<div class="step-number">1</div>
+<div class="step-label">Informations<br/>générales</div>
+</div>
+<div class="step" data-step="2">
+<div class="step-number">2</div>
+<div class="step-label">Accès &amp;<br/>Arrivée</div>
+</div>
+<div class="step" data-step="3">
+<div class="step-number">3</div>
+<div class="step-label">Le<br/>Logement</div>
+</div>
+<div class="step" data-step="4">
+<div class="step-number">4</div>
+<div class="step-label">Informations<br/>pratiques</div>
+</div>
+<div class="step" data-step="5">
+<div class="step-number">5</div>
+<div class="step-label">Aux<br/>Alentours</div>
+</div>
+</div>
+</div>
+<!-- Liste des livrets existants -->
+<div class="form-card" id="livretsListSection" style="margin-bottom: 2rem;">
+<h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--gray-700);">
+<i class="fas fa-list"></i>
     Mes livrets d'accueil
   </h2>
-  <div id="livretsList" style="margin-bottom: 1rem;">
-    <p style="color: #64748b; text-align: center;">Chargement...</p>
-  </div>
-  <button type="button" class="btn btn-primary" onclick="createNewLivret()">
-    <i class="fas fa-plus"></i>
+<div id="livretsList" style="margin-bottom: 1rem;">
+<p style="color: #64748b; text-align: center;">Chargement...</p>
+</div>
+<button class="btn btn-primary" onclick="createNewLivret()" type="button">
+<i class="fas fa-plus"></i>
     Créer un nouveau livret
   </button>
 </div>
-    <!-- Form -->
-    <form id="welcomeForm" style="display: none;">
-      <!-- Section 1: Informations Générales -->
-      <div class="form-section active" data-section="1">
-        <div class="form-card">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-home"></i>
+<!-- Form -->
+<form id="welcomeForm" style="display: none;">
+<!-- Section 1: Informations Générales -->
+<div class="form-section active" data-section="1">
+<div class="form-card">
+<div class="section-header">
+<h2 class="section-title">
+<i class="fas fa-home"></i>
               Informations Générales
             </h2>
-            <p class="section-description">
+<p class="section-description">
               Commencez par les informations de base de votre logement
             </p>
-          </div>
-
-          <div class="info-box">
-            <p><i class="fas fa-info-circle"></i> Ces informations apparaîtront sur la page d'accueil de votre livret</p>
-          </div>
-
-          <div class="form-group">
-            <label>
+</div>
+<div class="info-box">
+<p><i class="fas fa-info-circle"></i> Ces informations apparaîtront sur la page d'accueil de votre livret</p>
+</div>
+<div class="form-group">
+<label>
               Nom du logement <span class="required">*</span>
-              <span class="hint">Ex: "Votre Pied-à-Terre ", "Appartement Cosy Centre-Ville"</span>
-            </label>
-            <input type="text" class="form-control" name="propertyName" required placeholder="Nom de votre logement">
-          </div>
-
-          <div class="form-group">
-            <label>
+<span class="hint">Ex: "Votre Pied-à-Terre ", "Appartement Cosy Centre-Ville"</span>
+</label>
+<input class="form-control" name="propertyName" placeholder="Nom de votre logement" required="" type="text"/>
+</div>
+<div class="form-group">
+<label>
               Photo de couverture <span class="required">*</span>
-              <span class="hint">Image principale qui apparaîtra en haut du livret (format recommandé: 1920x1080px)</span>
-            </label>
-            <div class="image-upload-area" onclick="document.getElementById('coverPhoto').click()">
-              <i class="fas fa-cloud-upload-alt"></i>
-              <p>Cliquez pour télécharger votre photo de couverture</p>
-              <p class="supported-formats">JPG, PNG ou WebP (max 5MB)</p>
-            </div>
-            <input type="file" id="coverPhoto" accept="image/*" style="display: none;">
-            <div class="image-preview" id="coverPhotoPreview"></div>
-          </div>
-
-          <div class="form-group">
-            <label>
+<span class="hint">Image principale qui apparaîtra en haut du livret (format recommandé: 1920x1080px)</span>
+</label>
+<div class="image-upload-area" onclick="document.getElementById('coverPhoto').click()">
+<i class="fas fa-cloud-upload-alt"></i>
+<p>Cliquez pour télécharger votre photo de couverture</p>
+<p class="supported-formats">JPG, PNG ou WebP (max 5MB)</p>
+</div>
+<input accept="image/*" id="coverPhoto" style="display: none;" type="file"/>
+<div class="image-preview" id="coverPhotoPreview"></div>
+</div>
+<div class="form-group">
+<label>
               Description d'accueil
               <span class="hint">Message de bienvenue pour vos voyageurs</span>
-            </label>
-            <textarea class="form-control" name="welcomeDescription" rows="3" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement. Ce livret contient toutes les informations pour profiter pleinement de votre séjour."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>
+</label>
+<textarea class="form-control" name="welcomeDescription" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement. Ce livret contient toutes les informations pour profiter pleinement de votre séjour." rows="3"></textarea>
+</div>
+<div class="form-group">
+<label>
               Votre numéro de téléphone <span class="required">*</span>
-              <span class="hint">Pour que vos voyageurs puissent vous contacter</span>
-            </label>
-            <input type="tel" class="form-control" name="contactPhone" required placeholder="06 XX XX XX XX">
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <div></div>
-          <button type="button" class="btn btn-primary" onclick="nextSection()">
+<span class="hint">Pour que vos voyageurs puissent vous contacter</span>
+</label>
+<input class="form-control" name="contactPhone" placeholder="06 XX XX XX XX" required="" type="tel"/>
+</div>
+</div>
+<div class="form-actions">
+<div></div>
+<button class="btn btn-primary" onclick="nextSection()" type="button">
             Suivant
             <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Section 2: Accès & Arrivée -->
-      <div class="form-section" data-section="2">
-        <div class="form-card">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-map-marker-alt"></i>
-              Accès & Arrivée
+</button>
+</div>
+</div>
+<!-- Section 2: Accès & Arrivée -->
+<div class="form-section" data-section="2">
+<div class="form-card">
+<div class="section-header">
+<h2 class="section-title">
+<i class="fas fa-map-marker-alt"></i>
+              Accès &amp; Arrivée
             </h2>
-            <p class="section-description">
+<p class="section-description">
               Comment vos voyageurs accèdent-ils à votre logement ?
             </p>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>
                 Adresse complète <span class="required">*</span>
-              </label>
-              <input type="text" class="form-control" name="address" required placeholder="Numéro et rue">
-            </div>
-
-            <div class="form-group">
-              <label>
+</label>
+<input class="form-control" name="address" placeholder="Numéro et rue" required="" type="text"/>
+</div>
+<div class="form-group">
+<label>
                 Code postal <span class="required">*</span>
-              </label>
-              <input type="text" class="form-control" name="postalCode" required placeholder="75001">
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label>
+</label>
+<input class="form-control" name="postalCode" placeholder="75001" required="" type="text"/>
+</div>
+</div>
+<div class="form-grid">
+<div class="form-group">
+<label>
                 Ville <span class="required">*</span>
-              </label>
-              <input type="text" class="form-control" name="city" required placeholder="Paris">
-            </div>
-
-            <div class="form-group">
-              <label>
+</label>
+<input class="form-control" name="city" placeholder="Paris" required="" type="text"/>
+</div>
+<div class="form-group">
+<label>
                 Code de la boîte à clés
                 <span class="hint">Si applicable</span>
-              </label>
-              <input type="text" class="form-control" name="keyboxCode" placeholder="Ex: 8670">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>
+</label>
+<input class="form-control" name="keyboxCode" placeholder="Ex: 8670" type="text"/>
+</div>
+</div>
+<div class="form-group">
+<label>
               Instructions d'accès
               <span class="hint">Expliquez comment accéder au logement (portail, étage, etc.)</span>
-            </label>
-            <textarea class="form-control" name="accessInstructions" rows="4" placeholder="Ex: Poussez le portail, la boîte à clés est à gauche au niveau de la flèche rouge..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>
+</label>
+<textarea class="form-control" name="accessInstructions" placeholder="Ex: Poussez le portail, la boîte à clés est à gauche au niveau de la flèche rouge..." rows="4"></textarea>
+</div>
+<div class="form-group">
+<label>
               Photos de l'entrée
               <span class="hint">Photos du portail, de l'entrée, de la boîte à clés, etc.</span>
-            </label>
-            <div class="image-upload-area" onclick="document.getElementById('entrancePhotos').click()">
-              <i class="fas fa-images"></i>
-              <p>Cliquez pour télécharger les photos de l'entrée</p>
-              <p class="supported-formats">Vous pouvez sélectionner plusieurs images</p>
-            </div>
-            <input type="file" id="entrancePhotos" accept="image/*" multiple style="display: none;">
-            <div class="image-preview" id="entrancePhotosPreview"></div>
-          </div>
-
-          <div class="form-group">
-            <label>
+</label>
+<div class="image-upload-area" onclick="document.getElementById('entrancePhotos').click()">
+<i class="fas fa-images"></i>
+<p>Cliquez pour télécharger les photos de l'entrée</p>
+<p class="supported-formats">Vous pouvez sélectionner plusieurs images</p>
+</div>
+<input accept="image/*" id="entrancePhotos" multiple="" style="display: none;" type="file"/>
+<div class="image-preview" id="entrancePhotosPreview"></div>
+</div>
+<div class="form-group">
+<label>
               Parking
               <span class="hint">Informations sur le stationnement</span>
-            </label>
-            <textarea class="form-control" name="parkingInfo" rows="3" placeholder="Ex: Parking gratuit au 43-51 rue du Marché, 230 places sur 3 niveaux"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>
+</label>
+<textarea class="form-control" name="parkingInfo" placeholder="Ex: Parking gratuit au 43-51 rue du Marché, 230 places sur 3 niveaux" rows="3"></textarea>
+</div>
+<div class="form-group">
+<label>
               Photos du parking
               <span class="hint">Si applicable</span>
-            </label>
-            <div class="image-upload-area" onclick="document.getElementById('parkingPhotos').click()">
-              <i class="fas fa-parking"></i>
-              <p>Cliquez pour télécharger les photos du parking</p>
-            </div>
-            <input type="file" id="parkingPhotos" accept="image/*" multiple style="display: none;">
-            <div class="image-preview" id="parkingPhotosPreview"></div>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="prevSection()">
-            <i class="fas fa-arrow-left"></i>
+</label>
+<div class="image-upload-area" onclick="document.getElementById('parkingPhotos').click()">
+<i class="fas fa-parking"></i>
+<p>Cliquez pour télécharger les photos du parking</p>
+</div>
+<input accept="image/*" id="parkingPhotos" multiple="" style="display: none;" type="file"/>
+<div class="image-preview" id="parkingPhotosPreview"></div>
+</div>
+</div>
+<div class="form-actions">
+<button class="btn btn-secondary" onclick="prevSection()" type="button">
+<i class="fas fa-arrow-left"></i>
             Précédent
           </button>
-          <button type="button" class="btn btn-primary" onclick="nextSection()">
+<button class="btn btn-primary" onclick="nextSection()" type="button">
             Suivant
             <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Section 3: Le Logement -->
-      <div class="form-section" data-section="3">
-        <div class="form-card">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-door-open"></i>
+</button>
+</div>
+</div>
+<!-- Section 3: Le Logement -->
+<div class="form-section" data-section="3">
+<div class="form-card">
+<div class="section-header">
+<h2 class="section-title">
+<i class="fas fa-door-open"></i>
               Le Logement
             </h2>
-            <p class="section-description">
+<p class="section-description">
               Présentez les différentes pièces et espaces de votre logement
             </p>
-          </div>
-
-          <div class="warning-box">
-            <p><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire pour présenter votre logement</p>
-          </div>
-
-          <div id="roomsContainer" class="repeatable-section">
-            <!-- Les pièces seront ajoutées ici dynamiquement -->
-          </div>
-
-          <button type="button" class="add-item-btn" onclick="addRoom()">
-            <i class="fas fa-plus-circle"></i>
+</div>
+<div class="warning-box">
+<p><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire pour présenter votre logement</p>
+</div>
+<div class="repeatable-section" id="roomsContainer">
+<!-- Les pièces seront ajoutées ici dynamiquement -->
+</div>
+<button class="add-item-btn" onclick="addRoom()" type="button">
+<i class="fas fa-plus-circle"></i>
             Ajouter une pièce / un espace
           </button>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="prevSection()">
-            <i class="fas fa-arrow-left"></i>
+</div>
+<div class="form-actions">
+<button class="btn btn-secondary" onclick="prevSection()" type="button">
+<i class="fas fa-arrow-left"></i>
             Précédent
           </button>
-          <button type="button" class="btn btn-primary" onclick="nextSection()">
+<button class="btn btn-primary" onclick="nextSection()" type="button">
             Suivant
             <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Section 4: Informations Pratiques -->
-      <div class="form-section" data-section="4">
-        <div class="form-card">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-info-circle"></i>
+</button>
+</div>
+</div>
+<!-- Section 4: Informations Pratiques -->
+<div class="form-section" data-section="4">
+<div class="form-card">
+<div class="section-header">
+<h2 class="section-title">
+<i class="fas fa-info-circle"></i>
               Informations Pratiques
             </h2>
-            <p class="section-description">
+<p class="section-description">
               WiFi, équipements, consignes et tout ce qui est utile au quotidien
             </p>
-          </div>
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-wifi" style="color: var(--accent);"></i> WiFi
+</div>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-wifi" style="color: var(--accent);"></i> WiFi
           </h3>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Nom du réseau WiFi (SSID)</label>
-              <input type="text" class="form-control" name="wifiSSID" placeholder="Nom du réseau">
-            </div>
-
-            <div class="form-group">
-              <label>Mot de passe WiFi</label>
-              <input type="text" class="form-control" name="wifiPassword" placeholder="Mot de passe">
-            </div>
-          </div>
-
-          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-clipboard-list" style="color: var(--accent);"></i> Consignes de départ
+<div class="form-grid">
+<div class="form-group">
+<label>Nom du réseau WiFi (SSID)</label>
+<input class="form-control" name="wifiSSID" placeholder="Nom du réseau" type="text"/>
+</div>
+<div class="form-group">
+<label>Mot de passe WiFi</label>
+<input class="form-control" name="wifiPassword" placeholder="Mot de passe" type="text"/>
+</div>
+</div>
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-clipboard-list" style="color: var(--accent);"></i> Consignes de départ
           </h3>
-
-          <div class="form-group">
-            <label>
+<div class="form-group">
+<label>
               Heure de départ
               <span class="hint">Ex: 11h, 10h30</span>
-            </label>
-            <input type="text" class="form-control" name="checkoutTime" placeholder="11h">
-          </div>
-
-          <div class="form-group">
-            <label>
+</label>
+<input class="form-control" name="checkoutTime" placeholder="11h" type="text"/>
+</div>
+<div class="form-group">
+<label>
               Instructions de départ
               <span class="hint">Ce que les voyageurs doivent faire avant de partir</span>
-            </label>
-            <textarea class="form-control" name="checkoutInstructions" rows="5" placeholder="Ex:&#10;- Éteindre toutes les lumières&#10;- Laver la vaisselle&#10;- Poser les serviettes au sol..."></textarea>
-          </div>
-
-          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-toolbox" style="color: var(--accent);"></i> Équipements disponibles
+</label>
+<textarea class="form-control" name="checkoutInstructions" placeholder="Ex:
+- Éteindre toutes les lumières
+- Laver la vaisselle
+- Poser les serviettes au sol..." rows="5"></textarea>
+</div>
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-toolbox" style="color: var(--accent);"></i> Équipements disponibles
           </h3>
-
-          <div class="form-group">
-            <label>
+<div class="form-group">
+<label>
               Liste des équipements
               <span class="hint">Un équipement par ligne</span>
-            </label>
-            <textarea class="form-control" name="equipmentList" rows="8" placeholder="Ex:&#10;Machine à café Nespresso&#10;Micro-ondes&#10;Machine à laver&#10;Fer et planche à repasser..."></textarea>
-          </div>
-
-          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Règles importantes
+</label>
+<textarea class="form-control" name="equipmentList" placeholder="Ex:
+Machine à café Nespresso
+Micro-ondes
+Machine à laver
+Fer et planche à repasser..." rows="8"></textarea>
+</div>
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Règles importantes
           </h3>
-
-          <div class="form-group">
-            <label>
+<div class="form-group">
+<label>
               Règles et avertissements
               <span class="hint">Ex: Poutre basse, logement non-fumeur, attention aux marches...</span>
-            </label>
-            <textarea class="form-control" name="importantRules" rows="4" placeholder="Entrez les règles importantes..."></textarea>
-          </div>
-
-          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-train" style="color: var(--accent);"></i> Transports
+</label>
+<textarea class="form-control" name="importantRules" placeholder="Entrez les règles importantes..." rows="4"></textarea>
+</div>
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-train" style="color: var(--accent);"></i> Transports
           </h3>
-
-          <div class="form-group">
-            <label>
+<div class="form-group">
+<label>
               Informations sur les transports
               <span class="hint">Comment accéder aux transports en commun, gares, etc.</span>
-            </label>
-            <textarea class="form-control" name="transportInfo" rows="6" placeholder="Ex: Bus ligne 15 à 1 minute à pied..."></textarea>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="prevSection()">
-            <i class="fas fa-arrow-left"></i>
+</label>
+<textarea class="form-control" name="transportInfo" placeholder="Ex: Bus ligne 15 à 1 minute à pied..." rows="6"></textarea>
+</div>
+</div>
+<div class="form-actions">
+<button class="btn btn-secondary" onclick="prevSection()" type="button">
+<i class="fas fa-arrow-left"></i>
             Précédent
           </button>
-          <button type="button" class="btn btn-primary" onclick="nextSection()">
+<button class="btn btn-primary" onclick="nextSection()" type="button">
             Suivant
             <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Section 5: Aux Alentours -->
-      <div class="form-section" data-section="5">
-        <div class="form-card">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-map-marked-alt"></i>
+</button>
+</div>
+</div>
+<!-- Section 5: Aux Alentours -->
+<div class="form-section" data-section="5">
+<div class="form-card">
+<div class="section-header">
+<h2 class="section-title">
+<i class="fas fa-map-marked-alt"></i>
               Aux Alentours
             </h2>
-            <p class="section-description">
+<p class="section-description">
               Recommandations de restaurants, commerces et lieux à visiter
             </p>
-          </div>
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-utensils" style="color: var(--accent);"></i> Restaurants & Bars
+</div>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-utensils" style="color: var(--accent);"></i> Restaurants &amp; Bars
           </h3>
-
-          <div id="restaurantsContainer" class="repeatable-section">
-            <!-- Les restaurants seront ajoutés ici dynamiquement -->
-          </div>
-
-          <button type="button" class="add-item-btn" onclick="addRestaurant()">
-            <i class="fas fa-plus-circle"></i>
+<div class="repeatable-section" id="restaurantsContainer">
+<!-- Les restaurants seront ajoutés ici dynamiquement -->
+</div>
+<button class="add-item-btn" onclick="addRestaurant()" type="button">
+<i class="fas fa-plus-circle"></i>
             Ajouter un restaurant / bar
           </button>
-
-          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-shopping-bag" style="color: var(--accent);"></i> Commerces
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-shopping-bag" style="color: var(--accent);"></i> Commerces
           </h3>
-
-          <div class="form-group">
-            <label>
+<div class="form-group">
+<label>
               Liste des commerces
               <span class="hint">Supermarchés, boulangeries, pharmacies, etc. (un par ligne)</span>
-            </label>
-            <textarea class="form-control" name="shopsList" rows="6" placeholder="Ex:&#10;FRANPRIX - 6 rue de Pontoise&#10;Boulangerie LA POTERNE - Place du marché..."></textarea>
-          </div>
-
-          <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);">
-
-          <h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-            <i class="fas fa-map-signs" style="color: var(--accent);"></i> Lieux à Visiter
+</label>
+<textarea class="form-control" name="shopsList" placeholder="Ex:
+FRANPRIX - 6 rue de Pontoise
+Boulangerie LA POTERNE - Place du marché..." rows="6"></textarea>
+</div>
+<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
+<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
+<i class="fas fa-map-signs" style="color: var(--accent);"></i> Lieux à Visiter
           </h3>
-
-          <div id="placesContainer" class="repeatable-section">
-            <!-- Les lieux seront ajoutés ici dynamiquement -->
-          </div>
-
-          <button type="button" class="add-item-btn" onclick="addPlace()">
-            <i class="fas fa-plus-circle"></i>
+<div class="repeatable-section" id="placesContainer">
+<!-- Les lieux seront ajoutés ici dynamiquement -->
+</div>
+<button class="add-item-btn" onclick="addPlace()" type="button">
+<i class="fas fa-plus-circle"></i>
             Ajouter un lieu à visiter
           </button>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="prevSection()">
-            <i class="fas fa-arrow-left"></i>
+</div>
+<div class="form-actions">
+<button class="btn btn-secondary" onclick="prevSection()" type="button">
+<i class="fas fa-arrow-left"></i>
             Précédent
           </button>
-          <button type="submit" class="btn btn-accent">
-            <i class="fas fa-check-circle"></i>
+<button class="btn btn-accent" type="submit">
+<i class="fas fa-check-circle"></i>
             Créer le livret d'accueil
           </button>
-        </div>
-      </div>
-    </form>
-
-    <!-- Success Message -->
-      <div class="success-message" id="successMessage">
-  <div class="success-icon">
-    <i class="fas fa-check"></i>
-  </div>
-  <h2>Livret d'accueil créé avec succès !</h2>
-  <p>Votre livret d'accueil personnalisé a été généré.</p>
-  
-  <!-- QR Code Section -->
-  <div style="background: white; padding: 2rem; border-radius: 12px; margin: 2rem auto; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-    <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #374151;">
-      <i class="fas fa-qrcode"></i> QR Code du livret
+</div>
+</div>
+</form>
+<!-- Success Message -->
+<div class="success-message" id="successMessage">
+<div class="success-icon">
+<i class="fas fa-check"></i>
+</div>
+<h2>Livret d'accueil créé avec succès !</h2>
+<p>Votre livret d'accueil personnalisé a été généré.</p>
+<!-- QR Code Section -->
+<div style="background: white; padding: 2rem; border-radius: 12px; margin: 2rem auto; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+<h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #374151;">
+<i class="fas fa-qrcode"></i> QR Code du livret
     </h3>
-    <div id="qrcode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
-    <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem;">
+<div id="qrcode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
+<p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem;">
       Scannez ce code pour accéder directement au livret
     </p>
-    <button class="btn btn-secondary" onclick="downloadQRCode()" style="width: 100%;">
-      <i class="fas fa-download"></i>
+<button class="btn btn-secondary" onclick="downloadQRCode()" style="width: 100%;">
+<i class="fas fa-download"></i>
       Télécharger le QR Code
     </button>
-  </div>
-      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-        <button class="btn btn-primary" onclick="viewWelcomeBook()">
-          <i class="fas fa-eye"></i>
+</div>
+<div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+<button class="btn btn-primary" onclick="viewWelcomeBook()">
+<i class="fas fa-eye"></i>
           Voir le livret
         </button>
-        
-        <button class="btn btn-secondary" onclick="copyWelcomeBookLink(this)">
-          <i class="fas fa-copy"></i>
+<button class="btn btn-secondary" onclick="copyWelcomeBookLink(this)">
+<i class="fas fa-copy"></i>
           Copier le lien
         </button>
-
-        <button class="btn btn-secondary" onclick="modifyCurrentLivret()">
-          <i class="fas fa-edit"></i>
+<button class="btn btn-secondary" onclick="modifyCurrentLivret()">
+<i class="fas fa-edit"></i>
           Modifier
         </button>
-      </div>
-    </div>
-  </div>
+</div>
+</div>
+</div>
 <script>
 const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
@@ -1865,6 +1715,6 @@ function createNewLivret() {
 
 </script>
 </main>
-</div>
-</body>
+<main class="main-content"><div id="bhHeader"></div></main></div>
+<script src="/js/bh-layout.js"></script></body>
 </html>
