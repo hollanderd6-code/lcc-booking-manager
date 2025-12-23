@@ -4568,6 +4568,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
   document.addEventListener('DOMContentLoaded', bindKpiModalClicksOnce);
 function updateTopRisksKpi(bookings) {
     console.log('🎯 updateTopRisksKpi appelé avec', bookings ? bookings.length : 0, 'bookings');
+    console.log('📊 Bookings reçus:', bookings);
     
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -5031,9 +5032,14 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
         setTimeout(scrollCalendarToToday, 200);
         
         // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
+        console.log('⏰ Programmation du setTimeout pour updateTopRisksKpi dans 500ms...');
         setTimeout(() => {
+          console.log('⏰ setTimeout déclenché! Type de updateTopRisksKpi:', typeof updateTopRisksKpi);
+          console.log('📦 state.bookings disponible:', state.bookings ? state.bookings.length : 'AUCUN');
           if (typeof updateTopRisksKpi === 'function') {
             updateTopRisksKpi(state.bookings);
+          } else {
+            console.error('❌ updateTopRisksKpi n\'est PAS une fonction!');
           }
         }, 500);
       } catch (e) {
