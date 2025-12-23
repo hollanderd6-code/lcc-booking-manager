@@ -4656,8 +4656,20 @@ function updateTopRisksKpi(bookings) {
             </div>`;
           }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté sur le mois en cours.</div>`;
         }
+        
+        console.log('📦 Contenu HTML généré, longueur:', g ? g.innerHTML.length : 0);
+        
         const mm = document.getElementById('topRisksModal');
-        if (mm) { mm.style.display='flex'; mm.classList.add('active'); }
+        console.log('🎭 Modal element:', mm);
+        
+        if (mm) { 
+          mm.style.display = 'flex';
+          mm.classList.add('active');
+          document.body.style.overflow = 'hidden'; // Empêcher le scroll du body
+          console.log('✅ Modal devrait être visible maintenant');
+        } else {
+          console.error('❌ Modal topRisksModal introuvable dans le DOM');
+        }
       };
     }
   }
@@ -6441,12 +6453,29 @@ try {
         assignments = {};
       }
 
+      // Charger les cleaners depuis l'API au lieu du localStorage
       try {
-        cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
-        console.log('👷 Cleaners chargés:', cleaners);
+        const token = localStorage.getItem('lcc_token');
+        if (token && typeof API_URL !== 'undefined') {
+          const response = await fetch(`${API_URL}/api/cleaners`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            cleaners = data.cleaners || [];
+            console.log('👷 Cleaners chargés depuis API:', cleaners);
+          }
+        }
       } catch (e) {
-        cleaners = [];
+        console.log('⚠️ Erreur chargement cleaners depuis API, fallback localStorage');
+        try {
+          cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
+        } catch (e2) {
+          cleaners = [];
+        }
       }
+      
+      console.log('👷 Cleaners finaux:', cleaners);
 
       // même logique que sur cleaning-5.html
       function getReservationKey(reservation) {
@@ -6483,12 +6512,12 @@ try {
         // Format 1: uid
         assignedId = assignments[reservationKey];
         
-        // Format 2: propertyId::date>date
+        // Format 2: propertyId_date_date (avec underscore)
         if (!assignedId) {
           const start = booking.startDate || booking.start;
           const end = booking.endDate || booking.end;
           if (booking.propertyId && start && end) {
-            const altKey = booking.propertyId + '::' + String(start).slice(0, 10) + '>' + String(end).slice(0, 10);
+            const altKey = booking.propertyId + '_' + String(start).slice(0, 10) + '_' + String(end).slice(0, 10);
             assignedId = assignments[altKey];
             console.log('🔑 Essai clé alternative:', altKey, '→', assignedId);
           }
