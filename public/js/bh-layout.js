@@ -196,8 +196,40 @@
     `;
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function normalizeBranding() {
+  // Mobile header brand
+  const mobileLogoText = document.querySelector(".mobile-logo-text");
+  if (mobileLogoText) mobileLogoText.textContent = "Boostinghost";
+
+  const mobileLogo = document.querySelector(".mobile-logo");
+  if (mobileLogo) {
+    // Replace icon if it's the old calendar-check
+    const icon = mobileLogo.querySelector("i.fas, i.fa");
+    if (icon) {
+      // Use a simple inline SVG close to the sidebar mark
+      icon.outerHTML = `
+        <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+          <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
+                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 36V26H24V36"
+                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
+                fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 9L24 14H16L20 9Z" fill="white"/>
+        </svg>`;
+    }
+  }
+
+  // Sidebar brand title if needed
+  const sidebarTitle = document.querySelector(".sidebar-logo-title");
+  if (sidebarTitle) {
+    sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
     injectSidebar();
     injectHeader();
+    normalizeBranding();
   });
 })();
