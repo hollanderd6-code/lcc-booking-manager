@@ -4258,6 +4258,7 @@ function populateEditBookingProperties(selectedPropertyId) {
 
   // Make riskColor available everywhere (calendar, etc.)
   window.riskColor = function riskColor(level) {
+    if (level === 'critical') return '#dc2626'; // Rouge foncé
     if (level === 'red') return '#ef4444';
     if (level === 'orange') return '#f59e0b';
     return '#10b981';
@@ -4587,13 +4588,22 @@ function updateTopRisksKpi(reservations) {
     scored.sort((a, b) => (b.riskScore - a.riskScore));
     const top5 = scored.slice(0, 5);
 
+    const criticalCount = scored.filter(r => r.riskLevel === 'critical').length;
     const redCount = scored.filter(r => r.riskLevel === 'red').length;
     const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
 
     const valEl = document.getElementById('kpiTopRisksValue');
     const subEl = document.getElementById('kpiTopRisksSub');
     if (valEl) valEl.textContent = top5.length;
-    if (subEl) subEl.textContent = `${redCount} rouge • ${orangeCount} orange (mois en cours)`;
+    
+    let subText = '';
+    if (criticalCount > 0) subText += `${criticalCount} critique${criticalCount > 1 ? 's' : ''} • `;
+    if (redCount > 0) subText += `${redCount} rouge${redCount > 1 ? 's' : ''} • `;
+    if (orangeCount > 0) subText += `${orangeCount} orange${orangeCount > 1 ? 's' : ''}`;
+    if (!subText) subText = 'Aucun risque détecté';
+    else subText = subText.replace(/ • $/, '');
+    
+    if (subEl) subEl.textContent = subText;
 
     const card = document.getElementById('kpiTopRisksCard');
     if (card) {
@@ -4712,6 +4722,147 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
     };
   var MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+  // ========================================
+  // SYSTÈME DE CALCUL DE RISQUE
+  // ========================================
+  function calculateBookingRisk(booking) {
+    var score = 0;
+    var tags = [];
+    var recommendations = [];
+    
+    // Calculer la durée du séjour
+    var start = new Date(booking.startDate);
+    var end = new Date(booking.endDate);
+    var nights = Math.round((end - start) / MS_PER_DAY);
+    
+    // Calculer le délai de réservation (si createdAt disponible)
+    var now = new Date();
+    var daysUntilArrival = Math.round((start - now) / MS_PER_DAY);
+    
+    // CRITÈRE 1: Caution non prise (CRITIQUE pour Booking)
+    var platform = (booking.platform || booking.source || '').toLowerCase();
+    var isBooking = platform.includes('booking');
+    var isAirbnb = platform.includes('airbnb');
+    
+    if (isBooking && !booking.hasDeposit) {
+      score += 50;
+      tags.push('🚫 Pas de caution');
+      recommendations.push('⚠️ URGENT : Demander une caution via le système');
+    }
+    
+    // CRITÈRE 2: Réservation last minute
+    if (daysUntilArrival >= 0) {
+      if (daysUntilArrival < 2) {
+        score += 40;
+        tags.push('⚡ Last minute (<48h)');
+        recommendations.push('Vérifier l\'identité du voyageur');
+      } else if (daysUntilArrival < 7) {
+        score += 10;
+        tags.push('⏰ Résa récente (<7j)');
+      }
+    }
+    
+    // CRITÈRE 3: Durée très courte
+    if (nights === 1) {
+      score += 30;
+      tags.push('🌙 1 nuit');
+      recommendations.push('Risque prostitution/fête : surveiller');
+    } else if (nights === 2) {
+      score += 20;
+      tags.push('📅 2 nuits');
+    }
+    
+    // CRITÈRE 4: Weekend + courte durée
+    var dayOfWeek = start.getDay();
+    var isFriday = dayOfWeek === 5;
+    var isSaturday = dayOfWeek === 6;
+    if ((isFriday || isSaturday) && nights <= 2) {
+      score += 15;
+      tags.push('🎉 Weekend court');
+      recommendations.push('Risque fête : rappeler les règles de la maison');
+    }
+    
+    // CRITÈRE 5: Airbnb (pas de caution possible)
+    if (isAirbnb) {
+      score += 15;
+      tags.push('🏠 Airbnb (pas de caution)');
+      recommendations.push('Demander photo d\'identité par message');
+    }
+    
+    // CRITÈRE 6: Checklist non validée (si on a l'info)
+    // Note: On pourrait enrichir avec l'historique du logement
+    if (window.cleaningChecklists) {
+      var recentChecklists = window.cleaningChecklists.filter(function(c) {
+        return c.property_id === booking.propertyId && !c.is_validated;
+      });
+      if (recentChecklists.length > 0) {
+        score += 10;
+        tags.push('⚠️ Checklist précédente non validée');
+      }
+    }
+    
+    // BONUS: Réduire le risque pour les bons cas
+    if (booking.hasDeposit && booking.depositAmount > 0) {
+      score -= 20;
+      tags.push('✅ Caution OK');
+    }
+    
+    if (daysUntilArrival > 14) {
+      score -= 15;
+      tags.push('📆 Résa anticipée');
+    }
+    
+    if (nights > 7) {
+      score -= 10;
+      tags.push('🏖️ Long séjour');
+    }
+    
+    if (platform === 'direct') {
+      score -= 5;
+      tags.push('👤 Direct');
+    }
+    
+    // Limiter le score entre 0 et 100
+    score = Math.max(0, Math.min(100, score));
+    
+    // Déterminer le niveau et le label
+    var level, label;
+    if (score >= 71) {
+      level = 'critical';
+      label = 'CRITIQUE';
+    } else if (score >= 51) {
+      level = 'red';
+      label = 'ÉLEVÉ';
+    } else if (score >= 31) {
+      level = 'orange';
+      label = 'MOYEN';
+    } else {
+      level = 'green';
+      label = 'FAIBLE';
+    }
+    
+    // Créer le résumé
+    var summary = nights + ' nuit' + (nights > 1 ? 's' : '') + ' • ';
+    if (isBooking) summary += 'Booking';
+    else if (isAirbnb) summary += 'Airbnb';
+    else summary += 'Direct';
+    
+    if (booking.hasDeposit) summary += ' • Caution OK';
+    
+    return {
+      score: score,
+      level: level,
+      label: label,
+      summary: summary,
+      tags: tags,
+      recommendations: recommendations
+    };
+  }
+  
+  // Rendre la fonction accessible globalement
+  window.calculateBookingRisk = calculateBookingRisk;
+  // ========================================
+
     var state = {
       currentView: 'month',
       currentDate: new Date(),
@@ -4787,14 +4938,33 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
           if (!start || !end) continue;
           bookings.push({
             id: String(r2.id || k),
+            uid: r2.uid || null,
+            reservationKey: r2.reservationKey || null,
             propertyId: bpropId,
             propertyName: r2.propertyName || (r2.property && r2.property.name) || '',
             startDate: start,
             endDate: end,
             guestName: r2.guestName || r2.customerName || '',
-            platform: normalizePlatform(r2.source || r2.platform || 'direct')
+            platform: normalizePlatform(r2.source || r2.platform || 'direct'),
+            source: r2.source || r2.platform || 'direct',
+            createdAt: r2.createdAt || r2.created_at || null,
+            hasDeposit: r2.hasDeposit || r2.has_deposit || false,
+            depositAmount: r2.depositAmount || r2.deposit_amount || 0
           });
         }
+        
+        // Calculer le risque pour chaque réservation
+        bookings = bookings.map(function(booking) {
+          var risk = calculateBookingRisk(booking);
+          booking.riskScore = risk.score;
+          booking.riskLevel = risk.level;
+          booking.riskLabel = risk.label;
+          booking.riskSummary = risk.summary;
+          booking.riskTags = risk.tags;
+          booking.riskRecommendations = risk.recommendations;
+          return booking;
+        });
+        
         state.bookings = bookings;
 
         console.info('✅ Calendrier moderne: ' + state.properties.length +
@@ -5153,6 +5323,7 @@ function scrollCalendarToToday() {
       return cell;
     }
 function riskColor(level) {
+  if (level === 'critical') return '#dc2626'; // Rouge foncé
   if (level === 'red') return '#ef4444';
   if (level === 'orange') return '#f59e0b';
   return '#10b981';
@@ -5227,10 +5398,11 @@ function riskColor(level) {
 
           // Texte seulement sur le 1er jour
 if (j === 0 || cells.length === 1) {
-    // ✅ DOT risque (vert/orange/rouge)
+    // ✅ DOT risque (vert/orange/rouge/critique)
   var rawLevel = (b.riskLevel || b.riskLabel || '').toString().toLowerCase();
   var level = 'green';
-  if (rawLevel.includes('red') || rawLevel.includes('rouge') || rawLevel.includes('high') || rawLevel.includes('élev')) level = 'red';
+  if (rawLevel.includes('critical') || rawLevel.includes('critique')) level = 'critical';
+  else if (rawLevel.includes('red') || rawLevel.includes('rouge') || rawLevel.includes('high') || rawLevel.includes('élev')) level = 'red';
   else if (rawLevel.includes('orange') || rawLevel.includes('medium') || rawLevel.includes('moy')) level = 'orange';
 
   var dot = document.createElement('span');
@@ -6044,8 +6216,10 @@ try {
   // ----- RISQUE
   const riskScore = booking.riskScore;
   const riskLabel = booking.riskLabel || booking.riskLevel || '';
+  const riskLevel = booking.riskLevel || '';
   const riskSummary = booking.riskSummary || '';
   const riskTags = Array.isArray(booking.riskTags) ? booking.riskTags : [];
+  const riskRecommendations = Array.isArray(booking.riskRecommendations) ? booking.riskRecommendations : [];
 
   if (riskScore != null) {
     let riskGroup = detailsContent.querySelector('[data-risk-info="1"]');
@@ -6056,30 +6230,48 @@ try {
       detailsContent.appendChild(riskGroup);
     }
 
+    // Couleur adaptée au niveau de risque
+    const barColor = window.riskColor ? window.riskColor(riskLevel) : '#10b981';
+    
     const tagsHtml = riskTags.length
-      ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+      ? `<div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
           ${riskTags.map(t => `
-            <span style="font-size:11px; font-weight:700; padding:4px 8px; border-radius:999px; background:#f3f4f6;">
+            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f3f4f6; color:#374151;">
               ${String(t)}
             </span>`).join('')}
         </div>`
       : '';
+    
+    const recommendationsHtml = riskRecommendations.length
+      ? `<div style="margin-top:12px; padding:12px; background:#fef3c7; border-left:3px solid #f59e0b; border-radius:6px;">
+          <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:#92400e;">
+            <i class="fas fa-lightbulb"></i> Actions recommandées :
+          </div>
+          ${riskRecommendations.map(r => `
+            <div style="font-size:12px; margin:4px 0; color:#78350f;">
+              • ${String(r)}
+            </div>`).join('')}
+        </div>`
+      : '';
 
     riskGroup.innerHTML = `
-      <label><i class="fas fa-shield-alt"></i> Risque</label>
+      <label><i class="fas fa-shield-alt"></i> Analyse de risque</label>
       <div class="detail-value">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
           <div>
-            <div style="font-weight:800; font-size:16px;">${riskLabel} — ${Math.round(riskScore)}/100</div>
+            <div style="font-weight:800; font-size:18px; color:${barColor};">
+              ${riskLabel} — ${Math.round(riskScore)}/100
+            </div>
             ${riskSummary ? `<div style="margin-top:4px; font-size:13px; opacity:.8;">${riskSummary}</div>` : ''}
           </div>
           <div style="min-width:120px;">
-            <div style="height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
-              <div style="height:10px; width:${Math.max(0, Math.min(100, riskScore))}%; background:#10b981;"></div>
+            <div style="height:12px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
+              <div style="height:12px; width:${Math.max(0, Math.min(100, riskScore))}%; background:${barColor}; transition: width 0.3s ease;"></div>
             </div>
           </div>
         </div>
         ${tagsHtml}
+        ${recommendationsHtml}
       </div>
     `;
   }
@@ -7643,6 +7835,7 @@ if (document.readyState === 'loading') {
   // Ensure global riskColor for calendar + modals
   if (typeof window.riskColor !== 'function') {
     window.riskColor = function(level){
+      if (level === 'critical') return '#dc2626'; // Rouge foncé
       if (level === 'red') return '#ef4444';
       if (level === 'orange') return '#f59e0b';
       return '#10b981';
