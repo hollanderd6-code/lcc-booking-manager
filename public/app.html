@@ -1,27 +1,22 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+
+<html data-theme="light" lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost Manager – Dashboard</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
-  
-  <!-- Platform CSS -->
-  <link rel="stylesheet" href="/css/style.css?v=3">
-
-   <style>
+<meta charset="utf-8"/>
+<meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
+<meta content="no-cache" http-equiv="Pragma"/>
+<meta content="0" http-equiv="Expires"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boostinghost Manager – Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
+<!-- Platform CSS -->
+<link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -335,8 +330,7 @@
 }
 
   </style>
-
-  <style>
+<style>
 
 /* ============================================
        NOUVEAU CALENDRIER MODERNE
@@ -1538,9 +1532,7 @@
 }
 
   </style>
-
-
-  <style>
+<style>
     .status-icon .status-logo {
       width: 18px;
       height: 18px;
@@ -1855,7 +1847,7 @@
   }
 }
   </style>
-  <!-- Simplification mobile : KPI + calendrier uniquement -->
+<!-- Simplification mobile : KPI + calendrier uniquement -->
 <style>
   @media (max-width: 768px) {
     /* On masque les cartes de connexions + overview + onboarding + filtres calendrier */
@@ -2294,655 +2286,578 @@
   }
 }
 </style>
-
-  <script src="/js/auth-fetch.js"></script>
-
+<script src="/js/auth-fetch.js"></script>
 <style>
 /* UI fixes */
 #todayMovesModal .modal-footer,
 #cleaning48hModal .modal-footer { display: none !important; }
 </style>
-
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
-  <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px 24px; text-align: center; font-size: 15px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 9999;">
-    <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
-    <span id="alertMessage"></span>
-    <button onclick="window.location.href='/pricing.html'" style="margin-left: 16px; background: white; color: #d97706; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+<div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px 24px; text-align: center; font-size: 15px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 9999;">
+<i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+<span id="alertMessage"></span>
+<button onclick="window.location.href='/pricing.html'" style="margin-left: 16px; background: white; color: #d97706; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
       Choisir un plan
     </button>
-  </div>
 </div>
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Boostinghost</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">
-  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-    <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" 
-          stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M16 36V26H24V36" 
-          stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M20 4L4 18H10V22H30V18H36L20 4Z" 
-          fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-  </svg>
-  <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
-    <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
-      <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
-    </span>
-    <span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
+</div>
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Boostinghost</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<aside class="sidebar">
+<div class="sidebar-header">
+<a class="sidebar-logo" href="/">
+<svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
+<path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<path d="M16 36V26H24V36" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<path d="M20 4L4 18H10V22H30V18H36L20 4Z" fill="#10B981" stroke="#10B981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M20 9L24 14H16L20 9Z" fill="white"></path>
+</svg>
+<div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
+<span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
+<span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
+</span>
+<span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
       Smart Property Manager
     </span>
-  </div>
-</a>
- </div>     
-      <nav class="sidebar-nav">
-        <!-- PRINCIPAL -->
-        <div class="nav-section">
-          <div class="nav-section-title">Principal</div>
-
-          <a href="/app.html" class="nav-item active" data-page="app">
-            <i class="fas fa-th-large"></i>
-            <span>Dashboard</span>
-          </a>
-
-          <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-            <i class="fas fa-calendar"></i>
-            <span>Calendrier</span>
-            <span class="nav-badge" id="navTotalReservations">0</span>
-          </a>
-
-          <a href="/messages.html" class="nav-item" data-page="messages">
-            <i class="fas fa-comment-dots"></i>
-            <span>Messages</span>
-          </a>
-        </div>
-
-        <!-- GESTION -->
-        <div class="nav-section">
-          <div class="nav-section-title">Gestion</div>
-
-          <a href="/settings.html" class="nav-item" data-page="settings">
-            <i class="fas fa-home"></i>
-            <span>Mes logements</span>
-          </a>
-
-          <a href="/welcome.html" class="nav-item" data-page="welcome">
-            <i class="fas fa-book-open"></i>
-            <span>Livret d'accueil</span>
-          </a>
-
-          <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-            <i class="fas fa-broom"></i>
-            <span>Gestion du ménage</span>
-             </a>
-
-          <div class="nav-section">
-  <div class="nav-section-title"><Facturation></Facturation></div>
-  <a href="/factures.html" class="nav-item">
-    <i class="fas fa-file-invoice"></i>
-    <span>Factures clients</span>
-  </a>
-  <a href="/factures-proprietaires.html" class="nav-item">
-    <i class="fas fa-file-invoice-dollar"></i>
-    <span>Factures propriétaires</span>
-  </a>
 </div>
-
-
-          <a href="/deposits.html" class="nav-item" data-page="deposits">
-            <i class="fas fa-shield-alt"></i>
-            <span>Cautions</span>
-          </a>
-
-          <a href="/notifications.html" class="nav-item" data-page="notifications">
-            <i class="fas fa-bell"></i>
-            <span>Notifications</span>
-          </a>
-        </div>
-
-        <!-- PARAMÈTRES -->
-        <div class="nav-section">
-          <div class="nav-section-title">Paramètres</div>
-
-          <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-            <i class="fas fa-cog"></i>
-            <span>Paramètres</span>
-          </a>
-
-          <a href="/help.html" class="nav-item" data-page="help">
-            <i class="fas fa-question-circle"></i>
-            <span>Aide</span>
-          </a>
-        </div>
-      </nav>
-      
-      <div class="sidebar-footer">
-  <div class="user-profile">
-    <div class="user-avatar" id="sidebarUserAvatar">C</div>
-    <div class="user-info">
-      <div class="user-name" id="sidebarUserName">Utilisateur</div>
-      <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-    </div>
-
-    <button class="btn btn-ghost btn-xs" id="logoutBtn">
-      <i class="fas fa-sign-out-alt"></i>
-    </button>
-  </div>
+</a>
+</div>
+<nav class="sidebar-nav">
+<!-- PRINCIPAL -->
+<div class="nav-section">
+<div class="nav-section-title">Principal</div>
+<a class="nav-item active" data-page="app" href="/app.html">
+<i class="fas fa-th-large"></i>
+<span>Dashboard</span>
+</a>
+<a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
+<i class="fas fa-calendar"></i>
+<span>Calendrier</span>
+<span class="nav-badge" id="navTotalReservations">0</span>
+</a>
+<a class="nav-item" data-page="messages" href="/messages.html">
+<i class="fas fa-comment-dots"></i>
+<span>Messages</span>
+</a>
+</div>
+<!-- GESTION -->
+<div class="nav-section">
+<div class="nav-section-title">Gestion</div>
+<a class="nav-item" data-page="settings" href="/settings.html">
+<i class="fas fa-home"></i>
+<span>Mes logements</span>
+</a>
+<a class="nav-item" data-page="welcome" href="/welcome.html">
+<i class="fas fa-book-open"></i>
+<span>Livret d'accueil</span>
+</a>
+<a class="nav-item" data-page="cleaning" href="/cleaning.html">
+<i class="fas fa-broom"></i>
+<span>Gestion du ménage</span>
+</a>
+<div class="nav-section">
+<div class="nav-section-title"><facturation></facturation></div>
+<a class="nav-item" href="/factures.html">
+<i class="fas fa-file-invoice"></i>
+<span>Factures clients</span>
+</a>
+<a class="nav-item" href="/factures-proprietaires.html">
+<i class="fas fa-file-invoice-dollar"></i>
+<span>Factures propriétaires</span>
+</a>
+</div>
+<a class="nav-item" data-page="deposits" href="/deposits.html">
+<i class="fas fa-shield-alt"></i>
+<span>Cautions</span>
+</a>
+<a class="nav-item" data-page="notifications" href="/notifications.html">
+<i class="fas fa-bell"></i>
+<span>Notifications</span>
+</a>
+</div>
+<!-- PARAMÈTRES -->
+<div class="nav-section">
+<div class="nav-section-title">Paramètres</div>
+<a class="nav-item" data-page="settings-account" href="/settings-account.html">
+<i class="fas fa-cog"></i>
+<span>Paramètres</span>
+</a>
+<a class="nav-item" data-page="help" href="/help.html">
+<i class="fas fa-question-circle"></i>
+<span>Aide</span>
+</a>
+</div>
+</nav>
+<div class="sidebar-footer">
+<div class="user-profile">
+<div class="user-avatar" id="sidebarUserAvatar">C</div>
+<div class="user-info">
+<div class="user-name" id="sidebarUserName">Utilisateur</div>
+<div class="user-email" id="sidebarUserCompany">Mon espace</div>
+</div>
+<button class="btn btn-ghost btn-xs" id="logoutBtn">
+<i class="fas fa-sign-out-alt"></i>
+</button>
+</div>
 </div>
 </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Vue d’ensemble</div>
-          <h1 class="page-title">Dashboard</h1>
-          <p class="page-subtitle">
+<!-- Main Content -->
+<main class="main-content">
+<!-- Header -->
+<header class="main-header">
+<div class="header-left">
+<div class="page-kicker">Vue d’ensemble</div>
+<h1 class="page-title">Dashboard</h1>
+<p class="page-subtitle">
             Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
           </p>
-        </div>
-        
-        <div class="header-actions">
-          <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-
-          <button class="btn-icon" id="notificationsBtn" title="Notifications">
-            <i class="fas fa-bell"></i>
-            <span class="notification-badge"></span>
-          </button>
-
-          <button class="theme-toggle" id="themeToggle" title="Changer le thème">
-            <i class="fas fa-moon"></i>
-          </button>
-        </div>
-      </header>
-      <div class="page-content">
-        
-      <!-- Page Content -->
-        
-        <!-- ÉTAT DES CONNEXIONS -->
-        <section class="status-grid">
-          <!-- Airbnb -->
+</div>
+<div class="header-actions">
+<button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
+<i class="fas fa-sync-alt"></i>
+</button>
+<button class="btn-icon" id="notificationsBtn" title="Notifications">
+<i class="fas fa-bell"></i>
+<span class="notification-badge"></span>
+</button>
+<button class="theme-toggle" id="themeToggle" title="Changer le thème">
+<i class="fas fa-moon"></i>
+</button>
+</div>
+</header>
+<div class="page-content">
+<!-- Page Content -->
+<!-- ÉTAT DES CONNEXIONS -->
+<section class="status-grid">
+<!-- Airbnb -->
 <article class="status-card">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-airbnb">
-      <i class="fa-brands fa-airbnb"></i>
-    </div>
-    <span class="status-label status-warning">À connecter</span>
-  </div>
-  <h3>Airbnb</h3>
-  <p>Ajoutez vos liens iCal Airbnb.</p>
-  <button class="btn btn-ghost btn-xs">Ajouter un iCal</button>
+<div class="status-card-header">
+<div class="status-icon status-icon-airbnb">
+<i class="fa-brands fa-airbnb"></i>
+</div>
+<span class="status-label status-warning">À connecter</span>
+</div>
+<h3>Airbnb</h3>
+<p>Ajoutez vos liens iCal Airbnb.</p>
+<button class="btn btn-ghost btn-xs">Ajouter un iCal</button>
 </article>
-
 <!-- Booking.com -->
 <article class="status-card">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-booking">
-      <span class="status-booking-letter">B.</span>
-    </div>
-    <span class="status-label status-warning">À connecter</span>
-  </div>
-  <h3>Booking.com</h3>
-  <p>Ajoutez votre lien iCal Booking.com.</p>
-  <button class="btn btn-ghost btn-xs">Ajouter un iCal</button>
+<div class="status-card-header">
+<div class="status-icon status-icon-booking">
+<span class="status-booking-letter">B.</span>
+</div>
+<span class="status-label status-warning">À connecter</span>
+</div>
+<h3>Booking.com</h3>
+<p>Ajoutez votre lien iCal Booking.com.</p>
+<button class="btn btn-ghost btn-xs">Ajouter un iCal</button>
 </article>
-
 <!-- Stripe -->
 <article class="status-card">
-  <div class="status-card-header">
-    <div class="status-icon status-icon-stripe">
-      <i class="fa-brands fa-stripe-s"></i>
-    </div>
-    <span class="status-label status-ok">Connecté</span>
-  </div>
-  <h3>Stripe</h3>
-  <p>Cautions et paiements sécurisés.</p>
-  <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">
+<div class="status-card-header">
+<div class="status-icon status-icon-stripe">
+<i class="fa-brands fa-stripe-s"></i>
+</div>
+<span class="status-label status-ok">Connecté</span>
+</div>
+<h3>Stripe</h3>
+<p>Cautions et paiements sécurisés.</p>
+<button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">
     Voir les cautions
   </button>
 </article>
-
-          <article class="status-card">
-            <div class="status-card-header">
-              <div class="status-icon status-icon-ai">
-                <i class="fas fa-wand-magic-sparkles"></i>
-              </div>
-              <span class="status-label status-ok">Actif</span>
-            </div>
-            <h3>Messages automatiques</h3>
-            <p>Scénarios IA prêts pour vos voyageurs.</p>
-            <button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
-          </article>
-        </section>
-
-                <!-- KPI PRINCIPAUX -->
-        <section class="kpi-grid">
-
-  <!-- KPI 1 : Logements actifs -->
-  <article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
-    <div class="kpi-header">
-      <span class="kpi-label">Logements actifs</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-home"></i> synchronisés
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value" id="kpiPropertiesValue">0</span>
-      <span class="kpi-sub">connectés à au moins un OTA</span>
-    </div>
-  </article>
-
-  <!-- KPI 2 : Check-in / Check-out du jour -->
-  <article class="kpi-card kpi-card--clickable" id="kpiTodayMovesCard">
-    <div class="kpi-header">
-      <span class="kpi-label">Check-in / Check-out du jour</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-right-left"></i> aujourd’hui
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value" id="kpiTodayMovesValue">0</span>
-      <span class="kpi-sub" id="kpiTodayMovesSub">0 arrivées • 0 départs</span>
-    </div>
-  </article>
-
-  <!-- KPI 3 : Ménages à prévoir dans les 48h -->
-  <article class="kpi-card kpi-card--clickable" id="kpiCleaning48hCard">
-    <div class="kpi-header">
-      <span class="kpi-label">Ménages à prévoir (48h)</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-broom"></i> planning
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value" id="kpiCleaning48hValue">0</span>
-      <span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
-    </div>
-  </article>
-
-  <!-- KPI 4 : Top risques du mois -->
-  <article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
-    <div class="kpi-header">
-      <span class="kpi-label">Top risques du mois</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-shield-alt"></i> IA Risk
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value" id="kpiTopRisksValue">0</span>
-      <span class="kpi-sub" id="kpiTopRisksSub">0 rouge • 0 orange</span>
-    </div>
-  </article>
-
-  <!-- KPI 5 : Taux d'occupation -->
-  <article class="kpi-card kpi-card--clickable" id="kpiOccupancyCard">
-    <div class="kpi-header">
-      <span class="kpi-label">Taux d'occupation</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-calendar"></i> mois
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value" id="kpiOccupancyValue">0%</span>
-      <span class="kpi-sub">sur le mois en cours</span>
-    </div>
-  </article>
-
+<article class="status-card">
+<div class="status-card-header">
+<div class="status-icon status-icon-ai">
+<i class="fas fa-wand-magic-sparkles"></i>
+</div>
+<span class="status-label status-ok">Actif</span>
+</div>
+<h3>Messages automatiques</h3>
+<p>Scénarios IA prêts pour vos voyageurs.</p>
+<button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
+</article>
 </section>
-
-        <section class="onboarding-section" id="onboardingSection">
-          <header class="onboarding-header">
-            <div>
-              <h2>Bien démarrer avec Boostinghost</h2>
-              <p>Complétez ces étapes clés pour automatiser votre gestion.</p>
-            </div>
-            <span class="onboarding-progress-badge">
-              <span id="onboardingProgressValue">2</span>/4 complétées
+<!-- KPI PRINCIPAUX -->
+<section class="kpi-grid">
+<!-- KPI 1 : Logements actifs -->
+<article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
+<div class="kpi-header">
+<span class="kpi-label">Logements actifs</span>
+<span class="kpi-pill kpi-pill-neutral">
+<i class="fas fa-home"></i> synchronisés
+      </span>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiPropertiesValue">0</span>
+<span class="kpi-sub">connectés à au moins un OTA</span>
+</div>
+</article>
+<!-- KPI 2 : Check-in / Check-out du jour -->
+<article class="kpi-card kpi-card--clickable" id="kpiTodayMovesCard">
+<div class="kpi-header">
+<span class="kpi-label">Check-in / Check-out du jour</span>
+<span class="kpi-pill kpi-pill-neutral">
+<i class="fas fa-right-left"></i> aujourd’hui
+      </span>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiTodayMovesValue">0</span>
+<span class="kpi-sub" id="kpiTodayMovesSub">0 arrivées • 0 départs</span>
+</div>
+</article>
+<!-- KPI 3 : Ménages à prévoir dans les 48h -->
+<article class="kpi-card kpi-card--clickable" id="kpiCleaning48hCard">
+<div class="kpi-header">
+<span class="kpi-label">Ménages à prévoir (48h)</span>
+<span class="kpi-pill kpi-pill-neutral">
+<i class="fas fa-broom"></i> planning
+      </span>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiCleaning48hValue">0</span>
+<span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
+</div>
+</article>
+<!-- KPI 4 : Top risques du mois -->
+<article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
+<div class="kpi-header">
+<span class="kpi-label">Top risques du mois</span>
+<span class="kpi-pill kpi-pill-neutral">
+<i class="fas fa-shield-alt"></i> IA Risk
+      </span>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiTopRisksValue">0</span>
+<span class="kpi-sub" id="kpiTopRisksSub">0 rouge • 0 orange</span>
+</div>
+</article>
+<!-- KPI 5 : Taux d'occupation -->
+<article class="kpi-card kpi-card--clickable" id="kpiOccupancyCard">
+<div class="kpi-header">
+<span class="kpi-label">Taux d'occupation</span>
+<span class="kpi-pill kpi-pill-neutral">
+<i class="fas fa-calendar"></i> mois
+      </span>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiOccupancyValue">0%</span>
+<span class="kpi-sub">sur le mois en cours</span>
+</div>
+</article>
+</section>
+<section class="onboarding-section" id="onboardingSection">
+<header class="onboarding-header">
+<div>
+<h2>Bien démarrer avec Boostinghost</h2>
+<p>Complétez ces étapes clés pour automatiser votre gestion.</p>
+</div>
+<span class="onboarding-progress-badge">
+<span id="onboardingProgressValue">2</span>/4 complétées
             </span>
-          </header>
-
-          <div class="onboarding-steps">
-            <button class="onboarding-step" data-step="property" onclick="window.location.href='/settings.html'">
-              <div class="onboarding-step-icon done">
-                <i class="fas fa-home"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Ajouter votre premier logement</h3>
-                <p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
-              </div>
-              <span class="onboarding-step-status done">Terminé</span>
-            </button>
-
-            <button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
-              <div class="onboarding-step-icon todo">
-                <i class="fas fa-link"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Connecter vos liens iCal</h3>
-                <p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
-              </div>
-              <span class="onboarding-step-status todo">À faire</span>
-            </button>
-
-            <button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
-              <div class="onboarding-step-icon todo">
-                <i class="fab fa-stripe-s"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Connecter Stripe</h3>
-                <p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
-              </div>
-              <span class="onboarding-step-status todo">À faire</span>
-            </button>
-
-            <button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
-              <div class="onboarding-step-icon done">
-                <i class="fas fa-comment-dots"></i>
-              </div>
-              <div class="onboarding-step-content">
-                <h3>Configurer les messages automatiques</h3>
-                <p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
-              </div>
-              <span class="onboarding-step-status done">Terminé</span>
-            </button>
-          </div>
-        </section>
-
-        <!-- CHECKLISTS DE MÉNAGE -->
-<section class="cleaning-checklists-widget">
-  <div class="widget-header">
-    <div>
-      <div class="widget-kicker">Suivi du ménage</div>
-      <div class="widget-title">Checklists validées</div>
-    </div>
-    <button class="btn btn-ghost btn-sm" onclick="window.location.href='/cleaning.html'">
-      <i class="fas fa-cog"></i> Gérer
-    </button>
-  </div>
-  
-  <div id="checklistsContainer" class="checklists-grid">
-    <!-- Les checklists seront chargées ici -->
-    <div class="loading-state">
-      <i class="fas fa-spinner fa-spin"></i>
-      <span>Chargement...</span>
-    </div>
-  </div>
+</header>
+<div class="onboarding-steps">
+<button class="onboarding-step" data-step="property" onclick="window.location.href='/settings.html'">
+<div class="onboarding-step-icon done">
+<i class="fas fa-home"></i>
+</div>
+<div class="onboarding-step-content">
+<h3>Ajouter votre premier logement</h3>
+<p>Déclarez au moins un logement avec son nom, adresse et capacité.</p>
+</div>
+<span class="onboarding-step-status done">Terminé</span>
+</button>
+<button class="onboarding-step" data-step="ical" onclick="window.location.href='/settings.html'">
+<div class="onboarding-step-icon todo">
+<i class="fas fa-link"></i>
+</div>
+<div class="onboarding-step-content">
+<h3>Connecter vos liens iCal</h3>
+<p>Collez les URL iCal Airbnb, Booking, Abritel… pour centraliser votre calendrier.</p>
+</div>
+<span class="onboarding-step-status todo">À faire</span>
+</button>
+<button class="onboarding-step" data-step="stripe" onclick="window.location.href='/settings-account.html'">
+<div class="onboarding-step-icon todo">
+<i class="fab fa-stripe-s"></i>
+</div>
+<div class="onboarding-step-content">
+<h3>Connecter Stripe</h3>
+<p>Activez les cautions et paiements sécurisés pour vos réservations.</p>
+</div>
+<span class="onboarding-step-status todo">À faire</span>
+</button>
+<button class="onboarding-step" data-step="messages" onclick="window.location.href='/messages.html'">
+<div class="onboarding-step-icon done">
+<i class="fas fa-comment-dots"></i>
+</div>
+<div class="onboarding-step-content">
+<h3>Configurer les messages automatiques</h3>
+<p>Créez vos scénarios : avant arrivée, check-in, pendant le séjour, départ…</p>
+</div>
+<span class="onboarding-step-status done">Terminé</span>
+</button>
+</div>
 </section>
-
-        <!-- Property Filters -->
-        <section class="card mb-lg" id="calendarFiltersSection">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-filter"></i>
+<!-- CHECKLISTS DE MÉNAGE -->
+<section class="cleaning-checklists-widget">
+<div class="widget-header">
+<div>
+<div class="widget-kicker">Suivi du ménage</div>
+<div class="widget-title">Checklists validées</div>
+</div>
+<button class="btn btn-ghost btn-sm" onclick="window.location.href='/cleaning.html'">
+<i class="fas fa-cog"></i> Gérer
+    </button>
+</div>
+<div class="checklists-grid" id="checklistsContainer">
+<!-- Les checklists seront chargées ici -->
+<div class="loading-state">
+<i class="fas fa-spinner fa-spin"></i>
+<span>Chargement...</span>
+</div>
+</div>
+</section>
+<!-- Property Filters -->
+<section class="card mb-lg" id="calendarFiltersSection">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-filter"></i>
               Filtrer par logement
             </div>
-            <button class="btn btn-ghost" onclick="clearFilters()">
-              <i class="fas fa-times"></i>
+<button class="btn btn-ghost" onclick="clearFilters()">
+<i class="fas fa-times"></i>
               Réinitialiser
             </button>
-          </div>
-          <div class="property-filters" id="propertyFilters">
-            <!-- Généré dynamiquement par app.js -->
-          </div>
-        </section>
-        
-        <!-- Calendar Card -->
-        <section class="card" id="calendarSection" style="display:block !important;">
-          <div class="section-header">
-            <h2 class="section-title">
-              
-            </h2>
-            
-          </div>
-          
-          <!-- NOUVEAU CALENDRIER MODERNE -->
-          <div class="calendar-wrapper">
-
-            <!-- Calendar Header -->
-            <div class="calendar-modern-header">
-              <div class="calendar-header-top">
-                <h3 class="calendar-title-modern">
-                  <i class="fas fa-calendar"></i>
-                  <span>Calendrier</span>
-                </h3>
-                <div class="calendar-actions-top">
-                  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
-                    <i class="fas fa-search"></i>
-                  </button>
-                  <button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
-                    <i class="fas fa-filter"></i>
-                  </button>
-                  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
-                    <i class="fas fa-cog"></i>
-                  </button>
-                </div>
-              </div>
-              
-              <!-- View Selector -->
-              <div class="view-selector">
-                <div class="view-tabs">
-                  <button class="view-tab" data-view="day">
-                    <i class="fas fa-calendar-day"></i>
-                    <span>Jour</span>
-                  </button>
-                  <button class="view-tab" data-view="week">
-                    <i class="fas fa-calendar-week"></i>
-                    <span>Semaine</span>
-                  </button>
-                  <button class="view-tab active" data-view="month">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Mois</span>
-                  </button>
-                  <button class="view-tab" data-view="year">
-                    <i class="fas fa-calendar"></i>
-                    <span>Année</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Period Navigation -->
-            <div class="period-navigation">
-              <button class="period-nav-btn" id="prevPeriod">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              <div class="period-display">
-                <span class="month-name" id="currentMonth">Novembre</span>
-                <span class="year" id="currentYear">2025</span>
-              </div>
-              <button class="period-nav-btn" id="nextPeriod">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-            </div>
-            
-            <!-- Calendar Container -->
-            <div class="calendar-container">
-              <!-- Property List Column -->
-              <div class="property-list-column">
-                <div class="property-list-header">
-                  <span>Logements</span>
-                </div>
-                <div class="property-list-items" id="propertyList">
-                  <!-- Les logements seront ajoutés dynamiquement -->
-                </div>
-              </div>
-              
-              <!-- Calendar Grid Wrapper -->
-              <div class="calendar-grid-wrapper">
-                <!-- Days Header -->
-                <div class="days-header" id="daysHeader">
-                  <!-- Les jours seront ajoutés dynamiquement -->
-                </div>
-                
-                <!-- Calendar Grid -->
-                <div class="calendar-grid" id="calendarGrid">
-                  <!-- Les cellules seront ajoutées dynamiquement -->
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        
-      </div>
-
-      <!-- Notifications Panel -->
-     <aside class="notifications-panel" id="notificationsPanel">
-  <div class="notifications-header">
-    <h2><i class="fas fa-bell"></i> Activité</h2>
-    <button class="btn-icon" id="notificationsCloseBtn">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
-  <div class="notifications-body" id="notificationsList">
-    
-    <!-- Section : Aujourd'hui -->
-    <div class="activity-section">
-      <div class="activity-section-header">
-        <i class="fas fa-calendar-day"></i>
-        <h3>Aujourd'hui</h3>
-      </div>
-      <div id="activityToday" class="activity-list">
-        <div class="activity-loading">
-          <i class="fas fa-spinner fa-spin"></i> Chargement...
+</div>
+<div class="property-filters" id="propertyFilters">
+<!-- Généré dynamiquement par app.js -->
+</div>
+</section>
+<!-- Calendar Card -->
+<section class="card" id="calendarSection" style="display:block !important;">
+<div class="section-header">
+<h2 class="section-title">
+</h2>
+</div>
+<!-- NOUVEAU CALENDRIER MODERNE -->
+<div class="calendar-wrapper">
+<!-- Calendar Header -->
+<div class="calendar-modern-header">
+<div class="calendar-header-top">
+<h3 class="calendar-title-modern">
+<i class="fas fa-calendar"></i>
+<span>Calendrier</span>
+</h3>
+<div class="calendar-actions-top">
+<button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
+<i class="fas fa-search"></i>
+</button>
+<button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
+<i class="fas fa-filter"></i>
+</button>
+<button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
+<i class="fas fa-cog"></i>
+</button>
+</div>
+</div>
+<!-- View Selector -->
+<div class="view-selector">
+<div class="view-tabs">
+<button class="view-tab" data-view="day">
+<i class="fas fa-calendar-day"></i>
+<span>Jour</span>
+</button>
+<button class="view-tab" data-view="week">
+<i class="fas fa-calendar-week"></i>
+<span>Semaine</span>
+</button>
+<button class="view-tab active" data-view="month">
+<i class="fas fa-calendar-alt"></i>
+<span>Mois</span>
+</button>
+<button class="view-tab" data-view="year">
+<i class="fas fa-calendar"></i>
+<span>Année</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Period Navigation -->
+<div class="period-navigation">
+<button class="period-nav-btn" id="prevPeriod">
+<i class="fas fa-chevron-left"></i>
+</button>
+<div class="period-display">
+<span class="month-name" id="currentMonth">Novembre</span>
+<span class="year" id="currentYear">2025</span>
+</div>
+<button class="period-nav-btn" id="nextPeriod">
+<i class="fas fa-chevron-right"></i>
+</button>
+</div>
+<!-- Calendar Container -->
+<div class="calendar-container">
+<!-- Property List Column -->
+<div class="property-list-column">
+<div class="property-list-header">
+<span>Logements</span>
+</div>
+<div class="property-list-items" id="propertyList">
+<!-- Les logements seront ajoutés dynamiquement -->
+</div>
+</div>
+<!-- Calendar Grid Wrapper -->
+<div class="calendar-grid-wrapper">
+<!-- Days Header -->
+<div class="days-header" id="daysHeader">
+<!-- Les jours seront ajoutés dynamiquement -->
+</div>
+<!-- Calendar Grid -->
+<div class="calendar-grid" id="calendarGrid">
+<!-- Les cellules seront ajoutées dynamiquement -->
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Notifications Panel -->
+<aside class="notifications-panel" id="notificationsPanel">
+<div class="notifications-header">
+<h2><i class="fas fa-bell"></i> Activité</h2>
+<button class="btn-icon" id="notificationsCloseBtn">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="notifications-body" id="notificationsList">
+<!-- Section : Aujourd'hui -->
+<div class="activity-section">
+<div class="activity-section-header">
+<i class="fas fa-calendar-day"></i>
+<h3>Aujourd'hui</h3>
+</div>
+<div class="activity-list" id="activityToday">
+<div class="activity-loading">
+<i class="fas fa-spinner fa-spin"></i> Chargement...
         </div>
-      </div>
-    </div>
-
-    <!-- Section : Cette semaine -->
-    <div class="activity-section">
-      <div class="activity-section-header">
-        <i class="fas fa-broom"></i>
-        <h3>Ménages cette semaine</h3>
-      </div>
-      <div id="activityThisWeek" class="activity-list">
-        <div class="activity-loading">
-          <i class="fas fa-spinner fa-spin"></i> Chargement...
+</div>
+</div>
+<!-- Section : Cette semaine -->
+<div class="activity-section">
+<div class="activity-section-header">
+<i class="fas fa-broom"></i>
+<h3>Ménages cette semaine</h3>
+</div>
+<div class="activity-list" id="activityThisWeek">
+<div class="activity-loading">
+<i class="fas fa-spinner fa-spin"></i> Chargement...
         </div>
-      </div>
-    </div>
-
-    <!-- Section : Nouvelles réservations -->
-    <div class="activity-section">
-      <div class="activity-section-header">
-        <i class="fas fa-star"></i>
-        <h3>Nouvelles réservations (7 derniers jours)</h3>
-      </div>
-      <div id="activityNewReservations" class="activity-list">
-        <div class="activity-loading">
-          <i class="fas fa-spinner fa-spin"></i> Chargement...
+</div>
+</div>
+<!-- Section : Nouvelles réservations -->
+<div class="activity-section">
+<div class="activity-section-header">
+<i class="fas fa-star"></i>
+<h3>Nouvelles réservations (7 derniers jours)</h3>
+</div>
+<div class="activity-list" id="activityNewReservations">
+<div class="activity-loading">
+<i class="fas fa-spinner fa-spin"></i> Chargement...
         </div>
-      </div>
-    </div>
-
-  </div>
+</div>
+</div>
+</div>
 </aside>
-
-    </main>
-  </div>
-  
-  <!-- Reservation Modal -->
-  <div class="modal" id="reservationModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modalTitle">Détails de la réservation</h2>
-        <button class="modal-close" id="modalClose">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Contenu généré dynamiquement -->
-      </div>
-    </div>
-  </div>
-
-  <!-- New Manual Reservation Modal -->
-  <div class="modal" id="newReservationModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Nouvelle réservation</h2>
-        <button class="modal-close" id="newReservationClose">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="newReservationForm" class="form-grid">
-          <div class="form-row">
-            <label for="nrProperty">Logement</label>
-            <select id="nrProperty" name="propertyId" required>
-              <!-- On remplira en JS suivant PROPERTIES -->
-            </select>
-          </div>
-
-          <div class="form-row">
-            <label for="nrGuestName">Nom du client</label>
-            <input type="text" id="nrGuestName" name="guestName" required />
-          </div>
-
-          <div class="form-row">
-            <label for="nrStartDate">Arrivée</label>
-            <input type="date" id="nrStartDate" name="startDate" required />
-          </div>
-
-          <div class="form-row">
-            <label for="nrEndDate">Départ</label>
-            <input type="date" id="nrEndDate" name="endDate" required />
-          </div>
-
-          <div class="form-row">
-            <label for="nrNotes">Notes</label>
-            <textarea id="nrNotes" name="notes" rows="3"></textarea>
-          </div>
-
-          <div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-            <button type="button" class="btn btn-ghost" id="newReservationCancel">
+</main>
+</div>
+<!-- Reservation Modal -->
+<div class="modal" id="reservationModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="modalTitle">Détails de la réservation</h2>
+<button class="modal-close" id="modalClose">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="modal-body" id="modalBody">
+<!-- Contenu généré dynamiquement -->
+</div>
+</div>
+</div>
+<!-- New Manual Reservation Modal -->
+<div class="modal" id="newReservationModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2>Nouvelle réservation</h2>
+<button class="modal-close" id="newReservationClose">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="modal-body">
+<form class="form-grid" id="newReservationForm">
+<div class="form-row">
+<label for="nrProperty">Logement</label>
+<select id="nrProperty" name="propertyId" required="">
+<!-- On remplira en JS suivant PROPERTIES -->
+</select>
+</div>
+<div class="form-row">
+<label for="nrGuestName">Nom du client</label>
+<input id="nrGuestName" name="guestName" required="" type="text"/>
+</div>
+<div class="form-row">
+<label for="nrStartDate">Arrivée</label>
+<input id="nrStartDate" name="startDate" required="" type="date"/>
+</div>
+<div class="form-row">
+<label for="nrEndDate">Départ</label>
+<input id="nrEndDate" name="endDate" required="" type="date"/>
+</div>
+<div class="form-row">
+<label for="nrNotes">Notes</label>
+<textarea id="nrNotes" name="notes" rows="3"></textarea>
+</div>
+<div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+<button class="btn btn-ghost" id="newReservationCancel" type="button">
               Annuler
             </button>
-            <button type="submit" class="btn btn-primary">
+<button class="btn btn-primary" type="submit">
               Enregistrer
             </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Synchronisation en cours...</p>
-    </div>
-  </div>
-  
-  <!-- Toast Notifications -->
-  <div class="toast-container" id="toastContainer"></div>
-  
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
-  <script src="/js/app.js?v=3"></script>
-  
-  <style>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-spinner">
+<i class="fas fa-spinner fa-spin"></i>
+<p>Synchronisation en cours...</p>
+</div>
+</div>
+<!-- Toast Notifications -->
+<div class="toast-container" id="toastContainer"></div>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
+<script src="/js/app.js?v=3"></script>
+<style>
     /* Styles spécifiques calendrier & UI complémentaire */
     #calendar {
       margin-top: 24px;
@@ -3461,8 +3376,7 @@
       opacity: 0.7;
     }
   </style>
-
-  <!-- Script auth + user + logout -->
+<!-- Script auth + user + logout -->
 <script>
   // Vérifier l'abonnement au chargement de la page
   (async function checkSubscriptionAccess() {
@@ -3604,9 +3518,8 @@
     }
   })();
 </script>
-
-  <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
-  <script>
+<!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
+<script>
     document.addEventListener('DOMContentLoaded', function () {
       /* Nouvelle réservation */
 
@@ -4138,10 +4051,8 @@ function populateEditBookingProperties(selectedPropertyId) {
       }
     });
   </script>
-
-
-  <!-- MOBILE MENU SCRIPT -->
-  <script>
+<!-- MOBILE MENU SCRIPT -->
+<script>
     (function() {
       const menuBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
@@ -4217,8 +4128,7 @@ function populateEditBookingProperties(selectedPropertyId) {
       }
     })();
   </script>
-
-  <script>
+<script>
 (function () {
   const API_URL = 'https://lcc-booking-manager.onrender.com';
 
@@ -4744,9 +4654,7 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
   document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 })();
 </script>
-
-
-  <script>
+<script>
   // ============================================
   // CALENDRIER MODERNE - Vue tableau par logement
   // S'alimente via window.renderModernCalendar(reservations, properties)
@@ -5728,247 +5636,218 @@ if (j === 0 || cells.length === 1) {
 </script>
 <!-- Modal blocage calendrier -->
 <div class="modal" id="blockModal">
-  <div class="modal-dialog">
-    <button class="modal-close" id="blockModalClose">
-      <i class="fas fa-times"></i>
-    </button>
-
-    <h2 class="modal-title">
-      <i class="fas fa-lock"></i>
+<div class="modal-dialog">
+<button class="modal-close" id="blockModalClose">
+<i class="fas fa-times"></i>
+</button>
+<h2 class="modal-title">
+<i class="fas fa-lock"></i>
       Bloquer le calendrier
     </h2>
-
-    <div class="modal-body">
-      <div class="form-group">
-        <label for="blockPropertySelect">Logement</label>
-        <select id="blockPropertySelect" class="form-control"></select>
-      </div>
-
-      <div class="form-group">
-        <label for="blockStartDate">Du</label>
-        <input type="date" id="blockStartDate" class="form-control">
-      </div>
-
-      <div class="form-group">
-        <label for="blockEndDate">Au</label>
-        <input type="date" id="blockEndDate" class="form-control">
-      </div>
-
-      <div class="form-group">
-        <label for="blockReason">Motif (facultatif)</label>
-        <input type="text" id="blockReason" class="form-control" placeholder="Blocage perso, travaux, famille...">
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="blockModalCancel">Annuler</button>
-      <button class="btn btn-primary" id="blockSaveBtn">
-        <i class="fas fa-lock"></i>
+<div class="modal-body">
+<div class="form-group">
+<label for="blockPropertySelect">Logement</label>
+<select class="form-control" id="blockPropertySelect"></select>
+</div>
+<div class="form-group">
+<label for="blockStartDate">Du</label>
+<input class="form-control" id="blockStartDate" type="date"/>
+</div>
+<div class="form-group">
+<label for="blockEndDate">Au</label>
+<input class="form-control" id="blockEndDate" type="date"/>
+</div>
+<div class="form-group">
+<label for="blockReason">Motif (facultatif)</label>
+<input class="form-control" id="blockReason" placeholder="Blocage perso, travaux, famille..." type="text"/>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" id="blockModalCancel">Annuler</button>
+<button class="btn btn-primary" id="blockSaveBtn">
+<i class="fas fa-lock"></i>
         Bloquer ces dates
       </button>
-    </div>
-  </div>
 </div>
-  <!-- MODALS DU CALENDRIER MODERNE -->
-
+</div>
+</div>
+<!-- MODALS DU CALENDRIER MODERNE -->
 <!-- Reservation Details Modal -->
 <div class="booking-modal" id="reservationDetailsModal">
-  <div class="modal-overlay" id="detailsModalOverlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="detailsModalTitle">Détails de la réservation</h2>
-      <button class="modal-close" id="closeDetailsModal">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="reservationDetailsContent" class="reservation-details">
-      <!-- Le contenu sera inséré dynamiquement -->
-    </div>
-    <div class="modal-actions" id="detailsModalActions">
-      <button type="button" class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;">
-        <i class="fas fa-trash"></i> Supprimer
-      </button>
-      <button type="button" class="btn btn-ghost" id="closeDetailsBtn">Fermer</button>
-      <button type="button" class="btn btn-primary" id="editBookingBtn">
-        <i class="fas fa-edit"></i> Modifier
-      </button>
-    </div>
-  </div>
+<div class="modal-overlay" id="detailsModalOverlay"></div>
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="detailsModalTitle">Détails de la réservation</h2>
+<button class="modal-close" id="closeDetailsModal">
+<i class="fas fa-times"></i>
+</button>
 </div>
-
+<div class="reservation-details" id="reservationDetailsContent">
+<!-- Le contenu sera inséré dynamiquement -->
+</div>
+<div class="modal-actions" id="detailsModalActions">
+<button class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;" type="button">
+<i class="fas fa-trash"></i> Supprimer
+      </button>
+<button class="btn btn-ghost" id="closeDetailsBtn" type="button">Fermer</button>
+<button class="btn btn-primary" id="editBookingBtn" type="button">
+<i class="fas fa-edit"></i> Modifier
+      </button>
+</div>
+</div>
+</div>
 <!-- Cleaning Today Modal -->
 <div class="booking-modal" id="cleaningTodayModal">
-  <div class="modal-overlay" id="cleaningTodayOverlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Ménages du jour</h2>
-      <button class="modal-close" id="closeCleaningTodayModal">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="cleaningTodayContent" class="reservation-details">
-      <!-- Liste des départs à nettoyer aujourd’hui -->
-    </div>
-  </div>
+<div class="modal-overlay" id="cleaningTodayOverlay"></div>
+<div class="modal-content">
+<div class="modal-header">
+<h2>Ménages du jour</h2>
+<button class="modal-close" id="closeCleaningTodayModal">
+<i class="fas fa-times"></i>
+</button>
 </div>
-
-
+<div class="reservation-details" id="cleaningTodayContent">
+<!-- Liste des départs à nettoyer aujourd’hui -->
+</div>
+</div>
+</div>
 <!-- Edit Booking Modal -->
 <div class="booking-modal" id="editBookingModal">
-  <div class="modal-overlay" id="editModalOverlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Modifier la réservation</h2>
-      <button class="modal-close" id="closeEditModal">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="editBookingForm" class="booking-form">
-      <input type="hidden" id="editBookingId">
-      <input type="hidden" id="editBookingSource">
-      
-      <div class="form-group">
-        <label for="editBookingProperty">Logement</label>
-        <select id="editBookingProperty" required>
-          <option value="">Sélectionner un logement</option>
-        </select>
-      </div>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="editCheckIn">Arrivée</label>
-          <input type="date" id="editCheckIn" required>
-        </div>
-        <div class="form-group">
-          <label for="editCheckOut">Départ</label>
-          <input type="date" id="editCheckOut" required>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="editGuestName">Nom du client</label>
-        <input type="text" id="editGuestName" placeholder="Ex: Jean Dupont" required>
-      </div>
-
-      <div class="form-group">
-        <label for="editGuestPhone">Téléphone</label>
-        <input type="tel" id="editGuestPhone" placeholder="Ex: +33 6 12 34 56 78">
-      </div>
-
-      <div class="form-group">
-        <label for="editGuestEmail">Email</label>
-        <input type="email" id="editGuestEmail" placeholder="Ex: client@email.com">
-      </div>
-      
-      <div class="form-group">
-        <label for="editPlatform">Plateforme</label>
-        <select id="editPlatform">
-          <option value="direct">Direct</option>
-          <option value="booking">Booking.com</option>
-          <option value="airbnb">Airbnb</option>
-          <option value="expedia">Expedia</option>
-          <option value="vrbo">VRBO</option>
-          <option value="hotels">Hotels.com</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="editPrice">Prix (€)</label>
-        <input type="number" id="editPrice" min="0" step="0.01" placeholder="75">
-      </div>
-
-      <div class="form-group">
-        <label for="editNotes">Notes</label>
-        <textarea id="editNotes" rows="3" placeholder="Notes supplémentaires..."></textarea>
-      </div>
-      
-      <div class="modal-actions">
-        <button type="button" class="btn btn-ghost" id="cancelEditBooking">Annuler</button>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
-      </div>
-    </form>
-  </div>
+<div class="modal-overlay" id="editModalOverlay"></div>
+<div class="modal-content">
+<div class="modal-header">
+<h2>Modifier la réservation</h2>
+<button class="modal-close" id="closeEditModal">
+<i class="fas fa-times"></i>
+</button>
 </div>
-
+<form class="booking-form" id="editBookingForm">
+<input id="editBookingId" type="hidden"/>
+<input id="editBookingSource" type="hidden"/>
+<div class="form-group">
+<label for="editBookingProperty">Logement</label>
+<select id="editBookingProperty" required="">
+<option value="">Sélectionner un logement</option>
+</select>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label for="editCheckIn">Arrivée</label>
+<input id="editCheckIn" required="" type="date"/>
+</div>
+<div class="form-group">
+<label for="editCheckOut">Départ</label>
+<input id="editCheckOut" required="" type="date"/>
+</div>
+</div>
+<div class="form-group">
+<label for="editGuestName">Nom du client</label>
+<input id="editGuestName" placeholder="Ex: Jean Dupont" required="" type="text"/>
+</div>
+<div class="form-group">
+<label for="editGuestPhone">Téléphone</label>
+<input id="editGuestPhone" placeholder="Ex: +33 6 12 34 56 78" type="tel"/>
+</div>
+<div class="form-group">
+<label for="editGuestEmail">Email</label>
+<input id="editGuestEmail" placeholder="Ex: client@email.com" type="email"/>
+</div>
+<div class="form-group">
+<label for="editPlatform">Plateforme</label>
+<select id="editPlatform">
+<option value="direct">Direct</option>
+<option value="booking">Booking.com</option>
+<option value="airbnb">Airbnb</option>
+<option value="expedia">Expedia</option>
+<option value="vrbo">VRBO</option>
+<option value="hotels">Hotels.com</option>
+</select>
+</div>
+<div class="form-group">
+<label for="editPrice">Prix (€)</label>
+<input id="editPrice" min="0" placeholder="75" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="editNotes">Notes</label>
+<textarea id="editNotes" placeholder="Notes supplémentaires..." rows="3"></textarea>
+</div>
+<div class="modal-actions">
+<button class="btn btn-ghost" id="cancelEditBooking" type="button">Annuler</button>
+<button class="btn btn-primary" type="submit">Enregistrer</button>
+</div>
+</form>
+</div>
+</div>
 <!-- New Booking Modal -->
 <div class="booking-modal" id="bookingModal">
-  <div class="modal-overlay" id="modalOverlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Nouvelle Réservation</h2>
-      <button class="modal-close" id="closeModal">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="bookingForm" class="booking-form">
-      <div class="form-group">
-        <label for="bookingProperty">Logement</label>
-        <select id="bookingProperty" required>
-          <option value="">Sélectionner un logement</option>
-        </select>
-      </div>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="checkIn">Arrivée</label>
-          <input type="date" id="checkIn" required>
-        </div>
-        <div class="form-group">
-          <label for="checkOut">Départ</label>
-          <input type="date" id="checkOut" required>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="guestName">Nom du client</label>
-        <input type="text" id="guestName" placeholder="Ex: Jean Dupont" required>
-      </div>
-
-      <div class="form-group">
-        <label for="guestPhone">Téléphone</label>
-        <input type="tel" id="guestPhone" placeholder="Ex: +33 6 12 34 56 78">
-      </div>
-
-      <div class="form-group">
-        <label for="guestEmail">Email</label>
-        <input type="email" id="guestEmail" placeholder="Ex: client@email.com">
-      </div>
-      
-      <div class="form-group">
-        <label for="platform">Plateforme</label>
-        <select id="platform">
-          <option value="direct">Direct</option>
-          <option value="booking">Booking.com</option>
-          <option value="airbnb">Airbnb</option>
-          <option value="expedia">Expedia</option>
-          <option value="vrbo">VRBO</option>
-          <option value="hotels">Hotels.com</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="price">Prix (€)</label>
-        <input type="number" id="price" min="0" step="0.01" placeholder="75">
-      </div>
-
-      <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea id="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
-      </div>
-      
-      <div class="modal-actions">
-        <button type="button" class="btn btn-ghost" id="cancelBooking">Annuler</button>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
-      </div>
-    </form>
-  </div>
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal-content">
+<div class="modal-header">
+<h2>Nouvelle Réservation</h2>
+<button class="modal-close" id="closeModal">
+<i class="fas fa-times"></i>
+</button>
 </div>
-
+<form class="booking-form" id="bookingForm">
+<div class="form-group">
+<label for="bookingProperty">Logement</label>
+<select id="bookingProperty" required="">
+<option value="">Sélectionner un logement</option>
+</select>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label for="checkIn">Arrivée</label>
+<input id="checkIn" required="" type="date"/>
+</div>
+<div class="form-group">
+<label for="checkOut">Départ</label>
+<input id="checkOut" required="" type="date"/>
+</div>
+</div>
+<div class="form-group">
+<label for="guestName">Nom du client</label>
+<input id="guestName" placeholder="Ex: Jean Dupont" required="" type="text"/>
+</div>
+<div class="form-group">
+<label for="guestPhone">Téléphone</label>
+<input id="guestPhone" placeholder="Ex: +33 6 12 34 56 78" type="tel"/>
+</div>
+<div class="form-group">
+<label for="guestEmail">Email</label>
+<input id="guestEmail" placeholder="Ex: client@email.com" type="email"/>
+</div>
+<div class="form-group">
+<label for="platform">Plateforme</label>
+<select id="platform">
+<option value="direct">Direct</option>
+<option value="booking">Booking.com</option>
+<option value="airbnb">Airbnb</option>
+<option value="expedia">Expedia</option>
+<option value="vrbo">VRBO</option>
+<option value="hotels">Hotels.com</option>
+</select>
+</div>
+<div class="form-group">
+<label for="price">Prix (€)</label>
+<input id="price" min="0" placeholder="75" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="notes">Notes</label>
+<textarea id="notes" placeholder="Notes supplémentaires..." rows="3"></textarea>
+</div>
+<div class="modal-actions">
+<button class="btn btn-ghost" id="cancelBooking" type="button">Annuler</button>
+<button class="btn btn-primary" type="submit">Enregistrer</button>
+</div>
+</form>
+</div>
+</div>
 <!-- Floating Action Button (bouton +) -->
 <button class="fab" id="addBookingBtn" title="Nouvelle réservation">
-  <i class="fas fa-plus"></i>
+<i class="fas fa-plus"></i>
 </button>
- <script>
+<script>
 // Script complet pour le blocage de dates
 (function() {
   let propertiesLoaded = false;
@@ -6057,7 +5936,7 @@ if (j === 0 || cells.length === 1) {
   });
 })();
 </script>
-  <script>
+<script>
 // Correction du modal de détails de réservation - Version 2
 (function() {
   let currentBookingData = null;
@@ -7077,7 +6956,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
 })();
 </script>
- <script>
+<script>
   (function () {
     document.addEventListener('DOMContentLoaded', function () {
       // Helpers génériques
@@ -7312,7 +7191,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     });
   })();
 </script>
-  <script>
+<script>
   // Vérifier le statut de l'abonnement au chargement
   async function checkSubscriptionStatus() {
     const token = localStorage.getItem('lcc_token');
@@ -7351,7 +7230,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
   // Appeler au chargement de la page
   document.addEventListener('DOMContentLoaded', checkSubscriptionStatus);
 </script>
-  <style>
+<style>
   /* Mode mobile : on garde seulement KPI + Calendrier */
   @media (max-width: 768px) {
 
@@ -7406,12 +7285,11 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     }
   }
 </style>
-    <!-- ========================== -->
-  <!--  SCRIPTS DE RÉPARATION    -->
-  <!-- ========================== -->
-
-  <!-- 1) Sécurisation des données globales LCC_... -->
-  <script>
+<!-- ========================== -->
+<!--  SCRIPTS DE RÉPARATION    -->
+<!-- ========================== -->
+<!-- 1) Sécurisation des données globales LCC_... -->
+<script>
   document.addEventListener('DOMContentLoaded', function () {
     console.log("🔧 Démarrage du script de réparation V2 (nettoyé)...");
 
@@ -7436,9 +7314,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     }
   });
   </script>
-
-  <!-- 2) Fermeture du modal Détails réservation -->
-  <script>
+<!-- 2) Fermeture du modal Détails réservation -->
+<script>
   document.addEventListener('DOMContentLoaded', function () {
     const detailsModal    = document.getElementById('reservationDetailsModal');
     const closeDetailsX   = document.getElementById('closeDetailsModal');   // croix
@@ -7481,9 +7358,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     });
   });
   </script>
-
-  <!-- 3) Bouton "+" : ouverture + enregistrement nouvelle réservation -->
-  <script>
+<!-- 3) Bouton "+" : ouverture + enregistrement nouvelle réservation -->
+<script>
   document.addEventListener('DOMContentLoaded', function () {
     console.log('🔁 Correctif bouton + chargé');
 
@@ -7945,463 +7821,4 @@ if (document.readyState === 'loading') {
 }
 
 </script>
-
-
-<script>
-(function(){
-  if (window.__LCC_KPI_WATCHDOG__) return;
-  window.__LCC_KPI_WATCHDOG__ = true;
-
-  function getStored(key){
-    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
-    catch(e){ return []; }
-  }
-  function normDates(r){
-    const s = r && (r.start || r.startDate);
-    const e = r && (r.end || r.endDate);
-    return {s,e};
-  }
-
-  // Ensure global riskColor for calendar + modals
-  if (typeof window.riskColor !== 'function') {
-    window.riskColor = function(level){
-      if (level === 'critical') return '#dc2626'; // Rouge foncé
-      if (level === 'red') return '#ef4444';
-      if (level === 'orange') return '#f59e0b';
-      return '#10b981';
-    };
-  }
-
-  function computeKpisFrom(reservations, properties){
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const monthStart = new Date(year, month, 1);
-    const monthEnd = new Date(year, month + 1, 0);
-    const daysInMonth = monthEnd.getDate() || 1;
-
-    const totalNightsPossible = (properties.length || 1) * daysInMonth;
-
-    let nightsBooked = 0;
-    let cleaningToday = 0;
-
-    const todayStr = now.toISOString().slice(0,10);
-
-    (reservations || []).forEach((r)=>{
-      const {s,e} = normDates(r);
-      if (!s || !e) return;
-      const start = new Date(s);
-      const end = new Date(e);
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
-
-      const startClamped = start < monthStart ? monthStart : start;
-      const endClamped = end > monthEnd ? monthEnd : end;
-      if (endClamped > startClamped) {
-        nightsBooked += (endClamped - startClamped) / (1000*60*60*24);
-      }
-
-      if (String(e).slice(0,10) === todayStr) cleaningToday += 1;
-    });
-
-    let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1))*100);
-    if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
-    if (occupancy > 100) occupancy = 100;
-
-    const occEl = document.getElementById('kpiOccupancyValue');
-    const propEl = document.getElementById('kpiPropertiesValue');
-    const cleaningEl = document.getElementById('kpiCleaningTodayValue');
-
-    if (occEl) occEl.textContent = occupancy + '%';
-    if (propEl) propEl.textContent = properties.length || 0;
-    if (cleaningEl) cleaningEl.textContent = cleaningToday;
-
-    return {occupancy, propertiesCount: properties.length||0, cleaningToday};
-  }
-
-  function ensureTopRisksClick(reservations){
-    const card = document.getElementById('kpiTopRisksCard');
-    if (!card) return;
-
-    card.classList.add('kpi-card--clickable');
-
-    // compute top5 for current month
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const monthStart = new Date(y, m, 1);
-    const monthEnd = new Date(y, m+1, 1);
-
-    const monthRes = (reservations||[]).filter(r=>{
-      const {s,e}=normDates(r);
-      if(!s||!e) return false;
-      const ds=new Date(s), de=new Date(e);
-      return de>monthStart && ds<monthEnd;
-    });
-
-    const scored = monthRes.filter(r=>typeof r.riskScore === 'number');
-    scored.sort((a,b)=>(b.riskScore - a.riskScore));
-    const top5 = scored.slice(0,5);
-
-    const valEl = document.getElementById('kpiTopRisksValue');
-    const subEl = document.getElementById('kpiTopRisksSub');
-
-    if (valEl) valEl.textContent = top5.length;
-    if (subEl) {
-      const red = scored.filter(r=>r.riskLevel==='red').length;
-      const orange = scored.filter(r=>r.riskLevel==='orange').length;
-      subEl.textContent = `${red} rouge • ${orange} orange (mois en cours)`;
-    }
-
-    // Always clickable: if none, show empty modal message
-    card.onclick = function(){
-      if (typeof window.openTopRisksModal === 'function') {
-        window.openTopRisksModal(top5);
-      } else {
-        alert(top5.length ? 'Top risques prêt, mais modal non initialisé.' : 'Aucun risque détecté ce mois-ci.');
-      }
-    };
-  }
-
-  function ensureCleaningClick(){
-    const cleaningCard = document.getElementById('kpiCleaningTodayCard');
-    if (!cleaningCard) return;
-    cleaningCard.classList.add('kpi-card--clickable');
-
-    // If your existing modal handler is already attached, we do nothing.
-    if (cleaningCard.dataset.bound === '1') return;
-    cleaningCard.dataset.bound = '1';
-
-    // If modal exists in DOM, let existing code handle it; otherwise create a simple one.
-    let modal = document.getElementById('cleaningTodayModal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'cleaningTodayModal';
-      modal.className = 'booking-modal';
-      modal.innerHTML = `
-        <div class="modal-overlay" id="cleaningTodayOverlay"></div>
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>Ménages du jour</h2>
-            <button class="modal-close" id="closeCleaningTodayModal"><i class="fas fa-times"></i></button>
-          </div>
-          <div id="cleaningTodayContent" class="reservation-details">
-            <p class="detail-value">Chargement...</p>
-          </div>
-        </div>`;
-      document.body.appendChild(modal);
-    }
-    const overlay = document.getElementById('cleaningTodayOverlay');
-    const closeBtn = document.getElementById('closeCleaningTodayModal');
-    const contentEl = document.getElementById('cleaningTodayContent');
-
-    function getPropertyNameById(propertyId, properties){
-      const p = (properties||[]).find(x=>String(x.id)===String(propertyId) || String(x.propertyId)===String(propertyId));
-      return p ? (p.name || p.title || p.label || propertyId) : (propertyId || 'Logement');
-    }
-
-    function open(){
-      const reservations = getStored('LCC_RESERVATIONS');
-      const properties = getStored('LCC_PROPERTIES');
-      const todayStr = new Date().toISOString().slice(0,10);
-      const departures = (reservations||[]).filter(r=>{
-        const {e}=normDates(r);
-        return e && String(e).slice(0,10)===todayStr;
-      });
-
-      if (!contentEl) return;
-      if (!departures.length) {
-        contentEl.innerHTML = `<p class="detail-value">Aucun départ à nettoyer aujourd’hui.</p>`;
-      } else {
-        let html = `<div class="detail-group"><label>Départs à nettoyer aujourd’hui</label><div class="detail-value">`;
-        departures.forEach(r=>{
-          const prop = r.propertyName || getPropertyNameById(r.propertyId, properties);
-          const guest = r.guestName || r.name || 'Voyageur';
-          html += `<div style="margin-bottom:8px;"><strong>${prop}</strong> – ${guest}</div>`;
-        });
-        html += `</div></div>`;
-        contentEl.innerHTML = html;
-      }
-      modal.style.display = 'flex';
-      modal.classList.add('active');
-    }
-
-    function close(){
-      modal.classList.remove('active');
-      modal.style.display = 'none';
-    }
-
-    cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
-overlay && overlay.addEventListener('click', close);
-    closeBtn && closeBtn.addEventListener('click', close);
-  }
-
-  function refresh(){
-    const reservations = Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length
-      ? window.LCC_RESERVATIONS
-      : getStored('LCC_RESERVATIONS');
-    const properties = Array.isArray(window.LCC_PROPERTIES) && window.LCC_PROPERTIES.length
-      ? window.LCC_PROPERTIES
-      : getStored('LCC_PROPERTIES');
-
-    const k = computeKpisFrom(reservations, properties);
-    ensureTopRisksClick(reservations);
-    ensureCleaningClick();
-    return k;
-  }
-
-  // Run now + retry a few times (app.js often fills storage after)
-  refresh();
-  let tries = 0;
-  const t = setInterval(function(){
-    tries++;
-    const k = refresh();
-    // stop early once we have some data
-    if ((k.propertiesCount > 0) || (k.cleaningToday > 0) || (k.occupancy > 0) || tries >= 10) {
-      clearInterval(t);
-    }
-  }, 700);
-})();
-
-    });
-    
-    if (!response.ok) {
-      throw new Error('Erreur lors du chargement des checklists');
-    }
-    
-    const data = await response.json();
-    cleaningChecklists = data.checklists || [];
-    window.cleaningChecklists = cleaningChecklists; // Rendre accessible globalement
-    
-    renderCleaningChecklists();
-  } catch (err) {
-    console.error('Erreur chargement checklists:', err);
-    container.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-exclamation-circle"></i>
-        <p>Erreur lors du chargement</p>
-      </div>
-    `;
-  }
-}
-
-function renderCleaningChecklists() {
-  const container = document.getElementById('checklistsContainer');
-  
-  if (cleaningChecklists.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-broom"></i>
-        <p>Aucune checklist</p>
-        <small>Les checklists validées par vos équipes apparaîtront ici</small>
-      </div>
-    `;
-    return;
-  }
-  
-  // Afficher les 6 plus récentes
-  const recent = cleaningChecklists.slice(0, 6);
-  
-  container.innerHTML = recent.map(checklist => {
-    const isCompleted = checklist.is_validated || checklist.completed_at;
-    const cardClass = isCompleted ? 'checklist-card-completed' : 'checklist-card-pending';
-    const badgeClass = isCompleted ? 'checklist-badge-completed' : 'checklist-badge-pending';
-    const badgeIcon = isCompleted ? 'fa-check-circle' : 'fa-clock';
-    const badgeText = isCompleted ? 'Validé' : 'En attente';
-    
-    // Extraire infos de la reservation_key
-    const parts = (checklist.reservation_key || '').split('_');
-    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : checklist.checkout_date;
-    const formattedDate = checkoutDate ? formatChecklistDate(checkoutDate) : 'Date inconnue';
-    
-    // Nom du logement - utilise directement property_id pour l'instant
-    // On pourra améliorer plus tard en cherchant dans window.LCC_PROPERTIES
-    const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
-    
-    return `
-      <div class="checklist-card ${cardClass}" onclick="openChecklistDetails('${checklist.id}')">
-        <div class="checklist-card-header">
-          <div class="checklist-property">${propertyName}</div>
-          <span class="checklist-badge ${badgeClass}">
-            <i class="fas ${badgeIcon}"></i>
-            ${badgeText}
-          </span>
-        </div>
-        
-        <div class="checklist-info">
-          <div class="checklist-info-row">
-            <i class="fas fa-calendar"></i>
-            <span>Départ : ${formattedDate}</span>
-          </div>
-          <div class="checklist-info-row">
-            <i class="fas fa-user"></i>
-            <span>${checklist.guest_name || 'Voyageur'}</span>
-          </div>
-          <div class="checklist-info-row">
-            <i class="fas fa-user-check"></i>
-            <span>${checklist.cleaner_name || 'Non assigné'}</span>
-          </div>
-        </div>
-        
-        <div class="checklist-footer">
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openChecklistDetails('${checklist.id}')">
-            <i class="fas fa-eye"></i> Voir les détails
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function getPropertyNameFromChecklistKey(reservationKey, fallbackPropertyId) {
-  // Si pas de reservation_key, utiliser le fallback
-  if (!reservationKey) {
-    return fallbackPropertyId || 'Logement';
-  }
-  
-  // Extraire le property_id de la reservation_key
-  const parts = reservationKey.split('_');
-  if (parts.length < 3) {
-    return fallbackPropertyId || 'Logement';
-  }
-  
-  const propertyId = parts.slice(0, parts.length - 2).join('_');
-  
-  // Essayer de trouver le nom dans window.LCC_PROPERTIES
-  if (window.LCC_PROPERTIES && Array.isArray(window.LCC_PROPERTIES)) {
-    const property = window.LCC_PROPERTIES.find(p => 
-      p.id === propertyId || 
-      p.propertyId === propertyId
-    );
-    
-    if (property) {
-      return property.name || property.title || property.label || propertyId;
-    }
-  }
-  
-  // Sinon retourner le propertyId tel quel
-  return propertyId;
-}
-
-function formatChecklistDate(dateStr) {
-  if (!dateStr) return '';
-  
-  // Gérer les dates ISO (ex: 2025-12-25T00:00:00.000Z)
-  if (dateStr.includes('T')) {
-    dateStr = dateStr.split('T')[0];
-  }
-  
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-}
-
-function openChecklistDetails(checklistId) {
-  const checklist = cleaningChecklists.find(c => c.id == checklistId);
-  if (!checklist) return;
-  
-  // TODO: Créer une belle modale
-  const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
-  
-  alert(`📋 Détails de la checklist\n\n` +
-        `🏠 Logement: ${propertyName}\n` +
-        `👤 Voyageur: ${checklist.guest_name || 'N/A'}\n` +
-        `✨ Personne de ménage: ${checklist.cleaner_name || 'N/A'}\n` +
-        `📅 Date: ${formatChecklistDate(checklist.checkout_date)}\n\n` +
-        `[TODO: Afficher photos, tâches, notes dans une modale]`);
-}
-
-// Charger au démarrage
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadCleaningChecklists);
-} else {
-  loadCleaningChecklists();
-}
-  <!-- MODALE DÉTAILS CHECKLIST -->
-
-<!-- MODALE DÉTAILS CHECKLIST -->
-<div class="checklist-modal-overlay" id="checklistModal" onclick="closeChecklistModal(event)">
-  <div class="checklist-modal" onclick="event.stopPropagation()">
-    <!-- Header -->
-    <div class="checklist-modal-header">
-      <div>
-        <h2 id="modalChecklistProperty">Logement</h2>
-        <div class="checklist-modal-meta">
-          <span id="modalChecklistDate"></span>
-          <span class="separator">•</span>
-          <span id="modalChecklistCleaner"></span>
-        </div>
-      </div>
-      <button class="close-modal-btn" onclick="closeChecklistModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
-    <!-- Status Badge -->
-    <div class="checklist-modal-status" id="modalChecklistStatus"></div>
-
-    <!-- Content -->
-    <div class="checklist-modal-body">
-      
-      <!-- Guest Info -->
-      <div class="modal-section">
-        <h3 class="modal-section-title">
-          <i class="fas fa-user"></i>
-          Informations voyageur
-        </h3>
-        <div class="modal-info-grid">
-          <div class="modal-info-item">
-            <span class="modal-info-label">Nom</span>
-            <span class="modal-info-value" id="modalGuestName">-</span>
-          </div>
-          <div class="modal-info-item">
-            <span class="modal-info-label">Date de départ</span>
-            <span class="modal-info-value" id="modalCheckoutDate">-</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tasks -->
-      <div class="modal-section">
-        <h3 class="modal-section-title">
-          <i class="fas fa-check-square"></i>
-          Tâches effectuées
-        </h3>
-        <div id="modalTasksList" class="tasks-list"></div>
-      </div>
-
-      <!-- Photos -->
-      <div class="modal-section">
-        <h3 class="modal-section-title">
-          <i class="fas fa-camera"></i>
-          Photos du logement
-        </h3>
-        <div id="modalPhotosList" class="photos-grid"></div>
-      </div>
-
-      <!-- Notes -->
-      <div class="modal-section" id="modalNotesSection" style="display: none;">
-        <h3 class="modal-section-title">
-          <i class="fas fa-sticky-note"></i>
-          Notes complémentaires
-        </h3>
-        <div class="notes-content" id="modalNotes"></div>
-      </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="checklist-modal-footer">
-      <button class="btn btn-ghost" onclick="closeChecklistModal()">
-        Fermer
-      </button>
-      <button class="btn btn-primary" onclick="downloadChecklistPDF()">
-        <i class="fas fa-download"></i>
-        Télécharger PDF
-      </button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+<script></script><script src="/js/bh-layout.js"></script></body></html>
