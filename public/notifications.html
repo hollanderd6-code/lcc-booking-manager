@@ -1,20 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boostinghost – Notifications</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- CSS plateforme -->
-  <link rel="stylesheet" href="/css/style.css">
 
-  <style>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boostinghost – Notifications</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -188,9 +185,8 @@
       }
     }
   </style>
-
-  <!-- Script auth + user + logout -->
-  <script src="/js/auth-fetch.js"></script>
+<!-- Script auth + user + logout -->
+<script src="/js/auth-fetch.js"></script>
 <script>
     const API_URL = 'https://lcc-booking-manager.onrender.com';
     (function () {
@@ -243,272 +239,112 @@
     })();
   </script>
 </head>
-<body data-page="notifications">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Bookingmanage</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Configuration" data-page="notifications" data-subtitle="Choisissez comment et quand être notifié." data-title="Notifications">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Bookingmanage</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- Main Content -->
+<main class="main-content"><div id="bhHeader"></div>
+<!-- Header -->
 
-  <div class="app-container">
-    
-   <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div> <!-- ✅ IMPORTANT -->
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- FACTURATION (propre) -->
-    <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
-
-      <a href="/factures.html" class="nav-item" data-page="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures clients</span>
-      </a>
-
-      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
-        <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
-      </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item active" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Configuration</div>
-          <h1 class="page-title">Notifications</h1>
-          <p class="page-subtitle">
-            Choisissez comment et quand vous souhaitez être prévenu des nouvelles réservations et des événements importants.
-          </p>
-        </div>
-        
-        <div class="header-actions">
-    <button class="btn btn-ghost" onclick="window.location.href='/app.html'">
-      <i class="fas fa-arrow-left"></i>
-      Retour au dashboard
-    </button>
-  </div>
-</header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-
-        <!-- Bloc : Nouvelle réservation -->
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fas fa-ticket-alt"></i>
-              <span>Nouvelle réservation</span>
-            </div>
-          </div>
-          <p class="card-subtitle">
+<!-- Page Content -->
+<div class="page-content">
+<!-- Bloc : Nouvelle réservation -->
+<section class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-ticket-alt"></i>
+<span>Nouvelle réservation</span>
+</div>
+</div>
+<p class="card-subtitle">
             Paramétrez les notifications qui seront envoyées à chaque création de nouvelle réservation dans le Bookingmanage.
           </p>
-
-          <div class="row">
-            <div>
-              <div class="row-label">Notifications internes (in-app)</div>
-              <div class="row-hint">
+<div class="row">
+<div>
+<div class="row-label">Notifications internes (in-app)</div>
+<div class="row-hint">
                 Affiche une alerte dans le dashboard des utilisateurs concernés.
               </div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="newResInApp">
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="row-label">E-mails internes</div>
-              <div class="row-hint">
+</div>
+<label class="switch">
+<input id="newResInApp" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+<div class="row">
+<div>
+<div class="row-label">E-mails internes</div>
+<div class="row-hint">
                 Envoie un e-mail à la création d’une réservation.
               </div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="newResEmailEnabled">
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="row-label">Destinataires e-mail</div>
-              <div class="row-hint">
+</div>
+<label class="switch">
+<input id="newResEmailEnabled" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+<div class="row">
+<div>
+<div class="row-label">Destinataires e-mail</div>
+<div class="row-hint">
                 Liste d’adresses e-mail séparées par des virgules.
               </div>
-            </div>
-            <input
-              type="text"
-              id="newResEmailRecipients"
-              class="inline-input"
-              placeholder="reservations@exemple.com, manager@exemple.com"
-            >
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="row-label">Rôles concernés (in-app)</div>
-              <div class="row-hint">
+</div>
+<input class="inline-input" id="newResEmailRecipients" placeholder="reservations@exemple.com, manager@exemple.com" type="text"/>
+</div>
+<div class="row">
+<div>
+<div class="row-label">Rôles concernés (in-app)</div>
+<div class="row-hint">
                 Les utilisateurs ayant ces rôles recevront la notification interne.
               </div>
-            </div>
-            <div class="roles">
-              <label><input type="checkbox" id="roleAdmin"> Admin</label>
-              <label><input type="checkbox" id="roleManager"> Manager</label>
-              <label><input type="checkbox" id="roleReception"> Réception</label>
-              <label><input type="checkbox" id="roleHousekeeping"> Housekeeping</label>
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="row-label">Condition d’envoi</div>
-              <div class="row-hint">
+</div>
+<div class="roles">
+<label><input id="roleAdmin" type="checkbox"/> Admin</label>
+<label><input id="roleManager" type="checkbox"/> Manager</label>
+<label><input id="roleReception" type="checkbox"/> Réception</label>
+<label><input id="roleHousekeeping" type="checkbox"/> Housekeeping</label>
+</div>
+</div>
+<div class="row">
+<div>
+<div class="row-label">Condition d’envoi</div>
+<div class="row-hint">
                 À quel moment doit-on déclencher les notifications ?
               </div>
-            </div>
-            <div class="radio-group">
-              <label><input type="radio" name="newResCondition" value="all"> Toute nouvelle réservation</label>
-              <label><input type="radio" name="newResCondition" value="confirmed"> Uniquement les réservations confirmées</label>
-              <label><input type="radio" name="newResCondition" value="pending"> Réservations en attente</label>
-            </div>
-          </div>
-        </section>
-
-        <div class="actions">
-          <button type="button" class="btn btn-ghost" id="resetBtn">
+</div>
+<div class="radio-group">
+<label><input name="newResCondition" type="radio" value="all"/> Toute nouvelle réservation</label>
+<label><input name="newResCondition" type="radio" value="confirmed"/> Uniquement les réservations confirmées</label>
+<label><input name="newResCondition" type="radio" value="pending"/> Réservations en attente</label>
+</div>
+</div>
+</section>
+<div class="actions">
+<button class="btn btn-ghost" id="resetBtn" type="button">
             Réinitialiser
           </button>
-          <button type="button" class="btn btn-primary" id="saveBtn">
+<button class="btn btn-primary" id="saveBtn" type="button">
             Enregistrer
           </button>
-        </div>
-        <div class="save-status" id="saveStatus"></div>
-
-      </div>
-    </main>
-  </div>
-
-  <script>
+</div>
+<div class="save-status" id="saveStatus"></div>
+</div>
+</main>
+</div>
+<script>
   const STORAGE_KEY = 'lcc_notifications_settings';
 
   function defaultSettings() {
@@ -666,9 +502,8 @@
     });
   });
 </script>
-
-  <!-- MOBILE MENU SCRIPT -->
-  <script>
+<!-- MOBILE MENU SCRIPT -->
+<script>
     (function() {
       const menuBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
@@ -744,5 +579,5 @@
       }
     })();
   </script>
-</body>
+<script src="/js/bh-layout.js"></script></body>
 </html>
