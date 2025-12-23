@@ -5026,19 +5026,29 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
       setTimeout(scrollCalendarToToday, 100);
     }
 function scrollCalendarToToday() {
+  console.log('📅 scrollCalendarToToday appelé');
   const grid = document.getElementById('calendarGrid');
-  if (!grid) return;
+  if (!grid) {
+    console.log('❌ Grid non trouvé');
+    return;
+  }
 
   // On prend la 1ère cellule "today" (il y en a une par logement)
   const todayCell = grid.querySelector('.calendar-cell.today');
-  if (!todayCell) return;
+  if (!todayCell) {
+    console.log('❌ Cellule today non trouvée');
+    return;
+  }
 
   // Position horizontale de la colonne "today"
   const targetLeft = todayCell.offsetLeft;
+  console.log('📍 Position today:', targetLeft, 'Grid width:', grid.clientWidth);
 
   // On centre un peu (optionnel)
   const padding = Math.max(0, (grid.clientWidth / 2) - 80);
-  grid.scrollLeft = Math.max(0, targetLeft - padding);
+  const scrollPosition = Math.max(0, targetLeft - padding);
+  grid.scrollLeft = scrollPosition;
+  console.log('✅ Scroll à:', scrollPosition);
 }
         function renderDaysHeader(range) {
       var header = document.getElementById('daysHeader');
@@ -6086,13 +6096,24 @@ try {
     }
 
     // Chercher la checklist dans le tableau cleaningChecklists
+    console.log('🔍 Recherche checklist pour reservationUid:', reservationUid);
+    console.log('📋 Checklists disponibles:', window.cleaningChecklists);
+    
     const matchingChecklist = window.cleaningChecklists ? 
       window.cleaningChecklists.find(c => {
         // Essayer de matcher par reservation_key ou checkout_date
         const checkoutDate = booking.checkoutDate || booking.checkout || booking.end;
+        console.log('  Comparaison:', {
+          'reservation_key': c.reservation_key,
+          'reservationUid': reservationUid,
+          'checkout_date': c.checkout_date,
+          'checkoutDate': checkoutDate
+        });
         return c.reservation_key === reservationUid || 
                (checkoutDate && c.checkout_date === checkoutDate);
       }) : null;
+
+    console.log('✅ Checklist trouvée:', matchingChecklist);
 
     if (!matchingChecklist) {
       chkGroup.innerHTML = `
@@ -7338,6 +7359,7 @@ async function loadCleaningChecklists() {
     
     const data = await response.json();
     cleaningChecklists = data.checklists || [];
+    window.cleaningChecklists = cleaningChecklists; // Rendre accessible globalement
     
     renderCleaningChecklists();
   } catch (err) {
@@ -7810,6 +7832,7 @@ overlay && overlay.addEventListener('click', close);
     
     const data = await response.json();
     cleaningChecklists = data.checklists || [];
+    window.cleaningChecklists = cleaningChecklists; // Rendre accessible globalement
     
     renderCleaningChecklists();
   } catch (err) {
