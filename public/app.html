@@ -4998,6 +4998,9 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
         })));
         
         state.bookings = bookings;
+        
+        // Rendre state.bookings accessible globalement pour findReservationForBlock
+        window.calendarState = state;
 
         console.info('✅ Calendrier moderne: ' + state.properties.length +
                      ' logements / ' + state.bookings.length + ' réservations');
@@ -6055,17 +6058,20 @@ function findReservationForBlock(bookingBlock) {
   const bookingIdAttr = bookingBlock.getAttribute('data-booking-id');
   if (!bookingIdAttr) return null;
 
-  // Priorité 1: Chercher dans state.bookings (avec les scores de risque calculés)
+  // Priorité 1: Chercher dans window.calendarState.bookings (avec les scores de risque calculés)
   let bookings = [];
-  if (typeof state !== 'undefined' && Array.isArray(state.bookings) && state.bookings.length) {
-    bookings = state.bookings;
+  if (window.calendarState && Array.isArray(window.calendarState.bookings) && window.calendarState.bookings.length) {
+    bookings = window.calendarState.bookings;
+    console.log('🎯 Utilisation de window.calendarState.bookings avec', bookings.length, 'réservations');
   }
-  // Fallback: réservations brutes si state.bookings n'est pas disponible
+  // Fallback: réservations brutes si calendarState n'est pas disponible
   else if (Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length) {
     bookings = window.LCC_RESERVATIONS;
+    console.log('⚠️ Fallback sur LCC_RESERVATIONS');
   } else {
     try {
       bookings = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      console.log('⚠️ Fallback sur localStorage');
     } catch (e) {
       bookings = [];
     }
