@@ -1,20 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookingmanage – Factures</title>
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- CSS plateforme -->
-  <link rel="stylesheet" href="/css/style.css">
 
-  <style>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bookingmanage – Factures</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<style>
   /* DESIGN SYSTEM inspiré de factures-proprietaires */
   :root {
     --primary: #10B981;
@@ -504,341 +501,170 @@
   transition: background-color 0.3s ease;
 }
   </style>
-
-  <script src="/js/auth-fetch.js"></script>
+<script src="/js/auth-fetch.js"></script>
 </head>
-<body data-page="factures">
-  <!-- MOBILE HEADER -->
-  <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Bookingmanage</span>
-    </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures" data-subtitle="Créez, éditez et exportez vos factures clients." data-title="Factures clients">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Bookingmanage</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- Main Content -->
+<main class="main-content"><div id="bhHeader"></div>
+<!-- Header -->
 
-  <div class="app-container">
-    
-    <!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-
-      <div class="sidebar-logo-text" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif; font-size:17px; line-height:1.1;">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px; color:#6B7280; font-weight:500; letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div>
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-
-      <a href="/app.html" class="nav-item" data-page="app">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="/app.html#calendarSection" class="nav-item" id="navCalendarLink">
-        <i class="fas fa-calendar"></i>
-        <span>Calendrier</span>
-        <span class="nav-badge" id="navTotalReservations">0</span>
-      </a>
-
-      <a href="/messages.html" class="nav-item" data-page="messages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-
-      <a href="/settings.html" class="nav-item" data-page="settings">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-
-      <a href="/welcome.html" class="nav-item" data-page="welcome">
-        <i class="fas fa-book-open"></i>
-        <span>Livret d'accueil</span>
-      </a>
-
-      <a href="/cleaning.html" class="nav-item" data-page="cleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- FACTURATION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
-
-      <a href="/factures.html" class="nav-item active" data-page="factures">
-        <i class="fas fa-file-invoice"></i>
-        <span>Factures clients</span>
-      </a>
-
-      <a href="/factures-proprietaires.html" class="nav-item" data-page="factures-proprietaires">
-        <i class="fas fa-file-invoice-dollar"></i>
-        <span>Factures propriétaires</span>
-      </a>
-    </div>
-
-    <!-- AUTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Autres</div>
-
-      <a href="/deposits.html" class="nav-item" data-page="deposits">
-        <i class="fas fa-shield-alt"></i>
-        <span>Cautions</span>
-      </a>
-
-      <a href="/notifications.html" class="nav-item" data-page="notifications">
-        <i class="fas fa-bell"></i>
-        <span>Notifications</span>
-      </a>
-    </div>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-
-      <a href="/settings-account.html" class="nav-item" data-page="settings-account">
-        <i class="fas fa-cog"></i>
-        <span>Paramètres</span>
-      </a>
-
-      <a href="/help.html" class="nav-item" data-page="help">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-
-      <button class="btn btn-ghost btn-xs" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <div class="page-kicker">Gestion</div>
-          <h1 class="page-title">Créer une facture</h1>
-          <p class="page-subtitle">
-            Générez et envoyez des factures professionnelles à vos clients
-          </p>
-        </div>
-          <div class="header-actions">
-    <button class="btn btn-ghost" onclick="window.location.href='/app.html'">
-      <i class="fas fa-arrow-left"></i>
-      Retour au dashboard
-    </button>
-  </div>
-</header>
-      
-      <!-- Page Content -->
-      <div class="page-content">
-        <div class="invoice-grid">
-          
-          <!-- Formulaire -->
-          <div>
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title">
-                  <i class="fas fa-file-invoice-dollar"></i>
+<!-- Page Content -->
+<div class="page-content">
+<div class="invoice-grid">
+<!-- Formulaire -->
+<div>
+<div class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-file-invoice-dollar"></i>
                   Informations de facturation
                 </div>
-              </div>
-              <div class="card-body">
-                
-                <!-- Client -->
-                <div class="form-section">
-                  <div class="form-section-title">
-                    <i class="fas fa-user"></i>
+</div>
+<div class="card-body">
+<!-- Client -->
+<div class="form-section">
+<div class="form-section-title">
+<i class="fas fa-user"></i>
                     Informations client
                   </div>
-
-                  <div class="form-row">
-                    <label for="clientName">Nom complet *</label>
-                    <input type="text" id="clientName" placeholder="Jean Dupont" required>
-                  </div>
-
-                  <div class="form-row">
-                    <label for="clientEmail">Email</label>
-                    <input type="email" id="clientEmail" placeholder="client@exemple.com">
-                  </div>
-
-                  <div class="form-row">
-                    <label for="clientAddress">Adresse</label>
-                    <input type="text" id="clientAddress" placeholder="12 rue de la République">
-                  </div>
-
-                  <div class="form-row-inline">
-                    <div class="form-row">
-                      <label for="clientPostalCode">Code postal</label>
-                      <input type="text" id="clientPostalCode" placeholder="75001">
-                    </div>
-                    <div class="form-row">
-                      <label for="clientCity">Ville</label>
-                      <input type="text" id="clientCity" placeholder="Paris">
-                    </div>
-                  </div>
-
-                  <div class="checkbox-row">
-                    <input type="checkbox" id="isCompany">
-                    <label for="isCompany">Client professionnel</label>
-                  </div>
-
-                  <div class="form-row" id="siretGroup" style="display: none;">
-                    <label for="clientSiret">SIRET</label>
-                    <input type="text" id="clientSiret" placeholder="123 456 789 00012" maxlength="17">
-                  </div>
-                </div>
-
-                <div class="form-divider"></div>
-
-                <!-- Séjour -->
-                <div class="form-section">
-                  <div class="form-section-title">
-                    <i class="fas fa-calendar-alt"></i>
+<div class="form-row">
+<label for="clientName">Nom complet *</label>
+<input id="clientName" placeholder="Jean Dupont" required="" type="text"/>
+</div>
+<div class="form-row">
+<label for="clientEmail">Email</label>
+<input id="clientEmail" placeholder="client@exemple.com" type="email"/>
+</div>
+<div class="form-row">
+<label for="clientAddress">Adresse</label>
+<input id="clientAddress" placeholder="12 rue de la République" type="text"/>
+</div>
+<div class="form-row-inline">
+<div class="form-row">
+<label for="clientPostalCode">Code postal</label>
+<input id="clientPostalCode" placeholder="75001" type="text"/>
+</div>
+<div class="form-row">
+<label for="clientCity">Ville</label>
+<input id="clientCity" placeholder="Paris" type="text"/>
+</div>
+</div>
+<div class="checkbox-row">
+<input id="isCompany" type="checkbox"/>
+<label for="isCompany">Client professionnel</label>
+</div>
+<div class="form-row" id="siretGroup" style="display: none;">
+<label for="clientSiret">SIRET</label>
+<input id="clientSiret" maxlength="17" placeholder="123 456 789 00012" type="text"/>
+</div>
+</div>
+<div class="form-divider"></div>
+<!-- Séjour -->
+<div class="form-section">
+<div class="form-section-title">
+<i class="fas fa-calendar-alt"></i>
                     Séjour
                   </div>
-
-                  <div class="form-row">
-                    <label for="propertyName">Logement *</label>
-                    <select id="propertyName" required>
-                      <option value="">Sélectionner un logement...</option>
-                    </select>
-                  </div>
-
-                  <div class="form-row-inline">
-                    <div class="form-row">
-                      <label for="checkinDate">Date d'arrivée</label>
-                      <input type="date" id="checkinDate">
-                    </div>
-                    <div class="form-row">
-                      <label for="checkoutDate">Date de départ</label>
-                      <input type="date" id="checkoutDate">
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-divider"></div>
-
-                <!-- Montants -->
-                <div class="form-section">
-                  <div class="form-section-title">
-                    <i class="fas fa-euro-sign"></i>
+<div class="form-row">
+<label for="propertyName">Logement *</label>
+<select id="propertyName" required="">
+<option value="">Sélectionner un logement...</option>
+</select>
+</div>
+<div class="form-row-inline">
+<div class="form-row">
+<label for="checkinDate">Date d'arrivée</label>
+<input id="checkinDate" type="date"/>
+</div>
+<div class="form-row">
+<label for="checkoutDate">Date de départ</label>
+<input id="checkoutDate" type="date"/>
+</div>
+</div>
+</div>
+<div class="form-divider"></div>
+<!-- Montants -->
+<div class="form-section">
+<div class="form-section-title">
+<i class="fas fa-euro-sign"></i>
                     Montants
                   </div>
-
-                  <div class="form-row">
-                    <label for="rentAmount">Loyer (prix total en €)</label>
-                    <input type="number" id="rentAmount" placeholder="1050.00" step="0.01" min="0">
-                  </div>
-
-                  <div class="form-row">
-                    <label for="touristTaxAmount">Taxe de séjour (€)</label>
-                    <input type="number" id="touristTaxAmount" placeholder="35.00" step="0.01" min="0">
-                  </div>
-
-                  <div class="form-row">
-                    <label for="cleaningFee">Frais de ménage (€)</label>
-                    <input type="number" id="cleaningFee" placeholder="80.00" step="0.01" min="0">
-                  </div>
-
-                  <div class="checkbox-row">
-                    <input type="checkbox" id="withVat">
-                    <label for="withVat">Avec TVA</label>
-                  </div>
-
-                  <div class="form-row" id="vatGroup" style="display: none;">
-                    <label for="vatRate">Taux de TVA</label>
-                    <select id="vatRate">
-                      <option value="10">10%</option>
-                      <option value="20">20%</option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="form-actions">
-                  <button type="button" class="btn btn-primary" onclick="sendInvoice()" id="sendBtn" disabled>
-                    <i class="fas fa-envelope"></i>
+<div class="form-row">
+<label for="rentAmount">Loyer (prix total en €)</label>
+<input id="rentAmount" min="0" placeholder="1050.00" step="0.01" type="number"/>
+</div>
+<div class="form-row">
+<label for="touristTaxAmount">Taxe de séjour (€)</label>
+<input id="touristTaxAmount" min="0" placeholder="35.00" step="0.01" type="number"/>
+</div>
+<div class="form-row">
+<label for="cleaningFee">Frais de ménage (€)</label>
+<input id="cleaningFee" min="0" placeholder="80.00" step="0.01" type="number"/>
+</div>
+<div class="checkbox-row">
+<input id="withVat" type="checkbox"/>
+<label for="withVat">Avec TVA</label>
+</div>
+<div class="form-row" id="vatGroup" style="display: none;">
+<label for="vatRate">Taux de TVA</label>
+<select id="vatRate">
+<option value="10">10%</option>
+<option value="20">20%</option>
+</select>
+</div>
+</div>
+<!-- Actions -->
+<div class="form-actions">
+<button class="btn btn-primary" disabled="" id="sendBtn" onclick="sendInvoice()" type="button">
+<i class="fas fa-envelope"></i>
                     Envoyer par email
                   </button>
-                  <button type="button" class="btn btn-secondary" onclick="downloadPDF()" id="pdfBtn" disabled>
-                    <i class="fas fa-file-pdf"></i>
+<button class="btn btn-secondary" disabled="" id="pdfBtn" onclick="downloadPDF()" type="button">
+<i class="fas fa-file-pdf"></i>
                     Télécharger PDF
                   </button>
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-          <!-- Aperçu -->
-          <div class="invoice-preview-card">
-            <div class="invoice-preview-header">
-              <i class="fas fa-file-invoice"></i>
+</div>
+</div>
+</div>
+</div>
+<!-- Aperçu -->
+<div class="invoice-preview-card">
+<div class="invoice-preview-header">
+<i class="fas fa-file-invoice"></i>
               Aperçu de la facture
             </div>
-            <div class="invoice-preview-body">
-              <div class="invoice-paper" id="invoicePreview">
-                <div class="invoice-preview-empty">
-                  <i class="fas fa-file-invoice"></i>
-                  <div>
-                    <p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
-                    <p style="font-size: 14px;">Remplissez le formulaire pour voir l'aperçu en temps réel</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div><!-- /.invoice-grid -->
-      </div><!-- /.page-content -->
-      
-    </main>
-  </div>
-
-  <!-- Scripts -->
-  <script>
+<div class="invoice-preview-body">
+<div class="invoice-paper" id="invoicePreview">
+<div class="invoice-preview-empty">
+<i class="fas fa-file-invoice"></i>
+<div>
+<p style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Aucun aperçu</p>
+<p style="font-size: 14px;">Remplissez le formulaire pour voir l'aperçu en temps réel</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><!-- /.invoice-grid -->
+</div><!-- /.page-content -->
+</main>
+</div>
+<!-- Scripts -->
+<script>
     (async function checkSubscriptionAccess() {
       const token = localStorage.getItem('lcc_token');
       
@@ -1224,5 +1050,5 @@
       loadProperties();
     });
   </script>
-</body>
+<script src="/js/bh-layout.js"></script></body>
 </html>
