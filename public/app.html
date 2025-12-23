@@ -7545,7 +7545,7 @@ function populateChecklistModal(checklist) {
   document.getElementById('modalTasksList').innerHTML = tasksHTML || '<p style="color: var(--text-tertiary); font-style: italic;">Aucune tâche</p>';
   
   // Photos
-  cconst photos = typeof checklist.photos === 'string' ? JSON.parse(checklist.photos) : (checklist.photos || []);
+  const photos = typeof checklist.photos === 'string' ? JSON.parse(checklist.photos) : (checklist.photos || []);
   const photosHTML = photos.map((photo, idx) => `
     <div class="photo-item" onclick="viewPhotoFullscreen('${photo}', ${idx})">
       <img src="${photo}" alt="Photo ${idx + 1}">
