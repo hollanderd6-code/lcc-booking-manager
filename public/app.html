@@ -4611,6 +4611,8 @@ function updateTopRisksKpi(bookings) {
     if (subEl) subEl.textContent = subText;
 
     const card = document.getElementById('kpiTopRisksCard');
+    console.log('🎴 Carte Top Risques trouvée:', card ? 'OUI' : 'NON', card);
+    
     if (card) {
       card.onclick = () => {
         console.log('🖱️ Click sur Top Risques, top5:', top5);
