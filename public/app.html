@@ -6042,6 +6042,37 @@ if (j === 0 || cells.length === 1) {
 // Correction du modal de détails de réservation - Version 2
 (function() {
   let currentBookingData = null;
+  let cachedCleaners = null; // Cache pour éviter de recharger à chaque fois
+  
+  // Fonction pour charger les cleaners une seule fois
+  async function loadCleaners() {
+    if (cachedCleaners !== null) return cachedCleaners; // Déjà chargé
+    
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (token && typeof API_URL !== 'undefined') {
+        const response = await fetch(`${API_URL}/api/cleaners`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          cachedCleaners = data.cleaners || [];
+          console.log('👷 Cleaners chargés depuis API:', cachedCleaners);
+          return cachedCleaners;
+        }
+      }
+    } catch (e) {
+      console.log('⚠️ Erreur chargement cleaners depuis API');
+    }
+    
+    // Fallback localStorage
+    try {
+      cachedCleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
+    } catch (e) {
+      cachedCleaners = [];
+    }
+    return cachedCleaners;
+  }
   
   document.addEventListener('DOMContentLoaded', function() {
   // Intercepter les clics sur les booking-blocks
@@ -6444,7 +6475,6 @@ try {
     // 5️⃣ Gestion du ménage – alignée sur cleaning.html
     try {
       let assignments = {};
-      let cleaners = [];
 
       try {
         assignments = JSON.parse(localStorage.getItem('lcc_cleaning_assignments') || '{}');
@@ -6453,28 +6483,8 @@ try {
         assignments = {};
       }
 
-      // Charger les cleaners depuis l'API au lieu du localStorage
-      try {
-        const token = localStorage.getItem('lcc_token');
-        if (token && typeof API_URL !== 'undefined') {
-          const response = await fetch(`${API_URL}/api/cleaners`, {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            cleaners = data.cleaners || [];
-            console.log('👷 Cleaners chargés depuis API:', cleaners);
-          }
-        }
-      } catch (e) {
-        console.log('⚠️ Erreur chargement cleaners depuis API, fallback localStorage');
-        try {
-          cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
-        } catch (e2) {
-          cleaners = [];
-        }
-      }
-      
+      // Charger les cleaners (cache ou API)
+      const cleaners = await loadCleaners();
       console.log('👷 Cleaners finaux:', cleaners);
 
       // même logique que sur cleaning-5.html
