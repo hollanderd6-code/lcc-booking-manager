@@ -4802,6 +4802,8 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
 
         renderPropertyList();
         renderCalendar();
+        // S'assurer que le scroll vers aujourd'hui se fait après le rendu
+        setTimeout(scrollCalendarToToday, 200);
       } catch (e) {
         console.error('Erreur renderModernCalendar', e);
       }
@@ -5021,7 +5023,7 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
       var range = getCurrentRange();
       renderDaysHeader(range);
       renderGrid(range);
-      setTimeout(scrollCalendarToToday, 0);
+      setTimeout(scrollCalendarToToday, 100);
     }
 function scrollCalendarToToday() {
   const grid = document.getElementById('calendarGrid');
@@ -6073,7 +6075,6 @@ try {
 
   // ----- CHECKLIST
   const reservationUid = booking.uid || booking.reservationKey || booking.id || '';
-  const chk = booking.checklist || null;
 
   if (reservationUid) {
     let chkGroup = detailsContent.querySelector('[data-checklist-info="1"]');
@@ -6084,73 +6085,48 @@ try {
       detailsContent.appendChild(chkGroup);
     }
 
-    if (!chk || !Array.isArray(chk.tasks)) {
+    // Chercher la checklist dans le tableau cleaningChecklists
+    const matchingChecklist = window.cleaningChecklists ? 
+      window.cleaningChecklists.find(c => {
+        // Essayer de matcher par reservation_key ou checkout_date
+        const checkoutDate = booking.checkoutDate || booking.checkout || booking.end;
+        return c.reservation_key === reservationUid || 
+               (checkoutDate && c.checkout_date === checkoutDate);
+      }) : null;
+
+    if (!matchingChecklist) {
       chkGroup.innerHTML = `
         <label><i class="fas fa-list-check"></i> Checklist</label>
         <div class="detail-value">Aucune checklist trouvée.</div>
       `;
     } else {
-      const tasksHtml = chk.tasks.map(t => `
-        <label style="display:flex; align-items:center; gap:10px; margin:8px 0; text-transform:none; letter-spacing:0;">
-          <input type="checkbox" data-task-id="${t.id}" ${t.completed ? 'checked' : ''} />
-          <span style="font-size:14px; font-weight:600; opacity:${t.completed ? 0.6 : 1}; text-decoration:${t.completed ? 'line-through' : 'none'};">
-            ${t.title}
-          </span>
-        </label>
-      `).join('');
-
+      // Afficher les infos de la checklist
+      const tasks = typeof matchingChecklist.tasks === 'string' ? 
+        JSON.parse(matchingChecklist.tasks) : (matchingChecklist.tasks || []);
+      const isCompleted = matchingChecklist.is_validated || matchingChecklist.completed_at;
+      const completedTasks = tasks.filter(t => t.checked).length;
+      
       chkGroup.innerHTML = `
-        <label><i class="fas fa-list-check"></i> Checklist (${chk.status || 'pending'})</label>
+        <label><i class="fas fa-list-check"></i> Checklist</label>
         <div class="detail-value">
-          ${tasksHtml}
-          <div style="display:flex; gap:10px; margin-top:10px;">
-            <button type="button" class="btn btn-ghost" id="chkCompleteAllBtn" style="padding:8px 12px;">
-              Tout cocher
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+            <div>
+              <div style="font-weight:600; font-size:14px;">
+                ${isCompleted ? '✅ Validée' : '⏳ En attente'}
+              </div>
+              <div style="font-size:13px; opacity:0.7; margin-top:4px;">
+                ${completedTasks}/${tasks.length} tâches effectuées
+              </div>
+            </div>
+            <button 
+              onclick="openChecklistDetails('${matchingChecklist.id}')" 
+              class="btn btn-primary btn-sm"
+              style="padding:6px 12px; font-size:13px;">
+              <i class="fas fa-eye"></i> Voir détails
             </button>
           </div>
         </div>
       `;
-
-      // Toggle tasks
-      chkGroup.querySelectorAll('input[type="checkbox"][data-task-id]').forEach((cb) => {
-        cb.addEventListener('change', async () => {
-          const taskId = cb.getAttribute('data-task-id');
-          try {
-            const r = await fetch(`${API}/api/checklists/${encodeURIComponent(reservationUid)}/tasks/${encodeURIComponent(taskId)}/toggle`, {
-              method: 'POST',
-              headers: { Authorization: 'Bearer ' + token }
-            });
-            const data = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(data.error || 'Erreur toggle checklist');
-
-            // Mettre à jour booking.checklist en mémoire (pour l’affichage instant)
-            booking.checklist = data.checklist;
-          } catch (e) {
-            alert(e.message || 'Erreur checklist');
-            cb.checked = !cb.checked; // rollback UI
-          }
-        });
-      });
-
-      // Complete all
-      const completeAllBtn = chkGroup.querySelector('#chkCompleteAllBtn');
-      if (completeAllBtn) {
-        completeAllBtn.addEventListener('click', async () => {
-          try {
-            const r = await fetch(`${API}/api/checklists/${encodeURIComponent(reservationUid)}/complete`, {
-              method: 'POST',
-              headers: { Authorization: 'Bearer ' + token }
-            });
-            const data = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(data.error || 'Erreur complete checklist');
-            booking.checklist = data.checklist;
-            // refresh simple : re-render du modal
-            setTimeout(() => fixModalContent(bookingBlock), 50);
-          } catch (e) {
-            alert(e.message || 'Erreur checklist');
-          }
-        });
-      }
     }
   }
 } catch (e) {
@@ -7313,10 +7289,6 @@ let cleaningChecklists = [];
         <h3 class="modal-section-title"><i class="fas fa-user"></i> Informations voyageur</h3>
         <div class="modal-info-grid">
           <div class="modal-info-item">
-            <span class="modal-info-label">Date d'arrivée</span>
-            <span class="modal-info-value" id="modalGuestName">-</span>
-          </div>
-          <div class="modal-info-item">
             <span class="modal-info-label">Date de départ</span>
             <span class="modal-info-value" id="modalCheckoutDate">-</span>
           </div>
@@ -7534,8 +7506,7 @@ function populateChecklistModal(checklist) {
     ${isCompleted ? 'Checklist validée' : 'En attente de validation'}
   `;
   
-  // Guest info - Display checkin date instead of guest name
-  document.getElementById('modalGuestName').textContent = formatChecklistDate(checklist.checkin_date) || 'Non renseignée';
+  // Guest info
   document.getElementById('modalCheckoutDate').textContent = formatChecklistDate(checklist.checkout_date);
   
   // Tasks
