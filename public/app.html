@@ -6160,7 +6160,7 @@ function findReservationForBlock(bookingBlock) {
   }
 
   // Petit délai pour laisser currentBookingData se mettre à jour par les autres scripts
-  setTimeout(function () {
+  setTimeout(async function () {
     const booking =
       window.currentBookingData ||
       window.currentBooking ||
