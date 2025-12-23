@@ -734,7 +734,31 @@
 [data-theme="dark"] .main-header .header-actions .btn.btn-ghost:hover{
   background: rgba(15, 23, 42, 0.90) !important;
 }
-</style></head>
+</style><style id="bhWelcomeFixes">
+/* ✅ Mobile global : éviter le contenu sous le header mobile */
+@media (max-width: 768px){
+  body{ padding-top:72px !important; }
+}
+
+/* ✅ Welcome: stepper mobile en scroll horizontal */
+@media (max-width: 768px){
+  .progress-steps{ overflow-x:auto !important; -webkit-overflow-scrolling:touch; padding:1rem !important; }
+  .steps-container{ display:flex !important; flex-wrap:nowrap !important; gap:14px !important; min-width:max-content !important; justify-content:flex-start !important; padding:8px 4px !important; }
+  .steps-container::before{ display:none !important; }
+  .step{ flex:0 0 auto !important; min-width:150px !important; align-items:flex-start !important; }
+  .step-label{ text-align:left !important; white-space:normal !important; line-height:1.25 !important; }
+}
+
+/* ✅ Welcome: menu mobile OFF-CANVAS (sidebar visible + overlay cliquable) */
+@media (max-width: 768px){
+  #bhSidebar aside.sidebar, aside.sidebar{ display:block !important; position:fixed !important; left:0 !important; top:0 !important; height:100vh !important; transform:translateX(-110%) !important; transition:transform .25s ease !important; z-index:1200 !important; }
+  #bhSidebar aside.sidebar.active, aside.sidebar.active{ transform:translateX(0) !important; }
+  #sidebarOverlay.sidebar-overlay{ position:fixed !important; inset:0 !important; z-index:1100 !important; pointer-events:none; }
+  #sidebarOverlay.sidebar-overlay.active{ pointer-events:auto; }
+  .mobile-header{ position:fixed !important; top:0; left:0; right:0; z-index:1300 !important; }
+}
+</style>
+</head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="welcome" data-subtitle="Créez et gérez vos livrets d’accueil." data-title="Livret d'accueil"><div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
 <i class="fas fa-calendar-check"></i>
