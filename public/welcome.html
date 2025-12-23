@@ -651,7 +651,65 @@
     width: 100%;
   }
 }
-  </style>
+   /* ✅ Welcome: sidebar mobile OFF-CANVAS (menu fonctionne) */
+@media (max-width: 768px) {
+  aside.sidebar, .sidebar { display: block !important; }
+
+  aside.sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100vh !important;
+    transform: translateX(-110%) !important;
+    transition: transform .25s ease !important;
+  }
+  aside.sidebar.active { transform: translateX(0) !important; }
+
+  #sidebarOverlay.sidebar-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    pointer-events: none;
+  }
+  #sidebarOverlay.sidebar-overlay.active {
+    pointer-events: auto;
+  }
+}
+
+/* ✅ Welcome: stepper mobile (scroll horizontal propre) */
+@media (max-width: 768px) {
+  .progress-steps {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem !important;
+  }
+
+  .steps-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 14px !important;
+    min-width: max-content !important;
+    justify-content: flex-start !important;
+    padding: 8px 4px !important;
+  }
+
+  .steps-container::before { display: none !important; }
+
+  .step {
+    flex: 0 0 auto !important;
+    min-width: 150px !important;
+    align-items: flex-start !important;
+    background: #fff;
+    border: 1px solid rgba(148,163,184,.30);
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .step-label {
+    text-align: left !important;
+    white-space: normal !important;
+    line-height: 1.25 !important;
+  }
+}
 <style>
 /* ✅ Uniformisation du bouton "Retour au dashboard" (header) */
 .main-header .header-actions .btn.btn-ghost{
