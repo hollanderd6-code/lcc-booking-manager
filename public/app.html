@@ -4355,9 +4355,6 @@ function populateEditBookingProperties(selectedPropertyId) {
         </button>
       </div>
       <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div>
-      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid rgba(0,0,0,.08);">
-        <button class="btn btn-ghost" data-close="1">Fermer</button>
-      </div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -4613,11 +4610,8 @@ function updateTopRisksKpi(reservations) {
         // fallback modal
         ensureGenericModal('topRisksModal', 'Top risques du mois');
         const modal = document.getElementById('topRisksModal');
-        const content = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent'.replace('Content',''));
-        const body = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
-        const c = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModalContent');
-        // simple: open generic
-        const g = document.getElementById('topRisksModalContent') || document.getElementById('topRisksModal'+'Content');
+        const g = document.getElementById('topRisksModalContent');
+        
         if (g) {
           g.innerHTML = top5.length ? top5.map(r=>{
             const start = formatDateFR(dateOnlyStr(r.start||r.startDate));
@@ -4626,12 +4620,30 @@ function updateTopRisksKpi(reservations) {
             const name = r.guestName || 'Voyageur';
             const score = Math.round(r.riskScore||0);
             const color = window.riskColor(r.riskLevel);
-            return `<div style="border-left:6px solid ${color}; padding-left:12px; margin-bottom:10px;">
-              <div style="font-weight:900;">${score}/100 • ${prop}</div>
-              <div style="opacity:.85;">${start} → ${end} • ${name}</div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+            const riskLabel = r.riskLabel || r.riskLevel || '';
+            
+            // Afficher les tags de risque
+            const tagsHtml = (r.riskTags && r.riskTags.length) 
+              ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+                  ${r.riskTags.map(t => `
+                    <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; background:#f3f4f6; color:#374151;">
+                      ${String(t)}
+                    </span>`).join('')}
+                </div>`
+              : '';
+            
+            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#f9fafb; border-radius:0 8px 8px 0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="font-weight:900; font-size:16px; color:${color};">${riskLabel} — ${score}/100</div>
+                <div style="font-weight:600; opacity:0.7;">${prop}</div>
+              </div>
+              <div style="opacity:.85; font-size:14px; margin-bottom:4px;">
+                📅 ${start} → ${end} • 👤 ${name}
+              </div>
+              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:13px;">${r.riskSummary}</div>` : ''}
+              ${tagsHtml}
             </div>`;
-          }).join('') : `<div style="opacity:.8">Aucun risque détecté sur le mois en cours.</div>`;
+          }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté sur le mois en cours.</div>`;
         }
         const mm = document.getElementById('topRisksModal');
         if (mm) { mm.style.display='flex'; mm.classList.add('active'); }
