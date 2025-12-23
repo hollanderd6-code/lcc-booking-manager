@@ -4613,6 +4613,11 @@ function updateTopRisksKpi(bookings) {
     const card = document.getElementById('kpiTopRisksCard');
     console.log('🎴 Carte Top Risques trouvée:', card ? 'OUI' : 'NON', card);
     
+    if (!card) {
+      console.warn('⚠️ Carte kpiTopRisksCard introuvable dans le DOM, onclick non attaché');
+      return;
+    }
+    
     if (card) {
       card.onclick = () => {
         console.log('🖱️ Click sur Top Risques, top5:', top5);
@@ -5022,13 +5027,15 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
         renderPropertyList();
         renderCalendar();
         
-        // Mettre à jour le KPI des risques avec les bookings qui ont les scores calculés
-        if (typeof updateTopRisksKpi === 'function') {
-          updateTopRisksKpi(state.bookings);
-        }
-        
         // S'assurer que le scroll vers aujourd'hui se fait après le rendu
         setTimeout(scrollCalendarToToday, 200);
+        
+        // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
+        setTimeout(() => {
+          if (typeof updateTopRisksKpi === 'function') {
+            updateTopRisksKpi(state.bookings);
+          }
+        }, 500);
       } catch (e) {
         console.error('Erreur renderModernCalendar', e);
       }
@@ -8145,26 +8152,6 @@ overlay && overlay.addEventListener('click', close);
   }, 700);
 })();
 
-        <!-- CHECKLISTS DE MÉNAGE -->
-        <section class="cleaning-checklists-widget">
-          <div class="widget-header">
-            <div>
-              <div class="widget-kicker">Suivi du ménage</div>
-              <div class="widget-title">Checklists validées</div>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/cleaning.html'">
-              <i class="fas fa-cog"></i> Gérer
-            </button>
-          </div>
-          
-          <div id="checklistsContainer" class="checklists-grid">
-            <!-- Les checklists seront chargées ici -->
-            <div class="loading-state">
-              <i class="fas fa-spinner fa-spin"></i>
-              <span>Chargement...</span>
-            </div>
-          </div>
-        </section>
     });
     
     if (!response.ok) {
