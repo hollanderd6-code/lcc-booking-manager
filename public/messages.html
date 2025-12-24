@@ -409,6 +409,33 @@
       background: var(--border-color);
     }
 
+    /* Bouton Générer message */
+    .chat-modal-header .btn-action {
+      padding: 10px 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .chat-modal-header .btn-action:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .chat-modal-header .btn-action i {
+      font-size: 14px;
+    }
+
     .chat-modal-messages {
       flex: 1;
       overflow-y: auto;
@@ -658,7 +685,14 @@
 <div class="modal-overlay" id="chatModal">
 <div class="chat-modal">
 <div class="chat-modal-header">
+<div style="flex: 1;">
 <h2 id="chatModalTitle">Conversation</h2>
+</div>
+<!-- Bouton Générer message de réservation -->
+<button class="btn-action" onclick="openBookingMessageModal(currentConversationId)" style="margin-right: 12px; padding: 10px 16px; font-size: 13px;" title="Générer le message de bienvenue pour Airbnb/Booking">
+<i class="fas fa-paper-plane"></i>
+<span>Générer message</span>
+</button>
 <button class="close-modal" onclick="closeChat()">
 <i class="fas fa-times"></i>
 </button>
@@ -828,5 +862,169 @@
       }
     })();
   </script>
+
+  <!-- Fonctions génération message de réservation -->
+  <script>
+// ============================================
+// FONCTIONS GÉNÉRATION MESSAGE DE RÉSERVATION
+// ============================================
+
+async function openBookingMessageModal(conversationId) {
+  if (!conversationId) {
+    alert('Erreur: ID de conversation manquant');
+    return;
+  }
+
+  try {
+    // Créer la modal
+    const modal = createBookingMessageModal();
+    document.body.appendChild(modal);
+
+    // Afficher loading
+    const modalContent = modal.querySelector('.booking-modal-content');
+    modalContent.innerHTML = `
+      <div style="text-align: center; padding: 48px;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: var(--primary-color); margin-bottom: 16px;"></i>
+        <p style="color: var(--text-secondary);">Génération du message...</p>
+      </div>
+    `;
+
+    // Récupérer le message
+    const token = localStorage.getItem('lcc_token');
+    const API_URL = window.location.origin;
+    const response = await fetch(`${API_URL}/api/chat/generate-booking-message/${conversationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Erreur de génération');
+    }
+
+    // Afficher le message
+    displayBookingMessage(modalContent, data);
+
+  } catch (error) {
+    console.error('Erreur génération message:', error);
+    alert('Erreur: ' + error.message);
+    closeBookingMessageModal();
+  }
+}
+
+function createBookingMessageModal() {
+  const modal = document.createElement('div');
+  modal.id = 'bookingMessageModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;display:flex;align-items:center;justify-content:center;';
+  
+  modal.innerHTML = `
+    <div onclick="closeBookingMessageModal()" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);"></div>
+    <div style="position:relative;background:white;border-radius:16px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:24px;border-bottom:1px solid #e5e7eb;">
+        <h2 style="font-size:20px;font-weight:700;color:#111827;display:flex;align-items:center;gap:12px;margin:0;">
+          <i class="fas fa-paper-plane"></i>
+          Message de réservation
+        </h2>
+        <button onclick="closeBookingMessageModal()" style="width:36px;height:36px;border:none;background:#f9fafb;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="booking-modal-content" style="padding:24px;"></div>
+    </div>
+  `;
+  return modal;
+}
+
+function displayBookingMessage(container, data) {
+  const { message, hasCleaningPhotos, cleaningPhotoCount, pinCode, links } = data;
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#f9fafb;border-radius:8px;border-left:4px solid #3B82F6;">
+        <i class="fas fa-key" style="font-size:20px;color:#3B82F6;"></i>
+        <div><strong>Code PIN:</strong> ${pinCode}</div>
+      </div>
+      ${hasCleaningPhotos ? `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#D1FAE5;border-radius:8px;border-left:4px solid #10B981;">
+          <i class="fas fa-check-circle" style="font-size:20px;color:#10B981;"></i>
+          <div><strong>Photos de nettoyage:</strong> ${cleaningPhotoCount} photo(s) disponible(s)</div>
+        </div>
+      ` : `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#FEF3C7;border-radius:8px;border-left:4px solid #F59E0B;">
+          <i class="fas fa-exclamation-triangle" style="font-size:20px;color:#F59E0B;"></i>
+          <div><strong>Attention:</strong> Aucune photo de nettoyage trouvée</div>
+        </div>
+      `}
+    </div>
+
+    <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#6B7280;margin-bottom:12px;">
+        <i class="fas fa-eye"></i>
+        Aperçu du message
+      </div>
+      <div id="messageText" style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:16px;font-size:14px;line-height:1.6;color:#111827;white-space:pre-wrap;max-height:400px;overflow-y:auto;">${message.replace(/\n/g, '<br>')}</div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <button onclick="copyBookingMessage()" style="flex:1;min-width:200px;padding:14px 24px;background:#3B82F6;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <i class="fas fa-copy"></i>
+        Copier le message
+      </button>
+      <button onclick="previewLinks('${links.cleaningPhotos || ''}', '${links.checkoutForm}')" style="padding:14px 24px;background:white;color:#3B82F6;border:2px solid #3B82F6;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-external-link-alt"></i>
+        Tester les liens
+      </button>
+    </div>
+
+    <div style="display:flex;gap:12px;padding:16px;background:#EFF6FF;border-radius:8px;font-size:13px;color:#1E40AF;">
+      <i class="fas fa-info-circle" style="font-size:18px;margin-top:2px;flex-shrink:0;"></i>
+      <p style="margin:0;"><strong>Instructions :</strong> Copiez ce message et collez-le dans votre messagerie Airbnb ou Booking.com pour l'envoyer à votre voyageur.</p>
+    </div>
+  `;
+}
+
+function copyBookingMessage() {
+  const messageText = document.getElementById('messageText');
+  if (!messageText) return;
+
+  const text = messageText.innerText || messageText.textContent;
+  
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Message copié dans le presse-papier !');
+  }).catch(err => {
+    console.error('Erreur copie:', err);
+    alert('❌ Erreur lors de la copie');
+  });
+}
+
+function previewLinks(cleaningPhotosLink, checkoutFormLink) {
+  let opened = false;
+  
+  if (cleaningPhotosLink && cleaningPhotosLink !== 'null' && cleaningPhotosLink !== '') {
+    window.open(cleaningPhotosLink, '_blank');
+    opened = true;
+  }
+  if (checkoutFormLink && checkoutFormLink !== 'null' && checkoutFormLink !== '') {
+    window.open(checkoutFormLink, '_blank');
+    opened = true;
+  }
+  
+  if (!opened) {
+    alert('Aucun lien à tester');
+  }
+}
+
+function closeBookingMessageModal() {
+  const modal = document.getElementById('bookingMessageModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+  </script>
+
 <script src="/js/bh-layout.js"></script></body>
 </html>
