@@ -9355,9 +9355,10 @@ app.post('/api/chat/generate-booking-message/:conversationId', authenticateToken
 
     // 5. Générer le message
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
-    const chatLink = `${appUrl}/chat/${conversation.unique_token}`;
-    const cleaningPhotosLink = `${baseUrl}/chat/${photosToken}/cleaning-photos`;
-    const checkoutFormLink = `${appUrl}/chat/${photosToken}/checkout-form`;
+const baseUrl = appUrl.replace(/\/$/, ''); // Enlève le / final s'il existe
+const chatLink = `${baseUrl}/chat/${conversation.unique_token}`;
+const cleaningPhotosLink = `${baseUrl}/chat/${photosToken}/cleaning-photos`;
+const checkoutFormLink = `${baseUrl}/chat/${photosToken}/checkout-form`;
 
     const propertyName = conversation.property_name || 'votre logement';
     const pinCode = conversation.pin_code;
