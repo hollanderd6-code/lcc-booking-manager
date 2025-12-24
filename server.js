@@ -9554,7 +9554,7 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
           updated_at
         ) VALUES ($1, $2, $3, NOW(), NOW(), NOW())
         RETURNING id`,
-        [reservationKey, conversation.property_id, JSON.stringify(photos)]
+        [conversation.user_id, reservationKey, conversation.property_id, JSON.stringify(photos)]
       );
       
       console.log('✅ Cleaning checklist créé avec ID:', createResult.rows[0].id);
