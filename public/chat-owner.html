@@ -1291,7 +1291,20 @@ const bookingMessageModalStyles = `
   <div class="modal-overlay" id="chatModal">
     <div class="chat-modal">
       <div class="chat-modal-header">
-        <h2 id="chatModalTitle">Conversation</h2>
+        <div style="flex: 1;">
+          <h2 id="chatModalTitle">Conversation</h2>
+        </div>
+        
+        <!-- Bouton Générer message de réservation -->
+        <button 
+          class="btn-action" 
+          onclick="openBookingMessageModal(currentConversationId)"
+          style="margin-right: 12px;"
+          title="Générer le message de bienvenue pour Airbnb/Booking">
+          <i class="fas fa-paper-plane"></i>
+          Générer message
+        </button>
+        
         <button class="close-modal" onclick="closeChat()">
           <i class="fas fa-times"></i>
         </button>
