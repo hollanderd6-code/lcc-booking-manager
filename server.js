@@ -8920,7 +8920,14 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// Routes pour les pages publiques (pas d'authentification requise)
+app.get('/chat/:photosToken/cleaning-photos', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'html', 'cleaning-photos.html'));
+});
 
+app.get('/chat/:photosToken/checkout-form', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'html', 'checkout-form.html'));
+});
 // ============================================
 // FIN DES ROUTES V2
 // ============================================
