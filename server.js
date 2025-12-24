@@ -9541,47 +9541,58 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
     console.log('✅ Cleaning checklists trouvés:', checkExists.rows);
     
     if (checkExists.rows.length === 0) {
-      // ⚠️ Le cleaning checklist n'existe pas, on le crée !
-      console.log('⚠️ Aucun cleaning_checklist trouvé, création...');
-      
-      const createResult = await pool.query(
-        `INSERT INTO cleaning_checklists (
-          reservation_key, 
-          property_id,
-          departure_photos,
-          departure_photos_uploaded_at,
-          created_at,
-          updated_at
-        ) VALUES ($1, $2, $3, $4, NOW(), NOW(), NOW())
-        RETURNING id`,
+  console.log('⚠️ Aucun cleaning_checklist trouvé, création...');
+  
+  const createResult = await pool.query(
+    `INSERT INTO cleaning_checklists (
+      user_id,
+      property_id,
+      reservation_key,
+      cleaner_id,
+      checkout_date,
+      tasks,
+      photos,
+      sent_to_owner,
+      sent_to_guest,
+      created_at,
+      updated_at,
+      departure_photos,
+      departure_photos_uploaded_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), $10, NOW())
+    RETURNING id`,
     [
-      conversation.user_id,           // $1
-      conversation.property_id,       // $2
-      reservationKey,                 // $3
-      JSON.stringify(photos)          // $4
+      conversation.user_id,              // $1 - user_id
+      conversation.property_id,          // $2 - property_id
+      reservationKey,                    // $3 - reservation_key
+      '',                                // $4 - cleaner_id (vide pour l'instant)
+      conversation.reservation_end_date || conversation.reservation_start_date,  // $5 - checkout_date
+      JSON.stringify([]),                // $6 - tasks (tableau vide)
+      JSON.stringify([]),                // $7 - photos (tableau vide)
+      false,                             // $8 - sent_to_owner
+      false,                             // $9 - sent_to_guest
+      JSON.stringify(photos)             // $10 - departure_photos
     ]
   );
-      
-      console.log('✅ Cleaning checklist créé avec ID:', createResult.rows[0].id);
-      
-      // Notification
-      await pool.query(
-        `INSERT INTO chat_notifications (user_id, conversation_id, message, type, is_read)
-         VALUES ($1, $2, $3, $4, FALSE)`,
-        [
-          conversation.user_id, 
-          conversation.id,
-          `Le voyageur a uploadé ${photos.length} photo(s) de départ`,
-          'checkout_photos'
-        ]
-      );
-      
-      return res.json({
-        success: true,
-        message: 'Photos de départ enregistrées avec succès',
-        photoCount: photos.length
-      });
-    }
+  
+  console.log('✅ Cleaning checklist créé avec ID:', createResult.rows[0].id);
+  
+  await pool.query(
+    `INSERT INTO chat_notifications (user_id, conversation_id, message, type, is_read)
+     VALUES ($1, $2, $3, $4, FALSE)`,
+    [
+      conversation.user_id, 
+      conversation.id,
+      `Le voyageur a uploadé ${photos.length} photo(s) de départ`,
+      'checkout_photos'
+    ]
+  );
+  
+  return res.json({
+    success: true,
+    message: 'Photos de départ enregistrées avec succès',
+    photoCount: photos.length
+  });
+}
     
     // 3. Mettre à jour le cleaning checklist existant
     const result = await pool.query(
