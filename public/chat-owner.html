@@ -408,6 +408,34 @@
       transition: var(--transition-fast);
     }
 
+    /* ===== Bouton Générer Message ===== */
+    .chat-modal-header .btn-action {
+      padding: 10px 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .chat-modal-header .btn-action:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .chat-modal-header .btn-action i {
+      font-size: 14px;
+    }
+
+
     .close-modal:hover {
       background: var(--border-color);
     }
@@ -1347,6 +1375,9 @@ const bookingMessageModalStyles = `
 
   <!-- Auth + User -->
   <script>
+    // ✅ Variable globale pour la conversation active
+    let currentConversationId = null;
+    
     (async function checkSubscriptionAccess() {
     const token = localStorage.getItem('lcc_token');
     
