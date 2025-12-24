@@ -8922,10 +8922,12 @@ app.get('/api/owner-credit-notes/:id', async (req, res) => {
 });
 // Routes pour les pages publiques (pas d'authentification requise)
 app.get('/chat/:photosToken/cleaning-photos', (req, res) => {
+  console.log('✅ Route cleaning-photos appelée ! Token:', req.params.photosToken);
   res.sendFile(path.join(__dirname, 'public', 'html', 'cleaning-photos.html'));
 });
 
 app.get('/chat/:photosToken/checkout-form', (req, res) => {
+  console.log('✅ Route checkout-form appelée ! Token:', req.params.photosToken);
   res.sendFile(path.join(__dirname, 'public', 'html', 'checkout-form.html'));
 });
 // ============================================
