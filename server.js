@@ -9289,8 +9289,6 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 // À ajouter dans chat_routes-4.js
 // ============================================
 
-const crypto = require('crypto');
-
 /**
  * Générer le message de bienvenue à envoyer sur Airbnb/Booking
  * avec lien vers les photos du cleaning
