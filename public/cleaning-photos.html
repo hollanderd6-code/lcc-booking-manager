@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photos du logement - État à l'arrivée</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #3B82F6;
+      --primary-hover: #2563EB;
+      --success-color: #10B981;
+      --text-primary: #1F2937;
+      --text-secondary: #6B7280;
+      --border-color: #E5E7EB;
+      --bg-light: #F9FAFB;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .header-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 32px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .property-name {
+      font-size: 18px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .info-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--bg-light);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 16px;
+      color: var(--primary-color);
+      font-size: 18px;
+    }
+
+    .info-content h3 {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .info-content p {
+      font-size: 16px;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .section-title i {
+      font-size: 24px;
+    }
+
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .photo-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .photo-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .photo-info {
+      padding: 12px;
+      text-align: center;
+    }
+
+    .photo-number {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .empty-state {
+      background: white;
+      border-radius: 16px;
+      padding: 48px 24px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 48px;
+      color: white;
+      font-size: 18px;
+    }
+
+    .loading i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Lightbox pour voir les photos en grand */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .lightbox.active {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .lightbox-close:hover {
+      transform: scale(1.1);
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .lightbox-nav:hover {
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .lightbox-prev {
+      left: 24px;
+    }
+
+    .lightbox-next {
+      right: 24px;
+    }
+
+    .error-message {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      color: #EF4444;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .error-message i {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .photos-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 20px;
+      }
+      
+      .property-name {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Loading state -->
+    <div class="loading" id="loadingState">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des photos...</p>
+    </div>
+
+    <!-- Error state -->
+    <div class="error-message" id="errorState" style="display: none;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h2 id="errorTitle">Erreur</h2>
+      <p id="errorMessage"></p>
+    </div>
+
+    <!-- Content -->
+    <div id="content" style="display: none;">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-icon">
+          <i class="fas fa-home"></i>
+        </div>
+        <h1>État du logement à votre arrivée</h1>
+        <p class="property-name" id="propertyName">Chargement...</p>
+      </div>
+
+      <!-- Info Card -->
+      <div class="info-card">
+        <div class="info-row">
+          <div class="info-icon">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+          <div class="info-content">
+            <h3>Date d'arrivée</h3>
+            <p id="checkinDate">-</p>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i class="fas fa-calendar-times"></i>
+          </div>
+          <div class="info-content">
+            <h3>Date de départ</h3>
+            <p id="checkoutDate">-</p>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon">
+            <i class="fas fa-broom"></i>
+          </div>
+          <div class="info-content">
+            <h3>Nettoyage effectué le</h3>
+            <p id="cleaningDate">-</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Photos Section -->
+      <div class="section-title">
+        <i class="fas fa-camera"></i>
+        <span>Photos du logement nettoyé</span>
+      </div>
+
+      <div class="photos-grid" id="photosGrid">
+        <!-- Photos will be inserted here -->
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <i class="fas fa-image"></i>
+        <p>Aucune photo disponible pour ce nettoyage</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">
+      <i class="fas fa-times"></i>
+    </button>
+    <button class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <img id="lightboxImage" src="" alt="Photo">
+    <button class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+    const photosToken = window.location.pathname.split('/')[2];
+    
+    let currentPhotos = [];
+    let currentPhotoIndex = 0;
+
+    // Load cleaning info and photos
+    async function loadCleaningPhotos() {
+      try {
+        const response = await fetch(`${API_URL}/api/chat/${photosToken}/cleaning-info`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur de chargement');
+        }
+
+        // Hide loading
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+        // Fill info
+        document.getElementById('propertyName').textContent = data.propertyName || 'Votre logement';
+        document.getElementById('checkinDate').textContent = formatDate(data.checkinDate);
+        document.getElementById('checkoutDate').textContent = formatDate(data.checkoutDate);
+        document.getElementById('cleaningDate').textContent = formatDateTime(data.cleaningCompletedAt);
+
+        // Display photos
+        currentPhotos = data.arrivalPhotos || [];
+        
+        if (currentPhotos.length === 0) {
+          document.getElementById('photosGrid').style.display = 'none';
+          document.getElementById('emptyState').style.display = 'block';
+        } else {
+          displayPhotos(currentPhotos);
+        }
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('errorTitle').textContent = 'Erreur de chargement';
+        document.getElementById('errorMessage').textContent = error.message;
+      }
+    }
+
+    function displayPhotos(photos) {
+      const grid = document.getElementById('photosGrid');
+      grid.innerHTML = '';
+
+      photos.forEach((photo, index) => {
+        const photoCard = document.createElement('div');
+        photoCard.className = 'photo-card';
+        photoCard.onclick = () => openLightbox(index);
+
+        photoCard.innerHTML = `
+          <img src="${photo}" alt="Photo ${index + 1}">
+          <div class="photo-info">
+            <div class="photo-number">Photo ${index + 1} / ${photos.length}</div>
+          </div>
+        `;
+
+        grid.appendChild(photoCard);
+      });
+    }
+
+    function openLightbox(index) {
+      currentPhotoIndex = index;
+      document.getElementById('lightboxImage').src = currentPhotos[currentPhotoIndex];
+      document.getElementById('lightbox').classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+    }
+
+    function navigateLightbox(direction) {
+      currentPhotoIndex = (currentPhotoIndex + direction + currentPhotos.length) % currentPhotos.length;
+      document.getElementById('lightboxImage').src = currentPhotos[currentPhotoIndex];
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Close lightbox on ESC key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      if (e.key === 'ArrowRight') navigateLightbox(1);
+    });
+
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', loadCleaningPhotos);
+  </script>
+</body>
+</html>
