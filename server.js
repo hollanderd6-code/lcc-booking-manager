@@ -9494,28 +9494,27 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
   try {
     const { photosToken } = req.params;
     const { photos } = req.body;
-
+    
     if (!photos || !Array.isArray(photos) || photos.length === 0) {
       return res.status(400).json({ error: 'Aucune photo fournie' });
     }
-
-    // Limite de 10 photos
+    
     if (photos.length > 10) {
       return res.status(400).json({ error: 'Maximum 10 photos autorisées' });
     }
-
-    // 1. Trouver la conversation via le photos_token
+    
+    // 1. Trouver la conversation
     const convResult = await pool.query(
       `SELECT * FROM conversations WHERE photos_token = $1`,
       [photosToken]
     );
-
+    
     if (convResult.rows.length === 0) {
       return res.status(404).json({ error: 'Lien invalide' });
     }
-
+    
     const conversation = convResult.rows[0];
-
+    
     // 2. Construire le reservation_key
     const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
     const endDate = conversation.reservation_end_date 
@@ -9525,12 +9524,61 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
     const reservationKey = endDate 
       ? `${conversation.property_id}_${startDate}_${endDate}`
       : null;
-
+    
     if (!reservationKey) {
       return res.status(404).json({ error: 'Informations de réservation incomplètes' });
     }
-
-    // 3. Mettre à jour le cleaning checklist avec les photos de départ
+    
+    // 🔍 DEBUG : Voir ce qu'on cherche
+    console.log('🔍 Recherche cleaning_checklist avec reservation_key:', reservationKey);
+    
+    // Vérifier si le checklist existe
+    const checkExists = await pool.query(
+      `SELECT id, reservation_key FROM cleaning_checklists WHERE reservation_key = $1`,
+      [reservationKey]
+    );
+    
+    console.log('✅ Cleaning checklists trouvés:', checkExists.rows);
+    
+    if (checkExists.rows.length === 0) {
+      // ⚠️ Le cleaning checklist n'existe pas, on le crée !
+      console.log('⚠️ Aucun cleaning_checklist trouvé, création...');
+      
+      const createResult = await pool.query(
+        `INSERT INTO cleaning_checklists (
+          reservation_key, 
+          property_id,
+          departure_photos,
+          departure_photos_uploaded_at,
+          created_at,
+          updated_at
+        ) VALUES ($1, $2, $3, NOW(), NOW(), NOW())
+        RETURNING id`,
+        [reservationKey, conversation.property_id, JSON.stringify(photos)]
+      );
+      
+      console.log('✅ Cleaning checklist créé avec ID:', createResult.rows[0].id);
+      
+      // Notification
+      await pool.query(
+        `INSERT INTO chat_notifications (user_id, conversation_id, message, type, is_read)
+         VALUES ($1, $2, $3, $4, FALSE)`,
+        [
+          conversation.user_id, 
+          conversation.id,
+          `Le voyageur a uploadé ${photos.length} photo(s) de départ`,
+          'checkout_photos'
+        ]
+      );
+      
+      return res.json({
+        success: true,
+        message: 'Photos de départ enregistrées avec succès',
+        photoCount: photos.length
+      });
+    }
+    
+    // 3. Mettre à jour le cleaning checklist existant
     const result = await pool.query(
       `UPDATE cleaning_checklists 
        SET departure_photos = $1, 
@@ -9540,12 +9588,10 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
        RETURNING id`,
       [JSON.stringify(photos), reservationKey]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Nettoyage non trouvé' });
-    }
-
-    // 4. Créer une notification pour le propriétaire
+    
+    console.log('✅ Cleaning checklist mis à jour:', result.rows[0].id);
+    
+    // 4. Notification
     await pool.query(
       `INSERT INTO chat_notifications (user_id, conversation_id, message, type, is_read)
        VALUES ($1, $2, $3, $4, FALSE)`,
@@ -9556,16 +9602,16 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
         'checkout_photos'
       ]
     );
-
+    
     res.json({
       success: true,
       message: 'Photos de départ enregistrées avec succès',
       photoCount: photos.length
     });
-
+    
   } catch (error) {
     console.error('❌ Erreur upload photos départ:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur', details: error.message });
   }
 });
 // ============================================
