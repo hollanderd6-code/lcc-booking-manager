@@ -9552,7 +9552,7 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
           departure_photos_uploaded_at,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, NOW(), NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, NOW(), NOW(), NOW())
         RETURNING id`,
     [
       conversation.user_id,           // $1
