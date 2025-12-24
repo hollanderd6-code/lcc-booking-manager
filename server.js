@@ -9607,17 +9607,17 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
     
     console.log('✅ Cleaning checklist mis à jour:', result.rows[0].id);
     
-    // 4. Notification
-    await pool.query(
-      `INSERT INTO chat_notifications (user_id, conversation_id, message, type, is_read)
-       VALUES ($1, $2, $3, $4, FALSE)`,
-      [
-        conversation.user_id, 
-        conversation.id,
-        `Le voyageur a uploadé ${photos.length} photo(s) de départ`,
-        'checkout_photos'
-      ]
-    );
+    // Notification
+await pool.query(
+  `INSERT INTO chat_notifications (user_id, conversation_id, message, notification_type, is_read)
+   VALUES ($1, $2, $3, $4, FALSE)`,
+  [
+    conversation.user_id, 
+    conversation.id,
+    `Le voyageur a uploadé ${photos.length} photo(s) de départ`,
+    'checkout_photos'
+  ]
+);
     
     res.json({
       success: true,
