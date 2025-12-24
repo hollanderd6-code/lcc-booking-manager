@@ -9564,7 +9564,7 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
       conversation.user_id,              // $1 - user_id
       conversation.property_id,          // $2 - property_id
       reservationKey,                    // $3 - reservation_key
-      '',                                // $4 - cleaner_id (vide pour l'instant)
+      null,  // $4 - cleaner_id (null car pas encore assigné)
       conversation.reservation_end_date || conversation.reservation_start_date,  // $5 - checkout_date
       JSON.stringify([]),                // $6 - tasks (tableau vide)
       JSON.stringify([]),                // $7 - photos (tableau vide)
