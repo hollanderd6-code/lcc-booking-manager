@@ -9276,7 +9276,23 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
     res.status(500).json({ error: 'Erreur traitement webhook' });
   }
 });
+// Après les autres routes de chat, ajouter :
 
+// 1. Route pour générer le message
+app.post('/api/chat/generate-booking-message/:conversationId', 
+  authenticateToken, checkSubscription, async (req, res) => {
+  // ... code from booking-message-routes.js
+});
+
+// 2. Route pour récupérer les infos du cleaning
+app.get('/api/chat/:photosToken/cleaning-info', async (req, res) => {
+  // ... code from booking-message-routes.js
+});
+
+// 3. Route pour uploader les photos de départ
+app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
+  // ... code from booking-message-routes.js
+});
 // ============================================
 // FIN DES ROUTES STRIPE
 // ============================================
