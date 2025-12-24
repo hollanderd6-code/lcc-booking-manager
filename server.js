@@ -9283,22 +9283,289 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
     res.status(500).json({ error: 'Erreur traitement webhook' });
   }
 });
-// Après les autres routes de chat, ajouter :
 
-// 1. Route pour générer le message
-app.post('/api/chat/generate-booking-message/:conversationId', 
-  authenticateToken, checkSubscription, async (req, res) => {
-  // ... code from booking-message-routes.js
+// ============================================
+// ROUTES POUR MESSAGE DE RÉSERVATION AVEC CLEANING PHOTOS
+// À ajouter dans chat_routes-4.js
+// ============================================
+
+const crypto = require('crypto');
+
+/**
+ * Générer le message de bienvenue à envoyer sur Airbnb/Booking
+ * avec lien vers les photos du cleaning
+ */
+app.post('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversationId } = req.params;
+
+    // 1. Récupérer la conversation
+    const convResult = await pool.query(
+      `SELECT c.*, p.name as property_name 
+       FROM conversations c
+       LEFT JOIN properties p ON c.property_id = p.id
+       WHERE c.id = $1 AND c.user_id = $2`,
+      [conversationId, userId]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation non trouvée' });
+    }
+
+    const conversation = convResult.rows[0];
+
+    // 2. Générer ou récupérer le token pour les photos
+    let photosToken = conversation.photos_token;
+    
+    if (!photosToken) {
+      photosToken = crypto.randomBytes(32).toString('hex');
+      
+      await pool.query(
+        'UPDATE conversations SET photos_token = $1 WHERE id = $2',
+        [photosToken, conversationId]
+      );
+    }
+
+    // 3. Construire le reservation_key pour trouver le cleaning
+    const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
+    const endDate = conversation.reservation_end_date 
+      ? new Date(conversation.reservation_end_date).toISOString().split('T')[0]
+      : null;
+    
+    const reservationKey = endDate 
+      ? `${conversation.property_id}_${startDate}_${endDate}`
+      : null;
+
+    // 4. Vérifier si un cleaning checklist existe
+    let hasCleaningPhotos = false;
+    let cleaningPhotoCount = 0;
+
+    if (reservationKey) {
+      const cleaningResult = await pool.query(
+        `SELECT photos FROM cleaning_checklists WHERE reservation_key = $1`,
+        [reservationKey]
+      );
+
+      if (cleaningResult.rows.length > 0) {
+        const photos = cleaningResult.rows[0].photos;
+        cleaningPhotoCount = Array.isArray(photos) ? photos.length : 
+                           (typeof photos === 'string' ? JSON.parse(photos).length : 0);
+        hasCleaningPhotos = cleaningPhotoCount > 0;
+      }
+    }
+
+    // 5. Générer le message
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const chatLink = `${appUrl}/chat/${conversation.unique_token}`;
+    const cleaningPhotosLink = `${appUrl}/chat/${photosToken}/cleaning-photos`;
+    const checkoutFormLink = `${appUrl}/chat/${photosToken}/checkout-form`;
+
+    const propertyName = conversation.property_name || 'votre logement';
+    const pinCode = conversation.pin_code;
+
+    let message = `🎉 Bienvenue dans ${propertyName} !
+
+📋 Informations importantes :
+• Code PIN pour le chat sécurisé : ${pinCode}
+• Accédez au chat pour toutes vos questions : ${chatLink}
+
+`;
+
+    if (hasCleaningPhotos) {
+      message += `🧹 État du logement à votre arrivée :
+Consultez les photos du nettoyage effectué juste avant votre arrivée (${cleaningPhotoCount} photos) :
+👉 ${cleaningPhotosLink}
+
+`;
+    }
+
+    message += `📸 Photos de départ (optionnel) :
+Si vous le souhaitez, vous pouvez prendre quelques photos avant de partir pour documenter l'état du logement :
+👉 ${checkoutFormLink}
+
+Bon séjour ! 🏡`;
+
+    res.json({
+      success: true,
+      message: message,
+      links: {
+        chat: chatLink,
+        cleaningPhotos: hasCleaningPhotos ? cleaningPhotosLink : null,
+        checkoutForm: checkoutFormLink
+      },
+      hasCleaningPhotos,
+      cleaningPhotoCount,
+      pinCode
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur génération message:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-// 2. Route pour récupérer les infos du cleaning
+/**
+ * Récupérer les informations pour afficher les photos du cleaning
+ */
 app.get('/api/chat/:photosToken/cleaning-info', async (req, res) => {
-  // ... code from booking-message-routes.js
+  try {
+    const { photosToken } = req.params;
+
+    // 1. Trouver la conversation via le photos_token
+    const convResult = await pool.query(
+      `SELECT c.*, p.name as property_name 
+       FROM conversations c
+       LEFT JOIN properties p ON c.property_id = p.id
+       WHERE c.photos_token = $1`,
+      [photosToken]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Lien invalide' });
+    }
+
+    const conversation = convResult.rows[0];
+
+    // 2. Construire le reservation_key
+    const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
+    const endDate = conversation.reservation_end_date 
+      ? new Date(conversation.reservation_end_date).toISOString().split('T')[0]
+      : null;
+    
+    const reservationKey = endDate 
+      ? `${conversation.property_id}_${startDate}_${endDate}`
+      : null;
+
+    if (!reservationKey) {
+      return res.status(404).json({ error: 'Informations de réservation incomplètes' });
+    }
+
+    // 3. Récupérer le cleaning checklist
+    const cleaningResult = await pool.query(
+      `SELECT 
+        id, photos, departure_photos, completed_at, guest_name,
+        checkout_date, notes
+       FROM cleaning_checklists 
+       WHERE reservation_key = $1`,
+      [reservationKey]
+    );
+
+    if (cleaningResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Aucun nettoyage trouvé pour cette réservation' });
+    }
+
+    const cleaning = cleaningResult.rows[0];
+
+    // 4. Parser les photos
+    const arrivalPhotos = typeof cleaning.photos === 'string' 
+      ? JSON.parse(cleaning.photos) 
+      : (cleaning.photos || []);
+    
+    const departurePhotos = cleaning.departure_photos 
+      ? (typeof cleaning.departure_photos === 'string' 
+          ? JSON.parse(cleaning.departure_photos) 
+          : cleaning.departure_photos)
+      : [];
+
+    res.json({
+      success: true,
+      propertyName: conversation.property_name,
+      guestName: conversation.guest_name || cleaning.guest_name,
+      checkinDate: conversation.reservation_start_date,
+      checkoutDate: conversation.reservation_end_date || cleaning.checkout_date,
+      cleaningCompletedAt: cleaning.completed_at,
+      arrivalPhotos,
+      departurePhotos,
+      notes: cleaning.notes
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur récupération cleaning info:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-// 3. Route pour uploader les photos de départ
+/**
+ * Upload des photos de départ par le guest
+ */
 app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
-  // ... code from booking-message-routes.js
+  try {
+    const { photosToken } = req.params;
+    const { photos } = req.body;
+
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      return res.status(400).json({ error: 'Aucune photo fournie' });
+    }
+
+    // Limite de 10 photos
+    if (photos.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 photos autorisées' });
+    }
+
+    // 1. Trouver la conversation via le photos_token
+    const convResult = await pool.query(
+      `SELECT * FROM conversations WHERE photos_token = $1`,
+      [photosToken]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Lien invalide' });
+    }
+
+    const conversation = convResult.rows[0];
+
+    // 2. Construire le reservation_key
+    const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
+    const endDate = conversation.reservation_end_date 
+      ? new Date(conversation.reservation_end_date).toISOString().split('T')[0]
+      : null;
+    
+    const reservationKey = endDate 
+      ? `${conversation.property_id}_${startDate}_${endDate}`
+      : null;
+
+    if (!reservationKey) {
+      return res.status(404).json({ error: 'Informations de réservation incomplètes' });
+    }
+
+    // 3. Mettre à jour le cleaning checklist avec les photos de départ
+    const result = await pool.query(
+      `UPDATE cleaning_checklists 
+       SET departure_photos = $1, 
+           departure_photos_uploaded_at = NOW(),
+           updated_at = NOW()
+       WHERE reservation_key = $2
+       RETURNING id`,
+      [JSON.stringify(photos), reservationKey]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Nettoyage non trouvé' });
+    }
+
+    // 4. Créer une notification pour le propriétaire
+    await pool.query(
+      `INSERT INTO chat_notifications (user_id, conversation_id, message, type, is_read)
+       VALUES ($1, $2, $3, $4, FALSE)`,
+      [
+        conversation.user_id, 
+        conversation.id,
+        `Le voyageur a uploadé ${photos.length} photo(s) de départ`,
+        'checkout_photos'
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Photos de départ enregistrées avec succès',
+      photoCount: photos.length
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur upload photos départ:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 // ============================================
 // FIN DES ROUTES STRIPE
