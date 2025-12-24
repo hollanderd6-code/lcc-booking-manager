@@ -317,6 +317,228 @@
         max-width: 100%;
       }
     }
+    /* ===== INPUTS MODERNES - STYLE UNIFIÉ ===== */
+    
+    /* Override des styles globaux pour cette page */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="url"],
+    input[type="date"],
+    input[type="time"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px 16px !important;
+      font-size: 15px !important;
+      font-weight: 400 !important;
+      line-height: 1.5 !important;
+      color: var(--text-primary) !important;
+      background-color: #ffffff !important;
+      border: 1.5px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      transition: all 0.15s ease !important;
+      font-family: 'Inter', sans-serif !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="tel"]:focus,
+    input[type="number"]:focus,
+    input[type="url"]:focus,
+    input[type="date"]:focus,
+    input[type="time"]:focus,
+    textarea:focus,
+    select:focus {
+      outline: none !important;
+      border-color: var(--primary-color) !important;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+      background-color: #ffffff !important;
+    }
+
+    input[type="text"]:hover:not(:focus),
+    input[type="email"]:hover:not(:focus),
+    input[type="password"]:hover:not(:focus),
+    input[type="tel"]:hover:not(:focus),
+    input[type="number"]:hover:not(:focus),
+    input[type="url"]:hover:not(:focus),
+    input[type="date"]:hover:not(:focus),
+    input[type="time"]:hover:not(:focus),
+    textarea:hover:not(:focus),
+    select:hover:not(:focus) {
+      border-color: #d1d5db !important;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #9ca3af !important;
+      opacity: 1 !important;
+    }
+
+    /* Labels plus modernes */
+    label {
+      display: block;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      color: var(--text-primary) !important;
+      margin-bottom: 8px !important;
+    }
+
+    /* Form groups avec espacement */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    /* Select avec icône */
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E") !important;
+      background-position: right 12px center !important;
+      background-repeat: no-repeat !important;
+      background-size: 20px !important;
+      padding-right: 40px !important;
+    }
+
+    /* Textarea */
+    textarea {
+      min-height: 100px !important;
+      resize: vertical !important;
+    }
+
+    /* Disabled state */
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+      background-color: #f3f4f6 !important;
+      color: #9ca3af !important;
+      cursor: not-allowed !important;
+      opacity: 0.6 !important;
+    }
+
+    /* Boutons modernes */
+    .btn-primary,
+    .btn-action,
+    button[type="submit"] {
+      padding: 12px 24px !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      transition: all 0.15s ease !important;
+      border: none !important;
+    }
+
+    .btn-primary:hover,
+    .btn-action:hover,
+    button[type="submit"]:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    .btn-secondary {
+      padding: 10px 20px !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      transition: all 0.15s ease !important;
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px) !important;
+    }
+
+    /* Boutons d'action dans les listes */
+    .btn-sm {
+      padding: 8px 14px !important;
+      font-size: 13px !important;
+      border-radius: 6px !important;
+      transition: all 0.15s ease !important;
+    }
+
+    .btn-sm:hover {
+      transform: translateY(-1px) !important;
+    }
+
+    /* Messages d'erreur/succès */
+    .error-message {
+      color: #dc2626;
+      font-size: 13px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .success-message {
+      color: #059669;
+      font-size: 13px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Card sections plus espacées */
+    .card {
+      padding: 28px !important;
+      border-radius: 12px !important;
+    }
+
+    .card h2 {
+      margin-bottom: 24px !important;
+    }
+
+    /* Checkbox modernes */
+    input[type="checkbox"] {
+      width: 20px !important;
+      height: 20px !important;
+      border: 2px solid #d1d5db !important;
+      border-radius: 4px !important;
+      cursor: pointer !important;
+      transition: all 0.15s ease !important;
+    }
+
+    input[type="checkbox"]:checked {
+      background-color: var(--primary-color) !important;
+      border-color: var(--primary-color) !important;
+    }
+
+    input[type="checkbox"]:hover {
+      border-color: var(--primary-color) !important;
+    }
+
+    /* Upload de fichier moderne */
+    input[type="file"] {
+      padding: 10px !important;
+      border: 2px dashed #d1d5db !important;
+      background: #f9fafb !important;
+      cursor: pointer !important;
+      border-radius: 8px !important;
+    }
+
+    input[type="file"]:hover {
+      border-color: var(--primary-color) !important;
+      background: #f0fdf4 !important;
+    }
+
+    /* Modals avec inputs modernes */
+    .modal input[type="text"],
+    .modal input[type="email"],
+    .modal input[type="tel"],
+    .modal input[type="date"],
+    .modal textarea,
+    .modal select {
+      margin-bottom: 16px;
+    }
+
+    /* Espacement des formulaires dans les modals */
+    .modal .form-group:last-child {
+      margin-bottom: 0;
+    }
   </style>
 <script src="/js/auth-fetch.js"></script>
 </head>
