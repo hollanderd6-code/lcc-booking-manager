@@ -1870,7 +1870,11 @@ async function loadProperties() {
         access_instructions,
         owner_id,
         display_order,
-        chat_pin
+        chat_pin,
+        amenities,
+        house_rules,
+        practical_info,
+        auto_responses_enabled
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -1881,7 +1885,7 @@ async function loadProperties() {
         try {
           icalUrls = JSON.parse(icalUrls);
         } catch (e) {
-          console.error(`❌' Erreur parse ical_urls pour ${row.name}:`, e.message);
+          console.error('❌ Erreur parse ical_urls pour ${row.name}:', e.message);
           icalUrls = [];
         }
       }
@@ -1904,16 +1908,19 @@ async function loadProperties() {
         access_instructions: row.access_instructions,
         owner_id: row.owner_id,
         display_order: row.display_order,
-        chat_pin: row.chat_pin
+        chat_pin: row.chat_pin,
+        amenities: row.amenities,
+        house_rules: row.house_rules,
+        practical_info: row.practical_info,
+        auto_responses_enabled: row.auto_responses_enabled
       };
     });
-    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`); 
+    console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
   } catch (error) {
     console.error('❌ Erreur loadProperties :', error);
     PROPERTIES = [];
   }
 }
-
 function getUserProperties(userId) {
   return PROPERTIES.filter(p => p.userId === userId);
 }
