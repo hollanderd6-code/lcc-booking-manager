@@ -4,19 +4,6 @@
 
 const crypto = require('crypto');
 
-/**
- * Configuration des routes de chat
- * @param {Object} app - Express app
- * @param {Object} pool - PostgreSQL pool
- * @param {Object} io - Socket.io instance
- */
-function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
-  // ============================================
-// ROUTES SYSTÈME DE CHAT SÉCURISÉ
-// ============================================
-
-const crypto = require('crypto');
-
 // ============================================
 // 🤖 SERVICE DE RÉPONSES AUTOMATIQUES (INLINE)
 // ============================================
@@ -101,10 +88,10 @@ function generateAutoResponse(property, detectedQuestions) {
     
     switch (question.category) {
       case 'checkin':
-        if (property.arrival_time) response = `L'arrivée est possible à partir de ${property.arrival_time}.`;
+        if (property.arrival_time) response = \`L'arrivée est possible à partir de \${property.arrival_time}.\`;
         break;
       case 'checkout':
-        if (property.departure_time) response = `Le départ doit se faire avant ${property.departure_time}.`;
+        if (property.departure_time) response = \`Le départ doit se faire avant \${property.departure_time}.\`;
         break;
       case 'draps':
         response = amenities.draps ? 'Oui, les draps sont fournis.' : 'Non, les draps ne sont pas fournis.';
@@ -117,18 +104,18 @@ function generateAutoResponse(property, detectedQuestions) {
         break;
       case 'wifi':
         if (property.wifi_name && property.wifi_password) {
-          response = `Réseau WiFi : "${property.wifi_name}"\nMot de passe : "${property.wifi_password}"`;
+          response = \`Réseau WiFi : "\${property.wifi_name}"\nMot de passe : "\${property.wifi_password}"\`;
         }
         break;
       case 'acces_code':
-        if (property.access_code) response = `Le code d'accès est : ${property.access_code}`;
+        if (property.access_code) response = \`Le code d'accès est : \${property.access_code}\`;
         break;
       case 'animaux':
         response = houseRules.animaux ? 'Oui, les animaux sont acceptés.' : 'Non, les animaux ne sont pas acceptés.';
         break;
       case 'parking':
         if (amenities.parking && practicalInfo.parking_details) {
-          response = `Oui, voici les informations parking : ${practicalInfo.parking_details}`;
+          response = \`Oui, voici les informations parking : \${practicalInfo.parking_details}\`;
         } else if (amenities.parking) {
           response = 'Oui, un parking est disponible.';
         }
@@ -141,16 +128,6 @@ function generateAutoResponse(property, detectedQuestions) {
   return responses.length > 0 ? responses.join('\n\n') : null;
 }
 
-// ============================================
-// Configuration des routes de chat
-// ============================================
-
-/**
- * Configuration des routes de chat
- * @param {Object} app - Express app
- * @param {Object} pool - PostgreSQL pool
- * @param {Object} io - Socket.io instance
- */
 function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
 
   // ============================================
