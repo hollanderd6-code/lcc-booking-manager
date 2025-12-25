@@ -5925,7 +5925,7 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
       amenities,
       houseRules,
       practicalInfo,
-      autoResponsesEnabled
+      autoResponsesEnabled,
       chatPin 
     } = body;
 
