@@ -5713,13 +5713,7 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
       };
     });
 
-    res.json({ properties });
-  } catch (err) {
-    console.error('Erreur /api/properties :', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-    res.json({ properties });
+ res.json({ properties });
   } catch (err) {
     console.error('Erreur /api/properties :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -5731,14 +5725,11 @@ app.get('/api/properties/:propertyId', async (req, res) => {
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
   }
-
   const { propertyId } = req.params;
   const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-
   if (!property) {
     return res.status(404).json({ error: 'Logement non trouvé' });
   }
-
   res.json({
     id: property.id,
     name: property.name,
@@ -5756,6 +5747,10 @@ app.get('/api/properties/:propertyId', async (req, res) => {
     wifiPassword: property.wifi_password || null,
     accessInstructions: property.access_instructions || null,
     chatPin: property.chat_pin || null,
+    amenities: property.amenities || '{}',                    // ✅ AJOUTÉ
+    houseRules: property.house_rules || '{}',                 // ✅ AJOUTÉ
+    practicalInfo: property.practical_info || '{}',           // ✅ AJOUTÉ
+    autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,  // ✅ AJOUTÉ
     
     icalUrls: property.icalUrls || property.ical_urls || [],
     reservationCount: (reservationsStore.properties[property.id] || []).length
