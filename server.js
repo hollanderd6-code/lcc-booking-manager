@@ -6149,6 +6149,17 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   }
 });
 
+// ============================================
+// SUPPRIMER UN LOGEMENT
+// ============================================
+app.delete('/api/properties/:propertyId', authenticateUser, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { propertyId } = req.params;
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -6173,6 +6184,9 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   }
 });
 
+// ============================================
+// TESTER UNE URL ICAL
+// ============================================
 app.post('/api/properties/test-ical', async (req, res) => {
   const { url } = req.body;
 
@@ -6203,8 +6217,7 @@ app.post('/api/properties/test-ical', async (req, res) => {
       details: error.message
     });
   }
-  });
-
+});
   // ============================================
 // Réorganiser l'ordre des logements (SAFE)
 // ============================================
