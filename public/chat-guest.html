@@ -610,7 +610,23 @@
   font-size: inherit;
   font-weight: 500;
 }
+.auto-response-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: #eff6ff;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #bfdbfe;
+}
 
+.auto-response-badge i {
+  font-size: 12px;
+}
 </style>
 </head>
 <body>
@@ -1112,7 +1128,30 @@ contentDiv.appendChild(meta);messageDiv.appendChild(avatar);
       const container = document.getElementById('messagesContainer');
       container.scrollTop = container.scrollHeight;
     }
-
+function displayMessage(message) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${message.sender === 'guest' ? 'message-sent' : 'message-received'}`;
+  
+  let content = `
+    <div class="message-content">
+      ${message.message}
+    </div>
+    <div class="message-time">${formatTime(message.created_at)}</div>
+  `;
+  
+  // ✅ Afficher un badge "Réponse automatique"
+  if (message.is_auto_response || message.isAutoResponse) {
+    content += `
+      <div class="auto-response-badge">
+        <i class="fas fa-robot"></i>
+        Réponse automatique
+      </div>
+    `;
+  }
+  
+  messageDiv.innerHTML = content;
+  messagesContainer.appendChild(messageDiv);
+}
     // ============================================
     // AFFICHAGE DES ERREURS
     // ============================================
