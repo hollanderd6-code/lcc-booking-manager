@@ -5922,6 +5922,10 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
   wifiPassword,
   accessInstructions,
   ownerId,
+      amenities,
+      houseRules,
+      practicalInfo,
+      autoResponsesEnabled
       chatPin 
     } = body;
 
@@ -6069,6 +6073,9 @@ await pool.query(
     newOwnerId,
     newChatPin,
     propertyId,
+    amenities || '{}',           // ✅
+      houseRules || '{}',           // ✅
+      practicalInfo || '{}',
     user.id
   ]
 );
