@@ -551,7 +551,7 @@ function openEditPropertyModal(propertyId) {
     if (document.getElementById('ruleFetes')) 
       document.getElementById('ruleFetes').checked = rules.fetes || false;
     if (document.getElementById('ruleEnfants')) 
-      document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : true;
+      document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : false;
     
     // Infos pratiques
     const practical = property.practical_info
