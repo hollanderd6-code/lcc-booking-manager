@@ -5942,6 +5942,27 @@ if (icalUrls !== undefined) {
   newIcalUrls = property.icalUrls || property.ical_urls || [];
 }
 
+// ✅ NOUVEAUX CHAMPS - DÉCLARATION DES VARIABLES
+const newAmenities = 
+  amenities !== undefined 
+    ? amenities 
+    : (property.amenities || '{}');
+
+const newHouseRules = 
+  houseRules !== undefined 
+    ? houseRules 
+    : (property.house_rules || '{}');
+
+const newPracticalInfo = 
+  practicalInfo !== undefined 
+    ? practicalInfo 
+    : (property.practical_info || '{}');
+
+const newAutoResponsesEnabled = 
+  autoResponsesEnabled !== undefined 
+    ? autoResponsesEnabled 
+    : (property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true);
+
 const newOwnerId = body.ownerId || null;
 
 console.log('💾 UPDATE - Valeurs à sauvegarder:', {
@@ -6002,6 +6023,7 @@ const result = await pool.query(
   ]
 );
 
+console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
 console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
 
 await loadProperties();
