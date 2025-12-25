@@ -37,7 +37,249 @@ const { setupChatRoutes } = require('./routes/chat_routes');
 // ============================================
 // ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
 // ============================================
-const arrivalMessageService = require('./services/arrivalMessageService');
+
+// ============================================
+// SERVICE D'ENVOI AUTOMATIQUE DES MESSAGES D'ARRIVEE (INLINE)
+// ============================================
+
+function generateArrivalMessage(conversation, property, hasCleaningPhotos, cleaningPhotoCount) {
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const baseUrl = appUrl.replace(/\/$/, '');
+  
+  const propertyName = property.name || 'votre logement';
+  const chatLink = `${baseUrl}/chat/${conversation.unique_token}`;
+  const cleaningPhotosLink = `${baseUrl}/chat/${conversation.photos_token}/cleaning-photos`;
+  const checkoutFormLink = `${baseUrl}/chat/${conversation.photos_token}/checkout-form`;
+  
+  let message = `Bienvenue dans ${propertyName} !
+
+Nous sommes ravis de vous accueillir aujourd'hui.
+
+Informations importantes :
+
+`;
+
+  if (property.welcome_book_url) {
+    message += `Livret d'accueil :
+Retrouvez toutes les informations sur le logement (WiFi, acces, regles, etc.) :
+${property.welcome_book_url}
+
+`;
+  }
+
+  if (hasCleaningPhotos) {
+    message += `Etat du logement a votre arrivee :
+Consultez les photos du nettoyage effectue juste avant votre arrivee (${cleaningPhotoCount} photos) :
+${cleaningPhotosLink}
+
+`;
+  }
+
+  message += `Photos de depart (optionnel) :
+Si vous le souhaitez, vous pouvez prendre quelques photos avant de partir pour documenter l'etat du logement :
+${checkoutFormLink}
+
+`;
+
+  if (!property.welcome_book_url) {
+    message += `Informations pratiques :
+`;
+    if (property.arrival_time) message += `- Arrivee : a partir de ${property.arrival_time}\n`;
+    if (property.departure_time) message += `- Depart : avant ${property.departure_time}\n`;
+    if (property.access_code) message += `- Code d'acces : ${property.access_code}\n`;
+    if (property.wifi_name) {
+      message += `- WiFi : "${property.wifi_name}"`;
+      if (property.wifi_password) message += ` / Mot de passe : "${property.wifi_password}"`;
+      message += `\n`;
+    }
+    message += `\n`;
+  }
+
+  message += `Questions ?
+N'hesitez pas a nous contacter via le chat pour toute question :
+${chatLink}
+
+Excellent sejour !`;
+
+  return message;
+}
+
+async function hasArrivalMessageBeenSent(pool, conversationId) {
+  try {
+    const result = await pool.query(
+      `SELECT id FROM messages 
+       WHERE conversation_id = $1 
+       AND sender_type = 'system' 
+       AND message LIKE '%Bienvenue dans%'
+       LIMIT 1`,
+      [conversationId]
+    );
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Erreur verification message arrivee:', error);
+    return false;
+  }
+}
+
+async function sendArrivalMessage(pool, io, conversation) {
+  try {
+    const alreadySent = await hasArrivalMessageBeenSent(pool, conversation.id);
+    if (alreadySent) {
+      console.log(`Message d'arrivee deja envoye pour conversation ${conversation.id}`);
+      return { success: false, reason: 'already_sent' };
+    }
+
+    const propertyResult = await pool.query(
+      `SELECT id, name, welcome_book_url, arrival_time, departure_time,
+              access_code, wifi_name, wifi_password
+       FROM properties WHERE id = $1`,
+      [conversation.property_id]
+    );
+
+    if (propertyResult.rows.length === 0) {
+      return { success: false, reason: 'property_not_found' };
+    }
+
+    const property = propertyResult.rows[0];
+
+    const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
+    const endDate = conversation.reservation_end_date 
+      ? new Date(conversation.reservation_end_date).toISOString().split('T')[0]
+      : null;
+    
+    const reservationKey = endDate ? `${conversation.property_id}_${startDate}_${endDate}` : null;
+
+    let hasCleaningPhotos = false;
+    let cleaningPhotoCount = 0;
+
+    if (reservationKey) {
+      const cleaningResult = await pool.query(
+        `SELECT photos FROM cleaning_checklists WHERE reservation_key = $1`,
+        [reservationKey]
+      );
+
+      if (cleaningResult.rows.length > 0) {
+        const photos = cleaningResult.rows[0].photos;
+        cleaningPhotoCount = Array.isArray(photos) ? photos.length : 
+                           (typeof photos === 'string' ? JSON.parse(photos).length : 0);
+        hasCleaningPhotos = cleaningPhotoCount > 0;
+      }
+    }
+
+    const message = generateArrivalMessage(conversation, property, hasCleaningPhotos, cleaningPhotoCount);
+
+    const messageResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+       VALUES ($1, 'system', 'Bienvenue', $2, FALSE, NOW())
+       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, created_at`,
+      [conversation.id, message]
+    );
+
+    const savedMessage = messageResult.rows[0];
+
+    if (io) {
+      io.to(`conversation_${conversation.id}`).emit('new_message', savedMessage);
+    }
+
+    console.log(`Message d'arrivee envoye pour conversation ${conversation.id} (${property.name})`);
+
+    return {
+      success: true,
+      messageId: savedMessage.id,
+      conversationId: conversation.id,
+      propertyName: property.name,
+      guestName: conversation.guest_name,
+      guestEmail: conversation.guest_email
+    };
+
+  } catch (error) {
+    console.error(`Erreur envoi message arrivee:`, error);
+    return { success: false, reason: 'error', error: error.message };
+  }
+}
+
+async function processArrivalsForToday(pool, io, transporter) {
+  try {
+    console.log('Traitement des arrivees du jour...');
+
+    const today = new Date().toLocaleDateString('fr-FR', { 
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).split('/').reverse().join('-');
+
+    console.log(`Recherche des arrivees pour le ${today}`);
+
+    const result = await pool.query(
+      `SELECT c.*, u.email as owner_email, u.first_name as owner_first_name
+       FROM conversations c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE DATE(c.reservation_start_date) = $1
+       AND c.is_verified = TRUE`,
+      [today]
+    );
+
+    console.log(`${result.rows.length} arrivee(s) trouvee(s)`);
+
+    const results = [];
+    const successfulSends = [];
+
+    for (const conversation of result.rows) {
+      const sendResult = await sendArrivalMessage(pool, io, conversation);
+      results.push(sendResult);
+
+      if (sendResult.success) {
+        successfulSends.push({
+          ...sendResult,
+          ownerEmail: conversation.owner_email,
+          ownerFirstName: conversation.owner_first_name
+        });
+      }
+    }
+
+    if (transporter && successfulSends.length > 0) {
+      for (const send of successfulSends) {
+        if (!send.ownerEmail) continue;
+
+        try {
+          await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'noreply@bookingmanage.com',
+            to: send.ownerEmail,
+            subject: `Message de bienvenue envoye - ${send.propertyName}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #10B981;">Message de bienvenue envoye</h2>
+                <p>Bonjour ${send.ownerFirstName || ''},</p>
+                <p>Le message de bienvenue automatique a ete envoye a votre voyageur :</p>
+                <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Logement :</strong> ${send.propertyName}</p>
+                  <p style="margin: 5px 0;"><strong>Voyageur :</strong> ${send.guestName || 'Non renseigne'}</p>
+                  ${send.guestEmail ? `<p style="margin: 5px 0;"><strong>Email :</strong> ${send.guestEmail}</p>` : ''}
+                </div>
+                <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
+                  Bookingmanage - Gestion simplifiee de vos locations
+                </p>
+              </div>
+            `
+          });
+          console.log(`Email de notification envoye a ${send.ownerEmail}`);
+        } catch (emailError) {
+          console.error('Erreur envoi email:', emailError);
+        }
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    console.log(`${successCount}/${results.length} message(s) envoye(s)`);
+
+    return { total: results.length, success: successCount, results };
+
+  } catch (error) {
+    console.error('Erreur traitement arrivees:', error);
+    return { total: 0, success: 0, error: error.message };
+  }
+}
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -10472,6 +10714,24 @@ console.log('✅ Routes du chat initialisées');
 // ============================================
 // DÉMARRAGE (TOUJOURS EN DERNIER)
 // ============================================
+
+
+// ============================================
+// CRON JOB : MESSAGES D'ARRIVEE AUTOMATIQUES
+// ============================================
+
+cron.schedule('0 7 * * *', async () => {
+  console.log('CRON: Envoi des messages d arrivee a 7h00');
+  try {
+    await processArrivalsForToday(pool, io, transporter);
+  } catch (error) {
+    console.error('Erreur CRON messages arrivee:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('CRON job messages arrivee configure (tous les jours a 7h)');
 
 server.listen(PORT, async () => {
   console.log('');
