@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
 const PDFDocument = require('pdfkit');
+const autoResponseService = require('./services/autoResponseService');
 // ============================================
 // ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
@@ -9364,116 +9365,124 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
  * Générer le message de bienvenue à envoyer sur Airbnb/Booking
  * avec lien vers les photos du cleaning
  */
-app.post('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { conversationId } = req.params;
-
-    // 1. Récupérer la conversation
-    const convResult = await pool.query(
-      `SELECT c.*, p.name as property_name 
-       FROM conversations c
-       LEFT JOIN properties p ON c.property_id = p.id
-       WHERE c.id = $1 AND c.user_id = $2`,
-      [conversationId, userId]
-    );
-
-    if (convResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Conversation non trouvée' });
-    }
-
-    const conversation = convResult.rows[0];
-
-    // 2. Générer ou récupérer le token pour les photos
-    let photosToken = conversation.photos_token;
-    
-    if (!photosToken) {
-      photosToken = crypto.randomBytes(32).toString('hex');
+// ============================================
+  // 8. GÉNÉRATION DE MESSAGE DE RÉSERVATION
+  // ============================================
+  
+  app.post('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { conversationId } = req.params;
       
-      await pool.query(
-        'UPDATE conversations SET photos_token = $1 WHERE id = $2',
-        [photosToken, conversationId]
+      // 1. Récupérer la conversation
+      const convResult = await pool.query(
+        `SELECT c.*, p.name as property_name 
+         FROM conversations c
+         LEFT JOIN properties p ON c.property_id = p.id
+         WHERE c.id = $1 AND c.user_id = $2`,
+        [conversationId, userId]
       );
-    }
-
-    // 3. Construire le reservation_key pour trouver le cleaning
-    const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
-    const endDate = conversation.reservation_end_date 
-      ? new Date(conversation.reservation_end_date).toISOString().split('T')[0]
-      : null;
-    
-    const reservationKey = endDate 
-      ? `${conversation.property_id}_${startDate}_${endDate}`
-      : null;
-
-    // 4. Vérifier si un cleaning checklist existe
-    let hasCleaningPhotos = false;
-    let cleaningPhotoCount = 0;
-
-    if (reservationKey) {
-      const cleaningResult = await pool.query(
-        `SELECT photos FROM cleaning_checklists WHERE reservation_key = $1`,
-        [reservationKey]
-      );
-
-      if (cleaningResult.rows.length > 0) {
-        const photos = cleaningResult.rows[0].photos;
-        cleaningPhotoCount = Array.isArray(photos) ? photos.length : 
-                           (typeof photos === 'string' ? JSON.parse(photos).length : 0);
-        hasCleaningPhotos = cleaningPhotoCount > 0;
+      
+      if (convResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation non trouvée' });
       }
-    }
-
-    // 5. Générer le message
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
-const baseUrl = appUrl.replace(/\/$/, ''); // Enlève le / final s'il existe
-const chatLink = `${baseUrl}/chat/${conversation.unique_token}`;
-const cleaningPhotosLink = `${baseUrl}/chat/${photosToken}/cleaning-photos`;
-const checkoutFormLink = `${baseUrl}/chat/${photosToken}/checkout-form`;
-
-    const propertyName = conversation.property_name || 'votre logement';
-    const pinCode = conversation.pin_code;
-
-    let message = `🎉 Bienvenue dans ${propertyName} !
+      
+      const conversation = convResult.rows[0];
+      
+      // 2. Générer ou récupérer le token pour les photos
+      let photosToken = conversation.photos_token;
+      
+      if (!photosToken) {
+        photosToken = crypto.randomBytes(32).toString('hex');
+        
+        await pool.query(
+          'UPDATE conversations SET photos_token = $1 WHERE id = $2',
+          [photosToken, conversationId]
+        );
+      }
+      
+      // 3. Construire le reservation_key pour trouver le cleaning
+      const startDate = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
+      const endDate = conversation.reservation_end_date 
+        ? new Date(conversation.reservation_end_date).toISOString().split('T')[0]
+        : null;
+      
+      const reservationKey = endDate 
+        ? `${conversation.property_id}_${startDate}_${endDate}`
+        : null;
+      
+      // 4. Vérifier si un cleaning checklist existe
+      let hasCleaningPhotos = false;
+      let cleaningPhotoCount = 0;
+      
+      if (reservationKey) {
+        const cleaningResult = await pool.query(
+          `SELECT photos FROM cleaning_checklists WHERE reservation_key = $1`,
+          [reservationKey]
+        );
+        
+        if (cleaningResult.rows.length > 0) {
+          const photos = cleaningResult.rows[0].photos;
+          cleaningPhotoCount = Array.isArray(photos) ? photos.length : 
+                             (typeof photos === 'string' ? JSON.parse(photos).length : 0);
+          hasCleaningPhotos = cleaningPhotoCount > 0;
+        }
+      }
+      
+      // 5. Générer le message
+      const appUrl = process.env.APP_URL || 'http://localhost:3000';
+      const baseUrl = appUrl.replace(/\/$/, ''); // Enlève le / final s'il existe
+      const chatLink = `${baseUrl}/chat/${conversation.unique_token}`;
+      const cleaningPhotosLink = `${baseUrl}/chat/${photosToken}/cleaning-photos`;
+      const checkoutFormLink = `${baseUrl}/chat/${photosToken}/checkout-form`;
+      
+      const propertyName = conversation.property_name || 'votre logement';
+      const pinCode = conversation.pin_code;
+      
+      let message = `🎉 Bienvenue dans ${propertyName} !
 
 📋 Informations importantes :
-• Code PIN pour le chat sécurisé : ${pinCode}
-• Accédez au chat pour toutes vos questions : ${chatLink}
+- Code PIN pour le chat sécurisé : ${pinCode}
+- Accédez au chat pour toutes vos questions : ${chatLink}
 
 `;
-
-    if (hasCleaningPhotos) {
-      message += `🧹 État du logement à votre arrivée :
+      
+      if (hasCleaningPhotos) {
+        message += `🧹 État du logement à votre arrivée :
 Consultez les photos du nettoyage effectué juste avant votre arrivée (${cleaningPhotoCount} photos) :
 👉 ${cleaningPhotosLink}
 
 `;
-    }
-
-    message += `📸 Photos de départ (optionnel) :
+      }
+      
+      message += `📸 Photos de départ (optionnel) :
 Si vous le souhaitez, vous pouvez prendre quelques photos avant de partir pour documenter l'état du logement :
 👉 ${checkoutFormLink}
 
 Bon séjour ! 🏡`;
+      
+      res.json({
+        success: true,
+        message: message,
+        links: {
+          chat: chatLink,
+          cleaningPhotos: hasCleaningPhotos ? cleaningPhotosLink : null,
+          checkoutForm: checkoutFormLink
+        },
+        hasCleaningPhotos,
+        cleaningPhotoCount,
+        pinCode
+      });
+      
+    } catch (error) {
+      console.error('❌ Erreur génération message:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
 
-    res.json({
-      success: true,
-      message: message,
-      links: {
-        chat: chatLink,
-        cleaningPhotos: hasCleaningPhotos ? cleaningPhotosLink : null,
-        checkoutForm: checkoutFormLink
-      },
-      hasCleaningPhotos,
-      cleaningPhotoCount,
-      pinCode
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur génération message:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+  // ============================================
+  // GESTION SOCKET.IO
+  // ============================================
 
 /**
  * Récupérer les informations pour afficher les photos du cleaning
