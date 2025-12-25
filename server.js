@@ -5906,148 +5906,248 @@ res.status(201).json({
 });
 
 // ============================================
-// UPDATE
+// MODIFIER UN LOGEMENT
 // ============================================
-
-let newIcalUrls;
-if (icalUrls !== undefined) {
-  newIcalUrls = Array.isArray(icalUrls)
-    ? icalUrls
-        .map(item => {
-          if (typeof item === 'string') {
-            return {
-              url: item,
-              platform:
-                icalService && icalService.extractSource
-                  ? icalService.extractSource(item)
-                  : 'iCal'
-            };
-          }
-          if (item && typeof item === 'object' && item.url) {
-            const url = item.url;
-            const platform =
-              item.platform && item.platform.trim().length > 0
-                ? item.platform.trim()
-                : (icalService && icalService.extractSource
-                    ? icalService.extractSource(url)
-                    : 'iCal');
-            return { url, platform };
-          }
-          return null;
-        })
-        .filter(Boolean)
-    : [];
-} else {
-  // on garde ce qui est en base
-  newIcalUrls = property.icalUrls || property.ical_urls || [];
-}
-
-// ✅ NOUVEAUX CHAMPS - DÉCLARATION DES VARIABLES
-const newAmenities = 
-  amenities !== undefined 
-    ? amenities 
-    : (property.amenities || '{}');
-
-const newHouseRules = 
-  houseRules !== undefined 
-    ? houseRules 
-    : (property.house_rules || '{}');
-
-const newPracticalInfo = 
-  practicalInfo !== undefined 
-    ? practicalInfo 
-    : (property.practical_info || '{}');
-
-const newAutoResponsesEnabled = 
-  autoResponsesEnabled !== undefined 
-    ? autoResponsesEnabled 
-    : (property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true);
-
-const newOwnerId = body.ownerId || null;
-
-console.log('💾 UPDATE - Valeurs à sauvegarder:', {
-  newAmenities,
-  newHouseRules,
-  newPracticalInfo,
-  newAutoResponsesEnabled,
-  propertyId,
-  userId: user.id
-});
-
-const result = await pool.query(
-  `UPDATE properties
-   SET
-     name = $1,
-     color = $2,
-     ical_urls = $3,
-     address = $4,
-     arrival_time = $5,
-     departure_time = $6,
-     deposit_amount = $7,
-     photo_url = $8,
-     welcome_book_url = $9,
-     access_code = $10,
-     wifi_name = $11,
-     wifi_password = $12,
-     access_instructions = $13,
-     owner_id = $14,
-     chat_pin = $15,
-     amenities = $16,
-     house_rules = $17,
-     practical_info = $18,
-     auto_responses_enabled = $19,
-     updated_at = NOW()
-   WHERE id = $20 AND user_id = $21`,
-  [
-    newName,
-    newColor,
-    JSON.stringify(newIcalUrls || []),
-    newAddress,
-    newArrivalTime,
-    newDepartureTime,
-    newDepositAmount,
-    newPhotoUrl,
-    newWelcomeBookUrl,
-    newAccessCode,
-    newWifiName,
-    newWifiPassword,
-    newAccessInstructions,
-    newOwnerId,
-    newChatPin,
-    newAmenities,           // $16 ✅
-    newHouseRules,          // $17 ✅
-    newPracticalInfo,       // $18 ✅
-    newAutoResponsesEnabled, // $19 ✅
-    propertyId,             // $20
-    user.id                 // $21
-  ]
-);
-
-console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
-console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
-
-await loadProperties();
-
-const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-
-res.json({
-  message: 'Logement modifié avec succès',
-  property: updated
-});
-} catch (err) {
-  console.error('❌ Erreur modification logement:', err);
-  res.status(500).json({ error: 'Erreur serveur' });
-}
-});
-
-app.delete('/api/properties/:propertyId', async (req, res) => {
+app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
+    
     const { propertyId } = req.params;
+    let body;
+    try {
+      body = parsePropertyBody(req);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+    
+    const {
+      name,
+      color,
+      icalUrls,
+      address,
+      arrivalTime,
+      departureTime,
+      depositAmount,
+      photoUrl: existingPhotoUrl,
+      welcomeBookUrl,
+      accessCode,
+      wifiName,
+      wifiPassword,
+      accessInstructions,
+      ownerId,
+      amenities,
+      houseRules,
+      practicalInfo,
+      autoResponsesEnabled,
+      chatPin 
+    } = body;
+    
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    // Gérer la mise à jour du PIN (garder l'ancien si non fourni)
+    const newChatPin = 
+      chatPin !== undefined 
+        ? (chatPin || property.chat_pin) 
+        : (property.chat_pin || null);
+
+    const newName = name || property.name;
+    const newColor = color || property.color;
+
+    const newAddress =
+      address !== undefined ? address : (property.address || null);
+
+    const newArrivalTime =
+      arrivalTime !== undefined
+        ? arrivalTime
+        : (property.arrival_time || property.arrivalTime || null);
+
+    const newDepartureTime =
+      departureTime !== undefined
+        ? departureTime
+        : (property.departure_time || property.departureTime || null);
+
+    const newDepositAmount =
+      depositAmount !== undefined
+        ? (depositAmount === '' || depositAmount == null
+            ? null
+            : Number(depositAmount))
+        : (property.deposit_amount ?? property.depositAmount ?? null);
+
+    const newWelcomeBookUrl = 
+      welcomeBookUrl !== undefined 
+        ? (welcomeBookUrl || null) 
+        : (property.welcome_book_url || null);
+
+    const newAccessCode = 
+      accessCode !== undefined 
+        ? (accessCode || null) 
+        : (property.access_code || null);
+
+    const newWifiName = 
+      wifiName !== undefined 
+        ? (wifiName || null) 
+        : (property.wifi_name || null);
+
+    const newWifiPassword = 
+      wifiPassword !== undefined 
+        ? (wifiPassword || null) 
+        : (property.wifi_password || null);
+
+    const newAccessInstructions = 
+      accessInstructions !== undefined 
+        ? (accessInstructions || null) 
+        : (property.access_instructions || null);
+
+    // ✅ NOUVEAUX CHAMPS
+    const newAmenities = 
+      amenities !== undefined 
+        ? amenities 
+        : (property.amenities || '{}');
+
+    const newHouseRules = 
+      houseRules !== undefined 
+        ? houseRules 
+        : (property.house_rules || '{}');
+
+    const newPracticalInfo = 
+      practicalInfo !== undefined 
+        ? practicalInfo 
+        : (property.practical_info || '{}');
+
+    const newAutoResponsesEnabled = 
+      autoResponsesEnabled !== undefined 
+        ? autoResponsesEnabled 
+        : (property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true);
+        
+    let newPhotoUrl =
+      existingPhotoUrl !== undefined
+        ? (existingPhotoUrl || null)
+        : (property.photo_url || property.photoUrl || null);
+
+    // Upload vers Cloudinary si une nouvelle photo est fournie
+    if (req.file) {
+      try {
+        newPhotoUrl = await uploadPhotoToCloudinary(req.file);
+      } catch (uploadError) {
+        console.error('Erreur upload Cloudinary:', uploadError);
+        return res.status(500).json({ error: 'Erreur lors de l\'upload de la photo' });
+      }
+    }
+
+    let newIcalUrls;
+    if (icalUrls !== undefined) {
+      newIcalUrls = Array.isArray(icalUrls)
+        ? icalUrls
+            .map(item => {
+              if (typeof item === 'string') {
+                return {
+                  url: item,
+                  platform:
+                    icalService && icalService.extractSource
+                      ? icalService.extractSource(item)
+                      : 'iCal'
+                };
+              }
+              if (item && typeof item === 'object' && item.url) {
+                const url = item.url;
+                const platform =
+                  item.platform && item.platform.trim().length > 0
+                    ? item.platform.trim()
+                    : (icalService && icalService.extractSource
+                        ? icalService.extractSource(url)
+                        : 'iCal');
+                return { url, platform };
+              }
+              return null;
+            })
+            .filter(Boolean)
+        : [];
+    } else {
+      // on garde ce qui est en base
+      newIcalUrls = property.icalUrls || property.ical_urls || [];
+    }
+
+    const newOwnerId = ownerId || null;
+    
+    console.log('💾 UPDATE - Valeurs à sauvegarder:', {
+      newAmenities,
+      newHouseRules,
+      newPracticalInfo,
+      newAutoResponsesEnabled,
+      propertyId,
+      userId: user.id
+    });
+    
+    const result = await pool.query(
+      `UPDATE properties
+       SET
+         name = $1,
+         color = $2,
+         ical_urls = $3,
+         address = $4,
+         arrival_time = $5,
+         departure_time = $6,
+         deposit_amount = $7,
+         photo_url = $8,
+         welcome_book_url = $9,
+         access_code = $10,
+         wifi_name = $11,
+         wifi_password = $12,
+         access_instructions = $13,
+         owner_id = $14,
+         chat_pin = $15,
+         amenities = $16,
+         house_rules = $17,
+         practical_info = $18,
+         auto_responses_enabled = $19,
+         updated_at = NOW()
+       WHERE id = $20 AND user_id = $21`,
+      [
+        newName,
+        newColor,
+        JSON.stringify(newIcalUrls || []),
+        newAddress,
+        newArrivalTime,
+        newDepartureTime,
+        newDepositAmount,
+        newPhotoUrl,
+        newWelcomeBookUrl,
+        newAccessCode,
+        newWifiName,
+        newWifiPassword,
+        newAccessInstructions,
+        newOwnerId,
+        newChatPin,
+        newAmenities,
+        newHouseRules,
+        newPracticalInfo,
+        newAutoResponsesEnabled,
+        propertyId,
+        user.id
+      ]
+    );
+    
+    console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
+    
+    await loadProperties();
+
+    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+
+    res.json({
+      message: 'Logement modifié avec succès',
+      property: updated
+    });
+  } catch (err) {
+    console.error('❌ Erreur modification logement:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
