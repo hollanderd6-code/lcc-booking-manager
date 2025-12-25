@@ -5656,12 +5656,9 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
     const userProps = getUserProperties(user.id);
-
     const properties = userProps.map(p => {
       const rawIcal = p.icalUrls || p.ical_urls || [];
-
       // On reconstruit un tableau d'objets { url, platform }
       const icalUrls = Array.isArray(rawIcal)
         ? rawIcal
@@ -5676,7 +5673,6 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
                       : 'Inconnu'
                 };
               }
-
               // Nouveau format éventuel : déjà un objet
               if (item && typeof item === 'object' && item.url) {
                 return {
@@ -5688,25 +5684,19 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
                       : 'Inconnu')
                 };
               }
-
               return null;
             })
             .filter(Boolean)
         : [];
-
       return {
         id: p.id,
         name: p.name,
         color: p.color,
-
-        // 👇 nouveaux champs que le front attend
         address: p.address || null,
         arrivalTime: p.arrival_time || p.arrivalTime || null,
         departureTime: p.departure_time || p.departureTime || null,
         depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
         photoUrl: p.photo_url || p.photoUrl || null,
-
-        // ✅ NOUVEAUX CHAMPS ENRICHIS
         welcomeBookUrl: p.welcome_book_url || null,
         accessCode: p.access_code || null,
         wifiName: p.wifi_name || null,
@@ -5714,11 +5704,21 @@ app.get('/api/properties', authenticateUser, checkSubscription, async (req, res)
         accessInstructions: p.access_instructions || null,
         ownerId: p.owner_id || null,
         chatPin: p.chat_pin || null,
+        amenities: p.amenities || '{}',                    // ✅ AJOUTÉ
+        houseRules: p.house_rules || '{}',                 // ✅ AJOUTÉ
+        practicalInfo: p.practical_info || '{}',           // ✅ AJOUTÉ
+        autoResponsesEnabled: p.auto_responses_enabled !== undefined ? p.auto_responses_enabled : true,  // ✅ AJOUTÉ
         icalUrls,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
 
+    res.json({ properties });
+  } catch (err) {
+    console.error('Erreur /api/properties :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
     res.json({ properties });
   } catch (err) {
     console.error('Erreur /api/properties :', err);
