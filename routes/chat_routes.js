@@ -767,29 +767,43 @@ async function sendWelcomeMessage(pool, conversationId, propertyId, userId) {
  */
 async function findAutoResponse(pool, userId, propertyId, messageContent) {
   try {
-    const lowerContent = messageContent.toLowerCase();
-
-    // Récupérer toutes les réponses auto actives pour cet utilisateur
-    const result = await pool.query(
-      `SELECT response, keywords 
-       FROM auto_responses 
-       WHERE user_id = $1 
-       AND (property_id IS NULL OR property_id = $2)
-       AND is_active = TRUE
-       ORDER BY order_priority DESC`,
-      [userId, propertyId]
+    // Récupérer les infos complètes de la propriété
+    const propertyResult = await pool.query(
+      `SELECT 
+        id, name, address, arrival_time, departure_time,
+        wifi_name, wifi_password, access_code, access_instructions,
+        amenities, house_rules, practical_info, auto_responses_enabled
+       FROM properties 
+       WHERE id = $1 AND user_id = $2`,
+      [propertyId, userId]
     );
-
-    // Chercher la première qui matche
-    for (const row of result.rows) {
-      const keywords = row.keywords || [];
-      const hasMatch = keywords.some(keyword => lowerContent.includes(keyword.toLowerCase()));
-      
-      if (hasMatch) {
-        return row.response;
-      }
+    
+    if (propertyResult.rows.length === 0) {
+      return null;
     }
-
+    
+    const property = propertyResult.rows[0];
+    
+    // Vérifier si les réponses auto sont activées
+    if (property.auto_responses_enabled === false) {
+      return null;
+    }
+    
+    // Détecter les questions
+    const detectedQuestions = detectQuestions(messageContent);
+    
+    if (detectedQuestions.length === 0) {
+      return null;
+    }
+    
+    // Générer la réponse
+    const response = generateAutoResponse(property, detectedQuestions);
+    
+    if (response) {
+      console.log('🤖 Réponse auto générée pour:', detectedQuestions.map(q => q.category).join(', '));
+      return response;
+    }
+    
     return null;
 
   } catch (error) {
