@@ -1,4 +1,4 @@
-require('dotenv').config();
+`require('dotenv').config();
 const express = require('express')
 const http = require('http');
 const { Server } = require('socket.io');
@@ -5797,15 +5797,14 @@ const finalChatPin = chatPin || Math.floor(1000 + Math.random() * 9000).toString
       .replace(/^-+|-+$/g, '');
 
     const id = `${user.id}-${baseId}`;
-
-    // Upload vers Cloudinary si un fichier est présent
+// Upload vers Cloudinary si un fichier est présent
 let photoUrl = existingPhotoUrl || null;
 if (req.file) {
   photoUrl = await uploadPhotoToCloudinary(req.file);
 }
 
-    // normaliser les URLs iCal : on accepte strings ou objets {platform,url}
-    // normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
+// normaliser les URLs iCal : on accepte strings ou objets {platform,url}
+// normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
 let normalizedIcal = [];
 if (Array.isArray(icalUrls)) {
   normalizedIcal = icalUrls
@@ -5839,14 +5838,22 @@ if (Array.isArray(icalUrls)) {
     .filter(Boolean);
 }
 
-    const ownerId = req.body.ownerId || null; 
+const ownerId = req.body.ownerId || null; 
+
+console.log('🆕 CRÉATION - Données à insérer:', {
+  amenities,
+  houseRules,
+  practicalInfo,
+  autoResponsesEnabled
+});
 
 await pool.query(
   `INSERT INTO properties (
      id, user_id, name, color, ical_urls,
      address, arrival_time, departure_time, deposit_amount, photo_url,
      welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
-     owner_id, chat_pin, display_order, created_at
+     owner_id, chat_pin, display_order, created_at,
+     amenities, house_rules, practical_info, auto_responses_enabled
    )
    VALUES (
      $1, $2, $3, $4, $5,
@@ -5854,7 +5861,8 @@ await pool.query(
      $11, $12, $13, $14, $15,
      $16, $17,
      (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
-     NOW()
+     NOW(),
+     $18, $19, $20, $21
    )`,
   [
     id,
@@ -5873,162 +5881,33 @@ await pool.query(
     wifiPassword || null,
     accessInstructions || null,
     ownerId,
-    finalChatPin
+    finalChatPin,
+    amenities || '{}',           // $18 ✅
+    houseRules || '{}',          // $19 ✅
+    practicalInfo || '{}',       // $20 ✅
+    autoResponsesEnabled !== undefined ? autoResponsesEnabled : true  // $21 ✅
   ]
 );
       
-    await loadProperties();
+console.log('✅ Propriété créée avec succès');
 
-    const property = PROPERTIES.find(p => p.id === id);
+await loadProperties();
 
-    res.status(201).json({
-      message: 'Logement créé avec succès',
-      property
-    });
-  } catch (err) {
-    console.error('Erreur création logement:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
+const property = PROPERTIES.find(p => p.id === id);
+
+res.status(201).json({
+  message: 'Logement créé avec succès',
+  property
+});
+} catch (err) {
+  console.error('❌ Erreur création logement:', err);
+  res.status(500).json({ error: 'Erreur serveur' });
+}
 });
 
-app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { propertyId } = req.params;
-
-    let body;
-    try {
-      body = parsePropertyBody(req);
-    } catch (e) {
-      return res.status(400).json({ error: e.message });
-    }
-// ✅ AJOUTER CE LOG ICI
-    console.log('📦 Body reçu:', {
-      amenities: body.amenities,
-      houseRules: body.houseRules,
-      practicalInfo: body.practicalInfo,
-      autoResponsesEnabled: body.autoResponsesEnabled
-    });
-    const {
-      name,
-      color,
-      icalUrls,
-      address,
-      arrivalTime,
-      departureTime,
-      depositAmount,
-      photoUrl: existingPhotoUrl,
-      welcomeBookUrl,
-  accessCode,
-  wifiName,
-  wifiPassword,
-  accessInstructions,
-  ownerId,
-      amenities,
-      houseRules,
-      practicalInfo,
-      autoResponsesEnabled,
-      chatPin 
-    } = body;
-
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-    if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvé' });
-    }
-
-// Gérer la mise à jour du PIN (garder l'ancien si non fourni)
-const newChatPin = 
-  chatPin !== undefined 
-    ? (chatPin || property.chat_pin) 
-    : (property.chat_pin || null);
-
-const newName = name || property.name;
-const newColor = color || property.color;
-
-const newAddress =
-  address !== undefined ? address : (property.address || null);
-
-const newArrivalTime =
-  arrivalTime !== undefined
-    ? arrivalTime
-    : (property.arrival_time || property.arrivalTime || null);
-
-const newDepartureTime =
-  departureTime !== undefined
-    ? departureTime
-    : (property.departure_time || property.departureTime || null);
-
-const newDepositAmount =
-  depositAmount !== undefined
-    ? (depositAmount === '' || depositAmount == null
-        ? null
-        : Number(depositAmount))
-    : (property.deposit_amount ?? property.depositAmount ?? null);
-
-const newWelcomeBookUrl = 
-  welcomeBookUrl !== undefined 
-    ? (welcomeBookUrl || null) 
-    : (property.welcome_book_url || null);
-
-const newAccessCode = 
-  accessCode !== undefined 
-    ? (accessCode || null) 
-    : (property.access_code || null);
-
-const newWifiName = 
-  wifiName !== undefined 
-    ? (wifiName || null) 
-    : (property.wifi_name || null);
-
-const newWifiPassword = 
-  wifiPassword !== undefined 
-    ? (wifiPassword || null) 
-    : (property.wifi_password || null);
-
-const newAccessInstructions = 
-  accessInstructions !== undefined 
-    ? (accessInstructions || null) 
-    : (property.access_instructions || null);
-
-// ✅ NOUVEAUX CHAMPS
-const newAmenities = 
-  amenities !== undefined 
-    ? amenities 
-    : (property.amenities || '{}');
-
-const newHouseRules = 
-  houseRules !== undefined 
-    ? houseRules 
-    : (property.house_rules || '{}');
-
-const newPracticalInfo = 
-  practicalInfo !== undefined 
-    ? practicalInfo 
-    : (property.practical_info || '{}');
-
-const newAutoResponsesEnabled = 
-  autoResponsesEnabled !== undefined 
-    ? autoResponsesEnabled 
-    : (property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true);
-    
-let newPhotoUrl =
-  existingPhotoUrl !== undefined
-    ? (existingPhotoUrl || null)
-    : (property.photo_url || property.photoUrl || null);
-
-// Upload vers Cloudinary si une nouvelle photo est fournie
-if (req.file) {
-  try {
-    newPhotoUrl = await uploadPhotoToCloudinary(req.file);
-  } catch (uploadError) {
-    console.error('Erreur upload Cloudinary:', uploadError);
-    return res.status(500).json({ error: 'Erreur lors de l\'upload de la photo' });
-  }
-}
+// ============================================
+// UPDATE
+// ============================================
 
 let newIcalUrls;
 if (icalUrls !== undefined) {
@@ -6064,8 +5943,17 @@ if (icalUrls !== undefined) {
 }
 
 const newOwnerId = body.ownerId || null;
-    
-await pool.query(
+
+console.log('💾 UPDATE - Valeurs à sauvegarder:', {
+  newAmenities,
+  newHouseRules,
+  newPracticalInfo,
+  newAutoResponsesEnabled,
+  propertyId,
+  userId: user.id
+});
+
+const result = await pool.query(
   `UPDATE properties
    SET
      name = $1,
@@ -6113,18 +6001,21 @@ await pool.query(
     user.id                 // $21
   ]
 );
-    await loadProperties();
 
-    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
 
-    res.json({
-      message: 'Logement modifié avec succès',
-      property: updated
-    });
-  } catch (err) {
-    console.error('Erreur modification logement:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
+await loadProperties();
+
+const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+
+res.json({
+  message: 'Logement modifié avec succès',
+  property: updated
+});
+} catch (err) {
+  console.error('❌ Erreur modification logement:', err);
+  res.status(500).json({ error: 'Erreur serveur' });
+}
 });
 
 app.delete('/api/properties/:propertyId', async (req, res) => {
