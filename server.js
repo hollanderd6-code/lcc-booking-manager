@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const cron = require('node-cron');
+const cron = require('node-cron');  // ✅ UNE SEULE FOIS ICI
 const fs = require('fs');
 const fsp = require('fs').promises;
 const icalService = require('./services/icalService');
@@ -22,16 +22,22 @@ const crypto = require('crypto');
 const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
 const PDFDocument = require('pdfkit');
+
 // ============================================
 // ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
+
 // ============================================
 // ✅ IMPORT DES ROUTES DU CHAT
 // ============================================
 const { setupChatRoutes } = require('./routes/chat_routes');
+
 // ============================================
+// ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
+// ============================================
+const arrivalMessageService = require('./services/arrivalMessageService');
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -62,6 +68,22 @@ const smtpTransporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASSWORD
   }
 });
+// ============================================
+// CRON JOB : MESSAGES D'ARRIVÉE AUTOMATIQUES
+// ============================================
+
+cron.schedule('0 7 * * *', async () => {
+  console.log('🕐 CRON: Envoi des messages d\'arrivée à 7h00');
+  try {
+    await arrivalMessageService.processArrivalsForToday(pool, io, transporter);
+  } catch (error) {
+    console.error('❌ Erreur CRON messages d\'arrivée:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('✅ CRON job messages d\'arrivée configuré (tous les jours à 7h)');
 // ============================================
 // SERVICE DE RÉPONSES AUTOMATIQUES (INLINE)
 // ============================================
