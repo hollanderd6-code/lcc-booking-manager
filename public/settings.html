@@ -717,6 +717,191 @@
         height: 160px;
       }
     }
+    /* ===== SECTION HEADERS ===== */
+    .form-section-header {
+      margin-top: 32px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .form-section-header i {
+      color: var(--primary-color);
+      margin-right: 8px;
+      font-size: 18px;
+    }
+
+    .form-section-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 4px 0;
+      display: inline;
+    }
+
+    .form-section-header small {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* ===== CHECKBOX GRID ===== */
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #ffffff;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .checkbox-item:hover {
+      border-color: var(--primary-color);
+      background: #f0fdf4;
+      transform: translateY(-1px);
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .checkbox-item input[type="checkbox"]:checked {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    .checkbox-item.checked,
+    .checkbox-item:has(input:checked) {
+      border-color: var(--primary-color);
+      background: #f0fdf4;
+    }
+
+    .checkbox-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .checkbox-content i {
+      font-size: 18px;
+      color: var(--primary-color);
+      width: 24px;
+      text-align: center;
+    }
+
+    .checkbox-content span {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* ===== TOGGLE SWITCH ===== */
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      user-select: none;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      transition: all 0.15s ease;
+    }
+
+    .toggle-switch:hover {
+      border-color: var(--primary-color);
+      background: #f0fdf4;
+    }
+
+    .toggle-switch input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toggle-slider {
+      position: relative;
+      width: 52px;
+      height: 28px;
+      background: #d1d5db;
+      border-radius: 14px;
+      transition: background 0.2s ease;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--primary-color);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(24px);
+    }
+
+    .toggle-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ===== INFO BOX ===== */
+    .info-box {
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .info-box i {
+      font-size: 18px;
+      color: #3b82f6;
+      margin-top: 2px;
+    }
+
+    .info-box p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #1e40af;
+    }
+
+    @media (max-width: 768px) {
+      .checkbox-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 <!-- Script auth + user + logout -->
 <script src="/js/auth-fetch.js"></script>
@@ -966,6 +1151,179 @@
 </div>
 </div>
 </div>
+
+<!-- ===== SECTION : ÉQUIPEMENTS ===== -->
+<div class="form-section-header">
+  <i class="fas fa-home"></i>
+  <h3>Équipements du logement</h3>
+  <small>Ces informations permettent de répondre automatiquement aux questions fréquentes des voyageurs</small>
+</div>
+
+<div class="checkbox-grid">
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityDraps" />
+    <div class="checkbox-content">
+      <i class="fas fa-bed"></i>
+      <span>Draps fournis</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityServiettes" />
+    <div class="checkbox-content">
+      <i class="fas fa-bath"></i>
+      <span>Serviettes fournies</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityCuisine" />
+    <div class="checkbox-content">
+      <i class="fas fa-utensils"></i>
+      <span>Cuisine équipée</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityLaveLinge" />
+    <div class="checkbox-content">
+      <i class="fas fa-tshirt"></i>
+      <span>Lave-linge</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityLaveVaisselle" />
+    <div class="checkbox-content">
+      <i class="fas fa-sink"></i>
+      <span>Lave-vaisselle</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityTelevision" />
+    <div class="checkbox-content">
+      <i class="fas fa-tv"></i>
+      <span>Télévision</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityParking" />
+    <div class="checkbox-content">
+      <i class="fas fa-car"></i>
+      <span>Parking</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="amenityClimatisation" />
+    <div class="checkbox-content">
+      <i class="fas fa-snowflake"></i>
+      <span>Climatisation</span>
+    </div>
+  </label>
+</div>
+
+<!-- ===== SECTION : RÈGLES DE LA MAISON ===== -->
+<div class="form-section-header">
+  <i class="fas fa-list-check"></i>
+  <h3>Règles de la maison</h3>
+  <small>Définissez ce qui est autorisé ou non dans votre logement</small>
+</div>
+
+<div class="checkbox-grid">
+  <label class="checkbox-item">
+    <input type="checkbox" id="ruleAnimaux" />
+    <div class="checkbox-content">
+      <i class="fas fa-dog"></i>
+      <span>Animaux acceptés</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="ruleFumeurs" />
+    <div class="checkbox-content">
+      <i class="fas fa-smoking-ban"></i>
+      <span>Fumeurs acceptés</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item">
+    <input type="checkbox" id="ruleFetes" />
+    <div class="checkbox-content">
+      <i class="fas fa-music"></i>
+      <span>Fêtes autorisées</span>
+    </div>
+  </label>
+  
+  <label class="checkbox-item checked">
+    <input type="checkbox" id="ruleEnfants" checked />
+    <div class="checkbox-content">
+      <i class="fas fa-baby"></i>
+      <span>Enfants bienvenus</span>
+    </div>
+  </label>
+</div>
+
+<!-- ===== SECTION : INFOS PRATIQUES ===== -->
+<div class="form-section-header">
+  <i class="fas fa-circle-info"></i>
+  <h3>Informations pratiques</h3>
+  <small>Détails utiles pour vos voyageurs</small>
+</div>
+
+<div class="form-group">
+  <label for="practicalParking">
+    <i class="fas fa-car"></i>
+    <span>Détails parking</span>
+  </label>
+  <textarea id="practicalParking" placeholder="Ex: Parking gratuit dans la rue, place réservée n°5 au sous-sol..." rows="2"></textarea>
+</div>
+
+<div class="form-group">
+  <label for="practicalTrash">
+    <i class="fas fa-trash"></i>
+    <span>Jour des poubelles</span>
+  </label>
+  <input id="practicalTrash" placeholder="Ex: Mardi et vendredi soir" type="text" />
+</div>
+
+<div class="form-group">
+  <label for="practicalShops">
+    <i class="fas fa-store"></i>
+    <span>Commerces à proximité</span>
+  </label>
+  <textarea id="practicalShops" placeholder="Ex: Supermarché Carrefour à 200m, boulangerie en bas de la rue..." rows="2"></textarea>
+</div>
+
+<div class="form-group">
+  <label for="practicalTransport">
+    <i class="fas fa-bus"></i>
+    <span>Transports en commun</span>
+  </label>
+  <textarea id="practicalTransport" placeholder="Ex: Métro ligne 13 à 5min à pied, bus 261 devant l'immeuble..." rows="2"></textarea>
+</div>
+
+<!-- ===== SECTION : RÉPONSES AUTOMATIQUES ===== -->
+<div class="form-section-header">
+  <i class="fas fa-robot"></i>
+  <h3>Réponses automatiques</h3>
+  <small>Activez pour que le système réponde automatiquement aux questions fréquentes basées sur les informations ci-dessus</small>
+</div>
+
+<div class="form-group">
+  <label class="toggle-switch">
+    <input type="checkbox" id="autoResponsesEnabled" checked />
+    <span class="toggle-slider"></span>
+    <span class="toggle-label">Activer les réponses automatiques</span>
+  </label>
+  <div class="info-box">
+    <i class="fas fa-lightbulb"></i>
+    <p>Lorsqu'activé, le système répondra automatiquement aux questions comme "À quelle heure je peux arriver ?", "Y a-t-il des draps ?", etc. Si la réponse n'est pas trouvée, vous recevrez une notification.</p>
+  </div>
+</div>
+
 <div class="form-group">
 <label>
 <i class="fas fa-link"></i>
@@ -1417,5 +1775,127 @@
 
 })();
     </script>
+
+  <!-- Script pour gérer les équipements, règles et réponses auto -->
+  <script>
+  // ============================================
+  // GESTION DES NOUVELLES DONNÉES PROPRIÉTÉS
+  // ============================================
+
+  // Fonction utilitaire pour charger les données dans le formulaire
+  window.loadPropertyExtendedData = function(property) {
+    if (!property) return;
+    
+    console.log('📦 Chargement des données étendues:', property);
+    
+    // === ÉQUIPEMENTS ===
+    try {
+      const amenities = typeof property.amenities === 'string' 
+        ? JSON.parse(property.amenities) 
+        : (property.amenities || {});
+      
+      document.getElementById('amenityDraps').checked = amenities.draps || false;
+      document.getElementById('amenityServiettes').checked = amenities.serviettes || false;
+      document.getElementById('amenityCuisine').checked = amenities.cuisine_equipee || false;
+      document.getElementById('amenityLaveLinge').checked = amenities.lave_linge || false;
+      document.getElementById('amenityLaveVaisselle').checked = amenities.lave_vaisselle || false;
+      document.getElementById('amenityTelevision').checked = amenities.television || false;
+      document.getElementById('amenityParking').checked = amenities.parking || false;
+      document.getElementById('amenityClimatisation').checked = amenities.climatisation || false;
+    } catch (e) {
+      console.error('Erreur chargement amenities:', e);
+    }
+    
+    // === RÈGLES ===
+    try {
+      const rules = typeof property.house_rules === 'string'
+        ? JSON.parse(property.house_rules)
+        : (property.house_rules || {});
+      
+      document.getElementById('ruleAnimaux').checked = rules.animaux || false;
+      document.getElementById('ruleFumeurs').checked = rules.fumeurs || false;
+      document.getElementById('ruleFetes').checked = rules.fetes || false;
+      document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : true;
+    } catch (e) {
+      console.error('Erreur chargement house_rules:', e);
+    }
+    
+    // === INFOS PRATIQUES ===
+    try {
+      const practical = typeof property.practical_info === 'string'
+        ? JSON.parse(property.practical_info)
+        : (property.practical_info || {});
+      
+      document.getElementById('practicalParking').value = practical.parking_details || '';
+      document.getElementById('practicalTrash').value = practical.trash_day || '';
+      document.getElementById('practicalShops').value = practical.nearby_shops || '';
+      document.getElementById('practicalTransport').value = practical.public_transport || '';
+    } catch (e) {
+      console.error('Erreur chargement practical_info:', e);
+    }
+    
+    // === RÉPONSES AUTO ===
+    document.getElementById('autoResponsesEnabled').checked = property.auto_responses_enabled !== undefined 
+      ? property.auto_responses_enabled 
+      : true;
+  };
+
+  // Fonction pour récupérer les données du formulaire
+  window.getPropertyExtendedData = function() {
+    // === ÉQUIPEMENTS ===
+    const amenities = {
+      draps: document.getElementById('amenityDraps').checked,
+      serviettes: document.getElementById('amenityServiettes').checked,
+      cuisine_equipee: document.getElementById('amenityCuisine').checked,
+      lave_linge: document.getElementById('amenityLaveLinge').checked,
+      lave_vaisselle: document.getElementById('amenityLaveVaisselle').checked,
+      television: document.getElementById('amenityTelevision').checked,
+      parking: document.getElementById('amenityParking').checked,
+      climatisation: document.getElementById('amenityClimatisation').checked
+    };
+    
+    // === RÈGLES ===
+    const houseRules = {
+      animaux: document.getElementById('ruleAnimaux').checked,
+      fumeurs: document.getElementById('ruleFumeurs').checked,
+      fetes: document.getElementById('ruleFetes').checked,
+      enfants: document.getElementById('ruleEnfants').checked
+    };
+    
+    // === INFOS PRATIQUES ===
+    const practicalInfo = {
+      parking_details: document.getElementById('practicalParking').value.trim(),
+      trash_day: document.getElementById('practicalTrash').value.trim(),
+      nearby_shops: document.getElementById('practicalShops').value.trim(),
+      public_transport: document.getElementById('practicalTransport').value.trim()
+    };
+    
+    // === RÉPONSES AUTO ===
+    const autoResponsesEnabled = document.getElementById('autoResponsesEnabled').checked;
+    
+    return {
+      amenities: JSON.stringify(amenities),
+      house_rules: JSON.stringify(houseRules),
+      practical_info: JSON.stringify(practicalInfo),
+      auto_responses_enabled: autoResponsesEnabled
+    };
+  };
+
+  // Intercepter l'ouverture de la modal d'édition
+  // Cette fonction doit être appelée quand tu charges une propriété
+  const originalEditProperty = window.editProperty;
+  if (typeof originalEditProperty === 'function') {
+    window.editProperty = function(propertyData) {
+      // Appeler la fonction originale
+      originalEditProperty(propertyData);
+      
+      // Charger les données étendues
+      loadPropertyExtendedData(propertyData);
+    };
+  }
+
+  console.log('✅ Module auto-réponses chargé');
+  </script>
+
 <script src="/js/bh-layout.js"></script></body>
 </html>
