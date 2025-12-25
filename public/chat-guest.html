@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat â€“ Votre rÃ©servation</title>
+  <title>Chat "“ Votre réservation</title>
   
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
       max-width: 500px;
     }
 
-    /* ===== PAGE DE VÃ‰RIFICATION ===== */
+    /* ===== PAGE DE VÉRIFICATION ===== */
     .verification-card {
       background: var(--bg-primary);
       border-radius: var(--radius-lg);
@@ -477,7 +477,7 @@
   gap: 8px !important;
 }
 
-/* Messages du propriÃ©taire (Ã  gauche, gris) */
+/* Messages du propriétaire (à gauche, gris) */
 .message.owner {
   flex-direction: row !important;
   justify-content: flex-start !important;
@@ -489,7 +489,7 @@
   border-radius: 18px 18px 18px 4px !important;
 }
 
-/* Messages du voyageur (Ã  droite, vert) */
+/* Messages du voyageur (à droite, vert) */
 .message.guest {
   flex-direction: row-reverse !important;
   justify-content: flex-start !important;
@@ -514,7 +514,7 @@
   text-align: right !important;
 }
 
-/* Messages du bot (centrÃ©, bleu clair) */
+/* Messages du bot (centré, bleu clair) */
 .message.bot {
   flex-direction: row !important;
   justify-content: center !important;
@@ -528,7 +528,7 @@
 }
   
 
-/* ===== WHATSAPP PUR (sans avatar + collÃ© aux bords + statuts) ===== */
+/* ===== WHATSAPP PUR (sans avatar + collé aux bords + statuts) ===== */
 .message-avatar { display: none !important; }
 
 /* bulles plus naturelles */
@@ -544,7 +544,7 @@
   padding-right: 6px;
 }
 
-/* collÃ© Ã  gauche / droite */
+/* collé à gauche / droite */
 .message.owner { margin-right: auto !important; }
 .message.guest { margin-left: auto !important; }
 
@@ -565,7 +565,7 @@
 /* on masque le nom (1:1 WhatsApp) */
 .message-sender { display: none !important; }
 
-/* heure + statut sur la mÃªme ligne */
+/* heure + statut sur la même ligne */
 .message-meta {
   display: flex;
   gap: 6px;
@@ -575,10 +575,10 @@
   margin-top: 3px;
 }
 
-/* alignement meta Ã  droite pour guest */
+/* alignement meta à droite pour guest */
 .message.guest .message-meta { justify-content: flex-end; }
 
-/* bot centrÃ© */
+/* bot centré */
 .message.bot { max-width: 92% !important; }
 .message.bot .message-meta { justify-content: center; }
 
@@ -605,7 +605,7 @@
 
   
 
-/* Statut (EnvoyÃ©/DistribuÃ©/Lu) */
+/* Statut (Envoyé/Distribué/Lu) */
 .message-status {
   font-size: inherit;
   font-weight: 500;
@@ -631,16 +631,16 @@
 </head>
 <body>
   <div class="container">
-    <!-- Section de vÃ©rification -->
+    <!-- Section de vérification -->
 <div class="verification-container" id="verificationContainer">
   <div class="verification-card">
     <div class="verification-header">
       <div class="verification-icon">
         <i class="fas fa-shield-check"></i>
       </div>
-      <h1 class="verification-title">AccÃ¨s au Chat</h1>
+      <h1 class="verification-title">Accès au Chat</h1>
       <p class="verification-subtitle">
-        VÃ©rifiez votre rÃ©servation pour accÃ©der au chat sÃ©curisÃ©
+        Vérifiez votre réservation pour accéder au chat sécurisé
       </p>
     </div>
 
@@ -649,7 +649,7 @@
       <div class="form-group">
         <label class="form-label">
           <i class="fas fa-lock"></i>
-          Code PIN Ã  4 chiffres
+          Code PIN à 4 chiffres
         </label>
         <input 
           type="text" 
@@ -661,14 +661,14 @@
           required
           autocomplete="off"
         />
-        <p class="form-help">Le code PIN vous a Ã©tÃ© fourni par le propriÃ©taire</p>
+        <p class="form-help">Le code PIN vous a été fourni par le propriétaire</p>
       </div>
 
-      <!-- Date d'arrivÃ©e (Check-in) -->
+      <!-- Date d'arrivée (Check-in) -->
       <div class="form-group">
         <label class="form-label">
           <i class="fas fa-calendar-check"></i>
-          Date d'arrivÃ©e
+          Date d'arrivée
         </label>
         <input 
           type="date" 
@@ -678,34 +678,34 @@
         />
       </div>
 
-      <!-- Date de dÃ©part (Check-out) - OPTIONNEL -->
+      <!-- Date de départ (Check-out) - OPTIONNEL -->
       <div class="form-group">
         <label class="form-label">
           <i class="fas fa-calendar-times"></i>
-          Date de dÃ©part (optionnel)
+          Date de départ (optionnel)
         </label>
         <input 
           type="date" 
           id="checkoutDate" 
           class="form-input"
         />
-        <p class="form-help">Peut aider Ã  identifier votre rÃ©servation plus prÃ©cisÃ©ment</p>
+        <p class="form-help">Peut aider à identifier votre réservation plus précisément</p>
       </div>
 
-      <!-- Plateforme de rÃ©servation -->
+      <!-- Plateforme de réservation -->
       <div class="form-group">
         <label class="form-label">
           <i class="fas fa-building"></i>
-          Plateforme de rÃ©servation
+          Plateforme de réservation
         </label>
         <select id="platform" class="form-input" required>
-          <option value="">SÃ©lectionnez votre plateforme</option>
+          <option value="">Sélectionnez votre plateforme</option>
           <option value="Airbnb">Airbnb</option>
           <option value="Booking.com">Booking.com</option>
           <option value="VRBO">VRBO</option>
           <option value="Abritel">Abritel</option>
           <option value="HomeAway">HomeAway</option>
-          <option value="Direct">RÃ©servation directe</option>
+          <option value="Direct">Réservation directe</option>
           <option value="Autre">Autre</option>
         </select>
       </div>
@@ -716,17 +716,17 @@
         <span id="errorText"></span>
       </div>
 
-      <!-- Bouton de vÃ©rification -->
+      <!-- Bouton de vérification -->
       <button type="submit" class="btn-verify" id="verifyBtn">
         <i class="fas fa-check-circle"></i>
-        VÃ©rifier et accÃ©der au chat
+        Vérifier et accéder au chat
       </button>
     </form>
 
-    <!-- Note de sÃ©curitÃ© -->
+    <!-- Note de sécurité -->
     <div class="security-note">
       <i class="fas fa-info-circle"></i>
-      <span>Vos informations sont vÃ©rifiÃ©es de maniÃ¨re sÃ©curisÃ©e</span>
+      <span>Vos informations sont vérifiées de manière sécurisée</span>
     </div>
   </div>
 </div>
@@ -739,7 +739,7 @@
         </div>
         <div class="property-info">
           <h2 id="chatPropertyName">Votre logement</h2>
-          <p>Chat avec le propriÃ©taire</p>
+          <p>Chat avec le propriétaire</p>
         </div>
       </div>
 
@@ -755,7 +755,7 @@
         <div class="dot"></div>
         <div class="dot"></div>
         <span style="font-size: 12px; color: var(--text-secondary); margin-left: 4px;">
-          Le propriÃ©taire Ã©crit...
+          Le propriétaire écrit...
         </span>
       </div>
 
@@ -763,7 +763,7 @@
         <textarea 
           class="chat-input" 
           id="messageInput" 
-          placeholder="Ã‰crivez votre message..."
+          placeholder="Écrivez votre message..."
           rows="1"
         ></textarea>
         <button class="send-btn" id="sendBtn">
@@ -811,7 +811,7 @@ function appendMessageSafe(m) {
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('ðŸš€ Initialisation du chat, token:', token);
-  // VÃ©rifier si dÃ©jÃ  connectÃ©
+  // Vérifier si déjà connecté
   const savedConversationId = sessionStorage.getItem('chat_conversation_id');
   const isVerified = sessionStorage.getItem('chat_verified');
   
@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
     // ============================================
-    // CHARGEMENT DES PROPRIÃ‰TÃ‰S
+    // CHARGEMENT DES PROPRIÉTÉS
     // ============================================
 
     async function loadProperties() {
@@ -831,7 +831,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = await response.json();
         
         const select = document.getElementById('propertySelect');
-        select.innerHTML = '<option value="">-- SÃ©lectionnez votre logement --</option>';
+        select.innerHTML = '<option value="">-- Sélectionnez votre logement --</option>';
         
         data.properties.forEach(property => {
           const option = document.createElement('option');
@@ -841,18 +841,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
       } catch (error) {
-        console.error('âŒ Erreur chargement propriÃ©tÃ©s:', error);
-        showError('Erreur de chargement. Veuillez rafraÃ®chir la page.');
+        console.error('âŒ Erreur chargement propriétés:', error);
+        showError('Erreur de chargement. Veuillez rafraîchir la page.');
       }
     }
 
  // ============================================
-// VÃ‰RIFICATION
+// VÉRIFICATION
 // ============================================
 async function handleVerification(e) {
   e.preventDefault();
   
-  // RÃ©cupÃ©rer property_id depuis l'URL
+  // Récupérer property_id depuis l'URL
   const urlParams = new URLSearchParams(window.location.search);
   const propertyId = urlParams.get('property');
   
@@ -862,12 +862,12 @@ async function handleVerification(e) {
   const platform = document.getElementById('platform').value;
   
   if (!propertyId) {
-    showError('Lien invalide. Veuillez utiliser le lien fourni par votre propriÃ©taire.');
+    showError('Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.');
     return;
   }
   
   if (!pinCode || !checkinDate || !platform) {
-    showError('Tous les champs obligatoires doivent Ãªtre remplis');
+    showError('Tous les champs obligatoires doivent être remplis');
     return;
   }
   
@@ -879,7 +879,7 @@ async function handleVerification(e) {
   const verifyBtn = document.querySelector('button[type="submit"]');
   if (verifyBtn) {
     verifyBtn.disabled = true;
-    verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VÃ©rification...';
+    verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
   }
   
   try {
@@ -900,15 +900,15 @@ async function handleVerification(e) {
     const data = await response.json();
     
     if (!response.ok) {
-      showError(data.error || 'Erreur de vÃ©rification');
+      showError(data.error || 'Erreur de vérification');
       if (verifyBtn) {
         verifyBtn.disabled = false;
-        verifyBtn.innerHTML = '<i class="fas fa-check"></i> VÃ©rifier';
+        verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
       }
       return;
     }
     
-    // âœ… VÃ©rification rÃ©ussie !
+    // âœ… Vérification réussie !
     conversationId = data.conversation_id;
     sessionStorage.setItem('chat_conversation_id', data.conversation_id);
     sessionStorage.setItem('chat_property_id', data.property_id);
@@ -923,7 +923,7 @@ async function handleVerification(e) {
     showError('Erreur de connexion au serveur');
     if (verifyBtn) {
       verifyBtn.disabled = false;
-      verifyBtn.innerHTML = '<i class="fas fa-check"></i> VÃ©rifier';
+      verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
     }
   }
 }
@@ -964,7 +964,7 @@ async function handleVerification(e) {
       socket = io(API_URL);
       
       socket.on('connect', () => {
-        console.log('âœ… Socket connectÃ©');
+        console.log('âœ… Socket connecté');
         socket.emit('join_conversation', conversationId);
       });
       
@@ -983,7 +983,7 @@ async function handleVerification(e) {
       });
       
       socket.on('disconnect', () => {
-        console.log('âŒ Socket dÃ©connectÃ©');
+        console.log('âŒ Socket déconnecté');
       });
     }
 
@@ -995,7 +995,7 @@ async function handleVerification(e) {
   if (sendingInProgress) return;
   sendingInProgress = true;
 
-  console.log('ðŸš€ sendMessage appelÃ©e !');
+  console.log('ðŸš€ sendMessage appelée !');
 
   const input = document.getElementById('messageInput');
   const message = (input?.value || '').trim();
@@ -1020,7 +1020,7 @@ async function handleVerification(e) {
     if (!response.ok) throw new Error('Erreur envoi message');
     const data = await response.json().catch(() => ({}));
 
-    // Si le serveur renvoie le message dans la rÃ©ponse, on l'affiche en fallback (dÃ©dupliquÃ©).
+    // Si le serveur renvoie le message dans la réponse, on l'affiche en fallback (dédupliqué).
     if (data && data.message) {
       appendMessageSafe(data.message);
       scrollToBottom();
@@ -1046,7 +1046,7 @@ async function handleVerification(e) {
     function appendMessage(message) {
       const container = document.getElementById('messagesContainer');
       
-      // Supprimer le message "Aucun message" si prÃ©sent
+      // Supprimer le message "Aucun message" si présent
       if (container.querySelector('p')) {
         container.innerHTML = '';
       }
@@ -1057,10 +1057,10 @@ const rawType = (message.sender_type || '').toString().trim().toLowerCase().norm
 let normalizedType = 'bot';
 
 if (['guest','voyageur','traveler','client'].includes(rawType)) normalizedType = 'guest';
-else if (['owner','host','proprietaire','propriÃ©taire','admin','manager'].includes(rawType)) normalizedType = 'owner';
+else if (['owner','host','proprietaire','propriétaire','admin','manager'].includes(rawType)) normalizedType = 'owner';
 else if (['bot','assistant','system'].includes(rawType)) normalizedType = 'bot';
 else {
-  // Fallback basÃ© sur le nom si sender_type est absent / inattendu
+  // Fallback basé sur le nom si sender_type est absent / inattendu
   const n = (message.sender_name || '').toString().toLowerCase();
   normalizedType = n.includes('propri') || n.includes('host') ? 'owner' : 'guest';
 }
@@ -1079,7 +1079,7 @@ messageDiv.className = `message ${normalizedType}`;
       senderName.className = 'message-sender';
       senderName.textContent = message.sender_name || 
                               (message.sender_type === 'guest' ? 'Vous' : 
-                               message.sender_type === 'bot' ? 'Assistant' : 'PropriÃ©taire');
+                               message.sender_type === 'bot' ? 'Assistant' : 'Propriétaire');
       
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
@@ -1099,8 +1099,8 @@ status.className = 'message-status';
 if (message.sender_type === 'guest') {
   const s = message.status || (message.read_at ? 'read' : (message.delivered_at ? 'delivered' : 'sent'));
   if (s === 'read') status.textContent = 'Lu';
-  else if (s === 'delivered') status.textContent = 'DistribuÃ©';
-  else status.textContent = 'EnvoyÃ©';
+  else if (s === 'delivered') status.textContent = 'Distribué';
+  else status.textContent = 'Envoyé';
 } else {
   status.textContent = '';
 }
@@ -1175,7 +1175,7 @@ function displayMessage(message) {
         warningDiv.classList.remove('show');
       }, 5000);
     }
-// RÃ©cupÃ©rer l'ID du logement depuis l'URL
+// Récupérer l'ID du logement depuis l'URL
 const urlParams = new URLSearchParams(window.location.search);
 const propertyId = urlParams.get('property');
 
@@ -1184,13 +1184,13 @@ if (!propertyId) {
     <div class="verification-card">
       <div class="error-message" style="display: flex;">
         <i class="fas fa-exclamation-triangle"></i>
-        <span>Lien invalide. Veuillez utiliser le lien fourni par votre propriÃ©taire.</span>
+        <span>Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.</span>
       </div>
     </div>
   `;
 }
 
-// Gestion du formulaire de vÃ©rification
+// Gestion du formulaire de vérification
 document.getElementById('verificationForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   
@@ -1205,7 +1205,7 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
   // Validation
   if (!/^\d{4}$/.test(pinCode)) {
     errorDiv.style.display = 'flex';
-    errorText.textContent = 'Le code PIN doit Ãªtre composÃ© de 4 chiffres';
+    errorText.textContent = 'Le code PIN doit être composé de 4 chiffres';
     return;
   }
   
@@ -1215,9 +1215,9 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
     return;
   }
   
-  // DÃ©sactiver le bouton pendant la vÃ©rification
+  // Désactiver le bouton pendant la vérification
   verifyBtn.disabled = true;
-  verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VÃ©rification...';
+  verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
   errorDiv.style.display = 'none';
   
   try {
@@ -1238,10 +1238,10 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || 'Erreur de vÃ©rification');
+      throw new Error(data.error || 'Erreur de vérification');
     }
     
-    // âœ… VÃ©rification rÃ©ussie !
+    // âœ… Vérification réussie !
     // Stocker les infos dans sessionStorage
     sessionStorage.setItem('chat_conversation_id', data.conversation_id);
     sessionStorage.setItem('chat_property_id', data.property_id);
@@ -1254,22 +1254,22 @@ document.getElementById('verificationForm')?.addEventListener('submit', async (e
   } catch (error) {
     console.error('Erreur:', error);
     errorDiv.style.display = 'flex';
-    errorText.textContent = error.message || 'Erreur lors de la vÃ©rification. VÃ©rifiez vos informations.';
+    errorText.textContent = error.message || 'Erreur lors de la vérification. Vérifiez vos informations.';
     
     verifyBtn.disabled = false;
-    verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> VÃ©rifier et accÃ©der au chat';
+    verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder au chat';
   }
 });
 
-// Fonction pour afficher l'interface de chat aprÃ¨s vÃ©rification
+// Fonction pour afficher l'interface de chat après vérification
 function showChatInterface() {
-  // EmpÃªcher les doubles listeners (qui provoquent l'envoi en double)
+  // Empêcher les doubles listeners (qui provoquent l'envoi en double)
   if (!chatListenersAttached) {
-    const form = document.getElementById('chatForm'); // si prÃ©sent
+    const form = document.getElementById('chatForm'); // si présent
     const sendBtn = document.getElementById('sendBtn');
     const messageInput = document.getElementById('messageInput');
 
-    // On privilÃ©gie le submit du form (un seul point d'entrÃ©e)
+    // On privilégie le submit du form (un seul point d'entrée)
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1303,7 +1303,7 @@ function showChatInterface() {
   scrollToBottom();
 }
 
-// DÃ©finir la date minimale comme aujourd'hui - 30 jours (on peut avoir des rÃ©servations passÃ©es rÃ©centes)
+// Définir la date minimale comme aujourd'hui - 30 jours (on peut avoir des réservations passées récentes)
 const checkinInput = document.getElementById('checkinDate');
 if (checkinInput) {
   const today = new Date();
@@ -1311,7 +1311,7 @@ if (checkinInput) {
   checkinInput.min = today.toISOString().split('T')[0];
 }
 
-// Limiter la date de checkout basÃ©e sur le checkin
+// Limiter la date de checkout basée sur le checkin
 document.getElementById('checkinDate')?.addEventListener('change', (e) => {
   const checkoutInput = document.getElementById('checkoutDate');
   if (checkoutInput && e.target.value) {
