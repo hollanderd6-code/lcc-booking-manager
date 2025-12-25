@@ -11,7 +11,148 @@ const crypto = require('crypto');
  * @param {Object} io - Socket.io instance
  */
 function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
+  // ============================================
+// ROUTES SYSTÈME DE CHAT SÉCURISÉ
+// ============================================
+
+const crypto = require('crypto');
+
+// ============================================
+// 🤖 SERVICE DE RÉPONSES AUTOMATIQUES (INLINE)
+// ============================================
+
+const QUESTION_PATTERNS = {
+  checkin: {
+    keywords: ['arriver', 'arrivée', 'check-in', 'checkin', 'heure arrivée', 'quelle heure arriver', 'arrive'],
+    priority: 1
+  },
+  checkout: {
+    keywords: ['partir', 'départ', 'check-out', 'checkout', 'heure départ', 'quelle heure partir', 'libérer', 'quitter'],
+    priority: 1
+  },
+  draps: {
+    keywords: ['draps', 'drap', 'linge de lit', 'literie'],
+    priority: 2
+  },
+  serviettes: {
+    keywords: ['serviettes', 'serviette', 'linge de toilette', 'bain'],
+    priority: 2
+  },
+  cuisine: {
+    keywords: ['cuisine', 'cuisiner', 'équipée', 'ustensiles', 'vaisselle'],
+    priority: 2
+  },
+  wifi: {
+    keywords: ['wifi', 'wi-fi', 'internet', 'réseau', 'connexion', 'mot de passe wifi', 'code wifi'],
+    priority: 1
+  },
+  acces_code: {
+    keywords: ['code', 'clé', 'clef', 'accès', 'entrer', 'porte', 'digicode'],
+    priority: 1
+  },
+  animaux: {
+    keywords: ['animaux', 'animal', 'chien', 'chat', 'accepté'],
+    priority: 2
+  },
+  parking: {
+    keywords: ['parking', 'garer', 'stationnement', 'voiture', 'se garer'],
+    priority: 2
+  }
+};
+
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function detectQuestions(message) {
+  const normalized = normalizeText(message);
+  const detected = [];
   
+  for (const [category, config] of Object.entries(QUESTION_PATTERNS)) {
+    for (const keyword of config.keywords) {
+      const normalizedKeyword = normalizeText(keyword);
+      if (normalized.includes(normalizedKeyword)) {
+        detected.push({ category, priority: config.priority });
+        break;
+      }
+    }
+  }
+  
+  return detected.sort((a, b) => a.priority - b.priority);
+}
+
+function generateAutoResponse(property, detectedQuestions) {
+  if (!property || detectedQuestions.length === 0) return null;
+  
+  const amenities = typeof property.amenities === 'string' ? JSON.parse(property.amenities) : (property.amenities || {});
+  const houseRules = typeof property.house_rules === 'string' ? JSON.parse(property.house_rules) : (property.house_rules || {});
+  const practicalInfo = typeof property.practical_info === 'string' ? JSON.parse(property.practical_info) : (property.practical_info || {});
+  
+  const responses = [];
+  
+  for (const question of detectedQuestions) {
+    let response = null;
+    
+    switch (question.category) {
+      case 'checkin':
+        if (property.arrival_time) response = `L'arrivée est possible à partir de ${property.arrival_time}.`;
+        break;
+      case 'checkout':
+        if (property.departure_time) response = `Le départ doit se faire avant ${property.departure_time}.`;
+        break;
+      case 'draps':
+        response = amenities.draps ? 'Oui, les draps sont fournis.' : 'Non, les draps ne sont pas fournis.';
+        break;
+      case 'serviettes':
+        response = amenities.serviettes ? 'Oui, les serviettes sont fournies.' : 'Non, les serviettes ne sont pas fournies.';
+        break;
+      case 'cuisine':
+        response = amenities.cuisine_equipee ? 'Oui, la cuisine est équipée.' : 'La cuisine dispose d\'équipements de base.';
+        break;
+      case 'wifi':
+        if (property.wifi_name && property.wifi_password) {
+          response = `Réseau WiFi : "${property.wifi_name}"\nMot de passe : "${property.wifi_password}"`;
+        }
+        break;
+      case 'acces_code':
+        if (property.access_code) response = `Le code d'accès est : ${property.access_code}`;
+        break;
+      case 'animaux':
+        response = houseRules.animaux ? 'Oui, les animaux sont acceptés.' : 'Non, les animaux ne sont pas acceptés.';
+        break;
+      case 'parking':
+        if (amenities.parking && practicalInfo.parking_details) {
+          response = `Oui, voici les informations parking : ${practicalInfo.parking_details}`;
+        } else if (amenities.parking) {
+          response = 'Oui, un parking est disponible.';
+        }
+        break;
+    }
+    
+    if (response) responses.push(response);
+  }
+  
+  return responses.length > 0 ? responses.join('\n\n') : null;
+}
+
+// ============================================
+// Configuration des routes de chat
+// ============================================
+
+/**
+ * Configuration des routes de chat
+ * @param {Object} app - Express app
+ * @param {Object} pool - PostgreSQL pool
+ * @param {Object} io - Socket.io instance
+ */
+function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
+
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
   // ============================================
