@@ -5906,7 +5906,13 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
     } catch (e) {
       return res.status(400).json({ error: e.message });
     }
-
+// ✅ AJOUTER CE LOG ICI
+    console.log('📦 Body reçu:', {
+      amenities: body.amenities,
+      houseRules: body.houseRules,
+      practicalInfo: body.practicalInfo,
+      autoResponsesEnabled: body.autoResponsesEnabled
+    });
     const {
       name,
       color,
