@@ -240,6 +240,49 @@ async function saveProperty(event) {
   if (wifiName) formData.append('wifiName', wifiName);
   if (wifiPassword) formData.append('wifiPassword', wifiPassword);
   if (accessInstructions) formData.append('accessInstructions', accessInstructions);
+
+  // ===== AJOUT DES NOUVELLES DONNÉES (ÉQUIPEMENTS, RÈGLES, INFOS) =====
+  try {
+    // Équipements
+    const amenities = {
+      draps: document.getElementById('amenityDraps')?.checked || false,
+      serviettes: document.getElementById('amenityServiettes')?.checked || false,
+      cuisine_equipee: document.getElementById('amenityCuisine')?.checked || false,
+      lave_linge: document.getElementById('amenityLaveLinge')?.checked || false,
+      lave_vaisselle: document.getElementById('amenityLaveVaisselle')?.checked || false,
+      television: document.getElementById('amenityTelevision')?.checked || false,
+      parking: document.getElementById('amenityParking')?.checked || false,
+      climatisation: document.getElementById('amenityClimatisation')?.checked || false
+    };
+    formData.append('amenities', JSON.stringify(amenities));
+    
+    // Règles
+    const houseRules = {
+      animaux: document.getElementById('ruleAnimaux')?.checked || false,
+      fumeurs: document.getElementById('ruleFumeurs')?.checked || false,
+      fetes: document.getElementById('ruleFetes')?.checked || false,
+      enfants: document.getElementById('ruleEnfants')?.checked || false
+    };
+    formData.append('houseRules', JSON.stringify(houseRules));
+    
+    // Infos pratiques
+    const practicalInfo = {
+      parking_details: document.getElementById('practicalParking')?.value?.trim() || '',
+      trash_day: document.getElementById('practicalTrash')?.value?.trim() || '',
+      nearby_shops: document.getElementById('practicalShops')?.value?.trim() || '',
+      public_transport: document.getElementById('practicalTransport')?.value?.trim() || ''
+    };
+    formData.append('practicalInfo', JSON.stringify(practicalInfo));
+    
+    // Réponses auto
+    const autoResponsesEnabled = document.getElementById('autoResponsesEnabled')?.checked || true;
+    formData.append('autoResponsesEnabled', autoResponsesEnabled);
+    
+  } catch (e) {
+    console.error('Erreur collecte données étendues:', e);
+  }
+  // ===== FIN AJOUT NOUVELLES DONNÉES =====
+
 const ownerId = document.getElementById('propertyOwnerId')?.value || null;
 if (ownerId) formData.append('ownerId', ownerId);
   if (photoInput && photoInput.files && photoInput.files[0]) {
@@ -471,6 +514,68 @@ function openEditPropertyModal(propertyId) {
   if (document.getElementById("propertyOwnerId")) {
   document.getElementById("propertyOwnerId").value = property.owner_id || "";
 }
+
+  // ===== CHARGER LES NOUVELLES DONNÉES (ÉQUIPEMENTS, RÈGLES, INFOS) =====
+  try {
+    // Équipements
+    const amenities = property.amenities 
+      ? (typeof property.amenities === 'string' ? JSON.parse(property.amenities) : property.amenities)
+      : {};
+    
+    if (document.getElementById('amenityDraps')) 
+      document.getElementById('amenityDraps').checked = amenities.draps || false;
+    if (document.getElementById('amenityServiettes')) 
+      document.getElementById('amenityServiettes').checked = amenities.serviettes || false;
+    if (document.getElementById('amenityCuisine')) 
+      document.getElementById('amenityCuisine').checked = amenities.cuisine_equipee || false;
+    if (document.getElementById('amenityLaveLinge')) 
+      document.getElementById('amenityLaveLinge').checked = amenities.lave_linge || false;
+    if (document.getElementById('amenityLaveVaisselle')) 
+      document.getElementById('amenityLaveVaisselle').checked = amenities.lave_vaisselle || false;
+    if (document.getElementById('amenityTelevision')) 
+      document.getElementById('amenityTelevision').checked = amenities.television || false;
+    if (document.getElementById('amenityParking')) 
+      document.getElementById('amenityParking').checked = amenities.parking || false;
+    if (document.getElementById('amenityClimatisation')) 
+      document.getElementById('amenityClimatisation').checked = amenities.climatisation || false;
+    
+    // Règles
+    const rules = property.house_rules
+      ? (typeof property.house_rules === 'string' ? JSON.parse(property.house_rules) : property.house_rules)
+      : {};
+    
+    if (document.getElementById('ruleAnimaux')) 
+      document.getElementById('ruleAnimaux').checked = rules.animaux || false;
+    if (document.getElementById('ruleFumeurs')) 
+      document.getElementById('ruleFumeurs').checked = rules.fumeurs || false;
+    if (document.getElementById('ruleFetes')) 
+      document.getElementById('ruleFetes').checked = rules.fetes || false;
+    if (document.getElementById('ruleEnfants')) 
+      document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : true;
+    
+    // Infos pratiques
+    const practical = property.practical_info
+      ? (typeof property.practical_info === 'string' ? JSON.parse(property.practical_info) : property.practical_info)
+      : {};
+    
+    if (document.getElementById('practicalParking')) 
+      document.getElementById('practicalParking').value = practical.parking_details || '';
+    if (document.getElementById('practicalTrash')) 
+      document.getElementById('practicalTrash').value = practical.trash_day || '';
+    if (document.getElementById('practicalShops')) 
+      document.getElementById('practicalShops').value = practical.nearby_shops || '';
+    if (document.getElementById('practicalTransport')) 
+      document.getElementById('practicalTransport').value = practical.public_transport || '';
+    
+    // Réponses auto
+    if (document.getElementById('autoResponsesEnabled')) 
+      document.getElementById('autoResponsesEnabled').checked = property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true;
+    
+  } catch (e) {
+    console.error('Erreur chargement données étendues:', e);
+  }
+  // ===== FIN CHARGEMENT NOUVELLES DONNÉES =====
+
   const photoBox = document.getElementById("photoPreviewBox");
   if (photoBox) {
     if (photoUrl) {
