@@ -326,6 +326,24 @@ cron.schedule('0 7 * * *', async () => {
 });
 
 console.log('✅ CRON job messages d\'arrivée configuré (tous les jours à 7h)');
+
+// ============================================
+// CRON JOB : SYNCHRONISATION ICAL AUTOMATIQUE
+// ============================================
+
+cron.schedule('*/5 * * * *', async () => {
+  console.log('CRON: Synchronisation iCal automatique (toutes les 5 minutes)');
+  try {
+    await syncAllCalendars();
+  } catch (error) {
+    console.error('Erreur CRON synchronisation iCal:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('CRON job synchronisation iCal configure (toutes les 5 minutes)');
+
 // ============================================
 // SERVICE DE RÉPONSES AUTOMATIQUES (INLINE)
 // ============================================
