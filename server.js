@@ -3396,6 +3396,11 @@ async function syncAllCalendars() {
       // Base = iCal
       reservationsStore.properties[property.id] = newIcalReservations;
 
+      // SAUVEGARDER DANS POSTGRESQL
+      if (newIcalReservations.length > 0) {
+        await savePropertyReservations(property.id, newIcalReservations, property.userId);
+      }
+
       // Ajouter les réservations manuelles (y compris blocages)
       const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
       if (manualForProperty.length > 0) {
