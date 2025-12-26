@@ -381,10 +381,6 @@ app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken,
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-      console.error('❌ Erreur récupération propriétés:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
 
   // ============================================
   // 4. LISTE DES CONVERSATIONS (pour propriétaire)
