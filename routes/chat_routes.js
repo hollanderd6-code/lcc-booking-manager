@@ -1069,4 +1069,6 @@ async function createNotification(pool, io, userId, conversationId, messageId, t
   }
 }
 
+}
+
 module.exports = { setupChatRoutes };
