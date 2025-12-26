@@ -2389,6 +2389,19 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
+    // Recuperer le vrai user_id (integer) depuis properties
+    const userResult = await pool.query(
+      'SELECT user_id FROM properties WHERE id = $1',
+      [propertyId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      console.error(`Propriete ${propertyId} introuvable`);
+      return false;
+    }
+    
+    const realUserId = userResult.rows[0].user_id;
+    
     await pool.query(`
       INSERT INTO reservations (
         uid, property_id, user_id,
@@ -2413,7 +2426,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     `, [
       reservation.uid,
       propertyId,
-      userId,
+      realUserId,
       reservation.start,
       reservation.end,
       reservation.guestName || null,
@@ -2452,7 +2465,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
         (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, is_verified, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, 'pending')`,
         [
-          userId,
+          realUserId,
           propertyId,
           reservation.start,
           reservation.end,
