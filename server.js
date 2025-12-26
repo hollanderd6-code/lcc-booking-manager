@@ -2410,6 +2410,45 @@ async function saveReservationToDB(reservation, propertyId, userId) {
       reservation.rawData ? JSON.stringify(reservation.rawData) : null
     ]);
 
+    // ============================================
+    // ✅ NOUVEAU : CREER AUTOMATIQUEMENT UNE CONVERSATION
+    // ============================================
+    
+    // Vérifier si une conversation existe déjà
+    const existingConv = await pool.query(
+      `SELECT id FROM conversations 
+       WHERE property_id = $1 
+       AND reservation_start_date = $2 
+       AND platform = $3`,
+      [propertyId, reservation.start, reservation.platform || 'direct']
+    );
+    
+    // Si pas de conversation, en créer une
+    if (existingConv.rows.length === 0) {
+      const crypto = require('crypto');
+      const uniqueToken = crypto.randomBytes(32).toString('hex');
+      const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      await pool.query(
+        `INSERT INTO conversations 
+        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, is_verified, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, 'pending')`,
+        [
+          userId,
+          propertyId,
+          reservation.start,
+          reservation.end,
+          reservation.platform || 'direct',
+          reservation.guestName || null,
+          reservation.guestEmail || null,
+          pinCode,
+          uniqueToken
+        ]
+      );
+      
+      console.log(`✅ Conversation créée automatiquement pour réservation ${reservation.uid}`);
+    }
+
     return true;
   } catch (error) {
     console.error('❌ Erreur saveReservationToDB:', error);
