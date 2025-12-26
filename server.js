@@ -10751,6 +10751,98 @@ setupChatRoutes(app, pool, io, authenticateToken, checkSubscription);
 console.log('✅ Routes du chat initialisées');
 
 // ============================================
+// ROUTE VERIFICATION CHAT (AJOUTEE DIRECTEMENT)
+// ============================================
+
+app.post('/api/chat/verify-by-property', async (req, res) => {
+  try {
+    const { property_id, chat_pin, checkin_date, checkout_date, platform } = req.body;
+
+    if (!property_id || !chat_pin || !checkin_date || !platform) {
+      return res.status(400).json({ error: 'Tous les champs sont requis' });
+    }
+
+    const propertyResult = await pool.query(
+      'SELECT id, user_id, name, chat_pin FROM properties WHERE id = $1',
+      [property_id]
+    );
+
+    if (propertyResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Logement non trouve' });
+    }
+
+    const property = propertyResult.rows[0];
+
+    if (property.chat_pin !== chat_pin) {
+      return res.status(401).json({ error: 'Code PIN incorrect' });
+    }
+
+    const checkinDateStr = new Date(checkin_date).toISOString().split('T')[0];
+    const checkoutDateStr = checkout_date ? new Date(checkout_date).toISOString().split('T')[0] : null;
+
+    const reservationResult = await pool.query(
+      `SELECT id FROM reservations 
+       WHERE property_id = $1 
+       AND DATE(start_date) = $2 
+       AND ($3::date IS NULL OR DATE(end_date) = $3)
+       AND LOWER(source) = LOWER($4)
+       LIMIT 1`,
+      [property_id, checkinDateStr, checkoutDateStr, platform]
+    );
+
+    if (reservationResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Aucune reservation trouvee' });
+    }
+
+    let conversation;
+    const existingConv = await pool.query(
+      `SELECT * FROM conversations 
+       WHERE property_id = $1 
+       AND reservation_start_date = $2 
+       AND platform = $3`,
+      [property_id, checkinDateStr, platform]
+    );
+
+    if (existingConv.rows.length > 0) {
+      conversation = existingConv.rows[0];
+      
+      if (!conversation.is_verified) {
+        await pool.query(
+          `UPDATE conversations SET is_verified = TRUE, verified_at = NOW(), status = 'active' WHERE id = $1`,
+          [conversation.id]
+        );
+      }
+    } else {
+      const uniqueToken = crypto.randomBytes(32).toString('hex');
+
+      const newConvResult = await pool.query(
+        `INSERT INTO conversations 
+        (user_id, property_id, reservation_start_date, reservation_end_date, platform, pin_code, unique_token, is_verified, verified_at, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW(), 'active')
+        RETURNING *`,
+        [property.user_id, property_id, checkinDateStr, checkoutDateStr, platform, chat_pin, uniqueToken]
+      );
+
+      conversation = newConvResult.rows[0];
+    }
+
+    res.json({
+      success: true,
+      conversation_id: conversation.id,
+      property_id: property_id,
+      property_name: property.name
+    });
+
+  } catch (error) {
+    console.error('Erreur verification:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+console.log('Route verify-by-property ajoutee');
+
+
+// ============================================
 // DÉMARRAGE (TOUJOURS EN DERNIER)
 // ============================================
 
