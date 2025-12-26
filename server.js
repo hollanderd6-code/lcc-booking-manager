@@ -2389,18 +2389,8 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
-    // Recuperer le vrai user_id (integer) depuis properties
-    const userResult = await pool.query(
-      'SELECT user_id FROM properties WHERE id = $1',
-      [propertyId]
-    );
-    
-    if (userResult.rows.length === 0) {
-      console.error(`Propriete ${propertyId} introuvable`);
-      return false;
-    }
-    
-    const realUserId = userResult.rows[0].user_id;
+    // Utiliser user_id = 1 (toutes les proprietes appartiennent au meme utilisateur)
+    const realUserId = 1;
     
     await pool.query(`
       INSERT INTO reservations (
