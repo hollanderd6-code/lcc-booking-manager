@@ -10866,7 +10866,26 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 });
 
 console.log('Route verify-by-property ajoutee');
+// Route pour recuperer les messages d'une conversation
+app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    
+    const result = await pool.query(
+      `SELECT * FROM messages 
+       WHERE conversation_id = $1 
+       ORDER BY created_at ASC`,
+      [conversationId]
+    );
+    
+    res.json({ messages: result.rows });
+  } catch (error) {
+    console.error('Erreur recuperation messages:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
+console.log('Route messages ajoutee');
 
 // ============================================
 // DÉMARRAGE (TOUJOURS EN DERNIER)
