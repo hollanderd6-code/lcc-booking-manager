@@ -934,7 +934,7 @@ async function handleVerification(e) {
 
     async function loadMessages() {
       try {
-        const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`);
+        const response = await fetch(`${API_URL}/api/chat/messages/${conversationId}`);
         const data = await response.json();
         
         const container = document.getElementById('messagesContainer');
@@ -1008,14 +1008,16 @@ async function handleVerification(e) {
   if (sendBtn) sendBtn.disabled = true;
 
   try {
-    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        sender_name: 'Voyageur'
-      })
-    });
+    const response = await fetch(`${API_URL}/api/chat/send`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    conversation_id: conversationId,
+    message: message,
+    sender_type: 'guest',
+    sender_name: 'Voyageur'
+  })
+});
 
     if (!response.ok) throw new Error('Erreur envoi message');
     const data = await response.json().catch(() => ({}));
@@ -1030,12 +1032,13 @@ async function handleVerification(e) {
       input.value = '';
       input.style.height = 'auto';
     }
-  } catch (error) {
-    console.error('âŒ Erreur envoi:', error);
-    showError("Erreur lors de l'envoi du message");
-  } finally {
-    if (sendBtn) sendBtn.disabled = false;
-    sendingInProgress = false;
+ } catch (error) {
+  console.error('❌ Erreur envoi:', error);
+  const errorDiv = document.getElementById('errorMessage');
+  if (errorDiv) {
+    errorDiv.textContent = error.message || "Erreur lors de l'envoi du message";
+    errorDiv.classList.add('show');
+    setTimeout(() => errorDiv.classList.remove('show'), 5000);
   }
 }
 
