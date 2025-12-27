@@ -3777,16 +3777,18 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
     const formattedReservations = result.rows.map(r => ({
       ...r,
       // Champs pour le calendrier
-      start: r.start_date,
-      end: r.end_date,
-      propertyId: r.property_id,
-      propertyName: r.property_name,
-      propertyColor: r.property_color || '#3b82f6',
-      checkIn: r.start_date,
-      checkOut: r.end_date,
-      guestName: r.guest_name,
-      type: r.reservation_type || r.source || 'ical'
-    }));
+        start: r.start_date,
+  end: r.end_date,
+  startDate: r.start_date,     // ← AJOUTER
+  endDate: r.end_date,         // ← AJOUTER
+  propertyId: r.property_id,
+  propertyName: r.property_name,
+  propertyColor: r.property_color || '#3b82f6',
+  checkIn: r.start_date,
+  checkOut: r.end_date,
+  guestName: r.guest_name,
+  type: r.reservation_type || r.source || 'ical'
+}));
 
     res.json({
       success: true,
