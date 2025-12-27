@@ -3736,45 +3736,64 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
   }
 });
+// ============================================
+// ROUTES RÉSERVATIONS - VERSION CORRIGÉE POSTGRESQL
+// Remplace les routes dans server.js
+// ============================================
+
 // GET - Toutes les réservations du user
 app.get('/api/reservations', authenticateUser, checkSubscription, async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
-  const allReservations = [];
-  const userProps = getUserProperties(user.id);
+    console.log('📊 Récupération des réservations pour user:', user.id);
 
-  userProps.forEach(property => {
-    const propertyReservations = reservationsStore.properties[property.id] || [];
-    propertyReservations.forEach(reservation => {
-      allReservations.push({
-        ...reservation,
-        property: {
-          id: property.id,
-          name: property.name,
-          color: property.color
-        }
-      });
+    // ✅ RÉCUPÉRER DEPUIS POSTGRESQL (pas depuis reservationsStore)
+    const result = await pool.query(`
+      SELECT 
+        r.*,
+        p.name as property_name,
+        p.color as property_color
+      FROM reservations r
+      LEFT JOIN properties p ON r.property_id = p.id
+      WHERE r.user_id = $1 
+      AND r.status != 'cancelled'
+      ORDER BY r.start_date ASC
+    `, [user.id]);
+
+    // Récupérer les propriétés
+    const propsResult = await pool.query(`
+      SELECT id, name, color 
+      FROM properties 
+      WHERE user_id = $1
+    `, [user.id]);
+
+    console.log(`✅ ${result.rows.length} réservations trouvées`);
+
+    res.json({
+      success: true,
+      reservations: result.rows,
+      lastSync: new Date().toISOString(),
+      syncStatus: 'success',
+      properties: propsResult.rows.map(p => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        count: result.rows.filter(r => r.property_id === p.id).length
+      }))
     });
-  });
 
-  res.json({
-    reservations: allReservations,
-    lastSync: reservationsStore.lastSync,
-    syncStatus: reservationsStore.syncStatus,
-    properties: userProps.map(p => ({
-      id: p.id,
-      name: p.name,
-      color: p.color,
-      count: (reservationsStore.properties[p.id] || []).length
-    }))
-  });
+  } catch (error) {
+    console.error('❌ Erreur /api/reservations:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // POST - Créer une réservation manuelle
-app.post('/api/bookings', async (req, res) => {
+app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) => {
   console.log('📝 Nouvelle demande de création de réservation');
   
   try {
@@ -3803,20 +3822,18 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ error: 'checkOut est requis' });
     }
     
-    // 3. VÉRIFICATION DU LOGEMENT
-    if (!Array.isArray(PROPERTIES)) {
-      console.error('❌ PROPERTIES n\'est pas un tableau');
-      return res.status(500).json({ error: 'Erreur de configuration serveur (PROPERTIES)' });
-    }
+    // 3. VÉRIFICATION DU LOGEMENT EN POSTGRESQL
+    const propertyCheck = await pool.query(
+      'SELECT id, name, color FROM properties WHERE id = $1 AND user_id = $2',
+      [propertyId, user.id]
+    );
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-    if (!property) {
+    if (propertyCheck.rows.length === 0) {
       console.log('❌ Logement non trouvé:', propertyId);
-      console.log('📋 Logements disponibles pour cet utilisateur:', 
-        PROPERTIES.filter(p => p.userId === user.id).map(p => ({ id: p.id, name: p.name }))
-      );
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
+    
+    const property = propertyCheck.rows[0];
     console.log('✅ Logement trouvé:', property.name);
     
     // 4. CRÉATION DE LA RÉSERVATION
@@ -3830,102 +3847,54 @@ app.post('/api/bookings', async (req, res) => {
       type: 'manual',
       guestName: guestName || 'Réservation manuelle',
       price: typeof price === 'number' ? price : 0,
-      createdAt: new Date().toISOString(),
-      // Données supplémentaires pour les notifications
-      propertyId: property.id,
-      propertyName: property.name,
-      propertyColor: property.color || '#3b82f6',
-      userId: user.id
+      currency: 'EUR',
+      status: 'confirmed'
     };
     console.log('✅ Réservation créée:', uid);
     
-    // 5. SAUVEGARDE DANS MANUAL_RESERVATIONS
-    try {
-      if (typeof MANUAL_RESERVATIONS === 'undefined') {
-        console.log('⚠️  MANUAL_RESERVATIONS non défini, initialisation');
-        global.MANUAL_RESERVATIONS = {};
-      }
-      
-     if (!MANUAL_RESERVATIONS[propertyId]) {
-  MANUAL_RESERVATIONS[propertyId] = [];
-}
-MANUAL_RESERVATIONS[propertyId].push(reservation);
-
-// Sauvegarde sur disque (si la fonction existe)
-if (typeof saveManualReservations === 'function') {
-  await saveManualReservations();
-  console.log('✅ Sauvegarde MANUAL_RESERVATIONS OK');
-} else {
-  console.log('⚠️  Fonction saveManualReservations non trouvée');
-}
-} catch (saveErr) {
-  console.error('⚠️  Erreur sauvegarde MANUAL_RESERVATIONS:', saveErr);
-  // On continue quand même
-}
-    // DELETE - Supprimer une réservation
-app.delete('/api/bookings/:uid', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { uid } = req.params;
+    // 5. SAUVEGARDE EN POSTGRESQL
+    // Utilise la fonction saveReservationToDB que vous avez déjà modifiée
+    // Elle va aussi créer automatiquement la conversation !
+    const saved = await saveReservationToDB(reservation, propertyId, user.id);
     
-    const deleted = await deleteReservationFromDB(uid);
-    
-    if (!deleted) {
-      return res.status(500).json({ error: 'Erreur lors de la suppression' });
-    }
-
-    await loadReservationsFromDB();
-    
-    res.json({ message: 'Réservation supprimée avec succès' });
-  } catch (err) {
-    console.error('Erreur DELETE /api/bookings:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-    // 6. AJOUT AU STORE DES RÉSERVATIONS
-    try {
-      if (typeof reservationsStore === 'undefined') {
-        console.log('⚠️  reservationsStore non défini, initialisation');
-        global.reservationsStore = { properties: {} };
-      }
-      
-      if (!reservationsStore.properties) {
-        reservationsStore.properties = {};
-      }
-      
-      if (!reservationsStore.properties[propertyId]) {
-        reservationsStore.properties[propertyId] = [];
-      }
-      reservationsStore.properties[propertyId].push(reservation);
-      console.log('✅ Ajout au reservationsStore OK');
-    } catch (storeErr) {
-      console.error('⚠️  Erreur ajout au reservationsStore:', storeErr);
-      // On continue quand même
+    if (!saved) {
+      console.error('❌ Erreur lors de la sauvegarde');
+      return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
     }
     
-    // 7. PRÉPARATION DE LA RÉPONSE
+    console.log('✅ Réservation sauvegardée en PostgreSQL');
+    
+    // 6. PRÉPARATION DE LA RÉPONSE
     const bookingForClient = {
       id: reservation.uid,
+      uid: reservation.uid,
       propertyId: property.id,
+      property_id: property.id,
       propertyName: property.name,
+      property_name: property.name,
       propertyColor: property.color || '#3b82f6',
+      property_color: property.color || '#3b82f6',
       checkIn: checkIn,
+      start_date: checkIn,
       checkOut: checkOut,
+      end_date: checkOut,
       guestName: reservation.guestName,
+      guest_name: reservation.guestName,
       platform: reservation.platform,
+      source: reservation.source,
       price: reservation.price,
-      type: reservation.type
+      type: reservation.type,
+      status: reservation.status
     };
     
-    // 8. ENVOI DE LA RÉPONSE (AVANT LES NOTIFICATIONS)
+    // 7. ENVOI DE LA RÉPONSE (AVANT LES NOTIFICATIONS)
     console.log('✅ Réservation créée avec succès, envoi de la réponse');
-    res.status(201).json(bookingForClient);
+    res.status(201).json({
+      success: true,
+      reservation: bookingForClient
+    });
     
-    // 9. NOTIFICATIONS EN ARRIÈRE-PLAN (après avoir répondu au client)
+    // 8. NOTIFICATIONS EN ARRIÈRE-PLAN (après avoir répondu au client)
     setImmediate(async () => {
       try {
         console.log('📧 Tentative d\'envoi des notifications...');
@@ -3948,7 +3917,6 @@ app.delete('/api/bookings/:uid', async (req, res) => {
         console.log('✅ Notifications traitées');
       } catch (notifErr) {
         console.error('⚠️  Erreur lors de l\'envoi des notifications (réservation créée quand même):', notifErr.message);
-        console.error('Stack:', notifErr.stack);
       }
     });
     
@@ -3967,6 +3935,52 @@ app.delete('/api/bookings/:uid', async (req, res) => {
     }
   }
 });
+
+// DELETE - Supprimer une réservation
+app.delete('/api/bookings/:uid', authenticateUser, checkSubscription, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { uid } = req.params;
+    
+    console.log('🗑️  Suppression de la réservation:', uid);
+    
+    // Supprimer en PostgreSQL (pas juste en mémoire)
+    const deleted = await deleteReservationFromDB(uid);
+    
+    if (!deleted) {
+      return res.status(500).json({ error: 'Erreur lors de la suppression' });
+    }
+
+    console.log('✅ Réservation supprimée');
+    
+    res.json({ 
+      success: true,
+      message: 'Réservation supprimée avec succès' 
+    });
+    
+  } catch (err) {
+    console.error('❌ Erreur DELETE /api/bookings:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// NOTES IMPORTANTES :
+// ============================================
+// 
+// 1. Ces routes utilisent POSTGRESQL au lieu de reservationsStore
+// 2. La fonction saveReservationToDB doit être celle modifiée qui :
+//    - Sauvegarde en base de données
+//    - Crée automatiquement la conversation
+//    - Envoie le message de bienvenue
+// 3. Les property_id seront maintenant correctement renvoyés
+// 4. Les conversations seront créées automatiquement
+//
+// ============================================
 
 // POST - Créer un blocage manuel (dates bloquées)
 app.post('/api/blocks', async (req, res) => {
