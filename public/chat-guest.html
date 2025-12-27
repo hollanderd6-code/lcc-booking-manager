@@ -1113,11 +1113,11 @@ meta.appendChild(status);
 
 contentDiv.appendChild(senderName);
 contentDiv.appendChild(bubble);
-contentDiv.appendChild(meta);messageDiv.appendChild(avatar);
-      messageDiv.appendChild(contentDiv);
-      
-      container.appendChild(messageDiv);
-    }
+contentDiv.appendChild(meta);
+messageDiv.appendChild(avatar);      // ✅ Ligne 1113 corrigée
+messageDiv.appendChild(contentDiv);
+
+container.appendChild(messageDiv);
 
     function formatTime(timestamp) {
       const date = new Date(timestamp);
