@@ -3743,10 +3743,6 @@ app.post('/api/reservations/manual', async (req, res) => {
 
 // GET - Toutes les réservations du user
 app.get('/api/reservations', authenticateUser, checkSubscription, async (req, res) => {
-  // ✅ DEBUG : Voir ce que contient req.user
-    console.log('🔍 req.user =', req.user);
-    console.log('🔍 req.user.id =', req.user.id);
-    console.log('🔍 req.user.userId =', req.user.userId);
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -3755,7 +3751,7 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
 
     console.log('📊 Récupération des réservations pour user:', user.id);
 
-    // ✅ RÉCUPÉRER DEPUIS POSTGRESQL (pas depuis reservationsStore)
+    // ✅ RÉCUPÉRER DEPUIS POSTGRESQL
     const result = await pool.query(`
       SELECT 
         r.*,
@@ -3764,7 +3760,7 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
       FROM reservations r
       LEFT JOIN properties p ON r.property_id = p.id
       WHERE r.user_id = $1 
-      AND r.status != 'cancelled'
+      AND (r.status IS NULL OR r.status != 'cancelled')
       ORDER BY r.start_date ASC
     `, [user.id]);
 
@@ -3777,9 +3773,24 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
 
     console.log(`✅ ${result.rows.length} réservations trouvées`);
 
+    // ✅ TRANSFORMER pour le calendrier (ajouter les champs attendus)
+    const formattedReservations = result.rows.map(r => ({
+      ...r,
+      // Champs pour le calendrier
+      start: r.start_date,
+      end: r.end_date,
+      propertyId: r.property_id,
+      propertyName: r.property_name,
+      propertyColor: r.property_color || '#3b82f6',
+      checkIn: r.start_date,
+      checkOut: r.end_date,
+      guestName: r.guest_name,
+      type: r.reservation_type || r.source || 'ical'
+    }));
+
     res.json({
       success: true,
-      reservations: result.rows,
+      reservations: formattedReservations,
       lastSync: new Date().toISOString(),
       syncStatus: 'success',
       properties: propsResult.rows.map(p => ({
@@ -3792,7 +3803,10 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
 
   } catch (error) {
     console.error('❌ Erreur /api/reservations:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ 
+      error: 'Erreur serveur',
+      message: error.message 
+    });
   }
 });
 
