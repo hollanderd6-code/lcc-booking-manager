@@ -3790,19 +3790,20 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
   type: r.reservation_type || r.source || 'ical'
 }));
 
-    res.json({
-      success: true,
-      reservations: formattedReservations,
-      lastSync: new Date().toISOString(),
-      syncStatus: 'success',
-      properties: propsResult.rows.map(p => ({
-        id: p.id,
-        name: p.name,
-        color: p.color,
-        icalUrls: p.ical_urls || [],  // ← AJOUTER
-        count: result.rows.filter(r => r.property_id === p.id).length
-      }))
-    });
+   res.json({
+  success: true,
+  reservations: result.rows,  // ← Sans mapping, format brut
+  // reservations: formattedReservations,  // ← Commenté temporairement
+  lastSync: new Date().toISOString(),
+  syncStatus: 'success',
+  properties: propsResult.rows.map(p => ({
+    id: p.id,
+    name: p.name,
+    color: p.color,
+    icalUrls: p.ical_urls || [],
+    count: result.rows.filter(r => r.property_id === p.id).length
+  }))
+});
 
   } catch (error) {
     console.error('❌ Erreur /api/reservations:', error);
