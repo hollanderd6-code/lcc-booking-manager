@@ -10204,6 +10204,43 @@ await pool.query(
   }
 });
 // ============================================
+// ROUTE À AJOUTER DANS chat_routes.js
+// Suppression de conversation
+// ============================================
+
+// DELETE - Supprimer une conversation
+app.delete('/api/chat/conversations/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversationId } = req.params;
+    
+    // Vérifier que la conversation appartient à l'utilisateur
+    const checkResult = await pool.query(
+      'SELECT id FROM conversations WHERE id = $1 AND user_id = $2',
+      [conversationId, userId]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation non trouvée' });
+    }
+    
+    // Supprimer les messages associés
+    await pool.query('DELETE FROM messages WHERE conversation_id = $1', [conversationId]);
+    
+    // Supprimer la conversation
+    await pool.query('DELETE FROM conversations WHERE id = $1', [conversationId]);
+    
+    res.json({ 
+      success: true,
+      message: 'Conversation supprimée avec succès'
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur suppression conversation:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+// ============================================
 // FIN DES ROUTES STRIPE
 // ============================================
 // ============================================
