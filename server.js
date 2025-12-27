@@ -11090,4 +11090,3 @@ server.listen(PORT, async () => {
   console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
   console.log('');
 });
-
