@@ -3792,8 +3792,7 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
 
    res.json({
   success: true,
-  reservations: result.rows,  // ← Sans mapping, format brut
-  // reservations: formattedReservations,  // ← Commenté temporairement
+  reservations: formattedReservations,  // ✅ CORRIGÉ
   lastSync: new Date().toISOString(),
   syncStatus: 'success',
   properties: propsResult.rows.map(p => ({
