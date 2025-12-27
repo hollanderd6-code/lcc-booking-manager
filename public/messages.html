@@ -152,6 +152,7 @@
       display: flex;
       gap: 16px;
       align-items: flex-start;
+      position: relative;
     }
 
     .conversation-item:hover {
@@ -220,6 +221,44 @@
       gap: 8px;
     }
 
+    /* ✅ NOUVEAU : Actions de conversation */
+    .conversation-actions {
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+
+    .conversation-item:hover .conversation-actions {
+      opacity: 1;
+    }
+
+    .btn-delete-conversation {
+      padding: 6px 10px;
+      background: #FEE2E2;
+      color: #DC2626;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .btn-delete-conversation:hover {
+      background: #DC2626;
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+    }
+
     .status-badge {
       padding: 4px 10px;
       border-radius: 12px;
@@ -263,47 +302,6 @@
       white-space: nowrap;
     }
 
-    .conversation-time {
-      font-size: 12px;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-
-    .conversation-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .btn-action {
-      padding: 8px 14px;
-      background: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: var(--radius-md);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition-fast);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-action:hover {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-action.secondary {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-    }
-
-    .btn-action.secondary:hover {
-      background: var(--border-color);
-    }
-
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -312,68 +310,44 @@
 
     .empty-state i {
       font-size: 48px;
-      opacity: 0.3;
       margin-bottom: 16px;
-    }
-
-    .empty-state h3 {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
+      opacity: 0.3;
     }
 
     .empty-state p {
-      font-size: 14px;
+      font-size: 16px;
+      color: var(--text-secondary);
     }
 
     /* ===== Modal Chat ===== */
     .modal-overlay {
-      display: none;
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 9998;
-      animation: fadeIn 0.2s ease;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
     }
 
     .modal-overlay.active {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
     }
 
     .chat-modal {
       background: white;
       border-radius: var(--radius-lg);
-      width: 100%;
-      max-width: 700px;
-      height: 80vh;
-      max-height: 700px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
       display: flex;
       flex-direction: column;
-      box-shadow: var(--shadow-md);
-      animation: slideUp 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
     }
 
     .chat-modal-header {
@@ -382,20 +356,23 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
     .chat-modal-header h2 {
       font-size: 18px;
       font-weight: 700;
       color: var(--text-primary);
+      margin: 0;
     }
 
     .close-modal {
       width: 36px;
       height: 36px;
-      border-radius: 50%;
       border: none;
       background: var(--bg-secondary);
+      border-radius: 50%;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -749,21 +726,19 @@
       const data = await res.json();
 
       if (data.status === 'expired' || data.status === 'canceled') {
-        window.location.href = '/subscription-expired.html';
+        localStorage.removeItem('lcc_token');
+        localStorage.removeItem('lcc_user');
+        window.location.href = '/login.html?reason=expired';
         return;
       }
-
-      if (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0) {
-        window.location.href = '/subscription-expired.html';
-        return;
-      }
-
     } catch (err) {
       console.error('Erreur vérification abonnement:', err);
     }
   })();
-    (function () {
+
+    (function() {
       const token = localStorage.getItem('lcc_token');
+
       if (!token) {
         window.location.href = '/login.html';
         return;
@@ -861,6 +836,123 @@
         }
       }
     })();
+  </script>
+
+  <!-- ✅ NOUVELLE FONCTION : Suppression de conversation -->
+  <script>
+// ============================================
+// FONCTION SUPPRESSION DE CONVERSATION
+// ============================================
+
+async function deleteConversation(conversationId, event) {
+  // Empêcher l'ouverture du chat
+  event.stopPropagation();
+  
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.')) {
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const API_URL = window.location.origin;
+    
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Erreur lors de la suppression');
+    }
+    
+    // Supprimer visuellement
+    const conversationElement = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+    if (conversationElement) {
+      conversationElement.style.transition = 'all 0.3s ease';
+      conversationElement.style.opacity = '0';
+      conversationElement.style.transform = 'translateX(-20px)';
+      
+      setTimeout(() => {
+        conversationElement.remove();
+        
+        // Mettre à jour les stats
+        updateConversationStats();
+        
+        // Si plus aucune conversation
+        const conversationsList = document.getElementById('conversationsList');
+        if (conversationsList && conversationsList.children.length === 0) {
+          conversationsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-inbox"></i>
+              <p>Aucune conversation</p>
+            </div>
+          `;
+        }
+      }, 300);
+    }
+    
+    // Toast de confirmation
+    showToast('Conversation supprimée', 'success');
+    
+  } catch (error) {
+    console.error('Erreur suppression conversation:', error);
+    showToast('Erreur: ' + error.message, 'error');
+  }
+}
+
+// Fonction pour afficher les toasts
+function showToast(message, type = 'info') {
+  const toastContainer = document.getElementById('toastContainer');
+  if (!toastContainer) return;
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.style.cssText = `
+    padding: 16px 20px;
+    background: ${type === 'success' ? '#10B981' : '#EF4444'};
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-bottom: 12px;
+    animation: slideInRight 0.3s ease;
+  `;
+  toast.textContent = message;
+  
+  toastContainer.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOutRight 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Fonction pour mettre à jour les stats après suppression
+function updateConversationStats() {
+  const conversations = document.querySelectorAll('.conversation-item');
+  const total = conversations.length;
+  
+  let unread = 0;
+  let active = 0;
+  
+  conversations.forEach(conv => {
+    const unreadBadge = conv.querySelector('.unread-badge');
+    if (unreadBadge) {
+      unread += parseInt(unreadBadge.textContent) || 0;
+    }
+    
+    const statusBadge = conv.querySelector('.status-badge.active');
+    if (statusBadge) {
+      active++;
+    }
+  });
+  
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statUnread').textContent = unread;
+  document.getElementById('statActive').textContent = active;
+}
   </script>
 
   <!-- Fonctions génération message de réservation -->
