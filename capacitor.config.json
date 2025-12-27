@@ -1,0 +1,9 @@
+{
+  "appId": "com.boostinghost.app",
+  "appName": "Boostinghost",
+  "webDir": "build",
+  "server": {
+    "url": "https://lcc-booking-manager.onrender.com",
+    "cleartext": true
+  }
+}
