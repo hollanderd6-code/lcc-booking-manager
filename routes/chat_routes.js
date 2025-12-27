@@ -4,16 +4,8 @@
 
 const crypto = require('crypto');
 
-/**
- * Configuration des routes de chat
- * @param {Object} app - Express app
- * @param {Object} pool - PostgreSQL pool
- * @param {Object} io - Socket.io instance
- */
-function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
-
 // ============================================
-// 🤖 SERVICE DE RÉPONSES AUTOMATIQUES (INLINE)
+// 🤖 SERVICE DE RÉPONSES AUTOMATIQUES
 // ============================================
 
 const QUESTION_PATTERNS = {
@@ -227,165 +219,40 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
 
       // Générer token unique
       const uniqueToken = crypto.randomBytes(32).toString('hex');
+      const photosToken = crypto.randomBytes(32).toString('hex');
 
       // Créer la conversation
       const result = await pool.query(
         `INSERT INTO conversations 
-        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING id, unique_token, pin_code`,
-        [userId, property_id, reservation_start_date, reservation_end_date, platform || 'direct', guest_name, guest_email, pinCode, uniqueToken]
+        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, photos_token, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+        RETURNING id, unique_token, pin_code, photos_token`,
+        [userId, property_id, reservation_start_date, reservation_end_date, platform || 'direct', guest_name, guest_email, pinCode, uniqueToken, photosToken]
       );
 
       const conversation = result.rows[0];
 
-      console.log(`✅ Conversation créée: ID ${conversation.id} pour réservation ${property_id} - ${reservation_start_date}`);
+      // ✅ Envoyer le message de bienvenue automatique
+      await sendWelcomeMessage(pool, io, conversation.id, property_id, userId);
 
       res.json({
         success: true,
         conversation_id: conversation.id,
         chat_link: `${process.env.APP_URL || 'http://localhost:3000'}/chat/${conversation.unique_token}`,
         pin_code: conversation.pin_code,
-        message_template: generateMessageTemplate(conversation.pin_code, conversation.unique_token)
+        photos_token: conversation.photos_token
       });
 
     } catch (error) {
       console.error('❌ Erreur création conversation:', error);
-      res.status(500).json({ error: 'Erreur création conversation' });
-    }
-  });
-
-  // ============================================
-  // 2. VÉRIFICATION ET ACCÈS AU CHAT
-  // ============================================
-
-  /**
-   * Vérifier les informations du voyageur et donner accès au chat
-   */
-  app.post('/api/chat/verify/:token', async (req, res) => {
-    try {
-      const { token } = req.params;
-      const { property_id, checkin_date, platform, pin_code } = req.body;
-
-      if (!property_id || !checkin_date || !platform || !pin_code) {
-        return res.status(400).json({ error: 'Tous les champs sont requis' });
-      }
-
-      // Récupérer la conversation
-      const convResult = await pool.query(
-        'SELECT * FROM conversations WHERE unique_token = $1',
-        [token]
-      );
-
-      if (convResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Lien de chat invalide' });
-      }
-
-      const conversation = convResult.rows[0];
-
-      // Vérifier le nombre de tentatives
-      if (conversation.verification_attempts >= 3) {
-        return res.status(403).json({ 
-          error: 'Trop de tentatives. Veuillez contacter le propriétaire.',
-          max_attempts_reached: true
-        });
-      }
-
-      // Vérifier les informations
-      const checkinDateStr = new Date(checkin_date).toISOString().split('T')[0];
-      const conversationDateStr = new Date(conversation.reservation_start_date).toISOString().split('T')[0];
-
-      const isValid = 
-        parseInt(property_id) === parseInt(conversation.property_id) &&
-        checkinDateStr === conversationDateStr &&
-        platform === conversation.platform &&
-        pin_code === conversation.pin_code;
-
-      if (!isValid) {
-        // Incrémenter les tentatives
-        await pool.query(
-          'UPDATE conversations SET verification_attempts = verification_attempts + 1 WHERE id = $1',
-          [conversation.id]
-        );
-
-        return res.status(401).json({ 
-          error: 'Informations incorrectes. Vérifiez vos données.',
-          attempts: conversation.verification_attempts + 1,
-          max_attempts: 3
-        });
-      }
-
-      // ✅ Vérification réussie !
-      await pool.query(
-        `UPDATE conversations 
-         SET is_verified = TRUE, verified_at = NOW(), status = 'active'
-         WHERE id = $1`,
-        [conversation.id]
-      );
-
-      // Envoyer automatiquement le message de bienvenue avec livret d'accueil
-      await sendWelcomeMessage(pool, conversation.id, conversation.property_id, conversation.user_id);
-
-      res.json({
-        success: true,
-        conversation_id: conversation.id,
-        property_id: conversation.property_id,
-        guest_name: conversation.guest_name
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur vérification:', error);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
 
-// ===================================
-// Unread count (sidebar badge)
-// ===================================
-app.get('/api/chat/unread-count', authenticateToken, checkSubscription, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const r = await pool.query(
-      `SELECT COALESCE(COUNT(*),0)::int AS unread
-       FROM chat_notifications
-       WHERE user_id = $1 AND is_read = FALSE`,
-      [userId]
-    );
-    res.json({ unread: r.rows[0]?.unread ?? 0 });
-  } catch (error) {
-    console.error('❌ Erreur unread-count:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ===================================
-// Mark conversation as read (notifications)
-// ===================================
-app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, checkSubscription, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const conversationId = Number(req.params.conversationId);
-    if (!conversationId) return res.status(400).json({ error: 'conversationId invalide' });
-
-    // Mark notifications read for this conversation
-    await pool.query(
-      `UPDATE chat_notifications
-       SET is_read = TRUE
-       WHERE user_id = $1 AND conversation_id = $2 AND is_read = FALSE`,
-      [userId, conversationId]
-    );
-
-    res.json({ ok: true });
-  } catch (error) {
-    console.error('❌ Erreur mark-read:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
   // ============================================
-  // 4. LISTE DES CONVERSATIONS (pour propriétaire)
+  // 2. LISTE DES CONVERSATIONS (PROPRIÉTAIRE)
   // ============================================
-
+  
   app.get('/api/chat/conversations', authenticateToken, checkSubscription, async (req, res) => {
     try {
       const userId = req.user.id;
@@ -394,37 +261,39 @@ app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken,
       let query = `
         SELECT 
           c.*,
-          (SELECT COUNT(*) FROM chat_notifications n WHERE n.user_id = $1 AND n.conversation_id = c.id AND n.is_read = FALSE) as unread_count,
-          COUNT(m.id) as total_messages,
-          MAX(m.created_at) as last_message_time,
           p.name as property_name,
-          p.color as property_color
+          p.color as property_color,
+          (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
+          (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+          (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
         FROM conversations c
-        LEFT JOIN messages m ON c.id = m.conversation_id
         LEFT JOIN properties p ON c.property_id = p.id
         WHERE c.user_id = $1
       `;
 
       const params = [userId];
-      let paramIndex = 2;
+      let paramCount = 1;
 
       if (status) {
-        query += ` AND c.status = $${paramIndex}`;
+        paramCount++;
+        query += ` AND c.status = $${paramCount}`;
         params.push(status);
-        paramIndex++;
       }
 
       if (property_id) {
-        query += ` AND c.property_id = $${paramIndex}`;
+        paramCount++;
+        query += ` AND c.property_id = $${paramCount}`;
         params.push(property_id);
-        paramIndex++;
       }
 
-      query += ` GROUP BY c.id, p.name, p.color ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC`;
+      query += ` ORDER BY last_message_time DESC NULLS LAST, c.created_at DESC`;
 
       const result = await pool.query(query, params);
 
-      res.json({ conversations: result.rows });
+      res.json({
+        success: true,
+        conversations: result.rows
+      });
 
     } catch (error) {
       console.error('❌ Erreur récupération conversations:', error);
@@ -433,295 +302,90 @@ app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken,
   });
 
   // ============================================
-  // 5. MESSAGES D'UNE CONVERSATION
+  // 3. VÉRIFICATION ET ACCÈS AU CHAT (VOYAGEUR)
   // ============================================
-
-  app.get('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
+  
+  /**
+   * Vérification par token unique (lien direct)
+   */
+  app.post('/api/chat/verify', async (req, res) => {
     try {
-      const { conversationId } = req.params;
+      const { token, pin_code } = req.body;
 
-      // Si authentifié = propriétaire, sinon = voyageur (vérification token conversation)
-      const userId = req.user ? req.user.id : null;
+      if (!token || !pin_code) {
+        return res.status(400).json({ error: 'Token et PIN requis' });
+      }
 
-      // Vérifier l'accès
-      const convCheck = await pool.query(
-        'SELECT user_id, is_verified, status FROM conversations WHERE id = $1',
-        [conversationId]
+      const result = await pool.query(
+        `SELECT 
+          c.*,
+          p.name as property_name,
+          p.address as property_address
+         FROM conversations c
+         LEFT JOIN properties p ON c.property_id = p.id
+         WHERE c.unique_token = $1 AND c.pin_code = $2`,
+        [token, pin_code]
       );
 
-      if (convCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Conversation introuvable' });
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation introuvable ou code incorrect' });
       }
 
-      const conv = convCheck.rows[0];
+      const conversation = result.rows[0];
 
-      // Si pas de userId (voyageur), vérifier que la conversation est vérifiée
-      if (!userId && !conv.is_verified) {
-        return res.status(403).json({ error: 'Accès non autorisé' });
-      }
-
-      // Si userId (propriétaire), vérifier qu'il possède la conversation
-      if (userId && conv.user_id !== userId) {
-        return res.status(403).json({ error: 'Accès non autorisé' });
-      }
-
-      // Récupérer les messages
-      const messages = await pool.query(
-        `SELECT id, sender_type, sender_name, message, is_read, is_bot_response, created_at 
-         FROM messages 
-         WHERE conversation_id = $1 
-         ORDER BY created_at ASC`,
-        [conversationId]
-      );
-
-      // Marquer les messages du voyageur comme lus si c'est le propriétaire
-      if (userId) {
+      // Marquer comme vérifiée si pas déjà fait
+      if (!conversation.is_verified) {
         await pool.query(
-          `UPDATE messages 
-           SET is_read = TRUE 
-           WHERE conversation_id = $1 AND sender_type = 'guest' AND is_read = FALSE`,
-          [conversationId]
+          `UPDATE conversations 
+           SET is_verified = TRUE, verified_at = NOW(), status = 'active'
+           WHERE id = $1`,
+          [conversation.id]
         );
       }
 
-      res.json({ messages: messages.rows });
+      res.json({
+        success: true,
+        conversation_id: conversation.id,
+        property_id: conversation.property_id,
+        property_name: conversation.property_name,
+        property_address: conversation.property_address,
+        reservation_start: conversation.reservation_start_date,
+        reservation_end: conversation.reservation_end_date
+      });
 
     } catch (error) {
-      console.error('❌ Erreur récupération messages:', error);
+      console.error('❌ Erreur vérification:', error);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
 
-  // ============================================
-  // 6. ENVOI DE MESSAGE
-  // ============================================
-
-  app.post('/api/chat/conversations/:conversationId/messages', optionalAuth, async (req, res) => {
-    try {
-      const { conversationId } = req.params;
-      const { message, sender_name } = req.body;
-
-      if (!message || !message.trim()) {
-        return res.status(400).json({ error: 'Message vide' });
-      }
-
-      const userId = req.user ? req.user.id : null;
-      const senderType = userId ? 'owner' : 'guest';
-
-      // Vérifier l'accès
-      const convCheck = await pool.query(
-        'SELECT user_id, is_verified, status, property_id FROM conversations WHERE id = $1',
-        [conversationId]
-      );
-
-      if (convCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Conversation introuvable' });
-      }
-
-      const conv = convCheck.rows[0];
-
-      if (!userId && !conv.is_verified) {
-        return res.status(403).json({ error: 'Conversation non vérifiée' });
-      }
-
-      if (userId && conv.user_id !== userId) {
-        return res.status(403).json({ error: 'Accès non autorisé' });
-      }
-
-      // Insérer le message
-      const result = await pool.query(
-        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
-        [conversationId, senderType, sender_name, message.trim(), senderType === 'owner']
-      );
-
-      const savedMessage = result.rows[0];
-
-      // Mettre à jour last_message_at
-      await pool.query(
-        'UPDATE conversations SET last_message_at = NOW() WHERE id = $1',
-        [conversationId]
-      );
-
-      // Émettre le message via Socket.io
-      io.to(`conversation_${conversationId}`).emit('new_message', savedMessage);
-
-      // Si message du voyageur, vérifier si une réponse auto est applicable
-      if (senderType === 'guest') {
-        const autoResponse = await findAutoResponse(pool, conv.user_id, conv.property_id, message);
-        
-        if (autoResponse) {
-          // Envoyer réponse automatique
-          const botResult = await pool.query(
-            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
-             VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-             RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
-            [conversationId, autoResponse]
-          );
-
-          const botMessage = botResult.rows[0];
-          io.to(`conversation_${conversationId}`).emit('new_message', botMessage);
-        } else {
-          // Pas de réponse auto -> notifier le propriétaire
-          await createNotification(pool, io, conv.user_id, conversationId, savedMessage.id, 'new_message');
-        }
-      }
-
-      res.json({ success: true, message: savedMessage });
-
-    } catch (error) {
-      console.error('❌ Erreur envoi message:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 7. GESTION DES RÉPONSES AUTOMATIQUES
-  // ============================================
-
-  app.get('/api/chat/auto-responses', authenticateToken, checkSubscription, async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { property_id } = req.query;
-
-      let query = `
-        SELECT id, property_id, keywords, response, order_priority, is_active, created_at
-        FROM auto_responses
-        WHERE user_id = $1
-      `;
-
-      const params = [userId];
-
-      if (property_id) {
-        query += ` AND property_id = $2`;
-        params.push(property_id);
-      }
-
-      query += ` ORDER BY order_priority DESC, id DESC`;
-
-      const result = await pool.query(query, params);
-      res.json({ auto_responses: result.rows });
-
-    } catch (error) {
-      console.error('❌ Erreur récupération réponses auto:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  app.post('/api/chat/auto-responses', authenticateToken, checkSubscription, async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { property_id, keywords, response, order_priority } = req.body;
-
-      if (!keywords || keywords.length === 0 || !response) {
-        return res.status(400).json({ error: 'Keywords et response requis' });
-      }
-
-      const result = await pool.query(
-        `INSERT INTO auto_responses (user_id, property_id, keywords, response, order_priority)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [userId, property_id || null, keywords, response, order_priority || 0]
-      );
-
-      res.json({ success: true, auto_response: result.rows[0] });
-
-    } catch (error) {
-      console.error('❌ Erreur création réponse auto:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  app.put('/api/chat/auto-responses/:id', authenticateToken, checkSubscription, async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { id } = req.params;
-      const { keywords, response, order_priority, is_active } = req.body;
-
-      const result = await pool.query(
-        `UPDATE auto_responses 
-         SET keywords = COALESCE($1, keywords),
-             response = COALESCE($2, response),
-             order_priority = COALESCE($3, order_priority),
-             is_active = COALESCE($4, is_active),
-             updated_at = NOW()
-         WHERE id = $5 AND user_id = $6
-         RETURNING *`,
-        [keywords, response, order_priority, is_active, id, userId]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Réponse auto introuvable' });
-      }
-
-      res.json({ success: true, auto_response: result.rows[0] });
-
-    } catch (error) {
-      console.error('❌ Erreur mise à jour réponse auto:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  app.delete('/api/chat/auto-responses/:id', authenticateToken, checkSubscription, async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { id } = req.params;
-
-      const result = await pool.query(
-        'DELETE FROM auto_responses WHERE id = $1 AND user_id = $2 RETURNING id',
-        [id, userId]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Réponse auto introuvable' });
-      }
-
-      res.json({ success: true });
-
-    } catch (error) {
-      console.error('❌ Erreur suppression réponse auto:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 8. SOCKET.IO - TEMPS RÉEL
-  // ============================================
-
-
-  // ============================================
-  // ROUTE DE VERIFICATION PAR PROPRIETE
-  // ============================================
-  
+  /**
+   * Vérification par property + dates + PIN
+   */
   app.post('/api/chat/verify-by-property', async (req, res) => {
     try {
       const { property_id, chat_pin, checkin_date, checkout_date, platform } = req.body;
 
       if (!property_id || !chat_pin || !checkin_date || !platform) {
         return res.status(400).json({ 
-          error: 'Tous les champs sont requis' 
+          error: 'property_id, chat_pin, checkin_date et platform requis' 
         });
       }
 
-      const propertyResult = await pool.query(
-        'SELECT id, user_id, name, chat_pin FROM properties WHERE id = $1',
+      // Vérifier que la propriété existe
+      const property = await pool.query(
+        `SELECT id, name, user_id FROM properties WHERE id = $1`,
         [property_id]
       );
 
-      if (propertyResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Logement non trouve' });
-      }
-
-      const property = propertyResult.rows[0];
-
-      if (property.chat_pin !== chat_pin) {
-        return res.status(401).json({ error: 'Code PIN incorrect' });
+      if (property.rows.length === 0) {
+        return res.status(404).json({ error: 'Propriété introuvable' });
       }
 
       const checkinDateStr = new Date(checkin_date).toISOString().split('T')[0];
       const checkoutDateStr = checkout_date ? new Date(checkout_date).toISOString().split('T')[0] : null;
 
+      // Vérifier qu'une réservation existe
       const reservationResult = await pool.query(
         `SELECT id FROM reservations 
          WHERE property_id = $1 
@@ -734,17 +398,19 @@ app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken,
 
       if (reservationResult.rows.length === 0) {
         return res.status(404).json({ 
-          error: 'Aucune reservation trouvee avec ces informations' 
+          error: 'Aucune réservation trouvée avec ces informations' 
         });
       }
 
+      // Chercher ou créer la conversation
       let conversation;
       const existingConv = await pool.query(
         `SELECT * FROM conversations 
          WHERE property_id = $1 
          AND reservation_start_date = $2 
-         AND platform = $3`,
-        [property_id, checkinDateStr, platform]
+         AND platform = $3 
+         AND pin_code = $4`,
+        [property_id, checkinDateStr, platform, chat_pin]
       );
 
       if (existingConv.rows.length > 0) {
@@ -760,31 +426,240 @@ app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken,
         }
       } else {
         const uniqueToken = crypto.randomBytes(32).toString('hex');
+        const photosToken = crypto.randomBytes(32).toString('hex');
 
         const newConvResult = await pool.query(
           `INSERT INTO conversations 
-          (user_id, property_id, reservation_start_date, reservation_end_date, platform, pin_code, unique_token, is_verified, verified_at, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW(), 'active')
+          (user_id, property_id, reservation_start_date, reservation_end_date, platform, pin_code, unique_token, photos_token, is_verified, verified_at, status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW(), 'active')
           RETURNING *`,
-          [property.user_id, property_id, checkinDateStr, checkoutDateStr, platform, chat_pin, uniqueToken]
+          [property.rows[0].user_id, property_id, checkinDateStr, checkoutDateStr, platform, chat_pin, uniqueToken, photosToken]
         );
 
         conversation = newConvResult.rows[0];
+        
+        // ✅ Envoyer le message de bienvenue pour la nouvelle conversation
+        await sendWelcomeMessage(pool, io, conversation.id, property_id, property.rows[0].user_id);
       }
 
       res.json({
         success: true,
         conversation_id: conversation.id,
         property_id: property_id,
-        property_name: property.name
+        property_name: property.rows[0].name
       });
 
     } catch (error) {
-      console.error('Erreur verification:', error);
+      console.error('❌ Erreur vérification:', error);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
 
+  // ============================================
+  // 4. RÉCUPÉRER LES MESSAGES D'UNE CONVERSATION
+  // ============================================
+  
+  app.get('/api/chat/messages/:conversationId', optionalAuth, async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+
+      const convCheck = await pool.query(
+        `SELECT id, user_id FROM conversations WHERE id = $1`,
+        [conversationId]
+      );
+
+      if (convCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation introuvable' });
+      }
+
+      const conversation = convCheck.rows[0];
+
+      // Vérifier les permissions (propriétaire OU voyageur vérifié)
+      if (req.user && req.user.id !== conversation.user_id) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+
+      const messages = await pool.query(
+        `SELECT 
+          id, conversation_id, sender_type, sender_name, message,
+          is_read, is_bot_response, is_auto_response,
+          created_at, read_at, delivered_at
+         FROM messages
+         WHERE conversation_id = $1
+         ORDER BY created_at ASC`,
+        [conversationId]
+      );
+
+      res.json({
+        success: true,
+        messages: messages.rows
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur récupération messages:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // 5. ENVOYER UN MESSAGE
+  // ============================================
+  
+  app.post('/api/chat/send', optionalAuth, async (req, res) => {
+    try {
+      const { conversation_id, message, sender_type, sender_name } = req.body;
+
+      if (!conversation_id || !message || !sender_type) {
+        return res.status(400).json({ error: 'Données manquantes' });
+      }
+
+      // Vérifier que la conversation existe
+      const convResult = await pool.query(
+        `SELECT id, user_id, property_id, status FROM conversations WHERE id = $1`,
+        [conversation_id]
+      );
+
+      if (convResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation introuvable' });
+      }
+
+      const conversation = convResult.rows[0];
+
+      // Vérifier les permissions
+      if (req.user && sender_type === 'owner' && req.user.id !== conversation.user_id) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+
+      // Insérer le message
+      const result = await pool.query(
+        `INSERT INTO messages 
+        (conversation_id, sender_type, sender_name, message, is_read, created_at)
+        VALUES ($1, $2, $3, $4, FALSE, NOW())
+        RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
+        [conversation_id, sender_type, sender_name || 'Anonyme', message]
+      );
+
+      const newMessage = result.rows[0];
+
+      // Marquer conversation comme active
+      await pool.query(
+        `UPDATE conversations SET status = 'active', last_message_at = NOW() WHERE id = $1`,
+        [conversation_id]
+      );
+
+      // Émettre via Socket.io
+      if (io) {
+        io.to(`conversation_${conversation_id}`).emit('new_message', newMessage);
+      }
+
+      // ✅ Si c'est un message du voyageur, chercher une réponse automatique
+      if (sender_type === 'guest') {
+        const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
+        
+        if (autoResponse) {
+          // Attendre un peu pour simuler un délai naturel
+          setTimeout(async () => {
+            try {
+              const autoResult = await pool.query(
+                `INSERT INTO messages 
+                (conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at)
+                VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE, TRUE, NOW())
+                RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
+                [conversation_id, autoResponse]
+              );
+
+              const autoMsg = autoResult.rows[0];
+              
+              if (io) {
+                io.to(`conversation_${conversation_id}`).emit('new_message', autoMsg);
+              }
+
+              console.log(`🤖 Réponse automatique envoyée pour conversation ${conversation_id}`);
+            } catch (error) {
+              console.error('❌ Erreur envoi réponse auto:', error);
+            }
+          }, 1500);
+        }
+
+        // Créer une notification pour le propriétaire
+        await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
+      }
+
+      res.json({
+        success: true,
+        message: newMessage
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur envoi message:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // 6. MARQUER MESSAGES COMME LUS
+  // ============================================
+  
+  app.post('/api/chat/mark-read/:conversationId', optionalAuth, async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+
+      await pool.query(
+        `UPDATE messages 
+         SET is_read = TRUE, read_at = NOW()
+         WHERE conversation_id = $1 AND is_read = FALSE`,
+        [conversationId]
+      );
+
+      // Émettre via Socket.io
+      if (io) {
+        io.to(`conversation_${conversationId}`).emit('messages_read', { conversationId });
+      }
+
+      res.json({ success: true });
+
+    } catch (error) {
+      console.error('❌ Erreur marquage lu:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // 7. GÉNÉRER LE MESSAGE POUR AIRBNB/BOOKING
+  // ============================================
+  
+  app.get('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+
+      const result = await pool.query(
+        `SELECT unique_token, pin_code, user_id FROM conversations WHERE id = $1`,
+        [conversationId]
+      );
+
+      if (result.rows.length === 0 || result.rows[0].user_id !== userId) {
+        return res.status(404).json({ error: 'Conversation introuvable' });
+      }
+
+      const conversation = result.rows[0];
+      const message = generateMessageTemplate(conversation.pin_code, conversation.unique_token);
+
+      res.json({
+        success: true,
+        message
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur génération message:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // 8. SOCKET.IO EVENTS
+  // ============================================
+  
   io.on('connection', (socket) => {
     console.log('🔌 Client connecté:', socket.id);
 
@@ -844,7 +719,7 @@ Au plaisir de vous accueillir ! 🏠`;
 /**
  * Envoie le message de bienvenue avec livret d'accueil
  */
-async function sendWelcomeMessage(pool, conversationId, propertyId, userId) {
+async function sendWelcomeMessage(pool, io, conversationId, propertyId, userId) {
   try {
     // Récupérer le livret d'accueil
     const welcomeBook = await pool.query(
@@ -864,11 +739,19 @@ async function sendWelcomeMessage(pool, conversationId, propertyId, userId) {
     welcomeContent += '\n\nN\'hésitez pas à nous poser vos questions ! 😊';
 
     // Insérer le message de bienvenue
-    await pool.query(
+    const messageResult = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
-       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)`,
+       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
+       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
       [conversationId, welcomeContent]
     );
+
+    const welcomeMessage = messageResult.rows[0];
+
+    // Émettre via Socket.io
+    if (io) {
+      io.to(`conversation_${conversationId}`).emit('new_message', welcomeMessage);
+    }
 
     console.log(`✅ Message de bienvenue envoyé pour conversation ${conversationId}`);
 
@@ -950,8 +833,6 @@ async function createNotification(pool, io, userId, conversationId, messageId, t
   } catch (error) {
     console.error('❌ Erreur création notification:', error);
   }
-}
-
 }
 
 module.exports = { setupChatRoutes };
