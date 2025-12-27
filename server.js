@@ -3766,10 +3766,10 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
 
     // Récupérer les propriétés
     const propsResult = await pool.query(`
-      SELECT id, name, color 
-      FROM properties 
-      WHERE user_id = $1
-    `, [user.id]);
+  SELECT id, name, color, ical_urls 
+  FROM properties 
+  WHERE user_id = $1
+`, [user.id]);
 
     console.log(`✅ ${result.rows.length} réservations trouvées`);
 
@@ -3799,6 +3799,7 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
         id: p.id,
         name: p.name,
         color: p.color,
+        icalUrls: p.ical_urls || [],  // ← AJOUTER
         count: result.rows.filter(r => r.property_id === p.id).length
       }))
     });
