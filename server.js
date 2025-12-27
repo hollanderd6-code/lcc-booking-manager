@@ -3749,70 +3749,39 @@ app.get('/api/reservations', authenticateUser, checkSubscription, async (req, re
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    console.log('📊 Récupération des réservations pour user:', user.id);
+    const allReservations = [];
+    const userProps = getUserProperties(user.id);
 
-    // ✅ RÉCUPÉRER DEPUIS POSTGRESQL
-    const result = await pool.query(`
-      SELECT 
-        r.*,
-        p.name as property_name,
-        p.color as property_color
-      FROM reservations r
-      LEFT JOIN properties p ON r.property_id = p.id
-      WHERE r.user_id = $1 
-      AND (r.status IS NULL OR r.status != 'cancelled')
-      ORDER BY r.start_date ASC
-    `, [user.id]);
-
-    // Récupérer les propriétés
-    const propsResult = await pool.query(`
-  SELECT id, name, color, ical_urls 
-  FROM properties 
-  WHERE user_id = $1
-`, [user.id]);
-
-    console.log(`✅ ${result.rows.length} réservations trouvées`);
-
-    // ✅ TRANSFORMER pour le calendrier (ajouter les champs attendus)
-    const formattedReservations = result.rows.map(r => ({
-      ...r,
-      // Champs pour le calendrier
-        start: r.start_date,
-  end: r.end_date,
-  startDate: r.start_date,     // ← AJOUTER
-  endDate: r.end_date,         // ← AJOUTER
-  propertyId: r.property_id,
-  propertyName: r.property_name,
-  propertyColor: r.property_color || '#3b82f6',
-  checkIn: r.start_date,
-  checkOut: r.end_date,
-  guestName: r.guest_name,
-  type: r.reservation_type || r.source || 'ical'
-}));
-
-   res.json({
-  success: true,
-  reservations: formattedReservations,  // ✅ CORRIGÉ
-  lastSync: new Date().toISOString(),
-  syncStatus: 'success',
-  properties: propsResult.rows.map(p => ({
-    id: p.id,
-    name: p.name,
-    color: p.color,
-    icalUrls: p.ical_urls || [],
-    count: result.rows.filter(r => r.property_id === p.id).length
-  }))
-});
-
-  } catch (error) {
-    console.error('❌ Erreur /api/reservations:', error);
-    res.status(500).json({ 
-      error: 'Erreur serveur',
-      message: error.message 
+    userProps.forEach(property => {
+      const propertyReservations = reservationsStore.properties[property.id] || [];
+      propertyReservations.forEach(reservation => {
+        allReservations.push({
+          ...reservation,
+          property: {
+            id: property.id,
+            name: property.name,
+            color: property.color
+          }
+        });
+      });
     });
+
+    res.json({
+      reservations: allReservations,
+      lastSync: reservationsStore.lastSync,
+      syncStatus: reservationsStore.syncStatus,
+      properties: userProps.map(p => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        count: (reservationsStore.properties[p.id] || []).length
+      }))
+    });
+  } catch (err) {
+    console.error('❌ Erreur /api/reservations:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 // POST - Créer une réservation manuelle
 app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) => {
   console.log('📝 Nouvelle demande de création de réservation');
