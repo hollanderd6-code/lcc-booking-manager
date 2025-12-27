@@ -213,17 +213,6 @@ function renderConversations() {
               ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
             </div>
           </div>
-          
-          <div class="conversation-actions">
-            <button class="btn-action" onclick="event.stopPropagation(); openChat(${conv.id});">
-              <i class="fas fa-comments"></i>
-              Ouvrir la conversation
-            </button>
-            <button class="btn-action secondary" onclick="event.stopPropagation(); copyInviteLink('${conv.unique_token}', '${conv.pin_code}');">
-              <i class="fas fa-copy"></i>
-              Copier l'invitation
-            </button>
-          </div>
         </div>
       </div>
     `;
