@@ -2389,7 +2389,7 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
-    // Utiliser user_id = 1 (toutes les proprietes appartiennent au meme utilisateur)
+    // Utiliser user_id = 1 (toutes les propriétés appartiennent au même utilisateur)
     const realUserId = 1;
     
     await pool.query(`
@@ -2432,7 +2432,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     ]);
 
     // ============================================
-    // ✅ NOUVEAU : CREER AUTOMATIQUEMENT UNE CONVERSATION
+    // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
     // ============================================
     
     // Vérifier si une conversation existe déjà
@@ -2448,12 +2448,14 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     if (existingConv.rows.length === 0) {
       const crypto = require('crypto');
       const uniqueToken = crypto.randomBytes(32).toString('hex');
+      const photosToken = crypto.randomBytes(32).toString('hex');
       const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
       
-      await pool.query(
+      const convResult = await pool.query(
         `INSERT INTO conversations 
-        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, is_verified, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, 'pending')`,
+        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, photos_token, is_verified, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending')
+        RETURNING id`,
         [
           realUserId,
           propertyId,
@@ -2463,17 +2465,69 @@ async function saveReservationToDB(reservation, propertyId, userId) {
           reservation.guestName || null,
           reservation.guestEmail || null,
           pinCode,
-          uniqueToken
+          uniqueToken,
+          photosToken
         ]
       );
       
-      console.log(`✅ Conversation créée automatiquement pour réservation ${reservation.uid}`);
+      const conversationId = convResult.rows[0].id;
+      
+      // ✅ Envoyer le message de bienvenue automatique
+      await sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, realUserId);
+      
+      console.log(`✅ Conversation ${conversationId} créée automatiquement pour réservation ${reservation.uid}`);
     }
 
     return true;
   } catch (error) {
     console.error('❌ Erreur saveReservationToDB:', error);
     return false;
+  }
+}
+
+// ============================================
+// ✅ FONCTION HELPER POUR ENVOYER LE MESSAGE DE BIENVENUE
+// Ajouter cette fonction juste après saveReservationToDB
+// ============================================
+
+async function sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, userId) {
+  try {
+    // Récupérer le livret d'accueil
+    const welcomeBook = await pool.query(
+      `SELECT unique_id, property_name FROM welcome_books_v2 
+       WHERE user_id = $1 AND property_name = (SELECT name FROM properties WHERE id = $2)
+       LIMIT 1`,
+      [userId, propertyId]
+    );
+
+    let welcomeContent = '👋 Bienvenue ! Nous sommes ravis de vous accueillir.';
+
+    if (welcomeBook.rows.length > 0) {
+      const bookUrl = `${process.env.APP_URL || 'http://localhost:3000'}/welcome/${welcomeBook.rows[0].unique_id}`;
+      welcomeContent += `\n\n📖 Consultez votre livret d'accueil ici : ${bookUrl}\n\nVous y trouverez toutes les informations pour votre séjour (WiFi, accès, recommandations, etc.)`;
+    }
+
+    welcomeContent += '\n\nN\'hésitez pas à nous poser vos questions ! 😊';
+
+    // Insérer le message de bienvenue
+    const messageResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
+       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
+       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+      [conversationId, welcomeContent]
+    );
+
+    const welcomeMessage = messageResult.rows[0];
+
+    // Émettre via Socket.io si disponible
+    if (io) {
+      io.to(`conversation_${conversationId}`).emit('new_message', welcomeMessage);
+    }
+
+    console.log(`✅ Message de bienvenue envoyé pour conversation ${conversationId}`);
+
+  } catch (error) {
+    console.error('❌ Erreur envoi message bienvenue:', error);
   }
 }
 
@@ -2492,7 +2546,6 @@ async function savePropertyReservations(propertyId, reservations, userId) {
     return false;
   }
 }
-
 /**
  * Supprimer une réservation (soft delete)
  */
