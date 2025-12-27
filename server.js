@@ -10936,6 +10936,36 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   }
 });
 
+// ============================================
+// ROUTE DE TEST : Messages d'arrivée manuels
+// ============================================
+app.post('/api/test/arrival-messages', authenticateToken, async (req, res) => {
+  try {
+    console.log('🧪 TEST MANUEL : Déclenchement des messages d\'arrivée');
+    
+    const result = await processArrivalsForToday(pool, io, smtpTransporter);
+    
+    console.log('📊 Résultat du test:', result);
+    
+    res.json({ 
+      success: true, 
+      message: 'Test des messages d\'arrivée terminé',
+      total: result.total,
+      success_count: result.success,
+      results: result.results
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur test arrival messages:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors du test',
+      message: error.message 
+    });
+  }
+});
+
+console.log('✅ Route de test /api/test/arrival-messages ajoutée');
+
 console.log('Route verify-by-property ajoutee');
 // Route pour recuperer les messages d'une conversation
 app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => {
