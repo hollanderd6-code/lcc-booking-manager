@@ -776,50 +776,56 @@
   <!-- Socket.IO -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
   <script>
+    // ============================================
+    // VARIABLES GLOBALES
+    // ============================================
+
     const API_URL = window.location.origin;
-    const token = window.location.pathname.split('/chat/')[1];
-    
     let conversationId = null;
     let socket = null;
-    let typingTimeout = null;
-
-
-let chatListenersAttached = false;
-let sendingInProgress = false;
-const seenMessageKeys = new Set();
-
-function messageKey(m) {
-  if (!m) return null;
-  if (m.id) return `id:${m.id}`;
-  const t = m.created_at || m.timestamp || '';
-  const s = m.sender_type || '';
-  const n = m.sender_name || '';
-  const c = m.message || m.content || '';
-  return `k:${s}|${n}|${t}|${c}`;
-}
-
-function appendMessageSafe(m) {
-  const k = messageKey(m);
-  if (k && seenMessageKeys.has(k)) return;
-  if (k) seenMessageKeys.add(k);
-  appendMessage(m);
-}
+    const messageIds = new Set();
+    let chatListenersAttached = false;
+    let sendingInProgress = false;
 
     // ============================================
-// INITIALISATION
-// ============================================
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('ðŸš€ Initialisation du chat, token:', token);
-  // Vérifier si déjà connecté
-  const savedConversationId = sessionStorage.getItem('chat_conversation_id');
-  const isVerified = sessionStorage.getItem('chat_verified');
-  
-  if (savedConversationId && isVerified === 'true') {
-    conversationId = savedConversationId;
-    showChatInterface();
-  }
-});
+    // FONCTIONS HELPER
+    // ============================================
+
+    function messageKey(m) {
+      const s = (m.sender_type || '').toLowerCase();
+      if (m.id) return `id:${m.id}`;
+      const n = (m.sender_name || '').toLowerCase();
+      const t = new Date(m.created_at).getTime();
+      const c = (m.message || '').substring(0, 30);
+      return `k:${s}|${n}|${t}|${c}`;
+    }
+
+    function appendMessageSafe(m) {
+      const key = messageKey(m);
+      if (messageIds.has(key)) return;
+      messageIds.add(key);
+      appendMessage(m);
+    }
+
+    // ============================================
+    // INITIALISATION
+    // ============================================
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 Initialisation du chat');
+      
+      // Vérifier si déjà connecté
+      const savedConversationId = sessionStorage.getItem('chat_conversation_id');
+      const isVerified = sessionStorage.getItem('chat_verified');
+      
+      if (savedConversationId && isVerified === 'true') {
+        conversationId = savedConversationId;
+        showChatInterface();
+      }
+    });
 
     // ============================================
     // CHARGEMENT DES PROPRIÉTÉS
@@ -841,92 +847,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
       } catch (error) {
-        console.error('âŒ Erreur chargement propriétés:', error);
+        console.error('❌ Erreur chargement propriétés:', error);
         showError('Erreur de chargement. Veuillez rafraîchir la page.');
       }
     }
 
- // ============================================
-// VÉRIFICATION
-// ============================================
-async function handleVerification(e) {
-  e.preventDefault();
-  
-  // Récupérer property_id depuis l'URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const propertyId = urlParams.get('property');
-  
-  const pinCode = document.getElementById('pinCode').value;
-  const checkinDate = document.getElementById('checkinDate').value;
-  const checkoutDate = document.getElementById('checkoutDate').value;
-  const platform = document.getElementById('platform').value;
-  
-  if (!propertyId) {
-    showError('Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.');
-    return;
-  }
-  
-  if (!pinCode || !checkinDate || !platform) {
-    showError('Tous les champs obligatoires doivent être remplis');
-    return;
-  }
-  
-  if (pinCode.length !== 4 || !/^\d+$/.test(pinCode)) {
-    showError('Le code PIN doit contenir exactement 4 chiffres');
-    return;
-  }
-  
-  const verifyBtn = document.querySelector('button[type="submit"]');
-  if (verifyBtn) {
-    verifyBtn.disabled = true;
-    verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
-  }
-  
-  try {
-    const response = await fetch(`${API_URL}/api/chat/verify-by-property`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        property_id: propertyId,
-        chat_pin: pinCode,
-        checkin_date: checkinDate,
-        checkout_date: checkoutDate || null,
-        platform: platform
-      })
-    });
+    // ============================================
+    // VÉRIFICATION
+    // ============================================
     
-    const data = await response.json();
-    
-    if (!response.ok) {
-      showError(data.error || 'Erreur de vérification');
-      if (verifyBtn) {
-        verifyBtn.disabled = false;
-        verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
+    async function handleVerification(e) {
+      e.preventDefault();
+      
+      // Récupérer property_id depuis l'URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const propertyId = urlParams.get('property');
+      
+      const pinCode = document.getElementById('pinCode').value;
+      const checkinDate = document.getElementById('checkinDate').value;
+      const checkoutDate = document.getElementById('checkoutDate').value || null;
+      const platform = document.getElementById('platform').value;
+      const verifyBtn = document.getElementById('verifyBtn');
+      
+      if (!propertyId) {
+        showError('Lien invalide. Utilisez le lien fourni par votre propriétaire.');
+        return;
       }
-      return;
-    }
-    
-    // âœ… Vérification réussie !
-    conversationId = data.conversation_id;
-    sessionStorage.setItem('chat_conversation_id', data.conversation_id);
-    sessionStorage.setItem('chat_property_id', data.property_id);
-    sessionStorage.setItem('chat_property_name', data.property_name);
-    sessionStorage.setItem('chat_verified', 'true');
+      
+      if (!pinCode || !checkinDate || !platform) {
+        showError('Veuillez remplir tous les champs requis');
+        return;
+      }
+      
+      if (pinCode.length !== 4 || !/^\d+$/.test(pinCode)) {
+        showError('Le code PIN doit être composé de 4 chiffres');
+        return;
+      }
+      
+      if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/api/chat/verify-by-property`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            property_id: propertyId,
+            chat_pin: pinCode,
+            checkin_date: checkinDate,
+            checkout_date: checkoutDate,
+            platform: platform
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          showError(data.error || 'Erreur de vérification');
+          if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
+          }
+          return;
+        }
+        
+        // ✅ Vérification réussie !
+        conversationId = data.conversation_id;
+        sessionStorage.setItem('chat_conversation_id', data.conversation_id);
+        sessionStorage.setItem('chat_property_id', data.property_id);
+        sessionStorage.setItem('chat_property_name', data.property_name);
+        sessionStorage.setItem('chat_verified', 'true');
 
-  // Afficher le chat
-    showChatInterface();
-    
-  } catch (error) {
-    console.error('Erreur:', error);
-    showError('Erreur de connexion au serveur');
-    if (verifyBtn) {
-      verifyBtn.disabled = false;
-      verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
+        // Afficher le chat
+        showChatInterface();
+        
+      } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur de connexion au serveur');
+        if (verifyBtn) {
+          verifyBtn.disabled = false;
+          verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
+        }
+      }
     }
-  }
-}
 
     // ============================================
     // CHARGEMENT DES MESSAGES
@@ -951,7 +958,7 @@ async function handleVerification(e) {
         scrollToBottom();
         
       } catch (error) {
-        console.error('âŒ Erreur chargement messages:', error);
+        console.error('❌ Erreur chargement messages:', error);
         showError('Erreur de chargement des messages');
       }
     }
@@ -964,7 +971,7 @@ async function handleVerification(e) {
       socket = io(API_URL);
       
       socket.on('connect', () => {
-        console.log('âœ… Socket connecté');
+        console.log('✅ Socket connecté');
         socket.emit('join_conversation', conversationId);
       });
       
@@ -974,16 +981,16 @@ async function handleVerification(e) {
       });
       
       socket.on('user_typing', () => {
-        document.getElementById('typingIndicator').classList.add('show');
+        document.getElementById('typingIndicator')?.classList.add('show');
         scrollToBottom();
       });
       
       socket.on('user_stop_typing', () => {
-        document.getElementById('typingIndicator').classList.remove('show');
+        document.getElementById('typingIndicator')?.classList.remove('show');
       });
       
       socket.on('disconnect', () => {
-        console.log('âŒ Socket déconnecté');
+        console.log('❌ Socket déconnecté');
       });
     }
 
@@ -991,56 +998,65 @@ async function handleVerification(e) {
     // ENVOI DE MESSAGE
     // ============================================
 
-   async function sendMessage() {
-  if (sendingInProgress) return;
-  sendingInProgress = true;
+    async function sendMessage() {
+      if (sendingInProgress) return;
+      sendingInProgress = true;
 
-  console.log('ðŸš€ sendMessage appelée !');
+      console.log('🚀 sendMessage appelée !');
 
-  const input = document.getElementById('messageInput');
-  const message = (input?.value || '').trim();
-  if (!message) {
-    sendingInProgress = false;
-    return;
-  }
+      const input = document.getElementById('messageInput');
+      const message = (input?.value || '').trim();
+      if (!message) {
+        sendingInProgress = false;
+        return;
+      }
 
-  const sendBtn = document.getElementById('sendBtn');
-  if (sendBtn) sendBtn.disabled = true;
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) sendBtn.disabled = true;
 
-  try {
-    const response = await fetch(`${API_URL}/api/chat/send`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    conversation_id: conversationId,
-    message: message,
-    sender_type: 'guest',
-    sender_name: 'Voyageur'
-  })
-});
+      try {
+        const response = await fetch(`${API_URL}/api/chat/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            message: message,
+            sender_type: 'guest',
+            sender_name: 'Voyageur'
+          })
+        });
 
-    if (!response.ok) throw new Error('Erreur envoi message');
-    const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+          throw new Error(errorData.error || 'Erreur envoi message');
+        }
+        
+        const data = await response.json();
 
-    // Si le serveur renvoie le message dans la réponse, on l'affiche en fallback (dédupliqué).
-    if (data && data.message) {
-      appendMessageSafe(data.message);
-      scrollToBottom();
+        // Le message sera reçu via Socket.io, pas besoin de l'afficher ici
+        // Mais on garde un fallback au cas où Socket.io ne fonctionne pas
+        if (data && data.message && !socket?.connected) {
+          appendMessage(data.message);
+          scrollToBottom();
+        }
+
+        if (input) {
+          input.value = '';
+          input.style.height = 'auto';
+        }
+      } catch (error) {
+        console.error('❌ Erreur envoi:', error);
+        const errorDiv = document.getElementById('errorMessage');
+        if (errorDiv) {
+          errorDiv.textContent = error.message || "Erreur lors de l'envoi du message";
+          errorDiv.classList.add('show');
+          setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+      } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        sendingInProgress = false;
+      }
     }
-
-    if (input) {
-      input.value = '';
-      input.style.height = 'auto';
-    }
- } catch (error) {
-  console.error('❌ Erreur envoi:', error);
-  const errorDiv = document.getElementById('errorMessage');
-  if (errorDiv) {
-    errorDiv.textContent = error.message || "Erreur lors de l'envoi du message";
-    errorDiv.classList.add('show');
-    setTimeout(() => errorDiv.classList.remove('show'), 5000);
-  }
-}
 
     // ============================================
     // AFFICHAGE DES MESSAGES
@@ -1055,25 +1071,25 @@ async function handleVerification(e) {
       }
       
       const messageDiv = document.createElement('div');
-      // Normaliser le type de sender (backend peut renvoyer des variantes)
-const rawType = (message.sender_type || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-let normalizedType = 'bot';
+      
+      // Normaliser le type de sender
+      const rawType = (message.sender_type || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      let normalizedType = 'bot';
 
-if (['guest','voyageur','traveler','client'].includes(rawType)) normalizedType = 'guest';
-else if (['owner','host','proprietaire','propriétaire','admin','manager'].includes(rawType)) normalizedType = 'owner';
-else if (['bot','assistant','system'].includes(rawType)) normalizedType = 'bot';
-else {
-  // Fallback basé sur le nom si sender_type est absent / inattendu
-  const n = (message.sender_name || '').toString().toLowerCase();
-  normalizedType = n.includes('propri') || n.includes('host') ? 'owner' : 'guest';
-}
+      if (['guest','voyageur','traveler','client'].includes(rawType)) normalizedType = 'guest';
+      else if (['owner','host','proprietaire','propriétaire','admin','manager'].includes(rawType)) normalizedType = 'owner';
+      else if (['bot','assistant','system'].includes(rawType)) normalizedType = 'bot';
+      else {
+        const n = (message.sender_name || '').toString().toLowerCase();
+        normalizedType = n.includes('propri') || n.includes('host') ? 'owner' : 'guest';
+      }
 
-messageDiv.className = `message ${normalizedType}`;
+      messageDiv.className = `message ${normalizedType}`;
       
       const avatar = document.createElement('div');
       avatar.className = 'message-avatar';
       avatar.textContent = message.sender_type === 'guest' ? 'V' : 
-                          message.sender_type === 'bot' ? 'ðŸ¤–' : 'P';
+                          message.sender_type === 'bot' ? '🤖' : 'P';
       
       const contentDiv = document.createElement('div');
       contentDiv.className = 'message-content';
@@ -1086,38 +1102,41 @@ messageDiv.className = `message ${normalizedType}`;
       
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
-      bubble.textContent = message.message;  // âœ…
-// Meta : heure + statut (WhatsApp-like)
-const meta = document.createElement('div');
-meta.className = 'message-meta';
+      bubble.textContent = message.message;
+      
+      // Meta : heure + statut
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
 
-const time = document.createElement('span');
-time.className = 'message-time';
-time.textContent = formatTime(message.created_at);
+      const time = document.createElement('span');
+      time.className = 'message-time';
+      time.textContent = formatTime(message.created_at);
 
-const status = document.createElement('span');
-status.className = 'message-status';
+      const status = document.createElement('span');
+      status.className = 'message-status';
 
-// Statut visible uniquement pour les messages du voyageur
-if (message.sender_type === 'guest') {
-  const s = message.status || (message.read_at ? 'read' : (message.delivered_at ? 'delivered' : 'sent'));
-  if (s === 'read') status.textContent = 'Lu';
-  else if (s === 'delivered') status.textContent = 'Distribué';
-  else status.textContent = 'Envoyé';
-} else {
-  status.textContent = '';
-}
+      // Statut visible uniquement pour les messages du voyageur
+      if (message.sender_type === 'guest') {
+        const s = message.status || (message.read_at ? 'read' : (message.delivered_at ? 'delivered' : 'sent'));
+        if (s === 'read') status.textContent = 'Lu';
+        else if (s === 'delivered') status.textContent = 'Distribué';
+        else status.textContent = 'Envoyé';
+      } else {
+        status.textContent = '';
+      }
 
-meta.appendChild(time);
-meta.appendChild(status);
+      meta.appendChild(time);
+      meta.appendChild(status);
 
-contentDiv.appendChild(senderName);
-contentDiv.appendChild(bubble);
-contentDiv.appendChild(meta);
-messageDiv.appendChild(avatar);      // ✅ Ligne 1113 corrigée
-messageDiv.appendChild(contentDiv);
-
-container.appendChild(messageDiv);
+      contentDiv.appendChild(senderName);
+      contentDiv.appendChild(bubble);
+      contentDiv.appendChild(meta);
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(contentDiv);
+      
+      container.appendChild(messageDiv);
+    }
 
     function formatTime(timestamp) {
       const date = new Date(timestamp);
@@ -1129,198 +1148,116 @@ container.appendChild(messageDiv);
 
     function scrollToBottom() {
       const container = document.getElementById('messagesContainer');
-      container.scrollTop = container.scrollHeight;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
     }
-function displayMessage(message) {
-  const messageDiv = document.createElement('div');
-  messageDiv.className = `message ${message.sender === 'guest' ? 'message-sent' : 'message-received'}`;
-  
-  let content = `
-    <div class="message-content">
-      ${message.message}
-    </div>
-    <div class="message-time">${formatTime(message.created_at)}</div>
-  `;
-  
-  // ✅ Afficher un badge "Réponse automatique"
-  if (message.is_auto_response || message.isAutoResponse) {
-    content += `
-      <div class="auto-response-badge">
-        <i class="fas fa-robot"></i>
-        Réponse automatique
-      </div>
-    `;
-  }
-  
-  messageDiv.innerHTML = content;
-  messagesContainer.appendChild(messageDiv);
-}
+
     // ============================================
     // AFFICHAGE DES ERREURS
     // ============================================
 
     function showError(message) {
       const errorDiv = document.getElementById('errorMessage');
-      errorDiv.textContent = message;
-      errorDiv.classList.add('show');
-      
-      setTimeout(() => {
-        errorDiv.classList.remove('show');
-      }, 5000);
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.add('show');
+        
+        setTimeout(() => {
+          errorDiv.classList.remove('show');
+        }, 5000);
+      }
     }
 
     function showWarning(message) {
       const warningDiv = document.getElementById('warningMessage');
-      warningDiv.textContent = message;
-      warningDiv.classList.add('show');
-      
-      setTimeout(() => {
-        warningDiv.classList.remove('show');
-      }, 5000);
-    }
-// Récupérer l'ID du logement depuis l'URL
-const urlParams = new URLSearchParams(window.location.search);
-const propertyId = urlParams.get('property');
-
-if (!propertyId) {
-  document.getElementById('verificationContainer').innerHTML = `
-    <div class="verification-card">
-      <div class="error-message" style="display: flex;">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span>Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.</span>
-      </div>
-    </div>
-  `;
-}
-
-// Gestion du formulaire de vérification
-document.getElementById('verificationForm')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const pinCode = document.getElementById('pinCode').value.trim();
-  const checkinDate = document.getElementById('checkinDate').value;
-  const checkoutDate = document.getElementById('checkoutDate').value || null;
-  const platform = document.getElementById('platform').value;
-  const errorDiv = document.getElementById('verificationError');
-  const errorText = document.getElementById('errorText');
-  const verifyBtn = document.getElementById('verifyBtn');
-  
-  // Validation
-  if (!/^\d{4}$/.test(pinCode)) {
-    errorDiv.style.display = 'flex';
-    errorText.textContent = 'Le code PIN doit être composé de 4 chiffres';
-    return;
-  }
-  
-  if (!checkinDate || !platform) {
-    errorDiv.style.display = 'flex';
-    errorText.textContent = 'Veuillez remplir tous les champs requis';
-    return;
-  }
-  
-  // Désactiver le bouton pendant la vérification
-  verifyBtn.disabled = true;
-  verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
-  errorDiv.style.display = 'none';
-  
-  try {
-    const response = await fetch('/api/chat/verify-by-property', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        property_id: propertyId,
-        chat_pin: pinCode,
-        checkin_date: checkinDate,
-        checkout_date: checkoutDate,
-        platform: platform
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Erreur de vérification');
-    }
-    
-    // âœ… Vérification réussie !
-    // Stocker les infos dans sessionStorage
-    sessionStorage.setItem('chat_conversation_id', data.conversation_id);
-    sessionStorage.setItem('chat_property_id', data.property_id);
-    sessionStorage.setItem('chat_property_name', data.property_name || 'Logement');
-    sessionStorage.setItem('chat_verified', 'true');
-    conversationId = data.conversation_id;
-    // Afficher le chat
-    showChatInterface();
-    
-  } catch (error) {
-    console.error('Erreur:', error);
-    errorDiv.style.display = 'flex';
-    errorText.textContent = error.message || 'Erreur lors de la vérification. Vérifiez vos informations.';
-    
-    verifyBtn.disabled = false;
-    verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Vérifier et accéder au chat';
-  }
-});
-
-// Fonction pour afficher l'interface de chat après vérification
-function showChatInterface() {
-  // Empêcher les doubles listeners (qui provoquent l'envoi en double)
-  if (!chatListenersAttached) {
-    const form = document.getElementById('chatForm'); // si présent
-    const sendBtn = document.getElementById('sendBtn');
-    const messageInput = document.getElementById('messageInput');
-
-    // On privilégie le submit du form (un seul point d'entrée)
-    if (form) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await sendMessage();
-      });
-    } else if (sendBtn) {
-      // Fallback si pas de <form>
-      sendBtn.addEventListener('click', sendMessage);
+      if (warningDiv) {
+        warningDiv.textContent = message;
+        warningDiv.classList.add('show');
+        
+        setTimeout(() => {
+          warningDiv.classList.remove('show');
+        }, 5000);
+      }
     }
 
-    // Enter = envoyer, Shift+Enter = nouvelle ligne
-    if (messageInput) {
-      messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
+    // ============================================
+    // INITIALISATION DE LA PAGE
+    // ============================================
+
+    // Récupérer l'ID du logement depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const propertyId = urlParams.get('property');
+
+    if (!propertyId) {
+      document.getElementById('verificationContainer').innerHTML = `
+        <div class="verification-card">
+          <div class="error-message" style="display: flex;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Lien invalide. Veuillez utiliser le lien fourni par votre propriétaire.</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Attacher le gestionnaire de vérification
+    document.getElementById('verificationForm')?.addEventListener('submit', handleVerification);
+
+    // Fonction pour afficher l'interface de chat après vérification
+    function showChatInterface() {
+      // Empêcher les doubles listeners
+      if (!chatListenersAttached) {
+        const form = document.getElementById('chatForm');
+        const sendBtn = document.getElementById('sendBtn');
+        const messageInput = document.getElementById('messageInput');
+
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await sendMessage();
+          });
+        } else if (sendBtn) {
+          sendBtn.addEventListener('click', sendMessage);
         }
-      });
+
+        // Enter = envoyer, Shift+Enter = nouvelle ligne
+        if (messageInput) {
+          messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          });
+        }
+
+        chatListenersAttached = true;
+      }
+
+      // Afficher le container de chat
+      document.getElementById('verificationContainer').style.display = 'none';
+      document.getElementById('chatContainer').style.display = 'flex';
+
+      // Charger messages + connecter socket
+      loadMessages();
+      connectSocket();
+      scrollToBottom();
     }
 
-    chatListenersAttached = true;
-  }
+    // Définir la date minimale comme aujourd'hui - 30 jours
+    const checkinInput = document.getElementById('checkinDate');
+    if (checkinInput) {
+      const today = new Date();
+      today.setDate(today.getDate() - 30);
+      checkinInput.min = today.toISOString().split('T')[0];
+    }
 
-  // Afficher le container de chat
-  document.getElementById('verificationContainer').style.display = 'none';
-  document.getElementById('chatContainer').style.display = 'flex';
-
-  // Charger messages + connecter socket
-  loadMessages();
-  connectSocket();
-  scrollToBottom();
-}
-
-// Définir la date minimale comme aujourd'hui - 30 jours (on peut avoir des réservations passées récentes)
-const checkinInput = document.getElementById('checkinDate');
-if (checkinInput) {
-  const today = new Date();
-  today.setDate(today.getDate() - 30);
-  checkinInput.min = today.toISOString().split('T')[0];
-}
-
-// Limiter la date de checkout basée sur le checkin
-document.getElementById('checkinDate')?.addEventListener('change', (e) => {
-  const checkoutInput = document.getElementById('checkoutDate');
-  if (checkoutInput && e.target.value) {
-    checkoutInput.min = e.target.value;
-  }
-});
+    // Limiter la date de checkout basée sur le checkin
+    document.getElementById('checkinDate')?.addEventListener('change', (e) => {
+      const checkoutInput = document.getElementById('checkoutDate');
+      if (checkoutInput && e.target.value) {
+        checkoutInput.min = e.target.value;
+      }
+    });
   </script>
 </body>
 </html>
