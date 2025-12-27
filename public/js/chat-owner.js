@@ -179,7 +179,7 @@ function renderConversations() {
       : formatTime(conv.created_at);
     
     return `
-      <div class="conversation-item" onclick="openChat(${conv.id})">
+      <div class="conversation-item" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
         <div class="conversation-avatar" style="background: ${conv.property_color || '#10B981'};">
           ${guestInitial}
         </div>
@@ -198,6 +198,16 @@ function renderConversations() {
             </div>
             
             <div class="conversation-status">
+              <!-- ✅ NOUVEAU : Bouton de suppression -->
+              <div class="conversation-actions">
+                <button class="btn-delete-conversation" 
+                        onclick="deleteConversation(${conv.id}, event)" 
+                        title="Supprimer la conversation">
+                  <i class="fas fa-trash"></i>
+                  Supprimer
+                </button>
+              </div>
+              
               <div class="conversation-time">${lastMessageTime}</div>
               <div class="status-badge ${statusClass}">${statusLabel}</div>
               ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
@@ -544,3 +554,68 @@ document.getElementById('chatModal').addEventListener('click', function(e) {
     closeChat();
   }
 });
+
+// ============================================
+// SUPPRESSION DE CONVERSATION
+// ============================================
+async function deleteConversation(conversationId, event) {
+  // Empêcher l'ouverture du chat
+  event.stopPropagation();
+  
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.')) {
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('lcc_token');
+    
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Erreur lors de la suppression');
+    }
+    
+    // Supprimer visuellement avec animation
+    const conversationElement = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+    if (conversationElement) {
+      conversationElement.style.transition = 'all 0.3s ease';
+      conversationElement.style.opacity = '0';
+      conversationElement.style.transform = 'translateX(-20px)';
+      
+      setTimeout(() => {
+        conversationElement.remove();
+        
+        // Retirer de allConversations
+        allConversations = allConversations.filter(c => c.id !== conversationId);
+        
+        // Mettre à jour les stats
+        updateStats();
+        
+        // Si plus aucune conversation, afficher le message vide
+        const conversationsList = document.getElementById('conversationsList');
+        if (conversationsList && conversationsList.children.length === 0) {
+          conversationsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-comments"></i>
+              <h3>Aucune conversation</h3>
+              <p>Les conversations avec vos voyageurs apparaîtront ici.</p>
+            </div>
+          `;
+        }
+      }, 300);
+    }
+    
+    // Toast de confirmation
+    showToast('Conversation supprimée avec succès', 'success');
+    
+  } catch (error) {
+    console.error('❌ Erreur suppression conversation:', error);
+    showToast('Erreur: ' + error.message, 'error');
+  }
+}
