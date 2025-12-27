@@ -3743,6 +3743,10 @@ app.post('/api/reservations/manual', async (req, res) => {
 
 // GET - Toutes les réservations du user
 app.get('/api/reservations', authenticateUser, checkSubscription, async (req, res) => {
+  // ✅ DEBUG : Voir ce que contient req.user
+    console.log('🔍 req.user =', req.user);
+    console.log('🔍 req.user.id =', req.user.id);
+    console.log('🔍 req.user.userId =', req.user.userId);
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
