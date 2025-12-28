@@ -1,4 +1,7 @@
 // Initialiser les notifications push
+// Test pour vérifier que le fichier est bien chargé
+console.log('🔔 notifications.js chargé !');
+alert('🔔 Système de notifications chargé');
 async function initPushNotifications() {
   // Vérifier si Capacitor est disponible
   if (!window.Capacitor || !window.Capacitor.Plugins.PushNotifications) {
@@ -25,9 +28,11 @@ async function initPushNotifications() {
 
   // Écouter l'enregistrement réussi
   PushNotifications.addListener('registration', (token) => {
-    console.log('✅ Token FCM:', token.value);
-    saveTokenToBackend(token.value);
-  });
+  console.log('✅ Token FCM:', token.value);
+  // Afficher le token à l'écran
+  alert('✅ Token FCM reçu !\n\n' + token.value.substring(0, 50) + '...');
+  saveTokenToBackend(token.value);
+});
 
   // Écouter les erreurs
   PushNotifications.addListener('registrationError', (error) => {
