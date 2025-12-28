@@ -7822,3 +7822,24 @@ if (document.readyState === 'loading') {
 
 </script>
 <script></script><script src="/js/bh-layout.js"></script></body></html>
+<!-- Capacitor Core -->
+<script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
+
+<!-- Notifications Service -->
+<script src="/js/notifications.js"></script>
+
+<!-- Initialisation des notifications -->
+<script>
+  // Initialiser les notifications au chargement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof initPushNotifications === 'function') {
+        initPushNotifications();
+      }
+    });
+  } else {
+    if (typeof initPushNotifications === 'function') {
+      initPushNotifications();
+    }
+  }
+</script>
