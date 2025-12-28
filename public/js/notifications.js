@@ -1,7 +1,5 @@
 // Initialiser les notifications push
-// Test pour vérifier que le fichier est bien chargé
-console.log('🔔 notifications.js chargé !');
-alert('🔔 Système de notifications chargé');
+
 async function initPushNotifications() {
   // Vérifier si Capacitor est disponible
   if (!window.Capacitor || !window.Capacitor.Plugins.PushNotifications) {
