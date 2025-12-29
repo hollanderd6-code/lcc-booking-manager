@@ -615,7 +615,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
               }
             );
             
-            console.log(`🔔 Notification push envoyée à l'utilisateur ${conversation.user_id}`);
+            console.log(`🔔 Notification envoyée à l'utilisateur ${conversation.user_id}`);
           }
         } catch (notifError) {
           console.error('❌ Erreur notification push:', notifError);
