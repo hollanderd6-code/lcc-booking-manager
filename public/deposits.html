@@ -293,10 +293,6 @@
       .hide-on-mobile {
         display: none;
       }
-      /* Cacher les colonnes Voyageur et Source sur mobile */
-      .hide-mobile {
-        display: none !important;
-      }
     }
   </style>
 <!-- Script auth + user + logout -->
@@ -430,8 +426,10 @@
 <option value="">Tous les logements</option>
 </select>
 </div>
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
 <div id="depositsContainer">
 <p class="empty-state">Chargement des réservations…</p>
+</div>
 </div>
 </section>
 </div>
@@ -681,17 +679,17 @@ async function copyExistingDepositMessage(reservation) {
       }
 
       let html = `
-        <table>
+        <table style="min-width: 800px; width: max-content;">
           <thead>
             <tr>
-              <th>Logement</th>
-              <th>Dates</th>
-              <th class="hide-mobile">Voyageur</th>
-              <th class="hide-mobile">Source</th>
-              <th>Caution</th>
-              <th>Statut</th>
-              <th>Lien</th>
-              <th>Actions</th>
+              <th style="white-space: nowrap;">Logement</th>
+              <th style="white-space: nowrap;">Dates</th>
+              <th style="white-space: nowrap;">Voyageur</th>
+              <th style="white-space: nowrap;">Source</th>
+              <th style="white-space: nowrap;">Caution</th>
+              <th style="white-space: nowrap;">Statut</th>
+              <th style="white-space: nowrap;">Lien</th>
+              <th style="white-space: nowrap;">Actions</th>
             </tr>
 </thead>
           <tbody>
@@ -775,8 +773,8 @@ async function copyExistingDepositMessage(reservation) {
           <tr>
             <td>${r.propertyName || 'Logement'}</td>
             <td>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</td>
-            <td class="hide-mobile">${r.guestName || '-'}</td>
-            <td class="hide-mobile">${sourceLabel}</td>
+            <td>${r.guestName || '-'}</td>
+            <td>${sourceLabel}</td>
             <td>${amountText}</td>
             <td>${statusBadge}</td>
             <td>${linkHtml || '-'}</td>
