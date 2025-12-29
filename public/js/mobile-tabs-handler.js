@@ -1,0 +1,170 @@
+// ============================================
+// 📱 GESTION DES ONGLETS MOBILES
+// À inclure sur toutes les pages de l'app
+// ============================================
+
+(function() {
+  'use strict';
+
+  // ============================================
+  // CONFIGURATION DES ROUTES
+  // ============================================
+  
+  const ROUTES = {
+    dashboard: '/app.html',
+    calendar: '/app.html#calendar',
+    messages: '/messages.html',
+    properties: '/settings.html',
+    more: 'bottomsheet'
+  };
+
+  // Détecter la page actuelle pour mettre le bon onglet actif
+  const currentPath = window.location.pathname;
+  let activeTab = 'dashboard';
+
+  if (currentPath.includes('messages')) activeTab = 'messages';
+  else if (currentPath.includes('settings')) activeTab = 'properties';
+  else if (currentPath.includes('app')) activeTab = 'dashboard';
+
+  // ============================================
+  // ÉCOUTER LES CHANGEMENTS D'ONGLET
+  // ============================================
+  
+  document.addEventListener('tabChanged', (e) => {
+    const tab = e.detail.tab;
+    console.log('Navigation vers:', tab);
+    
+    if (ROUTES[tab] === 'bottomsheet') {
+      showMoreMenu();
+    } else if (ROUTES[tab]) {
+      window.location.href = ROUTES[tab];
+    }
+  });
+
+  // ============================================
+  // MENU "PLUS"
+  // ============================================
+  
+  function showMoreMenu() {
+    if (!window.mobileApp) return;
+    
+    window.mobileApp.createBottomSheet({
+      title: '⚙️ Menu',
+      content: `
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
+          
+          <button class="btn btn-primary" onclick="window.location.href='/settings.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-cog"></i> Paramètres
+          </button>
+          
+          <button class="btn btn-secondary" onclick="window.location.href='/notifications.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-bell"></i> Notifications
+          </button>
+          
+          <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-broom"></i> Ménages
+          </button>
+          
+          <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-shield-alt"></i> Cautions
+          </button>
+          
+          <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-file-invoice"></i> Factures
+          </button>
+          
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          
+          <button class="btn btn-secondary" onclick="testNotification()" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-vial"></i> Test notification
+          </button>
+          
+          <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-question-circle"></i> Aide
+          </button>
+          
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          
+          <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
+          </button>
+          
+        </div>
+      `,
+      height: '70%'
+    });
+  }
+
+  // ============================================
+  // FONCTIONS UTILITAIRES
+  // ============================================
+  
+  window.testNotification = function() {
+    const token = localStorage.getItem('lcc_token');
+    
+    if (!token) {
+      alert('Non connecté');
+      return;
+    }
+    
+    fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: '🏠 Test Boostinghost',
+        body: 'Ceci est une notification de test !'
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert('✅ Notification envoyée !');
+      } else {
+        alert('❌ Erreur : ' + (data.error || data.message));
+      }
+    })
+    .catch(err => {
+      alert('❌ Erreur : ' + err.message);
+    });
+  };
+
+  window.confirmLogout = function() {
+    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/logout';
+    }
+  };
+
+  // ============================================
+  // METTRE L'ONGLET ACTIF AU CHARGEMENT
+  // ============================================
+  
+  function setActiveTab() {
+    // Attendre que les onglets soient créés
+    setTimeout(() => {
+      const tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach(tab => {
+        const tabId = tab.dataset.tab;
+        if (tabId === activeTab) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+    }, 100);
+  }
+
+  // Initialiser
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setActiveTab);
+  } else {
+    setActiveTab();
+  }
+
+  console.log('✅ Gestion des onglets mobile initialisée (page:', activeTab, ')');
+
+})();
