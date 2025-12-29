@@ -956,5 +956,72 @@ Merci, et à très bientôt !
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
+
+<!-- FORCE LE SCROLL HORIZONTAL AVEC JAVASCRIPT -->
+<script>
+(function forceHorizontalScroll() {
+  console.log('🔧 Forçage du scroll horizontal...');
+  
+  function applyScrollFix() {
+    // Supprimer overflow-x: hidden de PARTOUT
+    const elementsToFix = [
+      document.documentElement,
+      document.body,
+      document.querySelector('.app-container'),
+      document.querySelector('.main-content'),
+      document.querySelector('.page-content'),
+      document.querySelector('#depositsContainer')?.parentElement
+    ];
+    
+    elementsToFix.forEach(el => {
+      if (el) {
+        el.style.overflowX = 'visible';
+        console.log('✅ overflow-x visible sur', el.tagName);
+      }
+    });
+    
+    // Wrapper scrollable
+    const wrapper = document.querySelector('#depositsContainer')?.parentElement;
+    if (wrapper) {
+      wrapper.style.overflowX = 'auto';
+      wrapper.style.webkitOverflowScrolling = 'touch';
+      wrapper.style.width = '100%';
+      wrapper.style.display = 'block';
+      console.log('✅ Wrapper scrollable configuré');
+    }
+    
+    // Table
+    const table = document.querySelector('#depositsContainer table');
+    if (table) {
+      table.style.minWidth = '900px';
+      table.style.width = '900px';
+      table.style.display = 'table';
+      console.log('✅ Table configurée avec width 900px');
+      console.log('📏 Table clientWidth:', table.clientWidth);
+      console.log('📏 Wrapper clientWidth:', wrapper?.clientWidth);
+    }
+  }
+  
+  // Appliquer immédiatement
+  applyScrollFix();
+  
+  // Réappliquer après chargement
+  setTimeout(applyScrollFix, 500);
+  setTimeout(applyScrollFix, 1500);
+  
+  // Observer les changements du DOM
+  const observer = new MutationObserver(() => {
+    applyScrollFix();
+  });
+  
+  const container = document.querySelector('#depositsContainer');
+  if (container) {
+    observer.observe(container, { childList: true, subtree: true });
+  }
+  
+  console.log('✅ Force scroll activé');
+})();
+</script>
+
 </body>
 </html>
