@@ -21,3 +21,22 @@
 .sidebar-overlay {
   z-index: 55 !important;
 }
+
+
+/* ===== GLOBAL MOBILE SCROLL FAILSAFE (only when body is detected as locked) =====
+   This avoids breaking the rest of the site: it activates ONLY when JS adds
+   html.scroll-fix-body-locked on mobile.
+*/
+@media (max-width: 1024px) {
+  html.scroll-fix-body-locked,
+  html.scroll-fix-body-locked body {
+    height: 100%;
+  }
+
+  html.scroll-fix-body-locked .main-content {
+    height: 100dvh;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+/* ===== END GLOBAL MOBILE SCROLL FAILSAFE ===== */
