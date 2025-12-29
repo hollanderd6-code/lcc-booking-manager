@@ -11261,6 +11261,56 @@ cron.schedule('0 8 * * *', async () => {
 });
 
 console.log('✅ CRON job notifications configuré (tous les jours à 8h)');
+
+// ============================================
+// ⏰ CRON JOB : RAPPELS J-1 À 18H
+// ============================================
+
+cron.schedule('0 18 * * *', async () => {
+  console.log('⏰ CRON: Rappels J-1 à 18h');
+  try {
+    const usersResult = await pool.query(
+      `SELECT u.id, t.fcm_token 
+       FROM users u 
+       JOIN user_fcm_tokens t ON u.id = t.user_id 
+       WHERE t.fcm_token IS NOT NULL`
+    );
+    
+    for (const user of usersResult.rows) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const dayAfter = new Date(tomorrow);
+      dayAfter.setDate(dayAfter.getDate() + 1);
+      
+      const arrivalsResult = await pool.query(
+        `SELECT COUNT(*) as count FROM reservations 
+         WHERE checkin_date >= $1 AND checkin_date < $2`,
+        [tomorrow, dayAfter]
+      );
+      
+      const count = parseInt(arrivalsResult.rows[0]?.count || 0);
+      
+      if (count > 0) {
+        await sendNotification(
+          user.fcm_token,
+          `⏰ Rappel : ${count} arrivée(s) demain`,
+          'Préparez les logements',
+          { type: 'reminder_j1' }
+        );
+      }
+    }
+    
+    console.log('✅ Rappels J-1 envoyés');
+  } catch (error) {
+    console.error('❌ Erreur CRON rappels:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('✅ CRON rappels J-1 configuré (18h quotidien)');
+
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
