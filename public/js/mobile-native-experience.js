@@ -1,725 +1,559 @@
-/* ============================================
-   📱 BOOSTINGHOST - STYLES MOBILE NATIFS
-   ============================================ */
+// ============================================
+// 📱 BOOSTINGHOST - EXPÉRIENCE MOBILE NATIVE
+// Version compatible Capacitor + Web
+// ============================================
 
-/* Variables CSS */
-:root {
-  --primary: #3B82F6;
-  --primary-dark: #2563EB;
-  --success: #10B981;
-  --error: #EF4444;
-  --warning: #F59E0B;
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F3F4F6;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --border-color: #E5E7EB;
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
-}
+(function() {
+  'use strict';
 
-/* Dark Mode Variables */
-body.dark-mode {
-  --primary: #60A5FA;
-  --primary-dark: #3B82F6;
-  --bg-primary: #1F2937;
-  --bg-secondary: #374151;
-  --text-primary: #F9FAFB;
-  --text-secondary: #D1D5DB;
-  --border-color: #4B5563;
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-
-/* ============================================
-   CONFIGURATION DE BASE
-   ============================================ */
-
-* {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  transition: background 0.3s, color 0.3s;
-  overflow-x: hidden;
+  // ============================================
+  // DÉTECTION CAPACITOR
+  // ============================================
   
-  /* Safe Area pour encoche iPhone */
-  padding-top: env(safe-area-inset-top);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-
-/* ============================================
-   NAVIGATION À ONGLETS (BOTTOM TABS)
-   ============================================ */
-
-.mobile-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  background: var(--bg-primary);
-  border-top: 1px solid var(--border-color);
-  padding: 8px 0;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  z-index: 1000;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  transition: background 0.3s;
-}
-
-.tab-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  background: none;
-  color: var(--text-secondary);
-  font-size: 11px;
-  padding: 8px 4px;
-  cursor: pointer;
-  position: relative;
-  transition: color 0.2s, transform 0.1s;
-  font-weight: 500;
-}
-
-.tab-btn i {
-  font-size: 22px;
-  transition: transform 0.2s;
-}
-
-.tab-btn.active {
-  color: var(--primary);
-}
-
-.tab-btn.active i {
-  transform: scale(1.1);
-}
-
-.tab-btn:active {
-  transform: scale(0.95);
-}
-
-.tab-btn .badge {
-  position: absolute;
-  top: 4px;
-  right: 50%;
-  transform: translateX(14px);
-  background: var(--error);
-  color: white;
-  border-radius: 10px;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: bold;
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-  animation: badgePop 0.3s ease-out;
-}
-
-@keyframes badgePop {
-  0% { transform: translateX(14px) scale(0); }
-  50% { transform: translateX(14px) scale(1.2); }
-  100% { transform: translateX(14px) scale(1); }
-}
-
-/* ============================================
-   PULL-TO-REFRESH
-   ============================================ */
-
-.pull-refresh-indicator {
-  position: fixed;
-  top: calc(20px + env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%) translateY(0) rotate(0deg);
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--primary);
-  color: white;
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 9999;
-  box-shadow: var(--shadow-lg);
-  pointer-events: none;
-}
-
-.pull-refresh-indicator i {
-  font-size: 20px;
-}
-
-.pull-refresh-indicator.ready {
-  background: var(--success);
-}
-
-.pull-refresh-indicator.refreshing {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: translateX(-50%) rotate(0deg); }
-  to { transform: translateX(-50%) rotate(360deg); }
-}
-
-/* ============================================
-   SWIPE GESTURES
-   ============================================ */
-
-.swipeable-item {
-  position: relative;
-  overflow: hidden;
-  background: var(--bg-primary);
-}
-
-.swipeable-item .swipe-content {
-  position: relative;
-  background: var(--bg-primary);
-  z-index: 2;
-  transition: transform 0.3s ease-out;
-}
-
-.swipeable-item .swipe-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 16px;
-  gap: 8px;
-  z-index: 1;
-}
-
-.swipeable-item .swipe-actions button {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: var(--error);
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s;
-}
-
-.swipeable-item .swipe-actions button:active {
-  transform: scale(0.9);
-}
-
-/* ============================================
-   CARDS & CONTENT
-   ============================================ */
-
-.card {
-  background: var(--bg-primary);
-  border-radius: 16px;
-  padding: 20px;
-  margin: 12px 16px;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
-  border: 1px solid var(--border-color);
-}
-
-.card:active {
-  transform: scale(0.98);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.card-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.card-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-.card-body {
-  color: var(--text-primary);
-}
-
-/* ============================================
-   BOTTOM SHEET
-   ============================================ */
-
-.bottom-sheet {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9998;
-  pointer-events: none;
-  transition: all 0.3s ease-out;
-}
-
-.bottom-sheet.open {
-  pointer-events: all;
-}
-
-.bottom-sheet-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0);
-  transition: background 0.3s;
-}
-
-.bottom-sheet.open .bottom-sheet-overlay {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.bottom-sheet-content {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--bg-primary);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.2);
-  transform: translateY(100%);
-  transition: transform 0.3s ease-out, background 0.3s;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.bottom-sheet.open .bottom-sheet-content {
-  transform: translateY(0);
-}
-
-.sheet-handle {
-  width: 40px;
-  height: 4px;
-  background: var(--border-color);
-  border-radius: 2px;
-  margin: 12px auto 8px;
-  flex-shrink: 0;
-}
-
-.sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.sheet-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.sheet-close {
-  background: var(--bg-secondary);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.sheet-close:active {
-  transform: scale(0.9);
-}
-
-.sheet-body {
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* ============================================
-   ANIMATIONS DE PAGE
-   ============================================ */
-
-.page {
-  display: none;
-  min-height: 100vh;
-}
-
-.page.active {
-  display: block;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideOutLeft {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideOutRight {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-}
-
-/* ============================================
-   BOUTONS
-   ============================================ */
-
-.btn {
-  padding: 12px 24px;
-  border-radius: 12px;
-  border: none;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-}
-
-.btn:active {
-  transform: scale(0.95);
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-
-.btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn-success {
-  background: var(--success);
-  color: white;
-}
-
-.btn-danger {
-  background: var(--error);
-  color: white;
-}
-
-.btn-sm {
-  padding: 8px 16px;
-  font-size: 14px;
-  border-radius: 8px;
-}
-
-/* ============================================
-   INPUTS
-   ============================================ */
-
-input,
-textarea,
-select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 16px;
-  transition: border 0.2s, background 0.3s, color 0.3s;
-  font-family: inherit;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* ============================================
-   LISTES
-   ============================================ */
-
-.list-item {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  transition: background 0.2s;
-  cursor: pointer;
-}
-
-.list-item:active {
-  background: var(--bg-secondary);
-}
-
-.list-item:last-child {
-  border-bottom: none;
-}
-
-.list-item-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.list-item-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.list-item-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-item-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-item-action {
-  margin-left: 12px;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-/* ============================================
-   TOASTS / SNACKBARS
-   ============================================ */
-
-.toast {
-  position: fixed;
-  top: calc(20px + env(safe-area-inset-top));
-  left: 16px;
-  right: 16px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 9999;
-  animation: toastSlideIn 0.3s ease-out;
-  border: 1px solid var(--border-color);
-}
-
-.toast.success {
-  border-left: 4px solid var(--success);
-}
-
-.toast.error {
-  border-left: 4px solid var(--error);
-}
-
-.toast.warning {
-  border-left: 4px solid var(--warning);
-}
-
-@keyframes toastSlideIn {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* ============================================
-   LOADING
-   ============================================ */
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--bg-secondary);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 40px auto;
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-
-@media (min-width: 768px) {
-  .mobile-tabs {
-    display: none;
-  }
+  const isCapacitor = window.Capacitor !== undefined;
+  const isNative = isCapacitor && window.Capacitor.isNativePlatform();
   
-  main,
-  .container {
-    padding-bottom: 20px !important;
-  }
-}
+  console.log('📱 Environnement:', isNative ? 'App Native' : 'Web Browser');
 
-/* ============================================
-   UTILITIES
-   ============================================ */
+  // ============================================
+  // CHARGEMENT DES PLUGINS CAPACITOR
+  // ============================================
+  
+  let Haptics, StatusBar, SplashScreen;
+  
+  if (isCapacitor) {
+    // Les plugins sont disponibles via window.Capacitor.Plugins
+    const plugins = window.Capacitor.Plugins;
+    Haptics = plugins.Haptics;
+    StatusBar = plugins.StatusBar;
+    SplashScreen = plugins.SplashScreen;
+  }
 
-.text-center {
-  text-align: center;
-}
+  // ============================================
+  // CLASSE PRINCIPALE
+  // ============================================
 
-.mt-1 { margin-top: 8px; }
-.mt-2 { margin-top: 16px; }
-.mt-3 { margin-top: 24px; }
-.mt-4 { margin-top: 32px; }
+  class MobileNativeExperience {
+    constructor() {
+      this.currentTab = 'dashboard';
+      this.isDarkMode = false;
+      this.isScrolling = false;
+      this.pullRefreshThreshold = 80;
+      
+      this.init();
+    }
 
-.mb-1 { margin-bottom: 8px; }
-.mb-2 { margin-bottom: 16px; }
-.mb-3 { margin-bottom: 24px; }
-.mb-4 { margin-bottom: 32px; }
+    async init() {
+      console.log('📱 Initialisation expérience mobile native...');
+      
+      // Attendre que le DOM soit prêt
+      if (document.readyState === 'loading') {
+        await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+      }
+      
+      // Configurer la status bar (app native seulement)
+      await this.setupStatusBar();
+      
+      // Configurer le dark mode
+      this.setupDarkMode();
+      
+      // Créer la navigation à onglets
+      this.createTabNavigation();
+      
+      // Configurer pull-to-refresh
+      this.setupPullToRefresh();
+      
+      // Configurer les gestures
+      this.setupSwipeGestures();
+      
+      // Configurer les haptics sur tous les boutons
+      this.setupHapticFeedback();
+      
+      // Configurer les transitions de page
+      this.setupPageTransitions();
+      
+      // Masquer le splash screen
+      await this.hideSplashScreen();
+      
+      console.log('✅ Expérience mobile native prête !');
+    }
 
-.p-1 { padding: 8px; }
-.p-2 { padding: 16px; }
-.p-3 { padding: 24px; }
-.p-4 { padding: 32px; }
+    // ============================================
+    // STATUS BAR NATIVE
+    // ============================================
 
-/* ============================================
-   CORRECTIONS POUR MOBILE
-   ============================================ */
+    async setupStatusBar() {
+      if (!isNative || !StatusBar) return;
+      
+      try {
+        await StatusBar.setStyle({ style: 'light' });
+        await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+        await StatusBar.show();
+        console.log('✅ Status bar configurée');
+      } catch (error) {
+        console.log('⚠️ Status bar non disponible');
+      }
+    }
 
-/* Forcer le contenu à être centré et bien visible sur mobile */
-@media (max-width: 768px) {
-  .main-content {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+    // ============================================
+    // DARK MODE AUTOMATIQUE
+    // ============================================
+
+    setupDarkMode() {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      const updateTheme = async (isDark) => {
+        this.isDarkMode = isDark;
+        
+        if (isDark) {
+          document.body.classList.add('dark-mode');
+          if (isNative && StatusBar) {
+            try {
+              await StatusBar.setStyle({ style: 'dark' });
+              await StatusBar.setBackgroundColor({ color: '#1F2937' });
+            } catch (e) {}
+          }
+        } else {
+          document.body.classList.remove('dark-mode');
+          if (isNative && StatusBar) {
+            try {
+              await StatusBar.setStyle({ style: 'light' });
+              await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+            } catch (e) {}
+          }
+        }
+      };
+
+      prefersDark.addEventListener('change', (e) => updateTheme(e.matches));
+      updateTheme(prefersDark.matches);
+    }
+
+    // ============================================
+    // NAVIGATION À ONGLETS (BOTTOM TABS)
+    // ============================================
+
+    createTabNavigation() {
+      // Vérifier si la navigation existe déjà
+      if (document.querySelector('.mobile-tabs')) {
+        console.log('⚠️ Navigation déjà créée');
+        return;
+      }
+
+      const tabs = [
+        { id: 'dashboard', icon: 'fa-home', label: 'Accueil' },
+        { id: 'calendar', icon: 'fa-calendar', label: 'Calendrier' },
+        { id: 'messages', icon: 'fa-comment', label: 'Messages', badge: 0 },
+        { id: 'properties', icon: 'fa-building', label: 'Logements' },
+        { id: 'more', icon: 'fa-ellipsis-h', label: 'Plus' }
+      ];
+
+      const tabsContainer = document.createElement('div');
+      tabsContainer.className = 'mobile-tabs';
+      tabsContainer.innerHTML = tabs.map(tab => `
+        <button class="tab-btn ${tab.id === 'dashboard' ? 'active' : ''}" data-tab="${tab.id}">
+          <i class="fas ${tab.icon}"></i>
+          <span>${tab.label}</span>
+          ${tab.badge !== undefined ? `<span class="badge" style="display: ${tab.badge > 0 ? 'flex' : 'none'}">${tab.badge}</span>` : ''}
+        </button>
+      `).join('');
+
+      document.body.appendChild(tabsContainer);
+
+      // Event listeners
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const tabId = btn.dataset.tab;
+          await this.switchTab(tabId);
+        });
+      });
+
+      // Ajouter padding en bas du contenu pour les tabs
+      const mainContent = document.querySelector('main') || document.querySelector('.container') || document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.style.paddingBottom = '80px';
+      }
+
+      console.log('✅ Navigation à onglets créée');
+    }
+
+    async switchTab(tabId) {
+      // Haptic feedback
+      await this.vibrate('light');
+
+      // Update active tab
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+      });
+
+      this.currentTab = tabId;
+
+      // Émettre événement custom
+      const event = new CustomEvent('tabChanged', { detail: { tab: tabId } });
+      document.dispatchEvent(event);
+
+      console.log('📍 Onglet changé:', tabId);
+    }
+
+    updateTabBadge(tabId, count) {
+      const tab = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+      if (!tab) return;
+
+      const badge = tab.querySelector('.badge');
+      if (!badge) return;
+
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'flex' : 'none';
+    }
+
+    // ============================================
+    // PULL-TO-REFRESH
+    // ============================================
+
+    setupPullToRefresh() {
+      let startY = 0;
+      let currentY = 0;
+      let pulling = false;
+      let refreshing = false;
+
+      // Créer l'indicateur
+      const indicator = document.createElement('div');
+      indicator.className = 'pull-refresh-indicator';
+      indicator.innerHTML = '<i class="fas fa-sync-alt"></i>';
+      document.body.insertBefore(indicator, document.body.firstChild);
+
+      const mainContent = document.querySelector('main') || document.querySelector('.container') || document.querySelector('.main-content') || document.body;
+
+      mainContent.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0 && !refreshing) {
+          startY = e.touches[0].clientY;
+          pulling = true;
+        }
+      }, { passive: true });
+
+      mainContent.addEventListener('touchmove', (e) => {
+        if (!pulling || refreshing) return;
+
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+
+        if (diff > 0 && diff < this.pullRefreshThreshold * 1.5) {
+          e.preventDefault();
+          const progress = Math.min(diff / this.pullRefreshThreshold, 1);
+          indicator.style.transform = `translateY(${diff * 0.5}px) rotate(${progress * 360}deg)`;
+          indicator.style.opacity = progress;
+
+          if (diff > this.pullRefreshThreshold) {
+            indicator.classList.add('ready');
+          } else {
+            indicator.classList.remove('ready');
+          }
+        }
+      });
+
+      mainContent.addEventListener('touchend', async (e) => {
+        if (!pulling) return;
+        pulling = false;
+
+        const diff = currentY - startY;
+
+        if (diff > this.pullRefreshThreshold && !refreshing) {
+          refreshing = true;
+          indicator.classList.add('refreshing');
+
+          // Haptic feedback
+          await this.vibrate('medium');
+
+          // Émettre événement
+          const event = new CustomEvent('pullRefresh');
+          document.dispatchEvent(event);
+
+          // Attendre le refresh
+          try {
+            await this.refreshData();
+            await this.vibrate('success');
+          } catch (error) {
+            await this.vibrate('error');
+          }
+
+          // Reset
+          setTimeout(() => {
+            indicator.style.transform = 'translateY(0) rotate(0deg)';
+            indicator.style.opacity = '0';
+            indicator.classList.remove('ready', 'refreshing');
+            refreshing = false;
+          }, 300);
+        } else {
+          indicator.style.transform = 'translateY(0) rotate(0deg)';
+          indicator.style.opacity = '0';
+          indicator.classList.remove('ready');
+        }
+
+        currentY = 0;
+      }, { passive: true });
+
+      console.log('✅ Pull-to-refresh configuré');
+    }
+
+    async refreshData() {
+      console.log('🔄 Refresh des données...');
+      
+      // Émettre un événement que votre code peut écouter
+      const event = new CustomEvent('dataRefreshRequested');
+      document.dispatchEvent(event);
+      
+      // Attendre un peu
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // ============================================
+    // SWIPE GESTURES
+    // ============================================
+
+    setupSwipeGestures() {
+      const addSwipeToElement = (element) => {
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+
+        const content = element.querySelector('.swipe-content') || element;
+        const actions = element.querySelector('.swipe-actions');
+
+        element.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          isDragging = true;
+        }, { passive: true });
+
+        element.addEventListener('touchmove', (e) => {
+          if (!isDragging) return;
+
+          currentX = e.touches[0].clientX;
+          const diff = currentX - startX;
+
+          if (diff < 0 && actions) {
+            const distance = Math.max(diff, -100);
+            content.style.transform = `translateX(${distance}px)`;
+            content.style.transition = 'none';
+          }
+        }, { passive: true });
+
+        element.addEventListener('touchend', async () => {
+          if (!isDragging) return;
+          isDragging = false;
+
+          const diff = currentX - startX;
+
+          content.style.transition = 'transform 0.3s ease-out';
+
+          if (diff < -50 && actions) {
+            content.style.transform = 'translateX(-100px)';
+            await this.vibrate('light');
+          } else {
+            content.style.transform = 'translateX(0)';
+          }
+        }, { passive: true });
+      };
+
+      // Observer pour nouveaux éléments
+      const observer = new MutationObserver((mutations) => {
+        document.querySelectorAll('.swipeable-item:not(.swipe-enabled)').forEach(element => {
+          addSwipeToElement(element);
+          element.classList.add('swipe-enabled');
+        });
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      // Appliquer aux éléments déjà présents
+      document.querySelectorAll('.swipeable-item').forEach(addSwipeToElement);
+
+      console.log('✅ Swipe gestures configurés');
+    }
+
+    // ============================================
+    // HAPTIC FEEDBACK
+    // ============================================
+
+    setupHapticFeedback() {
+      const addHapticToButtons = () => {
+        document.querySelectorAll('button:not(.haptic-enabled), .btn:not(.haptic-enabled), a.btn:not(.haptic-enabled)').forEach(btn => {
+          btn.addEventListener('click', () => this.vibrate('light'), { passive: true });
+          btn.classList.add('haptic-enabled');
+        });
+      };
+
+      // Observer pour nouveaux boutons
+      const observer = new MutationObserver(addHapticToButtons);
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      addHapticToButtons();
+
+      console.log('✅ Haptic feedback configuré');
+    }
+
+    async vibrate(type = 'light') {
+      if (!isNative || !Haptics) return;
+      
+      try {
+        const ImpactStyle = { Light: 'LIGHT', Medium: 'MEDIUM', Heavy: 'HEAVY' };
+        const NotificationType = { Success: 'SUCCESS', Error: 'ERROR', Warning: 'WARNING' };
+        
+        switch (type) {
+          case 'light':
+            await Haptics.impact({ style: ImpactStyle.Light });
+            break;
+          case 'medium':
+            await Haptics.impact({ style: ImpactStyle.Medium });
+            break;
+          case 'heavy':
+            await Haptics.impact({ style: ImpactStyle.Heavy });
+            break;
+          case 'success':
+            await Haptics.notification({ type: NotificationType.Success });
+            break;
+          case 'error':
+            await Haptics.notification({ type: NotificationType.Error });
+            break;
+          case 'warning':
+            await Haptics.notification({ type: NotificationType.Warning });
+            break;
+        }
+      } catch (error) {
+        // Haptics non disponible
+      }
+    }
+
+    // ============================================
+    // TRANSITIONS DE PAGE
+    // ============================================
+
+    setupPageTransitions() {
+      window.navigateToPage = async (pageId, direction = 'forward') => {
+        const currentPage = document.querySelector('.page.active');
+        const nextPage = document.querySelector(`.page[data-page="${pageId}"]`);
+
+        if (!nextPage || !currentPage || currentPage === nextPage) return;
+
+        await this.vibrate('light');
+
+        const animations = {
+          forward: { out: 'slideOutLeft', in: 'slideInRight' },
+          back: { out: 'slideOutRight', in: 'slideInLeft' }
+        };
+
+        const anim = animations[direction];
+
+        currentPage.style.animation = `${anim.out} 0.3s ease-out`;
+
+        setTimeout(() => {
+          currentPage.classList.remove('active');
+          currentPage.style.animation = '';
+
+          nextPage.classList.add('active');
+          nextPage.style.animation = `${anim.in} 0.3s ease-out`;
+
+          setTimeout(() => {
+            nextPage.style.animation = '';
+          }, 300);
+        }, 300);
+      };
+
+      console.log('✅ Transitions de page configurées');
+    }
+
+    // ============================================
+    // SPLASH SCREEN
+    // ============================================
+
+    async hideSplashScreen() {
+      if (!isNative || !SplashScreen) return;
+      
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await SplashScreen.hide({ fadeOutDuration: 500 });
+        console.log('✅ Splash screen masqué');
+      } catch (error) {
+        console.log('⚠️ Splash screen non disponible');
+      }
+    }
+
+    // ============================================
+    // BOTTOM SHEET
+    // ============================================
+
+    createBottomSheet(options) {
+      const { title, content, height = '50%' } = options;
+
+      const sheet = document.createElement('div');
+      sheet.className = 'bottom-sheet';
+      sheet.innerHTML = `
+        <div class="bottom-sheet-overlay"></div>
+        <div class="bottom-sheet-content" style="max-height: ${height}">
+          <div class="sheet-handle"></div>
+          <div class="sheet-header">
+            <h3>${title}</h3>
+            <button class="sheet-close"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="sheet-body">
+            ${content}
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(sheet);
+
+      setTimeout(() => sheet.classList.add('open'), 10);
+
+      const close = async () => {
+        await this.vibrate('light');
+        sheet.classList.remove('open');
+        setTimeout(() => sheet.remove(), 300);
+      };
+
+      sheet.querySelector('.sheet-close').addEventListener('click', close);
+      sheet.querySelector('.bottom-sheet-overlay').addEventListener('click', close);
+
+      // Swipe down pour fermer
+      let startY = 0;
+      const sheetContent = sheet.querySelector('.bottom-sheet-content');
+
+      sheetContent.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+
+      sheetContent.addEventListener('touchmove', (e) => {
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+
+        if (diff > 0) {
+          sheetContent.style.transform = `translateY(${diff}px)`;
+        }
+      }, { passive: true });
+
+      sheetContent.addEventListener('touchend', (e) => {
+        const currentY = e.changedTouches[0].clientY;
+        const diff = currentY - startY;
+
+        if (diff > 100) {
+          close();
+        } else {
+          sheetContent.style.transform = 'translateY(0)';
+        }
+      }, { passive: true });
+
+      return sheet;
+    }
   }
-  
-  .page-content {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+
+  // ============================================
+  // INITIALISATION GLOBALE
+  // ============================================
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.mobileApp = new MobileNativeExperience();
+    });
+  } else {
+    window.mobileApp = new MobileNativeExperience();
   }
-  
-  .card, .section {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    max-width: 100% !important;
-  }
-  
-  /* Empêcher le débordement horizontal */
-  table {
-    width: 100% !important;
-    overflow-x: auto !important;
-    display: block !important;
-  }
-  
-  /* Adapter les formulaires */
-  .form-row {
-    flex-direction: column !important;
-  }
-  
-  .form-row > * {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  
-  /* Assurer que tout le contenu est visible */
-  * {
-    box-sizing: border-box !important;
-  }
-  
-  /* Container principal */
-  .app-container {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    overflow-x: hidden !important;
-  }
-}
+
+})();
