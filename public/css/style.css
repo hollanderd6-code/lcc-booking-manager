@@ -1414,17 +1414,19 @@ body {
   }
 }
 /* Empêche la page complète de glisser horizontalement */
+/* MAIS permet aux enfants directs d'avoir leur propre scroll */
 html, body {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip; /* clip au lieu de hidden */
 }
 
 /* On s'assure aussi que le conteneur principal ne déborde pas */
+/* MAIS on autorise le scroll pour les éléments avec overflow-x: auto */
 .app-container,
 .main-content,
 .page-content {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip; /* clip au lieu de hidden */
   box-sizing: border-box;
 }
 /* --- NAV ITEMS : style uniforme "pill" --- */
