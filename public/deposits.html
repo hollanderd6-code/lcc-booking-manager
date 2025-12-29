@@ -294,6 +294,44 @@
         display: none;
       }
     }
+
+    /* ============================================
+       FIX SCROLL HORIZONTAL POUR TABLEAUX
+       ============================================ */
+    
+    /* Override du overflow-x: hidden du CSS global */
+    body[data-page="deposits"],
+    body[data-page="deposits"] .app-container,
+    body[data-page="deposits"] .main-content,
+    body[data-page="deposits"] .page-content {
+      overflow-x: visible !important;
+    }
+    
+    /* Container du tableau scrollable */
+    #depositsContainer {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      display: block !important;
+    }
+    
+    /* Wrapper scrollable */
+    #depositsContainer > div {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Tableau large */
+    #depositsContainer table {
+      min-width: 900px !important;
+      width: 900px !important;
+      display: table !important;
+    }
+    
+    /* Cellules non compressées */
+    #depositsContainer th,
+    #depositsContainer td {
+      white-space: nowrap !important;
+    }
   </style>
 <!-- Script auth + user + logout -->
 <script>
