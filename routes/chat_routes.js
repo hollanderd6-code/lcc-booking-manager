@@ -553,6 +553,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       }
 
       // ✅ Si c'est un message du voyageur, chercher une réponse automatique
+      console.log('🔍 sender_type reçu:', sender_type);
       if (sender_type === 'guest') {
         const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
         
