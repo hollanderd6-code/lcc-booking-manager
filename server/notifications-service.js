@@ -5,7 +5,9 @@ let firebaseInitialized = false;
 
 function initializeFirebase() {
   if (!firebaseInitialized) {
-    const serviceAccount = require('./firebase-service-account.json');
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  : require('./firebase-service-account.json');
     
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
