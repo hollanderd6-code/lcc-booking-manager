@@ -553,7 +553,6 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       }
 
       // ✅ Si c'est un message du voyageur, chercher une réponse automatique
-      console.log('🔍 sender_type reçu:', sender_type);
       if (sender_type === 'guest') {
         const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
         
@@ -585,18 +584,28 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
         // Créer une notification pour le propriétaire
         await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
         
+        console.log('✅ createNotification terminée, on passe à Firebase...');
+        
         // ============================================
         // 🔔 NOTIFICATION PUSH FIREBASE
         // ============================================
         
+        console.log('🔥 DÉBUT du bloc notification Firebase');
+        
         // Envoyer une notification push au propriétaire
         try {
+          console.log('🔍 Recherche du token FCM pour:', conversation.user_id);
+          
           const tokenResult = await pool.query(
             'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
             [conversation.user_id]
           );
           
+          console.log('🔍 Token trouvés:', tokenResult.rows.length);
+          
           if (tokenResult.rows.length > 0 && tokenResult.rows[0].fcm_token) {
+            console.log('✅ Token FCM trouvé, appel sendNotification...');
+            
             const { sendNotification } = require('../server/notifications-service');
             
             // Préparer le message (max 100 caractères)
