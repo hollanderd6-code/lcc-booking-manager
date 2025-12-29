@@ -6287,13 +6287,11 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
       chatPin 
     } = body;
 
-    // ✅ AJOUT : Extraire les champs optionnels avec valeurs par défaut
     const amenities = body.amenities || {};
     const houseRules = body.house_rules || {};
     const practicalInfo = body.practical_info || {};
     const autoResponsesEnabled = body.auto_responses_enabled !== undefined ? body.auto_responses_enabled : true;
 
-    // Générer automatiquement un PIN si non fourni
     const finalChatPin = chatPin || Math.floor(1000 + Math.random() * 9000).toString();
 
     if (!name || !color) {
@@ -6313,12 +6311,11 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
       photoUrl = await uploadPhotoToCloudinary(req.file);
     }
 
-    // Normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
+    // Normaliser les URLs iCal
     let normalizedIcal = [];
     if (Array.isArray(icalUrls)) {
       normalizedIcal = icalUrls
         .map(item => {
-          // Ancien cas : juste une string
           if (typeof item === 'string') {
             return {
               url: item,
@@ -6328,7 +6325,6 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
             };
           }
 
-          // Nouveau cas : objet { platform, url }
           if (item && typeof item === 'object' && item.url) {
             const url = item.url;
             const platform = item.platform && item.platform.trim().length > 0
@@ -6345,14 +6341,61 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
         .filter(Boolean);
     }
 
-    const ownerId = req.body.ownerId || null; 
+    const ownerId = req.body.ownerId || null;
 
-    console.log('🆕 CRÉATION - Données à insérer:', {
-      amenities,
-      houseRules,
-      practicalInfo,
-      autoResponsesEnabled
-    });
+    // ✅ VÉRIFIER SI LA PROPRIÉTÉ EXISTE DÉJÀ
+    const existingProperty = await pool.query(
+      'SELECT id FROM properties WHERE id = $1',
+      [id]
+    );
+
+    if (existingProperty.rows.length > 0) {
+      // ✅ UPDATE si elle existe
+      console.log('🔄 UPDATE - Propriété existe déjà, mise à jour...');
+      
+      await pool.query(
+        `UPDATE properties SET
+           name = $1, color = $2, ical_urls = $3,
+           address = $4, arrival_time = $5, departure_time = $6,
+           deposit_amount = $7, photo_url = $8, welcome_book_url = $9,
+           access_code = $10, wifi_name = $11, wifi_password = $12,
+           access_instructions = $13, owner_id = $14, chat_pin = $15,
+           amenities = $16, house_rules = $17, practical_info = $18,
+           auto_responses_enabled = $19
+         WHERE id = $20`,
+        [
+          name,
+          color,
+          JSON.stringify(normalizedIcal),
+          address || null,
+          arrivalTime || null,
+          departureTime || null,
+          depositAmount ? parseFloat(depositAmount) : null,
+          photoUrl,
+          welcomeBookUrl || null,
+          accessCode || null,
+          wifiName || null,
+          wifiPassword || null,
+          accessInstructions || null,
+          ownerId,
+          finalChatPin,
+          JSON.stringify(amenities),
+          JSON.stringify(houseRules),
+          JSON.stringify(practicalInfo),
+          autoResponsesEnabled,
+          id
+        ]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Propriété mise à jour avec succès',
+        property: { id }
+      });
+    }
+
+    // ✅ INSERT si elle n'existe pas
+    console.log('🆕 INSERT - Création nouvelle propriété...');
 
     await pool.query(
       `INSERT INTO properties (
@@ -6403,14 +6446,13 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Erreur création propriété:', error);
+    console.error('❌ Erreur création/mise à jour propriété:', error);
     res.status(500).json({ 
       error: 'Erreur serveur',
       details: error.message 
     });
   }
 });
-
 // ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
