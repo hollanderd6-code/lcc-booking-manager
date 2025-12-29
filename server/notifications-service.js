@@ -177,6 +177,7 @@ async function sendNotificationToMultiple(tokens, title, body, data = {}) {
 
 module.exports = {
   setPool,
+  initializeFirebase,
   sendNotification,
   sendNotificationByUserId,
   sendNotificationToMultiple
