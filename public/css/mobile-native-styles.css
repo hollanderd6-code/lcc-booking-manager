@@ -723,3 +723,43 @@ select:focus {
     overflow-x: hidden !important;
   }
 }
+
+/* ============================================
+   FIX SPÉCIFIQUE POUR LES TABLEAUX LARGES
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Wrapper scrollable pour les tableaux */
+  .table-responsive,
+  .card-body:has(table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px !important;
+    padding: 0 16px !important;
+  }
+  
+  /* Tableaux fixes pour permettre le scroll horizontal */
+  table {
+    min-width: 800px !important;
+    width: auto !important;
+    display: table !important;
+  }
+  
+  /* Assurer que les cellules ne se compressent pas */
+  table th,
+  table td {
+    white-space: nowrap !important;
+    min-width: 100px !important;
+  }
+  
+  /* Indicateur visuel de scroll */
+  .card-body:has(table)::after {
+    content: '← Glissez pour voir plus →';
+    display: block;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 8px;
+    margin-top: 8px;
+  }
+}
