@@ -758,6 +758,8 @@ const pool = new Pool({
     ? { rejectUnauthorized: false }
     : false
 });
+const notificationServiceModule = require('./server/notifications-service');
+notificationServiceModule.setPool(pool);
 
 // Init DB : création tables users + welcome_books + cleaners + user_settings + cleaning_assignments
 async function initDb() {
