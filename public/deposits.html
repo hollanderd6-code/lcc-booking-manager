@@ -426,7 +426,7 @@
 <option value="">Tous les logements</option>
 </select>
 </div>
-<div id="depositsContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<div id="depositsContainer" style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; display: block !important; width: 100% !important;">
 <p class="empty-state">Chargement des réservations…</p>
 </div>
 </section>
@@ -677,21 +677,21 @@ async function copyExistingDepositMessage(reservation) {
       }
 
       let html = `
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table style="min-width: 900px; width: 900px;">
-          <thead>
-            <tr>
-              <th style="min-width: 120px;">Logement</th>
-              <th style="min-width: 100px;">Dates</th>
-              <th style="min-width: 100px;">Voyageur</th>
-              <th style="min-width: 80px;">Source</th>
-              <th style="min-width: 100px;">Caution</th>
-              <th style="min-width: 120px;">Statut</th>
-              <th style="min-width: 150px;">Lien</th>
-              <th style="min-width: 100px;">Actions</th>
+        <div style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; display: block !important; width: 100% !important;">
+        <table style="min-width: 900px !important; width: 900px !important; display: table !important;">
+          <thead style="display: table-header-group !important;">
+            <tr style="display: table-row !important;">
+              <th style="min-width: 120px !important; display: table-cell !important;">Logement</th>
+              <th style="min-width: 100px !important; display: table-cell !important;">Dates</th>
+              <th style="min-width: 100px !important; display: table-cell !important;">Voyageur</th>
+              <th style="min-width: 80px !important; display: table-cell !important;">Source</th>
+              <th style="min-width: 100px !important; display: table-cell !important;">Caution</th>
+              <th style="min-width: 120px !important; display: table-cell !important;">Statut</th>
+              <th style="min-width: 150px !important; display: table-cell !important;">Lien</th>
+              <th style="min-width: 100px !important; display: table-cell !important;">Actions</th>
             </tr>
 </thead>
-          <tbody>
+          <tbody style="display: table-row-group !important;">
       `;
 
       data.forEach((r) => {
