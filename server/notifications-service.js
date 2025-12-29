@@ -1,5 +1,11 @@
 const admin = require('firebase-admin');
-const { pool } = require('./db');
+
+// Pool sera passé en paramètre depuis server.js
+let pool = null;
+
+function setPool(pgPool) {
+  pool = pgPool;
+}
 
 // Initialiser Firebase Admin (une seule fois)
 let firebaseInitialized = false;
@@ -170,6 +176,7 @@ async function sendNotificationToMultiple(tokens, title, body, data = {}) {
 }
 
 module.exports = {
+  setPool,
   sendNotification,
   sendNotificationByUserId,
   sendNotificationToMultiple
