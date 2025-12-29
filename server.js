@@ -33,7 +33,10 @@ const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ✅ IMPORT DES ROUTES DU CHAT
 // ============================================
 const { setupChatRoutes } = require('./routes/chat_routes');
-
+// ============================================
+// ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
+// ============================================
+const { sendNotification, sendNotificationToMultiple } = require('./server/notifications-service');
 // ============================================
 // ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
 // ============================================
@@ -11008,7 +11011,164 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ============================================
+// 🔔 ROUTES NOTIFICATIONS PUSH
+// ============================================
 
+// Endpoint pour sauvegarder le token FCM d'un utilisateur
+app.post('/api/save-token', authenticateToken, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const userId = req.user.userId;
+    
+    if (!token) {
+      return res.status(400).json({ error: 'Token manquant' });
+    }
+    
+    // Sauvegarder le token dans la base de données
+    await pool.query(
+      `INSERT INTO user_fcm_tokens (user_id, fcm_token, updated_at) 
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id) 
+       DO UPDATE SET fcm_token = $2, updated_at = NOW()`,
+      [userId, token]
+    );
+    
+    console.log(`✅ Token FCM sauvegardé pour user ${userId}`);
+    res.json({ success: true, message: 'Token sauvegardé' });
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde token:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour envoyer une notification test
+app.post('/api/notifications/send', authenticateToken, async (req, res) => {
+  try {
+    const { token, title, body } = req.body;
+    
+    if (!token || !title || !body) {
+      return res.status(400).json({ error: 'Paramètres manquants' });
+    }
+    
+    const result = await sendNotification(token, title, body);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur envoi notification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint pour notifier les arrivées du jour
+app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Récupérer le token FCM de l'utilisateur
+    const tokenResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (tokenResult.rows.length === 0) {
+      return res.json({ message: 'Aucun token FCM enregistré' });
+    }
+    
+    const fcmToken = tokenResult.rows[0].fcm_token;
+    
+    // Récupérer les arrivées du jour
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const arrivalsResult = await pool.query(
+      `SELECT r.*, p.name as property_name 
+       FROM reservations r
+       JOIN properties p ON r.property_id = p.id
+       WHERE r.check_in >= $1 AND r.check_in < $2
+       ORDER BY r.check_in`,
+      [today, tomorrow]
+    );
+    
+    const arrivals = arrivalsResult.rows;
+    
+    if (arrivals.length === 0) {
+      return res.json({ message: 'Aucune arrivée aujourd\'hui' });
+    }
+    
+    const title = `🏠 ${arrivals.length} arrivée(s) aujourd'hui`;
+    const body = arrivals.map(a => 
+      `${a.property_name} - ${a.guest_name || 'Voyageur'}`
+    ).join('\n');
+    
+    const result = await sendNotification(fcmToken, title, body, {
+      type: 'arrivals',
+      count: arrivals.length.toString()
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur notification arrivées:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint pour notifier les départs du jour
+app.post('/api/notifications/today-departures', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Récupérer le token FCM
+    const tokenResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (tokenResult.rows.length === 0) {
+      return res.json({ message: 'Aucun token FCM enregistré' });
+    }
+    
+    const fcmToken = tokenResult.rows[0].fcm_token;
+    
+    // Récupérer les départs du jour
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const departuresResult = await pool.query(
+      `SELECT r.*, p.name as property_name 
+       FROM reservations r
+       JOIN properties p ON r.property_id = p.id
+       WHERE r.check_out >= $1 AND r.check_out < $2
+       ORDER BY r.check_out`,
+      [today, tomorrow]
+    );
+    
+    const departures = departuresResult.rows;
+    
+    if (departures.length === 0) {
+      return res.json({ message: 'Aucun départ aujourd\'hui' });
+    }
+    
+    const title = `🚪 ${departures.length} départ(s) aujourd'hui`;
+    const body = `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`;
+    
+    const result = await sendNotification(fcmToken, title, body, {
+      type: 'departures',
+      count: departures.length.toString()
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur notification départs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Routes notifications push ajoutées');
 console.log('Route messages ajoutee');
 
 // ============================================
@@ -11032,7 +11192,75 @@ cron.schedule('0 7 * * *', async () => {
 });
 
 console.log('CRON job messages arrivee configure (tous les jours a 7h)');
+// ============================================
+// 🔔 CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
+// ============================================
 
+cron.schedule('0 8 * * *', async () => {
+  console.log('🔔 CRON: Envoi des notifications quotidiennes à 8h00');
+  try {
+    // Récupérer tous les utilisateurs avec token FCM
+    const usersResult = await pool.query(
+      `SELECT u.id, u.email, t.fcm_token 
+       FROM users u 
+       JOIN user_fcm_tokens t ON u.id = t.user_id 
+       WHERE t.fcm_token IS NOT NULL`
+    );
+    
+    for (const user of usersResult.rows) {
+      // Arrivées du jour
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const arrivalsResult = await pool.query(
+        `SELECT r.*, p.name as property_name 
+         FROM reservations r
+         JOIN properties p ON r.property_id = p.id
+         WHERE r.check_in >= $1 AND r.check_in < $2`,
+        [today, tomorrow]
+      );
+      
+      if (arrivalsResult.rows.length > 0) {
+        const arrivals = arrivalsResult.rows;
+        await sendNotification(
+          user.fcm_token,
+          `🏠 ${arrivals.length} arrivée(s) aujourd'hui`,
+          arrivals.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join('\n'),
+          { type: 'daily_arrivals' }
+        );
+      }
+      
+      // Départs du jour
+      const departuresResult = await pool.query(
+        `SELECT r.*, p.name as property_name 
+         FROM reservations r
+         JOIN properties p ON r.property_id = p.id
+         WHERE r.check_out >= $1 AND r.check_out < $2`,
+        [today, tomorrow]
+      );
+      
+      if (departuresResult.rows.length > 0) {
+        const departures = departuresResult.rows;
+        await sendNotification(
+          user.fcm_token,
+          `🚪 ${departures.length} départ(s) aujourd'hui`,
+          `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`,
+          { type: 'daily_departures' }
+        );
+      }
+    }
+    
+    console.log('✅ Notifications quotidiennes envoyées');
+  } catch (error) {
+    console.error('❌ Erreur CRON notifications:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('✅ CRON job notifications configuré (tous les jours à 8h)');
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
