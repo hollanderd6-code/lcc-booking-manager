@@ -1,9 +1,25 @@
 {
   "appId": "com.boostinghost.app",
   "appName": "Boostinghost",
-  "webDir": "build",
+  "webDir": "public",
   "server": {
     "url": "https://lcc-booking-manager.onrender.com",
     "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#3B82F6",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "light",
+      "backgroundColor": "#3B82F6"
+    },
+    "Haptics": {
+      "enabled": true
+    }
   }
 }
