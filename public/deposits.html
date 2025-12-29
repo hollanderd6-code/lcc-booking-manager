@@ -677,7 +677,8 @@ async function copyExistingDepositMessage(reservation) {
       }
 
       let html = `
-        <table>
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px;">
+        <table style="min-width: 900px;">
           <thead>
             <tr>
               <th>Logement</th>
@@ -781,7 +782,7 @@ async function copyExistingDepositMessage(reservation) {
         `;
       });
 
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       container.innerHTML = html;
     }
 
