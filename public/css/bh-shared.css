@@ -1,64 +1,142 @@
-/* bh-shared.css — styles communs header + petites harmonisations */
+/*! bh-scroll-fix.js
+ * Global mobile scroll failsafe.
+ * Goal: Fix rare cases where a script leaves the page locked (body overflow hidden / position fixed)
+ * after closing a sidebar/menu/modal overlay.
+ *
+ * Safety: We only unlock when we do NOT detect an active overlay or modal-like UI.
+ * We also only apply the CSS fallback by toggling html.scroll-fix-body-locked.
+ */
+(function () {
+  'use strict';
 
-.main-header{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:16px;
-  padding:18px 20px;
-  margin-bottom:20px;
-  border-radius:20px;
-  background: linear-gradient(135deg, #f9fafb, #eff6ff);
-  border:1px solid rgba(148,163,184,.40);
-  box-shadow: 0 18px 40px rgba(15,23,42,.06);
-}
+  var MOBILE_MAX = 1024;
 
-[data-theme="dark"] .main-header{
-  background: linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.92));
-  border-color: rgba(148,163,184,.45);
-  box-shadow: 0 24px 60px rgba(15,23,42,.70);
-}
+  function isMobile() {
+    return window.matchMedia && window.matchMedia('(max-width: ' + MOBILE_MAX + 'px)').matches;
+  }
 
-.header-left{ max-width:60%; }
-.page-kicker{
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:.18em;
-  color:#9ca3af;
-  margin-bottom:4px;
-  font-weight:600;
-}
-.page-title{
-  margin:0;
-  font-size:24px;
-  font-weight:700;
-  letter-spacing:.01em;
-}
-.page-subtitle{
-  margin-top:6px;
-  font-size:13px;
-  color:#6b7280;
-}
-[data-theme="dark"] .page-subtitle{ color:#9ca3af; }
+  function hasActiveOverlayOrModal() {
+    // Sidebar overlay (your layout uses #sidebarOverlay / .sidebar-overlay)
+    var sidebarOverlay = document.getElementById('sidebarOverlay');
+    if (sidebarOverlay && sidebarOverlay.classList && sidebarOverlay.classList.contains('active')) return true;
 
-.header-actions{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
-}
+    // Common modal patterns (Bootstrap-like or generic)
+    if (document.querySelector('.modal.show, .modal[open], dialog[open], [aria-modal="true"]')) return true;
 
-.btn-ghost{
-  border-radius:999px;
-  border:1px solid rgba(148,163,184,.45);
-  background:transparent;
-  padding-inline:14px;
-}
+    // Common backdrops/overlays
+    if (document.querySelector('.modal-backdrop.show, .backdrop.show, .overlay.active, .drawer-backdrop.active')) return true;
 
-.btn-ghost:hover{ background: rgba(15,23,42,.06); }
-[data-theme="dark"] .btn-ghost:hover{ background: rgba(15,23,42,.90); }
+    return false;
+  }
 
-@media (max-width:768px){
-  .main-header{ flex-direction:column; align-items:flex-start; }
-  .header-left{ max-width:100%; }
-}
+  function bodyLooksLocked() {
+    var body = document.body;
+    var html = document.documentElement;
+    if (!body || !html) return false;
+
+    var csBody = window.getComputedStyle(body);
+    var csHtml = window.getComputedStyle(html);
+
+    // Typical lock patterns
+    var overflowHidden = (csBody.overflowY === 'hidden' || csBody.overflow === 'hidden' || csHtml.overflowY === 'hidden' || csHtml.overflow === 'hidden');
+    var positionFixed = (csBody.position === 'fixed');
+
+    // If either is true, it's a strong signal the page is locked
+    return overflowHidden || positionFixed;
+  }
+
+  function unlockBodyScrollSoft() {
+    var body = document.body;
+    var html = document.documentElement;
+    if (!body || !html) return;
+
+    // Remove the most common locking inline styles (leave others untouched)
+    body.style.overflow = '';
+    body.style.overflowY = '';
+    body.style.position = '';
+    body.style.top = '';
+    body.style.width = '';
+    html.style.overflow = '';
+    html.style.overflowY = '';
+
+    // Remove our marker class
+    html.classList.remove('scroll-fix-body-locked');
+  }
+
+  function applyScrollableContainerFallback() {
+    // Only applies the CSS fallback (does not forcibly unlock JS styles)
+    var html = document.documentElement;
+    if (html) html.classList.add('scroll-fix-body-locked');
+  }
+
+  var scheduled = false;
+  function tick() {
+    scheduled = false;
+    if (!isMobile()) {
+      // Ensure we don't keep the fallback on desktop
+      var html = document.documentElement;
+      if (html) html.classList.remove('scroll-fix-body-locked');
+      return;
+    }
+
+    if (hasActiveOverlayOrModal()) return;
+
+    if (bodyLooksLocked()) {
+      // First try: gently unlock body scroll
+      unlockBodyScrollSoft();
+
+      // If something keeps relocking it, the fallback makes .main-content scrollable
+      // (doesn't interfere with pages where body isn't locked)
+      applyScrollableContainerFallback();
+    } else {
+      // Not locked => remove fallback class
+      var html2 = document.documentElement;
+      if (html2) html2.classList.remove('scroll-fix-body-locked');
+    }
+  }
+
+  function scheduleTick() {
+    if (scheduled) return;
+    scheduled = true;
+    window.requestAnimationFrame(tick);
+  }
+
+  function init() {
+    // Run on load
+    scheduleTick();
+
+    // Watch class changes on the sidebar overlay if present
+    var overlay = document.getElementById('sidebarOverlay');
+    if (overlay && window.MutationObserver) {
+      var obs = new MutationObserver(scheduleTick);
+      obs.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // General fallbacks
+    window.addEventListener('resize', scheduleTick, { passive: true });
+    window.addEventListener('orientationchange', scheduleTick, { passive: true });
+    document.addEventListener('click', function () { setTimeout(scheduleTick, 0); }, { passive: true });
+    document.addEventListener('touchend', function () { setTimeout(scheduleTick, 0); }, { passive: true });
+
+    // If your code toggles a "sidebar-open" class somewhere, watch the whole document
+    if (window.MutationObserver) {
+      var docObs = new MutationObserver(function (mutations) {
+        // Cheap check: only react to class/style changes
+        for (var i = 0; i < mutations.length; i++) {
+          var m = mutations[i];
+          if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')) {
+            scheduleTick();
+            break;
+          }
+        }
+      });
+      docObs.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
