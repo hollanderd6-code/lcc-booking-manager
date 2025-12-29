@@ -604,35 +604,29 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
               : message;
             
             // Envoyer la notification
-            await sendNotification(
-              tokenResult.rows[0].fcm_token,
-              '💬 Nouveau message',
-              messagePreview,
-              {
-                type: 'new_chat_message',
-                conversation_id: conversation_id.toString(),
-                property_name: conversation.property_name || 'Logement'
-              }
-            );
-            
-            console.log(`🔔 Notification envoyée à l'utilisateur ${conversation.user_id}`);
-          }
-        } catch (notifError) {
-          console.error('❌ Erreur notification push:', notifError);
-          // Ne pas bloquer l'envoi du message si la notification échoue
-        }
-      }
+const notifResult = await sendNotification(
+  tokenResult.rows[0].fcm_token,
+  '💬 Nouveau message',
+  messagePreview,
+  {
+    type: 'new_chat_message',
+    conversation_id: conversation_id.toString(),
+    property_name: conversation.property_name || 'Logement'
+  }
+);
 
-      res.json({
-        success: true,
-        message: newMessage
-      });
+console.log('🔔 Résultat notification:', notifResult);
 
-    } catch (error) {
-      console.error('❌ Erreur envoi message:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
+if (notifResult.success) {
+  console.log(`✅ Notification push envoyée avec succès à ${conversation.user_id}`);
+} else {
+  console.log(`❌ Échec envoi notification: ${notifResult.error}`);
+}
+
+} catch (notifError) {
+  console.error('❌ Erreur notification push:', notifError);
+  // Ne pas bloquer l'envoi du message si la notification échoue
+}
 
   // ============================================
   // 6. MARQUER MESSAGES COMME LUS
