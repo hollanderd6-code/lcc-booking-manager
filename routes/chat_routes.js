@@ -629,6 +629,18 @@ if (notifResult.success) {
           // Ne pas bloquer l'envoi du message si la notification échoue
         }
       }
+
+      res.json({
+        success: true,
+        message: newMessage
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur envoi message:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // ============================================
   // 6. MARQUER MESSAGES COMME LUS
   // ============================================
