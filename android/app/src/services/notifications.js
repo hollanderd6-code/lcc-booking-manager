@@ -1,13 +1,11 @@
-// Initialiser les notifications push
+import { PushNotifications } from '@capacitor/push-notifications';
 
-async function initPushNotifications() {
-  // Vérifier si Capacitor est disponible
-  if (!window.Capacitor || !window.Capacitor.Plugins.PushNotifications) {
+export const initPushNotifications = async () => {
+  // Vérifier si on est sur mobile
+  if (!window.Capacitor) {
     console.log('Pas sur mobile, notifications désactivées');
     return;
   }
-
-  const { PushNotifications } = window.Capacitor.Plugins;
 
   // Demander la permission
   let permStatus = await PushNotifications.checkPermissions();
@@ -26,9 +24,9 @@ async function initPushNotifications() {
 
   // Écouter l'enregistrement réussi
   PushNotifications.addListener('registration', (token) => {
-  console.log('✅ Token FCM:', token.value);
-  saveTokenToBackend(token.value);
-});
+    console.log('✅ Token FCM:', token.value);
+    saveTokenToBackend(token.value);
+  });
 
   // Écouter les erreurs
   PushNotifications.addListener('registrationError', (error) => {
@@ -45,12 +43,12 @@ async function initPushNotifications() {
   PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
     console.log('👆 Notification cliquée:', notification);
   });
-}
+};
 
 // Fonction pour sauvegarder le token
-async function saveTokenToBackend(token) {
+const saveTokenToBackend = async (token) => {
   try {
-    const response = await fetch('https://lcc-booking-manager.onrender.com/api/save-token', {
+    await fetch('https://lcc-booking-manager.onrender.com/api/save-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
@@ -59,4 +57,4 @@ async function saveTokenToBackend(token) {
   } catch (error) {
     console.error('❌ Erreur sauvegarde token:', error);
   }
-}
+};
