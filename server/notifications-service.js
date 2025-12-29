@@ -63,6 +63,11 @@ async function sendNotificationByUserId(userId, title, body, data = {}) {
 async function sendNotification(token, title, body, data = {}) {
   initializeFirebase();
   
+  console.log('🎯 sendNotification appelé');
+  console.log('🔑 Token reçu:', token.substring(0, 30) + '...');
+  console.log('📝 Title:', title);
+  console.log('📝 Body:', body);
+  
   const message = {
     notification: {
       title: title,
@@ -91,11 +96,13 @@ async function sendNotification(token, title, body, data = {}) {
     console.log('📨 Envoi vers Firebase...');
     const response = await admin.messaging().send(message);
     console.log('✅ Réponse Firebase:', response);
+    console.log('✅ Message ID:', response);
     return { success: true, messageId: response };
   } catch (error) {
-    console.error('❌ Erreur Firebase:', error);
+    console.error('❌ ERREUR FIREBASE COMPLÈTE:', error);
     console.error('❌ Error code:', error.code);
     console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
     
     // Si le token est invalide, le supprimer de la DB
     if (error.code === 'messaging/invalid-registration-token' || 
