@@ -1414,19 +1414,17 @@ body {
   }
 }
 /* Empêche la page complète de glisser horizontalement */
-/* MAIS permet aux enfants directs d'avoir leur propre scroll */
 html, body {
   max-width: 100%;
-  overflow-x: clip; /* clip au lieu de hidden */
+  overflow-x: hidden;
 }
 
 /* On s'assure aussi que le conteneur principal ne déborde pas */
-/* MAIS on autorise le scroll pour les éléments avec overflow-x: auto */
 .app-container,
 .main-content,
 .page-content {
   max-width: 100%;
-  overflow-x: clip; /* clip au lieu de hidden */
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 /* --- NAV ITEMS : style uniforme "pill" --- */
@@ -1649,20 +1647,3 @@ html, body {
     z-index: 1200;
   }
 }
-
-
-/* ===== FIX SCROLL MOBILE / SIDEBAR OVERLAY ===== */
-.sidebar-overlay {
-  display: none !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-}
-
-.sidebar-overlay.active {
-  display: block !important;
-  pointer-events: auto !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-/* ===== END FIX ===== */
