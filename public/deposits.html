@@ -293,44 +293,10 @@
       .hide-on-mobile {
         display: none;
       }
-    }
-
-    /* ============================================
-       FIX SCROLL HORIZONTAL POUR TABLEAUX
-       ============================================ */
-    
-    /* Override du overflow-x: hidden du CSS global */
-    body[data-page="deposits"],
-    body[data-page="deposits"] .app-container,
-    body[data-page="deposits"] .main-content,
-    body[data-page="deposits"] .page-content {
-      overflow-x: visible !important;
-    }
-    
-    /* Container du tableau scrollable */
-    #depositsContainer {
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch !important;
-      display: block !important;
-    }
-    
-    /* Wrapper scrollable */
-    #depositsContainer > div {
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch !important;
-    }
-    
-    /* Tableau large */
-    #depositsContainer table {
-      min-width: 900px !important;
-      width: 900px !important;
-      display: table !important;
-    }
-    
-    /* Cellules non compressées */
-    #depositsContainer th,
-    #depositsContainer td {
-      white-space: nowrap !important;
+      /* Cacher les colonnes Voyageur et Source sur mobile */
+      .hide-mobile {
+        display: none !important;
+      }
     }
   </style>
 <!-- Script auth + user + logout -->
@@ -464,7 +430,7 @@
 <option value="">Tous les logements</option>
 </select>
 </div>
-<div id="depositsContainer" style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; display: block !important; width: 100% !important;">
+<div id="depositsContainer">
 <p class="empty-state">Chargement des réservations…</p>
 </div>
 </section>
@@ -715,21 +681,20 @@ async function copyExistingDepositMessage(reservation) {
       }
 
       let html = `
-        <div style="overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; display: block !important; width: 100% !important;">
-        <table style="min-width: 900px !important; width: 900px !important; display: table !important;">
-          <thead style="display: table-header-group !important;">
-            <tr style="display: table-row !important;">
-              <th style="min-width: 120px !important; display: table-cell !important;">Logement</th>
-              <th style="min-width: 100px !important; display: table-cell !important;">Dates</th>
-              <th style="min-width: 100px !important; display: table-cell !important;">Voyageur</th>
-              <th style="min-width: 80px !important; display: table-cell !important;">Source</th>
-              <th style="min-width: 100px !important; display: table-cell !important;">Caution</th>
-              <th style="min-width: 120px !important; display: table-cell !important;">Statut</th>
-              <th style="min-width: 150px !important; display: table-cell !important;">Lien</th>
-              <th style="min-width: 100px !important; display: table-cell !important;">Actions</th>
+        <table>
+          <thead>
+            <tr>
+              <th>Logement</th>
+              <th>Dates</th>
+              <th class="hide-mobile">Voyageur</th>
+              <th class="hide-mobile">Source</th>
+              <th>Caution</th>
+              <th>Statut</th>
+              <th>Lien</th>
+              <th>Actions</th>
             </tr>
 </thead>
-          <tbody style="display: table-row-group !important;">
+          <tbody>
       `;
 
       data.forEach((r) => {
@@ -810,8 +775,8 @@ async function copyExistingDepositMessage(reservation) {
           <tr>
             <td>${r.propertyName || 'Logement'}</td>
             <td>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</td>
-            <td>${r.guestName || '-'}</td>
-            <td>${sourceLabel}</td>
+            <td class="hide-mobile">${r.guestName || '-'}</td>
+            <td class="hide-mobile">${sourceLabel}</td>
             <td>${amountText}</td>
             <td>${statusBadge}</td>
             <td>${linkHtml || '-'}</td>
@@ -820,7 +785,7 @@ async function copyExistingDepositMessage(reservation) {
         `;
       });
 
-      html += '</tbody></table></div>';
+      html += '</tbody></table>';
       container.innerHTML = html;
     }
 
