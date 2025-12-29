@@ -623,11 +623,12 @@ if (notifResult.success) {
   console.log(`❌ Échec envoi notification: ${notifResult.error}`);
 }
 
-} catch (notifError) {
-  console.error('❌ Erreur notification push:', notifError);
-  // Ne pas bloquer l'envoi du message si la notification échoue
-}
-
+          }
+        } catch (notifError) {
+          console.error('❌ Erreur notification push:', notifError);
+          // Ne pas bloquer l'envoi du message si la notification échoue
+        }
+      }
   // ============================================
   // 6. MARQUER MESSAGES COMME LUS
   // ============================================
