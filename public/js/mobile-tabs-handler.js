@@ -14,7 +14,7 @@
     dashboard: '/app.html',
     calendar: '/app.html#calendar',
     messages: '/messages.html',
-    properties: '/settings.html',
+    properties: '/settings.html',  // Logements
     more: 'bottomsheet'
   };
 
@@ -53,17 +53,21 @@
       content: `
         <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
           
-          <button class="btn btn-primary" onclick="window.location.href='/settings.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-cog"></i> Paramètres
+          <button class="btn btn-primary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-user-cog"></i> Paramètres du compte
           </button>
           
           <button class="btn btn-secondary" onclick="window.location.href='/notifications.html'" style="width: 100%; justify-content: flex-start;">
             <i class="fas fa-bell"></i> Notifications
           </button>
           
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          
           <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
             <i class="fas fa-broom"></i> Ménages
           </button>
+          
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
           
           <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
             <i class="fas fa-shield-alt"></i> Cautions
@@ -73,14 +77,24 @@
             <i class="fas fa-file-invoice"></i> Factures
           </button>
           
+          <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
+          </button>
+          
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
           
-          <button class="btn btn-secondary" onclick="testNotification()" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-vial"></i> Test notification
+          <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-book-open"></i> Livrets d'accueil
           </button>
           
           <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
             <i class="fas fa-question-circle"></i> Aide
+          </button>
+          
+          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+          
+          <button class="btn btn-secondary" onclick="testNotification()" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-vial"></i> Test notification
           </button>
           
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
@@ -91,7 +105,7 @@
           
         </div>
       `,
-      height: '70%'
+      height: '80%'
     });
   }
 
