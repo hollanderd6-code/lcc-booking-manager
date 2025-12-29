@@ -6280,14 +6280,22 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
       depositAmount,
       photoUrl: existingPhotoUrl,
       welcomeBookUrl,
-  accessCode,
-  wifiName,
-  wifiPassword,
-  accessInstructions,
+      accessCode,
+      wifiName,
+      wifiPassword,
+      accessInstructions,
       chatPin 
     } = body;
-// Générer automatiquement un PIN si non fourni
-const finalChatPin = chatPin || Math.floor(1000 + Math.random() * 9000).toString();
+
+    // ✅ AJOUT : Extraire les champs optionnels avec valeurs par défaut
+    const amenities = body.amenities || {};
+    const houseRules = body.house_rules || {};
+    const practicalInfo = body.practical_info || {};
+    const autoResponsesEnabled = body.auto_responses_enabled !== undefined ? body.auto_responses_enabled : true;
+
+    // Générer automatiquement un PIN si non fourni
+    const finalChatPin = chatPin || Math.floor(1000 + Math.random() * 9000).toString();
+
     if (!name || !color) {
       return res.status(400).json({ error: 'Nom et couleur requis' });
     }
@@ -6298,112 +6306,109 @@ const finalChatPin = chatPin || Math.floor(1000 + Math.random() * 9000).toString
       .replace(/^-+|-+$/g, '');
 
     const id = `${user.id}-${baseId}`;
-// Upload vers Cloudinary si un fichier est présent
-let photoUrl = existingPhotoUrl || null;
-if (req.file) {
-  photoUrl = await uploadPhotoToCloudinary(req.file);
-}
 
-// normaliser les URLs iCal : on accepte strings ou objets {platform,url}
-// normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
-let normalizedIcal = [];
-if (Array.isArray(icalUrls)) {
-  normalizedIcal = icalUrls
-    .map(item => {
-      // Ancien cas : juste une string
-      if (typeof item === 'string') {
-        return {
-          url: item,
-          platform:
-            icalService && icalService.extractSource
-              ? icalService.extractSource(item)
-              : 'iCal'
-        };
-      }
+    // Upload vers Cloudinary si un fichier est présent
+    let photoUrl = existingPhotoUrl || null;
+    if (req.file) {
+      photoUrl = await uploadPhotoToCloudinary(req.file);
+    }
 
-      // Nouveau cas : objet { platform, url }
-      if (item && typeof item === 'object' && item.url) {
-        const url = item.url;
-        const platform =
-          item.platform && item.platform.trim().length > 0
-            ? item.platform.trim()
-            : (icalService && icalService.extractSource
-                ? icalService.extractSource(url)
-                : 'iCal');
+    // Normaliser les URLs iCal : on stocke un tableau d'objets { platform, url }
+    let normalizedIcal = [];
+    if (Array.isArray(icalUrls)) {
+      normalizedIcal = icalUrls
+        .map(item => {
+          // Ancien cas : juste une string
+          if (typeof item === 'string') {
+            return {
+              url: item,
+              platform: icalService && icalService.extractSource
+                ? icalService.extractSource(item)
+                : 'iCal'
+            };
+          }
 
-        return { url, platform };
-      }
+          // Nouveau cas : objet { platform, url }
+          if (item && typeof item === 'object' && item.url) {
+            const url = item.url;
+            const platform = item.platform && item.platform.trim().length > 0
+              ? item.platform.trim()
+              : (icalService && icalService.extractSource
+                  ? icalService.extractSource(url)
+                  : 'iCal');
 
-      return null;
-    })
-    .filter(Boolean);
-}
+            return { url, platform };
+          }
 
-const ownerId = req.body.ownerId || null; 
+          return null;
+        })
+        .filter(Boolean);
+    }
 
-console.log('🆕 CRÉATION - Données à insérer:', {
-  amenities,
-  houseRules,
-  practicalInfo,
-  autoResponsesEnabled
-});
+    const ownerId = req.body.ownerId || null; 
 
-await pool.query(
-  `INSERT INTO properties (
-     id, user_id, name, color, ical_urls,
-     address, arrival_time, departure_time, deposit_amount, photo_url,
-     welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
-     owner_id, chat_pin, display_order, created_at,
-     amenities, house_rules, practical_info, auto_responses_enabled
-   )
-   VALUES (
-     $1, $2, $3, $4, $5,
-     $6, $7, $8, $9, $10,
-     $11, $12, $13, $14, $15,
-     $16, $17,
-     (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
-     NOW(),
-     $18, $19, $20, $21
-   )`,
-  [
-    id,
-    user.id,
-    name,
-    color,
-    JSON.stringify(normalizedIcal),
-    address || null,
-    arrivalTime || null,
-    departureTime || null,
-    depositAmount === '' || depositAmount == null ? null : Number(depositAmount),
-    photoUrl,
-    welcomeBookUrl || null,
-    accessCode || null,
-    wifiName || null,
-    wifiPassword || null,
-    accessInstructions || null,
-    ownerId,
-    finalChatPin,
-    amenities || '{}',           // $18 ✅
-    houseRules || '{}',          // $19 ✅
-    practicalInfo || '{}',       // $20 ✅
-    autoResponsesEnabled !== undefined ? autoResponsesEnabled : true  // $21 ✅
-  ]
-);
-      
-console.log('✅ Propriété créée avec succès');
+    console.log('🆕 CRÉATION - Données à insérer:', {
+      amenities,
+      houseRules,
+      practicalInfo,
+      autoResponsesEnabled
+    });
 
-await loadProperties();
+    await pool.query(
+      `INSERT INTO properties (
+         id, user_id, name, color, ical_urls,
+         address, arrival_time, departure_time, deposit_amount, photo_url,
+         welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
+         owner_id, chat_pin, display_order, created_at,
+         amenities, house_rules, practical_info, auto_responses_enabled
+       )
+       VALUES (
+         $1, $2, $3, $4, $5,
+         $6, $7, $8, $9, $10,
+         $11, $12, $13, $14, $15,
+         $16, $17,
+         (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
+         NOW(),
+         $18, $19, $20, $21
+       )`,
+      [
+        id,
+        user.id,
+        name,
+        color,
+        JSON.stringify(normalizedIcal),
+        address || null,
+        arrivalTime || null,
+        departureTime || null,
+        depositAmount ? parseFloat(depositAmount) : null,
+        photoUrl,
+        welcomeBookUrl || null,
+        accessCode || null,
+        wifiName || null,
+        wifiPassword || null,
+        accessInstructions || null,
+        ownerId,
+        finalChatPin,
+        JSON.stringify(amenities),
+        JSON.stringify(houseRules),
+        JSON.stringify(practicalInfo),
+        autoResponsesEnabled
+      ]
+    );
 
-const property = PROPERTIES.find(p => p.id === id);
+    res.json({
+      success: true,
+      message: 'Propriété créée avec succès',
+      property: { id }
+    });
 
-res.status(201).json({
-  message: 'Logement créé avec succès',
-  property
-});
-} catch (err) {
-  console.error('❌ Erreur création logement:', err);
-  res.status(500).json({ error: 'Erreur serveur' });
-}
+  } catch (error) {
+    console.error('❌ Erreur création propriété:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur',
+      details: error.message 
+    });
+  }
 });
 
 // ============================================
