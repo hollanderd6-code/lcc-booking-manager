@@ -1649,3 +1649,20 @@ html, body {
     z-index: 1200;
   }
 }
+
+
+/* ===== FIX SCROLL MOBILE / SIDEBAR OVERLAY ===== */
+.sidebar-overlay {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.sidebar-overlay.active {
+  display: block !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+/* ===== END FIX ===== */
