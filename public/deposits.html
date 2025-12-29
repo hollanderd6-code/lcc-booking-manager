@@ -426,7 +426,7 @@
 <option value="">Tous les logements</option>
 </select>
 </div>
-<div id="depositsContainer">
+<div id="depositsContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
 <p class="empty-state">Chargement des réservations…</p>
 </div>
 </section>
@@ -677,18 +677,18 @@ async function copyExistingDepositMessage(reservation) {
       }
 
       let html = `
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px;">
-        <table style="min-width: 900px;">
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table style="min-width: 900px; width: 900px;">
           <thead>
             <tr>
-              <th>Logement</th>
-              <th>Dates</th>
-              <th>Voyageur</th>
-              <th>Source</th>
-              <th>Caution</th>
-              <th>Statut</th>
-              <th>Lien</th>
-              <th>Actions</th>
+              <th style="min-width: 120px;">Logement</th>
+              <th style="min-width: 100px;">Dates</th>
+              <th style="min-width: 100px;">Voyageur</th>
+              <th style="min-width: 80px;">Source</th>
+              <th style="min-width: 100px;">Caution</th>
+              <th style="min-width: 120px;">Statut</th>
+              <th style="min-width: 150px;">Lien</th>
+              <th style="min-width: 100px;">Actions</th>
             </tr>
 </thead>
           <tbody>
