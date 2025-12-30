@@ -2,80 +2,55 @@
 // 🔔 ENREGISTREMENT DU TOKEN FCM
 // ============================================
 
-// Fonction pour afficher des messages debug
-function showDebug(msg) {
-  console.log(msg);
-  
-  // Créer une notification visuelle en haut de l'écran
-  const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;top:60px;left:10px;right:10px;background:rgba(0,0,0,0.9);color:lime;padding:10px;z-index:99999;font-size:12px;border-radius:5px;';
-  div.textContent = msg;
-  document.body.appendChild(div);
-  
-  setTimeout(() => div.remove(), 5000);
-}
-
 (async function registerFCMToken() {
-  showDebug('🔥 Script FCM démarré');
-  
   // Vérifier si on est dans l'app Capacitor
   if (!window.Capacitor) {
-    showDebug('⚠️ Pas dans Capacitor (navigateur web)');
+    console.log('⚠️ Pas dans Capacitor, skip FCM');
     return;
   }
-
-  showDebug('✅ Dans Capacitor');
 
   const { PushNotifications } = window.Capacitor.Plugins;
   
   if (!PushNotifications) {
-    showDebug('❌ Plugin PushNotifications non disponible');
+    console.log('⚠️ Plugin PushNotifications non disponible');
     return;
   }
 
-  showDebug('✅ Plugin PushNotifications disponible');
-
   try {
     // 1. Demander la permission
-    showDebug('📱 Demande de permission...');
+    console.log('📱 Demande de permission pour les notifications...');
     
     let permStatus = await PushNotifications.checkPermissions();
-    showDebug(`📱 Permission actuelle: ${permStatus.receive}`);
     
     if (permStatus.receive === 'prompt') {
       permStatus = await PushNotifications.requestPermissions();
-      showDebug(`📱 Permission après demande: ${permStatus.receive}`);
     }
     
     if (permStatus.receive !== 'granted') {
-      showDebug('❌ Permission refusée');
+      console.log('❌ Permission notifications refusée');
       return;
     }
     
-    showDebug('✅ Permission accordée');
+    console.log('✅ Permission notifications accordée');
     
     // 2. Enregistrer pour recevoir les notifications
     await PushNotifications.register();
-    showDebug('📱 Enregistrement FCM lancé...');
+    console.log('📱 Enregistrement FCM lancé...');
     
     // 3. Écouter la réception du token
     PushNotifications.addListener('registration', async (token) => {
-      showDebug(`🔑 Token reçu: ${token.value.substring(0, 20)}...`);
+      console.log('🔑 Token FCM reçu');
       
       // 4. Récupérer le JWT de l'utilisateur
       const jwtToken = localStorage.getItem('lcc_token');
       
       if (!jwtToken) {
-        showDebug('❌ JWT non trouvé (utilisateur non connecté)');
+        console.log('❌ Utilisateur non connecté, impossible de sauvegarder le token');
         return;
       }
       
-      showDebug('✅ JWT trouvé');
-      
       // 5. Envoyer le token au serveur
       try {
-        showDebug('📤 Envoi au serveur...');
-        
         const response = await fetch('/api/save-token', {
           method: 'POST',
           headers: {
@@ -87,45 +62,50 @@ function showDebug(msg) {
           })
         });
         
-        const data = await response.json();
-        
         if (response.ok) {
-          showDebug('✅✅✅ TOKEN SAUVEGARDÉ !');
+          console.log('✅ Token FCM sauvegardé');
           localStorage.setItem('fcm_token_registered', 'true');
         } else {
-          showDebug(`❌ Erreur serveur: ${data.error}`);
+          const data = await response.json();
+          console.error('❌ Erreur serveur:', data.error);
         }
       } catch (error) {
-        showDebug(`❌ Erreur fetch: ${error.message}`);
+        console.error('❌ Erreur envoi token:', error);
       }
     });
     
     // 6. Écouter les erreurs
     PushNotifications.addListener('registrationError', (error) => {
-      showDebug(`❌ Erreur FCM: ${error.error}`);
+      console.error('❌ Erreur enregistrement FCM:', error);
     });
     
-    // 7. Écouter les notifications reçues
+    // 7. Écouter les notifications reçues (quand l'app est ouverte)
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      showDebug(`🔔 Notif reçue: ${notification.title}`);
+      console.log('🔔 Notification reçue:', notification.title);
+      
+      // Afficher une notification locale
+      if (notification.title && notification.body) {
+        // Optionnel : afficher une alerte ou un toast
+      }
     });
     
     // 8. Écouter les clics sur les notifications
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('👆 Notification cliquée:', action);
+      console.log('👆 Notification cliquée');
       
-      // Rediriger vers la conversation si c'est un message
-      if (action.notification.data.type === 'new_chat_message') {
-        const conversationId = action.notification.data.conversation_id;
-        if (conversationId) {
-          window.location.href = `/messages.html?conversation=${conversationId}`;
-        }
+      const data = action.notification.data;
+      
+      // Rediriger selon le type de notification
+      if (data.type === 'new_chat_message' && data.conversation_id) {
+        window.location.href = `/messages.html?conversation=${data.conversation_id}`;
+      } else if (data.type === 'new_cleaning' && data.cleaning_id) {
+        window.location.href = `/cleaning.html?id=${data.cleaning_id}`;
+      } else if (data.type === 'cleaning_reminder') {
+        window.location.href = `/cleaning.html`;
       }
     });
     
-    showDebug('✅ Listeners configurés');
-    
   } catch (error) {
-    showDebug(`❌ Erreur globale: ${error.message}`);
+    console.error('❌ Erreur FCM:', error);
   }
 })();
