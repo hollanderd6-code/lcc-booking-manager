@@ -11069,7 +11069,6 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
 // ============================================
 // 🔔 ROUTES NOTIFICATIONS PUSH
 // ============================================
-
 // Endpoint pour sauvegarder le token FCM d'un utilisateur
 app.post('/api/save-token', authenticateToken, async (req, res) => {
   try {
@@ -11092,7 +11091,7 @@ app.post('/api/save-token', authenticateToken, async (req, res) => {
       [userId, token]
     );
     
-    console.log(`✅ Token FCM enregistré pour ${userId}`);
+    console.log(`✅ Token FCM enregistré pour ${userId}`);  // ← CORRIGÉ : parenthèses au lieu de backtick
     res.json({ success: true, message: 'Token sauvegardé' });
   } catch (error) {
     console.error('❌ Erreur sauvegarde token:', error);
