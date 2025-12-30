@@ -3749,7 +3749,7 @@ app.post('/api/reservations/manual', async (req, res) => {
     };
     
     console.log('✅ Réservation créée:', uid);
-    
+    console.log('🔥🔥🔥 AVANT INSERTION SQL');
     // 🔥 SAUVEGARDER EN BASE DE DONNÉES
     try {
       await pool.query(`
