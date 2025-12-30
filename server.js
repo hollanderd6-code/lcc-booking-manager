@@ -644,14 +644,13 @@ async function uploadToCloudinary(fileBuffer, filename) {
 // ============================================
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Token manquant' });
   }
   const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
   try {
     const decoded = jwt.verify(token, secret);
-    console.log('🔍 JWT décodé:', decoded);  // ← AJOUTÉ ICI
     req.user = decoded;
     next();
   } catch (err) {
@@ -11075,23 +11074,31 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
 app.post('/api/save-token', authenticateToken, async (req, res) => {
   try {
     const { token } = req.body;
-    
-    console.log('🔍 req.user:', req.user);
-    console.log('🔍 req.user.userId:', req.user?.userId);
-    console.log('🔍 req.user.id:', req.user?.id);
-    
-    const userId = req.user.userId || req.user.id;  // Essayer les deux
+    const userId = req.user.userId || req.user.id;
     
     if (!token) {
       return res.status(400).json({ error: 'Token manquant' });
     }
     
     if (!userId) {
-      console.error('❌ userId est null/undefined !');
-      return res.status(400).json({ error: 'User ID manquant dans le JWT' });
+      return res.status(400).json({ error: 'User ID manquant' });
     }
     
-    console.log('✅ userId final utilisé:', userId);
+    await pool.query(
+      `INSERT INTO user_fcm_tokens (user_id, fcm_token, updated_at) 
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id) 
+       DO UPDATE SET fcm_token = $2, updated_at = NOW()`,
+      [userId, token]
+    );
+    
+    console.log(`✅ Token FCM enregistré pour ${userId}`);
+    res.json({ success: true, message: 'Token sauvegardé' });
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde token:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
     
     // Sauvegarder le token dans la base de données
     await pool.query(
