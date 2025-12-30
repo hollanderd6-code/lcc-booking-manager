@@ -3864,53 +3864,6 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
   }
 });
-    // 🔔 NOTIFICATION PUSH FIREBASE
-    try {
-      // Récupérer le token de l'utilisateur
-      const tokenResult = await pool.query(
-        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-        [user.id]
-      );
-      
-      if (tokenResult.rows.length > 0) {
-        const checkInDate = new Date(start).toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'short'
-        });
-        const checkOutDate = new Date(end).toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'short'
-        });
-        
-        await sendNotification(
-          tokenResult.rows[0].fcm_token,
-          '📅 Nouvelle réservation',
-          `${property.name} - ${checkInDate} au ${checkOutDate}`,
-          {
-            type: 'new_reservation',
-            reservation_id: uid,
-            property_name: property.name
-          }
-        );
-        
-        console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
-      }
-    } catch (pushNotifError) {
-      console.error('❌ Erreur notification push:', pushNotifError.message);
-    }
-
-  } catch (notifErr) {
-    console.error('⚠️  Erreur notifications:', notifErr.message);
-  }
-});
-
-  } catch (err) {
-    console.error('❌ Erreur /api/reservations/manual:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  }
-});
 // ============================================
 // ROUTES RÉSERVATIONS - VERSION CORRIGÉE POSTGRESQL
 // Remplace les routes dans server.js
