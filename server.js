@@ -645,15 +645,13 @@ async function uploadToCloudinary(fileBuffer, filename) {
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
   if (!token) {
     return res.status(401).json({ error: 'Token manquant' });
   }
-
   const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-
   try {
     const decoded = jwt.verify(token, secret);
+    console.log('🔍 JWT décodé:', decoded);  // ← AJOUTÉ ICI
     req.user = decoded;
     next();
   } catch (err) {
@@ -11077,11 +11075,23 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
 app.post('/api/save-token', authenticateToken, async (req, res) => {
   try {
     const { token } = req.body;
-    const userId = req.user.userId;
+    
+    console.log('🔍 req.user:', req.user);
+    console.log('🔍 req.user.userId:', req.user?.userId);
+    console.log('🔍 req.user.id:', req.user?.id);
+    
+    const userId = req.user.userId || req.user.id;  // Essayer les deux
     
     if (!token) {
       return res.status(400).json({ error: 'Token manquant' });
     }
+    
+    if (!userId) {
+      console.error('❌ userId est null/undefined !');
+      return res.status(400).json({ error: 'User ID manquant dans le JWT' });
+    }
+    
+    console.log('✅ userId final utilisé:', userId);
     
     // Sauvegarder le token dans la base de données
     await pool.query(
