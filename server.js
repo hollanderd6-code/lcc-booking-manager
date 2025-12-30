@@ -36,7 +36,15 @@ const { setupChatRoutes } = require('./routes/chat_routes');
 // ============================================
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
 // ============================================
-const { sendNotification, sendNotificationToMultiple } = require('./server/notifications-service');
+const { 
+  sendNotification, 
+  sendNotificationToMultiple,
+  sendNewMessageNotification,
+  sendNewCleaningNotification,
+  sendCleaningReminderNotification,
+  sendNewInvoiceNotification,
+  sendNewReservationNotification
+} = require('./server/notifications-service');
 // ============================================
 // ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
 // ============================================
@@ -3770,8 +3778,16 @@ app.post('/api/reservations/manual', async (req, res) => {
         }
 
         // 🔔 NOTIFICATION PUSH FIREBASE
-try {
-  const notifService = require('./server/notifications-service');
+  // Utiliser la fonction déjà importée en haut
+await sendNewReservationNotification(
+  user.id,
+  uid,
+  property.name,
+  guestName || 'Voyageur',
+  start,
+  end,
+  'direct'
+);
   
   console.log('🔍 Fonctions disponibles:', Object.keys(notifService));
   console.log('🔍 Type de sendNewReservationNotification:', typeof notifService.sendNewReservationNotification);
