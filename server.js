@@ -5855,27 +5855,31 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     );
 
     // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
-    try {
-      const { sendNewCleaningNotification } = require('./server/notifications-service');
-      
-      // Récupérer les infos de la réservation pour la date
-      const reservation = await getReservationByKey(user.id, reservationKey);
-      
-      if (reservation && reservation.endDate) {
-        await sendNewCleaningNotification(
-          user.id,
-          reservationKey,
-          property.name,
-          cleanerResult.rows[0].name,
-          reservation.endDate
-        );
-        
-        console.log(`✅ Notification ménage envoyée à ${user.id}`);
-      }
-    } catch (notifError) {
-      console.error('❌ Erreur notification ménage:', notifError.message);
-    }
-
+try {
+  const { sendNewCleaningNotification } = require('./server/notifications-service');
+  
+  // Récupérer la date de fin de la réservation depuis la DB
+  const resResult = await pool.query(
+    'SELECT end_date FROM reservations WHERE uid = $1 OR id::text = $1',
+    [reservationKey]
+  );
+  
+  if (resResult.rows.length > 0) {
+    const cleaningDate = resResult.rows[0].end_date;
+    
+    await sendNewCleaningNotification(
+      user.id,
+      reservationKey,
+      property.name,
+      cleanerResult.rows[0].name,
+      cleaningDate
+    );
+    
+    console.log(`✅ Notification ménage envoyée à ${user.id}`);
+  }
+} catch (notifError) {
+  console.error('❌ Erreur notification ménage:', notifError.message);
+}
     res.json({
       message: 'Assignation ménage enregistrée',
       assignment: {
