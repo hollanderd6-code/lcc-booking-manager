@@ -3776,40 +3776,22 @@ app.post('/api/reservations/manual', async (req, res) => {
           await notifyCleanersAboutNewBookings([reservation]);
           console.log('✅ Notification cleaners envoyée');
         }
-
-        // 🔔 NOTIFICATION PUSH FIREBASE
-  // Utiliser la fonction déjà importée en haut
-await sendNewReservationNotification(
-  user.id,
-  uid,
-  property.name,
-  guestName || 'Voyageur',
-  start,
-  end,
-  'direct'
-);
-  
-  console.log('🔍 Fonctions disponibles:', Object.keys(notifService));
-  console.log('🔍 Type de sendNewReservationNotification:', typeof notifService.sendNewReservationNotification);
-  
-  if (typeof notifService.sendNewReservationNotification === 'function') {
-    await notifService.sendNewReservationNotification(
-      user.id,
-      uid,
-      property.name,
-      guestName || 'Voyageur',
-      start,
-      end,
-      'direct'
-    );
-    
-    console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
-  } else {
-    console.log('❌ sendNewReservationNotification non disponible dans les exports');
-  }
-} catch (pushNotifError) {
-  console.error('❌ Erreur notification push:', pushNotifError.message);
-}
+// 🔔 NOTIFICATION PUSH FIREBASE
+        try {
+          await sendNewReservationNotification(
+            user.id,
+            uid,
+            property.name,
+            guestName || 'Voyageur',
+            start,
+            end,
+            'direct'
+          );
+          
+          console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
+        } catch (pushNotifError) {
+          console.error('❌ Erreur notification push:', pushNotifError.message);
+        }
 
       } catch (notifErr) {
         console.error('⚠️  Erreur notifications:', notifErr.message);
