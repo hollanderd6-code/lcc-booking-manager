@@ -584,76 +584,43 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
         // Créer une notification pour le propriétaire
         await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
         
-        console.log('✅ createNotification terminée, on passe à Firebase...');
-        
         // ============================================
         // 🔔 NOTIFICATION PUSH FIREBASE
         // ============================================
         
-       // Envoyer une notification push au propriétaire
-try {
-  const tokenResult = await pool.query(
-    'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-    [conversation.user_id]
-  );
-  
-  if (tokenResult.rows.length > 0 && tokenResult.rows[0].fcm_token) {
-    const { sendNotification } = require('../server/notifications-service');
-    
-    const messagePreview = message.length > 100 
-      ? message.substring(0, 97) + '...' 
-      : message;
-    
-    const notifResult = await sendNotification(
-      tokenResult.rows[0].fcm_token,
-      '💬 Nouveau message',
-      messagePreview,
-      {
-        type: 'new_chat_message',
-        conversation_id: conversation_id.toString(),
-        property_name: conversation.property_name || 'Logement'
-      }
-    );
-
-    if (notifResult.success) {
-      console.log(`✅ Notification envoyée à ${conversation.user_id}`);
-    } else {
-      console.log(`❌ Échec notification: ${notifResult.error}`);
-    }
-  }
-} catch (notifError) {
-  console.error('❌ Erreur notification:', notifError.message);
-}
+        // Envoyer une notification push au propriétaire
+        try {
+          const tokenResult = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+            [conversation.user_id]
+          );
+          
+          if (tokenResult.rows.length > 0 && tokenResult.rows[0].fcm_token) {
+            const { sendNotification } = require('../server/notifications-service');
             
-            // Préparer le message (max 100 caractères)
             const messagePreview = message.length > 100 
               ? message.substring(0, 97) + '...' 
               : message;
             
-            // Envoyer la notification
-const notifResult = await sendNotification(
-  tokenResult.rows[0].fcm_token,
-  '💬 Nouveau message',
-  messagePreview,
-  {
-    type: 'new_chat_message',
-    conversation_id: conversation_id.toString(),
-    property_name: conversation.property_name || 'Logement'
-  }
-);
+            const notifResult = await sendNotification(
+              tokenResult.rows[0].fcm_token,
+              '💬 Nouveau message',
+              messagePreview,
+              {
+                type: 'new_chat_message',
+                conversation_id: conversation_id.toString(),
+                property_name: conversation.property_name || 'Logement'
+              }
+            );
 
-console.log('🔔 Résultat notification:', notifResult);
-
-if (notifResult.success) {
-  console.log(`✅ Notification push envoyée avec succès à ${conversation.user_id}`);
-} else {
-  console.log(`❌ Échec envoi notification: ${notifResult.error}`);
-}
-
+            if (notifResult.success) {
+              console.log(`✅ Notification envoyée à ${conversation.user_id}`);
+            } else {
+              console.log(`❌ Échec notification: ${notifResult.error}`);
+            }
           }
         } catch (notifError) {
-          console.error('❌ Erreur notification push:', notifError);
-          // Ne pas bloquer l'envoi du message si la notification échoue
+          console.error('❌ Erreur notification:', notifError.message);
         }
       }
 
