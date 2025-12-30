@@ -2396,8 +2396,6 @@ async function loadReservationsFromDB() {
 }
 
 /**
-/**
-/**
  * Sauvegarder une réservation en base
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
@@ -2483,54 +2481,63 @@ async function saveReservationToDB(reservation, propertyId, userId) {
       } catch (notifError) {
         console.error('❌ Erreur notification réservation:', notifError.message);
       }
-    }
-    
-  } catch (error) {
-    console.error('❌ Erreur saveReservationToDB:', error);
-    throw error;
-  }
-}
-    // Si pas de conversation, en créer une
-    if (existingConv.rows.length === 0) {
-      const crypto = require('crypto');
-      const uniqueToken = crypto.randomBytes(32).toString('hex');
-      const photosToken = crypto.randomBytes(32).toString('hex');
-      const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+      // ============================================
+      // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
+      // ============================================
       
-      const convResult = await pool.query(
-        `INSERT INTO conversations 
-        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, photos_token, is_verified, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending')
-        RETURNING id`,
-        [
-          realUserId,
-          propertyId,
-          reservation.start,
-          reservation.end,
-          reservation.platform || 'direct',
-          reservation.guestName || null,
-          reservation.guestEmail || null,
-          pinCode,
-          uniqueToken,
-          photosToken
-        ]
+      // Vérifier si une conversation existe déjà
+      const existingConv = await pool.query(
+        `SELECT id FROM conversations 
+         WHERE property_id = $1 
+         AND reservation_start_date = $2 
+         AND platform = $3`,
+        [propertyId, reservation.start, reservation.platform || 'direct']
       );
-      
-      const conversationId = convResult.rows[0].id;
-      
-      // ✅ Envoyer le message de bienvenue automatique
-      await sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, realUserId);
-      
-      console.log(`✅ Conversation ${conversationId} créée automatiquement pour réservation ${reservation.uid}`);
+
+      // Si pas de conversation, en créer une
+      if (existingConv.rows.length === 0) {
+        const crypto = require('crypto');
+        const uniqueToken = crypto.randomBytes(32).toString('hex');
+        const photosToken = crypto.randomBytes(32).toString('hex');
+        const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        const convResult = await pool.query(
+          `INSERT INTO conversations 
+          (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, photos_token, is_verified, status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending')
+          RETURNING id`,
+          [
+            realUserId,
+            propertyId,
+            reservation.start,
+            reservation.end,
+            reservation.platform || 'direct',
+            reservation.guestName || null,
+            reservation.guestEmail || null,
+            pinCode,
+            uniqueToken,
+            photosToken
+          ]
+        );
+        
+        const conversationId = convResult.rows[0].id;
+        
+        // ✅ Envoyer le message de bienvenue automatique
+        if (typeof sendWelcomeMessageForNewReservation === 'function') {
+          await sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, realUserId);
+        }
+        
+        console.log(`✅ Conversation ${conversationId} créée automatiquement pour réservation ${reservation.uid}`);
+      }
     }
 
     return true;
   } catch (error) {
     console.error('❌ Erreur saveReservationToDB:', error);
-    return false;
+    throw error;
   }
 }
-
 // ============================================
 // ✅ FONCTION HELPER POUR ENVOYER LE MESSAGE DE BIENVENUE
 // Ajouter cette fonction juste après saveReservationToDB
