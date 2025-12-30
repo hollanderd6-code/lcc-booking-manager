@@ -3699,7 +3699,6 @@ app.get('/api/debug-users', async (req, res) => {
 // ENDPOINT /api/reservations/manual
 // (appelé par le frontend)
 // ============================================
-
 app.post('/api/reservations/manual', async (req, res) => {
   console.log('📝 /api/reservations/manual appelé');
   
@@ -3708,21 +3707,17 @@ app.post('/api/reservations/manual', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
     const { propertyId, start, end, guestName, notes } = req.body;
     console.log('📦 Données reçues:', { propertyId, start, end, guestName });
-
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
-
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       console.log('❌ Logement non trouvé:', propertyId);
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
     console.log('✅ Logement trouvé:', property.name);
-
     const uid = 'manual_' + Date.now();
     const reservation = {
       uid: uid,
@@ -3740,7 +3735,6 @@ app.post('/api/reservations/manual', async (req, res) => {
       userId: user.id
     };
     console.log('✅ Réservation créée:', uid);
-
     // Sauvegarde
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
@@ -3750,19 +3744,16 @@ app.post('/api/reservations/manual', async (req, res) => {
     if (typeof saveManualReservations === 'function') {
       await saveManualReservations();
     }
-
     if (!reservationsStore.properties[propertyId]) {
       reservationsStore.properties[propertyId] = [];
     }
     reservationsStore.properties[propertyId].push(reservation);
-
     // Réponse au client AVANT les notifications
     res.status(201).json({
       message: 'Réservation manuelle créée',
       reservation: reservation
     });
     console.log('✅ Réponse envoyée au client');
-
     // Notifications en arrière-plan
     setImmediate(async () => {
       try {
@@ -3777,11 +3768,30 @@ app.post('/api/reservations/manual', async (req, res) => {
           await notifyCleanersAboutNewBookings([reservation]);
           console.log('✅ Notification cleaners envoyée');
         }
+
+        // 🔔 NOTIFICATION PUSH FIREBASE
+        try {
+          const { sendNewReservationNotification } = require('./server/notifications-service');
+          
+          await sendNewReservationNotification(
+            user.id,
+            uid, // On utilise l'UID comme ID de réservation
+            property.name,
+            guestName || 'Voyageur',
+            start,
+            end,
+            'direct' // Réservation manuelle = direct
+          );
+          
+          console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
+        } catch (pushNotifError) {
+          console.error('❌ Erreur notification push:', pushNotifError.message);
+        }
+
       } catch (notifErr) {
         console.error('⚠️  Erreur notifications:', notifErr.message);
       }
     });
-
   } catch (err) {
     console.error('❌ Erreur /api/reservations/manual:', err);
     if (!res.headersSent) {
