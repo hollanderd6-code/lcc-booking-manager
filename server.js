@@ -3778,17 +3778,35 @@ app.post('/api/reservations/manual', async (req, res) => {
         }
 // 🔔 NOTIFICATION PUSH FIREBASE
         try {
-          await sendNewReservationNotification(
-            user.id,
-            uid,
-            property.name,
-            guestName || 'Voyageur',
-            start,
-            end,
-            'direct'
+          // Récupérer le token de l'utilisateur
+          const tokenResult = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+            [user.id]
           );
           
-          console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
+          if (tokenResult.rows.length > 0) {
+            const checkInDate = new Date(start).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'short'
+            });
+            const checkOutDate = new Date(end).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'short'
+            });
+            
+            await sendNotification(
+              tokenResult.rows[0].fcm_token,
+              '📅 Nouvelle réservation',
+              `${property.name} - ${checkInDate} au ${checkOutDate}`,
+              {
+                type: 'new_reservation',
+                reservation_id: uid,
+                property_name: property.name
+              }
+            );
+            
+            console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
+          }
         } catch (pushNotifError) {
           console.error('❌ Erreur notification push:', pushNotifError.message);
         }
