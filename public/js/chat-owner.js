@@ -308,26 +308,30 @@ async function sendMessageOwner() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/messages`, {
+    const response = await fetch(`${API_URL}/api/chat/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({
-  message: content,
-  sender_name: 'Propriétaire'
-})
+        conversation_id: currentConversationId,
+        message: content,
+        sender_type: 'owner',
+        sender_name: 'Propriétaire'
+      })
     });
     
     if (!response.ok) {
-      throw new Error('Erreur envoi message');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erreur envoi message');
     }
+    
     const data = await response.json();
-if (data.message) {
-  appendMessage(data.message);
-  scrollToBottom();
-}
+    if (data.message) {
+      appendMessage(data.message);
+      scrollToBottom();
+    }
     input.value = '';
     input.style.height = 'auto';
     
