@@ -3743,6 +3743,19 @@ app.post('/api/reservations/manual', async (req, res) => {
       userId: user.id
     };
     console.log('✅ Réservation créée:', uid);
+    // 🔥 SAUVEGARDER EN BASE DE DONNÉES
+try {
+  await saveReservationToDB(reservation, propertyId, user.id);
+  console.log('✅ Réservation sauvegardée en DB');
+} catch (dbError) {
+  console.error('❌ Erreur sauvegarde DB:', dbError.message);
+}
+
+// Sauvegarde EN MÉMOIRE (pour compatibilité avec le code existant)
+if (!MANUAL_RESERVATIONS[propertyId]) {
+  MANUAL_RESERVATIONS[propertyId] = [];
+}
+MANUAL_RESERVATIONS[propertyId].push(reservation);
     // Sauvegarde
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
