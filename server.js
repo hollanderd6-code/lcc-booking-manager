@@ -3743,52 +3743,58 @@ app.post('/api/reservations/manual', async (req, res) => {
       userId: user.id
     };
     console.log('✅ Réservation créée:', uid);
-    // 🔥 SAUVEGARDER EN BASE DE DONNÉES
+
+// 🔥 SAUVEGARDER EN BASE DE DONNÉES
 try {
-  await saveReservationToDB(reservation, propertyId, user.id);
+  await pool.query(`
+    INSERT INTO reservations (
+      uid, property_id, user_id,
+      start_date, end_date,
+      guest_name, source, platform, reservation_type,
+      price, currency, status,
+      synced_at, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+    ON CONFLICT (uid) DO NOTHING
+  `, [
+    uid,
+    propertyId,
+    user.id,
+    start,
+    end,
+    guestName || 'Réservation manuelle',
+    'MANUEL',
+    'MANUEL',
+    'manual',
+    0,
+    'EUR',
+    'confirmed'
+  ]);
+  
   console.log('✅ Réservation sauvegardée en DB');
 } catch (dbError) {
   console.error('❌ Erreur sauvegarde DB:', dbError.message);
 }
 
-// Sauvegarde EN MÉMOIRE (pour compatibilité avec le code existant)
+// Sauvegarde en mémoire (pour compatibilité)
 if (!MANUAL_RESERVATIONS[propertyId]) {
   MANUAL_RESERVATIONS[propertyId] = [];
 }
 MANUAL_RESERVATIONS[propertyId].push(reservation);
-    // Sauvegarde
-    if (!MANUAL_RESERVATIONS[propertyId]) {
-      MANUAL_RESERVATIONS[propertyId] = [];
-    }
-    MANUAL_RESERVATIONS[propertyId].push(reservation);
-    
-    if (typeof saveManualReservations === 'function') {
-      await saveManualReservations();
-    }
-    if (!reservationsStore.properties[propertyId]) {
-      reservationsStore.properties[propertyId] = [];
-    }
-    reservationsStore.properties[propertyId].push(reservation);
-    // Réponse au client AVANT les notifications
-    res.status(201).json({
-      message: 'Réservation manuelle créée',
-      reservation: reservation
-    });
-    console.log('✅ Réponse envoyée au client');
-    // Notifications en arrière-plan
-    setImmediate(async () => {
-      try {
-        console.log('📧 Envoi des notifications...');
-        
-        if (typeof notifyOwnersAboutBookings === 'function') {
-          await notifyOwnersAboutBookings([reservation], []);
-          console.log('✅ Notification propriétaire envoyée');
-        }
-        
-        if (typeof notifyCleanersAboutNewBookings === 'function') {
-          await notifyCleanersAboutNewBookings([reservation]);
-          console.log('✅ Notification cleaners envoyée');
-        }
+
+if (typeof saveManualReservations === 'function') {
+  await saveManualReservations();
+}
+if (!reservationsStore.properties[propertyId]) {
+  reservationsStore.properties[propertyId] = [];
+}
+reservationsStore.properties[propertyId].push(reservation);
+
+// Réponse au client AVANT les notifications
+res.status(201).json({
+  message: 'Réservation manuelle créée',
+  reservation: reservation
+});
+console.log('✅ Réponse envoyée au client');
 // 🔔 NOTIFICATION PUSH FIREBASE
         try {
           // Récupérer le token de l'utilisateur
