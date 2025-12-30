@@ -11607,7 +11607,58 @@ cron.schedule('0 18 * * *', async () => {
 });
 
 console.log('✅ CRON rappels J-1 configuré (18h quotidien)');
+// ============================================
+// CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
+// ============================================
 
+async function loadManualReservationsFromDB() {
+  try {
+    console.log('📦 Chargement des réservations manuelles depuis la DB...');
+    
+    const result = await pool.query(`
+      SELECT * FROM reservations 
+      WHERE source = 'MANUEL' 
+      AND status != 'cancelled'
+      ORDER BY start_date ASC
+    `);
+    
+    // Reconstruire les objets réservation en mémoire
+    for (const row of result.rows) {
+      const reservation = {
+        uid: row.uid,
+        start: row.start_date,
+        end: row.end_date,
+        source: row.source,
+        platform: row.platform,
+        type: row.reservation_type,
+        guestName: row.guest_name,
+        notes: '',
+        createdAt: row.created_at,
+        propertyId: row.property_id,
+        propertyName: '', // On le remplira après
+        propertyColor: '#3b82f6',
+        userId: row.user_id
+      };
+      
+      // Ajouter à MANUAL_RESERVATIONS
+      if (!MANUAL_RESERVATIONS[row.property_id]) {
+        MANUAL_RESERVATIONS[row.property_id] = [];
+      }
+      MANUAL_RESERVATIONS[row.property_id].push(reservation);
+      
+      // Ajouter à reservationsStore
+      if (!reservationsStore.properties[row.property_id]) {
+        reservationsStore.properties[row.property_id] = [];
+      }
+      reservationsStore.properties[row.property_id].push(reservation);
+    }
+    
+    console.log(`✅ ${result.rows.length} réservations manuelles chargées depuis la DB`);
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement réservations manuelles:', error);
+  }
+}
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
@@ -11624,7 +11675,7 @@ server.listen(PORT, async () => {
   await loadProperties();
     // ✅ NOUVEAU : Charger les réservations depuis PostgreSQL
   await loadReservationsFromDB();
-  
+  await loadManualReservationsFromDB();
   // Migration one-time (à décommenter UNE SEULE FOIS pour migrer)
   // await migrateManualReservationsToPostgres();
   await loadManualReservations();
