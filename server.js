@@ -3770,23 +3770,30 @@ app.post('/api/reservations/manual', async (req, res) => {
         }
 
         // 🔔 NOTIFICATION PUSH FIREBASE
-        try {
-          const { sendNewReservationNotification } = require('./server/notifications-service');
-          
-          await sendNewReservationNotification(
-            user.id,
-            uid, // On utilise l'UID comme ID de réservation
-            property.name,
-            guestName || 'Voyageur',
-            start,
-            end,
-            'direct' // Réservation manuelle = direct
-          );
-          
-          console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
-        } catch (pushNotifError) {
-          console.error('❌ Erreur notification push:', pushNotifError.message);
-        }
+try {
+  const notifService = require('./server/notifications-service');
+  
+  console.log('🔍 Fonctions disponibles:', Object.keys(notifService));
+  console.log('🔍 Type de sendNewReservationNotification:', typeof notifService.sendNewReservationNotification);
+  
+  if (typeof notifService.sendNewReservationNotification === 'function') {
+    await notifService.sendNewReservationNotification(
+      user.id,
+      uid,
+      property.name,
+      guestName || 'Voyageur',
+      start,
+      end,
+      'direct'
+    );
+    
+    console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
+  } else {
+    console.log('❌ sendNewReservationNotification non disponible dans les exports');
+  }
+} catch (pushNotifError) {
+  console.error('❌ Erreur notification push:', pushNotifError.message);
+}
 
       } catch (notifErr) {
         console.error('⚠️  Erreur notifications:', notifErr.message);
