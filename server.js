@@ -2397,6 +2397,7 @@ async function loadReservationsFromDB() {
 
 /**
 /**
+/**
  * Sauvegarder une réservation en base
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
@@ -2458,7 +2459,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     // 🔔 NOTIFICATION SEULEMENT SI NOUVELLE RÉSERVATION
     if (isNewReservation) {
       try {
-        const { sendNewReservationNotification } = require('../server/notifications-service');
+        const { sendNewReservationNotification } = require('./server/notifications-service');
         
         // Récupérer le nom de la propriété
         const propResult = await pool.query(
@@ -2489,19 +2490,6 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     throw error;
   }
 }
-    // ============================================
-    // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
-    // ============================================
-    
-    // Vérifier si une conversation existe déjà
-    const existingConv = await pool.query(
-      `SELECT id FROM conversations 
-       WHERE property_id = $1 
-       AND reservation_start_date = $2 
-       AND platform = $3`,
-      [propertyId, reservation.start, reservation.platform || 'direct']
-    );
-    
     // Si pas de conversation, en créer une
     if (existingConv.rows.length === 0) {
       const crypto = require('crypto');
