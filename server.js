@@ -2396,6 +2396,7 @@ async function loadReservationsFromDB() {
 }
 
 /**
+/**
  * Sauvegarder une réservation en base
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
@@ -2403,7 +2404,16 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     // Utiliser user_id = 1 (toutes les propriétés appartiennent au même utilisateur)
     const realUserId = 1;
     
-    await pool.query(`
+    // Vérifier si la réservation existe déjà
+    const existingResult = await pool.query(
+      'SELECT id FROM reservations WHERE uid = $1',
+      [reservation.uid]
+    );
+    
+    const isNewReservation = existingResult.rows.length === 0;
+    
+    // Insérer ou mettre à jour
+    const result = await pool.query(`
       INSERT INTO reservations (
         uid, property_id, user_id,
         start_date, end_date,
@@ -2424,6 +2434,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
         raw_ical_data = EXCLUDED.raw_ical_data,
         synced_at = NOW(),
         updated_at = NOW()
+      RETURNING id
     `, [
       reservation.uid,
       propertyId,
@@ -2442,6 +2453,42 @@ async function saveReservationToDB(reservation, propertyId, userId) {
       reservation.rawData ? JSON.stringify(reservation.rawData) : null
     ]);
 
+    const reservationId = result.rows[0].id;
+
+    // 🔔 NOTIFICATION SEULEMENT SI NOUVELLE RÉSERVATION
+    if (isNewReservation) {
+      try {
+        const { sendNewReservationNotification } = require('../server/notifications-service');
+        
+        // Récupérer le nom de la propriété
+        const propResult = await pool.query(
+          'SELECT name FROM properties WHERE id = $1',
+          [propertyId]
+        );
+        
+        if (propResult.rows.length > 0) {
+          await sendNewReservationNotification(
+            realUserId,
+            reservationId,
+            propResult.rows[0].name,
+            reservation.guestName || 'Voyageur',
+            reservation.start,
+            reservation.end,
+            reservation.platform || 'direct'
+          );
+          
+          console.log(`✅ Notification réservation envoyée pour ${propResult.rows[0].name}`);
+        }
+      } catch (notifError) {
+        console.error('❌ Erreur notification réservation:', notifError.message);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur saveReservationToDB:', error);
+    throw error;
+  }
+}
     // ============================================
     // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
     // ============================================
@@ -5756,40 +5803,94 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// ============================================
-// ROUTES API - ASSIGNATIONS MENAGE (par user)
-// ============================================
-
-// GET - Liste des assignations de ménage
-app.get('/api/cleaning/assignments', async (req, res) => {
+app.post('/api/cleaning/assignments', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const result = await pool.query(
-      `
-      SELECT
-        ca.reservation_key,
-        ca.property_id,
-        ca.cleaner_id,
-        c.name  AS cleaner_name,
-        c.email AS cleaner_email,
-        c.phone AS cleaner_phone
-      FROM cleaning_assignments ca
-      LEFT JOIN cleaners c ON c.id = ca.cleaner_id
-      WHERE ca.user_id = $1
-      ORDER BY ca.reservation_key ASC
-      `,
-      [user.id]
+    const { reservationKey, propertyId, cleanerId } = req.body || {};
+
+    if (!reservationKey || !propertyId) {
+      return res.status(400).json({ error: 'reservationKey et propertyId requis' });
+    }
+
+    // Si cleanerId vide → on supprime l'assignation
+    if (!cleanerId) {
+      await pool.query(
+        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+        [user.id, reservationKey]
+      );
+      return res.json({
+        message: 'Assignation ménage supprimée',
+        reservationKey
+      });
+    }
+
+    // Vérifier que le logement appartient bien à l'utilisateur
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
+    }
+
+    // Vérifier que le cleaner appartient bien à l'utilisateur
+    const cleanerResult = await pool.query(
+      `SELECT id, name, email, phone
+       FROM cleaners
+       WHERE id = $1 AND user_id = $2`,
+      [cleanerId, user.id]
     );
 
+    if (cleanerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Personne de ménage introuvable pour cet utilisateur' });
+    }
+
+    // D'abord, supprimer toute assignation existante pour cette réservation
+    await pool.query(
+      'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+      [user.id, reservationKey]
+    );
+
+    // Puis insérer la nouvelle assignation
+    await pool.query(
+      `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+      [user.id, propertyId, reservationKey, cleanerId]
+    );
+
+    // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
+    try {
+      const { sendNewCleaningNotification } = require('./server/notifications-service');
+      
+      // Récupérer les infos de la réservation pour la date
+      const reservation = await getReservationByKey(user.id, reservationKey);
+      
+      if (reservation && reservation.endDate) {
+        await sendNewCleaningNotification(
+          user.id,
+          reservationKey,
+          property.name,
+          cleanerResult.rows[0].name,
+          reservation.endDate
+        );
+        
+        console.log(`✅ Notification ménage envoyée à ${user.id}`);
+      }
+    } catch (notifError) {
+      console.error('❌ Erreur notification ménage:', notifError.message);
+    }
+
     res.json({
-      assignments: result.rows
+      message: 'Assignation ménage enregistrée',
+      assignment: {
+        reservationKey,
+        propertyId,
+        cleanerId
+      }
     });
   } catch (err) {
-    console.error('Erreur GET /api/cleaning/assignments :', err);
+    console.error('Erreur POST /api/cleaning/assignments :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -10424,6 +10525,71 @@ cron.schedule('0 * * * *', async () => {
 
 console.log('⏰ Tâche CRON emails automatiques activée (toutes les heures)');
 
+// ⏰ Rappels de ménage J-1 (tous les jours à 9h)
+cron.schedule('0 9 * * *', async () => {
+  console.log('⏰ Vérification des rappels de ménage (J-1)...');
+  
+  try {
+    const { sendCleaningReminderNotification } = require('./server/notifications-service');
+    
+    // Date de demain
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    // Récupérer tous les utilisateurs
+    const usersResult = await pool.query('SELECT DISTINCT user_id FROM user_fcm_tokens');
+    
+    for (const userRow of usersResult.rows) {
+      const userId = userRow.user_id;
+      
+      // Récupérer les réservations de demain pour cet utilisateur
+      const reservations = await getReservationsForUser(userId);
+      
+      // Filtrer les réservations qui finissent demain (= ménage demain)
+      const cleaningsTomorrow = reservations.filter(r => {
+        const endDate = new Date(r.endDate).toISOString().split('T')[0];
+        return endDate === tomorrowStr;
+      });
+      
+      // Pour chaque ménage de demain, vérifier s'il y a une assignation
+      for (const reservation of cleaningsTomorrow) {
+        try {
+          const assignmentResult = await pool.query(
+            `SELECT ca.*, c.name as cleaner_name
+             FROM cleaning_assignments ca
+             JOIN cleaners c ON ca.cleaner_id = c.id
+             WHERE ca.user_id = $1 AND ca.reservation_key = $2`,
+            [userId, reservation.key]
+          );
+          
+          if (assignmentResult.rows.length > 0) {
+            const assignment = assignmentResult.rows[0];
+            
+            await sendCleaningReminderNotification(
+              userId,
+              reservation.key,
+              reservation.propertyName,
+              assignment.cleaner_name,
+              reservation.endDate
+            );
+            
+            console.log(`✅ Rappel ménage envoyé pour ${reservation.propertyName}`);
+          }
+        } catch (error) {
+          console.error(`❌ Erreur rappel pour ${reservation.key}:`, error);
+        }
+      }
+    }
+    
+    console.log('✅ Vérification des rappels terminée');
+    
+  } catch (error) {
+    console.error('❌ Erreur cron rappels ménage:', error);
+  }
+});
+
+console.log('✅ Cron job rappels de ménage configuré (9h tous les jours)');
 // ============================================
 // MODIFIER LE WEBHOOK : ENVOYER EMAIL CONFIRMATION
 // ============================================
