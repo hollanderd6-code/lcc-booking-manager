@@ -10764,16 +10764,16 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     await saveManualReservations();
     console.log('💾 MANUAL_RESERVATIONS sauvegardé après suppression');
 
-    // 🔥 SUPPRIMER AUSSI DE POSTGRESQL
-    try {
-      await pool.query(
-        'DELETE FROM reservations WHERE uid = $1 AND user_id = $2',
-        [uid, user.id]
-      );
-      console.log('✅ Réservation supprimée de PostgreSQL:', uid);
-    } catch (dbError) {
-      console.error('❌ Erreur suppression DB:', dbError.message);
-    }
+    // 🔥 SUPPRIMER DE POSTGRESQL
+try {
+  const deleteResult = await pool.query(
+    'DELETE FROM reservations WHERE uid = $1',
+    [uid]
+  );
+  console.log(`✅ Réservation supprimée de PostgreSQL: ${uid} (${deleteResult.rowCount} ligne(s))`);
+} catch (dbError) {
+  console.error('❌ Erreur suppression DB:', dbError.message);
+}
 
     // Mise à jour du reservationsStore (UNE SEULE FOIS)
     if (reservationsStore.properties[propertyId]) {
