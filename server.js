@@ -3799,6 +3799,13 @@ if (!MANUAL_RESERVATIONS[propertyId]) {
 }
 MANUAL_RESERVATIONS[propertyId].push(reservation);
 console.log('✅ Ajouté à MANUAL_RESERVATIONS');
+
+// 🔥 AJOUTER AUSSI DANS reservationsStore pour affichage immédiat
+if (!reservationsStore.properties[propertyId]) {
+  reservationsStore.properties[propertyId] = [];
+}
+reservationsStore.properties[propertyId].push(reservation);
+console.log('✅ Ajouté à reservationsStore');
     
     // Réponse au client AVANT les notifications
     res.status(201).json({
@@ -4136,7 +4143,13 @@ app.post('/api/blocks', async (req, res) => {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(block);
+// ✅ AJOUTER CES LIGNES :
+if (!reservationsStore.properties[propertyId]) {
+  reservationsStore.properties[propertyId] = [];
+}
+reservationsStore.properties[propertyId].push(block);
 
+res.status(201).json({
     res.status(201).json({
       message: 'Blocage créé',
       block
@@ -4597,7 +4610,13 @@ app.post('/api/bookings', async (req, res) => {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(reservation);
+// ✅ AJOUTER CES LIGNES :
+if (!reservationsStore.properties[propertyId]) {
+  reservationsStore.properties[propertyId] = [];
+}
+reservationsStore.properties[propertyId].push(reservation);
 
+const bookingForClient = {
     const bookingForClient = {
       id: reservation.uid,
       propertyId: property.id,
