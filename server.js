@@ -10768,9 +10768,6 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
     }
 
-    await saveManualReservations();
-    console.log('💾 MANUAL_RESERVATIONS sauvegardé après suppression');
-
     // 🔥 SUPPRIMER DE POSTGRESQL
 try {
   const deleteResult = await pool.query(
