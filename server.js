@@ -4114,18 +4114,14 @@ app.post('/api/blocks', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
     const { propertyId, start, end, reason } = req.body || {};
-
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
-
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
-
     const block = {
       uid: 'block_' + Date.now(),
       propertyId,
@@ -4138,18 +4134,18 @@ app.post('/api/blocks', async (req, res) => {
       notes: reason || '',
       createdAt: new Date().toISOString()
     };
-
+    
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(block);
-// ✅ AJOUTER CES LIGNES :
-if (!reservationsStore.properties[propertyId]) {
-  reservationsStore.properties[propertyId] = [];
-}
-reservationsStore.properties[propertyId].push(block);
-
-res.status(201).json({
+    
+    // ✅ AJOUTER AUSSI DANS reservationsStore
+    if (!reservationsStore.properties[propertyId]) {
+      reservationsStore.properties[propertyId] = [];
+    }
+    reservationsStore.properties[propertyId].push(block);
+    
     res.status(201).json({
       message: 'Blocage créé',
       block
