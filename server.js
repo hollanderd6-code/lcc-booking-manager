@@ -11676,54 +11676,55 @@ server.listen(PORT, async () => {
   console.log('');
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
   console.log('');
-
+  
   await initDb();
-
-// ✅ Initialiser les tables livrets d'accueil
-await initWelcomeBookTables(pool);
-console.log('✅ Tables welcome_books initialisées');
-
-// ✅ Charger les propriétés
-await loadProperties();
-
-// ✅ Charger les réservations depuis PostgreSQL
-await loadReservationsFromDB();
-
-// ✅ Charger les réservations manuelles depuis PostgreSQL (AVANT la synchro iCal)
-await loadManualReservationsFromDB();
-
-// Compatibilité : charger depuis JSON si présent
-await loadManualReservations();
-
-// ✅ Charger les cautions depuis PostgreSQL
-await loadDepositsFromDB();
-
-// ✅ Charger les checklists
-await loadChecklists();
-
-// Migration one-time (à décommenter UNE SEULE FOIS pour migrer)
-// await migrateManualReservationsToPostgres();
-// await migrateDepositsToPostgres();
-
-// Afficher les logements configurés
-console.log('');
-console.log('Logements configurés:');
-PROPERTIES.forEach(p => {
-  const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
-  console.log(`  ${status} ${p.name} (${p.icalUrls.length} source${p.icalUrls.length > 1 ? 's' : ''})`);
-});
-console.log('');
-
-// ✅ Synchronisation initiale (APRÈS le chargement des manuelles)
-console.log('🔄 Synchronisation initiale...');
-await syncAllCalendars();
+  
+  // ✅ Initialiser les tables livrets d'accueil
+  await initWelcomeBookTables(pool);
+  console.log('✅ Tables welcome_books initialisées');
+  
+  // ✅ Charger les propriétés
+  await loadProperties();
+  
+  // ✅ Charger les réservations depuis PostgreSQL
+  await loadReservationsFromDB();
+  
+  // ✅ Charger les réservations manuelles depuis PostgreSQL (AVANT la synchro iCal)
+  await loadManualReservationsFromDB();
+  
+  // Compatibilité : charger depuis JSON si présent
+  await loadManualReservations();
+  
+  // ✅ Charger les cautions depuis PostgreSQL
+  await loadDepositsFromDB();
+  
+  // ✅ Charger les checklists
+  await loadChecklists();
+  
+  // Migration one-time (à décommenter UNE SEULE FOIS pour migrer)
+  // await migrateManualReservationsToPostgres();
+  // await migrateDepositsToPostgres();
+  
+  // Afficher les logements configurés
+  console.log('');
+  console.log('Logements configurés:');
+  PROPERTIES.forEach(p => {
+    const status = p.icalUrls && p.icalUrls.length > 0 ? '✅' : '⚠️';
+    console.log(`  ${status} ${p.name} (${p.icalUrls.length} source${p.icalUrls.length > 1 ? 's' : ''})`);
+  });
+  console.log('');
+  
+  // ✅ Synchronisation initiale (APRÈS le chargement des manuelles)
+  console.log('🔄 Synchronisation initiale...');
+  await syncAllCalendars();
+  
   const syncInterval = parseInt(process.env.SYNC_INTERVAL) || 15;
   cron.schedule(`*/${syncInterval} * * * *`, async () => {
     console.log('');
     console.log('⏰ Synchronisation automatique programmée');
     await syncAllCalendars();
   });
-
+  
   const cleaningPlanHour = parseInt(process.env.CLEANING_PLAN_HOUR || '18', 10); // heure FR (18h par défaut)
   cron.schedule(`0 ${cleaningPlanHour} * * *`, async () => {
     console.log('');
@@ -11731,10 +11732,10 @@ await syncAllCalendars();
     try {
       await sendDailyCleaningPlan();
     } catch (err) {
-      console.error('❌ Erreur lors de l’envoi du planning ménage quotidien :', err);
+      console.error('❌ Erreur lors de l'envoi du planning ménage quotidien :', err);
     }
   });
-
+  
   console.log('');
   console.log(`⏰ Synchronisation automatique: toutes les ${syncInterval} minutes`);
   console.log('');
