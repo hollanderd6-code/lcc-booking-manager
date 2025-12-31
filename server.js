@@ -3793,10 +3793,12 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
     }
     
-    // 🔄 RECHARGER TOUTES les réservations manuelles depuis la DB
-MANUAL_RESERVATIONS = {}; // Vider d'abord
-await loadManualReservationsFromDB();
-console.log('✅ Réservations manuelles rechargées depuis DB');
+// 🔥 AJOUTER DANS MANUAL_RESERVATIONS
+if (!MANUAL_RESERVATIONS[propertyId]) {
+  MANUAL_RESERVATIONS[propertyId] = [];
+}
+MANUAL_RESERVATIONS[propertyId].push(reservation);
+console.log('✅ Ajouté à MANUAL_RESERVATIONS');
     
     // Réponse au client AVANT les notifications
     res.status(201).json({
