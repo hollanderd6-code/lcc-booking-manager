@@ -11654,6 +11654,7 @@ async function loadManualReservationsFromDB() {
         MANUAL_RESERVATIONS[row.property_id] = [];
       }
       MANUAL_RESERVATIONS[row.property_id].push(reservation);
+    }
     
     console.log(`✅ ${result.rows.length} réservations manuelles chargées depuis la DB`);
     
