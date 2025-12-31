@@ -3793,12 +3793,10 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
     }
     
-    // 🔥 AJOUTER DANS MANUAL_RESERVATIONS
-    if (!MANUAL_RESERVATIONS[propertyId]) {
-      MANUAL_RESERVATIONS[propertyId] = [];
-    }
-    MANUAL_RESERVATIONS[propertyId].push(reservation);
-    console.log('✅ Ajouté à MANUAL_RESERVATIONS');
+    // 🔄 RECHARGER TOUTES les réservations manuelles depuis la DB
+MANUAL_RESERVATIONS = {}; // Vider d'abord
+await loadManualReservationsFromDB();
+console.log('✅ Réservations manuelles rechargées depuis DB');
     
     // Réponse au client AVANT les notifications
     res.status(201).json({
@@ -11656,13 +11654,6 @@ async function loadManualReservationsFromDB() {
         MANUAL_RESERVATIONS[row.property_id] = [];
       }
       MANUAL_RESERVATIONS[row.property_id].push(reservation);
-      
-      // Ajouter à reservationsStore
-      if (!reservationsStore.properties[row.property_id]) {
-        reservationsStore.properties[row.property_id] = [];
-      }
-      reservationsStore.properties[row.property_id].push(reservation);
-    }
     
     console.log(`✅ ${result.rows.length} réservations manuelles chargées depuis la DB`);
     
