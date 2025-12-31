@@ -11610,7 +11610,6 @@ console.log('✅ CRON rappels J-1 configuré (18h quotidien)');
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
-
 async function loadManualReservationsFromDB() {
   try {
     console.log('📦 Chargement des réservations manuelles depuis la DB...');
@@ -11635,9 +11634,10 @@ async function loadManualReservationsFromDB() {
         notes: '',
         createdAt: row.created_at,
         propertyId: row.property_id,
-        propertyName: '', // On le remplira après
+        propertyName: '', // Sera rempli par la synchro
         propertyColor: '#3b82f6',
-        userId: row.user_id
+        userId: row.user_id,
+        nights: Math.ceil((new Date(row.end_date) - new Date(row.start_date)) / (1000 * 60 * 60 * 24))
       };
       
       // Ajouter à MANUAL_RESERVATIONS
@@ -11654,6 +11654,12 @@ async function loadManualReservationsFromDB() {
     }
     
     console.log(`✅ ${result.rows.length} réservations manuelles chargées depuis la DB`);
+    
+    // 📊 DEBUG : Afficher combien de réservations par propriété
+    console.log('📊 Répartition par propriété:');
+    for (const [propId, reservations] of Object.entries(MANUAL_RESERVATIONS)) {
+      console.log(`  - ${propId}: ${reservations.length} réservations`);
+    }
     
   } catch (error) {
     console.error('❌ Erreur chargement réservations manuelles:', error);
