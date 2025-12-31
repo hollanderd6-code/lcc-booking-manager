@@ -3513,28 +3513,27 @@ async function syncAllCalendars() {
       // Base = iCal
       reservationsStore.properties[property.id] = newIcalReservations;
 
-      // SAUVEGARDER DANS POSTGRESQL
-      if (newIcalReservations.length > 0) {
-        await savePropertyReservations(property.id, newIcalReservations, property.userId);
-      }
-      
+     // SAUVEGARDER DANS POSTGRESQL
+if (newIcalReservations.length > 0) {
+  await savePropertyReservations(property.id, newIcalReservations, property.userId);
+}
+
 console.log(`🔍 Recherche manuelles pour property.id: ${property.id}`);
 console.log(`🔍 Clés dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
 const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
 console.log(`🔍 Trouvé ${manualForProperty.length} réservations manuelles`);
-      // Ajouter les réservations manuelles (y compris blocages)
-      const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
-      if (manualForProperty.length > 0) {
-        reservationsStore.properties[property.id] = [
-          ...reservationsStore.properties[property.id],
-          ...manualForProperty
-        ];
-      }
 
-      console.log(
-        `✅ ${property.name}: ${reservationsStore.properties[property.id].length} ` +
-        `réservations (iCal + manuelles)`
-      );
+// Ajouter les réservations manuelles (y compris blocages)
+if (manualForProperty.length > 0) {
+  reservationsStore.properties[property.id] = [
+    ...reservationsStore.properties[property.id],
+    ...manualForProperty
+  ];
+}
+console.log(
+  `✅ ${property.name}: ${reservationsStore.properties[property.id].length} ` +
+  `réservations (iCal + manuelles)`
+);
     } catch (error) {
       console.error(`❌' Erreur lors de la synchronisation de ${property.name}:`, error.message);
     }
