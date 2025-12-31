@@ -3793,20 +3793,20 @@ app.post('/api/reservations/manual', async (req, res) => {
       console.error('❌ Erreur sauvegarde DB:', dbError.message);
     }
     
-    // Sauvegarde en mémoire (pour compatibilité)
-    if (!MANUAL_RESERVATIONS[propertyId]) {
-      MANUAL_RESERVATIONS[propertyId] = [];
-    }
-    MANUAL_RESERVATIONS[propertyId].push(reservation);
-    
-    if (typeof saveManualReservations === 'function') {
-      await saveManualReservations();
-    }
-    
-    if (!reservationsStore.properties[propertyId]) {
-      reservationsStore.properties[propertyId] = [];
-    }
-    reservationsStore.properties[propertyId].push(reservation);
+    // ❌ SUPPRIMÉ : Sauvegarde en mémoire (causait des doublons)
+    // ❌ SUPPRIMÉ : if (!MANUAL_RESERVATIONS[propertyId]) {
+    // ❌ SUPPRIMÉ :   MANUAL_RESERVATIONS[propertyId] = [];
+    // ❌ SUPPRIMÉ : }
+    // ❌ SUPPRIMÉ : MANUAL_RESERVATIONS[propertyId].push(reservation);
+    // ❌ SUPPRIMÉ : 
+    // ❌ SUPPRIMÉ : if (typeof saveManualReservations === 'function') {
+    // ❌ SUPPRIMÉ :   await saveManualReservations();
+    // ❌ SUPPRIMÉ : }
+    // ❌ SUPPRIMÉ : 
+    // ❌ SUPPRIMÉ : if (!reservationsStore.properties[propertyId]) {
+    // ❌ SUPPRIMÉ :   reservationsStore.properties[propertyId] = [];
+    // ❌ SUPPRIMÉ : }
+    // ❌ SUPPRIMÉ : reservationsStore.properties[propertyId].push(reservation);
     
     // Réponse au client AVANT les notifications
     res.status(201).json({
@@ -3815,21 +3815,21 @@ app.post('/api/reservations/manual', async (req, res) => {
     });
     console.log('✅ Réponse envoyée au client');
     
-    // Notifications en arrière-plan
+    // Notifications en arrière-plan (UNE SEULE FOIS)
     setImmediate(async () => {
       try {
-        console.log('📧 Envoi des notifications...');
+        console.log('📧 Envoi de la notification...');
         
+        // Envoyer UNIQUEMENT notifyOwnersAboutBookings (qui gère tout)
         if (typeof notifyOwnersAboutBookings === 'function') {
           await notifyOwnersAboutBookings([reservation], []);
-          console.log('✅ Notification propriétaire envoyée');
+          console.log('✅ Notification envoyée');
         }
         
-        if (typeof notifyCleanersAboutNewBookings === 'function') {
-          await notifyCleanersAboutNewBookings([reservation]);
-          console.log('✅ Notification cleaners envoyée');
-        }
-
+      } catch (notifError) {
+        console.error('❌ Erreur notification:', notifError.message);
+      }
+    });
         // 🔔 NOTIFICATION PUSH FIREBASE
         try {
           const tokenResult = await pool.query(
