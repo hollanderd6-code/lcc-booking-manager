@@ -3532,12 +3532,26 @@ console.log(`🔍 Clés dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATI
 const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
 console.log(`🔍 Trouvé ${manualForProperty.length} réservations manuelles`);
 
-// Ajouter les réservations manuelles (y compris blocages)
+// Ajouter les réservations manuelles SANS DOUBLON
 if (manualForProperty.length > 0) {
-  reservationsStore.properties[property.id] = [
-    ...reservationsStore.properties[property.id],
-    ...manualForProperty
-  ];
+  // Créer un Set des UIDs déjà présents dans reservationsStore
+  const existingUids = new Set(
+    reservationsStore.properties[property.id].map(r => r.uid)
+  );
+  
+  // Filtrer pour ne garder que les nouvelles réservations
+  const newManuals = manualForProperty.filter(r => !existingUids.has(r.uid));
+  
+  // Ajouter uniquement les nouvelles
+  if (newManuals.length > 0) {
+    reservationsStore.properties[property.id] = [
+      ...reservationsStore.properties[property.id],
+      ...newManuals
+    ];
+    console.log(`➕ ${newManuals.length} nouvelles réservations manuelles ajoutées`);
+  } else {
+    console.log(`ℹ️ Aucune nouvelle réservation manuelle (${manualForProperty.length} déjà présentes)`);
+  }
 }
 console.log(
   `✅ ${property.name}: ${reservationsStore.properties[property.id].length} ` +
