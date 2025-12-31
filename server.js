@@ -3762,6 +3762,7 @@ app.post('/api/reservations/manual', async (req, res) => {
     
     console.log('✅ Réservation créée:', uid);
     console.log('🔥🔥🔥 AVANT INSERTION SQL');
+    
     // 🔥 SAUVEGARDER EN BASE DE DONNÉES
     try {
       await pool.query(`
@@ -3791,22 +3792,8 @@ app.post('/api/reservations/manual', async (req, res) => {
       console.log('✅ Réservation sauvegardée en DB');
     } catch (dbError) {
       console.error('❌ Erreur sauvegarde DB:', dbError.message);
+      return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
     }
-    
-    // ❌ SUPPRIMÉ : Sauvegarde en mémoire (causait des doublons)
-    // ❌ SUPPRIMÉ : if (!MANUAL_RESERVATIONS[propertyId]) {
-    // ❌ SUPPRIMÉ :   MANUAL_RESERVATIONS[propertyId] = [];
-    // ❌ SUPPRIMÉ : }
-    // ❌ SUPPRIMÉ : MANUAL_RESERVATIONS[propertyId].push(reservation);
-    // ❌ SUPPRIMÉ : 
-    // ❌ SUPPRIMÉ : if (typeof saveManualReservations === 'function') {
-    // ❌ SUPPRIMÉ :   await saveManualReservations();
-    // ❌ SUPPRIMÉ : }
-    // ❌ SUPPRIMÉ : 
-    // ❌ SUPPRIMÉ : if (!reservationsStore.properties[propertyId]) {
-    // ❌ SUPPRIMÉ :   reservationsStore.properties[propertyId] = [];
-    // ❌ SUPPRIMÉ : }
-    // ❌ SUPPRIMÉ : reservationsStore.properties[propertyId].push(reservation);
     
     // Réponse au client AVANT les notifications
     res.status(201).json({
@@ -3830,6 +3817,12 @@ app.post('/api/reservations/manual', async (req, res) => {
         console.error('❌ Erreur notification:', notifError.message);
       }
     });
+    
+  } catch (err) {
+    console.error('❌ Erreur /api/reservations/manual:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
         // 🔔 NOTIFICATION PUSH FIREBASE
         try {
           const tokenResult = await pool.query(
