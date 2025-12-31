@@ -10763,40 +10763,24 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
 
     await saveManualReservations();
     console.log('💾 MANUAL_RESERVATIONS sauvegardé après suppression');
-// 🔥 SUPPRIMER AUSSI DE POSTGRESQL
-try {
-  await pool.query(
-    'DELETE FROM reservations WHERE uid = $1 AND user_id = $2',
-    [uid, user.id]
-  );
-  console.log('✅ Réservation supprimée de PostgreSQL:', uid);
-} catch (dbError) {
-  console.error('❌ Erreur suppression DB:', dbError.message);
-}
 
-if (reservationsStore.properties[propertyId]) {
-  const initialStoreLength = reservationsStore.properties[propertyId].length;
-  reservationsStore.properties[propertyId] =
-    reservationsStore.properties[propertyId].filter((r) => r.uid !== uid);
-  const newStoreLength = reservationsStore.properties[propertyId].length;
-  console.log('🧮 reservationsStore mis à jour :', {
-    propertyId,
-    uid,
-    initialStoreLength,
-    newStoreLength
-  });
-} else {
-  console.log(
-    'ℹ️ Aucun entry dans reservationsStore pour ce propertyId au moment de la suppression',
-    { propertyId }
-  );
-}
+    // 🔥 SUPPRIMER AUSSI DE POSTGRESQL
+    try {
+      await pool.query(
+        'DELETE FROM reservations WHERE uid = $1 AND user_id = $2',
+        [uid, user.id]
+      );
+      console.log('✅ Réservation supprimée de PostgreSQL:', uid);
+    } catch (dbError) {
+      console.error('❌ Erreur suppression DB:', dbError.message);
+    }
+
+    // Mise à jour du reservationsStore (UNE SEULE FOIS)
     if (reservationsStore.properties[propertyId]) {
       const initialStoreLength = reservationsStore.properties[propertyId].length;
       reservationsStore.properties[propertyId] =
         reservationsStore.properties[propertyId].filter((r) => r.uid !== uid);
       const newStoreLength = reservationsStore.properties[propertyId].length;
-
       console.log('🧮 reservationsStore mis à jour :', {
         propertyId,
         uid,
