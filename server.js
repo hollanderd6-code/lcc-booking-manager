@@ -3517,7 +3517,11 @@ async function syncAllCalendars() {
       if (newIcalReservations.length > 0) {
         await savePropertyReservations(property.id, newIcalReservations, property.userId);
       }
-
+      
+console.log(`🔍 Recherche manuelles pour property.id: ${property.id}`);
+console.log(`🔍 Clés dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
+const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
+console.log(`🔍 Trouvé ${manualForProperty.length} réservations manuelles`);
       // Ajouter les réservations manuelles (y compris blocages)
       const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
       if (manualForProperty.length > 0) {
