@@ -4136,12 +4136,6 @@ app.post('/api/blocks', async (req, res) => {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(block);
-    await saveManualReservations();
-
-    if (!reservationsStore.properties[propertyId]) {
-      reservationsStore.properties[propertyId] = [];
-    }
-    reservationsStore.properties[propertyId].push(block);
 
     res.status(201).json({
       message: 'Blocage créé',
@@ -4603,12 +4597,6 @@ app.post('/api/bookings', async (req, res) => {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(reservation);
-    await saveManualReservations();
-
-    if (!reservationsStore.properties[propertyId]) {
-      reservationsStore.properties[propertyId] = [];
-    }
-    reservationsStore.properties[propertyId].push(reservation);
 
     const bookingForClient = {
       id: reservation.uid,
