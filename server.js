@@ -1783,11 +1783,20 @@ let DEPOSITS = [];               // { id, reservationUid, amountCents, ... }
 async function loadManualReservations() {
   try {
     const data = await fsp.readFile(MANUAL_RES_FILE, 'utf8');
-    MANUAL_RESERVATIONS = JSON.parse(data);
+    const jsonData = JSON.parse(data);
+    
+    // Fusionner avec les données existantes (de la DB)
+    for (const [propId, reservations] of Object.entries(jsonData)) {
+      if (!MANUAL_RESERVATIONS[propId]) {
+        MANUAL_RESERVATIONS[propId] = [];
+      }
+      MANUAL_RESERVATIONS[propId].push(...reservations);
+    }
+    
     console.log('✅ Réservations manuelles chargées depuis manual-reservations.json');
   } catch (error) {
-    MANUAL_RESERVATIONS = {};
-    console.log('⚠️  Aucun fichier manual-reservations.json, démarrage sans réservations manuelles');
+    // NE RIEN FAIRE - garder les données de la DB
+    console.log('⚠️  Aucun fichier manual-reservations.json, utilisation des données DB uniquement');
   }
 }
 
