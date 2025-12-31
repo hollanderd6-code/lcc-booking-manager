@@ -3793,26 +3793,19 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
     }
     
-    // Réponse au client AVANT les notifications
-res.status(201).json({
-  message: 'Réservation manuelle créée',
-  reservation: reservation
-});
-console.log('✅ Réponse envoyée au client');
-
-// 🔄 RECHARGER les réservations manuelles depuis la DB
-await loadManualReservationsFromDB();
-
-// Notifications en arrière-plan
-setImmediate(async () => {
-  try {
-    console.log('📧 Envoi des notifications...');
-    
-    // 1. Notification email propriétaire
-    if (typeof notifyOwnersAboutBookings === 'function') {
-      await notifyOwnersAboutBookings([reservation], []);
-      console.log('✅ Notification email envoyée');
+    // 🔥 AJOUTER DANS MANUAL_RESERVATIONS
+    if (!MANUAL_RESERVATIONS[propertyId]) {
+      MANUAL_RESERVATIONS[propertyId] = [];
     }
+    MANUAL_RESERVATIONS[propertyId].push(reservation);
+    console.log('✅ Ajouté à MANUAL_RESERVATIONS');
+    
+    // Réponse au client AVANT les notifications
+    res.status(201).json({
+      message: 'Réservation manuelle créée',
+      reservation: reservation
+    });
+    console.log('✅ Réponse envoyée au client');
     
     // Notifications en arrière-plan
     setImmediate(async () => {
