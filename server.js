@@ -11732,7 +11732,7 @@ server.listen(PORT, async () => {
     try {
       await sendDailyCleaningPlan();
     } catch (err) {
-      console.error('❌ Erreur lors de l'envoi du planning ménage quotidien :', err);
+      console.error("❌ Erreur lors de l'envoi du planning ménage quotidien :", err);
     }
   });
   
