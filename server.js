@@ -3718,7 +3718,6 @@ app.get('/api/debug-users', async (req, res) => {
 // ============================================
 // ENDPOINT /api/reservations/manual
 // (appelé par le frontend)
-// ============================================
 app.post('/api/reservations/manual', async (req, res) => {
   console.log('📝 /api/reservations/manual appelé');
   
@@ -3761,7 +3760,6 @@ app.post('/api/reservations/manual', async (req, res) => {
     };
     
     console.log('✅ Réservation créée:', uid);
-    console.log('🔥🔥🔥 AVANT INSERTION SQL');
     
     // 🔥 SAUVEGARDER EN BASE DE DONNÉES
     try {
@@ -3802,28 +3800,18 @@ app.post('/api/reservations/manual', async (req, res) => {
     });
     console.log('✅ Réponse envoyée au client');
     
-    // Notifications en arrière-plan (UNE SEULE FOIS)
+    // Notifications en arrière-plan
     setImmediate(async () => {
       try {
-        console.log('📧 Envoi de la notification...');
+        console.log('📧 Envoi des notifications...');
         
-        // Envoyer UNIQUEMENT notifyOwnersAboutBookings (qui gère tout)
+        // 1. Notification email propriétaire
         if (typeof notifyOwnersAboutBookings === 'function') {
           await notifyOwnersAboutBookings([reservation], []);
-          console.log('✅ Notification envoyée');
+          console.log('✅ Notification email envoyée');
         }
         
-      } catch (notifError) {
-        console.error('❌ Erreur notification:', notifError.message);
-      }
-    });
-    
-  } catch (err) {
-    console.error('❌ Erreur /api/reservations/manual:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-        // 🔔 NOTIFICATION PUSH FIREBASE
+        // 2. Notification push Firebase
         try {
           const tokenResult = await pool.query(
             'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
@@ -3853,12 +3841,12 @@ app.post('/api/reservations/manual', async (req, res) => {
             
             console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
           }
-        } catch (pushNotifError) {
-          console.error('❌ Erreur notification push:', pushNotifError.message);
+        } catch (pushError) {
+          console.error('❌ Erreur notification push:', pushError.message);
         }
-
-      } catch (notifErr) {
-        console.error('⚠️  Erreur notifications:', notifErr.message);
+        
+      } catch (notifError) {
+        console.error('❌ Erreur notifications:', notifError.message);
       }
     });
     
