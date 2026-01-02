@@ -4288,28 +4288,26 @@ function populateEditBookingProperties(selectedPropertyId) {
     } catch (e) {
       console.error('Erreur chargement LCC_PROPERTIES:', e);
     }
-    
-    console.log('🏠 enrichReservationsWithPropertyNames - Properties disponibles:', properties.length);
-    console.log('📋 Réservations à enrichir:', reservations.length);
-    
-    // Logger la première réservation pour voir sa structure
-    if (reservations.length > 0) {
-      console.log('🔬 Structure de la première réservation:', reservations[0]);
-    }
 
     return reservations.map((r, index) => {
       // Si propertyName existe déjà et n'est pas vide, on garde
       if (r.propertyName && r.propertyName.trim()) {
-        console.log(`✅ Réservation ${index} - propertyName déjà présent:`, r.propertyName);
         return r;
       }
 
-      // Chercher le propertyId dans plusieurs champs possibles
-      const propertyId = r.propertyId || r.property_id || r.property || r.propertyKey || r.propId;
-      console.log(`🔍 Réservation ${index} - propertyId trouvé:`, propertyId);
+      // CAS SPÉCIAL : si r.property est un objet avec le nom dedans, on l'utilise directement !
+      if (r.property && typeof r.property === 'object' && r.property.name) {
+        return { ...r, propertyName: r.property.name };
+      }
+
+      // Sinon, on cherche le propertyId (en gérant le cas où property est un objet avec id)
+      const propertyId = r.propertyId || 
+                        r.property_id || 
+                        (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 
+                        r.propertyKey || 
+                        r.propId;
       
       if (!propertyId) {
-        console.log(`⚠️ Réservation ${index} - Aucun propertyId, fallback sur "Logement"`);
         return { ...r, propertyName: 'Logement' };
       }
 
@@ -4321,19 +4319,15 @@ function populateEditBookingProperties(selectedPropertyId) {
       );
 
       if (property) {
-        const name = property.name || property.title || property.label || propertyId;
-        console.log(`✅ Réservation ${index} - Propriété trouvée:`, name);
         return { 
           ...r, 
-          propertyName: name
+          propertyName: property.name || property.title || property.label || propertyId
         };
       }
 
       // Fallback: extraire un nom lisible de l'ID
-      // Par exemple "u_mjcpmi2k-belle-guest-house" -> "Belle guest house"
       let readableName = propertyId;
       if (propertyId.includes('-')) {
-        // Prendre la partie après le dernier "_" et remplacer les "-" par des espaces
         const parts = propertyId.split('_');
         if (parts.length > 1) {
           readableName = parts[parts.length - 1]
@@ -4342,8 +4336,7 @@ function populateEditBookingProperties(selectedPropertyId) {
             .join(' ');
         }
       }
-      
-      console.log(`🔧 Réservation ${index} - Nom extrait de l'ID:`, readableName);
+
       return { ...r, propertyName: readableName };
     });
   }
