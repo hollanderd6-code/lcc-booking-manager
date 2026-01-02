@@ -2325,7 +2325,6 @@
 <style id="mobile-scroll-fix">
 /* ✅ FIX FINAL : 1 seul scroll horizontal (mobile friendly) */
 @media (max-width: 768px) {
-  /* Le scroll horizontal doit être sur le wrapper (et uniquement lui) */
   .calendar-container .calendar-grid-wrapper{
     overflow-x: auto !important;
     overflow-y: visible !important;
@@ -2333,26 +2332,22 @@
     touch-action: pan-x pan-y !important;
   }
 
-  /* La grille ne doit plus être un scroller (sinon conflit de scroll) */
   .calendar-container .calendar-grid{
     overflow: visible !important;
   }
 
-  /* Il faut une largeur de contenu > viewport, sinon pas de scroll */
   .calendar-container .days-header,
   .calendar-container .calendar-grid,
   .calendar-container .calendar-row{
     min-width: max-content !important;
   }
 
-  /* Largeur fixe des colonnes (déjà chez toi, on le verrouille) */
   .calendar-container .days-header .day-header,
   .calendar-container .calendar-cell{
     flex: 0 0 44px !important;
     min-width: 44px !important;
   }
 
-  /* Les éléments cliquables ne doivent pas “casser” le geste */
   .calendar-cell,
   .booking-block{
     touch-action: pan-x pan-y !important;
@@ -7915,6 +7910,39 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/fcm-registration.js"></script>
-    
+<script>
+(function() {
+  const el = document.querySelector('.calendar-grid-wrapper');
+  if (!el) return;
+
+  let startX = 0, startY = 0, startLeft = 0;
+  let dragging = false;
+
+  el.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    startLeft = el.scrollLeft;
+    dragging = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    // On prend la main seulement si le geste est clairement horizontal
+    if (!dragging) {
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) dragging = true;
+      else return;
+    }
+
+    e.preventDefault();
+    el.scrollLeft = startLeft - dx;
+  }, { passive: false });
+})();
+</script>    
 </body>
 </html>
