@@ -371,11 +371,9 @@ async function sendMessageOwner() {
       throw new Error(errorData.error || 'Erreur envoi message');
     }
     
-    const data = await response.json();
-    if (data.message) {
-      appendMessage(data.message);
-      scrollToBottom();
-    }
+    // ✅ On ne fait PLUS appendMessage ici
+    // Socket.IO va s'en charger via l'événement 'new_message'
+    
     input.value = '';
     input.style.height = 'auto';
     
@@ -522,6 +520,7 @@ function connectSocket() {
     // Si c'est dans la conversation actuelle, afficher le message
     if (currentConversationId && message.conversation_id === currentConversationId) {
       appendMessage(message);
+      scrollToBottom(); // ✅ Scroll automatique
     }
     
     // Mettre à jour le compteur de messages non lus
