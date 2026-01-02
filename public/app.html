@@ -2156,57 +2156,134 @@
     }
   }
 </style>
-</style>
 <style>
 /* =================================================================
-   CALENDRIER MOBILE - VERSION SIMPLIFIÉE QUI FONCTIONNE
+   FIX CALENDRIER ULTRA-ROBUSTE (Mobile + Desktop)
    ================================================================= */
 
+/* --- 1. Correctif GLOBAL (Ordi + Mobile) pour les lignes verticales --- */
+/* On applique ça partout pour que les traits aillent jusqu'en bas */
+.calendar-row {
+  display: flex; /* S'assure que c'est flex partout */
+  align-items: stretch; /* Tire les traits vers le bas */
+}
+
+.calendar-cell {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+}
+
+/* --- 2. CONFIGURATION SPÉCIALE MOBILE (< 768px) --- */
 @media (max-width: 768px) {
-  
-  /* 1. WRAPPER : C'est LUI qui scroll */
-  .calendar-wrapper {
-    max-height: 65vh !important;
-    overflow-y: auto !important;
+
+  /* A. Empêcher toute la page de glisser horizontalement */
+  html, body {
     overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
+    position: relative;
   }
-  
-  /* 2. CONTAINER : Hauteur automatique, pas de blocage */
+
+  /* B. Conteneur : Force la ligne (Logements | Grille) */
   .calendar-container {
-    min-height: auto !important;
-    max-height: none !important;
-    height: auto !important;
-    overflow: visible !important;
+    display: flex !important;
+    flex-direction: row !important; /* Important : CÔTE À CÔTE */
+    align-items: flex-start !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow: hidden !important; /* Le scroll se fera DANS le wrapper */
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
   }
-  
-  /* 3. Colonne logements compacte */
+
+  /* C. Colonne Gauche (Logements) : Fixe et solide */
   .property-list-column {
-    width: 90px !important;
-    min-width: 90px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 85px !important;      
+    min-width: 85px !important;
+    max-width: 85px !important;
+    flex-shrink: 0 !important;   /* INTERDIT de rétrécir */
+    background: #fff !important;
+    z-index: 20 !important;      
+    box-shadow: 4px 0 8px rgba(0,0,0,0.05); 
+    border-right: 1px solid #e5e7eb !important;
+  }
+
+  /* D. Partie Droite (Grille) : Scroll Horizontal */
+  .calendar-grid-wrapper {
+    flex: 1 !important;
+    width: 0 !important; /* Hack CSS vital pour forcer le scroll dans un flex */
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #fff;
+  }
+
+  /* E. Synchronisation des hauteurs (50px header / 48px corps) */
+  
+  /* En-têtes */
+  .property-list-header, 
+  .days-header {
+    height: 50px !important; 
+    min-height: 50px !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    box-sizing: border-box !important;
   }
   
+  /* Tête colonne gauche */
+  .property-list-header {
+    font-size: 10px !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    text-align: center;
+    background: #f9fafb !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Tête jours */
+  .day-header {
+    height: 100% !important;
+    min-width: 44px !important; 
+    flex: 0 0 44px !important;
+    justify-content: center !important;
+  }
+
+  /* Lignes du corps */
+  .property-item, 
+  .calendar-row {
+    height: 48px !important; 
+    min-height: 48px !important;
+    box-sizing: border-box !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+  }
+
+  /* Cellule Logement */
   .property-item {
     font-size: 11px !important;
-    padding: 4px 6px !important;
+    padding: 0 4px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    white-space: normal !important; 
+    line-height: 1.2 !important;
   }
   
-  /* 4. Cellules calendrier */
+  .property-item .property-count {
+    display: none !important;
+  }
+
+  /* Cellule Grille */
   .calendar-cell {
-    min-width: 44px !important;
+    min-width: 44px !important; 
+    flex: 0 0 44px !important;
+    height: auto !important;       
+    min-height: 100% !important;   
   }
-  
-  /* 5. SUPPRIMER L'EFFET BOUTON */
-  .calendar-wrapper,
-  .calendar-container,
-  .calendar-grid,
-  .calendar-cell,
-  .property-item,
-  .day-header {
-    -webkit-tap-highlight-color: transparent !important;
-    -webkit-touch-callout: none !important;
-  }
-  
 }
 </style>
 <script src="/js/auth-fetch.js"></script>
@@ -7773,107 +7850,6 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/fcm-registration.js"></script>
-<!-- 
-=============================================================================
-🔧 SOLUTION DÉFINITIVE SCROLL CALENDRIER MOBILE
-À ajouter EN TOUTE FIN, juste avant </body>
-=============================================================================
--->
-
-<style>
-/* SOLUTION MOBILE CALENDRIER - À la fin pour override tout */
-@media (max-width: 768px) {
-  
-  /* 1. Le wrapper parent devient scrollable */
-  .calendar-wrapper {
-    max-height: 60vh !important;
-    overflow-y: scroll !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-  
-  /* 2. Le container intérieur : hauteur auto, pas de scroll */
-  .calendar-container {
-    min-height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  
-  /* 3. Supprimer l'effet tap (effet bouton) */
-  * {
-    -webkit-tap-highlight-color: transparent !important;
-  }
-  
-  .calendar-cell,
-  .property-item,
-  .day-header {
-    -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
-    tap-highlight-color: rgba(0,0,0,0) !important;
-  }
-  
-}
-</style>
-
-<script>
-// FORCER LA CONFIGURATION AU CHARGEMENT
-(function forceCalendarScroll() {
-  
-  function applyFix() {
-    if (window.innerWidth > 768) return;
     
-    console.log('🔧 Application du fix calendrier mobile...');
-    
-    // 1. Wrapper scrollable
-    const wrapper = document.querySelector('.calendar-wrapper');
-    if (wrapper) {
-      wrapper.style.setProperty('max-height', '60vh', 'important');
-      wrapper.style.setProperty('overflow-y', 'scroll', 'important');
-      wrapper.style.setProperty('overflow-x', 'hidden', 'important');
-      wrapper.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-      console.log('✅ Wrapper configuré');
-    }
-    
-    // 2. Container sans restrictions
-    const container = document.querySelector('.calendar-container');
-    if (container) {
-      container.style.setProperty('min-height', 'auto', 'important');
-      container.style.setProperty('max-height', 'none', 'important');
-      container.style.setProperty('overflow', 'visible', 'important');
-      console.log('✅ Container configuré');
-    }
-    
-    // 3. Désactiver scrollIntoView qui interfère
-    const originalScroll = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = function(options) {
-      // Bloquer SEULEMENT sur mobile et SEULEMENT pour les cellules calendrier
-      if (window.innerWidth <= 768 && this.classList && this.classList.contains('calendar-cell')) {
-        console.log('⚠️ scrollIntoView bloqué');
-        return;
-      }
-      return originalScroll.call(this, options);
-    };
-    
-    console.log('✅ Fix calendrier appliqué !');
-  }
-  
-  // Appliquer maintenant
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyFix);
-  } else {
-    applyFix();
-  }
-  
-  // Réappliquer après 1 seconde (au cas où le calendrier se charge après)
-  setTimeout(applyFix, 1000);
-  
-  // Réappliquer quand on change de vue dans le calendrier
-  document.addEventListener('click', function(e) {
-    if (e.target.closest('.view-tab')) {
-      setTimeout(applyFix, 100);
-    }
-  });
-  
-})();
-</script>    
 </body>
 </html>
