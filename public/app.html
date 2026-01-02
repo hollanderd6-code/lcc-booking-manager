@@ -2060,7 +2060,6 @@
     font-size: 20px;
   }
 }
-  <style>
     /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
     @media (max-width: 768px) {
       /* On masque les blocs que tu ne veux pas sur mobile */
@@ -2097,8 +2096,7 @@
         padding-bottom: 80px;
       }
     }
-  </style>
-<style>
+ 
   /* ✨ Fix calendrier MOBILE
      - la page ne glisse plus en horizontal
      - la colonne LOGEMENTS reste alignée avec les lignes de réservations
@@ -2283,36 +2281,227 @@
     min-height: 100% !important;   
   }
 }
-/* UI fixes */
-#todayMovesModal .modal-footer,
-#cleaning48hModal .modal-footer { display: none !important; }
-</style>
-    <!-- 📱 Styles Mobile Natifs -->
-<link rel="stylesheet" href="/css/mobile-native-styles.css">
+<!-- 🔧 CORRECTIF SCROLL CALENDRIER MOBILE - Version finale -->
+<style>
+/* =================================================================
+   FIX SCROLL CALENDRIER MOBILE - SOLUTION DÉFINITIVE
+   ================================================================= */
 
-    <style>
 @media (max-width: 768px) {
+  
+  /* 1. CONTENEUR PRINCIPAL : Autoriser le scroll vertical */
   .calendar-container {
+    display: flex !important;
+    flex-direction: column !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    touch-action: auto !important;
+    touch-action: pan-y !important;
     -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
     max-height: 70vh !important;
     min-height: auto !important;
   }
   
+  /* 2. GRILLE : Scroll horizontal uniquement */
   .calendar-grid {
     overflow-x: auto !important;
     overflow-y: visible !important;
+    touch-action: pan-x !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* 3. WRAPPER DE LA GRILLE */
+  .calendar-grid-wrapper {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+  }
+  
+  /* 4. LISTE DES PROPRIÉTÉS : Pas de scroll interne */
+  .property-list-items {
+    overflow-y: visible !important;
+  }
+  
+  /* 5. HEADER DES JOURS : Scroll horizontal */
+  .days-header {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* 6. TOUS LES ÉLÉMENTS : Permettre les gestes tactiles */
+  .calendar-cell,
+  .booking-block,
+  .property-item,
+  .day-header {
     touch-action: auto !important;
   }
   
-  .calendar-cell,
+  /* 7. WRAPPER CALENDRIER : Hauteur adaptée */
+  .calendar-wrapper {
+    max-height: 80vh;
+    overscroll-behavior: contain;
+  }
+  
+  /* 8. SCROLLBARS VISIBLES */
+  .calendar-grid::-webkit-scrollbar,
+  .days-header::-webkit-scrollbar,
+  .calendar-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  
+  .calendar-grid::-webkit-scrollbar-track,
+  .days-header::-webkit-scrollbar-track,
+  .calendar-container::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+  
+  .calendar-grid::-webkit-scrollbar-thumb,
+  .days-header::-webkit-scrollbar-thumb,
+  .calendar-container::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+  }
+  
+  .calendar-grid::-webkit-scrollbar-thumb:active,
+  .days-header::-webkit-scrollbar-thumb:active,
+  .calendar-container::-webkit-scrollbar-thumb:active {
+    background: #6b7280;
+  }
+  
+}
+
+/* PETITS ÉCRANS (iPhone SE, etc.) */
+@media (max-width: 480px) {
+  .calendar-container {
+    max-height: 65vh !important;
+  }
+  
+  .calendar-cell {
+    height: 24px;
+  }
+  
+  .property-list-column {
+    width: 90px;
+    min-width: 90px;
+  }
+  
+  .property-item {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+  
   .booking-block {
-    touch-action: auto !important;
+    font-size: 9px;
+    padding: 1px 3px;
   }
 }
 </style>
+
+<!-- 🔧 SCRIPT CORRECTIF SCROLL MOBILE -->
+<script>
+(function fixCalendarScrollMobile() {
+  'use strict';
+  
+  function init() {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+    
+    console.log('🔧 Correction scroll calendrier mobile...');
+    
+    const container = document.querySelector('.calendar-container');
+    const grid = document.querySelector('.calendar-grid');
+    const header = document.querySelector('.days-header');
+    const wrapper = document.querySelector('.calendar-grid-wrapper');
+    
+    // 1. FORCER LES STYLES AVEC setProperty
+    if (container) {
+      container.style.setProperty('overflow-y', 'auto', 'important');
+      container.style.setProperty('overflow-x', 'hidden', 'important');
+      container.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+      container.style.setProperty('touch-action', 'pan-y', 'important');
+      container.style.setProperty('max-height', '70vh', 'important');
+      container.style.setProperty('min-height', 'auto', 'important');
+      container.style.setProperty('overscroll-behavior', 'contain', 'important');
+    }
+    
+    if (grid) {
+      grid.style.setProperty('overflow-x', 'auto', 'important');
+      grid.style.setProperty('overflow-y', 'visible', 'important');
+      grid.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+      grid.style.setProperty('touch-action', 'pan-x', 'important');
+    }
+    
+    if (wrapper) {
+      wrapper.style.setProperty('overflow-x', 'auto', 'important');
+      wrapper.style.setProperty('overflow-y', 'visible', 'important');
+    }
+    
+    if (header) {
+      header.style.setProperty('overflow-x', 'auto', 'important');
+      header.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+    }
+    
+    // 2. BLOQUER scrollIntoView SUR LES CELLULES DU CALENDRIER
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function(...args) {
+      if (this.classList && this.classList.contains('calendar-cell')) {
+        console.log('⚠️ scrollIntoView bloqué pour cellule calendrier');
+        return;
+      }
+      return originalScrollIntoView.apply(this, args);
+    };
+    
+    // 3. PERMETTRE LE SCROLL SUR TOUS LES ÉLÉMENTS
+    const allElements = document.querySelectorAll('.calendar-cell, .booking-block, .property-item, .day-header');
+    allElements.forEach(el => {
+      el.style.setProperty('touch-action', 'auto', 'important');
+    });
+    
+    // 4. OBSERVER ET RÉAPPLIQUER APRÈS CHANGEMENTS
+    const observer = new MutationObserver(() => {
+      setTimeout(() => {
+        if (container) {
+          container.style.setProperty('overflow-y', 'auto', 'important');
+          container.style.setProperty('touch-action', 'pan-y', 'important');
+        }
+        if (grid) {
+          grid.style.setProperty('touch-action', 'pan-x', 'important');
+        }
+      }, 50);
+    });
+    
+    if (container) {
+      observer.observe(container, {
+        childList: true,
+        subtree: true
+      });
+    }
+    
+    console.log('✅ Scroll calendrier mobile corrigé');
+  }
+  
+  // INITIALISATION
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  
+  // Réappliquer après délais
+  setTimeout(init, 1000);
+  setTimeout(init, 2000);
+  
+  // Réappliquer au resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(init, 250);
+  });
+  
+})();
+</script>
+
         <!-- 📱 Styles Mobile Natifs -->
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
     <script src="/js/auth-fetch.js"></script>
