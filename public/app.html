@@ -2294,6 +2294,87 @@
 </style>
     <!-- 📱 Styles Mobile Natifs -->
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+    <!-- 
+=============================================================================
+🔧 CORRECTIF CALENDRIER MOBILE - VERSION ULTRA-SIMPLE
+À ajouter JUSTE AVANT </head> dans app.html
+=============================================================================
+-->
+
+<style>
+/* ===================================================================
+   CORRECTIF SCROLL + SUPPRESSION EFFET BOUTON MOBILE
+   =================================================================== */
+
+@media (max-width: 768px) {
+  
+  /* 1. ACTIVER LE SCROLL VERTICAL DU CALENDRIER */
+  .calendar-wrapper {
+    max-height: 65vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* 2. CONTAINER : Pas de hauteur fixe */
+  .calendar-container {
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+  
+  /* 3. SUPPRIMER L'EFFET DE SURBRILLANCE AU TAP (effet bouton) */
+  .calendar-container,
+  .calendar-grid,
+  .calendar-cell,
+  .day-header,
+  .property-item,
+  .calendar-wrapper {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none !important;
+    user-select: none !important;
+  }
+  
+  /* 4. PERMETTRE LE SCROLL SANS INTERFÉRENCE */
+  .calendar-wrapper,
+  .calendar-container,
+  .calendar-grid {
+    touch-action: pan-y pan-x !important;
+  }
+  
+  /* 5. PAS D'EFFET HOVER SUR MOBILE */
+  .calendar-cell:hover,
+  .property-item:hover,
+  .day-header:hover {
+    background: inherit !important;
+    transform: none !important;
+  }
+  
+}
+</style>
+
+<!-- Script pour forcer la correction -->
+<script>
+(function() {
+  if (window.innerWidth > 768) return;
+  
+  // Attendre le chargement
+  setTimeout(function() {
+    const wrapper = document.querySelector('.calendar-wrapper');
+    if (wrapper) {
+      wrapper.style.maxHeight = '65vh';
+      wrapper.style.overflowY = 'auto';
+      wrapper.style.webkitOverflowScrolling = 'touch';
+    }
+    
+    // Désactiver l'effet bouton sur tous les éléments du calendrier
+    const elements = document.querySelectorAll('.calendar-cell, .calendar-container, .calendar-grid, .day-header, .property-item');
+    elements.forEach(el => {
+      el.style.webkitTapHighlightColor = 'transparent';
+    });
+  }, 500);
+})();
+</script>
+
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
