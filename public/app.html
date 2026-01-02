@@ -3739,7 +3739,7 @@ function populateEditBookingProperties(selectedPropertyId) {
           );
           const cleaners = JSON.parse(localStorage.getItem('lcc_cleaners') || '[]');
 
-          const todayStr = new Date().toISOString().slice(0, 10);
+          const todayStr = getTodayString();
 
           const todaysDepartures = (reservations || []).filter((r) => {
             if (!r.end) return false;
@@ -4230,6 +4230,24 @@ function populateEditBookingProperties(selectedPropertyId) {
     x.setHours(0,0,0,0);
     return x;
   }
+  
+  // Nouvelle fonction pour obtenir la date du jour en format ISO sans problème de timezone
+  function getTodayString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Fonction pour formater n'importe quelle date en string local (sans problème de timezone)
+  function toLocalDateString(date) {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
   function addDays(d, n) {
     const x = new Date(d);
     x.setDate(x.getDate() + n);
@@ -4319,7 +4337,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   function computeKpis(reservations, properties) {
     const now = new Date();
     const today0 = startOfDay(now);
-    const todayStr = today0.toISOString().slice(0,10);
+    const todayStr = getTodayString(); // Correction timezone
 
     const window48End = addDays(today0, 2); // today + 48h window as dates (today & tomorrow)
 
@@ -4424,7 +4442,7 @@ function populateEditBookingProperties(selectedPropertyId) {
     const content = document.getElementById(modalId + 'Content');
     if (!modal || !content) return;
 
-    const todayStr = startOfDay(new Date()).toISOString().slice(0,10);
+    const todayStr = getTodayString();
     console.log('🗓️ Today is:', todayStr, '(openTodayMovesModal)');
 
     // Enrichir les réservations avec les noms de logements
@@ -4529,7 +4547,7 @@ function populateEditBookingProperties(selectedPropertyId) {
     const today0 = startOfDay(new Date());
     const window48End = addDays(today0, 2);
     
-    console.log('🧹 Cleaning48h - Today:', today0.toISOString().slice(0,10), 'Window end:', window48End.toISOString().slice(0,10));
+    console.log('🧹 Cleaning48h - Today:', getTodayString(), 'Window end:', toLocalDateString(window48End));
 
     // Enrichir les réservations avec les noms de logements
     const enrichedReservations = enrichReservationsWithPropertyNames(reservations);
