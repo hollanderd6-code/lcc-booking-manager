@@ -4291,6 +4291,11 @@ function populateEditBookingProperties(selectedPropertyId) {
     
     console.log('🏠 enrichReservationsWithPropertyNames - Properties disponibles:', properties.length);
     console.log('📋 Réservations à enrichir:', reservations.length);
+    
+    // Logger la première réservation pour voir sa structure
+    if (reservations.length > 0) {
+      console.log('🔬 Structure de la première réservation:', reservations[0]);
+    }
 
     return reservations.map((r, index) => {
       // Si propertyName existe déjà et n'est pas vide, on garde
@@ -4299,8 +4304,8 @@ function populateEditBookingProperties(selectedPropertyId) {
         return r;
       }
 
-      // Sinon, on cherche dans LCC_PROPERTIES
-      const propertyId = r.propertyId || r.property_id;
+      // Chercher le propertyId dans plusieurs champs possibles
+      const propertyId = r.propertyId || r.property_id || r.property || r.propertyKey || r.propId;
       console.log(`🔍 Réservation ${index} - propertyId trouvé:`, propertyId);
       
       if (!propertyId) {
