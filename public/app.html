@@ -2294,6 +2294,75 @@
 </style>
     <!-- 📱 Styles Mobile Natifs -->
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+    <style>
+/* Correction scroll horizontal calendrier mobile */
+@media (max-width: 768px) {
+  
+  /* 1. Permettre le scroll horizontal sur la grille */
+  .calendar-grid-wrapper {
+    touch-action: pan-x pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* 2. Le calendrier ne doit pas bloquer les gestes */
+  .calendar-wrapper,
+  .calendar-container {
+    touch-action: auto !important;
+  }
+  
+  /* 3. Supprimer l'effet bouton (tap highlight) */
+  .calendar-cell,
+  .day-header,
+  .property-item {
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  
+}
+</style>
+
+<script>
+// Débloquer le scroll horizontal du calendrier
+(function() {
+  if (window.innerWidth > 768) return;
+  
+  // Attendre le chargement
+  document.addEventListener('DOMContentLoaded', function() {
+    
+    setTimeout(function() {
+      // Trouver le calendrier
+      const calendarWrapper = document.querySelector('.calendar-wrapper');
+      const gridWrapper = document.querySelector('.calendar-grid-wrapper');
+      
+      if (!calendarWrapper || !gridWrapper) return;
+      
+      console.log('🔧 Déblocage scroll horizontal calendrier...');
+      
+      // Empêcher le pull-to-refresh d'interférer avec le calendrier
+      calendarWrapper.addEventListener('touchstart', function(e) {
+        // Marquer que le touch commence sur le calendrier
+        e.currentTarget.dataset.touchStarted = 'true';
+      }, { passive: true });
+      
+      calendarWrapper.addEventListener('touchmove', function(e) {
+        // Si le touch a commencé sur le calendrier, ne pas laisser le pull-to-refresh bloquer
+        if (e.currentTarget.dataset.touchStarted === 'true') {
+          e.stopPropagation(); // Empêcher le pull-to-refresh de voir cet événement
+        }
+      }, { passive: true });
+      
+      calendarWrapper.addEventListener('touchend', function(e) {
+        // Reset
+        delete e.currentTarget.dataset.touchStarted;
+      }, { passive: true });
+      
+      console.log('✅ Scroll horizontal calendrier débloqué !');
+      
+    }, 500);
+    
+  });
+  
+})();
+</script>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
