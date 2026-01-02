@@ -2294,87 +2294,6 @@
 </style>
     <!-- 📱 Styles Mobile Natifs -->
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
-    <!-- 
-=============================================================================
-🔧 CORRECTIF CALENDRIER MOBILE - VERSION ULTRA-SIMPLE
-À ajouter JUSTE AVANT </head> dans app.html
-=============================================================================
--->
-
-<style>
-/* ===================================================================
-   CORRECTIF SCROLL + SUPPRESSION EFFET BOUTON MOBILE
-   =================================================================== */
-
-@media (max-width: 768px) {
-  
-  /* 1. ACTIVER LE SCROLL VERTICAL DU CALENDRIER */
-  .calendar-wrapper {
-    max-height: 65vh !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-  
-  /* 2. CONTAINER : Pas de hauteur fixe */
-  .calendar-container {
-    min-height: auto !important;
-    max-height: none !important;
-    height: auto !important;
-  }
-  
-  /* 3. SUPPRIMER L'EFFET DE SURBRILLANCE AU TAP (effet bouton) */
-  .calendar-container,
-  .calendar-grid,
-  .calendar-cell,
-  .day-header,
-  .property-item,
-  .calendar-wrapper {
-    -webkit-tap-highlight-color: transparent !important;
-    -webkit-touch-callout: none !important;
-    user-select: none !important;
-  }
-  
-  /* 4. PERMETTRE LE SCROLL SANS INTERFÉRENCE */
-  .calendar-wrapper,
-  .calendar-container,
-  .calendar-grid {
-    touch-action: pan-y pan-x !important;
-  }
-  
-  /* 5. PAS D'EFFET HOVER SUR MOBILE */
-  .calendar-cell:hover,
-  .property-item:hover,
-  .day-header:hover {
-    background: inherit !important;
-    transform: none !important;
-  }
-  
-}
-</style>
-
-<!-- Script pour forcer la correction -->
-<script>
-(function() {
-  if (window.innerWidth > 768) return;
-  
-  // Attendre le chargement
-  setTimeout(function() {
-    const wrapper = document.querySelector('.calendar-wrapper');
-    if (wrapper) {
-      wrapper.style.maxHeight = '65vh';
-      wrapper.style.overflowY = 'auto';
-      wrapper.style.webkitOverflowScrolling = 'touch';
-    }
-    
-    // Désactiver l'effet bouton sur tous les éléments du calendrier
-    const elements = document.querySelectorAll('.calendar-cell, .calendar-container, .calendar-grid, .day-header, .property-item');
-    elements.forEach(el => {
-      el.style.webkitTapHighlightColor = 'transparent';
-    });
-  }, 500);
-})();
-</script>
-
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
@@ -7931,6 +7850,107 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/fcm-registration.js"></script>
+<!-- 
+=============================================================================
+🔧 SOLUTION DÉFINITIVE SCROLL CALENDRIER MOBILE
+À ajouter EN TOUTE FIN, juste avant </body>
+=============================================================================
+-->
+
+<style>
+/* SOLUTION MOBILE CALENDRIER - À la fin pour override tout */
+@media (max-width: 768px) {
+  
+  /* 1. Le wrapper parent devient scrollable */
+  .calendar-wrapper {
+    max-height: 60vh !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* 2. Le container intérieur : hauteur auto, pas de scroll */
+  .calendar-container {
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  /* 3. Supprimer l'effet tap (effet bouton) */
+  * {
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  
+  .calendar-cell,
+  .property-item,
+  .day-header {
+    -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+    tap-highlight-color: rgba(0,0,0,0) !important;
+  }
+  
+}
+</style>
+
+<script>
+// FORCER LA CONFIGURATION AU CHARGEMENT
+(function forceCalendarScroll() {
+  
+  function applyFix() {
+    if (window.innerWidth > 768) return;
     
+    console.log('🔧 Application du fix calendrier mobile...');
+    
+    // 1. Wrapper scrollable
+    const wrapper = document.querySelector('.calendar-wrapper');
+    if (wrapper) {
+      wrapper.style.setProperty('max-height', '60vh', 'important');
+      wrapper.style.setProperty('overflow-y', 'scroll', 'important');
+      wrapper.style.setProperty('overflow-x', 'hidden', 'important');
+      wrapper.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+      console.log('✅ Wrapper configuré');
+    }
+    
+    // 2. Container sans restrictions
+    const container = document.querySelector('.calendar-container');
+    if (container) {
+      container.style.setProperty('min-height', 'auto', 'important');
+      container.style.setProperty('max-height', 'none', 'important');
+      container.style.setProperty('overflow', 'visible', 'important');
+      console.log('✅ Container configuré');
+    }
+    
+    // 3. Désactiver scrollIntoView qui interfère
+    const originalScroll = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function(options) {
+      // Bloquer SEULEMENT sur mobile et SEULEMENT pour les cellules calendrier
+      if (window.innerWidth <= 768 && this.classList && this.classList.contains('calendar-cell')) {
+        console.log('⚠️ scrollIntoView bloqué');
+        return;
+      }
+      return originalScroll.call(this, options);
+    };
+    
+    console.log('✅ Fix calendrier appliqué !');
+  }
+  
+  // Appliquer maintenant
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyFix);
+  } else {
+    applyFix();
+  }
+  
+  // Réappliquer après 1 seconde (au cas où le calendrier se charge après)
+  setTimeout(applyFix, 1000);
+  
+  // Réappliquer quand on change de vue dans le calendrier
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.view-tab')) {
+      setTimeout(applyFix, 100);
+    }
+  });
+  
+})();
+</script>    
 </body>
 </html>
