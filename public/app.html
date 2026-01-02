@@ -2285,15 +2285,37 @@
     min-height: 100% !important;   
   }
 }
-</style>
-<script src="/js/auth-fetch.js"></script>
-<style>
 /* UI fixes */
 #todayMovesModal .modal-footer,
 #cleaning48hModal .modal-footer { display: none !important; }
 </style>
     <!-- 📱 Styles Mobile Natifs -->
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+
+    <style>
+@media (max-width: 768px) {
+  .calendar-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    touch-action: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 70vh !important;
+    min-height: auto !important;
+  }
+  
+  .calendar-grid {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    touch-action: auto !important;
+  }
+  
+  .calendar-cell,
+  .booking-block {
+    touch-action: auto !important;
+  }
+}
+</style>
+    <script src="/js/auth-fetch.js"></script>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
