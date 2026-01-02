@@ -4197,7 +4197,26 @@ function populateEditBookingProperties(selectedPropertyId) {
   // ---------- helpers ----------
   function dateOnlyStr(v) {
     if (!v) return null;
-    return String(v).slice(0, 10);
+    const s = String(v);
+    
+    // Si c'est déjà au format ISO (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      return s.slice(0, 10);
+    }
+    
+    // Si c'est au format français (DD/MM/YYYY)
+    const frMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (frMatch) {
+      return `${frMatch[3]}-${frMatch[2]}-${frMatch[1]}`; // Convertir en ISO
+    }
+    
+    // Sinon essayer de parser comme date
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().slice(0, 10);
+    }
+    
+    return s.slice(0, 10);
   }
   function formatDateFR(iso) {
     if (!iso) return '';
@@ -4406,9 +4425,11 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (!modal || !content) return;
 
     const todayStr = startOfDay(new Date()).toISOString().slice(0,10);
+    console.log('🗓️ Today is:', todayStr, '(openTodayMovesModal)');
 
     // Enrichir les réservations avec les noms de logements
     const enrichedReservations = enrichReservationsWithPropertyNames(reservations);
+    console.log('📋 Total reservations to check:', enrichedReservations.length);
 
     const rows = (enrichedReservations || [])
       .map(r => {
@@ -4421,6 +4442,19 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         const isIn = s === todayStr;
         const isOut = e === todayStr;
+        
+        // Debug: afficher les dates testées
+        if (isIn || isOut) {
+          console.log('✅ Match found:', {
+            property: r.propertyName,
+            startDate: s,
+            endDate: e,
+            today: todayStr,
+            isCheckIn: isIn,
+            isCheckOut: isOut
+          });
+        }
+        
         if (!isIn && !isOut) return null;
 
         return {
@@ -4436,6 +4470,8 @@ function populateEditBookingProperties(selectedPropertyId) {
         };
       })
       .filter(Boolean);
+
+    console.log('📊 Results found:', rows.length, 'movements today');
 
     if (!rows.length) {
       content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
@@ -4492,9 +4528,12 @@ function populateEditBookingProperties(selectedPropertyId) {
 
     const today0 = startOfDay(new Date());
     const window48End = addDays(today0, 2);
+    
+    console.log('🧹 Cleaning48h - Today:', today0.toISOString().slice(0,10), 'Window end:', window48End.toISOString().slice(0,10));
 
     // Enrichir les réservations avec les noms de logements
     const enrichedReservations = enrichReservationsWithPropertyNames(reservations);
+    console.log('📋 Total reservations to check:', enrichedReservations.length);
 
     const rows = (enrichedReservations || [])
       .map(r => {
