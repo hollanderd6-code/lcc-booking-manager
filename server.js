@@ -11315,20 +11315,19 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
 // ============================================
 app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, async (req, res) => {
   const { conversationId } = req.params;
-  const userId = req.user.id;
   
   try {
-    console.log(`📖 Marquage messages lus - Conversation: ${conversationId}, User: ${userId}`);
+    console.log(`📖 Marquage messages lus - Conversation: ${conversationId}`);
     
-    // Marquer tous les messages de cette conversation comme lus
+    // Marquer tous les messages NON envoyés par le propriétaire comme lus
     const result = await pool.query(
       `UPDATE messages 
        SET is_read = true
        WHERE conversation_id = $1 
-       AND sender_id != $2 
+       AND sender_type != 'owner'
        AND is_read = false
        RETURNING id`,
-      [conversationId, userId]
+      [conversationId]
     );
     
     const markedCount = result.rowCount;
