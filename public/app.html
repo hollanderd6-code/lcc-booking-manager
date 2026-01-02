@@ -4288,16 +4288,23 @@ function populateEditBookingProperties(selectedPropertyId) {
     } catch (e) {
       console.error('Erreur chargement LCC_PROPERTIES:', e);
     }
+    
+    console.log('🏠 enrichReservationsWithPropertyNames - Properties disponibles:', properties.length);
+    console.log('📋 Réservations à enrichir:', reservations.length);
 
-    return reservations.map(r => {
+    return reservations.map((r, index) => {
       // Si propertyName existe déjà et n'est pas vide, on garde
       if (r.propertyName && r.propertyName.trim()) {
+        console.log(`✅ Réservation ${index} - propertyName déjà présent:`, r.propertyName);
         return r;
       }
 
       // Sinon, on cherche dans LCC_PROPERTIES
       const propertyId = r.propertyId || r.property_id;
+      console.log(`🔍 Réservation ${index} - propertyId trouvé:`, propertyId);
+      
       if (!propertyId) {
+        console.log(`⚠️ Réservation ${index} - Aucun propertyId, fallback sur "Logement"`);
         return { ...r, propertyName: 'Logement' };
       }
 
@@ -4309,9 +4316,11 @@ function populateEditBookingProperties(selectedPropertyId) {
       );
 
       if (property) {
+        const name = property.name || property.title || property.label || propertyId;
+        console.log(`✅ Réservation ${index} - Propriété trouvée:`, name);
         return { 
           ...r, 
-          propertyName: property.name || property.title || property.label || propertyId
+          propertyName: name
         };
       }
 
@@ -4328,7 +4337,8 @@ function populateEditBookingProperties(selectedPropertyId) {
             .join(' ');
         }
       }
-
+      
+      console.log(`🔧 Réservation ${index} - Nom extrait de l'ID:`, readableName);
       return { ...r, propertyName: readableName };
     });
   }
