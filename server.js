@@ -11311,6 +11311,43 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
   }
 });
 // ============================================
+// ROUTE : MARQUER LES MESSAGES COMME LUS
+// ============================================
+app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.id;
+  
+  try {
+    console.log(`📖 Marquage messages lus - Conversation: ${conversationId}, User: ${userId}`);
+    
+    // Marquer tous les messages de cette conversation comme lus
+    const result = await pool.query(
+      `UPDATE messages 
+       SET is_read = true
+       WHERE conversation_id = $1 
+       AND sender_id != $2 
+       AND is_read = false
+       RETURNING id`,
+      [conversationId, userId]
+    );
+    
+    const markedCount = result.rowCount;
+    console.log(`✅ ${markedCount} message(s) marqué(s) comme lu(s)`);
+    
+    res.json({ 
+      success: true,
+      markedCount: markedCount
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur marquage messages lus:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur',
+      details: error.message 
+    });
+  }
+});
+// ============================================
 // 🔔 ROUTES NOTIFICATIONS PUSH
 // ============================================
 // Endpoint pour sauvegarder le token FCM d'un utilisateur
