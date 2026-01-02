@@ -4236,6 +4236,66 @@ function populateEditBookingProperties(selectedPropertyId) {
     return '#10b981';
   };
 
+  // Helper pour enrichir les réservations avec les vrais noms de logements
+  function enrichReservationsWithPropertyNames(reservations) {
+    if (!Array.isArray(reservations)) return [];
+    
+    // Récupérer la liste des propriétés
+    let properties = [];
+    try {
+      if (Array.isArray(window.LCC_PROPERTIES)) {
+        properties = window.LCC_PROPERTIES;
+      } else {
+        properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      }
+    } catch (e) {
+      console.error('Erreur chargement LCC_PROPERTIES:', e);
+    }
+
+    return reservations.map(r => {
+      // Si propertyName existe déjà et n'est pas vide, on garde
+      if (r.propertyName && r.propertyName.trim()) {
+        return r;
+      }
+
+      // Sinon, on cherche dans LCC_PROPERTIES
+      const propertyId = r.propertyId || r.property_id;
+      if (!propertyId) {
+        return { ...r, propertyName: 'Logement' };
+      }
+
+      // Chercher le logement correspondant
+      const property = properties.find(p => 
+        p.id === propertyId || 
+        p.propertyId === propertyId ||
+        p.key === propertyId
+      );
+
+      if (property) {
+        return { 
+          ...r, 
+          propertyName: property.name || property.title || property.label || propertyId
+        };
+      }
+
+      // Fallback: extraire un nom lisible de l'ID
+      // Par exemple "u_mjcpmi2k-belle-guest-house" -> "Belle guest house"
+      let readableName = propertyId;
+      if (propertyId.includes('-')) {
+        // Prendre la partie après le dernier "_" et remplacer les "-" par des espaces
+        const parts = propertyId.split('_');
+        if (parts.length > 1) {
+          readableName = parts[parts.length - 1]
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
+      }
+
+      return { ...r, propertyName: readableName };
+    });
+  }
+
   // ---------- KPI compute ----------
   function computeKpis(reservations, properties) {
     const now = new Date();
@@ -4347,7 +4407,10 @@ function populateEditBookingProperties(selectedPropertyId) {
 
     const todayStr = startOfDay(new Date()).toISOString().slice(0,10);
 
-    const rows = (reservations || [])
+    // Enrichir les réservations avec les noms de logements
+    const enrichedReservations = enrichReservationsWithPropertyNames(reservations);
+
+    const rows = (enrichedReservations || [])
       .map(r => {
         const rawStart = r.start || r.startDate;
         const rawEnd = r.end || r.endDate;
@@ -4363,7 +4426,7 @@ function populateEditBookingProperties(selectedPropertyId) {
         return {
           type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
           who: r.guestName || r.summary || 'Réservation',
-          prop: r.propertyName || r.propertyId || '',
+          prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           startStr: formatDateFR(s),
           endStr: formatDateFR(e),
@@ -4430,7 +4493,10 @@ function populateEditBookingProperties(selectedPropertyId) {
     const today0 = startOfDay(new Date());
     const window48End = addDays(today0, 2);
 
-    const rows = (reservations || [])
+    // Enrichir les réservations avec les noms de logements
+    const enrichedReservations = enrichReservationsWithPropertyNames(reservations);
+
+    const rows = (enrichedReservations || [])
       .map(r => {
         const rawEnd = r.end || r.endDate;
         const rawStart = r.start || r.startDate;
@@ -4447,7 +4513,7 @@ function populateEditBookingProperties(selectedPropertyId) {
           startStr: formatDateFR(dateOnlyStr(rawStart)),
           endStr: formatDateFR(dateOnlyStr(rawEnd)),
           who: r.guestName || r.summary || 'Réservation',
-          prop: r.propertyName || r.propertyId || '',
+          prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           riskLevel: r.riskLevel || 'green',
           riskScore: typeof r.riskScore === 'number' ? Math.round(r.riskScore) : null,
