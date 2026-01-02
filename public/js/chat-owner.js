@@ -237,9 +237,53 @@ async function openChat(conversationId) {
   // Charger les messages
   await loadMessages(conversationId);
   
+  // ✅ NOUVEAU : Marquer les messages comme lus
+  await markMessagesAsRead(conversationId);
+  
   // Rejoindre la room Socket.IO
   if (socket) {
     socket.emit('join_conversation', conversationId);
+  }
+}
+
+// ============================================
+// MARQUER LES MESSAGES COMME LUS
+// ============================================
+async function markMessagesAsRead(conversationId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/mark-read`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      // Mettre à jour localement le compteur de non lus
+      const conv = allConversations.find(c => c.id === conversationId);
+      if (conv) {
+        conv.unread_count = 0;
+      }
+      
+      // Mettre à jour le badge visuel de cette conversation
+      const convElement = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+      if (convElement) {
+        const unreadBadge = convElement.querySelector('.unread-badge');
+        if (unreadBadge) {
+          unreadBadge.remove();
+        }
+      }
+      
+      // Mettre à jour les stats globales
+      updateStats();
+      
+      console.log('✅ Messages marqués comme lus pour conversation', conversationId);
+    }
+  } catch (error) {
+    console.error('❌ Erreur marquage messages lus:', error);
+    // Ne pas bloquer l'ouverture du chat si ça échoue
   }
 }
 
