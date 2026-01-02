@@ -526,9 +526,8 @@
       min-height: 500px;
       width: 100%;
       max-width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
+  overflow: hidden;
+}
 /* On évite que les enfants forcent le body à s'élargir */
 .days-header,
 .calendar-row {
@@ -2321,48 +2320,45 @@
 </style>
 
 <script>
-// Débloquer le scroll horizontal du calendrier
-(function() {
-  if (window.innerWidth > 768) return;
-  
-  // Attendre le chargement
-  document.addEventListener('DOMContentLoaded', function() {
-    
-    setTimeout(function() {
-      // Trouver le calendrier
-      const calendarWrapper = document.querySelector('.calendar-wrapper');
-      const gridWrapper = document.querySelector('.calendar-grid-wrapper');
-      
-      if (!calendarWrapper || !gridWrapper) return;
-      
-      console.log('🔧 Déblocage scroll horizontal calendrier...');
-      
-      // Empêcher le pull-to-refresh d'interférer avec le calendrier
-      calendarWrapper.addEventListener('touchstart', function(e) {
-        // Marquer que le touch commence sur le calendrier
-        e.currentTarget.dataset.touchStarted = 'true';
-      }, { passive: true });
-      
-      calendarWrapper.addEventListener('touchmove', function(e) {
-        // Si le touch a commencé sur le calendrier, ne pas laisser le pull-to-refresh bloquer
-        if (e.currentTarget.dataset.touchStarted === 'true') {
-          e.stopPropagation(); // Empêcher le pull-to-refresh de voir cet événement
-        }
-      }, { passive: true });
-      
-      calendarWrapper.addEventListener('touchend', function(e) {
-        // Reset
-        delete e.currentTarget.dataset.touchStarted;
-      }, { passive: true });
-      
-      console.log('✅ Scroll horizontal calendrier débloqué !');
-      
-    }, 500);
-    
-  });
-  
-})();
 </script>
+
+<style id="mobile-scroll-fix">
+/* ✅ FIX FINAL : 1 seul scroll horizontal (mobile friendly) */
+@media (max-width: 768px) {
+  /* Le scroll horizontal doit être sur le wrapper (et uniquement lui) */
+  .calendar-container .calendar-grid-wrapper{
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
+  }
+
+  /* La grille ne doit plus être un scroller (sinon conflit de scroll) */
+  .calendar-container .calendar-grid{
+    overflow: visible !important;
+  }
+
+  /* Il faut une largeur de contenu > viewport, sinon pas de scroll */
+  .calendar-container .days-header,
+  .calendar-container .calendar-grid,
+  .calendar-container .calendar-row{
+    min-width: max-content !important;
+  }
+
+  /* Largeur fixe des colonnes (déjà chez toi, on le verrouille) */
+  .calendar-container .days-header .day-header,
+  .calendar-container .calendar-cell{
+    flex: 0 0 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* Les éléments cliquables ne doivent pas “casser” le geste */
+  .calendar-cell,
+  .booking-block{
+    touch-action: pan-x pan-y !important;
+  }
+}
+</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
