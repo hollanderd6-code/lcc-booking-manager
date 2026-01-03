@@ -389,17 +389,13 @@ body {
   padding: 20px 24px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  /* transition supprimée car elle fait bouger tous les cadres */
 }
 
-/* Effet hover uniquement pour les cartes cliquables */
-.card.clickable {
-  transition: var(--transition-fast);
-  cursor: pointer;
-}
-
-.card.clickable:hover {
-  box-shadow: var(--shadow-md);
-}
+/* Si tu veux un effet hover uniquement sur certaines cartes cliquables, 
+   ajoute la classe .card-clickable et utilise :
+   .card.card-clickable:hover { box-shadow: var(--shadow-md); }
+*/
 
 .card-header {
   display: flex;
