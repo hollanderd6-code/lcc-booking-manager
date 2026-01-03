@@ -1,0 +1,202 @@
+/* ============================================
+   🧹 CLEANING - MODE CARTES
+   
+   CSS pour afficher les ménages en cartes
+   au lieu d'un tableau
+   
+   À ajouter sur cleaning.html
+   ============================================ */
+
+/* ============================================
+   📱 MOBILE & DESKTOP
+   ============================================ */
+
+.cleaning-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  .cleaning-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .cleaning-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================
+   🎴 CARTE INDIVIDUELLE
+   ============================================ */
+
+.cleaning-card {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-left: 3px solid #3B82F6;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.cleaning-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   📋 HEADER DE LA CARTE
+   ============================================ */
+
+.cleaning-card-header {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.cleaning-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  margin: 0;
+}
+
+/* ============================================
+   📝 BODY DE LA CARTE
+   ============================================ */
+
+.cleaning-card-body {
+  margin-bottom: 12px;
+}
+
+/* Ligne avec icône (date) */
+.cleaning-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 10px;
+}
+
+.cleaning-info-row i {
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.cleaning-info-row.date {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Info client */
+.cleaning-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.cleaning-info-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.cleaning-info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+}
+
+/* ============================================
+   🔘 FOOTER AVEC SELECT
+   ============================================ */
+
+.cleaning-card-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+/* Select dans la carte */
+.assign-select-card {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb);
+  color: var(--text-primary, #111827);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.assign-select-card:hover {
+  border-color: #3B82F6;
+  background: var(--bg-primary, #fff);
+}
+
+.assign-select-card:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Option sélectionnée (pas "Aucun") */
+.assign-select-card:has(option:checked:not([value=""])) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05));
+  border-color: #3B82F6;
+  font-weight: 600;
+}
+
+/* ============================================
+   📱 MOBILE OPTIMISATIONS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .cleaning-card {
+    padding: 12px;
+  }
+  
+  .cleaning-card-title {
+    font-size: 15px;
+  }
+  
+  .assign-select-card {
+    padding: 12px;
+    font-size: 15px;
+  }
+}
+
+/* ============================================
+   🌙 DARK MODE
+   ============================================ */
+
+[data-theme="dark"] .cleaning-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .cleaning-card-header,
+[data-theme="dark"] .cleaning-card-footer {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .assign-select-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   FIN DES STYLES CARTES CLEANING
+   ============================================ */
