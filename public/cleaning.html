@@ -725,65 +725,65 @@
       
       function loadLocalData() {
         try {
-          // Les cleaners sont maintenant chargés depuis l'API dans loadRemoteData()
-          // On garde seulement les assignations en localStorage pour la compatibilité
+          // ✅ Charger les cleaners depuis localStorage (comme avant)
+          cleaners = JSON.parse(localStorage.getItem(STORAGE_CLEANERS)) || [];
           assignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN)) || {};
         } catch (e) {
+          cleaners = [];
           assignments = {};
         }
       }
 
       function saveLocalData() {
-        // On ne sauvegarde plus les cleaners en localStorage
-        // Ils sont maintenant gérés uniquement via l'API
+        // ✅ Sauvegarder les cleaners ET les assignations en localStorage
+        localStorage.setItem(STORAGE_CLEANERS, JSON.stringify(cleaners));
         localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
       }
 
-      // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
+      // ✅ Fonction désactivée : les assignations sont maintenant gérées via localStorage
+      // Si tu veux réactiver la synchronisation API, décommente cette fonction
       async function loadAssignmentsFromApi() {
-  try {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) return;
+        // Désactivé pour utiliser localStorage
+        return;
+        /*
+        try {
+          const token = localStorage.getItem('lcc_token');
+          if (!token) return;
 
-    const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
-      headers: {
-        Authorization: 'Bearer ' + token
+          const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
+            headers: {
+              Authorization: 'Bearer ' + token
+            }
+          });
+
+          if (!res.ok) {
+            console.warn('Erreur lors du chargement des assignations ménage', res.status);
+            return;
+          }
+
+          const data = await res.json();
+          const apiMap = {};
+
+          (data.assignments || []).forEach((row) => {
+            const key = row.reservation_key;
+            if (key && row.cleaner_id) {
+              apiMap[key] = row.cleaner_id;
+            }
+          });
+
+          const apiKeys = Object.keys(apiMap);
+
+          if (apiKeys.length > 0) {
+            assignments = Object.assign({}, assignments, apiMap);
+            saveLocalData();
+          } else {
+            console.log("ℹ️ Aucune assignation ménage renvoyée par l'API, on garde les assignations locales.");
+          }
+        } catch (e) {
+          console.error('Erreur loadAssignmentsFromApi()', e);
+        }
+        */
       }
-    });
-
-    if (!res.ok) {
-      console.warn('Erreur lors du chargement des assignations ménage', res.status);
-      return;
-    }
-
-    const data = await res.json();
-    const apiMap = {};
-
-    // On reconstruit une map à partir de ce que renvoie l'API
-    (data.assignments || []).forEach((row) => {
-      const key = row.reservation_key;
-
-      if (key && row.cleaner_id) {
-        apiMap[key] = row.cleaner_id;
-      }
-    });
-
-    const apiKeys = Object.keys(apiMap);
-
-    if (apiKeys.length > 0) {
-      // ✅ On FUSIONNE les assignations API avec les locales
-      // Les données API prennent le dessus si conflit
-      assignments = Object.assign({}, assignments, apiMap);
-      saveLocalData();
-    } else {
-      // ✅ Aucune assignation retournée → on NE TOUCHE PAS aux assignations locales
-      console.log("ℹ️ Aucune assignation ménage renvoyée par l'API, on garde les assignations locales.");
-    }
-  } catch (e) {
-    console.error('Erreur loadAssignmentsFromApi()', e);
-    // En cas d'erreur réseau, on ne touche pas non plus aux assignations locales
-  }
-}
 
 
       async function loadRemoteData() {
@@ -808,19 +808,8 @@
           RESERVATIONS = Array.isArray(data.reservations) ? data.reservations : [];
           PROPERTIES = Array.isArray(data.properties) ? data.properties : [];
 
-          // Charger les cleaners depuis l'API
-          const cleanersResponse = await fetch(`${API_URL}/api/cleaners`, {
-            headers: {
-              Authorization: 'Bearer ' + token
-            }
-          });
-
-          if (cleanersResponse.ok) {
-            const cleanersData = await cleanersResponse.json().catch(() => ({}));
-            if (Array.isArray(cleanersData.cleaners)) {
-              cleaners = cleanersData.cleaners;
-            }
-          }
+          // ✅ Les cleaners sont maintenant chargés depuis localStorage dans loadLocalData()
+          // On n'essaie plus de les charger depuis l'API
 
           // Fallback de démo si aucune propriété
           if (!PROPERTIES.length) {
@@ -1156,43 +1145,39 @@
 
           if (!name) return;
 
+          // ✅ Créer le cleaner localement d'abord
+          const newCleaner = {
+            id: 'cleaner-' + Date.now(),
+            name,
+            email: email || null,
+            phone: phone || null,
+            notes: notes || null,
+            isActive: true
+          };
+
+          // ✅ Ajouter à la liste locale
+          cleaners.push(newCleaner);
+          saveLocalData();
+          
+          cleanerForm.reset();
+          renderCleaners();
+          renderAssignments();
+
+          // Optionnel : Essayer de synchroniser avec l'API si elle existe
           const token = localStorage.getItem('lcc_token');
-          if (!token) {
-            alert('Session expirée, veuillez vous reconnecter');
-            return;
-          }
-
-          try {
-            const response = await fetch(`${API_URL}/api/cleaners`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer ' + token
-              },
-              body: JSON.stringify({
-                name,
-                email: email || null,
-                phone: phone || null,
-                notes: notes || null,
-                isActive: true
-              })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-              throw new Error(data.error || 'Erreur lors de la création');
+          if (token) {
+            try {
+              await fetch(`${API_URL}/api/cleaners`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: 'Bearer ' + token
+                },
+                body: JSON.stringify(newCleaner)
+              }).catch(() => {}); // Ignorer les erreurs API
+            } catch (err) {
+              // API non disponible, pas grave, on a déjà sauvegardé localement
             }
-
-            // Ajouter à la liste locale
-            cleaners.push(data.cleaner);
-            
-            cleanerForm.reset();
-            renderCleaners();
-            renderAssignments();
-          } catch (err) {
-            console.error('Erreur création cleaner:', err);
-            alert('Erreur lors de la création: ' + err.message);
           }
         });
       }
@@ -1209,41 +1194,33 @@
             return;
           }
 
-          const token = localStorage.getItem('lcc_token');
-          if (!token) {
-            alert('Session expirée, veuillez vous reconnecter');
-            return;
-          }
+          // ✅ Retirer de la liste locale d'abord
+          cleaners = cleaners.filter((c) => c.id !== id);
 
-          try {
-            const response = await fetch(`${API_URL}/api/cleaners/${id}`, {
-              method: 'DELETE',
-              headers: {
-                Authorization: 'Bearer ' + token
-              }
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-              throw new Error(data.error || 'Erreur lors de la suppression');
+          // ✅ On enlève les assignations liées
+          Object.keys(assignments).forEach((resKey) => {
+            if (assignments[resKey] === id) {
+              delete assignments[resKey];
             }
+          });
 
-            // Retirer de la liste locale
-            cleaners = cleaners.filter((c) => c.id !== id);
+          saveLocalData();
+          renderCleaners();
+          renderAssignments();
 
-            // On enlève les assignations liées (maintenant par reservation_key)
-            Object.keys(assignments).forEach((resKey) => {
-              if (assignments[resKey] === id) {
-                delete assignments[resKey];
-              }
-            });
-
-            renderCleaners();
-            renderAssignments();
-          } catch (err) {
-            console.error('Erreur suppression cleaner:', err);
-            alert('Erreur lors de la suppression: ' + err.message);
+          // Optionnel : Essayer de synchroniser avec l'API si elle existe
+          const token = localStorage.getItem('lcc_token');
+          if (token) {
+            try {
+              await fetch(`${API_URL}/api/cleaners/${id}`, {
+                method: 'DELETE',
+                headers: {
+                  Authorization: 'Bearer ' + token
+                }
+              }).catch(() => {}); // Ignorer les erreurs API
+            } catch (err) {
+              // API non disponible, pas grave, on a déjà supprimé localement
+            }
           }
         });
       }
@@ -1263,10 +1240,11 @@
       }
 
       // Init
+      // Init
       (async function initCleaningPage() {
-        loadLocalData();
-        await loadRemoteData();
-        await loadAssignmentsFromApi();
+        loadLocalData(); // ✅ Charge cleaners + assignments depuis localStorage
+        await loadRemoteData(); // ✅ Charge réservations + propriétés depuis API
+        // await loadAssignmentsFromApi(); // ❌ Désactivé : on utilise localStorage
         renderCleaners();
         renderAssignments();
       })();
