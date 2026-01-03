@@ -1,0 +1,332 @@
+/* ============================================
+   🎨 BOTTOM BAR AMÉLIORÉE - Mobile Only
+   
+   Ce fichier améliore UNIQUEMENT la navigation
+   mobile en bas. Rien d'autre ne change.
+   
+   À ajouter APRÈS vos CSS existants
+   ============================================ */
+
+/* ============================================
+   📱 BOTTOM NAVIGATION - Mobile uniquement
+   ============================================ */
+
+@media (max-width: 768px) {
+  
+  /* Container de la bottom bar */
+  .mobile-tabs {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 8px 0;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Dark mode */
+  [data-theme="dark"] .mobile-tabs {
+    background: rgba(31, 41, 55, 0.95);
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Boutons individuels */
+  .mobile-tabs .tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: transparent;
+    border: none;
+    color: #9CA3AF;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Icône */
+  .mobile-tabs .tab-btn i {
+    font-size: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Texte */
+  .mobile-tabs .tab-btn span {
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+  }
+  
+  /* ============================================
+     ✨ ÉTAT ACTIF - Effet moderne
+     ============================================ */
+  
+  .mobile-tabs .tab-btn.active {
+    color: #10B981;
+  }
+  
+  .mobile-tabs .tab-btn.active i {
+    transform: translateY(-3px) scale(1.15);
+  }
+  
+  .mobile-tabs .tab-btn.active span {
+    font-weight: 600;
+    opacity: 1;
+  }
+  
+  /* Indicateur visuel sous l'icône active */
+  .mobile-tabs .tab-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: #10B981;
+    border-radius: 50%;
+    animation: indicatorPulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes indicatorPulse {
+    0%, 100% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: translateX(-50%) scale(1.5);
+    }
+  }
+  
+  /* ============================================
+     👆 INTERACTIONS - Feedback tactile
+     ============================================ */
+  
+  /* Hover (desktop touch) */
+  .mobile-tabs .tab-btn:hover:not(.active) {
+    color: #6B7280;
+  }
+  
+  .mobile-tabs .tab-btn:hover:not(.active) i {
+    transform: scale(1.05);
+  }
+  
+  /* Active press */
+  .mobile-tabs .tab-btn:active {
+    transform: scale(0.95);
+  }
+  
+  /* ============================================
+     🔔 BADGE DE NOTIFICATION - Style moderne
+     ============================================ */
+  
+  .mobile-tabs .tab-btn .badge {
+    position: absolute;
+    top: 4px;
+    right: 50%;
+    transform: translateX(16px);
+    min-width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 6px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    border: 2px solid white;
+    animation: badgeBounce 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  [data-theme="dark"] .mobile-tabs .tab-btn .badge {
+    border-color: rgba(31, 41, 55, 0.95);
+  }
+  
+  @keyframes badgeBounce {
+    0% {
+      transform: translateX(16px) scale(0);
+    }
+    50% {
+      transform: translateX(16px) scale(1.2);
+    }
+    100% {
+      transform: translateX(16px) scale(1);
+    }
+  }
+  
+  /* Badge pulse pour attirer l'attention */
+  .mobile-tabs .tab-btn .badge.pulse {
+    animation: badgePulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes badgePulse {
+    0%, 100% {
+      transform: translateX(16px) scale(1);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+    50% {
+      transform: translateX(16px) scale(1.1);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+    }
+  }
+  
+  /* ============================================
+     🎨 ANIMATIONS D'ENTRÉE - Smooth
+     ============================================ */
+  
+  /* Animation au chargement de la page */
+  .mobile-tabs {
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  /* Animation des boutons (effet cascade) */
+  .mobile-tabs .tab-btn:nth-child(1) { animation: fadeInUp 0.3s ease 0.1s backwards; }
+  .mobile-tabs .tab-btn:nth-child(2) { animation: fadeInUp 0.3s ease 0.15s backwards; }
+  .mobile-tabs .tab-btn:nth-child(3) { animation: fadeInUp 0.3s ease 0.2s backwards; }
+  .mobile-tabs .tab-btn:nth-child(4) { animation: fadeInUp 0.3s ease 0.25s backwards; }
+  .mobile-tabs .tab-btn:nth-child(5) { animation: fadeInUp 0.3s ease 0.3s backwards; }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* ============================================
+     🌊 EFFET RIPPLE au clic (optionnel)
+     ============================================ */
+  
+  .mobile-tabs .tab-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+    pointer-events: none;
+  }
+  
+  .mobile-tabs .tab-btn:active::after {
+    width: 60px;
+    height: 60px;
+  }
+  
+  /* ============================================
+     ♿ ACCESSIBILITÉ - Zones tactiles
+     ============================================ */
+  
+  /* Zone minimale de 44x44px pour accessibilité */
+  .mobile-tabs .tab-btn {
+    min-height: 52px;
+    min-width: 52px;
+  }
+  
+  /* Focus visible pour navigation clavier */
+  .mobile-tabs .tab-btn:focus {
+    outline: 2px solid #10B981;
+    outline-offset: 2px;
+  }
+  
+  /* ============================================
+     📐 AJUSTEMENTS SAFE AREA
+     ============================================ */
+  
+  /* iPhone avec encoche */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .mobile-tabs {
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+      min-height: calc(68px + env(safe-area-inset-bottom));
+    }
+  }
+  
+  /* ============================================
+     🎭 VARIANTES DE STYLE (optionnel)
+     ============================================ */
+  
+  /* Style "bulles" - décommentez si vous préférez */
+  /*
+  .mobile-tabs .tab-btn.active {
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 16px;
+    margin: 0 4px;
+  }
+  */
+  
+  /* Style "ligne du haut" - décommentez si vous préférez */
+  /*
+  .mobile-tabs .tab-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: #10B981;
+    border-radius: 0 0 3px 3px;
+    animation: none;
+  }
+  */
+}
+
+/* ============================================
+   💡 MODE RÉDUIT DU MOUVEMENT
+   Pour les utilisateurs qui préfèrent moins d'animations
+   ============================================ */
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .mobile-tabs,
+  .mobile-tabs .tab-btn,
+  .mobile-tabs .tab-btn i,
+  .mobile-tabs .tab-btn span,
+  .mobile-tabs .tab-btn .badge,
+  .mobile-tabs .tab-btn::before,
+  .mobile-tabs .tab-btn::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .mobile-tabs .tab-btn.active i {
+    transform: none;
+  }
+}
