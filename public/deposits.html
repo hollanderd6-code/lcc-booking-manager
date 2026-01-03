@@ -680,53 +680,29 @@ async function copyExistingDepositMessage(reservation) {
         return;
       }
 
-      let html = `
-        <table style="min-width: 800px; width: max-content;">
-          <thead>
-            <tr>
-              <th style="white-space: nowrap;">Logement</th>
-              <th style="white-space: nowrap;">Dates</th>
-              <th style="white-space: nowrap;">Voyageur</th>
-              <th style="white-space: nowrap;">Source</th>
-              <th style="white-space: nowrap;">Caution</th>
-              <th style="white-space: nowrap;">Statut</th>
-              <th style="white-space: nowrap;">Lien</th>
-              <th style="white-space: nowrap;">Actions</th>
-            </tr>
-</thead>
-          <tbody>
-      `;
+      // ============================================
+      // 🎴 MODE CARTES (remplace le tableau)
+      // ============================================
+
+      let html = '<div class="deposits-cards-grid">';
 
       data.forEach((r) => {
         const d = r.deposit || null;
-        let amountText = '<span class="badge badge-empty">Aucune</span>';
+        let amountBadge = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
-        let linkHtml = '';
-
+        
         if (d) {
           if (d.amountCents) {
-            amountText = (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €';
+            amountBadge = '<span class="badge badge-amount">' + (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €</span>';
           }
           if (d.status === 'pending') {
-            statusBadge = '<span class="badge badge-pending">En attente de paiement</span>';
+            statusBadge = '<span class="badge badge-pending">En attente</span>';
           } else if (d.status === 'paid') {
             statusBadge = '<span class="badge badge-paid">Payée</span>';
           } else if (d.status === 'refunded') {
             statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
-          } else {
+          } else if (d.status) {
             statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
-          }
-
-          if (d.checkoutUrl) {
-            const encodedUrl = encodeURIComponent(d.checkoutUrl);
-            linkHtml = `
-              <div class="link-cell">
-                ${d.checkoutUrl}
-                <button class="btn btn-ghost btn-xs" onclick="copyText('${encodedUrl}')">
-                  Copier
-                </button>
-              </div>
-            `;
           }
         }
 
@@ -734,58 +710,65 @@ async function copyExistingDepositMessage(reservation) {
         const rawSource = r.source || r.sourceRaw || r.channel || '';
         const sourceKey = normalizeSourceToKey(rawSource);
         const isAirbnb = sourceKey === 'airbnb';
-        const isBooking = sourceKey === 'booking';
-
-        let sourceLabel = '-';
-        if (sourceKey === 'airbnb') sourceLabel = 'Airbnb';
-        else if (sourceKey === 'booking') sourceLabel = 'Booking.com';
-        else if (sourceKey === 'direct') sourceLabel = 'Direct';
-        else if (sourceKey === 'vrbo') sourceLabel = 'Vrbo';
-        else if (sourceKey === 'expedia') sourceLabel = 'Expedia';
-        else if (sourceKey === 'block') sourceLabel = 'Blocage';
-        else if (rawSource) sourceLabel = rawSource;
 
         const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
 
+        // Actions
         let actionsHtml = '';
-
+        
         if (isAirbnb) {
-  actionsHtml = '<span class="small-hint text-secondary">Caution gérée par Airbnb</span>';
-} else if (d && d.status === 'pending' && d.checkoutUrl) {
-  actionsHtml = `
-    <div class="actions-stack">
-      <button class="btn btn-ghost btn-xs" onclick='copyExistingDepositMessage(${safeJson})'>
-        Copier le message
-      </button>
-      <span class="small-hint text-secondary">Lien déjà créé pour ce séjour</span>
-    </div>
-  `;
-} else if (!d) {
-  actionsHtml = `
-    <button class="btn btn-primary btn-xs" onclick='openDepositModal(${safeJson})'>
-      Créer un lien
-    </button>
-  `;
-} else {
-  actionsHtml = '<span class="small-hint text-secondary">Caution déjà gérée pour ce séjour</span>';
-}
+          actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
+        } else if (d && d.status === 'pending' && d.checkoutUrl) {
+          actionsHtml = `
+            <button class="btn btn-secondary btn-card" onclick='copyExistingDepositMessage(${safeJson})'>
+              <i class="fas fa-copy"></i> Copier le message
+            </button>
+            <div class="card-hint">Lien déjà créé</div>
+          `;
+        } else if (!d) {
+          actionsHtml = `
+            <button class="btn btn-primary btn-card" onclick='openDepositModal(${safeJson})'>
+              <i class="fas fa-link"></i> Créer un lien
+            </button>
+          `;
+        } else {
+          actionsHtml = '<div class="card-hint">Caution déjà gérée</div>';
+        }
 
-
+        // Générer la carte
         html += `
-          <tr>
-            <td>${r.propertyName || 'Logement'}</td>
-            <td>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</td>
-            <td>${r.guestName || '-'}</td>
-            <td>${sourceLabel}</td>
-            <td>${amountText}</td>
-            <td>${statusBadge}</td>
-            <td>${linkHtml || '-'}</td>
-            <td>${actionsHtml}</td>
-          </tr>
+          <div class="deposit-card">
+            <div class="deposit-card-header">
+              <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
+            </div>
+            
+            <div class="deposit-card-body">
+              <div class="deposit-info-row">
+                <i class="fas fa-calendar"></i>
+                <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
+              </div>
+              
+              <div class="deposit-info-grid-simple">
+                <div class="deposit-info-item">
+                  <div class="deposit-info-label">Caution</div>
+                  <div class="deposit-info-value">${amountBadge}</div>
+                </div>
+                
+                <div class="deposit-info-item">
+                  <div class="deposit-info-label">Statut</div>
+                  <div class="deposit-info-value">${statusBadge}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="deposit-card-footer">
+              ${actionsHtml}
+            </div>
+          </div>
         `;
       });
 
-      html += '</tbody></table>';
+      html += '</div>';
       container.innerHTML = html;
     }
 
