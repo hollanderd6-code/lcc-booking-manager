@@ -42,7 +42,7 @@
   });
 
   // ============================================
-  // MENU "PLUS" - SANS TEST NOTIFICATION
+  // MENU "PLUS" - TOUS LES BOUTONS EN SECONDAIRE
   // ============================================
   
   function showMoreMenu() {
@@ -53,7 +53,7 @@
       content: `
         <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
           
-          <button class="btn btn-primary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
+          <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
             <i class="fas fa-user-cog"></i> Paramètres du compte
           </button>
           
