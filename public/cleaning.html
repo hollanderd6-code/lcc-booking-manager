@@ -12,6 +12,7 @@
 <!-- CSS plateforme globale -->
 <link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link href="/css/cleaning-cards-style.css" rel="stylesheet"/>
 <style>
     html, body {
       margin: 0 !important;
@@ -722,13 +723,6 @@
       const cleanerList = document.getElementById('cleanerList');
       const assignContainer = document.getElementById('assignContainer');
       
-function formatDateFr(dateStr) {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-}
       function loadLocalData() {
         try {
           // Les cleaners sont maintenant chargés depuis l'API dans loadRemoteData()
@@ -1007,17 +1001,19 @@ function formatDateFr(dateStr) {
         }
 
         let html = `
-          <table class="assign-table">
-            <thead>
-              <tr>
-                <th>Départ le</th>
-                <th>Logement</th>
-                <th>Client</th>
-                <th>Personne en charge</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
+        if (!upcoming.length) {
+          assignContainer.innerHTML = `
+            <p class="text-secondary" style="font-size:13px;">
+              Aucune réservation future détectée. Les départs apparaîtront ici dès qu'ils seront synchronisés.
+            </p>`;
+          return;
+        }
+
+        // ============================================
+        // 🎴 MODE CARTES (remplace le tableau)
+        // ============================================
+        
+        let html = '<div class="cleaning-cards-grid">';
 
      upcoming.forEach((r) => {
   const key = getReservationKey(r);
@@ -1029,15 +1025,28 @@ function formatDateFr(dateStr) {
     getPropertyNameById(propertyId);
   const guestName = r.guestName || r.name || '';
   const endStr = String(r.end).slice(0, 10);
-  const endDateFr = formatDateFr(endStr);  // ← AJOUTE CETTE LIGNE ICI
+  const endDateFr = formatDateFr(endStr);
   
   html += `
-    <tr>
-      <td>${endDateFr}</td>
-      <td>${propertyName}</td>
-      <td>${guestName || '-'}</td>
-      <td>
-        <select class="assign-select"
+    <div class="cleaning-card">
+      <div class="cleaning-card-header">
+        <h3 class="cleaning-card-title">${propertyName}</h3>
+      </div>
+      
+      <div class="cleaning-card-body">
+        <div class="cleaning-info-row date">
+          <i class="fas fa-calendar-check"></i>
+          <span>Départ le ${endDateFr}</span>
+        </div>
+        
+        <div class="cleaning-info-item">
+          <div class="cleaning-info-label">Client</div>
+          <div class="cleaning-info-value">${guestName || '-'}</div>
+        </div>
+      </div>
+      
+      <div class="cleaning-card-footer">
+        <select class="assign-select assign-select-card"
                 data-reservation-key="${key || ''}"
                 data-property-id="${propertyId || ''}">
           <option value="">Aucun</option>
@@ -1051,12 +1060,51 @@ function formatDateFr(dateStr) {
             )
             .join('')}
         </select>
-      </td>
-    </tr>
+      </div>
+    </div>
   `;
 });
-        html += '</tbody></table>';
+        html += '</div>';
         assignContainer.innerHTML = html;
+
+        assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
+          sel.addEventListener('change', async (e) => {
+            const select = e.target;
+            const key = select.getAttribute('data-reservation-key');
+            const propertyId = select.getAttribute('data-property-id') || null;
+            const cleanerId = select.value;
+
+            if (!key) return;
+
+            if (cleanerId) {
+              assignments[key] = cleanerId;
+            } else {
+              delete assignments[key];
+            }
+            saveLocalData();
+
+            const token = localStorage.getItem('lcc_token');
+            if (!token) return;
+
+            try {
+              await fetch(`${API_URL}/api/cleaning/assignments`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                  reservationKey: key,
+                  propertyId,
+                  cleanerId: cleanerId || null
+                })
+              });
+            } catch (err) {
+              console.error('Erreur sauvegarde assignation ménage', err);
+            }
+          });
+        });
+      }
 
         assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
           sel.addEventListener('change', async (e) => {
