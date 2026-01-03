@@ -1,0 +1,170 @@
+/* ============================================
+   ⚙️ SETTINGS - HARMONISATION
+   
+   CSS pour harmoniser la page settings avec
+   deposits, cleaning, factures
+   
+   À ajouter sur settings.html
+   ============================================ */
+
+/* ============================================
+   🎴 CARTES DE LOGEMENTS - HARMONISATION
+   ============================================ */
+
+/* Forcer la bordure gauche verte comme les autres pages */
+.property-card {
+  border-left: 3px solid #10B981 !important;
+  border-top: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Harmoniser la grille responsive avec les autres pages */
+@media (max-width: 768px) {
+  .properties-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .property-card {
+    padding: 14px 16px !important;
+  }
+  
+  .property-name {
+    font-size: 15px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .properties-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .properties-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ============================================
+   🔘 BOUTONS - HARMONISATION
+   ============================================ */
+
+/* Harmoniser le bouton "Ajouter un logement" */
+.btn-add-property {
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  border: none !important;
+  min-height: 44px !important;
+}
+
+.btn-add-property:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3) !important;
+}
+
+.btn-add-property:active {
+  transform: scale(0.98) !important;
+}
+
+/* Harmoniser les boutons d'action */
+.property-actions .btn {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.property-actions .btn:hover {
+  transform: translateY(-1px);
+}
+
+.property-actions .btn:active {
+  transform: scale(0.98);
+}
+
+/* ============================================
+   📱 MOBILE - AJUSTEMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Empiler les boutons verticalement sur mobile */
+  .property-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  
+  .property-actions .btn {
+    width: 100% !important;
+  }
+  
+  /* Header mobile */
+  .properties-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+  
+  .btn-add-property {
+    width: 100% !important;
+  }
+}
+
+/* ============================================
+   🌙 DARK MODE - HARMONISATION
+   ============================================ */
+
+[data-theme="dark"] .property-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  border-left-color: #10B981 !important;
+}
+
+[data-theme="dark"] .property-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ============================================
+   🎨 BADGES - HARMONISATION
+   ============================================ */
+
+/* Badge de couleur avec bordure plus fine */
+.color-badge {
+  border: 2px solid var(--bg-primary, white) !important;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2) !important;
+}
+
+/* Meta badges style cohérent */
+.property-meta .badge {
+  background: rgba(156, 163, 175, 0.15);
+  color: #6b7280;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ============================================
+   ✨ ANIMATIONS - HARMONISATION
+   ============================================ */
+
+.property-card {
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   FIN DES STYLES SETTINGS
+   ============================================ */
