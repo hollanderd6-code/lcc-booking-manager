@@ -1,0 +1,294 @@
+/* ============================================
+   💰 FACTURES PROPRIÉTAIRES - MODE CARTES
+   
+   CSS pour afficher les factures en cartes
+   au lieu d'un tableau
+   
+   À ajouter sur factures-proprietaires.html
+   ============================================ */
+
+/* ============================================
+   📱 MOBILE & DESKTOP
+   ============================================ */
+
+.invoices-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  .invoices-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .invoices-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================
+   🎴 CARTE INDIVIDUELLE
+   ============================================ */
+
+.invoice-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #10B981;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.invoice-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   📋 HEADER DE LA CARTE
+   ============================================ */
+
+.invoice-card-header {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invoice-card-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: #10B981;
+  margin: 0;
+}
+
+.invoice-card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.invoice-badge-draft {
+  background: rgba(156, 163, 175, 0.15);
+  color: #6b7280;
+}
+
+.invoice-badge-invoiced {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}
+
+.invoice-badge-sent {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.invoice-badge-paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.invoice-badge-credit {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+/* ============================================
+   📝 BODY DE LA CARTE
+   ============================================ */
+
+.invoice-card-body {
+  margin-bottom: 12px;
+}
+
+.invoice-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.invoice-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.invoice-info-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+}
+
+.invoice-info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.invoice-info-value.amount {
+  font-size: 16px;
+  color: #10B981;
+}
+
+/* ============================================
+   🔘 FOOTER AVEC ACTIONS
+   ============================================ */
+
+.invoice-card-footer {
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  position: relative;
+}
+
+.invoice-card-actions-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.invoice-card-actions-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.invoice-card-actions-btn:active {
+  transform: scale(0.98);
+}
+
+/* Menu déroulant */
+.invoice-actions-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 4px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.invoice-actions-menu.show {
+  display: block;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.invoice-actions-menu button {
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 4px;
+}
+
+.invoice-actions-menu button:hover {
+  background: #f3f4f6;
+}
+
+.invoice-actions-menu button:last-child {
+  margin-bottom: 0;
+}
+
+.invoice-actions-menu button[style*="color:#b91c1c"],
+.invoice-actions-menu button[style*="color: #b91c1c"] {
+  color: #b91c1c !important;
+}
+
+.invoice-actions-menu button[style*="color:#b91c1c"]:hover,
+.invoice-actions-menu button[style*="color: #b91c1c"]:hover {
+  background: #fee2e2 !important;
+}
+
+/* ============================================
+   📱 MOBILE OPTIMISATIONS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .invoice-card {
+    padding: 12px;
+  }
+  
+  .invoice-card-number {
+    font-size: 15px;
+  }
+  
+  .invoice-info-value.amount {
+    font-size: 15px;
+  }
+}
+
+/* ============================================
+   🌙 DARK MODE
+   ============================================ */
+
+[data-theme="dark"] .invoice-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .invoice-card-header,
+[data-theme="dark"] .invoice-card-footer {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .invoice-card-actions-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .invoice-actions-menu {
+  background: rgba(31, 41, 55, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   FIN DES STYLES CARTES FACTURES
+   ============================================ */
