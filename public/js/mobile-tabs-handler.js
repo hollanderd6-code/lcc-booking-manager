@@ -42,7 +42,7 @@
   });
 
   // ============================================
-  // MENU "PLUS"
+  // MENU "PLUS" - SANS TEST NOTIFICATION
   // ============================================
   
   function showMoreMenu() {
@@ -93,12 +93,6 @@
           
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
           
-          <button class="btn btn-secondary" onclick="testNotification()" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-vial"></i> Test notification
-          </button>
-          
-          <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
-          
           <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
             <i class="fas fa-sign-out-alt"></i> Déconnexion
           </button>
@@ -112,38 +106,6 @@
   // ============================================
   // FONCTIONS UTILITAIRES
   // ============================================
-  
-  window.testNotification = function() {
-    const token = localStorage.getItem('lcc_token');
-    
-    if (!token) {
-      alert('Non connecté');
-      return;
-    }
-    
-    fetch('/api/notifications/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: '🏠 Test Boostinghost',
-        body: 'Ceci est une notification de test !'
-      })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        alert('✅ Notification envoyée !');
-      } else {
-        alert('❌ Erreur : ' + (data.error || data.message));
-      }
-    })
-    .catch(err => {
-      alert('❌ Erreur : ' + err.message);
-    });
-  };
 
   window.confirmLogout = function() {
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
