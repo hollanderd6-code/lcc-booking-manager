@@ -12,7 +12,6 @@
 <!-- CSS plateforme globale -->
 <link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
-<link href="/css/cleaning-cards-style.css" rel="stylesheet"/>
 <style>
     html, body {
       margin: 0 !important;
@@ -1008,11 +1007,17 @@ function formatDateFr(dateStr) {
         }
 
         let html = `
-          // ============================================
-          // 🎴 MODE CARTES (remplace le tableau)
-          // ============================================
-          
-          let html = '<div class="cleaning-cards-grid">';
+          <table class="assign-table">
+            <thead>
+              <tr>
+                <th>Départ le</th>
+                <th>Logement</th>
+                <th>Client</th>
+                <th>Personne en charge</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
 
      upcoming.forEach((r) => {
   const key = getReservationKey(r);
@@ -1024,28 +1029,15 @@ function formatDateFr(dateStr) {
     getPropertyNameById(propertyId);
   const guestName = r.guestName || r.name || '';
   const endStr = String(r.end).slice(0, 10);
-  const endDateFr = formatDateFr(endStr);
+  const endDateFr = formatDateFr(endStr);  // ← AJOUTE CETTE LIGNE ICI
   
   html += `
-    <div class="cleaning-card">
-      <div class="cleaning-card-header">
-        <h3 class="cleaning-card-title">${propertyName}</h3>
-      </div>
-      
-      <div class="cleaning-card-body">
-        <div class="cleaning-info-row date">
-          <i class="fas fa-calendar-check"></i>
-          <span>Départ le ${endDateFr}</span>
-        </div>
-        
-        <div class="cleaning-info-item">
-          <div class="cleaning-info-label">Client</div>
-          <div class="cleaning-info-value">${guestName || '-'}</div>
-        </div>
-      </div>
-      
-      <div class="cleaning-card-footer">
-        <select class="assign-select assign-select-card"
+    <tr>
+      <td>${endDateFr}</td>
+      <td>${propertyName}</td>
+      <td>${guestName || '-'}</td>
+      <td>
+        <select class="assign-select"
                 data-reservation-key="${key || ''}"
                 data-property-id="${propertyId || ''}">
           <option value="">Aucun</option>
@@ -1059,11 +1051,11 @@ function formatDateFr(dateStr) {
             )
             .join('')}
         </select>
-      </div>
-    </div>
+      </td>
+    </tr>
   `;
 });
-        html += '</div>';
+        html += '</tbody></table>';
         assignContainer.innerHTML = html;
 
         assignContainer.querySelectorAll('.assign-select').forEach((sel) => {
