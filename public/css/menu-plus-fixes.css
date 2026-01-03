@@ -1,0 +1,274 @@
+/* ============================================
+   🎨 CORRECTIONS MENU MOBILE "PLUS"
+   
+   Ce fichier corrige :
+   1. Couleur des boutons (bleu → vert)
+   2. Onglet "Plus" actif sur les bonnes pages
+   
+   À ajouter APRÈS bottom-bar-enhanced.css
+   ============================================ */
+
+/* ============================================
+   🎨 CORRECTION COULEURS - Tout en vert
+   ============================================ */
+
+/* Bouton primaire dans le bottom sheet (Menu Plus) */
+.btn-primary,
+.bottom-sheet .btn-primary,
+[class*="sheet"] .btn-primary {
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Boutons secondaires dans le menu */
+.btn-secondary,
+.bottom-sheet .btn-secondary,
+[class*="sheet"] .btn-secondary {
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+.btn-secondary:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Bouton danger (déconnexion) reste rouge */
+.btn-danger {
+  background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #DC2626, #B91C1C) !important;
+}
+
+/* ============================================
+   ✅ ONGLET "PLUS" ACTIF automatiquement
+   ============================================ */
+
+/* Liste des pages qui doivent activer l'onglet "Plus" */
+body[data-page="settings-account"] .tab-btn[data-tab="more"],
+body[data-page="notifications"] .tab-btn[data-tab="more"],
+body[data-page="cleaning"] .tab-btn[data-tab="more"],
+body[data-page="deposits"] .tab-btn[data-tab="more"],
+body[data-page="factures"] .tab-btn[data-tab="more"],
+body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"],
+body[data-page="welcome"] .tab-btn[data-tab="more"],
+body[data-page="help"] .tab-btn[data-tab="more"] {
+  color: var(--primary-color, #10B981) !important;
+}
+
+/* Indicateur visuel sous l'onglet Plus quand actif */
+body[data-page="settings-account"] .tab-btn[data-tab="more"]::before,
+body[data-page="notifications"] .tab-btn[data-tab="more"]::before,
+body[data-page="cleaning"] .tab-btn[data-tab="more"]::before,
+body[data-page="deposits"] .tab-btn[data-tab="more"]::before,
+body[data-page="factures"] .tab-btn[data-tab="more"]::before,
+body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"]::before,
+body[data-page="welcome"] .tab-btn[data-tab="more"]::before,
+body[data-page="help"] .tab-btn[data-tab="more"]::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: #10B981;
+  border-radius: 50%;
+  animation: indicatorPulse 2s ease-in-out infinite;
+}
+
+/* Icône Plus qui grossit quand actif */
+body[data-page="settings-account"] .tab-btn[data-tab="more"] i,
+body[data-page="notifications"] .tab-btn[data-tab="more"] i,
+body[data-page="cleaning"] .tab-btn[data-tab="more"] i,
+body[data-page="deposits"] .tab-btn[data-tab="more"] i,
+body[data-page="factures"] .tab-btn[data-tab="more"] i,
+body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"] i,
+body[data-page="welcome"] .tab-btn[data-tab="more"] i,
+body[data-page="help"] .tab-btn[data-tab="more"] i {
+  transform: translateY(-3px) scale(1.15);
+}
+
+/* Animation du point */
+@keyframes indicatorPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateX(-50%) scale(1.5);
+  }
+}
+
+/* ============================================
+   📱 AMÉLIORATION DU BOTTOM SHEET
+   ============================================ */
+
+/* Titre du menu avec icône verte */
+.bottom-sheet .sheet-header h3,
+.bottom-sheet-header h3 {
+  color: var(--text-primary, #111827);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Icône du titre */
+.bottom-sheet .sheet-header h3::before,
+.bottom-sheet-header h3::before {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  color: #10B981;
+}
+
+/* Espacement des boutons */
+.bottom-sheet .btn,
+[class*="sheet"] .btn {
+  margin: 0 !important;
+  transition: all 0.2s ease;
+}
+
+/* Séparateurs */
+.bottom-sheet hr,
+[class*="sheet"] hr {
+  margin: 12px 0 !important;
+  border: none !important;
+  border-top: 1px solid var(--border-color, #E5E7EB) !important;
+  opacity: 0.5;
+}
+
+/* ============================================
+   🎨 HARMONISATION DARK MODE
+   ============================================ */
+
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #34D399, #10B981) !important;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: rgba(52, 211, 153, 0.1) !important;
+  color: #34D399 !important;
+  border-color: rgba(52, 211, 153, 0.2) !important;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: rgba(52, 211, 153, 0.2) !important;
+}
+
+/* ============================================
+   🔧 FIX ICÔNES DANS LES BOUTONS
+   ============================================ */
+
+.btn i {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* Alignement parfait */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  border: none;
+  width: 100%;
+}
+
+/* ============================================
+   ✨ EFFET HOVER/ACTIVE
+   ============================================ */
+
+.bottom-sheet .btn:hover,
+[class*="sheet"] .btn:hover {
+  transform: translateX(4px);
+}
+
+.bottom-sheet .btn:active,
+[class*="sheet"] .btn:active {
+  transform: scale(0.98);
+}
+
+/* ============================================
+   🎯 CORRECTION SPÉCIFIQUE POUR CHAQUE PAGE
+   ============================================ */
+
+/* S'assurer que data-page est bien défini */
+body:not([data-page]) {
+  /* Fallback: détecter par l'URL */
+}
+
+/* Si on est sur une page du menu Plus, marquer l'onglet */
+@media (max-width: 768px) {
+  /* Notifications */
+  body[data-page="notifications"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Paramètres compte */
+  body[data-page="settings-account"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Ménages */
+  body[data-page="cleaning"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Cautions */
+  body[data-page="deposits"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Factures */
+  body[data-page="factures"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="factures-proprietaires"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Livrets */
+  body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Aide */
+  body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
+    color: #10B981 !important;
+  }
+  
+  /* Ajouter la classe active */
+  body[data-page="notifications"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="settings-account"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="cleaning"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="deposits"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="factures"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="factures-proprietaires"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
+    /* On réutilise les styles de .active */
+  }
+}
+
+/* ============================================
+   📝 INSTRUCTIONS D'UTILISATION
+   ============================================
+   
+   Pour que l'onglet "Plus" soit actif sur une page,
+   ajoutez l'attribut data-page sur la balise <body> :
+   
+   Exemples :
+   <body data-page="notifications"> → Onglet Plus actif
+   <body data-page="cleaning"> → Onglet Plus actif
+   <body data-page="help"> → Onglet Plus actif
+   <body data-page="app"> → Onglet Dashboard actif
+   <body data-page="messages"> → Onglet Messages actif
+   <body data-page="settings"> → Onglet Logements actif
+   
+   ============================================ */
