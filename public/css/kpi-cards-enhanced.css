@@ -1,0 +1,528 @@
+/* ============================================
+   📊 CARTES KPI AMÉLIORÉES
+   
+   Ce fichier améliore UNIQUEMENT les cartes KPI
+   (statistiques) avec animations et effets.
+   
+   À ajouter APRÈS vos CSS existants
+   ============================================ */
+
+/* ============================================
+   🎯 SÉLECTION DES CARTES KPI
+   ============================================ */
+
+/* Cibler toutes les cartes qui affichent des stats */
+.kpi-card,
+.card.stat-card,
+.stats-card,
+[class*="stat-"],
+.card:has(.kpi-value),
+.card:has([class*="count"]) {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   ✨ EFFET HOVER - Élégant et subtil
+   ============================================ */
+
+.kpi-card:hover,
+.card.stat-card:hover,
+.stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Dark mode */
+[data-theme="dark"] .kpi-card:hover,
+[data-theme="dark"] .card.stat-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================
+   💫 EFFET DE BRILLANCE au survol
+   ============================================ */
+
+.kpi-card::before,
+.card.stat-card::before,
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(16, 185, 129, 0.1),
+    transparent
+  );
+  transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.kpi-card:hover::before,
+.card.stat-card:hover::before,
+.stats-card:hover::before {
+  transform: translateX(100%) translateY(100%) rotate(45deg);
+}
+
+/* ============================================
+   🔢 ANIMATION DES CHIFFRES
+   ============================================ */
+
+/* Chiffres principaux (grands) */
+.kpi-value,
+[class*="count"],
+.stat-number,
+.big-number {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.3s ease;
+}
+
+/* Effet pulse subtil au hover */
+.kpi-card:hover .kpi-value,
+.card:hover [class*="count"],
+.card:hover .stat-number {
+  transform: scale(1.05);
+  color: var(--primary-color, #10B981);
+}
+
+/* Animation de compteur (si JS activé plus tard) */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kpi-value,
+[class*="count"],
+.stat-number {
+  animation: countUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   🎨 ICÔNES ANIMÉES
+   ============================================ */
+
+/* Conteneur d'icône */
+.kpi-icon,
+.stat-icon,
+.card-icon,
+[class*="icon-wrapper"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Icône elle-même */
+.kpi-icon i,
+.stat-icon i,
+.card-icon i,
+[class*="icon-wrapper"] i {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Effet au hover de la carte */
+.kpi-card:hover .kpi-icon,
+.card:hover .stat-icon,
+.card:hover .card-icon {
+  transform: rotate(10deg) scale(1.1);
+}
+
+.kpi-card:hover .kpi-icon i,
+.card:hover .stat-icon i,
+.card:hover .card-icon i {
+  transform: rotate(-10deg);
+}
+
+/* Pulse subtil de l'icône */
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Active le pulse au hover seulement */
+.kpi-card:hover .kpi-icon i,
+.card:hover .stat-icon i {
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   🌈 BORDURE COLORÉE DYNAMIQUE
+   ============================================ */
+
+/* Bordure gauche colorée selon le type */
+.kpi-card,
+.card.stat-card,
+.stats-card {
+  border-left: 3px solid transparent;
+  transition: border-left-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Couleur au hover */
+.kpi-card:hover {
+  border-left-color: var(--primary-color, #10B981);
+}
+
+/* Variantes de couleurs selon le type de stat */
+.kpi-card[data-type="success"]:hover,
+.card.stat-success:hover {
+  border-left-color: #10B981;
+}
+
+.kpi-card[data-type="warning"]:hover,
+.card.stat-warning:hover {
+  border-left-color: #F59E0B;
+}
+
+.kpi-card[data-type="danger"]:hover,
+.card.stat-danger:hover {
+  border-left-color: #EF4444;
+}
+
+.kpi-card[data-type="info"]:hover,
+.card.stat-info:hover {
+  border-left-color: #3B82F6;
+}
+
+/* ============================================
+   📈 INDICATEUR DE TENDANCE
+   ============================================ */
+
+/* Flèches de tendance (montée/baisse) */
+.kpi-change,
+.stat-change,
+.trend-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+/* Tendance positive */
+.kpi-change.positive,
+.stat-change.up,
+.trend-up {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.kpi-card:hover .kpi-change.positive,
+.card:hover .stat-change.up {
+  background: rgba(16, 185, 129, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Tendance négative */
+.kpi-change.negative,
+.stat-change.down,
+.trend-down {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.kpi-card:hover .kpi-change.negative,
+.card:hover .stat-change.down {
+  background: rgba(239, 68, 68, 0.2);
+  transform: translateY(2px);
+}
+
+/* Flèche animée */
+.kpi-change i,
+.stat-change i,
+.trend-indicator i {
+  transition: transform 0.3s ease;
+}
+
+.kpi-card:hover .kpi-change.positive i {
+  animation: arrowUp 1s ease-in-out infinite;
+}
+
+.kpi-card:hover .kpi-change.negative i {
+  animation: arrowDown 1s ease-in-out infinite;
+}
+
+@keyframes arrowUp {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes arrowDown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+
+/* ============================================
+   🎭 EFFET DE FOND DÉGRADÉ au hover
+   ============================================ */
+
+.kpi-card::after,
+.card.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.03),
+    transparent 50%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kpi-card:hover::after,
+.card.stat-card:hover::after {
+  opacity: 1;
+}
+
+/* S'assurer que le contenu est au-dessus */
+.kpi-card > *,
+.card.stat-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   💡 LABELS ET TEXTES
+   ============================================ */
+
+.kpi-label,
+.stat-label,
+.card-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary, #9CA3AF);
+  transition: color 0.3s ease;
+}
+
+.kpi-card:hover .kpi-label,
+.card:hover .stat-label {
+  color: var(--text-secondary, #6B7280);
+}
+
+/* ============================================
+   📱 RESPONSIVE - Mobile
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Désactiver certains effets trop gourmands sur mobile */
+  .kpi-card::before,
+  .card.stat-card::before {
+    display: none;
+  }
+  
+  /* Réduire l'animation au tap */
+  .kpi-card:active,
+  .card.stat-card:active {
+    transform: scale(0.98);
+  }
+  
+  /* Effet hover transformé en tap */
+  .kpi-card:active {
+    border-left-color: var(--primary-color, #10B981);
+  }
+  
+  .kpi-card:active::after {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   🎯 CARTES CLIQUABLES
+   ============================================ */
+
+/* Si la carte est cliquable, ajouter un curseur pointer */
+.kpi-card[onclick],
+.kpi-card[data-href],
+.kpi-card.clickable,
+a.kpi-card,
+a.card.stat-card {
+  cursor: pointer;
+}
+
+/* Effet au clic */
+.kpi-card[onclick]:active,
+.kpi-card.clickable:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+/* ============================================
+   🌊 EFFET RIPPLE au clic
+   ============================================ */
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* JS peut ajouter dynamiquement cet effet */
+.kpi-card .ripple-effect,
+.card.stat-card .ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.4);
+  width: 20px;
+  height: 20px;
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* ============================================
+   📊 GRILLE DE CARTES KPI
+   ============================================ */
+
+.kpi-grid,
+.stats-grid,
+[class*="grid"]:has(.kpi-card) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .kpi-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Animation d'apparition en cascade */
+.kpi-card:nth-child(1) { animation-delay: 0s; }
+.kpi-card:nth-child(2) { animation-delay: 0.1s; }
+.kpi-card:nth-child(3) { animation-delay: 0.2s; }
+.kpi-card:nth-child(4) { animation-delay: 0.3s; }
+.kpi-card:nth-child(5) { animation-delay: 0.4s; }
+.kpi-card:nth-child(6) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kpi-card {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+/* ============================================
+   ♿ MODE RÉDUIT DU MOUVEMENT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card,
+  .kpi-card *,
+  .card.stat-card,
+  .card.stat-card * {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .kpi-card:hover,
+  .card.stat-card:hover {
+    transform: none;
+  }
+}
+
+/* ============================================
+   🎨 VARIANTES DE COULEURS D'ICÔNES
+   ============================================ */
+
+/* Icône verte (par défaut) */
+.kpi-icon.green,
+.stat-icon.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+/* Icône bleue */
+.kpi-icon.blue,
+.stat-icon.info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+/* Icône orange */
+.kpi-icon.orange,
+.stat-icon.warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+}
+
+/* Icône rouge */
+.kpi-icon.red,
+.stat-icon.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
+
+/* Icône violette */
+.kpi-icon.purple,
+.stat-icon.premium {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8B5CF6;
+}
+
+/* ============================================
+   🔥 EFFET "HOT" pour stats importantes
+   ============================================ */
+
+.kpi-card.featured,
+.kpi-card.hot,
+.card.stat-featured {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.03), rgba(59, 130, 246, 0.03));
+  border: 2px solid rgba(16, 185, 129, 0.2);
+}
+
+.kpi-card.featured::before {
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(16, 185, 129, 0.2),
+    transparent
+  );
+}
+
+/* ============================================
+   FIN DES AMÉLIORATIONS KPI
+   ============================================ */
