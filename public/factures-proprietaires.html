@@ -12,6 +12,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link href="/css/invoices-cards-style.css" rel="stylesheet"/>
 <style>
     /* DESIGN SYSTEM "FACTURE PRO" */
     :root { --primary: #10B981; --primary-dark: #059669; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
@@ -335,16 +336,10 @@ input[type="number"] {
 <button class="nav-tab" id="btn-clients" onclick="switchTab('clients')">Mes Clients</button>
 </div>
 <div class="tab-content active" id="tab-dashboard">
-<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
-<table style="width:100%; border-collapse:collapse;">
-<thead>
-<tr style="background:#f9fafb; text-align:left; font-size:12px; text-transform:uppercase; color:#6b7280;">
-<th style="padding:16px;">N°</th><th style="padding:16px;">Client</th><th style="padding:16px;">Date</th>
-<th style="padding:16px;">Montant TTC</th><th style="padding:16px;">Statut</th><th style="padding:16px;">Actions</th>
-</tr>
-</thead>
-<tbody id="invoicesTableBody"><tr><td colspan="6" style="padding:40px; text-align:center;">Chargement...</td></tr></tbody>
-</table>
+<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
+<div id="invoicesCardsGrid" class="invoices-cards-grid">
+<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</td></div>
+</div>
 </div>
 </div>
 <div class="tab-content" id="tab-create">
@@ -849,10 +844,10 @@ async function loadInvoices() {
     const invs = data.invoices || [];
     window.ownerInvoices = invs;
 
-    const tbody = document.getElementById('invoicesTableBody');
+    const container = document.getElementById('invoicesCardsGrid');
 
     if (invs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="padding:40px; text-align:center;">Aucune facture.</td></tr>';
+      container.innerHTML = '<tr><td colspan="6" style="padding:40px; text-align:center;">Aucune facture.</td></tr>';
       document.getElementById('statsRevenue').textContent = '0.00 €';
       document.getElementById('statsPending').textContent = '0.00 €';
       return;
@@ -860,7 +855,7 @@ async function loadInvoices() {
 
     let totalRev = 0;
     let totalPending = 0;
-    tbody.innerHTML = '';
+    container.innerHTML = '';
 
     invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
@@ -879,16 +874,22 @@ async function loadInvoices() {
       const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
 
       let statusLabel = status;
+      let statusClass = 'invoice-badge-draft';
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
+        statusClass = 'invoice-badge-credit';
       } else if (status === 'draft') {
         statusLabel = 'Brouillon';
+        statusClass = 'invoice-badge-draft';
       } else if (status === 'invoiced') {
         statusLabel = 'Facturée';
+        statusClass = 'invoice-badge-invoiced';
       } else if (status === 'sent') {
         statusLabel = 'Envoyée';
+        statusClass = 'invoice-badge-sent';
       } else if (status === 'paid') {
         statusLabel = 'Payée';
+        statusClass = 'invoice-badge-paid';
       }
 
       let actionsHtml = '';
@@ -922,24 +923,39 @@ async function loadInvoices() {
 
       const issueDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
 
-      const rowHtml =
-        '<tr style="border-bottom:1px solid #f3f4f6;">' +
-          '<td style="padding:16px; font-weight:700; color:#10B981;">' + numberDisplay + '</td>' +
-          '<td style="padding:16px;">' + (inv.client_name || '') + '</td>' +
-          '<td style="padding:16px;">' + issueDate + '</td>' +
-          '<td style="padding:16px; font-weight:600;">' + total.toFixed(2) + ' €</td>' +
-          '<td style="padding:16px;">' + statusLabel + '</td>' +
-          '<td style="padding:16px; text-align:right;">' +
-            '<div class="invoice-row-actions">' +
-              '<button type="button" class="btn-xs btn-secondary" onclick="toggleInvoiceActions(' + inv.id + ', this)">...</button>' +
-              '<div class="invoice-actions-menu" id="invoice-actions-' + inv.id + '">' +
-                actionsHtml +
+      const cardHtml =
+        '<div class="invoice-card">' +
+          '<div class="invoice-card-header">' +
+            '<div class="invoice-card-number">' + numberDisplay + '</div>' +
+            '<span class="invoice-card-badge ' + statusClass + '">' + statusLabel + '</span>' +
+          '</div>' +
+          '<div class="invoice-card-body">' +
+            '<div class="invoice-info-grid">' +
+              '<div class="invoice-info-item">' +
+                '<div class="invoice-info-label">Client</div>' +
+                '<div class="invoice-info-value">' + (inv.client_name || '-') + '</div>' +
+              '</div>' +
+              '<div class="invoice-info-item">' +
+                '<div class="invoice-info-label">Date</div>' +
+                '<div class="invoice-info-value">' + issueDate + '</div>' +
+              '</div>' +
+              '<div class="invoice-info-item">' +
+                '<div class="invoice-info-label">Montant TTC</div>' +
+                '<div class="invoice-info-value amount">' + total.toFixed(2) + ' €</div>' +
               '</div>' +
             '</div>' +
-          '</td>' +
-        '</tr>';
+          '</div>' +
+          '<div class="invoice-card-footer">' +
+            '<button type="button" class="invoice-card-actions-btn" onclick="toggleInvoiceActions(' + inv.id + ', this)">' +
+              '<i class="fas fa-ellipsis-v"></i> Actions' +
+            '</button>' +
+            '<div class="invoice-actions-menu" id="invoice-actions-' + inv.id + '">' +
+              actionsHtml +
+            '</div>' +
+          '</div>' +
+        '</div>';
 
-      tbody.innerHTML += rowHtml;
+      container.innerHTML += cardHtml;
     });
 
     document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
@@ -1537,7 +1553,7 @@ if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateS
 
     // Totaux
     const tbody = document.getElementById('previewBody');
-    tbody.innerHTML = '';
+    container.innerHTML = '';
     let totalHT = 0;
 
     prestations.forEach(p => {
@@ -1547,7 +1563,7 @@ if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateS
       let qtyDisplay = p.type === 'commission' ? `${p.rentalAmount}€` : p.quantity;
       let priceDisplay = p.type === 'commission' ? `${p.commissionRate}%` : `${p.unitPrice}€`;
 
-      tbody.innerHTML += `
+      container.innerHTML += `
         <tr>
           <td>${p.description}</td>
           <td style="text-align:center;">${qtyDisplay}</td>
