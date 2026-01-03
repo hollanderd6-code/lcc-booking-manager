@@ -75,7 +75,23 @@
     }
   }
   */
+  // Dans n'importe quelle page
+document.addEventListener('DOMContentLoaded', function() {
+  // Récupérer le nombre de messages (exemple : depuis une API)
+  const unreadCount = 5; // Remplacez par votre logique
   
+  // Créer ou mettre à jour le badge
+  const messagesTab = document.querySelector('.tab-btn[data-tab="messages"]');
+  if (messagesTab && unreadCount > 0) {
+    let badge = messagesTab.querySelector('.badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'badge';
+      messagesTab.appendChild(badge);
+    }
+    badge.textContent = unreadCount;
+  }
+});
   /* ============================================
      🔢 SI VOUS VOULEZ CHANGER LE NOMBRE
      ============================================
