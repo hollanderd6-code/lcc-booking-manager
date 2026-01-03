@@ -1,0 +1,411 @@
+/* ============================================
+   📱 OPTIMISATION PAGE NOTIFICATIONS - MOBILE
+   
+   Ce fichier améliore l'affichage de la page
+   notifications.html sur mobile
+   
+   À ajouter sur notifications.html uniquement
+   ============================================ */
+
+/* ============================================
+   📱 MOBILE ONLY - Max 768px
+   ============================================ */
+
+@media (max-width: 768px) {
+  
+  /* ============================================
+     📦 CONTAINERS & SPACING
+     ============================================ */
+  
+  /* Page content avec padding adapté */
+  .page-content {
+    padding: 12px !important;
+    max-width: 100% !important;
+  }
+  
+  /* Cartes avec padding réduit */
+  .card {
+    padding: 16px 14px !important;
+    margin-bottom: 16px !important;
+    border-radius: 16px !important;
+  }
+  
+  .card-body {
+    padding: 0 !important;
+  }
+  
+  /* ============================================
+     🔘 TOGGLE SWITCHES
+     ============================================ */
+  
+  /* Container du toggle */
+  .form-group {
+    margin-bottom: 20px !important;
+  }
+  
+  /* Label du toggle */
+  .form-group label {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin-bottom: 6px !important;
+    display: block !important;
+  }
+  
+  /* Description sous le toggle */
+  .form-group p,
+  .form-group small {
+    font-size: 13px !important;
+    color: var(--text-secondary) !important;
+    margin-top: 4px !important;
+    line-height: 1.4 !important;
+  }
+  
+  /* Toggle switch lui-même */
+  .toggle-switch,
+  input[type="checkbox"] {
+    transform: scale(1.1);
+    margin: 8px 0;
+  }
+  
+  /* ============================================
+     📧 INPUT EMAIL
+     ============================================ */
+  
+  input[type="email"],
+  input[type="text"],
+  textarea {
+    width: 100% !important;
+    padding: 12px 14px !important;
+    font-size: 15px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-secondary) !important;
+    margin: 8px 0 !important;
+  }
+  
+  input::placeholder {
+    color: var(--text-tertiary) !important;
+    font-size: 14px !important;
+  }
+  
+  /* ============================================
+     ✅ CHECKBOXES & RADIO BUTTONS
+     ============================================ */
+  
+  /* Zone des checkboxes */
+  .checkbox-group,
+  .radio-group,
+  [class*="roles"],
+  [class*="condition"] {
+    display: flex;
+    flex-direction: column;
+    gap: 12px !important;
+    margin: 12px 0 !important;
+  }
+  
+  /* Chaque option */
+  .checkbox-item,
+  .radio-item,
+  label[for*="role"],
+  label[for*="condition"] {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--border-color) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    min-height: 48px !important;
+  }
+  
+  .checkbox-item:active,
+  .radio-item:active {
+    transform: scale(0.98);
+  }
+  
+  /* Checkbox/Radio input */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* Label à côté */
+  .checkbox-item span,
+  .radio-item span,
+  label[for*="role"] span,
+  label[for*="condition"] span {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    flex: 1 !important;
+  }
+  
+  /* Quand c'est coché */
+  input[type="checkbox"]:checked + span,
+  input[type="radio"]:checked + span {
+    font-weight: 600 !important;
+    color: var(--primary-color, #10B981) !important;
+  }
+  
+  /* ============================================
+     🎯 SECTION "RÔLES CONCERNÉS"
+     ============================================ */
+  
+  /* Titre de section */
+  h3, h4,
+  .section-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    margin: 20px 0 12px 0 !important;
+    color: var(--text-primary) !important;
+  }
+  
+  /* Description sous le titre */
+  .section-description {
+    font-size: 13px !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 12px !important;
+    line-height: 1.4 !important;
+  }
+  
+  /* Grid de rôles (Admin, Manager, etc.) */
+  .roles-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin: 12px 0 !important;
+  }
+  
+  .role-checkbox {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--border-color) !important;
+    min-height: 48px !important;
+  }
+  
+  .role-checkbox input {
+    width: 22px !important;
+    height: 22px !important;
+    margin: 0 !important;
+  }
+  
+  .role-checkbox span {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  }
+  
+  /* ============================================
+     🔘 RADIO BUTTONS - CONDITIONS D'ENVOI
+     ============================================ */
+  
+  /* Container des radio */
+  .radio-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  
+  .radio-option {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--border-color) !important;
+    cursor: pointer !important;
+    min-height: 54px !important;
+  }
+  
+  .radio-option input[type="radio"] {
+    width: 24px !important;
+    height: 24px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  
+  .radio-option label,
+  .radio-option span {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    cursor: pointer !important;
+    flex: 1 !important;
+  }
+  
+  /* Quand sélectionné */
+  .radio-option:has(input:checked) {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: var(--primary-color, #10B981) !important;
+  }
+  
+  .radio-option:has(input:checked) label,
+  .radio-option:has(input:checked) span {
+    color: var(--primary-color, #10B981) !important;
+    font-weight: 600 !important;
+  }
+  
+  /* ============================================
+     🎨 BOUTONS
+     ============================================ */
+  
+  /* Container des boutons en bas */
+  .form-actions,
+  .button-group,
+  div:has(> .btn) {
+    display: flex !important;
+    gap: 12px !important;
+    margin-top: 24px !important;
+    padding-top: 20px !important;
+    border-top: 1px solid var(--border-color) !important;
+  }
+  
+  /* Boutons eux-mêmes */
+  .btn {
+    flex: 1 !important;
+    min-height: 48px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 14px 20px !important;
+  }
+  
+  /* Bouton primaire */
+  .btn-primary {
+    background: linear-gradient(135deg, #10B981, #059669) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  }
+  
+  .btn-primary:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3) !important;
+  }
+  
+  /* Bouton secondaire */
+  .btn-secondary {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+  
+  .btn-secondary:active {
+    transform: scale(0.98);
+    background: var(--bg-tertiary) !important;
+  }
+  
+  /* ============================================
+     📏 ESPACEMENTS GLOBAUX
+     ============================================ */
+  
+  /* Espace entre les sections */
+  .card + .card {
+    margin-top: 16px !important;
+  }
+  
+  /* Séparateurs */
+  hr {
+    margin: 20px 0 !important;
+    border: none !important;
+    border-top: 1px solid var(--border-color) !important;
+    opacity: 0.5;
+  }
+  
+  /* ============================================
+     🎯 HEADER DE LA PAGE
+     ============================================ */
+  
+  .main-header {
+    margin-bottom: 16px !important;
+    padding: 16px 14px !important;
+  }
+  
+  .page-title {
+    font-size: 22px !important;
+  }
+  
+  .page-subtitle {
+    font-size: 13px !important;
+  }
+  
+  /* ============================================
+     🔧 FIXES SPÉCIFIQUES
+     ============================================ */
+  
+  /* Éviter le débordement horizontal */
+  * {
+    max-width: 100%;
+    word-wrap: break-word;
+  }
+  
+  /* Texte qui déborde */
+  p, span, label {
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+  
+  /* Input email qui déborde */
+  input[type="email"] {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* ============================================
+     ✨ AMÉLIORATIONS VISUELLES
+     ============================================ */
+  
+  /* Ombre douce sur les cartes */
+  .card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  /* Transition smooth sur les interactions */
+  .checkbox-item,
+  .radio-option,
+  .btn,
+  input,
+  textarea {
+    transition: all 0.2s ease !important;
+  }
+  
+  /* Focus states */
+  input:focus,
+  textarea:focus {
+    outline: none !important;
+    border-color: var(--primary-color, #10B981) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+  }
+  
+  /* ============================================
+     🎨 DARK MODE ADJUSTMENTS
+     ============================================ */
+  
+  [data-theme="dark"] .checkbox-item,
+  [data-theme="dark"] .radio-option {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+  
+  [data-theme="dark"] input,
+  [data-theme="dark"] textarea {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--text-primary) !important;
+  }
+}
+
+/* ============================================
+   FIN DES OPTIMISATIONS MOBILE
+   ============================================ */
