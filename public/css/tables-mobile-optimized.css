@@ -1,8 +1,8 @@
 /* ============================================
-   📱 OPTIMISATION TABLEAUX - MOBILE
+   📱 OPTIMISATION TABLEAUX V2 - MOBILE
    
-   Ce fichier améliore l'affichage des tableaux
-   sur mobile (deposits, factures, etc.)
+   Version compacte et lisible pour deposits,
+   factures, etc.
    
    À ajouter sur les pages avec tableaux
    ============================================ */
@@ -14,119 +14,25 @@
 @media (max-width: 768px) {
   
   /* ============================================
-     📊 TABLEAUX - MODE CARTE
+     📦 PAGE & CONTAINERS
      ============================================ */
   
-  /* Cacher le tableau classique */
-  table {
-    display: none !important;
-  }
-  
-  /* Afficher en mode "cartes" */
-  tbody {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-  
-  /* Chaque ligne = une carte */
-  tr {
-    display: flex !important;
-    flex-direction: column !important;
-    background: var(--bg-primary, #fff) !important;
-    border: 1px solid var(--border-color, #e5e7eb) !important;
-    border-radius: 12px !important;
-    padding: 14px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-    margin-bottom: 0 !important;
-  }
-  
-  /* Chaque cellule */
-  td {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 10px 0 !important;
-    border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
-    font-size: 14px !important;
-  }
-  
-  /* Dernière cellule sans bordure */
-  td:last-child {
-    border-bottom: none !important;
-  }
-  
-  /* Ajouter le label avant chaque donnée */
-  td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: var(--text-secondary, #6b7280);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  
-  /* Valeur à droite */
-  td::after {
-    content: attr(data-value);
-    font-weight: 500;
-    color: var(--text-primary, #111827);
-    text-align: right;
-  }
-  
-  /* ============================================
-     🎯 SOLUTION ALTERNATIVE - SCROLL HORIZONTAL
-     (Décommentez si vous préférez ce style)
-     ============================================ */
-  
-  /*
-  table {
-    display: table !important;
-    min-width: 100% !important;
-  }
-  
-  .table-wrapper,
-  .table-responsive {
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    margin: 0 -14px !important;
-    padding: 0 14px !important;
-  }
-  
-  table {
-    min-width: 600px !important;
-    font-size: 13px !important;
-  }
-  
-  th, td {
-    padding: 12px 10px !important;
-    white-space: nowrap !important;
-  }
-  
-  th {
-    font-size: 11px !important;
-    position: sticky !important;
-    top: 0 !important;
-    background: var(--bg-secondary) !important;
-    z-index: 10 !important;
-  }
-  */
-  
-  /* ============================================
-     📋 LAYOUT SPÉCIFIQUE DEPOSITS
-     ============================================ */
-  
-  /* Container principal */
   .page-content {
     padding: 12px !important;
+    max-width: 100% !important;
   }
   
-  /* Select "Tous les logements" */
+  .card {
+    padding: 16px 12px !important;
+    margin-bottom: 16px !important;
+  }
+  
+  /* ============================================
+     🎛️ SELECT "TOUS LES LOGEMENTS"
+     ============================================ */
+  
   select,
-  .form-select,
-  [name*="property"],
-  [name*="logement"] {
+  .form-select {
     width: 100% !important;
     padding: 12px 14px !important;
     font-size: 15px !important;
@@ -141,257 +47,287 @@
     padding-right: 40px !important;
   }
   
-  /* En-tête du tableau */
-  .table-header,
+  /* ============================================
+     📊 MASQUER LE TABLEAU CLASSIQUE
+     ============================================ */
+  
+  table,
+  thead,
+  tbody,
+  th {
+    display: block !important;
+    width: 100% !important;
+  }
+  
   thead {
     display: none !important;
   }
   
   /* ============================================
-     🏠 CARTE RÉSERVATION - Style amélioré
+     🎴 CHAQUE LIGNE = UNE CARTE COMPACTE
      ============================================ */
   
-  .reservation-card,
+  tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  
+  /* Carte pour chaque réservation */
   tr {
-    position: relative !important;
-    overflow: hidden !important;
-  }
-  
-  /* Barre colorée à gauche selon statut */
-  .reservation-card::before,
-  tr::before {
-    content: '' !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 4px !important;
-    background: var(--primary-color, #10B981) !important;
-  }
-  
-  /* Titre de la carte (nom du logement) */
-  .property-name,
-  td:first-child {
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    color: var(--text-primary) !important;
-    margin-bottom: 8px !important;
-  }
-  
-  /* Dates */
-  .dates,
-  td:nth-child(2) {
-    font-size: 14px !important;
-    color: var(--text-secondary) !important;
+    display: block !important;
+    background: var(--bg-primary, #fff) !important;
+    border: 1px solid var(--border-color, #e5e7eb) !important;
+    border-left: 4px solid var(--primary-color, #10B981) !important;
+    border-radius: 12px !important;
+    padding: 14px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* ============================================
-     🎨 INFO LIGNE - 2 colonnes
+     📝 ORGANISATION DES CELLULES
      ============================================ */
   
-  .info-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    margin: 8px 0 !important;
+  /* Toutes les cellules en block */
+  td {
+    display: block !important;
+    padding: 0 !important;
+    border: none !important;
+    width: 100% !important;
+    text-align: left !important;
   }
   
-  .info-item {
+  /* ============================================
+     🏠 NOM DU LOGEMENT (1ère cellule)
+     ============================================ */
+  
+  tr td:nth-child(1) {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    color: var(--text-primary, #111827) !important;
+    margin-bottom: 10px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
+  }
+  
+  /* ============================================
+     📅 DATES (2ème cellule)
+     ============================================ */
+  
+  tr td:nth-child(2) {
+    font-size: 14px !important;
+    color: var(--text-secondary, #6b7280) !important;
+    margin-bottom: 8px !important;
     display: flex !important;
-    flex-direction: column !important;
-    gap: 4px !important;
+    align-items: center !important;
+    gap: 6px !important;
   }
   
-  .info-label {
-    font-size: 11px !important;
+  tr td:nth-child(2)::before {
+    content: '📅' !important;
+    font-size: 14px !important;
+  }
+  
+  /* ============================================
+     🎯 AUTRES INFOS (Grid 2 colonnes)
+     ============================================ */
+  
+  /* Conteneur pour les infos restantes */
+  tr {
+    position: relative !important;
+  }
+  
+  /* Grille 2 colonnes pour les infos */
+  tr td:nth-child(3),
+  tr td:nth-child(4),
+  tr td:nth-child(5),
+  tr td:nth-child(6),
+  tr td:nth-child(7) {
+    display: inline-block !important;
+    width: calc(50% - 6px) !important;
+    font-size: 13px !important;
+    padding: 8px 0 !important;
+    vertical-align: top !important;
+  }
+  
+  /* Ajouter un label avant chaque info */
+  tr td:nth-child(3)::before,
+  tr td:nth-child(4)::before,
+  tr td:nth-child(5)::before,
+  tr td:nth-child(6)::before,
+  tr td:nth-child(7)::before {
+    display: block !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
     color: var(--text-tertiary, #9ca3af) !important;
+    margin-bottom: 3px !important;
   }
   
-  .info-value {
-    font-size: 14px !important;
+  /* Labels spécifiques */
+  tr td:nth-child(3)::before {
+    content: 'Statut' !important;
+  }
+  
+  tr td:nth-child(4)::before {
+    content: 'Source' !important;
+  }
+  
+  tr td:nth-child(5)::before {
+    content: 'Caution créée' !important;
+  }
+  
+  tr td:nth-child(6)::before {
+    content: 'Caution libérée' !important;
+  }
+  
+  tr td:nth-child(7)::before {
+    content: 'Actions' !important;
+  }
+  
+  /* Valeurs en gras */
+  tr td:nth-child(3),
+  tr td:nth-child(4) {
     font-weight: 600 !important;
-    color: var(--text-primary) !important;
+    color: var(--text-primary, #111827) !important;
   }
   
   /* ============================================
-     📅 FORMAT DATES - Plus compact
+     🎨 BADGES "AUCUNE", "RESERVED", etc.
      ============================================ */
   
-  .date-range {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    font-size: 13px !important;
-    color: var(--text-secondary) !important;
+  /* Badge style pour les statuts */
+  tr td:nth-child(5),
+  tr td:nth-child(6) {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    background: rgba(156, 163, 175, 0.1) !important;
+    color: #6b7280 !important;
+    width: auto !important;
+    display: inline-block !important;
   }
   
-  .date-range i {
-    color: var(--text-tertiary) !important;
-    font-size: 10px !important;
+  /* Badge "Reserved" */
+  tr td:contains("Reserved"),
+  tr td:contains("Réservé") {
+    background: rgba(59, 130, 246, 0.1) !important;
+    color: #2563eb !important;
   }
   
   /* ============================================
-     🎯 ACTIONS - Boutons en bas de carte
+     🔘 BOUTON "CRÉER UN LIEN"
      ============================================ */
   
-  .card-actions,
-  .actions,
-  td:last-child {
-    display: flex !important;
-    gap: 8px !important;
+  /* Dernière cellule = bouton */
+  tr td:last-child {
+    width: 100% !important;
     margin-top: 12px !important;
     padding-top: 12px !important;
-    border-top: 1px solid var(--border-color) !important;
+    border-top: 1px solid var(--border-color, #e5e7eb) !important;
   }
   
-  .btn-action,
-  .action-btn,
-  button {
-    flex: 1 !important;
-    min-height: 40px !important;
-    font-size: 13px !important;
+  tr td:last-child::before {
+    display: none !important;
+  }
+  
+  /* Bouton pleine largeur */
+  tr td:last-child button,
+  tr td:last-child .btn,
+  tr td:last-child a {
+    width: 100% !important;
+    min-height: 44px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     border-radius: 10px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 6px !important;
-  }
-  
-  /* ============================================
-     🔍 RECHERCHE & FILTRES
-     ============================================ */
-  
-  .search-bar,
-  .filter-bar {
-    margin-bottom: 16px !important;
-  }
-  
-  input[type="search"],
-  input[type="text"].search {
-    width: 100% !important;
-    padding: 12px 14px 12px 40px !important;
-    font-size: 15px !important;
-    border-radius: 12px !important;
-    border: 1px solid var(--border-color) !important;
-    background: var(--bg-secondary) !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: 14px center !important;
-  }
-  
-  /* ============================================
-     📊 STATS EN HAUT (si présentes)
-     ============================================ */
-  
-  .stats-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
-    margin-bottom: 16px !important;
-  }
-  
-  .stat-card {
-    background: var(--bg-primary) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 12px !important;
+    gap: 8px !important;
+    background: linear-gradient(135deg, #10B981, #059669) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
     padding: 12px !important;
-    text-align: center !important;
   }
   
-  .stat-value {
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    color: var(--primary-color, #10B981) !important;
-  }
-  
-  .stat-label {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    color: var(--text-tertiary) !important;
-    margin-top: 4px !important;
+  tr td:last-child button:active {
+    transform: scale(0.98);
   }
   
   /* ============================================
-     ✨ ANIMATIONS & INTERACTIONS
+     ✨ AMÉLIORATIONS VISUELLES
      ============================================ */
   
-  .reservation-card,
+  /* Espacement entre colonnes dans la grille */
+  tr td:nth-child(odd) {
+    margin-right: 12px !important;
+  }
+  
+  /* Hover/Active states */
   tr {
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
   }
   
-  .reservation-card:active,
   tr:active {
     transform: scale(0.98) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
   }
   
   /* ============================================
-     🎨 ÉTATS & BADGES
+     🎯 CAS SPÉCIAL : Ligne vide ou "-"
      ============================================ */
   
-  .badge,
-  .status-badge {
-    display: inline-flex !important;
-    align-items: center !important;
-    padding: 4px 10px !important;
-    border-radius: 8px !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-  }
-  
-  .badge-success {
-    background: rgba(16, 185, 129, 0.1) !important;
-    color: #059669 !important;
-  }
-  
-  .badge-warning {
-    background: rgba(245, 158, 11, 0.1) !important;
-    color: #d97706 !important;
-  }
-  
-  .badge-danger {
-    background: rgba(239, 68, 68, 0.1) !important;
-    color: #dc2626 !important;
+  tr td:contains("-") {
+    color: var(--text-tertiary, #9ca3af) !important;
+    font-style: italic !important;
   }
   
   /* ============================================
-     🔧 FIXES SPÉCIFIQUES
+     📏 FIXES LARGEUR
      ============================================ */
   
-  /* Éviter le débordement */
-  * {
-    max-width: 100%;
-    box-sizing: border-box;
+  /* S'assurer que rien ne déborde */
+  table,
+  tbody,
+  tr,
+  td {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
   
   /* Texte qui wrap */
-  td, th, p, span {
+  td {
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
+    white-space: normal !important;
   }
   
   /* ============================================
      🌙 DARK MODE
      ============================================ */
   
-  [data-theme="dark"] tr,
-  [data-theme="dark"] .reservation-card {
+  [data-theme="dark"] tr {
     background: rgba(255, 255, 255, 0.05) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
   }
   
-  [data-theme="dark"] td {
-    border-color: rgba(255, 255, 255, 0.05) !important;
+  [data-theme="dark"] tr td:nth-child(1) {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  [data-theme="dark"] tr td:last-child {
+    border-color: rgba(255, 255, 255, 0.1) !important;
   }
 }
 
 /* ============================================
-   FIN DES OPTIMISATIONS TABLEAUX MOBILE
+   FIN DES OPTIMISATIONS
    ============================================ */
