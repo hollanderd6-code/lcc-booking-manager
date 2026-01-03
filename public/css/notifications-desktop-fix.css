@@ -1,0 +1,103 @@
+/* ============================================
+   🔔 NOTIFICATIONS - DESKTOP FIX ONLY
+   
+   Corrige UNIQUEMENT le desktop
+   N'affecte PAS le mobile
+   
+   À ajouter sur notifications.html APRÈS bh-shared.css
+   ============================================ */
+
+/* ============================================
+   💻 DESKTOP UNIQUEMENT (min-width: 769px)
+   ============================================ */
+
+@media (min-width: 769px) {
+  
+  /* Augmenter la largeur max pour avoir plus d'espace */
+  .page-content {
+    max-width: 1100px !important;
+  }
+  
+  /* Les checkboxes (rôles) doivent avoir plus d'espace */
+  .roles {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(200px, 1fr)) !important;
+    gap: 16px !important;
+    margin-top: 12px !important;
+  }
+  
+  .roles label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 14px !important;
+    white-space: nowrap !important;
+  }
+  
+  .roles input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+  
+  /* Les radios doivent être en colonne pour éviter le débordement */
+  .radio-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-top: 12px !important;
+  }
+  
+  .radio-group label {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+  
+  .radio-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  
+  /* Les sections de notification avec plus d'espacement */
+  .notification-setting,
+  .setting-group {
+    margin-bottom: 24px !important;
+  }
+  
+  /* Labels plus lisibles */
+  .notification-setting > label,
+  .setting-label {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    display: block !important;
+    margin-bottom: 8px !important;
+  }
+  
+  /* Descriptions plus claires */
+  .notification-setting > p,
+  .setting-description {
+    font-size: 13px !important;
+    color: var(--text-secondary, #6b7280) !important;
+    margin-bottom: 12px !important;
+    line-height: 1.6 !important;
+  }
+  
+}
+
+/* ============================================
+   📱 MOBILE - AUCUN CHANGEMENT
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Le mobile reste exactement comme il est */
+  /* Pas de CSS ici */
+}
+
+/* ============================================
+   FIN DES STYLES
+   ============================================ */
