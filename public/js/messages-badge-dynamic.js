@@ -1,10 +1,8 @@
 /* ============================================
-   🔔 BADGE MESSAGES - SYSTÈME DYNAMIQUE
+   🔔 BADGE MESSAGES - VERSION CORRIGÉE
    
-   Charge et met à jour le compteur de messages
-   non lus en temps réel
-   
-   À inclure sur TOUTES les pages
+   Affiche toujours le badge (même pour 0)
+   Meilleur comptage des messages non lus
    ============================================ */
 
 (function() {
@@ -21,7 +19,8 @@
     try {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
-        console.log('⚠️ Pas de token - Badge désactivé');
+        console.log('⚠️ Pas de token - Badge = 0');
+        updateBadge(0);
         return;
       }
 
@@ -33,24 +32,38 @@
       });
 
       if (!response.ok) {
-        throw new Error('Erreur chargement conversations');
+        console.warn('⚠️ Erreur API (status:', response.status, ') - Badge = 0');
+        updateBadge(0);
+        return;
       }
 
       const data = await response.json();
+      
+      console.log('📦 Données reçues:', data);
       
       // Compter les messages non lus
       let totalUnread = 0;
       
       if (data.conversations && Array.isArray(data.conversations)) {
-        data.conversations.forEach(conv => {
-          totalUnread += (conv.unread_count || 0);
+        console.log(`📋 ${data.conversations.length} conversation(s) trouvée(s)`);
+        
+        data.conversations.forEach((conv, index) => {
+          const unreadCount = parseInt(conv.unread_count) || 0;
+          
+          if (unreadCount > 0) {
+            console.log(`  - Conv ${index + 1} (${conv.guest_name || 'Sans nom'}): ${unreadCount} non lu(s)`);
+          }
+          
+          totalUnread += unreadCount;
         });
+      } else {
+        console.warn('⚠️ Format de réponse inattendu:', data);
       }
 
       // Mettre à jour le badge
       updateBadge(totalUnread);
       
-      console.log('🔔 Messages non lus:', totalUnread);
+      console.log('🔔 Total messages non lus:', totalUnread);
 
     } catch (error) {
       console.error('❌ Erreur chargement badge:', error);
@@ -82,18 +95,19 @@
       badge = document.createElement('span');
       badge.className = 'badge-count';
       messagesTab.appendChild(badge);
+      console.log('✅ Badge créé');
     }
 
-    // Afficher ou masquer selon le nombre
-    if (count > 0) {
-      badge.textContent = count > 99 ? '99+' : count;
-      badge.style.display = 'flex';
+    // Toujours afficher le badge (même pour 0)
+    if (count > 99) {
+      badge.textContent = '99+';
     } else {
-      badge.textContent = '0';
-      badge.style.display = 'flex'; // Afficher 0 aussi
+      badge.textContent = count;
     }
+    
+    badge.style.display = 'flex';
 
-    console.log('🔔 Badge mis à jour:', count);
+    console.log('✅ Badge mis à jour:', badge.textContent);
   }
 
   // ============================================
@@ -117,19 +131,25 @@
         const userId = getUserId();
         if (userId) {
           socket.emit('join_user_room', userId);
+          console.log('🔌 Room user rejointe:', userId);
         }
       });
 
       // Écouter les nouveaux messages
-      socket.on('new_message', () => {
-        console.log('🔔 Nouveau message reçu - Recharger badge');
-        loadUnreadCount();
+      socket.on('new_message', (message) => {
+        console.log('🔔 Nouveau message reçu:', message);
+        // Attendre 500ms avant de recharger (laisser le temps au serveur de mettre à jour)
+        setTimeout(() => {
+          loadUnreadCount();
+        }, 500);
       });
 
       // Écouter les notifications
-      socket.on('new_notification', () => {
-        console.log('🔔 Nouvelle notification - Recharger badge');
-        loadUnreadCount();
+      socket.on('new_notification', (notification) => {
+        console.log('🔔 Nouvelle notification:', notification);
+        setTimeout(() => {
+          loadUnreadCount();
+        }, 500);
       });
 
       socket.on('disconnect', () => {
@@ -165,6 +185,7 @@
   function startPeriodicRefresh() {
     // Recharger toutes les 30 secondes (backup si Socket.io ne fonctionne pas)
     setInterval(() => {
+      console.log('🔄 Refresh périodique du badge...');
       loadUnreadCount();
     }, 30000); // 30 secondes
   }
@@ -200,10 +221,22 @@
   init();
 
   // ============================================
-  // 🌍 EXPOSER updateBadge GLOBALEMENT
+  // 🌍 EXPOSER GLOBALEMENT POUR DÉBOGAGE
   // ============================================
   
   window.updateMessagesBadge = updateBadge;
   window.refreshMessagesBadge = loadUnreadCount;
+  
+  // Pour déboguer depuis la console
+  window.debugBadge = function() {
+    console.log('🔍 DEBUG BADGE:');
+    console.log('- API_URL:', API_URL);
+    console.log('- Token:', localStorage.getItem('lcc_token') ? 'Présent' : 'Absent');
+    console.log('- User:', localStorage.getItem('lcc_user'));
+    console.log('- Socket:', socket ? 'Connecté' : 'Non connecté');
+    
+    // Forcer le rechargement
+    loadUnreadCount();
+  };
 
 })();
