@@ -140,25 +140,28 @@
     .roles {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      font-size: 13px;
+      gap: 16px;
+      font-size: 14px;
     }
     .roles label {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 8px;
+      min-width: 160px;
+      white-space: nowrap;
     }
 
     .radio-group {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 12px;
-      font-size: 13px;
+      font-size: 14px;
     }
     .radio-group label {
       display: inline-flex;
-      align-items: center;
-      gap: 4px;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.5;
     }
 
     .actions {
@@ -174,44 +177,6 @@
       min-height: 18px;
       margin-top: 6px;
     }
-
-    /* ===== DESKTOP FIX - INLINE ===== */
-    @media (min-width: 769px) {
-      .page-content {
-        max-width: 1100px !important;
-      }
-      
-      .roles {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 16px !important;
-        margin-top: 12px !important;
-      }
-      
-      .roles label {
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        font-size: 14px !important;
-        white-space: nowrap !important;
-      }
-      
-      .radio-group {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-        margin-top: 12px !important;
-      }
-      
-      .radio-group label {
-        display: flex !important;
-        align-items: flex-start !important;
-        gap: 8px !important;
-        font-size: 14px !important;
-        line-height: 1.5 !important;
-      }
-    }
-    /* ===== FIN DESKTOP FIX ===== */
 
     @media (max-width: 768px) {
       .row {
