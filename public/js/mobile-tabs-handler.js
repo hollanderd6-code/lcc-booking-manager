@@ -18,13 +18,37 @@
     more: 'bottomsheet'
   };
 
-  // Détecter la page actuelle pour mettre le bon onglet actif
+  // ============================================
+  // ✅ DÉTECTION DE LA PAGE ACTIVE - CORRIGÉE
+  // ============================================
+  
   const currentPath = window.location.pathname;
+  const dataPage = document.body.getAttribute('data-page'); // ✅ Lire data-page du body
   let activeTab = 'dashboard';
 
-  if (currentPath.includes('messages')) activeTab = 'messages';
-  else if (currentPath.includes('settings')) activeTab = 'properties';
-  else if (currentPath.includes('app')) activeTab = 'dashboard';
+  // ✅ Pages du menu "Plus" (détection prioritaire)
+  const PLUS_PAGES = [
+    'notifications',
+    'settings-account', 
+    'cleaning',
+    'deposits',
+    'factures',
+    'factures-proprietaires',
+    'welcome',
+    'help'
+  ];
+
+  if (dataPage && PLUS_PAGES.includes(dataPage)) {
+    // ✅ Si on est sur une page du menu Plus → activer "Plus"
+    activeTab = 'more';
+  } else if (currentPath.includes('messages')) {
+    activeTab = 'messages';
+  } else if (currentPath.includes('settings') && !dataPage) {
+    // ✅ /settings.html = Logements (seulement si pas de data-page)
+    activeTab = 'properties';
+  } else if (currentPath.includes('app')) {
+    activeTab = 'dashboard';
+  }
 
   // ============================================
   // ÉCOUTER LES CHANGEMENTS D'ONGLET
