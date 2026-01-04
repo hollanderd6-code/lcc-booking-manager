@@ -1,10 +1,8 @@
 /* ============================================
-   🔔 FIX BADGE MESSAGES - Afficher "0"
+   🔔 BADGE MESSAGES - CSS DYNAMIQUE
    
-   Ce fichier force l'affichage du badge sur
-   l'onglet Messages même quand il y a 0
-   
-   À ajouter sur toutes les pages
+   Affiche le badge avec le nombre réel de
+   messages non lus (géré par JS)
    ============================================ */
 
 @media (max-width: 768px) {
@@ -13,9 +11,8 @@
      🔴 BADGE SUR MESSAGES
      ============================================ */
   
-  /* Ajouter un badge "0" par défaut sur Messages */
-  .mobile-tabs .tab-btn[data-tab="messages"]::after {
-    content: '0';
+  .mobile-tab[data-tab="messages"] .badge-count,
+  .tab-btn[data-tab="messages"] .badge-count {
     position: absolute;
     top: 4px;
     right: 50%;
@@ -50,67 +47,20 @@
   }
   
   /* Dark mode */
-  [data-theme="dark"] .mobile-tabs .tab-btn[data-tab="messages"]::after {
+  [data-theme="dark"] .mobile-tab[data-tab="messages"] .badge-count,
+  [data-theme="dark"] .tab-btn[data-tab="messages"] .badge-count {
     border-color: rgba(31, 41, 55, 0.95);
   }
   
-  /* ============================================
-     💡 VARIANTE : Badge qui pulse
-     (Décommentez si vous voulez qu'il pulse)
-     ============================================ */
-  
-  /*
-  .mobile-tabs .tab-btn[data-tab="messages"]::after {
-    animation: badgePulse 2s ease-in-out infinite;
+  /* Badge avec 0 - Plus discret */
+  .mobile-tab[data-tab="messages"][data-count="0"] .badge-count,
+  .tab-btn[data-tab="messages"][data-count="0"] .badge-count {
+    background: linear-gradient(135deg, #9CA3AF, #6B7280);
+    opacity: 0.8;
   }
   
-  @keyframes badgePulse {
-    0%, 100% {
-      transform: translateX(16px) scale(1);
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-    }
-    50% {
-      transform: translateX(16px) scale(1.1);
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
-    }
-  }
-  */
-  // Dans n'importe quelle page
-document.addEventListener('DOMContentLoaded', function() {
-  // Récupérer le nombre de messages (exemple : depuis une API)
-  const unreadCount = 5; // Remplacez par votre logique
-  
-  // Créer ou mettre à jour le badge
-  const messagesTab = document.querySelector('.tab-btn[data-tab="messages"]');
-  if (messagesTab && unreadCount > 0) {
-    let badge = messagesTab.querySelector('.badge');
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'badge';
-      messagesTab.appendChild(badge);
-    }
-    badge.textContent = unreadCount;
-  }
-});
-  /* ============================================
-     🔢 SI VOUS VOULEZ CHANGER LE NOMBRE
-     ============================================
-     
-     Pour afficher un nombre dynamique, vous
-     devrez ajouter un attribut data-count sur
-     le bouton Messages dans votre HTML :
-     
-     <button class="tab-btn" data-tab="messages" data-count="5">
-     
-     Puis modifier le CSS comme ça :
-     
-     .mobile-tabs .tab-btn[data-tab="messages"]::after {
-       content: attr(data-count);
-     }
-     
-     ============================================ */
 }
 
 /* ============================================
-   FIN DU FIX BADGE
+   FIN DU CSS BADGE
    ============================================ */
