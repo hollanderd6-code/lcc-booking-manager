@@ -1,0 +1,550 @@
+/* ============================================
+   💬 CHAT MODERNE - DESIGN ÉPURÉ
+   
+   Ajouter ce fichier APRÈS les CSS existants
+   Conserve 100% du fonctionnement actuel
+   ============================================ */
+
+/* ============================================
+   🎨 VARIABLES
+   ============================================ */
+
+:root {
+  --chat-primary: #10B981;
+  --chat-primary-light: #D1FAE5;
+  --chat-bg: #F9FAFB;
+  --chat-bubble-owner: #10B981;
+  --chat-bubble-guest: #FFFFFF;
+  --chat-bubble-bot: #EFF6FF;
+  --chat-text-owner: #FFFFFF;
+  --chat-text-guest: #111827;
+  --chat-border: #E5E7EB;
+}
+
+/* ============================================
+   📱 MODAL CHAT - LAYOUT MODERNE
+   ============================================ */
+
+.chat-modal {
+  max-width: 900px !important;
+  width: 95% !important;
+  height: 85vh !important;
+  max-height: 700px !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Header épuré */
+.chat-modal-header {
+  background: linear-gradient(135deg, #F9FAFB, #FFFFFF) !important;
+  border-bottom: 1px solid var(--chat-border) !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.chat-modal-header h2 {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  margin: 0 !important;
+}
+
+/* ============================================
+   💬 ZONE DES MESSAGES - MODERNE
+   ============================================ */
+
+.chat-modal-messages {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 20px !important;
+  background: var(--chat-bg) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+/* Scroll smooth */
+.chat-modal-messages {
+  scroll-behavior: smooth;
+}
+
+/* ============================================
+   💭 BULLES DE MESSAGES - DESIGN MODERNE
+   ============================================ */
+
+.chat-message {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  margin-bottom: 4px !important;
+  animation: messageSlideIn 0.2s ease-out;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Messages du propriétaire (vous) - À DROITE */
+.chat-message.owner {
+  flex-direction: row-reverse !important;
+}
+
+/* Messages du voyageur - À GAUCHE */
+.chat-message.guest {
+  flex-direction: row !important;
+}
+
+/* Messages du bot - À GAUCHE */
+.chat-message.bot {
+  flex-direction: row !important;
+}
+
+/* ============================================
+   👤 AVATARS MODERNES
+   ============================================ */
+
+.chat-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Avatar propriétaire */
+.chat-message.owner .chat-avatar {
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: white !important;
+}
+
+/* Avatar voyageur */
+.chat-message.guest .chat-avatar {
+  background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
+  color: white !important;
+}
+
+/* Avatar bot */
+.chat-message.bot .chat-avatar {
+  background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
+  color: white !important;
+  font-size: 18px !important;
+}
+
+/* ============================================
+   💬 BULLES DE TEXTE
+   ============================================ */
+
+.chat-bubble {
+  padding: 10px 14px !important;
+  border-radius: 16px !important;
+  max-width: 400px !important;
+  word-wrap: break-word !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  position: relative !important;
+}
+
+/* Bulle propriétaire (vous) - VERT */
+.chat-message.owner .chat-bubble {
+  background: var(--chat-bubble-owner) !important;
+  color: var(--chat-text-owner) !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+/* Bulle voyageur - BLANC */
+.chat-message.guest .chat-bubble {
+  background: var(--chat-bubble-guest) !important;
+  color: var(--chat-text-guest) !important;
+  border: 1px solid var(--chat-border) !important;
+  border-bottom-left-radius: 4px !important;
+}
+
+/* Bulle bot - BLEU CLAIR */
+.chat-message.bot .chat-bubble {
+  background: var(--chat-bubble-bot) !important;
+  color: #1E40AF !important;
+  border: 1px solid #BFDBFE !important;
+  border-bottom-left-radius: 4px !important;
+}
+
+/* ============================================
+   🕐 META (heure + statut)
+   ============================================ */
+
+.chat-sender {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #6B7280 !important;
+  margin-bottom: 4px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.chat-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 4px !important;
+  font-size: 11px !important;
+  color: #9CA3AF !important;
+}
+
+.chat-time {
+  font-weight: 500 !important;
+}
+
+.chat-status {
+  font-style: italic !important;
+  color: #10B981 !important;
+}
+
+/* Meta à droite pour les messages du propriétaire */
+.chat-message.owner .chat-meta {
+  justify-content: flex-end !important;
+}
+
+/* Meta à gauche pour les autres */
+.chat-message.guest .chat-meta,
+.chat-message.bot .chat-meta {
+  justify-content: flex-start !important;
+}
+
+/* ============================================
+   📷 IMAGES DANS LES MESSAGES
+   ============================================ */
+
+.chat-image {
+  max-width: 300px !important;
+  max-height: 400px !important;
+  border-radius: 12px !important;
+  margin-top: 8px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.chat-image:hover {
+  transform: scale(1.02) !important;
+}
+
+/* ============================================
+   ✏️ INPUT ZONE - MODERNE
+   ============================================ */
+
+.chat-modal-input {
+  background: white !important;
+  border-top: 1px solid var(--chat-border) !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 8px !important;
+}
+
+.chat-input {
+  flex: 1 !important;
+  min-height: 42px !important;
+  max-height: 120px !important;
+  padding: 10px 14px !important;
+  border: 1.5px solid var(--chat-border) !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-family: 'Inter', sans-serif !important;
+  resize: none !important;
+  transition: all 0.2s ease !important;
+  background: #F9FAFB !important;
+}
+
+.chat-input:focus {
+  outline: none !important;
+  border-color: var(--chat-primary) !important;
+  background: white !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+/* ============================================
+   🔘 BOUTONS INPUT (emoji, photo, envoyer)
+   ============================================ */
+
+.chat-input-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.chat-action-btn {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: #F3F4F6 !important;
+  color: #6B7280 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.chat-action-btn:hover {
+  background: #E5E7EB !important;
+  color: #374151 !important;
+  transform: scale(1.05) !important;
+}
+
+.chat-action-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* Bouton envoyer - VERT */
+.send-btn {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: white !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+}
+
+.send-btn:active {
+  transform: translateY(0) !important;
+}
+
+.send-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================
+   😊 EMOJI PICKER
+   ============================================ */
+
+.emoji-picker {
+  position: absolute !important;
+  bottom: 70px !important;
+  right: 80px !important;
+  width: 320px !important;
+  max-height: 350px !important;
+  background: white !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid var(--chat-border) !important;
+  display: none !important;
+  flex-direction: column !important;
+  z-index: 1000 !important;
+}
+
+.emoji-picker.active {
+  display: flex !important;
+}
+
+.emoji-picker-header {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--chat-border) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  color: #374151 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.emoji-picker-close {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: #F3F4F6 !important;
+  color: #6B7280 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+}
+
+.emoji-picker-close:hover {
+  background: #E5E7EB !important;
+}
+
+.emoji-picker-grid {
+  padding: 12px !important;
+  display: grid !important;
+  grid-template-columns: repeat(8, 1fr) !important;
+  gap: 4px !important;
+  overflow-y: auto !important;
+  max-height: 280px !important;
+}
+
+.emoji-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 20px !important;
+  cursor: pointer !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.emoji-btn:hover {
+  background: #F3F4F6 !important;
+  transform: scale(1.2) !important;
+}
+
+/* ============================================
+   📷 PHOTO UPLOAD PREVIEW
+   ============================================ */
+
+.photo-preview-container {
+  position: absolute !important;
+  bottom: 70px !important;
+  left: 20px !important;
+  background: white !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid var(--chat-border) !important;
+  display: none !important;
+  max-width: 300px !important;
+}
+
+.photo-preview-container.active {
+  display: block !important;
+}
+
+.photo-preview {
+  max-width: 100% !important;
+  max-height: 200px !important;
+  border-radius: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.photo-preview-actions {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.photo-preview-actions button {
+  flex: 1 !important;
+  padding: 8px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.photo-cancel-btn {
+  background: #F3F4F6 !important;
+  color: #6B7280 !important;
+}
+
+.photo-cancel-btn:hover {
+  background: #E5E7EB !important;
+}
+
+.photo-send-btn {
+  background: var(--chat-primary) !important;
+  color: white !important;
+}
+
+.photo-send-btn:hover {
+  background: #059669 !important;
+}
+
+/* ============================================
+   📱 RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .chat-modal {
+    width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+  
+  .chat-bubble {
+    max-width: 280px !important;
+  }
+  
+  .emoji-picker {
+    width: calc(100% - 40px) !important;
+    left: 20px !important;
+    right: 20px !important;
+  }
+  
+  .chat-image {
+    max-width: 240px !important;
+  }
+}
+
+/* ============================================
+   🎨 DARK MODE (optionnel)
+   ============================================ */
+
+[data-theme="dark"] .chat-modal {
+  background: #1F2937 !important;
+}
+
+[data-theme="dark"] .chat-modal-messages {
+  background: #111827 !important;
+}
+
+[data-theme="dark"] .chat-bubble.guest {
+  background: #374151 !important;
+  color: #F9FAFB !important;
+  border-color: #4B5563 !important;
+}
+
+[data-theme="dark"] .chat-input {
+  background: #374151 !important;
+  border-color: #4B5563 !important;
+  color: #F9FAFB !important;
+}
+
+[data-theme="dark"] .emoji-picker {
+  background: #1F2937 !important;
+  border-color: #4B5563 !important;
+}
+
+/* ============================================
+   FIN DES STYLES
+   ============================================ */
