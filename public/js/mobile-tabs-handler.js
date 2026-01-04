@@ -38,13 +38,17 @@
     'help'
   ];
 
-  if (dataPage && PLUS_PAGES.includes(dataPage)) {
-    // ✅ Si on est sur une page du menu Plus → activer "Plus"
+  // ✅ Vérifier data-page="settings" en priorité
+  if (dataPage === 'settings') {
+    // settings.html (Mes logements) → Onglet Logements
+    activeTab = 'properties';
+  } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
+    // Pages du menu Plus → Onglet Plus
     activeTab = 'more';
   } else if (currentPath.includes('messages')) {
     activeTab = 'messages';
-  } else if (currentPath.includes('settings') && !dataPage) {
-    // ✅ /settings.html = Logements (seulement si pas de data-page)
+  } else if (currentPath.includes('settings')) {
+    // Fallback pour /settings.html sans data-page
     activeTab = 'properties';
   } else if (currentPath.includes('app')) {
     activeTab = 'dashboard';
