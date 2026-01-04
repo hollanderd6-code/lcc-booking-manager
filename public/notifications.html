@@ -1,600 +1,625 @@
 <!DOCTYPE html>
+
 <html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Boostinghost – Notifications</title>
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css" rel="stylesheet"/>
-<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
-<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link href="/css/menu-plus-fixes.css" rel="stylesheet"/>
-<link href="/css/menu-active-button.css" rel="stylesheet"/>
-<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
 <style>
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-}
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .app-container {
+      margin-top: 0 !important;
+    }
+    .main-header {
+      margin-top: 0 !important;
+    }
+    .main-content {
+      margin-top: 0 !important;
+      padding-top: 24px !important;
+    }
+    .page-content {
+      margin-top: 0 !important;
+      max-width: 900px;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
 
-.main-content {
-  padding-top: 24px !important;
-}
+    .card {
+      background: var(--bg-primary);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .card-title i {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
 
-.page-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color-subtle);
+    }
+    .row:last-child {
+      border-bottom: none;
+    }
+    .row-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .row-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
 
-/* ===== NOTIFICATION CARD ===== */
-.notification-card {
-  background: var(--bg-primary, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-left: 3px solid var(--primary-color, #10B981);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 22px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      transition: .2s;
+      border-radius: 999px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #2563eb;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
 
-.notification-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
+    .inline-input {
+      width: 100%;
+      max-width: 320px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color-subtle);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 13px;
+    }
 
-.notification-card-header i {
-  color: var(--primary-color, #10B981);
-  font-size: 20px;
-}
+    .roles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+    .roles label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg-secondary, #f9fafb);
+      border: 2px solid var(--border-color, #e5e7eb);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .roles label:hover {
+      background: var(--bg-primary, #fff);
+      border-color: var(--primary-color, #10B981);
+    }
+    .roles input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      cursor: pointer;
+      accent-color: var(--primary-color, #10B981);
+    }
 
-.notification-card-header h2 {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary, #111827);
-  margin: 0;
-}
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+    .radio-group label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--bg-secondary, #f9fafb);
+      border: 2px solid var(--border-color, #e5e7eb);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      line-height: 1.5;
+    }
+    .radio-group label:hover {
+      background: var(--bg-primary, #fff);
+      border-color: var(--primary-color, #10B981);
+    }
+    .radio-group input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      margin: 2px 0 0 0;
+      cursor: pointer;
+      accent-color: var(--primary-color, #10B981);
+      flex-shrink: 0;
+    }
 
-.notification-card-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary, #6b7280);
-  margin-bottom: 24px;
-  line-height: 1.6;
-}
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .save-status {
+      font-size: 12px;
+      color: #059669;
+      text-align: right;
+      min-height: 18px;
+      margin-top: 6px;
+    }
 
-/* ===== SETTING ROW ===== */
-.setting-row {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-}
+    @media (max-width: 768px) {
+      .row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+<!-- Script auth + user + logout -->
+<script src="/js/auth-fetch.js"></script>
+<script>
+    const API_URL = 'https://lcc-booking-manager.onrender.com';
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
 
-.setting-row:last-child {
-  border-bottom: none;
-}
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
 
-.setting-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 12px;
-}
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
 
-.setting-info {
-  flex: 1;
-}
+      window.addEventListener('DOMContentLoaded', () => {
+        if (user) {
+          const nameEl = document.getElementById('sidebarUserName');
+          const companyEl = document.getElementById('sidebarUserCompany');
+          const avatarEl = document.getElementById('sidebarUserAvatar');
 
-.setting-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-  margin-bottom: 4px;
-}
+          if (nameEl) {
+            nameEl.textContent = user.firstName
+              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+              : (user.email || 'Mon compte');
+          }
 
-.setting-hint {
-  font-size: 13px;
-  color: var(--text-secondary, #6b7280);
-  line-height: 1.5;
-}
+          if (companyEl) {
+            companyEl.textContent = user.company || 'Mon espace';
+          }
 
-/* ===== TOGGLE SWITCH ===== */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 28px;
-  flex-shrink: 0;
-}
+          if (avatarEl) {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
+        }
 
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: var(--primary-color, #10B981);
-}
-
-input:checked + .slider:before {
-  transform: translateX(22px);
-}
-
-/* ===== INPUT ===== */
-.setting-input {
-  width: 100%;
-  padding: 12px;
-  font-size: 14px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  background: var(--bg-secondary, #f9fafb);
-  color: var(--text-primary, #111827);
-  font-family: inherit;
-}
-
-.setting-input:focus {
-  outline: none;
-  border-color: var(--primary-color, #10B981);
-  background: var(--bg-primary, #fff);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-/* ===== CHECKBOXES GRID ===== */
-.roles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.role-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--bg-secondary, #f9fafb);
-  border: 2px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.role-checkbox:hover {
-  background: var(--bg-primary, #fff);
-  border-color: var(--primary-color, #10B981);
-}
-
-.role-checkbox input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: var(--primary-color, #10B981);
-}
-
-.role-checkbox.checked {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: var(--primary-color, #10B981);
-}
-
-.role-checkbox label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  margin: 0;
-  user-select: none;
-}
-
-/* ===== RADIOS ===== */
-.radio-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.radio-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--bg-secondary, #f9fafb);
-  border: 2px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.radio-option:hover {
-  background: var(--bg-primary, #fff);
-  border-color: var(--primary-color, #10B981);
-}
-
-.radio-option input[type="radio"] {
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
-  cursor: pointer;
-  accent-color: var(--primary-color, #10B981);
-  flex-shrink: 0;
-}
-
-.radio-option.selected {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: var(--primary-color, #10B981);
-}
-
-.radio-option label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  margin: 0;
-  line-height: 1.5;
-  user-select: none;
-}
-
-/* ===== ACTIONS ===== */
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.btn {
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  font-family: inherit;
-}
-
-.btn-ghost {
-  background: var(--bg-secondary, #f9fafb);
-  color: var(--text-primary, #111827);
-  border: 1px solid var(--border-color, #e5e7eb);
-}
-
-.btn-ghost:hover {
-  background: var(--bg-tertiary, #f3f4f6);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #10B981, #059669);
-  color: white;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
-  transform: translateY(-1px);
-}
-
-.save-status {
-  text-align: right;
-  font-size: 13px;
-  color: var(--primary-color, #10B981);
-  min-height: 20px;
-  margin-top: 8px;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  .page-content {
-    padding: 0 16px;
-  }
-  
-  .notification-card {
-    padding: 20px 16px;
-  }
-  
-  .setting-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .switch {
-    align-self: flex-end;
-  }
-  
-  .roles-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .actions {
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-  }
-}
-
-/* ===== DARK MODE ===== */
-[data-theme="dark"] .notification-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .role-checkbox,
-[data-theme="dark"] .radio-option {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .role-checkbox:hover,
-[data-theme="dark"] .radio-option:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-</style>
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function () {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = '/login.html';
+          });
+        }
+      });
+    })();
+  </script>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Paramètres" data-page="notifications" data-subtitle="Gérez les notifications de votre équipe." data-title="Notifications">
-<div class="app-container">
-<main class="main-content">
-<div class="page-content">
-
-<section class="notification-card">
-<div class="notification-card-header">
-<i class="fas fa-bell"></i>
-<h2>Nouvelle réservation</h2>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Configuration" data-page="notifications" data-subtitle="Choisissez comment et quand être notifié." data-title="Notifications">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Bookingmanage</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
 </div>
-<p class="notification-card-subtitle">
-Paramétrez les notifications qui seront envoyées à chaque création de nouvelle réservation dans le Bookingmanage.
-</p>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- Main Content -->
+<main class="main-content"><div id="bhHeader"></div>
+<!-- Header -->
 
-<!-- Notifications internes -->
-<div class="setting-row">
-<div class="setting-header">
-<div class="setting-info">
-<div class="setting-label">Notifications internes (in-app)</div>
-<div class="setting-hint">Affiche une alerte dans le dashboard des utilisateurs concernés.</div>
+<!-- Page Content -->
+<div class="page-content">
+<!-- Bloc : Nouvelle réservation -->
+<section class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-ticket-alt"></i>
+<span>Nouvelle réservation</span>
+</div>
+</div>
+<p class="card-subtitle">
+            Paramétrez les notifications qui seront envoyées à chaque création de nouvelle réservation dans le Bookingmanage.
+          </p>
+<div class="row">
+<div>
+<div class="row-label">Notifications internes (in-app)</div>
+<div class="row-hint">
+                Affiche une alerte dans le dashboard des utilisateurs concernés.
+              </div>
 </div>
 <label class="switch">
 <input id="newResInApp" type="checkbox"/>
 <span class="slider"></span>
 </label>
 </div>
-</div>
-
-<!-- E-mails internes -->
-<div class="setting-row">
-<div class="setting-header">
-<div class="setting-info">
-<div class="setting-label">E-mails internes</div>
-<div class="setting-hint">Envoie un e-mail à la création d'une réservation.</div>
+<div class="row">
+<div>
+<div class="row-label">E-mails internes</div>
+<div class="row-hint">
+                Envoie un e-mail à la création d’une réservation.
+              </div>
 </div>
 <label class="switch">
 <input id="newResEmailEnabled" type="checkbox"/>
 <span class="slider"></span>
 </label>
 </div>
+<div class="row">
+<div>
+<div class="row-label">Destinataires e-mail</div>
+<div class="row-hint">
+                Liste d’adresses e-mail séparées par des virgules.
+              </div>
 </div>
-
-<!-- Destinataires e-mail -->
-<div class="setting-row">
-<div class="setting-info">
-<div class="setting-label">Destinataires e-mail</div>
-<div class="setting-hint">Liste d'adresses e-mail séparées par des virgules.</div>
+<input class="inline-input" id="newResEmailRecipients" placeholder="reservations@exemple.com, manager@exemple.com" type="text"/>
 </div>
-<input class="setting-input" id="newResEmailRecipients" placeholder="reservations@exemple.com, manager@exemple.com" type="text"/>
+<div class="row">
+<div>
+<div class="row-label">Rôles concernés (in-app)</div>
+<div class="row-hint">
+                Les utilisateurs ayant ces rôles recevront la notification interne.
+              </div>
 </div>
-
-<!-- Rôles concernés -->
-<div class="setting-row">
-<div class="setting-info">
-<div class="setting-label">Rôles concernés (in-app)</div>
-<div class="setting-hint">Les utilisateurs ayant ces rôles recevront la notification interne.</div>
-</div>
-<div class="roles-grid">
-<div class="role-checkbox" onclick="this.querySelector('input').click()">
-<input id="roleAdmin" type="checkbox"/>
-<label for="roleAdmin">Admin</label>
-</div>
-<div class="role-checkbox" onclick="this.querySelector('input').click()">
-<input id="roleManager" type="checkbox"/>
-<label for="roleManager">Manager</label>
-</div>
-<div class="role-checkbox" onclick="this.querySelector('input').click()">
-<input id="roleReception" type="checkbox"/>
-<label for="roleReception">Réception</label>
-</div>
-<div class="role-checkbox" onclick="this.querySelector('input').click()">
-<input id="roleHousekeeping" type="checkbox"/>
-<label for="roleHousekeeping">Housekeeping</label>
+<div class="roles">
+<label><input id="roleAdmin" type="checkbox"/> Admin</label>
+<label><input id="roleManager" type="checkbox"/> Manager</label>
+<label><input id="roleReception" type="checkbox"/> Réception</label>
+<label><input id="roleHousekeeping" type="checkbox"/> Housekeeping</label>
 </div>
 </div>
-</div>
-
-<!-- Condition d'envoi -->
-<div class="setting-row">
-<div class="setting-info">
-<div class="setting-label">Condition d'envoi</div>
-<div class="setting-hint">À quel moment doit-on déclencher les notifications ?</div>
+<div class="row">
+<div>
+<div class="row-label">Condition d’envoi</div>
+<div class="row-hint">
+                À quel moment doit-on déclencher les notifications ?
+              </div>
 </div>
 <div class="radio-group">
-<div class="radio-option" onclick="this.querySelector('input').click()">
-<input name="newResCondition" type="radio" value="all"/>
-<label>Toute nouvelle réservation</label>
-</div>
-<div class="radio-option" onclick="this.querySelector('input').click()">
-<input name="newResCondition" type="radio" value="confirmed"/>
-<label>Uniquement les réservations confirmées</label>
-</div>
-<div class="radio-option" onclick="this.querySelector('input').click()">
-<input name="newResCondition" type="radio" value="pending"/>
-<label>Réservations en attente</label>
+<label><input name="newResCondition" type="radio" value="all"/> Toute nouvelle réservation</label>
+<label><input name="newResCondition" type="radio" value="confirmed"/> Uniquement les réservations confirmées</label>
+<label><input name="newResCondition" type="radio" value="pending"/> Réservations en attente</label>
 </div>
 </div>
-</div>
-
 </section>
-
 <div class="actions">
-<button class="btn btn-ghost" id="resetBtn" type="button">Réinitialiser</button>
-<button class="btn btn-primary" id="saveBtn" type="button">Enregistrer</button>
+<button class="btn btn-ghost" id="resetBtn" type="button">
+            Réinitialiser
+          </button>
+<button class="btn btn-primary" id="saveBtn" type="button">
+            Enregistrer
+          </button>
 </div>
 <div class="save-status" id="saveStatus"></div>
-
 </div>
 </main>
 </div>
-
 <script>
-const STORAGE_KEY = 'lcc_notifications_settings';
+  const STORAGE_KEY = 'lcc_notifications_settings';
 
-// Charger les paramètres
-function loadSettings() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return getDefaultSettings();
-    return JSON.parse(saved);
-  } catch (e) {
-    console.error('Erreur chargement settings:', e);
-    return getDefaultSettings();
-  }
-}
-
-function getDefaultSettings() {
-  return {
-    newReservation: {
-      inApp: true,
-      emailEnabled: false,
-      emailRecipients: '',
+  function defaultSettings() {
+    return {
+      newResInApp: true,
+      newResEmailEnabled: true,
+      newResEmailRecipients: '',
       roles: {
         admin: true,
         manager: true,
-        reception: false,
+        reception: true,
         housekeeping: false
       },
-      condition: 'all'
-    }
-  };
-}
+      newResCondition: 'confirmed'
+    };
+  }
 
-// Sauvegarder les paramètres
-function saveSettings() {
-  const settings = {
-    newReservation: {
-      inApp: document.getElementById('newResInApp').checked,
-      emailEnabled: document.getElementById('newResEmailEnabled').checked,
-      emailRecipients: document.getElementById('newResEmailRecipients').value,
+  function loadSettings() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultSettings();
+    try {
+      return { ...defaultSettings(), ...JSON.parse(raw) };
+    } catch (e) {
+      console.error('Erreur lecture settings notifications', e);
+      return defaultSettings();
+    }
+  }
+
+  function saveSettings(settings) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  }
+
+  function applyToForm(settings) {
+    const safeCheck = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!value;
+    };
+    const safeValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value || '';
+    };
+
+    safeCheck('newResInApp', settings.newResInApp);
+    safeCheck('newResEmailEnabled', settings.newResEmailEnabled);
+    safeValue('newResEmailRecipients', settings.newResEmailRecipients);
+
+    safeCheck('roleAdmin', settings.roles?.admin);
+    safeCheck('roleManager', settings.roles?.manager);
+    safeCheck('roleReception', settings.roles?.reception);
+    safeCheck('roleHousekeeping', settings.roles?.housekeeping);
+
+    const cond = settings.newResCondition || 'confirmed';
+    const radio = document.querySelector(`input[name="newResCondition"][value="${cond}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  function readFromForm() {
+    const getChecked = (id, fallback = false) => {
+      const el = document.getElementById(id);
+      return el ? !!el.checked : fallback;
+    };
+    const getValue = (id, fallback = '') => {
+      const el = document.getElementById(id);
+      return el ? (el.value || '').trim() : fallback;
+    };
+
+    const radios = document.querySelectorAll('input[name="newResCondition"]');
+    let condition = 'confirmed';
+    radios.forEach(r => { if (r.checked) condition = r.value; });
+
+    return {
+      newResInApp: getChecked('newResInApp', true),
+      newResEmailEnabled: getChecked('newResEmailEnabled', true),
+      newResEmailRecipients: getValue('newResEmailRecipients', ''),
       roles: {
-        admin: document.getElementById('roleAdmin').checked,
-        manager: document.getElementById('roleManager').checked,
-        reception: document.getElementById('roleReception').checked,
-        housekeeping: document.getElementById('roleHousekeeping').checked
+        admin: getChecked('roleAdmin', true),
+        manager: getChecked('roleManager', true),
+        reception: getChecked('roleReception', true),
+        housekeeping: getChecked('roleHousekeeping', false)
       },
-      condition: document.querySelector('input[name="newResCondition"]:checked')?.value || 'all'
-    }
-  };
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  
-  const status = document.getElementById('saveStatus');
-  status.textContent = '✓ Enregistré';
-  setTimeout(() => status.textContent = '', 2000);
-}
+      newResCondition: condition
+    };
+  }
 
-// Appliquer les paramètres aux inputs
-function applySettings(settings) {
-  const nr = settings.newReservation;
-  
-  document.getElementById('newResInApp').checked = nr.inApp;
-  document.getElementById('newResEmailEnabled').checked = nr.emailEnabled;
-  document.getElementById('newResEmailRecipients').value = nr.emailRecipients || '';
-  
-  document.getElementById('roleAdmin').checked = nr.roles?.admin || false;
-  document.getElementById('roleManager').checked = nr.roles?.manager || false;
-  document.getElementById('roleReception').checked = nr.roles?.reception || false;
-  document.getElementById('roleHousekeeping').checked = nr.roles?.housekeeping || false;
-  
-  const conditionRadio = document.querySelector(`input[name="newResCondition"][value="${nr.condition || 'all'}"]`);
-  if (conditionRadio) conditionRadio.checked = true;
-  
-  updateCheckboxClasses();
-  updateRadioClasses();
-}
+  function validateEmailList(value) {
+    if (!value) return true;
+    const emails = value.split(',').map(s => s.trim()).filter(Boolean);
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emails.every(e => re.test(e));
+  }
 
-// Mettre à jour les classes des checkboxes
-function updateCheckboxClasses() {
-  document.querySelectorAll('.role-checkbox').forEach(box => {
-    const input = box.querySelector('input[type="checkbox"]');
-    if (input.checked) {
-      box.classList.add('checked');
-    } else {
-      box.classList.remove('checked');
-    }
-  });
-}
+  document.addEventListener('DOMContentLoaded', async () => {
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const saveStatus = document.getElementById('saveStatus');
 
-// Mettre à jour les classes des radios
-function updateRadioClasses() {
-  document.querySelectorAll('.radio-option').forEach(option => {
-    const input = option.querySelector('input[type="radio"]');
-    if (input.checked) {
-      option.classList.add('selected');
-    } else {
-      option.classList.remove('selected');
-    }
-  });
-}
+    const local = loadSettings();
+    applyToForm(local);
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', function() {
-  const settings = loadSettings();
-  applySettings(settings);
-  
-  // Bouton Enregistrer
-  document.getElementById('saveBtn').addEventListener('click', saveSettings);
-  
-  // Bouton Réinitialiser
-  document.getElementById('resetBtn').addEventListener('click', function() {
-    if (confirm('Réinitialiser tous les paramètres ?')) {
-      applySettings(getDefaultSettings());
-      saveSettings();
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
+      try {
+        const resp = await fetch('/api/settings/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const serverData = await resp.json();
+          if (serverData && serverData.settings) {
+            const merged = { ...defaultSettings(), ...serverData.settings };
+            saveSettings(merged);
+            applyToForm(merged);
+          }
+        }
+      } catch (e) {
+        console.warn('Chargement notifications serveur impossible', e);
+      }
     }
+
+    saveBtn?.addEventListener('click', async () => {
+      const newSettings = readFromForm();
+
+      if (!validateEmailList(newSettings.newResEmailRecipients)) {
+        saveStatus.textContent = "Adresse(s) email invalide(s). Sépare par des virgules.";
+        setTimeout(() => (saveStatus.textContent = ''), 2500);
+        return;
+      }
+
+      saveSettings(newSettings);
+
+      if (token) {
+        try {
+          await fetch('/api/settings/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ settings: newSettings })
+          });
+        } catch (e) {
+          console.warn('Sauvegarde serveur notifications impossible', e);
+        }
+      }
+
+      saveStatus.textContent = 'Préférences enregistrées.';
+      setTimeout(() => (saveStatus.textContent = ''), 2500);
+    });
+
+    resetBtn?.addEventListener('click', () => {
+      const defaults = defaultSettings();
+      applyToForm(defaults);
+      saveSettings(defaults);
+      saveStatus.textContent = 'Préférences réinitialisées.';
+      setTimeout(() => (saveStatus.textContent = ''), 2500);
+    });
   });
-  
-  // Mettre à jour les classes au changement
-  document.querySelectorAll('.role-checkbox input').forEach(input => {
-    input.addEventListener('change', updateCheckboxClasses);
-  });
-  
-  document.querySelectorAll('.radio-option input').forEach(input => {
-    input.addEventListener('change', updateRadioClasses);
-  });
-});
 </script>
-
+<!-- MOBILE MENU SCRIPT -->
+<script>
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+        
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+        
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+    
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="notifications"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+    
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
+    });
+    
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
+    })();
+  </script>
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
 </body>
 </html>
