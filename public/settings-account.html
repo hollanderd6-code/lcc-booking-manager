@@ -440,6 +440,53 @@
     .card h2 {
       margin-bottom: 24px !important;
     }
+
+    /* ===== FIX HEADER DESKTOP ===== */
+    @media (min-width: 769px) {
+      /* Forcer le header à être transparent et limité en largeur */
+      #bhHeader,
+      [id*="header"],
+      [class*="page-header"],
+      [class*="settings-header"] {
+        background: transparent !important;
+        max-width: 960px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+
+      /* Wrapper du header */
+      .header-wrapper,
+      [class*="header-wrap"] {
+        background: transparent !important;
+      }
+
+      /* Kicker, titre, sous-titre */
+      .page-kicker,
+      [class*="kicker"] {
+        background: transparent !important;
+        color: var(--text-secondary, #6b7280) !important;
+      }
+
+      .page-title,
+      h1[class*="title"] {
+        background: transparent !important;
+        color: var(--text-primary, #111827) !important;
+      }
+
+      .page-subtitle,
+      [class*="subtitle"] {
+        background: transparent !important;
+        color: var(--text-secondary, #6b7280) !important;
+      }
+
+      /* Conteneur principal */
+      .main-content {
+        background: var(--bg-body, #f3f4f6) !important;
+      }
+    }
+    /* ===== FIN FIX HEADER ===== */
   </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
