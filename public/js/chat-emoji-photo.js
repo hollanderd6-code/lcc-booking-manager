@@ -1,11 +1,7 @@
 /* ============================================
-   💬 CHAT MODERNE - EMOJIS & PHOTOS (UNIVERSEL)
+   💬 CHAT MODERNE - EMOJIS & PHOTOS (FIX v2)
    
-   Version compatible avec :
-   - Chat propriétaire (messages.html)
-   - Chat voyageur (chat-guest.html)
-   
-   ⚠️ Charger ce fichier APRÈS le script principal du chat
+   Version corrigée qui affiche les images dans les deux chats
    ============================================ */
 
 (function() {
@@ -39,7 +35,7 @@
   ];
 
   // ============================================
-  // 🎨 DÉTECTION AUTOMATIQUE DE LA STRUCTURE
+  // 🎨 DÉTECTION AUTOMATIQUE
   // ============================================
   
   let inputContainer = null;
@@ -47,31 +43,19 @@
   let sendBtn = null;
 
   function detectChatStructure() {
-    // Chercher le conteneur
     inputContainer = document.querySelector('.chat-modal-input') || 
                      document.querySelector('.chat-input-container');
     
-    if (!inputContainer) {
-      console.warn('⚠️ Conteneur de chat non trouvé');
-      return false;
-    }
+    if (!inputContainer) return false;
 
-    // Chercher le textarea
     chatInput = document.getElementById('chatInput') || 
                 document.getElementById('messageInput');
     
-    if (!chatInput) {
-      console.warn('⚠️ Input de chat non trouvé');
-      return false;
-    }
+    if (!chatInput) return false;
 
-    // Chercher le bouton send
     sendBtn = document.getElementById('sendBtn');
     
-    if (!sendBtn) {
-      console.warn('⚠️ Bouton d\'envoi non trouvé');
-      return false;
-    }
+    if (!sendBtn) return false;
 
     console.log('✅ Structure détectée:', {
       container: inputContainer.className,
@@ -91,16 +75,13 @@
       return;
     }
 
-    // Vérifier si déjà initialisé
     if (document.getElementById('emojiPickerBtn')) {
       return;
     }
 
-    // Créer le conteneur des actions
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'chat-input-actions';
 
-    // Bouton emoji
     const emojiBtn = document.createElement('button');
     emojiBtn.id = 'emojiPickerBtn';
     emojiBtn.className = 'chat-action-btn';
@@ -109,7 +90,6 @@
     emojiBtn.title = 'Ajouter un emoji';
     emojiBtn.onclick = toggleEmojiPicker;
 
-    // Bouton photo
     const photoBtn = document.createElement('button');
     photoBtn.id = 'photoUploadBtn';
     photoBtn.className = 'chat-action-btn';
@@ -118,7 +98,6 @@
     photoBtn.title = 'Envoyer une photo';
     photoBtn.onclick = triggerPhotoUpload;
 
-    // Input file caché
     const fileInput = document.createElement('input');
     fileInput.id = 'photoFileInput';
     fileInput.type = 'file';
@@ -126,15 +105,12 @@
     fileInput.style.display = 'none';
     fileInput.onchange = handlePhotoSelect;
 
-    // Réorganiser
     actionsDiv.appendChild(emojiBtn);
     actionsDiv.appendChild(photoBtn);
     actionsDiv.appendChild(fileInput);
 
-    // Insérer avant le bouton d'envoi
     inputContainer.insertBefore(actionsDiv, sendBtn);
 
-    // Créer l'emoji picker
     createEmojiPicker();
 
     console.log('✅ Chat moderne initialisé');
@@ -219,7 +195,6 @@
     const file = event.target.files[0];
     if (!file) return;
 
-    // Vérifier que c'est une image
     if (!file.type.startsWith('image/')) {
       if (typeof showToast === 'function') {
         showToast('Veuillez sélectionner une image', 'error');
@@ -229,7 +204,6 @@
       return;
     }
 
-    // Vérifier la taille (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       if (typeof showToast === 'function') {
         showToast('Image trop volumineuse (max 5MB)', 'error');
@@ -239,12 +213,10 @@
       return;
     }
 
-    // Afficher preview et uploader
     showPhotoPreview(file);
   }
 
   function showPhotoPreview(file) {
-    // Créer ou récupérer le conteneur de preview
     let previewContainer = document.getElementById('photoPreviewContainer');
     
     if (!previewContainer) {
@@ -254,7 +226,6 @@
       inputContainer.appendChild(previewContainer);
     }
 
-    // Créer l'aperçu
     const reader = new FileReader();
     reader.onload = async (e) => {
       previewContainer.innerHTML = `
@@ -273,7 +244,6 @@
       `;
       previewContainer.classList.add('active');
 
-      // Bouton envoyer
       document.getElementById('photoSendBtn').onclick = () => uploadPhoto(file);
     };
 
@@ -287,7 +257,6 @@
       container.innerHTML = '';
     }
     
-    // Reset file input
     const fileInput = document.getElementById('photoFileInput');
     if (fileInput) {
       fileInput.value = '';
@@ -302,12 +271,10 @@
     if (sendBtn) sendBtn.disabled = true;
 
     try {
-      // Créer FormData
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', 'chat-photos'); // ⚠️ TON PRESET
+      formData.append('upload_preset', 'chat-photos');
 
-      // Upload vers Cloudinary
       const response = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
         method: 'POST',
         body: formData
@@ -320,14 +287,12 @@
       const data = await response.json();
       uploadedPhotoUrl = data.secure_url;
 
-      // Insérer l'URL dans le textarea
       if (chatInput) {
         const imageTag = `[IMAGE:${uploadedPhotoUrl}]`;
         chatInput.value = (chatInput.value ? chatInput.value + '\n' : '') + imageTag;
         chatInput.focus();
       }
 
-      // Fermer la preview
       cancelPhotoUpload();
 
       if (typeof showToast === 'function') {
@@ -348,88 +313,118 @@
   }
 
   // ============================================
-  // 🖼️ AFFICHAGE DES IMAGES DANS LES MESSAGES
+  // 🖼️ AFFICHAGE DES IMAGES - VERSION UNIVERSELLE
   // ============================================
   
-  // Surcharger appendMessage pour supporter les images
+  function createMessageWithImage(message) {
+    const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g;
+    let messageText = message.message || '';
+    const images = [];
+    
+    let match;
+    while ((match = imageRegex.exec(messageText)) !== null) {
+      images.push(match[1]);
+    }
+    
+    messageText = messageText.replace(imageRegex, '').trim();
+    
+    return { text: messageText, images: images };
+  }
+
+  // Surcharger appendMessage pour TOUS les chats
   const originalAppendMessage = window.appendMessage;
   
   if (originalAppendMessage) {
     window.appendMessage = function(message) {
-      // Détecter si le message contient une image
-      const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g;
-      let messageText = message.message;
-      const images = [];
-      
-      let match;
-      while ((match = imageRegex.exec(messageText)) !== null) {
-        images.push(match[1]);
-      }
+      const parsed = createMessageWithImage(message);
       
       // Si pas d'image, utiliser la fonction originale
-      if (images.length === 0) {
+      if (parsed.images.length === 0) {
         return originalAppendMessage(message);
       }
       
-      // Supprimer les tags [IMAGE:...] du texte
-      messageText = messageText.replace(imageRegex, '').trim();
-      
-      // Créer le message manuellement avec les images
+      // Déterminer quel conteneur utiliser
       const container = document.getElementById('chatMessages') || 
-                       document.getElementById('chatMessagesContainer');
+                       document.getElementById('messagesContainer');
       
-      if (!container) return;
+      if (!container) {
+        console.warn('⚠️ Conteneur de messages non trouvé');
+        return;
+      }
       
+      // Vider si message vide
       if (container.querySelector('p')) {
         container.innerHTML = '';
       }
       
+      // Détecter le type de classe à utiliser
+      const isOwnerChat = document.querySelector('.chat-modal');
+      const messageClass = isOwnerChat ? 'chat-message' : 'message';
+      const avatarClass = isOwnerChat ? 'chat-avatar' : 'message-avatar';
+      const bubbleClass = isOwnerChat ? 'chat-bubble' : 'message-bubble';
+      const senderClass = isOwnerChat ? 'chat-sender' : 'message-sender';
+      const metaClass = isOwnerChat ? 'chat-meta' : 'message-meta';
+      const timeClass = isOwnerChat ? 'chat-time' : 'message-time';
+      const statusClass = isOwnerChat ? 'chat-status' : 'message-status';
+      
+      // Normaliser le sender_type
+      let normalizedType = (message.sender_type || '').toLowerCase();
+      
       const messageDiv = document.createElement('div');
-      messageDiv.className = `chat-message ${message.sender_type}`;
+      messageDiv.className = `${messageClass} ${normalizedType}`;
       
       const avatar = document.createElement('div');
-      avatar.className = 'chat-avatar';
-      avatar.textContent = message.sender_type === 'guest' ? 'V' : 
-                          message.sender_type === 'bot' ? '🤖' : 'P';
+      avatar.className = avatarClass;
+      avatar.textContent = normalizedType === 'guest' ? 'V' : 
+                          normalizedType === 'bot' ? '🤖' : 'P';
       
       const contentDiv = document.createElement('div');
       contentDiv.style.flex = '1';
+      if (!isOwnerChat) {
+        contentDiv.className = 'message-content';
+      }
       
       const sender = document.createElement('div');
-      sender.className = 'chat-sender';
+      sender.className = senderClass;
       sender.textContent = message.sender_name || 
-                          (message.sender_type === 'guest' ? 'Voyageur' : 
-                           message.sender_type === 'bot' ? 'Assistant' : 'Vous');
+                          (normalizedType === 'guest' ? 'Voyageur' : 
+                           normalizedType === 'bot' ? 'Assistant' : 'Propriétaire');
       
       const bubble = document.createElement('div');
-      bubble.className = 'chat-bubble';
+      bubble.className = bubbleClass;
       
-      // Ajouter le texte s'il existe
-      if (messageText) {
-        const textNode = document.createTextNode(messageText);
+      // Ajouter le texte
+      if (parsed.text) {
+        const textNode = document.createTextNode(parsed.text);
         bubble.appendChild(textNode);
       }
       
       // Ajouter les images
-      images.forEach(imageUrl => {
+      parsed.images.forEach(imageUrl => {
         const img = document.createElement('img');
         img.src = imageUrl;
         img.className = 'chat-image';
         img.alt = 'Photo';
+        img.style.maxWidth = '300px';
+        img.style.maxHeight = '400px';
+        img.style.borderRadius = '12px';
+        img.style.marginTop = '8px';
+        img.style.cursor = 'pointer';
         img.onclick = () => window.open(imageUrl, '_blank');
         bubble.appendChild(img);
       });
       
       const meta = document.createElement('div');
-      meta.className = 'chat-meta';
+      meta.className = metaClass;
       
       const time = document.createElement('span');
-      time.className = 'chat-time';
-      time.textContent = typeof formatTime === 'function' ? formatTime(message.created_at) : '';
+      time.className = timeClass;
+      time.textContent = typeof formatTime === 'function' ? 
+                        formatTime(message.created_at) : '';
       
       const status = document.createElement('span');
-      status.className = 'chat-status';
-      status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
+      status.className = statusClass;
+      status.textContent = (normalizedType === 'owner' || normalizedType === 'guest') ? 'Envoyé' : '';
       
       meta.appendChild(time);
       meta.appendChild(status);
@@ -447,6 +442,20 @@
         scrollToBottom();
       }
     };
+    
+    console.log('✅ appendMessage() surchargé pour supporter les images');
+  }
+
+  // Surcharger appendMessageSafe aussi (pour le chat voyageur)
+  const originalAppendMessageSafe = window.appendMessageSafe;
+  
+  if (originalAppendMessageSafe) {
+    window.appendMessageSafe = function(m) {
+      // Juste appeler la nouvelle appendMessage
+      window.appendMessage(m);
+    };
+    
+    console.log('✅ appendMessageSafe() surchargé');
   }
 
   // ============================================
@@ -460,16 +469,14 @@
   // 🚀 INITIALISATION
   // ============================================
   
-  // Initialiser quand le DOM est prêt
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initChatModern, 500); // Attendre un peu
+      setTimeout(initChatModern, 500);
     });
   } else {
-    setTimeout(initChatModern, 500); // Attendre un peu
+    setTimeout(initChatModern, 500);
   }
 
-  // Réinitialiser quand le chat s'ouvre (pour le chat propriétaire)
   const originalOpenChat = window.openChat;
   if (originalOpenChat) {
     window.openChat = async function(...args) {
@@ -478,6 +485,6 @@
     };
   }
 
-  console.log('📦 Chat moderne universel - Emojis & Photos chargé');
+  console.log('📦 Chat moderne v2 - Images fixes - Emojis & Photos chargé');
 
 })();
