@@ -1,8 +1,11 @@
 /* ============================================
-   💬 CHAT MODERNE - EMOJIS & PHOTOS
+   💬 CHAT MODERNE - EMOJIS & PHOTOS (UNIVERSEL)
    
-   ⚠️ Charger ce fichier APRÈS chat-owner.js
-   Ajoute les fonctionnalités sans modifier l'existant
+   Version compatible avec :
+   - Chat propriétaire (messages.html)
+   - Chat voyageur (chat-guest.html)
+   
+   ⚠️ Charger ce fichier APRÈS le script principal du chat
    ============================================ */
 
 (function() {
@@ -36,26 +39,60 @@
   ];
 
   // ============================================
+  // 🎨 DÉTECTION AUTOMATIQUE DE LA STRUCTURE
+  // ============================================
+  
+  let inputContainer = null;
+  let chatInput = null;
+  let sendBtn = null;
+
+  function detectChatStructure() {
+    // Chercher le conteneur
+    inputContainer = document.querySelector('.chat-modal-input') || 
+                     document.querySelector('.chat-input-container');
+    
+    if (!inputContainer) {
+      console.warn('⚠️ Conteneur de chat non trouvé');
+      return false;
+    }
+
+    // Chercher le textarea
+    chatInput = document.getElementById('chatInput') || 
+                document.getElementById('messageInput');
+    
+    if (!chatInput) {
+      console.warn('⚠️ Input de chat non trouvé');
+      return false;
+    }
+
+    // Chercher le bouton send
+    sendBtn = document.getElementById('sendBtn');
+    
+    if (!sendBtn) {
+      console.warn('⚠️ Bouton d\'envoi non trouvé');
+      return false;
+    }
+
+    console.log('✅ Structure détectée:', {
+      container: inputContainer.className,
+      input: chatInput.id
+    });
+
+    return true;
+  }
+
+  // ============================================
   // 🎨 CRÉATION DE L'INTERFACE
   // ============================================
   
   function initChatModern() {
-    const inputContainer = document.querySelector('.chat-modal-input');
-    if (!inputContainer) {
-      console.warn('⚠️ Chat input container not found');
+    if (!detectChatStructure()) {
+      console.warn('⚠️ Impossible d\'initialiser le chat moderne');
       return;
     }
 
     // Vérifier si déjà initialisé
     if (document.getElementById('emojiPickerBtn')) {
-      return;
-    }
-
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    if (!chatInput || !sendBtn) {
-      console.warn('⚠️ Chat input or send button not found');
       return;
     }
 
@@ -108,8 +145,6 @@
   // ============================================
   
   function createEmojiPicker() {
-    const inputContainer = document.querySelector('.chat-modal-input');
-    
     const picker = document.createElement('div');
     picker.id = 'emojiPicker';
     picker.className = 'emoji-picker';
@@ -154,16 +189,15 @@
   }
 
   function insertEmoji(emoji) {
-    const input = document.getElementById('chatInput');
-    if (!input) return;
+    if (!chatInput) return;
 
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    const text = input.value;
+    const start = chatInput.selectionStart;
+    const end = chatInput.selectionEnd;
+    const text = chatInput.value;
 
-    input.value = text.substring(0, start) + emoji + text.substring(end);
-    input.selectionStart = input.selectionEnd = start + emoji.length;
-    input.focus();
+    chatInput.value = text.substring(0, start) + emoji + text.substring(end);
+    chatInput.selectionStart = chatInput.selectionEnd = start + emoji.length;
+    chatInput.focus();
 
     closeEmojiPicker();
   }
@@ -217,7 +251,7 @@
       previewContainer = document.createElement('div');
       previewContainer.id = 'photoPreviewContainer';
       previewContainer.className = 'photo-preview-container';
-      document.querySelector('.chat-modal-input').appendChild(previewContainer);
+      inputContainer.appendChild(previewContainer);
     }
 
     // Créer l'aperçu
@@ -271,7 +305,7 @@
       // Créer FormData
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', 'chat-photos');
+      formData.append('upload_preset', 'chat-photos'); // ⚠️ TON PRESET
 
       // Upload vers Cloudinary
       const response = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
@@ -287,11 +321,10 @@
       uploadedPhotoUrl = data.secure_url;
 
       // Insérer l'URL dans le textarea
-      const input = document.getElementById('chatInput');
-      if (input) {
+      if (chatInput) {
         const imageTag = `[IMAGE:${uploadedPhotoUrl}]`;
-        input.value = (input.value ? input.value + '\n' : '') + imageTag;
-        input.focus();
+        chatInput.value = (chatInput.value ? chatInput.value + '\n' : '') + imageTag;
+        chatInput.focus();
       }
 
       // Fermer la preview
@@ -321,95 +354,100 @@
   // Surcharger appendMessage pour supporter les images
   const originalAppendMessage = window.appendMessage;
   
-  window.appendMessage = function(message) {
-    // Détecter si le message contient une image
-    const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g;
-    let messageText = message.message;
-    const images = [];
-    
-    let match;
-    while ((match = imageRegex.exec(messageText)) !== null) {
-      images.push(match[1]);
-    }
-    
-    // Si pas d'image, utiliser la fonction originale
-    if (images.length === 0) {
-      return originalAppendMessage(message);
-    }
-    
-    // Supprimer les tags [IMAGE:...] du texte
-    messageText = messageText.replace(imageRegex, '').trim();
-    
-    // Créer le message manuellement avec les images
-    const container = document.getElementById('chatMessages');
-    
-    if (container.querySelector('p')) {
-      container.innerHTML = '';
-    }
-    
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `chat-message ${message.sender_type}`;
-    
-    const avatar = document.createElement('div');
-    avatar.className = 'chat-avatar';
-    avatar.textContent = message.sender_type === 'guest' ? 'V' : 
-                        message.sender_type === 'bot' ? '🤖' : 'P';
-    
-    const contentDiv = document.createElement('div');
-    contentDiv.style.flex = '1';
-    
-    const sender = document.createElement('div');
-    sender.className = 'chat-sender';
-    sender.textContent = message.sender_name || 
-                        (message.sender_type === 'guest' ? 'Voyageur' : 
-                         message.sender_type === 'bot' ? 'Assistant' : 'Vous');
-    
-    const bubble = document.createElement('div');
-    bubble.className = 'chat-bubble';
-    
-    // Ajouter le texte s'il existe
-    if (messageText) {
-      const textNode = document.createTextNode(messageText);
-      bubble.appendChild(textNode);
-    }
-    
-    // Ajouter les images
-    images.forEach(imageUrl => {
-      const img = document.createElement('img');
-      img.src = imageUrl;
-      img.className = 'chat-image';
-      img.alt = 'Photo';
-      img.onclick = () => window.open(imageUrl, '_blank');
-      bubble.appendChild(img);
-    });
-    
-    const meta = document.createElement('div');
-    meta.className = 'chat-meta';
-    
-    const time = document.createElement('span');
-    time.className = 'chat-time';
-    time.textContent = typeof formatTime === 'function' ? formatTime(message.created_at) : '';
-    
-    const status = document.createElement('span');
-    status.className = 'chat-status';
-    status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
-    
-    meta.appendChild(time);
-    meta.appendChild(status);
-    
-    contentDiv.appendChild(sender);
-    contentDiv.appendChild(bubble);
-    contentDiv.appendChild(meta);
-    
-    messageDiv.appendChild(avatar);
-    messageDiv.appendChild(contentDiv);
-    
-    container.appendChild(messageDiv);
-    
-    if (typeof scrollToBottom === 'function') {
-      scrollToBottom();
-    }
-  };
+  if (originalAppendMessage) {
+    window.appendMessage = function(message) {
+      // Détecter si le message contient une image
+      const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g;
+      let messageText = message.message;
+      const images = [];
+      
+      let match;
+      while ((match = imageRegex.exec(messageText)) !== null) {
+        images.push(match[1]);
+      }
+      
+      // Si pas d'image, utiliser la fonction originale
+      if (images.length === 0) {
+        return originalAppendMessage(message);
+      }
+      
+      // Supprimer les tags [IMAGE:...] du texte
+      messageText = messageText.replace(imageRegex, '').trim();
+      
+      // Créer le message manuellement avec les images
+      const container = document.getElementById('chatMessages') || 
+                       document.getElementById('chatMessagesContainer');
+      
+      if (!container) return;
+      
+      if (container.querySelector('p')) {
+        container.innerHTML = '';
+      }
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `chat-message ${message.sender_type}`;
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'chat-avatar';
+      avatar.textContent = message.sender_type === 'guest' ? 'V' : 
+                          message.sender_type === 'bot' ? '🤖' : 'P';
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.style.flex = '1';
+      
+      const sender = document.createElement('div');
+      sender.className = 'chat-sender';
+      sender.textContent = message.sender_name || 
+                          (message.sender_type === 'guest' ? 'Voyageur' : 
+                           message.sender_type === 'bot' ? 'Assistant' : 'Vous');
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble';
+      
+      // Ajouter le texte s'il existe
+      if (messageText) {
+        const textNode = document.createTextNode(messageText);
+        bubble.appendChild(textNode);
+      }
+      
+      // Ajouter les images
+      images.forEach(imageUrl => {
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.className = 'chat-image';
+        img.alt = 'Photo';
+        img.onclick = () => window.open(imageUrl, '_blank');
+        bubble.appendChild(img);
+      });
+      
+      const meta = document.createElement('div');
+      meta.className = 'chat-meta';
+      
+      const time = document.createElement('span');
+      time.className = 'chat-time';
+      time.textContent = typeof formatTime === 'function' ? formatTime(message.created_at) : '';
+      
+      const status = document.createElement('span');
+      status.className = 'chat-status';
+      status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
+      
+      meta.appendChild(time);
+      meta.appendChild(status);
+      
+      contentDiv.appendChild(sender);
+      contentDiv.appendChild(bubble);
+      contentDiv.appendChild(meta);
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(contentDiv);
+      
+      container.appendChild(messageDiv);
+      
+      if (typeof scrollToBottom === 'function') {
+        scrollToBottom();
+      }
+    };
+  }
 
   // ============================================
   // 🌍 FONCTIONS GLOBALES
@@ -424,21 +462,22 @@
   
   // Initialiser quand le DOM est prêt
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initChatModern);
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initChatModern, 500); // Attendre un peu
+    });
   } else {
-    initChatModern();
+    setTimeout(initChatModern, 500); // Attendre un peu
   }
 
-  // Réinitialiser quand le chat s'ouvre
+  // Réinitialiser quand le chat s'ouvre (pour le chat propriétaire)
   const originalOpenChat = window.openChat;
   if (originalOpenChat) {
     window.openChat = async function(...args) {
       await originalOpenChat(...args);
-      // Attendre un peu que le DOM soit mis à jour
-      setTimeout(initChatModern, 100);
+      setTimeout(initChatModern, 500);
     };
   }
 
-  console.log('📦 Chat moderne - Emojis & Photos chargé');
+  console.log('📦 Chat moderne universel - Emojis & Photos chargé');
 
 })();
