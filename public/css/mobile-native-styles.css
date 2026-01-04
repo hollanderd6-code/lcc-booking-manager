@@ -760,3 +760,15 @@ select:focus {
     margin-top: 8px;
   }
 }
+/* 🚫 Cacher le menu hamburger sur mobile */
+@media (max-width: 768px) {
+  .mobile-menu-btn,
+  #mobileMenuBtn {
+    display: none !important;
+  }
+  
+  /* Centrer le logo */
+  .mobile-header {
+    justify-content: center !important;
+  }
+}
