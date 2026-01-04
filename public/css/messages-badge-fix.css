@@ -1,22 +1,21 @@
 /* ============================================
-   🔔 BADGE MESSAGES - CSS CORRIGÉ
+   🔔 BADGE MESSAGES - CSS OPTIMISÉ
    
-   Badge toujours visible (même pour 0)
-   Rouge tout le temps
+   Badge positionné à droite de l'icône
+   (pour ne pas cacher l'icône)
    ============================================ */
 
 @media (max-width: 768px) {
   
   /* ============================================
-     🔴 BADGE SUR MESSAGES - TOUJOURS VISIBLE
+     🔴 BADGE SUR MESSAGES - BIEN POSITIONNÉ
      ============================================ */
   
   .mobile-tab[data-tab="messages"] .badge-count,
   .tab-btn[data-tab="messages"] .badge-count {
     position: absolute;
-    top: 4px;
-    right: 50%;
-    transform: translateX(16px);
+    top: 2px;
+    right: 8px; /* Positionné à droite */
     min-width: 20px;
     height: 20px;
     background: linear-gradient(135deg, #EF4444, #DC2626);
@@ -36,13 +35,13 @@
   /* Animation d'apparition */
   @keyframes badgeBounce {
     0% {
-      transform: translateX(16px) scale(0);
+      transform: scale(0);
     }
     50% {
-      transform: translateX(16px) scale(1.2);
+      transform: scale(1.2);
     }
     100% {
-      transform: translateX(16px) scale(1);
+      transform: scale(1);
     }
   }
   
@@ -52,8 +51,7 @@
     border-color: rgba(31, 41, 55, 0.95);
   }
   
-  /* ✅ Badge avec 0 - ROUGE aussi (pas gris !) */
-  /* Le badge reste rouge même pour 0 */
+  /* Badge toujours rouge (même pour 0) */
   
 }
 
