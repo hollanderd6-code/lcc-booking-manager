@@ -441,14 +441,25 @@
       margin-bottom: 24px !important;
     }
 
-    /* ===== FIX HEADER DESKTOP ===== */
+    /* ===== FIX HEADER DESKTOP - ULTRA AGGRESSIVE ===== */
     @media (min-width: 769px) {
-      /* Forcer le header à être transparent et limité en largeur */
+      /* Cibler TOUS les éléments possibles du header */
       #bhHeader,
+      #bhHeader > *,
+      #bhHeader div,
       [id*="header"],
+      [id*="Header"],
       [class*="page-header"],
-      [class*="settings-header"] {
+      [class*="pageHeader"],
+      [class*="Page-header"],
+      [class*="settings-header"],
+      [class*="header-container"],
+      [class*="header-wrapper"],
+      header,
+      .header {
         background: transparent !important;
+        background-color: transparent !important;
+        background-image: none !important;
         max-width: 960px !important;
         margin-left: auto !important;
         margin-right: auto !important;
@@ -456,34 +467,71 @@
         padding-right: 0 !important;
       }
 
-      /* Wrapper du header */
-      .header-wrapper,
-      [class*="header-wrap"] {
+      /* Cibler spécifiquement les divs dans bhHeader */
+      #bhHeader div[style*="background"] {
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+
+      /* Forcer tous les enfants directs */
+      body > div,
+      body > div > div,
+      .app-container > *,
+      .main-content > * {
+        background: transparent !important;
+      }
+
+      /* Remettre le fond blanc uniquement pour les cards */
+      .card,
+      section.card,
+      .page-content .card {
+        background: var(--bg-primary, white) !important;
+      }
+
+      /* Main content doit avoir le fond gris */
+      .main-content,
+      main.main-content {
+        background: var(--bg-body, #f3f4f6) !important;
+      }
+
+      /* Page content transparent */
+      .page-content {
         background: transparent !important;
       }
 
       /* Kicker, titre, sous-titre */
+      [class*="kicker"],
+      [class*="Kicker"],
       .page-kicker,
-      [class*="kicker"] {
+      span[class*="kicker"] {
         background: transparent !important;
+        background-color: transparent !important;
         color: var(--text-secondary, #6b7280) !important;
       }
 
+      [class*="title"],
+      [class*="Title"],
       .page-title,
+      h1,
       h1[class*="title"] {
         background: transparent !important;
+        background-color: transparent !important;
         color: var(--text-primary, #111827) !important;
       }
 
+      [class*="subtitle"],
+      [class*="Subtitle"],
       .page-subtitle,
-      [class*="subtitle"] {
+      p[class*="subtitle"] {
         background: transparent !important;
+        background-color: transparent !important;
         color: var(--text-secondary, #6b7280) !important;
       }
 
-      /* Conteneur principal */
-      .main-content {
-        background: var(--bg-body, #f3f4f6) !important;
+      /* Forcer transparent sur TOUS les éléments au-dessus de .page-content */
+      .app-container,
+      .app-container > *:not(.sidebar):not(#bhSidebar) {
+        background: transparent !important;
       }
     }
     /* ===== FIN FIX HEADER ===== */
