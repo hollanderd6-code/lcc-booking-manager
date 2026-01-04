@@ -62,3 +62,17 @@
   .main-header{ flex-direction:column; align-items:flex-start; }
   .header-left{ max-width:100%; }
 }
+
+/* === FIX HEADER TITRE – COHÉRENCE TOUTES PAGES === */
+
+.page-title {
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .page-title {
+  color: #0f172a;
+}
+
+[data-theme="dark"] .page-title {
+  color: #f8fafc;
+}
