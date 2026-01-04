@@ -1,14 +1,14 @@
 /* ============================================
-   🔔 BADGE MESSAGES - CSS DYNAMIQUE
+   🔔 BADGE MESSAGES - CSS CORRIGÉ
    
-   Affiche le badge avec le nombre réel de
-   messages non lus (géré par JS)
+   Badge toujours visible (même pour 0)
+   Rouge tout le temps
    ============================================ */
 
 @media (max-width: 768px) {
   
   /* ============================================
-     🔴 BADGE SUR MESSAGES
+     🔴 BADGE SUR MESSAGES - TOUJOURS VISIBLE
      ============================================ */
   
   .mobile-tab[data-tab="messages"] .badge-count,
@@ -52,12 +52,8 @@
     border-color: rgba(31, 41, 55, 0.95);
   }
   
-  /* Badge avec 0 - Plus discret */
-  .mobile-tab[data-tab="messages"][data-count="0"] .badge-count,
-  .tab-btn[data-tab="messages"][data-count="0"] .badge-count {
-    background: linear-gradient(135deg, #9CA3AF, #6B7280);
-    opacity: 0.8;
-  }
+  /* ✅ Badge avec 0 - ROUGE aussi (pas gris !) */
+  /* Le badge reste rouge même pour 0 */
   
 }
 
