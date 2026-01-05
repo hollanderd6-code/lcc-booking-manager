@@ -1,24 +1,48 @@
 // public/js/fcm-registration.js
 (function () {
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
+  const SUPABASE_URL = 'https://ztdzragdnjkastswtvzn.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZHpyYWdkbmprYXN0c3d0dnpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzNTc2OTAsImV4cCI6MjA0OTkzMzY5MH0.VE_2vYBO7RfNGLa_iHtSZhPOnOk9ofmvdlb_EY6-TrU';
   
-  async function saveTokenToServer(token) {
+  async function getSupabaseSession() {
     try {
-      // ✅ Utiliser Capacitor Preferences au lieu de localStorage
       const cap = window.Capacitor;
       if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
         console.error('❌ Capacitor Preferences non disponible');
-        return;
+        return null;
       }
       
-      const { value: jwt } = await cap.Plugins.Preferences.get({ key: 'lcc_token' });
+      // Récupérer la session Supabase stockée par Capacitor
+      const { value: authStorage } = await cap.Plugins.Preferences.get({ 
+        key: 'sb-ztdzragdnjkastswtvzn-auth-token' 
+      });
+      
+      if (!authStorage) {
+        console.warn('⚠️ Pas de session Supabase trouvée');
+        return null;
+      }
+      
+      const session = JSON.parse(authStorage);
+      console.log('✅ Session Supabase trouvée');
+      
+      return session.access_token;
+    } catch (err) {
+      console.error('❌ Erreur lecture session Supabase:', err);
+      return null;
+    }
+  }
+  
+  async function saveTokenToServer(token) {
+    try {
+      const jwt = await getSupabaseSession();
       
       if (!jwt) {
-        console.warn('⚠️ Pas de JWT dans Preferences');
+        console.warn('⚠️ Pas de JWT disponible');
         return;
       }
       
-      console.log('✅ JWT trouvé, envoi du token au serveur...');
+      console.log('✅ JWT récupéré, envoi du token au serveur...');
+      console.log('📱 Token iOS:', token);
       
       const res = await fetch(`${API_BASE}/api/save-token`, {
         method: 'POST',
@@ -63,7 +87,8 @@
     
     // Listeners
     PushNotifications.addListener('registration', async (token) => {
-      console.log('✅ Push registration token:', token && token.value);
+      console.log('✅✅✅ DEVICE TOKEN RECEIVED!');
+      console.log('📱 Token:', token && token.value);
       if (token && token.value) await saveTokenToServer(token.value);
     });
     
@@ -100,5 +125,5 @@
   // Auto-start
   setTimeout(() => {
     initPush();
-  }, 2000);
+  }, 3000);
 })();
