@@ -1,120 +1,125 @@
-// Initialiser les notifications push (Capacitor)
-//
-// - iOS: l'événement 'registration' renvoie généralement un token APNS (pas FCM).
-// - Android: token FCM.
-// Ton backend peut stocker le token + platform pour router correctement.
+/* notifications.js (vanilla script - PAS de 'export')
+ * Compatible avec <script src="/js/notifications.js"></script>
+ * Capacitor Push Notifications (iOS/Android)
+ *
+ * Notes:
+ * - iOS: l'événement 'registration' renvoie généralement un token APNS (pas FCM).
+ * - Android: token FCM.
+ * - On envoie le token au backend pour l'associer à l'utilisateur/appareil.
+ */
 
-let __pushInitDone = false;
+(function () {
+  'use strict';
 
-export async function initPushNotifications() {
-  if (__pushInitDone) return;
-  __pushInitDone = true;
+  var __pushInitDone = false;
 
-  const cap = window?.Capacitor;
-  const PushNotifications = cap?.Plugins?.PushNotifications;
-
-  // Pas dans l'app native / plugin absent
-  if (!cap || !PushNotifications) {
-    console.log('📱 Pas en environnement Capacitor natif -> notifications désactivées');
-    return;
+  function log() {
+    try { console.log.apply(console, arguments); } catch (_) {}
+  }
+  function warn() {
+    try { console.warn.apply(console, arguments); } catch (_) {}
+  }
+  function err() {
+    try { console.error.apply(console, arguments); } catch (_) {}
   }
 
-  // Évite les doublons de listeners si la page est rechargée dans la WebView
-  try {
-    if (typeof PushNotifications.removeAllListeners === 'function') {
-      await PushNotifications.removeAllListeners();
+  async function safeJson(res) {
+    try { return await res.json(); } catch (_) { return {}; }
+  }
+
+  async function postJson(url, body) {
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body || {})
+    });
+
+    if (!res.ok) {
+      var txt = '';
+      try { txt = await res.text(); } catch (_) {}
+      throw new Error(('HTTP ' + res.status + ' ' + res.statusText + ' ' + txt).trim());
     }
-  } catch (e) {
-    // non bloquant
+    return safeJson(res);
   }
 
-  console.log('📱 Demande de permission pour les notifications...');
-
-  // 1) Vérifier / demander la permission
-  let permStatus;
-  try {
-    permStatus = await PushNotifications.checkPermissions();
-  } catch (e) {
-    console.error('❌ checkPermissions a échoué:', e);
-    return;
+  async function saveTokenToBackend(token, platform) {
+    // IMPORTANT: adapte l'URL si ton backend attend un autre endpoint
+    // (j'ai gardé celui qui existait dans ton fichier précédent).
+    return postJson('/api/save-token', {
+      token: token,
+      platform: platform || 'unknown',
+      ts: Date.now()
+    });
   }
 
-  if (permStatus.receive === 'prompt') {
-    try {
-      permStatus = await PushNotifications.requestPermissions();
-    } catch (e) {
-      console.error('❌ requestPermissions a échoué:', e);
+  async function initPushNotifications() {
+    if (__pushInitDone) return;
+    __pushInitDone = true;
+
+    var cap = window && window.Capacitor;
+    var PushNotifications = cap && cap.Plugins && cap.Plugins.PushNotifications;
+
+    if (!cap || !PushNotifications) {
+      warn('🔕 PushNotifications non dispo (pas dans l’app native ? plugin absent ?).', { hasCapacitor: !!cap, hasPlugin: !!PushNotifications });
       return;
     }
-  }
 
-  if (permStatus.receive !== 'granted') {
-    console.warn('🔕 Permission de notification refusée:', permStatus.receive);
-    // Important: ne pas throw ici sinon ça casse l'app
-    return;
-  }
+    // Platform
+    var platform = (cap.getPlatform && cap.getPlatform()) || 'unknown';
+    log('📱 Push init (platform=' + platform + ')');
 
-  console.log('✅ Permission notifications accordée');
+    // Listeners
+    PushNotifications.addListener('registration', function (token) {
+      // token.value contient la valeur (APNS sur iOS / FCM sur Android)
+      log('✅ Push registration token:', token && token.value ? token.value : token);
 
-  // 2) Listeners
-  await PushNotifications.addListener('registration', async (token) => {
-    // token.value = APNS sur iOS, FCM sur Android
-    console.log('✅ Push registration token reçu:', token?.value);
+      // Envoi au backend
+      saveTokenToBackend(token && token.value ? token.value : token, platform)
+        .then(function (r) { log('📨 Token sauvegardé côté serveur:', r); })
+        .catch(function (e) { err('❌ Erreur sauvegarde token:', e); });
+    });
 
+    PushNotifications.addListener('registrationError', function (error) {
+      err('❌ Push registrationError:', error);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', function (notification) {
+      log('🔔 pushNotificationReceived:', notification);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', function (notification) {
+      log('👉 pushNotificationActionPerformed:', notification);
+    });
+
+    // Permissions
     try {
-      await saveTokenToBackend({
-        token: token?.value,
-        platform: cap.getPlatform?.() || cap.platform || 'unknown',
-      });
-      console.log('✅ Token sauvegardé (backend)');
+      var permStatus = await PushNotifications.checkPermissions();
+      log('🔎 checkPermissions:', permStatus);
+
+      if (permStatus && permStatus.receive !== 'granted') {
+        log('📱 Demande permission notifications...');
+        permStatus = await PushNotifications.requestPermissions();
+        log('📝 requestPermissions:', permStatus);
+      }
+
+      if (permStatus && permStatus.receive === 'granted') {
+        log('📌 Permission accordée, register()...');
+        await PushNotifications.register();
+        log('🟢 register() appelé (attends l’événement registration)');
+      } else {
+        warn('🚫 Permission notifications refusée ou indéterminée:', permStatus);
+      }
     } catch (e) {
-      console.error('❌ Sauvegarde token (backend) a échoué:', e);
+      err('❌ Erreur init push:', e);
     }
-  });
-
-  await PushNotifications.addListener('registrationError', (error) => {
-    console.error('❌ Push registration error:', error);
-  });
-
-  await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    console.log('📩 Push reçu (foreground):', notification);
-    // Ici tu peux afficher un toast / badge si tu veux
-  });
-
-  await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-    console.log('👉 Action sur notification (tap / action):', notification);
-    // Ici tu peux naviguer selon notification.notification.data
-  });
-
-  // 3) Enregistrer le device (déclenche l'événement 'registration')
-  console.log('📱 Enregistrement push lancé...');
-  try {
-    await PushNotifications.register();
-  } catch (e) {
-    console.error('❌ PushNotifications.register a échoué:', e);
-  }
-}
-
-// Fonction pour sauvegarder le token
-async function saveTokenToBackend(payload) {
-  // payload: { token: string, platform: 'ios' | 'android' | 'web' | 'unknown' }
-  const res = await fetch('https://lcc-booking-manager.onrender.com/api/save-token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} ${res.statusText} ${txt}`.trim());
   }
 
-  return res.json().catch(() => ({}));
-}
+  // Expose global (pour pouvoir appeler depuis d’autres scripts)
+  window.initPushNotifications = initPushNotifications;
 
-// Auto-init si tu veux (optionnel)
-// Si tu préfères contrôler l'init ailleurs, supprime ce bloc.
-document.addEventListener('DOMContentLoaded', () => {
-  // Petite protection: certains frameworks déclenchent plusieurs fois
-  initPushNotifications().catch((e) => console.error('❌ initPushNotifications error:', e));
-});
+  // Auto-init
+  document.addEventListener('DOMContentLoaded', function () {
+    initPushNotifications();
+  });
+})();
