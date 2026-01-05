@@ -95,6 +95,8 @@
   // Expose au global si besoin
   window.initPush = initPush;
 
-  // Auto-start (si tu veux)
-  // initPush();
+  // Auto-start avec délai pour attendre Capacitor
+setTimeout(() => {
+  initPush();
+}, 2000);
 })();
