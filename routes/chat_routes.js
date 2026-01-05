@@ -596,7 +596,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
           );
           
           if (tokenResult.rows.length > 0 && tokenResult.rows[0].fcm_token) {
-            const { sendNotification } = require('../server/notifications-service');
+            const { sendNotification } = require('../services/notifications-service');
             
             const messagePreview = message.length > 100 
               ? message.substring(0, 97) + '...' 
