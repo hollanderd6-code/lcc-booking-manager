@@ -8079,32 +8079,22 @@ if (document.readyState === 'loading') {
 <script src="/js/messages-badge-loader.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>   
 <script>
+console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
 (function () {
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   
   async function getJWTFromWeb() {
+    console.log('🔍 getJWTFromWeb appelé');
     try {
       const jwt = localStorage.getItem('lcc_token');
+      console.log('📦 localStorage.lcc_token:', jwt ? 'TROUVÉ (' + jwt.substring(0, 20) + '...)' : 'VIDE');
+      
       if (jwt) {
         console.log('✅ JWT trouvé dans localStorage');
         return jwt;
       }
       
-      const sessionJwt = sessionStorage.getItem('lcc_token');
-      if (sessionJwt) {
-        console.log('✅ JWT trouvé dans sessionStorage');
-        return sessionJwt;
-      }
-      
-      if (window.supabase && typeof window.supabase.auth?.getSession === 'function') {
-        const { data } = await window.supabase.auth.getSession();
-        if (data?.session?.access_token) {
-          console.log('✅ JWT récupéré depuis Supabase client');
-          return data.session.access_token;
-        }
-      }
-      
-      console.warn('⚠️ Aucun JWT trouvé');
+      console.warn('⚠️ Aucun JWT trouvé dans localStorage');
       return null;
     } catch (err) {
       console.error('❌ Erreur récupération JWT:', err);
@@ -8113,6 +8103,7 @@ if (document.readyState === 'loading') {
   }
   
   async function saveTokenToServer(token) {
+    console.log('💾 saveTokenToServer appelé');
     try {
       const jwt = await getJWTFromWeb();
       
@@ -8141,7 +8132,7 @@ if (document.readyState === 'loading') {
         console.error('❌ Enregistrement token échoué:', res.status, data);
         return;
       }
-      console.log('✅✅✅ TOKEN SAUVEGARDÉ SUR LE SERVEUR!', data);
+      console.log('🎉🎉🎉 TOKEN SAUVEGARDÉ SUR LE SERVEUR!', data);
     } catch (err) {
       console.error('❌ Erreur réseau:', err);
     }
@@ -8163,7 +8154,7 @@ if (document.readyState === 'loading') {
       return;
     }
     
-    console.log('🔔 Init Push (native)...');
+    console.log('🔔 Init Push (native) - APP.HTML VERSION');
     
     PushNotifications.addListener('registration', async (token) => {
       console.log('✅✅✅ DEVICE TOKEN RECEIVED!');
@@ -8175,20 +8166,11 @@ if (document.readyState === 'loading') {
       console.error('❌ Push registration error:', error);
     });
     
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('📩 Push received:', notification);
-    });
-    
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('👉 Push action performed:', notification);
-    });
-    
     const permStatus = await PushNotifications.checkPermissions();
     console.log('🔎 checkPermissions:', permStatus);
     
     if (!permStatus || permStatus.receive !== 'granted') {
       const requestStatus = await PushNotifications.requestPermissions();
-      console.log('🟦 requestPermissions:', requestStatus);
       if (!requestStatus || requestStatus.receive !== 'granted') {
         console.warn('⛔ Permission refusée');
         return;
@@ -8205,6 +8187,6 @@ if (document.readyState === 'loading') {
   }, 3000);
 })();
 </script>
-<script>console.log('🏠 APP.HTML CHARGÉ');</script>    
 </body>
 </html>
+
