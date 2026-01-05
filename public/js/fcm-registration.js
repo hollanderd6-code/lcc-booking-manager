@@ -1,102 +1,115 @@
-// fcm-registration.js (CORRIGÉ)
-// Objectif : toujours voir soit "✅ Push registration token", soit "registrationError"
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
-(function () {
-  // ✅ Anti double init (si le script est injecté plusieurs fois)
-  if (window.__LCC_PUSH_INIT__) {
-    console.log("🔁 Push déjà initialisé, on skip.");
-    return;
-  }
-  window.__LCC_PUSH_INIT__ = true;
+// Optionnel: si tu installes le plugin Firebase Messaging (voir plus bas)
+let FirebaseMessaging = null;
+try {
+  // eslint-disable-next-line import/no-unresolved
+  FirebaseMessaging = (await import('@capacitor-firebase/messaging')).FirebaseMessaging;
+} catch (e) {
+  // plugin pas installé -> on continue en APNs only
+}
 
-  const { Capacitor } = window;
-  const PushNotifications = Capacitor?.Plugins?.PushNotifications;
+const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
-  if (!PushNotifications) {
-    console.log("❌ PushNotifications plugin introuvable (pas dans l'app native ?).");
-    return;
-  }
-
-  const API_BASE = (window.API_BASE || window.location.origin).replace(/\/$/, "");
-  let registrationReceived = false;
-
-  // ✅ Important : listeners AVANT register()
-  PushNotifications.addListener("registration", async (token) => {
-    registrationReceived = true;
-    const value = token?.value;
-    console.log("✅ Push registration token:", value);
-
-    if (!value) {
-      console.log("⚠️ registration event reçu mais token vide:", token);
+async function saveTokenToServer(token) {
+  try {
+    const jwt = localStorage.getItem('token');
+    if (!jwt) {
+      console.warn('⚠️ Pas de JWT en localStorage, token non envoyé au serveur');
       return;
     }
 
-    try {
-      const res = await fetch(`${API_BASE}/api/save-token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: value,
-          platform: Capacitor.getPlatform?.() || "unknown",
-          createdAt: new Date().toISOString(),
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      console.log("✅ Token envoyé au serveur:", json);
-    } catch (e) {
-      console.log("❌ Erreur envoi token au serveur:", e);
+    const res = await fetch(`${API_BASE}/api/save-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('❌ save-token failed', res.status, data);
+      return;
     }
+    console.log('✅ Token sauvegardé serveur:', data);
+  } catch (err) {
+    console.error('❌ Erreur réseau save-token:', err);
+  }
+}
+
+export async function initPush() {
+  if (window.__pushInitDone) return;
+  window.__pushInitDone = true;
+
+  // On ne fait ça que dans l’app native
+  if (!Capacitor.isNativePlatform()) {
+    console.log('🌐 Web: pas d’init push iOS/Android');
+    return;
+  }
+
+  console.log('🔔 Init Push (native) ...');
+
+  // 1) Listeners AVANT register()
+  await PushNotifications.addListener('registration', async (token) => {
+    console.log('✅ Push registration token (APNs):', token?.value);
+
+    // IMPORTANT: token.value ici = APNs token (iOS) / FCM token (Android selon setup)
+    // Pour ton serveur, tu veux idéalement un vrai FCM token.
+    await saveTokenToServer(token?.value);
   });
 
-  PushNotifications.addListener("registrationError", (error) => {
-    registrationReceived = true;
-    console.log("❌ registrationError:", error);
+  await PushNotifications.addListener('registrationError', (error) => {
+    console.error('❌ Push registration error:', error);
   });
 
-  PushNotifications.addListener("pushNotificationReceived", (notification) => {
-    console.log("📩 pushNotificationReceived:", notification);
+  await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    console.log('📩 Push received:', notification);
   });
 
-  PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-    console.log("👉 pushNotificationActionPerformed:", action);
+  await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+    console.log('👉 Push action performed:', notification);
   });
 
-  async function initPush() {
-    try {
-      console.log("📱 Demande de permission notifications...");
-      const permStatus = await PushNotifications.checkPermissions();
-      console.log("🔎 checkPermissions:", permStatus);
+  // 2) Permission
+  const permStatus = await PushNotifications.checkPermissions();
+  console.log('🔎 checkPermissions:', permStatus);
 
-      let status = permStatus?.receive;
-
-      if (status !== "granted") {
-        const req = await PushNotifications.requestPermissions();
-        console.log("🟦 requestPermissions:", req);
-        status = req?.receive;
-      }
-
-      if (status !== "granted") {
-        console.log("🚫 Permission refusée:", status);
-        return;
-      }
-
-      console.log("📌 Permission accordée, register()...");
-      await PushNotifications.register();
-      console.log("🟢 register() appelé (attends l’événement registration)");
-
-      // ✅ Si après 10s on n’a rien → on log un warning clair
-      setTimeout(() => {
-        if (!registrationReceived) {
-          console.log(
-            "⚠️ Aucun événement 'registration' ni 'registrationError' après 10s.\n" +
-              "→ Très probable: capabilities iOS (Push Notifications) manquantes, provisioning, APNs/Firebase config, ou AppDelegate."
-          );
-        }
-      }, 10000);
-    } catch (e) {
-      console.log("❌ Exception initPush:", e);
+  if (permStatus.receive !== 'granted') {
+    const requestStatus = await PushNotifications.requestPermissions();
+    console.log('🟦 requestPermissions:', requestStatus);
+    if (requestStatus.receive !== 'granted') {
+      console.warn('⛔ Permission refusée');
+      return;
     }
   }
 
-  initPush();
-})();
+  // 3) Register APNs/FCM (Capacitor PushNotifications)
+  console.log('📌 Permission OK, register()...');
+  await PushNotifications.register();
+  console.log('🟢 register() appelé, attente event registration/registrationError');
+
+  // 4) BONUS: si tu installes Firebase Messaging, récupère le VRAI token FCM iOS
+  if (FirebaseMessaging) {
+    try {
+      const fcmPerm = await FirebaseMessaging.requestPermissions();
+      console.log('🟦 FirebaseMessaging permissions:', fcmPerm);
+
+      const { token } = await FirebaseMessaging.getToken();
+      console.log('✅ FCM token (FirebaseMessaging):', token);
+      if (token) await saveTokenToServer(token);
+    } catch (e) {
+      console.warn('⚠️ Impossible de récupérer token FCM via FirebaseMessaging:', e);
+    }
+  } else {
+    console.log('ℹ️ Plugin FirebaseMessaging non installé → iOS aura seulement APNs token');
+  }
+
+  // 5) watchdog debug
+  setTimeout(() => {
+    console.warn("⚠️ Si tu ne vois toujours ni 'registration' ni 'registrationError' :");
+    console.warn('→ très souvent: test sur simulateur, ou souci APNs/provisioning/runtime');
+  }, 10000);
+}
