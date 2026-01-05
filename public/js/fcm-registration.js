@@ -1,10 +1,8 @@
 // public/js/fcm-registration.js
 (function () {
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
-  const SUPABASE_URL = 'https://ztdzragdnjkastswtvzn.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZHpyYWdkbmprYXN0c3d0dnpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzNTc2OTAsImV4cCI6MjA0OTkzMzY5MH0.VE_2vYBO7RfNGLa_iHtSZhPOnOk9ofmvdlb_EY6-TrU';
   
-  async function getSupabaseSession() {
+  async function findSupabaseKey() {
     try {
       const cap = window.Capacitor;
       if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
@@ -12,22 +10,60 @@
         return null;
       }
       
-      // Récupérer la session Supabase stockée par Capacitor
-      const { value: authStorage } = await cap.Plugins.Preferences.get({ 
-        key: 'sb-ztdzragdnjkastswtvzn-auth-token' 
-      });
+      // Essayer différentes clés possibles
+      const possibleKeys = [
+        'sb-ztdzragdnjkastswtvzn-auth-token',
+        'supabase.auth.token',
+        '@supabase/auth-token',
+        'sb-auth-token',
+        'lcc_token'  // Peut-être que c'est stocké directement
+      ];
       
-      if (!authStorage) {
-        console.warn('⚠️ Pas de session Supabase trouvée');
-        return null;
+      console.log('🔍 Recherche de la clé Supabase...');
+      
+      for (const key of possibleKeys) {
+        const { value } = await cap.Plugins.Preferences.get({ key });
+        if (value) {
+          console.log(`✅ Clé trouvée: ${key}`);
+          console.log(`📦 Valeur (début): ${value.substring(0, 100)}...`);
+          return { key, value };
+        }
       }
       
-      const session = JSON.parse(authStorage);
-      console.log('✅ Session Supabase trouvée');
-      
-      return session.access_token;
+      console.warn('⚠️ Aucune clé Supabase trouvée dans les clés testées');
+      return null;
     } catch (err) {
-      console.error('❌ Erreur lecture session Supabase:', err);
+      console.error('❌ Erreur recherche clé:', err);
+      return null;
+    }
+  }
+  
+  async function getSupabaseSession() {
+    const found = await findSupabaseKey();
+    if (!found) return null;
+    
+    try {
+      // Si c'est lcc_token, c'est directement le JWT
+      if (found.key === 'lcc_token') {
+        console.log('✅ JWT direct trouvé');
+        return found.value;
+      }
+      
+      // Sinon, parser le JSON
+      const session = JSON.parse(found.value);
+      console.log('✅ Session Supabase parsée');
+      
+      // Essayer différents chemins pour le token
+      const token = session.access_token || session.accessToken || session.token;
+      if (token) {
+        console.log('✅ JWT extrait de la session');
+        return token;
+      }
+      
+      console.warn('⚠️ Pas de token dans la session');
+      return null;
+    } catch (err) {
+      console.error('❌ Erreur parsing session:', err);
       return null;
     }
   }
