@@ -1,130 +1,96 @@
-// ============================================
-// 🔔 ENREGISTREMENT FCM AVEC @capacitor-firebase/messaging
-// ============================================
-
-/**
- * Enregistrer les notifications push
- */
-export async function registerForPushNotifications() {
-  try {
-    console.log('📱 Environnement:', window.Capacitor?.isNativePlatform() ? 'App Native' : 'Web');
-    
-    // Vérifier si on est en mode natif
-    const isNative = window.Capacitor?.isNativePlatform();
-    
-    if (!isNative) {
-      console.log('⚠️ Pas en mode natif');
-      return null;
-    }
-    
-    // Importer le plugin Firebase
-    const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
-    
-    console.log('📱 Demande de permission pour les notifications...');
-    
-    // 1. Vérifier les permissions
-    const permissionStatus = await FirebaseMessaging.checkPermissions();
-    console.log('🔐 Status permission:', permissionStatus.receive);
-    
-    if (permissionStatus.receive === 'prompt') {
-      // Demander la permission
-      const result = await FirebaseMessaging.requestPermissions();
-      
-      if (result.receive !== 'granted') {
-        console.log('❌ Permission refusée');
-        return null;
+// public/js/fcm-registration.js
+(function () {
+  const API_BASE = 'https://lcc-booking-manager.onrender.com';
+  
+  async function saveTokenToServer(token) {
+    try {
+      const jwt = localStorage.getItem('lcc_token');
+      if (!jwt) {
+        console.warn('⚠️ Pas de JWT en localStorage');
+        return;
       }
-    }
-    
-    if (permissionStatus.receive !== 'granted') {
-      console.log('❌ Permission non accordée');
-      return null;
-    }
-    
-    console.log('✅ Permission notifications accordée');
-    
-    // 2. Récupérer le token FCM (déjà converti par le plugin !)
-    console.log('📱 Enregistrement FCM lancé...');
-    
-    const result = await FirebaseMessaging.getToken();
-    const fcmToken = result.token;
-    
-    if (fcmToken) {
-      console.log('🔑 Token FCM reçu:', fcmToken.substring(0, 20) + '...');
       
-      // 3. Envoyer au serveur
-      await saveFCMToken(fcmToken);
+      console.log('✅ JWT trouvé, envoi du token au serveur...');
       
-      return fcmToken;
-    } else {
-      console.error('❌ Pas de token FCM');
-      return null;
+      const res = await fetch(`${API_BASE}/api/save-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ 
+          token,
+          device_type: 'ios'
+        }),
+      });
+      
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('❌ Enregistrement token échoué:', res.status, data);
+        return;
+      }
+      console.log('✅ Token sauvegardé sur le serveur:', data);
+    } catch (err) {
+      console.error('❌ Erreur réseau:', err);
     }
-    
-  } catch (error) {
-    console.error('❌ Erreur enregistrement notifications:', error);
-    return null;
   }
-}
-
-/**
- * Envoyer le token FCM au serveur
- */
-async function saveFCMToken(token) {
-  try {
-    const authToken = localStorage.getItem('authToken');
+  
+  async function initPush() {
+    if (window.__pushInitDone) return;
+    window.__pushInitDone = true;
     
-    if (!authToken) {
-      console.warn('⚠️ Pas de token d\'authentification');
+    const cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) {
+      console.log('🌐 Web: pas d\'init push');
       return;
     }
     
-    const response = await fetch('/api/save-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ token })
-    });
-    
-    if (response.ok) {
-      console.log('✅ Token FCM sauvegardé sur le serveur');
-    } else {
-      const error = await response.json();
-      console.error('❌ Erreur sauvegarde token:', error);
+    const PushNotifications = cap.Plugins && cap.Plugins.PushNotifications;
+    if (!PushNotifications) {
+      console.error('❌ PushNotifications plugin introuvable');
+      return;
     }
-  } catch (error) {
-    console.error('❌ Erreur requête sauvegarde token:', error);
-  }
-}
-
-/**
- * Configurer les listeners de notifications
- */
-export async function setupNotificationListeners() {
-  try {
-    const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
     
-    // Écouter les notifications
-    await FirebaseMessaging.addListener('notificationReceived', (event) => {
-      console.log('🔔 Notification reçue (foreground):', event.notification);
+    console.log('🔔 Init Push (native)...');
+    
+    // Listeners
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('✅ Push registration token:', token && token.value);
+      if (token && token.value) await saveTokenToServer(token.value);
     });
     
-    await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-      console.log('👆 Notification cliquée:', event.notification);
-      
-      // Naviguer vers la bonne page
-      const data = event.notification.data;
-      
-      if (data?.type === 'new_chat_message' && data?.conversation_id) {
-        window.location.href = `/dashboard?tab=messages&conversation=${data.conversation_id}`;
+    PushNotifications.addListener('registrationError', (error) => {
+      console.error('❌ Push registration error:', error);
+    });
+    
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('📩 Push received:', notification);
+    });
+    
+    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      console.log('👉 Push action performed:', notification);
+    });
+    
+    // Permissions
+    const permStatus = await PushNotifications.checkPermissions();
+    console.log('🔎 checkPermissions:', permStatus);
+    
+    if (!permStatus || permStatus.receive !== 'granted') {
+      const requestStatus = await PushNotifications.requestPermissions();
+      console.log('🟦 requestPermissions:', requestStatus);
+      if (!requestStatus || requestStatus.receive !== 'granted') {
+        console.warn('⛔ Permission refusée');
+        return;
       }
-    });
+    }
     
-    console.log('✅ Listeners de notifications configurés');
-    
-  } catch (error) {
-    console.error('❌ Erreur configuration listeners:', error);
+    console.log('📌 Permission OK, register()...');
+    await PushNotifications.register();
+    console.log('🟢 register() appelé, attente token...');
   }
-}
+  
+  // Auto-start
+  setTimeout(() => {
+    initPush();
+  }, 2000);
+})();
