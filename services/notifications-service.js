@@ -12,16 +12,21 @@ let firebaseInitialized = false;
 
 function initializeFirebase() {
   if (!firebaseInitialized) {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-      : require('./firebase-service-account.json');
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    
-    firebaseInitialized = true;
-    console.log('✅ Firebase Admin initialisé');
+    try {
+      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+        : require('../firebase-service-account.json');
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      
+      firebaseInitialized = true;
+      console.log('✅ Firebase Admin initialisé');
+    } catch (error) {
+      console.error('❌ Erreur initialisation Firebase:', error.message);
+      firebaseInitialized = false;
+    }
   }
 }
 
@@ -31,6 +36,11 @@ function initializeFirebase() {
 
 async function sendNotification(token, title, body, data = {}) {
   initializeFirebase();
+  
+  if (!firebaseInitialized) {
+    console.warn('⚠️ Firebase non initialisé - notification ignorée');
+    return { success: false, error: 'Firebase not initialized' };
+  }
   
   const message = {
     notification: { title, body },
@@ -83,6 +93,11 @@ async function sendNotification(token, title, body, data = {}) {
  */
 async function sendNewMessageNotification(userId, conversationId, messagePreview, propertyName) {
   try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
     const result = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
@@ -109,10 +124,41 @@ async function sendNewMessageNotification(userId, conversationId, messagePreview
 }
 
 /**
+ * Envoyer par userId directement
+ */
+async function sendNotificationByUserId(userId, title, body, data = {}) {
+  try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
+    const result = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return { success: false, error: 'No token' };
+    }
+    
+    return await sendNotification(result.rows[0].fcm_token, title, body, data);
+  } catch (error) {
+    console.error('❌ Erreur notification:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Envoyer une notification de nouveau ménage assigné
  */
 async function sendNewCleaningNotification(userId, cleaningId, propertyName, cleanerName, cleaningDate) {
   try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
     const result = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
@@ -148,6 +194,11 @@ async function sendNewCleaningNotification(userId, cleaningId, propertyName, cle
  */
 async function sendCleaningReminderNotification(userId, cleaningId, propertyName, cleanerName, cleaningDate) {
   try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
     const result = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
@@ -178,6 +229,11 @@ async function sendCleaningReminderNotification(userId, cleaningId, propertyName
  */
 async function sendNewInvoiceNotification(userId, invoiceId, invoiceType, amount) {
   try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
     const result = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
@@ -214,6 +270,11 @@ async function sendNewInvoiceNotification(userId, invoiceId, invoiceType, amount
  */
 async function sendNewReservationNotification(userId, reservationId, propertyName, guestName, checkIn, checkOut, platform) {
   try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
     const result = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
@@ -240,7 +301,7 @@ async function sendNewReservationNotification(userId, reservationId, propertyNam
       `${propertyName} - ${checkInDate} au ${checkOutDate}`,
       {
         type: 'new_reservation',
-        reservation_id: reservationId.toString(),
+        reservation_id: reservationId ? reservationId.toString() : '',
         property_name: propertyName
       }
     );
@@ -256,6 +317,11 @@ async function sendNewReservationNotification(userId, reservationId, propertyNam
 async function sendNotificationToMultiple(tokens, title, body, data = {}) {
   initializeFirebase();
   
+  if (!firebaseInitialized) {
+    console.warn('⚠️ Firebase non initialisé - notification ignorée');
+    return { success: false, error: 'Firebase not initialized' };
+  }
+  
   const message = {
     notification: { title, body },
     data: data,
@@ -265,6 +331,14 @@ async function sendNotificationToMultiple(tokens, title, body, data = {}) {
       notification: {
         sound: 'default',
         channelId: 'default'
+      }
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1
+        }
       }
     }
   };
@@ -296,6 +370,7 @@ module.exports = {
   setPool,
   initializeFirebase,
   sendNotification,
+  sendNotificationByUserId,
   sendNewMessageNotification,
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
