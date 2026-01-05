@@ -3,37 +3,34 @@
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   
   async function saveTokenToServer(token) {
-    try {
-      const jwt = localStorage.getItem('lcc_token'); // ← CORRIGÉ: clé correcte
-      if (!jwt) {
-        console.warn('⚠️ Pas de JWT en localStorage, token non envoyé au serveur');
-        return;
-      }
-      
-      console.log('✅ JWT trouvé, envoi du token FCM au serveur...');
-      
-      const res = await fetch(`${API_BASE}/api/notifications/fcm/register`, { // ← CORRIGÉ: syntaxe fetch + endpoint FCM
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({ 
-          fcmToken: token,      // ← CORRIGÉ: nom du champ
-          deviceType: 'ios'     // ← AJOUTÉ: type d'appareil
-        }),
-      });
-      
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error('❌ Enregistrement FCM échoué:', res.status, data);
-        return;
-      }
-      console.log('✅ Token FCM sauvegardé sur le serveur:', data);
-    } catch (err) {
-      console.error('❌ Erreur réseau lors de l\'enregistrement FCM:', err);
+  try {
+    const jwt = localStorage.getItem('lcc_token');
+    if (!jwt) {
+      console.warn('⚠️ Pas de JWT en localStorage, token non envoyé au serveur');
+      return;
     }
+    
+    console.log('✅ JWT trouvé, envoi du token au serveur...');
+    
+    const res = await fetch(`${API_BASE}/api/save-token`, { // ← BON ENDPOINT
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ token }), // ← FORMAT ATTENDU
+    });
+    
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('❌ Enregistrement token échoué:', res.status, data);
+      return;
+    }
+    console.log('✅ Token sauvegardé sur le serveur:', data);
+  } catch (err) {
+    console.error('❌ Erreur réseau lors de l\'enregistrement:', err);
   }
+}
   
   async function initPush() {
     if (window.__pushInitDone) return;
