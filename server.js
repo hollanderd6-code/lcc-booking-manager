@@ -765,17 +765,17 @@ const pool = new Pool({
     ? { rejectUnauthorized: false }
     : false
 });
-const notificationServiceModule = require('./server/notifications-service');
-notificationServiceModule.setPool(pool);
+
+// Initialiser le pool pour les notifications
+setPool(pool);
+
 // FORCER L'INITIALISATION DE FIREBASE AU DÉMARRAGE
 try {
   console.log('🔥 Initialisation de Firebase...');
-  // Appeler une fonction vide juste pour initialiser
-  const testInit = require('./server/notifications-service');
-  // Firebase s'initialisera au premier appel
-  console.log('✅ Module Firebase chargé');
+  initializeFirebase();
+  console.log('✅ Firebase initialisé avec succès');
 } catch (error) {
-  console.error('❌ Erreur chargement Firebase:', error);
+  console.error('❌ Erreur initialisation Firebase:', error);
 }
 // Init DB : création tables users + welcome_books + cleaners + user_settings + cleaning_assignments
 async function initDb() {
