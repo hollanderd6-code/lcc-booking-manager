@@ -4,9 +4,17 @@
   
   async function saveTokenToServer(token) {
     try {
-      const jwt = localStorage.getItem('lcc_token');
+      // ✅ Utiliser Capacitor Preferences au lieu de localStorage
+      const cap = window.Capacitor;
+      if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
+        console.error('❌ Capacitor Preferences non disponible');
+        return;
+      }
+      
+      const { value: jwt } = await cap.Plugins.Preferences.get({ key: 'lcc_token' });
+      
       if (!jwt) {
-        console.warn('⚠️ Pas de JWT en localStorage');
+        console.warn('⚠️ Pas de JWT dans Preferences');
         return;
       }
       
