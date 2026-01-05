@@ -43,8 +43,10 @@ const {
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
   sendNewInvoiceNotification,
-  sendNewReservationNotification
-} = require('./server/notifications-service');
+  sendNewReservationNotification,
+  setPool,             
+  initializeFirebase    
+} = require('./services/notifications-service');
 // ============================================
 // ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
 // ============================================
