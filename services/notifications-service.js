@@ -31,43 +31,59 @@ function initializeFirebase() {
 }
 
 // ============================================
-// FONCTION DE BASE : ENVOYER UNE NOTIFICATION
+// FONCTIONS DE BASE
 // ============================================
-async function sendNotificationByUserId(userId, title, body, data = {}) {
+
+async function sendNotification(token, title, body, data = {}) {
+  initializeFirebase();
+  
+  if (!firebaseInitialized) {
+    console.warn('⚠️ Firebase non initialisé - notification ignorée');
+    return { success: false, error: 'Firebase not initialized' };
+  }
+  
+  const message = {
+    notification: { title, body },
+    data: data,
+    token: token,
+    android: {
+      priority: 'high',
+      notification: {
+        sound: 'default',
+        channelId: 'default'
+      }
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1
+        }
+      }
+    }
+  };
+  
   try {
-    if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
-    }
-    
-    const result = await pool.query(
-      'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
-    }
-    
-    const token = result.rows[0].fcm_token;
-    const deviceType = result.rows[0].device_type || 'android';
-    
-    // Si c'est iOS, utiliser APNs
-    if (deviceType === 'ios') {
-      return await sendApnsNotification(token, title, body, data);
-    }
-    
-    // Sinon, utiliser FCM (Android)
-    return await sendNotification(token, title, body, data);
+    const response = await admin.messaging().send(message);
+    return { success: true, messageId: response };
   } catch (error) {
-    console.error('❌ Erreur notification:', error);
+    console.error('❌ Erreur Firebase:', error.code, error.message);
+    
+    // Supprimer token invalide
+    if (pool && (error.code === 'messaging/invalid-registration-token' || 
+        error.code === 'messaging/registration-token-not-registered')) {
+      try {
+        await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [token]);
+        console.log('🗑️ Token invalide supprimé');
+      } catch (dbError) {
+        console.error('❌ Erreur suppression token:', dbError);
+      }
+    }
+    
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Envoyer via APNs (Apple Push Notification service)
- */
 async function sendApnsNotification(apnsToken, title, body, data = {}) {
   initializeFirebase();
   
@@ -120,48 +136,6 @@ async function sendApnsNotification(apnsToken, title, body, data = {}) {
   }
 }
 
-// ============================================
-// NOTIFICATIONS PAR TYPE
-// ============================================
-
-/**
- * Envoyer une notification de nouveau message
- */
-async function sendNewMessageNotification(userId, conversationId, messagePreview, propertyName) {
-  try {
-    if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
-    }
-    
-    const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
-    }
-    
-    return await sendNotification(
-      result.rows[0].fcm_token,
-      '💬 Nouveau message',
-      messagePreview,
-      {
-        type: 'new_chat_message',
-        conversation_id: conversationId.toString(),
-        property_name: propertyName || 'Logement'
-      }
-    );
-  } catch (error) {
-    console.error('❌ Erreur notification message:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Envoyer par userId directement
- */
 async function sendNotificationByUserId(userId, title, body, data = {}) {
   try {
     if (!pool) {
@@ -170,7 +144,7 @@ async function sendNotificationByUserId(userId, title, body, data = {}) {
     }
     
     const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
     );
     
@@ -178,178 +152,115 @@ async function sendNotificationByUserId(userId, title, body, data = {}) {
       return { success: false, error: 'No token' };
     }
     
-    return await sendNotification(result.rows[0].fcm_token, title, body, data);
+    const token = result.rows[0].fcm_token;
+    const deviceType = result.rows[0].device_type || 'android';
+    
+    console.log(`📱 Envoi notification à ${userId} (${deviceType})`);
+    
+    // Si c'est iOS, utiliser APNs
+    if (deviceType === 'ios') {
+      return await sendApnsNotification(token, title, body, data);
+    }
+    
+    // Sinon, utiliser FCM (Android)
+    return await sendNotification(token, title, body, data);
   } catch (error) {
     console.error('❌ Erreur notification:', error);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Envoyer une notification de nouveau ménage assigné
- */
+// ============================================
+// NOTIFICATIONS PAR TYPE
+// ============================================
+
+async function sendNewMessageNotification(userId, conversationId, messagePreview, propertyName) {
+  return await sendNotificationByUserId(
+    userId,
+    '💬 Nouveau message',
+    messagePreview,
+    {
+      type: 'new_chat_message',
+      conversation_id: conversationId.toString(),
+      property_name: propertyName || 'Logement'
+    }
+  );
+}
+
 async function sendNewCleaningNotification(userId, cleaningId, propertyName, cleanerName, cleaningDate) {
-  try {
-    if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
+  const formattedDate = new Date(cleaningDate).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long'
+  });
+  
+  return await sendNotificationByUserId(
+    userId,
+    '🧹 Nouveau ménage assigné',
+    `${cleanerName} - ${propertyName} le ${formattedDate}`,
+    {
+      type: 'new_cleaning',
+      cleaning_id: cleaningId.toString(),
+      property_name: propertyName
     }
-    
-    const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
-    }
-    
-    const formattedDate = new Date(cleaningDate).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long'
-    });
-    
-    return await sendNotification(
-      result.rows[0].fcm_token,
-      '🧹 Nouveau ménage assigné',
-      `${cleanerName} - ${propertyName} le ${formattedDate}`,
-      {
-        type: 'new_cleaning',
-        cleaning_id: cleaningId.toString(),
-        property_name: propertyName
-      }
-    );
-  } catch (error) {
-    console.error('❌ Erreur notification ménage:', error);
-    return { success: false, error: error.message };
-  }
+  );
 }
 
-/**
- * Envoyer un rappel de ménage (J-1)
- */
 async function sendCleaningReminderNotification(userId, cleaningId, propertyName, cleanerName, cleaningDate) {
-  try {
-    if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
+  return await sendNotificationByUserId(
+    userId,
+    '⏰ Rappel : Ménage demain',
+    `${cleanerName} - ${propertyName}`,
+    {
+      type: 'cleaning_reminder',
+      cleaning_id: cleaningId.toString(),
+      property_name: propertyName
     }
-    
-    const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
-    }
-    
-    return await sendNotification(
-      result.rows[0].fcm_token,
-      '⏰ Rappel : Ménage demain',
-      `${cleanerName} - ${propertyName}`,
-      {
-        type: 'cleaning_reminder',
-        cleaning_id: cleaningId.toString(),
-        property_name: propertyName
-      }
-    );
-  } catch (error) {
-    console.error('❌ Erreur rappel ménage:', error);
-    return { success: false, error: error.message };
-  }
+  );
 }
 
-/**
- * Envoyer une notification de nouvelle facture
- */
 async function sendNewInvoiceNotification(userId, invoiceId, invoiceType, amount) {
-  try {
-    if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
+  const typeLabel = invoiceType === 'owner' ? 'Facture propriétaire' : 'Facture';
+  const formattedAmount = new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(amount);
+  
+  return await sendNotificationByUserId(
+    userId,
+    `💰 ${typeLabel}`,
+    `Nouvelle facture de ${formattedAmount}`,
+    {
+      type: 'new_invoice',
+      invoice_id: invoiceId.toString(),
+      invoice_type: invoiceType
     }
-    
-    const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
-    }
-    
-    const typeLabel = invoiceType === 'owner' ? 'Facture propriétaire' : 'Facture';
-    const formattedAmount = new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-    
-    return await sendNotification(
-      result.rows[0].fcm_token,
-      `💰 ${typeLabel}`,
-      `Nouvelle facture de ${formattedAmount}`,
-      {
-        type: 'new_invoice',
-        invoice_id: invoiceId.toString(),
-        invoice_type: invoiceType
-      }
-    );
-  } catch (error) {
-    console.error('❌ Erreur notification facture:', error);
-    return { success: false, error: error.message };
-  }
+  );
 }
 
-/**
- * Envoyer une notification de nouvelle réservation
- */
 async function sendNewReservationNotification(userId, reservationId, propertyName, guestName, checkIn, checkOut, platform) {
-  try {
-    if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
+  const checkInDate = new Date(checkIn).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short'
+  });
+  const checkOutDate = new Date(checkOut).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short'
+  });
+  
+  const platformEmoji = platform === 'airbnb' ? '🏠' : platform === 'booking' ? '🏨' : '📅';
+  
+  return await sendNotificationByUserId(
+    userId,
+    `${platformEmoji} Nouvelle réservation`,
+    `${propertyName} - ${checkInDate} au ${checkOutDate}`,
+    {
+      type: 'new_reservation',
+      reservation_id: reservationId ? reservationId.toString() : '',
+      property_name: propertyName
     }
-    
-    const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
-    }
-    
-    const checkInDate = new Date(checkIn).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short'
-    });
-    const checkOutDate = new Date(checkOut).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short'
-    });
-    
-    const platformEmoji = platform === 'airbnb' ? '🏠' : platform === 'booking' ? '🏨' : '📅';
-    
-    return await sendNotification(
-      result.rows[0].fcm_token,
-      `${platformEmoji} Nouvelle réservation`,
-      `${propertyName} - ${checkInDate} au ${checkOutDate}`,
-      {
-        type: 'new_reservation',
-        reservation_id: reservationId ? reservationId.toString() : '',
-        property_name: propertyName
-      }
-    );
-  } catch (error) {
-    console.error('❌ Erreur notification réservation:', error);
-    return { success: false, error: error.message };
-  }
+  );
 }
 
-/**
- * Envoyer à plusieurs tokens (broadcast)
- */
 async function sendNotificationToMultiple(tokens, title, body, data = {}) {
   initializeFirebase();
   
@@ -406,7 +317,7 @@ module.exports = {
   setPool,
   initializeFirebase,
   sendNotification,
-  sendApnsNotification, 
+  sendApnsNotification,
   sendNotificationByUserId,
   sendNewMessageNotification,
   sendNewCleaningNotification,
