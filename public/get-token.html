@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get FCM Token</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+    }
+    h1 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 24px;
+    }
+    p {
+      color: #666;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    button {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 15px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    button:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+    }
+    button.secondary {
+      background: #f0f0f0;
+      color: #333;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+    }
+    .token-display {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 12px;
+      display: none;
+      border: 2px solid #667eea;
+    }
+    .token-display.show {
+      display: block;
+    }
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+    .emoji {
+      font-size: 48px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="emoji">🔔</div>
+    <h1>Récupérer Token FCM</h1>
+    <p>Cliquez sur le bouton pour obtenir votre token de notification Android.</p>
+    
+    <button onclick="getToken()">📱 Obtenir le Token</button>
+    <button class="secondary" onclick="copyToken()">📋 Copier le Token</button>
+    <button class="secondary" onclick="sendToken()">📤 Envoyer au Serveur</button>
+    
+    <div id="tokenDisplay" class="token-display"></div>
+    
+    <div class="info">
+      <strong>ℹ️ Instructions :</strong><br>
+      1. Cliquez sur "Obtenir le Token"<br>
+      2. Acceptez les notifications si demandé<br>
+      3. Le token s'affichera ci-dessous<br>
+      4. Cliquez sur "Envoyer au Serveur"
+    </div>
+    
+    <div id="status" class="status"></div>
+  </div>
+
+  <script>
+    let currentToken = null;
+
+    function setStatus(message, isError = false) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.style.color = isError ? '#d73a49' : '#28a745';
+    }
+
+    async function getToken() {
+      try {
+        setStatus('🔄 Initialisation...', false);
+        
+        // Vérifier Capacitor
+        if (!window.Capacitor) {
+          alert('❌ Erreur: Capacitor non disponible. Êtes-vous sur l\'app mobile ?');
+          setStatus('❌ Capacitor non disponible', true);
+          return;
+        }
+
+        const platform = window.Capacitor.getPlatform();
+        setStatus(`📱 Platform: ${platform}`, false);
+        
+        if (platform === 'web') {
+          alert('⚠️ Vous êtes sur le web. Ouvrez cette page dans l\'app mobile.');
+          setStatus('⚠️ Utilisez l\'app mobile', true);
+          return;
+        }
+
+        const { PushNotifications } = window.Capacitor.Plugins;
+        
+        if (!PushNotifications) {
+          alert('❌ Plugin PushNotifications non trouvé');
+          setStatus('❌ Plugin non trouvé', true);
+          return;
+        }
+
+        setStatus('🔐 Demande de permission...', false);
+
+        // Demander permission
+        let permStatus = await PushNotifications.checkPermissions();
+        console.log('Permission actuelle:', permStatus);
+
+        if (permStatus.receive !== 'granted') {
+          permStatus = await PushNotifications.requestPermissions();
+          console.log('Nouvelle permission:', permStatus);
+        }
+
+        if (permStatus.receive !== 'granted') {
+          alert('❌ Permission refusée. Activez les notifications dans les paramètres de l\'app.');
+          setStatus('❌ Permission refusée', true);
+          return;
+        }
+
+        setStatus('✅ Permission accordée. Enregistrement...', false);
+
+        // Ajouter listener
+        PushNotifications.addListener('registration', (token) => {
+          console.log('✅ Token reçu:', token.value);
+          currentToken = token.value;
+          
+          const displayDiv = document.getElementById('tokenDisplay');
+          displayDiv.textContent = token.value;
+          displayDiv.classList.add('show');
+          
+          setStatus('✅ Token reçu avec succès !', false);
+          alert('✅ Token reçu ! Cliquez sur "Envoyer au Serveur"');
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('❌ Erreur:', error);
+          alert('❌ Erreur: ' + JSON.stringify(error));
+          setStatus('❌ Erreur d\'enregistrement', true);
+        });
+
+        // Register
+        await PushNotifications.register();
+        setStatus('⏳ En attente du token...', false);
+
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        alert('❌ Erreur: ' + error.message);
+        setStatus('❌ ' + error.message, true);
+      }
+    }
+
+    function copyToken() {
+      if (!currentToken) {
+        alert('⚠️ Aucun token à copier. Cliquez d\'abord sur "Obtenir le Token"');
+        return;
+      }
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(currentToken).then(() => {
+          alert('✅ Token copié dans le presse-papier !');
+          setStatus('✅ Token copié', false);
+        }).catch(err => {
+          alert('❌ Erreur de copie: ' + err.message);
+        });
+      } else {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = currentToken;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('✅ Token copié !');
+        setStatus('✅ Token copié', false);
+      }
+    }
+
+    async function sendToken() {
+      if (!currentToken) {
+        alert('⚠️ Aucun token à envoyer. Cliquez d\'abord sur "Obtenir le Token"');
+        return;
+      }
+
+      try {
+        setStatus('📤 Envoi au serveur...', false);
+
+        const authToken = localStorage.getItem('token');
+        if (!authToken) {
+          alert('⚠️ Vous devez être connecté pour enregistrer le token.');
+          setStatus('⚠️ Non connecté', true);
+          return;
+        }
+
+        const platform = window.Capacitor.getPlatform();
+        const deviceType = platform === 'ios' ? 'ios' : 'android';
+
+        const response = await fetch('/api/save-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            token: currentToken,
+            device_type: deviceType
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('✅ Token enregistré avec succès sur le serveur !');
+          setStatus('✅ Token enregistré sur le serveur', false);
+        } else {
+          alert('❌ Erreur serveur: ' + (data.error || 'Erreur inconnue'));
+          setStatus('❌ Erreur: ' + data.error, true);
+        }
+
+      } catch (error) {
+        alert('❌ Erreur réseau: ' + error.message);
+        setStatus('❌ Erreur réseau', true);
+      }
+    }
+
+    // Vérifier au chargement
+    window.addEventListener('load', () => {
+      if (window.Capacitor) {
+        const platform = window.Capacitor.getPlatform();
+        setStatus(`✅ Capacitor détecté (${platform})`, false);
+      } else {
+        setStatus('⚠️ Capacitor non détecté', true);
+      }
+    });
+  </script>
+</body>
+</html>
