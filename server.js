@@ -11348,6 +11348,20 @@ app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken,
     });
   }
 });
+// Route de test notification
+app.get('/api/test-notification', async (req, res) => {
+  try {
+    const result = await notificationService.sendNotificationByUserId(
+      'u_mjcpmi2k',
+      '🎉 Test de notification',
+      'Si vous voyez ce message, ça marche !',
+      { type: 'test' }
+    );
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ============================================
 // 🔔 ROUTES NOTIFICATIONS PUSH
 // ============================================
