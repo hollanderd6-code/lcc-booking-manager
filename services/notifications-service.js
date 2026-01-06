@@ -33,48 +33,84 @@ function initializeFirebase() {
 // ============================================
 // FONCTION DE BASE : ENVOYER UNE NOTIFICATION
 // ============================================
+async function sendNotificationByUserId(userId, title, body, data = {}) {
+  try {
+    if (!pool) {
+      console.warn('⚠️ Pool non initialisé');
+      return { success: false, error: 'Pool not initialized' };
+    }
+    
+    const result = await pool.query(
+      'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return { success: false, error: 'No token' };
+    }
+    
+    const token = result.rows[0].fcm_token;
+    const deviceType = result.rows[0].device_type || 'android';
+    
+    // Si c'est iOS, utiliser APNs
+    if (deviceType === 'ios') {
+      return await sendApnsNotification(token, title, body, data);
+    }
+    
+    // Sinon, utiliser FCM (Android)
+    return await sendNotification(token, title, body, data);
+  } catch (error) {
+    console.error('❌ Erreur notification:', error);
+    return { success: false, error: error.message };
+  }
+}
 
-async function sendNotification(token, title, body, data = {}) {
+/**
+ * Envoyer via APNs (Apple Push Notification service)
+ */
+async function sendApnsNotification(apnsToken, title, body, data = {}) {
   initializeFirebase();
   
   if (!firebaseInitialized) {
-    console.warn('⚠️ Firebase non initialisé - notification ignorée');
+    console.warn('⚠️ Firebase non initialisé');
     return { success: false, error: 'Firebase not initialized' };
   }
   
   const message = {
-    notification: { title, body },
-    data: data,
-    token: token,
-    android: {
-      priority: 'high',
-      notification: {
-        sound: 'default',
-        channelId: 'default'
-      }
-    },
+    token: apnsToken,
     apns: {
+      headers: {
+        'apns-priority': '10',
+        'apns-push-type': 'alert'
+      },
       payload: {
         aps: {
+          alert: {
+            title: title,
+            body: body
+          },
           sound: 'default',
-          badge: 1
-        }
+          badge: 1,
+          'content-available': 1
+        },
+        ...data
       }
     }
   };
   
   try {
     const response = await admin.messaging().send(message);
+    console.log('✅ Notification APNs envoyée:', response);
     return { success: true, messageId: response };
   } catch (error) {
-    console.error('❌ Erreur Firebase:', error.code, error.message);
+    console.error('❌ Erreur APNs:', error.code, error.message);
     
     // Supprimer token invalide
     if (pool && (error.code === 'messaging/invalid-registration-token' || 
         error.code === 'messaging/registration-token-not-registered')) {
       try {
-        await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [token]);
-        console.log('🗑️ Token invalide supprimé');
+        await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [apnsToken]);
+        console.log('🗑️ Token APNs invalide supprimé');
       } catch (dbError) {
         console.error('❌ Erreur suppression token:', dbError);
       }
@@ -370,6 +406,7 @@ module.exports = {
   setPool,
   initializeFirebase,
   sendNotification,
+  sendApnsNotification, 
   sendNotificationByUserId,
   sendNewMessageNotification,
   sendNewCleaningNotification,
