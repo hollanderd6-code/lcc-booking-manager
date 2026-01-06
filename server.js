@@ -2474,32 +2474,33 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     const reservationId = result.rows[0].id;
 
     // 🔔 NOTIFICATION SEULEMENT SI NOUVELLE RÉSERVATION
-    if (isNewReservation) {
-      try {
-        const { sendNewReservationNotification } = require('./server/notifications-service');
-        
-        // Récupérer le nom de la propriété
-        const propResult = await pool.query(
-          'SELECT name FROM properties WHERE id = $1',
-          [propertyId]
-        );
-        
-        if (propResult.rows.length > 0) {
-          await sendNewReservationNotification(
-            realUserId,
-            reservationId,
-            propResult.rows[0].name,
-            reservation.guestName || 'Voyageur',
-            reservation.start,
-            reservation.end,
-            reservation.platform || 'direct'
-          );
-          
-          console.log(`✅ Notification réservation envoyée pour ${propResult.rows[0].name}`);
-        }
-      } catch (notifError) {
-        console.error('❌ Erreur notification réservation:', notifError.message);
-      }
+if (isNewReservation) {
+  try {
+    // Récupérer le nom de la propriété
+    const propResult = await pool.query(
+      'SELECT name FROM properties WHERE id = $1',
+      [propertyId]
+    );
+    
+    if (propResult.rows.length > 0) {
+      await sendNewReservationNotification(
+        realUserId,
+        reservationId,
+        propResult.rows[0].name,
+        reservation.guestName || 'Voyageur',
+        reservation.start,
+        reservation.end,
+        reservation.platform || 'direct'
+      );
+      
+      console.log(`✅ Notification réservation envoyée pour ${propResult.rows[0].name}`);
+    }
+  } catch (notifError) {
+    console.error('❌ Erreur notification réservation:', notifError.message);
+  }
+
+  // ... reste du code (création conversation)
+}
 
       // ============================================
       // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
