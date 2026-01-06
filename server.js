@@ -11378,9 +11378,10 @@ app.post('/api/save-token', authenticateToken, async (req, res) => {
     }
     
     // Déterminer le device_type
-    const deviceType = device_type || 'android'; // Par défaut Android
+    const deviceType = device_type || 'android';
     
     console.log(`📱 Enregistrement token pour ${userId} (${deviceType})`);
+    console.log(`   Token: ${token.substring(0, 30)}...`);
     
     await pool.query(
       `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at) 
