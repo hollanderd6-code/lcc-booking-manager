@@ -8079,7 +8079,12 @@ if (document.readyState === 'loading') {
 <script src="/js/messages-badge-loader.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>   
 <script>
-console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
+// BLOQUER IMMÉDIATEMENT TOUT AUTRE CODE PUSH
+window.__pushInitDone = true;
+window.__oldPushCode = true;
+
+console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML - VERSION FINALE');
+
 (function () {
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   
@@ -8103,7 +8108,7 @@ console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
   }
   
   async function saveTokenToServer(token) {
-    console.log('💾 saveTokenToServer appelé');
+    console.log('💾 saveTokenToServer appelé avec token:', token);
     try {
       const jwt = await getJWTFromWeb();
       
@@ -8113,7 +8118,6 @@ console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
       }
       
       console.log('✅ JWT récupéré, envoi du token au serveur...');
-      console.log('📱 Token iOS:', token);
       
       const res = await fetch(`${API_BASE}/api/save-token`, {
         method: 'POST',
@@ -8139,9 +8143,6 @@ console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
   }
   
   async function initPush() {
-    if (window.__pushInitDone) return;
-    window.__pushInitDone = true;
-    
     const cap = window.Capacitor;
     if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) {
       console.log('🌐 Web: pas d\'init push');
@@ -8154,10 +8155,10 @@ console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
       return;
     }
     
-    console.log('🔔 Init Push (native) - APP.HTML VERSION');
+    console.log('🔔 Init Push (native) - NOUVEAU CODE FINAL');
     
     PushNotifications.addListener('registration', async (token) => {
-      console.log('✅✅✅ DEVICE TOKEN RECEIVED!');
+      console.log('✅✅✅ DEVICE TOKEN RECEIVED - NOUVEAU CODE!');
       console.log('📱 Token:', token && token.value);
       if (token && token.value) await saveTokenToServer(token.value);
     });
@@ -8189,4 +8190,3 @@ console.log('🚀 NOUVEAU CODE FCM CHARGÉ - APP.HTML');
 </script>
 </body>
 </html>
-
