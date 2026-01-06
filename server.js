@@ -11727,6 +11727,10 @@ server.listen(PORT, async () => {
   
   await initDb();
   
+setPool(pool);
+initializeFirebase();
+console.log('✅ Service de notifications initialisé');
+  
   // ✅ Initialiser les tables livrets d'accueil
   await initWelcomeBookTables(pool);
   console.log('✅ Tables welcome_books initialisées');
