@@ -8190,6 +8190,51 @@ window.__pushInitDone = true;
           font-size:28px;">
   🔔
 </a>
+<script>
+// ============================================
+// 🔔 GESTION DU BADGE DE NOTIFICATIONS
+// ============================================
+
+// Fonction pour effacer le badge
+async function clearNotificationBadge() {
+  try {
+    if (!window.Capacitor || window.Capacitor.getPlatform() === 'web') {
+      return;
+    }
+
+    const { PushNotifications } = window.Capacitor.Plugins;
+    
+    if (PushNotifications) {
+      // Remettre le badge à 0
+      await PushNotifications.removeAllDeliveredNotifications();
+      
+      console.log('✅ Badge notification effacé');
+    }
+  } catch (error) {
+    console.error('❌ Erreur effacement badge:', error);
+  }
+}
+
+// Effacer le badge quand l'app est ouverte
+if (window.Capacitor) {
+  // Au chargement de la page
+  window.addEventListener('load', () => {
+    clearNotificationBadge();
+  });
+
+  // Quand l'app revient au premier plan
+  document.addEventListener('resume', () => {
+    clearNotificationBadge();
+  });
+  
+  // Quand la page devient visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      clearNotificationBadge();
+    }
+  });
+}
+</script>    
 </body>
 </html>    
 </body>
