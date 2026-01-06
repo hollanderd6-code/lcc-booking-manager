@@ -551,7 +551,65 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       if (io) {
         io.to(`conversation_${conversation_id}`).emit('new_message', newMessage);
       }
+// ============================================
+// 🔔 NOTIFICATION PUSH FIREBASE - PROPRIÉTAIRE → VOYAGEUR  
+// ============================================
 
+// Si c'est le propriétaire qui répond, notifier le voyageur (s'il a l'app)
+if (sender_type === 'owner') {
+  try {
+    // Récupérer l'email du voyageur depuis la conversation
+    const guestResult = await pool.query(
+      'SELECT guest_email FROM conversations WHERE id = $1',
+      [conversation_id]
+    );
+    
+    if (guestResult.rows.length > 0 && guestResult.rows[0].guest_email) {
+      const guestEmail = guestResult.rows[0].guest_email;
+      
+      // Vérifier si le voyageur a un compte et un token
+      const guestUserResult = await pool.query(
+        `SELECT u.id 
+         FROM users u
+         JOIN user_fcm_tokens t ON u.id = t.user_id
+         WHERE u.email = $1 AND t.fcm_token IS NOT NULL
+         LIMIT 1`,
+        [guestEmail]
+      );
+      
+      if (guestUserResult.rows.length > 0) {
+        const guestUserId = guestUserResult.rows[0].id;
+        
+        // Récupérer le nom de la propriété
+        const propertyResult = await pool.query(
+          'SELECT name FROM properties WHERE id = $1',
+          [conversation.property_id]
+        );
+        
+        const propertyName = propertyResult.rows.length > 0 
+          ? propertyResult.rows[0].name 
+          : 'Votre logement';
+        
+        const { sendNewMessageNotification } = require('../services/notifications-service');
+        
+        const messagePreview = message.length > 100 
+          ? message.substring(0, 97) + '...' 
+          : message;
+        
+        await sendNewMessageNotification(
+          guestUserId,
+          conversation_id,
+          messagePreview,
+          propertyName
+        );
+        
+        console.log(`✅ Notification push envoyée au voyageur ${guestUserId}`);
+      }
+    }
+  } catch (notifError) {
+    console.error('❌ Erreur notification push voyageur:', notifError.message);
+  }
+}
       // ✅ Si c'est un message du voyageur, chercher une réponse automatique
       if (sender_type === 'guest') {
         const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
@@ -585,43 +643,42 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
         await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
         
         // ============================================
-        // 🔔 NOTIFICATION PUSH FIREBASE
-        // ============================================
-        
-        // Envoyer une notification push au propriétaire
-        try {
-          const tokenResult = await pool.query(
-            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-            [conversation.user_id]
-          );
-          
-          if (tokenResult.rows.length > 0 && tokenResult.rows[0].fcm_token) {
-            const { sendNotification } = require('../services/notifications-service');
-            
-            const messagePreview = message.length > 100 
-              ? message.substring(0, 97) + '...' 
-              : message;
-            
-            const notifResult = await sendNotification(
-              tokenResult.rows[0].fcm_token,
-              '💬 Nouveau message',
-              messagePreview,
-              {
-                type: 'new_chat_message',
-                conversation_id: conversation_id.toString(),
-                property_name: conversation.property_name || 'Logement'
-              }
-            );
+// 🔔 NOTIFICATION PUSH FIREBASE - VOYAGEUR → PROPRIÉTAIRE
+// ============================================
 
-            if (notifResult.success) {
-              console.log(`✅ Notification envoyée à ${conversation.user_id}`);
-            } else {
-              console.log(`❌ Échec notification: ${notifResult.error}`);
-            }
-          }
-        } catch (notifError) {
-          console.error('❌ Erreur notification:', notifError.message);
-        }
+// Envoyer une notification push au propriétaire quand un voyageur écrit
+try {
+  // Récupérer le nom de la propriété
+  const propertyResult = await pool.query(
+    'SELECT name FROM properties WHERE id = $1',
+    [conversation.property_id]
+  );
+  
+  const propertyName = propertyResult.rows.length > 0 
+    ? propertyResult.rows[0].name 
+    : 'Logement';
+  
+  const { sendNewMessageNotification } = require('../services/notifications-service');
+  
+  const messagePreview = message.length > 100 
+    ? message.substring(0, 97) + '...' 
+    : message;
+  
+  const notifResult = await sendNewMessageNotification(
+    conversation.user_id,  // ID du propriétaire
+    conversation_id,
+    messagePreview,
+    propertyName
+  );
+
+  if (notifResult.success) {
+    console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
+  } else {
+    console.log(`⚠️ Échec notification push: ${notifResult.error}`);
+  }
+} catch (notifError) {
+  console.error('❌ Erreur notification push:', notifError.message);
+}
       }
 
       res.json({
