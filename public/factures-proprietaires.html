@@ -33,6 +33,22 @@
     /* CONTENT */
     .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
     .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
+
+    /* MAIN CONTENT (patched for iOS safe-area + desktop padding) */
+    .main-content{
+      flex: 1;
+      padding: 24px 32px;
+      padding-top: calc(24px + env(safe-area-inset-top));
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    @media (max-width: 1024px){
+      .main-content{
+        padding: 16px 16px;
+        padding-top: calc(16px + env(safe-area-inset-top));
+      }
+    }
+
     /* (patched) removed inline .main-content padding override for iOS safe-area */
 
     /* DASHBOARD */
@@ -300,6 +316,16 @@ input[type="number"] {
 <!-- Sidebar -->
 <div id="bhSidebar"></div>
 <div class="main-wrapper">
+<header class="top-bar">
+<button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i></button>
+<div style="display:flex; align-items:center; gap:12px;">
+<div style="text-align:right;">
+<div id="userName" style="font-weight:600; font-size:14px;">Mon Compte</div>
+<div style="font-size:11px; color:#6b7280;">Propriétaire</div>
+</div>
+<div style="width:36px; height:36px; background:#e5e7eb; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#374151;">U</div>
+</div>
+</header>
 <main class="main-content"><div id="bhHeaderActions" style="display:none;"><button class="btn btn-primary" onclick="createNewInvoice()">
 <i class="fa fa-plus"></i> Nouvelle Facture
 </button></div><div id="bhHeader"></div>
@@ -328,7 +354,7 @@ input[type="number"] {
 <div class="tab-content active" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div id="invoicesCardsGrid" class="invoices-cards-grid">
-<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</td></div>
+<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</div>
 </div>
 </div>
 </div>
