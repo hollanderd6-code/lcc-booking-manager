@@ -94,7 +94,7 @@ body {
   background: var(--bg-secondary);
   line-height: 1.5;
   /* Respect iOS notch / Dynamic Island */
-  padding-top: var(--sat);
+  padding-top: 0;
   padding-right: var(--sar);
   padding-bottom: var(--sab);
   padding-left: var(--sal);
