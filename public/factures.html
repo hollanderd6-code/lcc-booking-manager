@@ -3,7 +3,7 @@
 <html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Bookingmanage – Factures</title>
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
@@ -24,7 +24,6 @@
 
   html, body {
     margin: 0 !important;
-    padding: 0 !important;
     background: var(--bg-body);
     font-family: 'Inter', sans-serif;
     height: 100%;
@@ -102,14 +101,7 @@
   }
 
   /* MAIN CONTENT */
-  .main-content {
-    flex: 1;
-    margin-left: 260px;
-    padding: 32px;
-    max-width: 1600px;
-    margin-right: auto;
-    box-sizing: border-box;
-  }
+  /* (patched) removed inline .main-content padding override for iOS safe-area */
 
   .page-kicker {
     font-size: 11px;
@@ -154,10 +146,7 @@
     .sidebar.active {
       transform: translateX(0);
     }
-    .main-content {
-      margin-left: 0;
-      padding: 16px;
-    }
+    /* (patched) removed inline .main-content padding override for iOS safe-area */
     .invoice-grid {
       grid-template-columns: 1fr;
     }
