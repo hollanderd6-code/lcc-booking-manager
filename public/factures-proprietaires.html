@@ -14,6 +14,19 @@
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link href="/css/invoices-cards-style.css" rel="stylesheet"/>
 <style>
+    /* FIX iOS POUR APP MOBILE */
+    html, body {
+      margin: 0 !important;
+    }
+    .app-container {
+      margin-top: 0 !important;
+    }
+    /* (patched) removed inline .main-content padding override for iOS safe-area */
+    .page-content {
+      margin-top: 0 !important;
+      max-width: 1100px;
+    }
+    
     /* DESIGN SYSTEM "FACTURE PRO" */
     :root { --primary: #10B981; --primary-dark: #059669; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
@@ -33,7 +46,7 @@
     /* CONTENT */
     .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
     .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-    /* (patched) removed inline .main-content padding override for iOS safe-area */
+    .main-content { padding: 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     /* DASHBOARD */
     .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -284,20 +297,6 @@ input[type="number"] {
 [data-theme="dark"] .main-header .header-actions .btn.btn-ghost:hover{
   background: rgba(15, 23, 42, 0.90) !important;
 }
-
-
-/* (patched) iPhone layout fixes for this page only */
-@media (max-width: 1024px){
-  /* Remove the useless hamburger in the mobile header */
-  .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
-
-  /* Hide the desktop top-bar (hamburger + account) on mobile to avoid double header */
-  header.top-bar { display: none !important; }
-
-  /* Ensure content starts correctly under the native mobile header */
-  .main-wrapper { margin-left: 0 !important; }
-}
-
 </style>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
@@ -306,16 +305,12 @@ input[type="number"] {
 <i class="fas fa-calendar-check"></i>
 <span class="mobile-logo-text">Boostinghost</span>
 </a>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
 </div><div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
 <!-- Sidebar -->
 <div id="bhSidebar"></div>
 <div class="main-wrapper">
 <header class="top-bar">
-<button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i></button>
 <div style="display:flex; align-items:center; gap:12px;">
 <div style="text-align:right;">
 <div id="userName" style="font-weight:600; font-size:14px;">Mon Compte</div>
@@ -352,7 +347,7 @@ input[type="number"] {
 <div class="tab-content active" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div id="invoicesCardsGrid" class="invoices-cards-grid">
-<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</div>
+<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</td></div>
 </div>
 </div>
 </div>
