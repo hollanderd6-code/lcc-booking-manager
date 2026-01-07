@@ -11384,12 +11384,14 @@ app.post('/api/save-token', authenticateToken, async (req, res) => {
     console.log(`   Token: ${token.substring(0, 30)}...`);
     
     await pool.query(
-      `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at) 
-       VALUES ($1, $2, $3, NOW(), NOW())
-       ON CONFLICT (fcm_token) 
-       DO UPDATE SET device_type = $3, updated_at = NOW()`,
-      [userId, token, deviceType]
-    );
+  `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
+   VALUES ($1, $2, $3, NOW(), NOW())
+   ON CONFLICT (user_id)
+   DO UPDATE SET fcm_token = EXCLUDED.fcm_token,
+                 device_type = EXCLUDED.device_type,
+                 updated_at = NOW()`,
+  [userId, token, deviceType]
+);
     
     console.log(`✅ Token FCM enregistré pour ${userId} (${deviceType})`);
     res.json({ success: true, message: 'Token sauvegardé' });
