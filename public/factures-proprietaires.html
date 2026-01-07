@@ -290,6 +290,16 @@ input[type="number"] {
   header.top-bar{ display:none !important; }
   .main-wrapper{ padding-top: 0 !important; }
 }
+
+/* (patched) Remove big blank gap between sidebar and content on desktop */
+@media (min-width: 1025px){
+  .main-wrapper{ margin-left: 260px; }
+  .main-content{
+    max-width: none !important;
+    margin: 0 !important;      /* was 0 auto (centering) */
+    width: 100% !important;
+  }
+}
 </style>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
