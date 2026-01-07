@@ -301,12 +301,36 @@ input[type="number"] {
   }
 }
 
-/* (patched) Mobile: hide hamburger on this page + fix iOS scroll lock */
+/* (patched) Mobile: hide hamburger on this page + prevent iOS pull-to-refresh by using an inner scroll container */
 @media (max-width: 1024px){
   /* Hide the hamburger button (menu) */
   .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
 
-  /* Ensure page can scroll smoothly on iOS WebView */
+  /* Lock body scroll to avoid iOS pull-to-refresh on WKWebView */
+  html, body{
+    height: 100%;
+    overflow: hidden !important;
+  }
+
+  /* Make main content the scroll container */
+  .app-container{
+    height: 100dvh;
+  }
+
+  .main-content{
+    height: calc(100dvh - var(--mobile-header-h) - env(safe-area-inset-top));
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  /* Prevent an invisible overlay from blocking scroll/taps */
+  .sidebar-overlay{
+    pointer-events: none;
+  }
+}
+/* Ensure page can scroll smoothly on iOS WebView */
   html, body{
     height: 100%;
     overflow: auto !important;
