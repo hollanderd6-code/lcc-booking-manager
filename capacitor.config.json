@@ -16,7 +16,8 @@
     },
     "StatusBar": {
       "style": "light",
-      "backgroundColor": "#3B82F6"
+      "backgroundColor": "#3B82F6",
+      "overlaysWebView": false
     },
     "Haptics": {
       "enabled": true
