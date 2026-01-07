@@ -20,8 +20,7 @@
 <style>
     html, body {
       margin: 0 !important;
-      padding: 0 !important;
-    }
+      }
 
     .app-container {
       margin-top: 0 !important;
@@ -31,10 +30,7 @@
       margin-top: 0 !important;
     }
 
-    .main-content {
-      margin-top: 0 !important;
-      padding-top: 24px !important;
-    }
+    /* (patched) removed inline .main-content padding override for iOS safe-area */
 
     .page-content {
       margin-top: 0 !important;
@@ -56,9 +52,7 @@
 
     /* Responsive global dashboard layout */
     @media (max-width: 768px) {
-      .main-content {
-        padding: 16px 12px 24px;
-      }
+      /* (patched) removed inline .main-content padding override for iOS safe-area */
 
       .main-header {
         flex-direction: column;
