@@ -285,71 +285,19 @@ input[type="number"] {
   background: rgba(15, 23, 42, 0.90) !important;
 }
 
-/* (patched) Hide desktop account top-bar (hamburger + 'Propriétaire/Charles') - keep DOM to avoid JS errors */
-@media (min-width: 1025px){
-  header.top-bar{ display:none !important; }
-  .main-wrapper{ padding-top: 0 !important; }
-}
 
-/* (patched) Remove big blank gap between sidebar and content on desktop */
-@media (min-width: 1025px){
-  .main-wrapper{ margin-left: 260px; }
-  .main-content{
-    max-width: none !important;
-    margin: 0 !important;      /* was 0 auto (centering) */
-    width: 100% !important;
-  }
-}
-
-/* (patched) Mobile: hide hamburger on this page + prevent iOS pull-to-refresh by using an inner scroll container */
+/* (patched) iPhone layout fixes for this page only */
 @media (max-width: 1024px){
-  /* Hide the hamburger button (menu) */
+  /* Remove the useless hamburger in the mobile header */
   .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
 
-  /* Lock body scroll to avoid iOS pull-to-refresh on WKWebView */
-  html, body{
-    height: 100%;
-    overflow: hidden !important;
-  }
+  /* Hide the desktop top-bar (hamburger + account) on mobile to avoid double header */
+  header.top-bar { display: none !important; }
 
-  /* Make main content the scroll container */
-  .app-container{
-    height: 100dvh;
-  }
-
-  .main-content{
-    height: calc(100dvh - var(--mobile-header-h) - env(safe-area-inset-top));
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
-  }
-
-  /* Prevent an invisible overlay from blocking scroll/taps */
-  .sidebar-overlay{
-    pointer-events: none;
-  }
+  /* Ensure content starts correctly under the native mobile header */
+  .main-wrapper { margin-left: 0 !important; }
 }
-/* Ensure page can scroll smoothly on iOS WebView */
-  html, body{
-    height: 100%;
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
 
-  /* If your layout uses a scroll container, ensure it can scroll */
-  .main-content{
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
-  }
-
-  /* Prevent an invisible overlay from blocking scroll/taps */
-  .sidebar-overlay{
-    pointer-events: none;
-  }
-}
 </style>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
@@ -404,7 +352,7 @@ input[type="number"] {
 <div class="tab-content active" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div id="invoicesCardsGrid" class="invoices-cards-grid">
-<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</td></div>
+<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</div>
 </div>
 </div>
 </div>
