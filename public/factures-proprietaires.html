@@ -574,9 +574,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // User Info
   currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-  if(currentUser.firstName) {
-    document.getElementById('userName').textContent = currentUser.firstName;
-  }
   
   // Dates defaut
   const d = new Date(); 
