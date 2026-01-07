@@ -33,22 +33,6 @@
     /* CONTENT */
     .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
     .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-
-    /* MAIN CONTENT (patched for iOS safe-area + desktop padding) */
-    .main-content{
-      flex: 1;
-      padding: 24px 32px;
-      padding-top: calc(24px + env(safe-area-inset-top));
-      box-sizing: border-box;
-      min-width: 0;
-    }
-    @media (max-width: 1024px){
-      .main-content{
-        padding: 16px 16px;
-        padding-top: calc(16px + env(safe-area-inset-top));
-      }
-    }
-
     /* (patched) removed inline .main-content padding override for iOS safe-area */
 
     /* DASHBOARD */
@@ -300,6 +284,12 @@ input[type="number"] {
 [data-theme="dark"] .main-header .header-actions .btn.btn-ghost:hover{
   background: rgba(15, 23, 42, 0.90) !important;
 }
+
+/* (patched) Hide desktop account top-bar (hamburger + 'Propriétaire/Charles') - keep DOM to avoid JS errors */
+@media (min-width: 1025px){
+  header.top-bar{ display:none !important; }
+  .main-wrapper{ padding-top: 0 !important; }
+}
 </style>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
@@ -354,7 +344,7 @@ input[type="number"] {
 <div class="tab-content active" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div id="invoicesCardsGrid" class="invoices-cards-grid">
-<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</div>
+<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</td></div>
 </div>
 </div>
 </div>
