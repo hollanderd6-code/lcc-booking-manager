@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="BoostingHost logo">
+  <!-- Fond vert (arrondi type iOS) -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#63CFA6"/>
+  
+  <!-- Lettre B (centrée) -->
+  <text x="512" y="620"
+        text-anchor="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="520"
+        font-weight="800"
+        fill="#FFFFFF">B</text>
+</svg>
