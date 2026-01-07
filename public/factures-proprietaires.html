@@ -340,7 +340,7 @@ input[type="number"] {
 <div class="tab-content active" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div id="invoicesCardsGrid" class="invoices-cards-grid">
-<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</td></div>
+<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</div>
 </div>
 </div>
 </div>
@@ -562,9 +562,14 @@ let token = localStorage.getItem('lcc_token');
   };
   let currentUser = null;
 
+  // Fonction pour formater les montants en français
+  function formatMoney(amount) {
+    return amount.toFixed(2).replace('.', ',') + ' €';
+  }
 
   // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🔧 Initialisation de la page factures...');
   if(!token) return window.location.href='/login.html';
   
   // User Info
@@ -579,8 +584,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   const d2 = new Date(); d2.setDate(d2.getDate()+30);
   document.getElementById('invoiceDueDate').valueAsDate = d2;
   
-  // Charger les données
-  await Promise.all([loadClients(), loadInvoices(), loadUserProfile()]);
+  // Charger les données une par une pour éviter le blocage
+  try {
+    console.log('📥 Chargement des clients...');
+    await loadClients();
+    console.log('✅ Clients chargés');
+  } catch(e) {
+    console.error('❌ Erreur clients:', e);
+  }
+  
+  try {
+    console.log('📥 Chargement des factures...');
+    await loadInvoices();
+    console.log('✅ Factures chargées');
+  } catch(e) {
+    console.error('❌ Erreur factures:', e);
+  }
+  
+  try {
+    console.log('📥 Chargement du profil...');
+    await loadUserProfile();
+    console.log('✅ Profil chargé');
+  } catch(e) {
+    console.error('❌ Erreur profil:', e);
+  }
   
   // Profil émetteur (APRÈS loadUserProfile pour ne pas écraser le logo)
   loadEmitterProfile();
@@ -590,6 +617,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Attendre que le DOM soit prêt avant d'appeler updatePreview
   setTimeout(() => updatePreview(), 100);
+  
+  console.log('✅ Initialisation terminée');
 });
 
   // --- TABS ---
@@ -838,26 +867,38 @@ window.closeStatsModal = function() {
 
 
 async function loadInvoices() {
+  console.log('🔍 loadInvoices() - Début...');
   try {
+    console.log('📡 Appel API /api/owner-invoices...');
     const res = await fetch('/api/owner-invoices', {
       headers: { Authorization: 'Bearer ' + token }
     });
+    console.log('📡 Réponse reçue, status:', res.status);
+    
     const data = await res.json();
+    console.log('📦 Données reçues:', data);
+    
     const invs = data.invoices || [];
+    console.log('📊 Nombre de factures:', invs.length);
+    
     window.ownerInvoices = invs;
 
     const container = document.getElementById('invoicesCardsGrid');
+    console.log('📍 Container trouvé:', !!container);
 
     if (invs.length === 0) {
-      container.innerHTML = '<tr><td colspan="6" style="padding:40px; text-align:center;">Aucune facture.</td></tr>';
-      document.getElementById('statsRevenue').textContent = '0.00 €';
-      document.getElementById('statsPending').textContent = '0.00 €';
+      console.log('⚠️ Aucune facture trouvée');
+      container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>';
+      document.getElementById('statsRevenue').textContent = '0,00 €';
+      document.getElementById('statsPending').textContent = '0,00 €';
       return;
     }
 
     let totalRev = 0;
     let totalPending = 0;
     container.innerHTML = '';
+    
+    console.log('🔄 Génération des cartes de factures...');
 
     invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
@@ -943,7 +984,7 @@ async function loadInvoices() {
               '</div>' +
               '<div class="invoice-info-item">' +
                 '<div class="invoice-info-label">Montant TTC</div>' +
-                '<div class="invoice-info-value amount">' + total.toFixed(2) + ' €</div>' +
+                '<div class="invoice-info-value amount">' + formatMoney(total) + '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -960,10 +1001,15 @@ async function loadInvoices() {
       container.innerHTML += cardHtml;
     });
 
-    document.getElementById('statsRevenue').textContent = totalRev.toFixed(2) + ' €';
-    document.getElementById('statsPending').textContent = totalPending.toFixed(2) + ' €';
+    document.getElementById('statsRevenue').textContent = formatMoney(totalRev);
+    document.getElementById('statsPending').textContent = formatMoney(totalPending);
+    console.log('✅ loadInvoices() - Terminé avec succès');
   } catch (e) {
-    console.error('Erreur chargement factures propriétaires:', e);
+    console.error('❌ loadInvoices() - Erreur:', e);
+    const container = document.getElementById('invoicesCardsGrid');
+    if (container) {
+      container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1; color:#dc2626;">Erreur lors du chargement des factures. Veuillez réessayer.</div>';
+    }
   }
 }
 
