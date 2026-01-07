@@ -66,6 +66,13 @@
   /* Layout */
   --sidebar-width: 260px;
   --header-height: 64px;
+  
+  /* iOS Safe Area (Capacitor) */
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --mobile-header-h: 60px;
 }
 
 /* Reset */
@@ -86,6 +93,11 @@ body {
   color: var(--text-primary);
   background: var(--bg-secondary);
   line-height: 1.5;
+  /* Respect iOS notch / Dynamic Island */
+  padding-top: var(--sat);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
 }
 
 /* ============================================
@@ -94,7 +106,7 @@ body {
 
 .app-container {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* SIDEBAR */
@@ -325,7 +337,7 @@ body {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-secondary);
 }
 
@@ -707,10 +719,11 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: calc(var(--mobile-header-h) + var(--sat));
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   padding: 0 16px;
+  padding-top: var(--sat);
   align-items: center;
   justify-content: space-between;
   z-index: 110;
@@ -797,7 +810,7 @@ body {
   /* Ajuster le contenu */
   .main-content {
     margin-left: 0;
-    padding-top: 60px;
+    padding-top: calc(var(--mobile-header-h) + var(--sat));
   }
   
   .main-header {
@@ -1363,7 +1376,7 @@ body {
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
-    padding-top: 60px; /* déjà présent, mais on renforce l'intention */
+    padding-top: calc(var(--mobile-header-h) + var(--sat)); /* déjà présent, mais on renforce l'intention */
   }
 
   .page-content {
@@ -1625,12 +1638,9 @@ html, body {
 }
 /* ✅ Fix global mobile : éviter le contenu sous le header */
 @media (max-width: 768px) {
-  body {
-    padding-top: 72px; /* ajuste si ton header est + grand */
-  }
 
   .app-container {
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Sécurise le header et le menu */
