@@ -11386,9 +11386,8 @@ app.post('/api/save-token', authenticateToken, async (req, res) => {
     await pool.query(
   `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
    VALUES ($1, $2, $3, NOW(), NOW())
-   ON CONFLICT (user_id)
+   ON CONFLICT (user_id, device_type)
    DO UPDATE SET fcm_token = EXCLUDED.fcm_token,
-                 device_type = EXCLUDED.device_type,
                  updated_at = NOW()`,
   [userId, token, deviceType]
 );
@@ -11434,7 +11433,7 @@ app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res
       return res.json({ message: 'Aucun token FCM enregistré' });
     }
     
-    const fcmToken = tokenResult.rows[0].fcm_token;
+    const fcmTokens = tokenResult.rows.map(r => r.fcm_token);
     
     // Récupérer les arrivées du jour
     const today = new Date();
@@ -11462,7 +11461,7 @@ app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res
       `${a.property_name} - ${a.guest_name || 'Voyageur'}`
     ).join('\n');
     
-    const result = await sendNotification(fcmToken, title, body, {
+    const result = await sendNotificationToMultiple(fcmTokens, title, body, {
       type: 'arrivals',
       count: arrivals.length.toString()
     });
@@ -11489,7 +11488,7 @@ app.post('/api/notifications/today-departures', authenticateToken, async (req, r
       return res.json({ message: 'Aucun token FCM enregistré' });
     }
     
-    const fcmToken = tokenResult.rows[0].fcm_token;
+    const fcmTokens = tokenResult.rows.map(r => r.fcm_token);
     
     // Récupérer les départs du jour
     const today = new Date();
@@ -11515,7 +11514,7 @@ app.post('/api/notifications/today-departures', authenticateToken, async (req, r
     const title = `🚪 ${departures.length} départ(s) aujourd'hui`;
     const body = `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`;
     
-    const result = await sendNotification(fcmToken, title, body, {
+    const result = await sendNotificationToMultiple(fcmTokens, title, body, {
       type: 'departures',
       count: departures.length.toString()
     });
