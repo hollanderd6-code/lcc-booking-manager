@@ -1658,3 +1658,47 @@ html, body {
     z-index: 1200;
   }
 }
+
+/* ================================
+   Logo mobile : version "desktop-like"
+   ================================ */
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.mobile-logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mobile-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.mobile-logo-title {
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 17px;
+}
+
+.mobile-logo-subtitle {
+  font-size: 10px;
+  color: #6B7280;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.logo-green { color: #10B981; font-weight: 800; }
+.logo-dark  { color: #111827; font-weight: 600; }
+
+@media (max-width: 360px) {
+  .mobile-logo-subtitle { display: none; }
+}
