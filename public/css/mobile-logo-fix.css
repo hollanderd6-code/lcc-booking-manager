@@ -2,6 +2,7 @@
    📱 BOOSTINGHOST - FIX LOGO MOBILE
    
    À ajouter APRÈS tous les autres CSS
+   Version ULTRA RENFORCÉE
    ============================================ */
 
 @media (max-width: 768px) {
@@ -10,7 +11,9 @@
      HEADER MOBILE - STRUCTURE
      ============================================ */
   
-  .mobile-header {
+  html body .mobile-header,
+  html body div.mobile-header,
+  .mobile-header.mobile-header {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -30,16 +33,23 @@
      LOGO MOBILE - VISIBLE ET STYLÉ
      ============================================ */
   
-  .mobile-logo {
+  html body .mobile-logo,
+  html body a.mobile-logo,
+  .mobile-header .mobile-logo {
     display: flex !important;
     align-items: center !important;
     gap: 10px !important;
     text-decoration: none !important;
     cursor: pointer !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   
   /* Image du logo - FORCER L'AFFICHAGE */
-  .mobile-logo img {
+  html body .mobile-logo img,
+  html body a.mobile-logo img,
+  .mobile-header .mobile-logo img,
+  .mobile-logo img[src*="base64"] {
     display: block !important;
     width: 32px !important;
     height: 32px !important;
@@ -47,10 +57,15 @@
     flex-shrink: 0 !important;
     visibility: visible !important;
     opacity: 1 !important;
+    object-fit: cover !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
   }
   
   /* Texte "Boostinghost" */
-  .mobile-logo-text {
+  html body .mobile-logo-text,
+  html body span.mobile-logo-text,
+  .mobile-header .mobile-logo-text {
     display: inline-flex !important;
     align-items: center !important;
     font-size: 18px !important;
@@ -60,33 +75,48 @@
     opacity: 1 !important;
   }
   
-  /* Styles pour "Boosting" (vert) et "host" (noir) */
-  .mobile-logo-text span:first-child {
+  /* Styles pour "Boosting" (vert) */
+  html body .mobile-logo-text span:first-child,
+  html body span.mobile-logo-text span:first-child,
+  .mobile-header .mobile-logo-text span:first-child {
     color: #10B981 !important;
     font-weight: 800 !important;
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   
-  .mobile-logo-text span:last-child {
+  /* Styles pour "host" (noir) */
+  html body .mobile-logo-text span:last-child,
+  html body span.mobile-logo-text span:last-child,
+  .mobile-header .mobile-logo-text span:last-child {
     color: #111827 !important;
     font-weight: 600 !important;
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   
   /* ============================================
      CACHER LE MENU HAMBURGER
      ============================================ */
   
-  .mobile-menu-btn,
-  #mobileMenuBtn {
+  html body .mobile-menu-btn,
+  html body #mobileMenuBtn,
+  .mobile-header .mobile-menu-btn,
+  .mobile-header #mobileMenuBtn {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
   }
   
   /* ============================================
      AJUSTER LE CONTENU POUR L'ESPACE DU HEADER
      ============================================ */
   
-  body,
-  .app-container,
-  main {
+  html body,
+  html body .app-container,
+  html body main {
     padding-top: 60px !important;
   }
   
@@ -94,11 +124,13 @@
      DARK MODE
      ============================================ */
   
+  [data-theme="dark"] html body .mobile-header,
   [data-theme="dark"] .mobile-header {
     background: #1F2937 !important;
     border-bottom-color: #374151 !important;
   }
   
+  [data-theme="dark"] html body .mobile-logo-text span:last-child,
   [data-theme="dark"] .mobile-logo-text span:last-child {
     color: #F9FAFB !important;
   }
