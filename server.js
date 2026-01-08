@@ -3849,8 +3849,9 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
               month: 'short'
             });
             
-            await sendNotification(
-              tokenResult.rows[0].fcm_token,
+            for (const row of tokenResult.rows) {
+              await sendNotification(
+                row.fcm_token,
               '📅 Nouvelle réservation',
               `${property.name} - ${checkInDate} au ${checkOutDate}`,
               {
@@ -3859,6 +3860,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
                 property_name: property.name
               }
             );
+            }
             
             console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
           }
@@ -11461,7 +11463,7 @@ app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res
       `${a.property_name} - ${a.guest_name || 'Voyageur'}`
     ).join('\n');
     
-    const result = await sendNotificationToMultiple(fcmTokens, title, body, {
+    const result = await sendNotification(fcmToken, title, body, {
       type: 'arrivals',
       count: arrivals.length.toString()
     });
@@ -11514,7 +11516,7 @@ app.post('/api/notifications/today-departures', authenticateToken, async (req, r
     const title = `🚪 ${departures.length} départ(s) aujourd'hui`;
     const body = `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`;
     
-    const result = await sendNotificationToMultiple(fcmTokens, title, body, {
+    const result = await sendNotification(fcmToken, title, body, {
       type: 'departures',
       count: departures.length.toString()
     });
