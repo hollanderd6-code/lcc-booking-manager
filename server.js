@@ -3849,9 +3849,8 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
               month: 'short'
             });
             
-            for (const row of tokenResult.rows) {
-              await sendNotification(
-                row.fcm_token,
+            await sendNotification(
+              tokenResult.rows[0].fcm_token,
               '📅 Nouvelle réservation',
               `${property.name} - ${checkInDate} au ${checkOutDate}`,
               {
@@ -3860,7 +3859,6 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
                 property_name: property.name
               }
             );
-            }
             
             console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
           }
@@ -11388,8 +11386,9 @@ app.post('/api/save-token', authenticateToken, async (req, res) => {
     await pool.query(
   `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
    VALUES ($1, $2, $3, NOW(), NOW())
-   ON CONFLICT (user_id, device_type)
+   ON CONFLICT (user_id)
    DO UPDATE SET fcm_token = EXCLUDED.fcm_token,
+                 device_type = EXCLUDED.device_type,
                  updated_at = NOW()`,
   [userId, token, deviceType]
 );
@@ -11435,7 +11434,7 @@ app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res
       return res.json({ message: 'Aucun token FCM enregistré' });
     }
     
-    const fcmTokens = tokenResult.rows.map(r => r.fcm_token);
+    const fcmToken = tokenResult.rows[0].fcm_token;
     
     // Récupérer les arrivées du jour
     const today = new Date();
@@ -11490,7 +11489,7 @@ app.post('/api/notifications/today-departures', authenticateToken, async (req, r
       return res.json({ message: 'Aucun token FCM enregistré' });
     }
     
-    const fcmTokens = tokenResult.rows.map(r => r.fcm_token);
+    const fcmToken = tokenResult.rows[0].fcm_token;
     
     // Récupérer les départs du jour
     const today = new Date();
