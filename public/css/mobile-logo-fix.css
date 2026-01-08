@@ -1,0 +1,109 @@
+/* ============================================
+   📱 BOOSTINGHOST - FIX LOGO MOBILE
+   
+   À ajouter APRÈS tous les autres CSS
+   ============================================ */
+
+@media (max-width: 768px) {
+  
+  /* ============================================
+     HEADER MOBILE - STRUCTURE
+     ============================================ */
+  
+  .mobile-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #E5E7EB !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    height: 60px !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* ============================================
+     LOGO MOBILE - VISIBLE ET STYLÉ
+     ============================================ */
+  
+  .mobile-logo {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+  }
+  
+  /* Image du logo - FORCER L'AFFICHAGE */
+  .mobile-logo img {
+    display: block !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    flex-shrink: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Texte "Boostinghost" */
+  .mobile-logo-text {
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Styles pour "Boosting" (vert) et "host" (noir) */
+  .mobile-logo-text span:first-child {
+    color: #10B981 !important;
+    font-weight: 800 !important;
+  }
+  
+  .mobile-logo-text span:last-child {
+    color: #111827 !important;
+    font-weight: 600 !important;
+  }
+  
+  /* ============================================
+     CACHER LE MENU HAMBURGER
+     ============================================ */
+  
+  .mobile-menu-btn,
+  #mobileMenuBtn {
+    display: none !important;
+  }
+  
+  /* ============================================
+     AJUSTER LE CONTENU POUR L'ESPACE DU HEADER
+     ============================================ */
+  
+  body,
+  .app-container,
+  main {
+    padding-top: 60px !important;
+  }
+  
+  /* ============================================
+     DARK MODE
+     ============================================ */
+  
+  [data-theme="dark"] .mobile-header {
+    background: #1F2937 !important;
+    border-bottom-color: #374151 !important;
+  }
+  
+  [data-theme="dark"] .mobile-logo-text span:last-child {
+    color: #F9FAFB !important;
+  }
+}
+
+/* ============================================
+   FIN DES STYLES LOGO MOBILE
+   ============================================ */
