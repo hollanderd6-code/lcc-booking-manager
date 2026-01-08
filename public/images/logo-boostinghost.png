@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Logo B">
+  <!-- carré vert -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#63CFA6"/>
+
+  <!-- B centré optiquement -->
+  <text
+    x="520"
+    y="585"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="SF Pro Display, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+    font-size="960"
+    font-weight="900"
+    fill="#FFFFFF">
+    B
+  </text>
+</svg>
