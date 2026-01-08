@@ -501,6 +501,16 @@
     border-radius: 0 !important;
   }
   
+  /* ✅ Espace pour la barre de statut iOS */
+  .chat-modal-header {
+    padding-top: 60px !important;
+  }
+  
+  /* ✅ Espace pour l'indicateur d'accueil iOS */
+  .chat-modal-input {
+    padding-bottom: 34px !important;
+  }
+  
   .chat-bubble {
     max-width: 280px !important;
   }
