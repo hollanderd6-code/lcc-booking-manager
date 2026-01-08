@@ -197,40 +197,52 @@
   }
 
   function normalizeBranding() {
-  // Mobile header brand
-  const mobileLogoText = document.querySelector(".mobile-logo-text");
-if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
-  mobileLogoText.innerHTML = `
-    <span class="mobile-logo-title">
-      <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-    </span>
-    <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
-  `;
-}
-
+  // --- Mobile header brand (logo + texte) ---
   const mobileLogo = document.querySelector(".mobile-logo");
+  const mobileLogoText = document.querySelector(".mobile-logo-text");
+
+  // 1) Texte stylé (Boosting/host + sous-titre) sans écraser si déjà en place
+  if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
+    mobileLogoText.innerHTML = `
+      <span class="mobile-logo-title">
+        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+      </span>
+      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
+    `;
+  }
+
+  // 2) Icône : si on a un ancien <i>, on le remplace ; si on n'a rien, on injecte un SVG
   if (mobileLogo) {
-    // Replace icon if it's the old calendar-check
-    const icon = mobileLogo.querySelector("i.fas, i.fa");
-    if (icon) {
-      // Use a simple inline SVG close to the sidebar mark
-      icon.outerHTML = `
-        <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-          <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M16 36V26H24V36"
-                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-                fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-        </svg>`;
+    const existingImg = mobileLogo.querySelector("img");
+    const existingSvg = mobileLogo.querySelector("svg");
+    const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
+
+    const brandSvg = `
+      <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40" fill="none"
+           xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; border-radius:999px;">
+        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
+              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 36V26H24V36"
+              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
+              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
+      </svg>
+    `;
+
+    if (oldIcon) {
+      oldIcon.outerHTML = brandSvg;
+    } else if (!existingImg && !existingSvg) {
+      // injecter le SVG au début du lien
+      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
     }
   }
 
-  // Sidebar brand title if needed
+  // --- Sidebar brand title (si besoin) ---
   const sidebarTitle = document.querySelector(".sidebar-logo-title");
   if (sidebarTitle) {
-    sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
+    sidebarTitle.innerHTML =
+      '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
   }
 }
 
