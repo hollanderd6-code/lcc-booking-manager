@@ -197,26 +197,61 @@
   }
 
   function normalizeBranding() {
-  // --- Mobile header brand (logo + texte) ---
   const mobileLogo = document.querySelector(".mobile-logo");
-if (mobileLogo) {
-  const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
-  const anySvg  = mobileLogo.querySelector("svg");
-  const anyImg  = mobileLogo.querySelector("img");
+  const mobileLogoText = document.querySelector(".mobile-logo-text");
 
-  // Si un <i> existe -> remplace
-  if (oldIcon) {
-    oldIcon.outerHTML = brandSvg;
+  // SVG du logo "B" rond (stable, pas de dépendance)
+  const brandSvg = `
+    <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
+         xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+      <defs>
+        <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#7fd3a6"/>
+          <stop offset="1" stop-color="#58b88c"/>
+        </linearGradient>
+      </defs>
+      <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
+      <text x="20" y="26" text-anchor="middle"
+            font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
+            font-size="20" font-weight="800" fill="#ffffff">B</text>
+    </svg>
+  `;
+
+  // 1) Texte stylé (Boosting/host + sous-titre) sans écraser si déjà OK
+  if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
+    mobileLogoText.innerHTML = `
+      <span class="mobile-logo-title">
+        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+      </span>
+      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
+    `;
   }
-  // Si un SVG "maison" existe -> remplace aussi
-  else if (anySvg) {
-    anySvg.outerHTML = brandSvg;
+
+  // 2) Icône : remplace l'ancien <i> OU l'ancien SVG OU injecte si rien
+  if (mobileLogo) {
+    const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
+    const anySvg = mobileLogo.querySelector("svg");
+    const anyImg = mobileLogo.querySelector("img");
+
+    if (oldIcon) {
+      oldIcon.outerHTML = brandSvg;
+    } else if (anySvg && !anySvg.classList.contains("mobile-logo-mark")) {
+      // Remplace le SVG existant (ex: maison) par le B
+      anySvg.outerHTML = brandSvg;
+    } else if (!anyImg && !anySvg) {
+      // Rien ? on injecte au début
+      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+    }
   }
-  // Si rien n’existe (pas d’img, pas de svg) -> injecte
-  else if (!anyImg) {
-    mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+
+  // 3) Sidebar (desktop) : garde le titre Boostinghost en couleurs
+  const sidebarTitle = document.querySelector(".sidebar-logo-title");
+  if (sidebarTitle) {
+    sidebarTitle.innerHTML =
+      '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
   }
 }
+
 
   // 1) Texte stylé (Boosting/host + sous-titre) sans écraser si déjà en place
   if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
