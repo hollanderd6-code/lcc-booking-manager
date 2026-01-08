@@ -199,7 +199,24 @@
   function normalizeBranding() {
   // --- Mobile header brand (logo + texte) ---
   const mobileLogo = document.querySelector(".mobile-logo");
-  const mobileLogoText = document.querySelector(".mobile-logo-text");
+if (mobileLogo) {
+  const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
+  const anySvg  = mobileLogo.querySelector("svg");
+  const anyImg  = mobileLogo.querySelector("img");
+
+  // Si un <i> existe -> remplace
+  if (oldIcon) {
+    oldIcon.outerHTML = brandSvg;
+  }
+  // Si un SVG "maison" existe -> remplace aussi
+  else if (anySvg) {
+    anySvg.outerHTML = brandSvg;
+  }
+  // Si rien n’existe (pas d’img, pas de svg) -> injecte
+  else if (!anyImg) {
+    mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+  }
+}
 
   // 1) Texte stylé (Boosting/host + sous-titre) sans écraser si déjà en place
   if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
@@ -218,17 +235,20 @@
     const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
 
     const brandSvg = `
-      <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40" fill="none"
-           xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0; border-radius:999px;">
-        <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M16 36V26H24V36"
-              stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
-              fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M20 9L24 14H16L20 9Z" fill="white"/>
-      </svg>
-    `;
+  <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
+       xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+    <defs>
+      <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7fd3a6"/>
+        <stop offset="1" stop-color="#58b88c"/>
+      </linearGradient>
+    </defs>
+    <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
+    <text x="20" y="26" text-anchor="middle"
+          font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
+          font-size="20" font-weight="800" fill="#ffffff">B</text>
+  </svg>
+`;
 
     if (oldIcon) {
       oldIcon.outerHTML = brandSvg;
