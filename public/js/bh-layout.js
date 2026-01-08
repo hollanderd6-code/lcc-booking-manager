@@ -199,7 +199,14 @@
   function normalizeBranding() {
   // Mobile header brand
   const mobileLogoText = document.querySelector(".mobile-logo-text");
-  if (mobileLogoText) mobileLogoText.textContent = "Boostinghost";
+if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
+  mobileLogoText.innerHTML = `
+    <span class="mobile-logo-title">
+      <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+    </span>
+    <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
+  `;
+}
 
   const mobileLogo = document.querySelector(".mobile-logo");
   if (mobileLogo) {
