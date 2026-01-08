@@ -8,156 +8,119 @@
       : 'web';
 
   async function findSupabaseKey() {
-    try {
-      const cap = window.Capacitor;
-      if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
-        console.error('❌ Capacitor Preferences non disponible');
-        return null;
-      }
+    const cap = window.Capacitor;
+    if (!cap?.Plugins?.Preferences) return null;
 
-      const possibleKeys = [
-        'sb-ztdzragdnjkastswtvzn-auth-token',
-        'supabase.auth.token',
-        '@supabase/auth-token',
-        'sb-auth-token',
-        'lcc_token'
-      ];
+    const keys = [
+      'lcc_token',
+      'sb-ztdzragdnjkastswtvzn-auth-token',
+      'supabase.auth.token',
+      '@supabase/auth-token',
+      'sb-auth-token'
+    ];
 
-      console.log('🔍 Recherche de la clé Supabase...');
-
-      for (const key of possibleKeys) {
-        const { value } = await cap.Plugins.Preferences.get({ key });
-        if (value) {
-          console.log(`✅ Clé trouvée: ${key}`);
-          return { key, value };
-        }
-      }
-
-      console.warn('⚠️ Aucune clé Supabase trouvée');
-      return null;
-    } catch (err) {
-      console.error('❌ Erreur recherche clé:', err);
-      return null;
+    for (const key of keys) {
+      const { value } = await cap.Plugins.Preferences.get({ key });
+      if (value) return { key, value };
     }
+    return null;
   }
 
-  async function getSupabaseSession() {
+  async function getJwt() {
     const found = await findSupabaseKey();
     if (!found) return null;
 
     try {
-      if (found.key === 'lcc_token') {
-        return found.value;
-      }
-
+      if (found.key === 'lcc_token') return found.value;
       const session = JSON.parse(found.value);
-      return session.access_token || session.accessToken || session.token || null;
-    } catch (err) {
-      console.error('❌ Erreur parsing session:', err);
+      return session.access_token || session.token || null;
+    } catch {
       return null;
     }
   }
 
   async function saveTokenToServer(token) {
-    try {
-      const jwt = await getSupabaseSession();
-      if (!jwt) {
-        console.warn('⚠️ Pas de JWT disponible');
-        return;
-      }
-
-      console.log(`📱 Envoi token (${deviceType}) au serveur`);
-
-      const res = await fetch(`${API_BASE}/api/save-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`
-        },
-        body: JSON.stringify({
-          token,
-          device_type: deviceType
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error('❌ Enregistrement token échoué:', data);
-        return;
-      }
-
-      console.log('✅ Token sauvegardé:', data);
-    } catch (err) {
-      console.error('❌ Erreur réseau:', err);
+    const jwt = await getJwt();
+    if (!jwt) {
+      console.warn('⛔ JWT absent, token non envoyé');
+      return;
     }
+
+    console.log(`📤 Envoi token ${deviceType} au serveur`);
+
+    await fetch(`${API_BASE}/api/save-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`
+      },
+      body: JSON.stringify({
+        token,
+        device_type: deviceType
+      })
+    });
   }
 
   async function initPush() {
-    if (window.__fcmRegInitDone) return;
-    window.__fcmRegInitDone = true;
+    if (window.__pushInitDone) return;
+    window.__pushInitDone = true;
 
     const cap = window.Capacitor;
-    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) {
-      console.log('🌐 Web: pas d\'init push');
+    if (!cap?.isNativePlatform?.()) {
+      console.log('🌐 Web → pas de push');
       return;
     }
 
-    const PushNotifications = cap.Plugins?.PushNotifications;
-    if (!PushNotifications) {
-      console.error('❌ PushNotifications plugin introuvable');
-      return;
-    }
+    const PushNotifications = cap.Plugins.PushNotifications;
+    if (!PushNotifications) return;
 
-    console.log('🔔 Init Push (native)...');
+    console.log(`🔔 Init Push (${deviceType})`);
 
-    // 🔥 ANDROID ONLY : création du channel
+    /* ================= ANDROID 13+ ================= */
     if (deviceType === 'android') {
-      console.log('🤖 Création du channel Android');
-      try {
-        await PushNotifications.createChannel({
-          id: 'default',
-          name: 'Notifications',
-          description: 'Notifications générales',
-          importance: 4 // HIGH
-        });
-        console.log('✅ Channel Android créé');
-      } catch (e) {
-        console.warn('⚠️ Channel Android déjà existant ou erreur:', e);
+      const perm = await PushNotifications.checkPermissions();
+      console.log('🤖 Android permissions:', perm);
+
+      if (perm.receive !== 'granted') {
+        const req = await PushNotifications.requestPermissions();
+        console.log('🤖 Android permission request:', req);
+
+        if (req.receive !== 'granted') {
+          console.warn('⛔ Android: permission refusée → PAS DE TOKEN');
+          return;
+        }
       }
+
+      console.log('🤖 Création channel Android');
+      await PushNotifications.createChannel({
+        id: 'default',
+        name: 'Notifications',
+        description: 'Notifications générales',
+        importance: 4
+      });
     }
 
-    // Listeners
+    /* ================= LISTENERS ================= */
     PushNotifications.addListener('registration', async (token) => {
-      console.log('✅ DEVICE TOKEN RECEIVED');
-      console.log('📱 Token:', token?.value);
+      console.log(`📱 TOKEN REÇU (${deviceType})`, token.value);
       if (token?.value) await saveTokenToServer(token.value);
     });
 
-    PushNotifications.addListener('registrationError', (error) => {
-      console.error('❌ Push registration error:', error);
+    PushNotifications.addListener('registrationError', (err) => {
+      console.error('❌ registrationError', err);
     });
 
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('📩 Push reçu:', notification);
+    PushNotifications.addListener('pushNotificationReceived', (n) => {
+      console.log('📩 Push reçu', n);
     });
 
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('👉 Push action:', notification);
+    PushNotifications.addListener('pushNotificationActionPerformed', (n) => {
+      console.log('👉 Push action', n);
     });
 
-    const permStatus = await PushNotifications.checkPermissions();
-    if (permStatus.receive !== 'granted') {
-      const requestStatus = await PushNotifications.requestPermissions();
-      if (requestStatus.receive !== 'granted') {
-        console.warn('⛔ Permission refusée');
-        return;
-      }
-    }
-
-    console.log('📌 Permission OK → register()');
+    console.log('📌 register()');
     await PushNotifications.register();
   }
 
-  // Auto-start
   setTimeout(initPush, 3000);
 })();
