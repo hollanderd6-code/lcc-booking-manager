@@ -2,7 +2,9 @@
 (function () {
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   
-  async function findSupabaseKey() {
+  
+  const deviceType = (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') ? window.Capacitor.getPlatform() : 'web';
+async function findSupabaseKey() {
     try {
       const cap = window.Capacitor;
       if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
@@ -88,7 +90,7 @@
         },
         body: JSON.stringify({ 
           token,
-          device_type: 'ios'
+          device_type: deviceType
         }),
       });
       
@@ -104,8 +106,8 @@
   }
   
   async function initPush() {
-    if (window.__pushInitDone) return;
-    window.__pushInitDone = true;
+    if (window.__fcmRegInitDone) return;
+    window.__fcmRegInitDone = true;
     
     const cap = window.Capacitor;
     if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) {
