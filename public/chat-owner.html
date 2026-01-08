@@ -2,7 +2,7 @@
 <html lang="fr" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Messages — Boostinghost</title>
 
   <!-- Fonts -->
@@ -571,10 +571,24 @@
     }
 
     @media (max-width: 768px) {
+      .modal-overlay.active {
+        padding: 0;
+      }
+
       .chat-modal {
         height: 100vh;
         max-height: 100vh;
         border-radius: 0;
+      }
+
+      .chat-modal-header {
+        padding-top: max(20px, env(safe-area-inset-top));
+        padding-top: max(20px, constant(safe-area-inset-top)); /* Fallback pour iOS < 11.2 */
+      }
+
+      .chat-modal-input {
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+        padding-bottom: max(16px, constant(safe-area-inset-bottom)); /* Fallback pour iOS < 11.2 */
       }
       /* Meta (heure + statut) = même taille que côté guest */
 .chat-meta{
