@@ -27,7 +27,7 @@
         font-size="34" font-weight="800" fill="#ffffff">B</text>
 </svg>
       <span class="mobile-logo-text">
-        <span class="brand-boosting">Boosting</span><span class="brand-host">host</span>
+        <span class="brand-name"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
       </span>
     </a>
   </div>
@@ -45,7 +45,7 @@
         font-size="34" font-weight="800" fill="#ffffff">B</text>
 </svg></div>
           <div class="logo-text">
-            <span class="logo-title"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
+            <span class="logo-title"><span class="brand-name"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span></span>
           </div>
         </a>
       </div>
@@ -293,6 +293,22 @@
     }
 
 /* Branding Boostinghost */
+/* Keep Boostinghost on one line */
+    .brand-name {
+      display: inline-flex;
+      align-items: baseline;
+      white-space: nowrap;
+      line-height: 1;
+      gap: 0;
+    }
+
+    /* Mobile: avoid duplicate top bar (logo + buttons) */
+    @media (max-width: 640px) {
+      .landing-header { display: none; }   /* removes logo + "Se connecter / Créer un compte" */
+      .mobile-header { display: flex; }    /* keep only the mobile header */
+    }
+
+
     .brand-boosting { color: #10B981; font-weight: 800; }
     .brand-host { color: #0F172A; font-weight: 700; }
 
