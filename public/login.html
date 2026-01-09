@@ -31,7 +31,7 @@
 </svg>
 </div>
         <div>
-          <div class="auth-logo-title">Boostinghost</div>
+          <div class="auth-logo-title"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></div>
           <div class="auth-logo-subtitle">Property Manager</div>
         </div>
       </div>
@@ -431,6 +431,14 @@
       font-size: 12px;
     }
 
+
+    /* Brand title colors (Boosting en vert) */
+    .brand-boosting { color: #10B981; font-weight: 800; }
+    .brand-host { color: #0F172A; font-weight: 700; }
+
+    /* Agrandir le logo */
+    .bh-logo { width: 52px; height: 52px; }
+
     /* Responsive */
     @media (max-width: 1024px) {
       .auth-container {
@@ -446,6 +454,9 @@
     }
 
     @media (max-width: 640px) {
+
+      /* Mobile: logo légèrement plus grand aussi */
+      .bh-logo { width: 48px; height: 48px; }
       .auth-container {
         margin: 12px;
         border-radius: 20px;
