@@ -295,13 +295,15 @@
 /* Branding Boostinghost */
 /* Mobile fix: push down dark dashboard card */
     @media (max-width: 640px) {
-      .hero-preview,
-      .dashboard-preview,
-      .mockup-preview {
-        margin-top: 40px;
+      .landing-hero {
+        padding-top: 80px;  /* Compensation pour le header mobile fixe */
       }
     }
 
+    /* Mobile header - hidden by default on desktop */
+    .mobile-header {
+      display: none;
+    }
 
 /* Keep Boostinghost on one line */
     .brand-name {
@@ -312,10 +314,22 @@
       gap: 0;
     }
 
-    /* Mobile: avoid duplicate top bar (logo + buttons) */
+    /* Mobile: show only mobile header without buttons */
     @media (max-width: 640px) {
-      .landing-header { display: none; }   /* removes logo + "Se connecter / Créer un compte" */
-      .mobile-header { display: flex; }    /* keep only the mobile header */
+      .landing-header { 
+        display: none !important;   /* removes logo + "Se connecter / Créer un compte" */
+      }
+      .mobile-header { 
+        display: flex !important;    /* show only the mobile header */
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(18px);
+        background: rgba(248, 250, 252, 0.95);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+        padding: 12px 16px;
+        align-items: center;
+      }
     }
 
 
@@ -323,6 +337,19 @@
     .brand-host { color: #0F172A; font-weight: 700; }
 
     .mobile-header .bh-logo { width: 40px; height: 40px; }
+    
+    .mobile-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+    
+    .mobile-logo-text {
+      font-size: 16px;
+      font-weight: 700;
+    }
     .logo-icon--svg {
       background: transparent !important;
       box-shadow: none !important;
