@@ -1,0 +1,146 @@
+/* ============================================
+   📱 FIX AFFICHAGE LIVRETS D'ACCUEIL MOBILE
+   
+   Corrige l'affichage des cartes de livrets
+   pour que tous les boutons soient visibles
+   ============================================ */
+
+/* ============================================
+   🎯 RESPONSIVE DESIGN POUR LES CARTES
+   ============================================ */
+
+/* Sur mobile, passer en mode vertical */
+@media (max-width: 768px) {
+  /* La carte complète en mode column sur mobile */
+  #livretsList > div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+  
+  /* Les informations du livret prennent toute la largeur */
+  #livretsList > div > div:first-child {
+    width: 100%;
+  }
+  
+  /* Container des boutons */
+  #livretsList > div > div:last-child {
+    width: 100%;
+    display: flex !important;
+    gap: 0.5rem !important;
+    flex-wrap: wrap !important;
+  }
+  
+  /* Chaque bouton prend une taille adaptée */
+  #livretsList > div > div:last-child button {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    padding: 0.6rem 0.8rem !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+  }
+  
+  /* Le bouton poubelle a une taille minimale */
+  #livretsList > div > div:last-child button:last-child {
+    flex: 0 0 auto !important;
+    padding: 0.6rem 1rem !important;
+  }
+}
+
+/* ============================================
+   🎨 VERSION ALTERNATIVE : 3 BOUTONS EN LIGNE
+   (Décommentez si vous préférez cette version)
+   ============================================ */
+
+/*
+@media (max-width: 768px) {
+  #livretsList > div > div:last-child {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr auto !important;
+    gap: 0.4rem !important;
+  }
+  
+  #livretsList > div > div:last-child button {
+    padding: 0.5rem 0.4rem !important;
+    font-size: 12px !important;
+  }
+  
+  #livretsList > div > div:last-child button i {
+    font-size: 14px;
+  }
+  
+  #livretsList > div > div:last-child button span {
+    display: none;
+  }
+}
+*/
+
+/* ============================================
+   ✨ AMÉLIORATION VISUELLE GÉNÉRALE
+   ============================================ */
+
+/* Améliorer le contraste des boutons */
+#livretsList .btn {
+  transition: all 0.2s ease;
+}
+
+#livretsList .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#livretsList .btn:active {
+  transform: translateY(0);
+}
+
+/* Bouton poubelle plus visible */
+#livretsList button[style*="e53e3e"] {
+  background: #ef4444 !important;
+}
+
+#livretsList button[style*="e53e3e"]:hover {
+  background: #dc2626 !important;
+}
+
+/* ============================================
+   📱 TRÈS PETIT ÉCRAN (< 380px)
+   ============================================ */
+
+@media (max-width: 380px) {
+  #livretsList > div {
+    padding: 0.8rem !important;
+  }
+  
+  #livretsList > div > div:last-child {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  
+  #livretsList > div > div:last-child button {
+    width: 100% !important;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+/* ============================================
+   🎯 FIX POUR LE TITRE
+   ============================================ */
+
+/* Sur petit écran, réduire la taille du titre */
+@media (max-width: 768px) {
+  #livretsList strong {
+    font-size: 15px !important;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  
+  #livretsList small {
+    font-size: 12px !important;
+  }
+}
+
+/* ============================================
+   FIN DES STYLES
+   ============================================ */
