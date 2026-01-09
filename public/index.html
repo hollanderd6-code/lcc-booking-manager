@@ -800,6 +800,17 @@
         align-items: flex-start;
       }
     }
+    .brand-name {
+  display: inline-flex;       /* force sur une seule ligne */
+  align-items: baseline;
+  white-space: nowrap;        /* interdit le retour à la ligne */
+  line-height: 1;
+}
+
+.brand-boosting,
+.brand-host {
+  display: inline;
+}
   </style>
 
   <!-- MOBILE MENU SCRIPT -->
