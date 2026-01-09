@@ -2354,7 +2354,7 @@
   .fab-add-resa{
     position: fixed;
     right: 16px;
-    bottom: 84px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
     width: 52px;
     height: 52px;
     border-radius: 999px;
@@ -2365,13 +2365,12 @@
     font-weight: 800;
     line-height: 1;
     box-shadow: 0 10px 24px rgba(0,0,0,.18);
-    z-index: 9999;
+    z-index: 2147483647; /* au-dessus de tout */
+    cursor: pointer;
+    touch-action: manipulation;
+    pointer-events: auto;
   }
   .fab-add-resa:active { transform: scale(0.98); }
-}
-/* Ensure FAB stays clickable above overlays */
-@media (max-width: 900px) {
-  .fab-add-resa { pointer-events: auto; }
 }
 </style>
 </head>
@@ -8246,26 +8245,20 @@ if (window.Capacitor) {
 <button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
 
 <script>
-  // FAB mobile: déclenche exactement la même action que le bouton "+" desktop
+  // FAB mobile : déclenche la même action que le bouton "+" desktop (ouvre la modale de réservation)
   document.getElementById('fabAddResa')?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const btn = document.getElementById('addBookingBtn')
-            || document.getElementById('newReservationBtn');
+    const btn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
+    if (btn) { btn.click(); return; }
 
-    if (btn) {
-      btn.click(); // réutilise le handler existant (modal + remplissage + submit)
-      return;
-    }
-
-    // Fallback si jamais: essayer une fonction globale si elle existe
     if (typeof window.openNewReservationModal === 'function') {
       window.openNewReservationModal();
       return;
     }
 
-    console.warn('Bouton + introuvable (addBookingBtn/newReservationBtn).');
+    console.warn('FAB: bouton desktop introuvable (addBookingBtn/newReservationBtn).');
   });
 </script>
 
@@ -8275,12 +8268,20 @@ if (window.Capacitor) {
 <button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
 
 <script>
-  document.getElementById('fabAddResa')?.addEventListener('click', () => {
-    const desktopBtn = document.querySelector('#addReservationBtn');
-    if (desktopBtn) desktopBtn.click();
-    else if (typeof openNewReservationModal === "function") {
-      openNewReservationModal();
+  // FAB mobile : déclenche la même action que le bouton "+" desktop (ouvre la modale de réservation)
+  document.getElementById('fabAddResa')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const btn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
+    if (btn) { btn.click(); return; }
+
+    if (typeof window.openNewReservationModal === 'function') {
+      window.openNewReservationModal();
+      return;
     }
+
+    console.warn('FAB: bouton desktop introuvable (addBookingBtn/newReservationBtn).');
   });
 </script>
 
