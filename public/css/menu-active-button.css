@@ -1,99 +1,101 @@
 /* ============================================
-   ✨ BOUTON ACTIF DANS LE MENU "PLUS"
-   
-   Met en surbrillance le bouton correspondant
-   à la page actuelle dans le menu Plus
+   ✨ BOUTON ACTIF DANS LE MENU "PLUS" (VERSION NEUTRE)
+
+   Objectif : garder la surbrillance du bouton actif
+   MAIS en style blanc/gris (comme page Messages), sans vert.
    ============================================ */
 
-/* ============================================
-   🎯 DÉTECTION AUTOMATIQUE DE LA PAGE ACTIVE
-   ============================================ */
+/* Helper : style commun du bouton actif */
+body[data-page] .bottom-sheet .btn.is-active,
+body[data-page] [class*="sheet"] .btn.is-active {
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+}
 
 /* Paramètres du compte */
 body[data-page="settings-account"] .bottom-sheet .btn[onclick*="settings-account"],
 body[data-page="settings-account"] [class*="sheet"] .btn[onclick*="settings-account"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Notifications */
 body[data-page="notifications"] .bottom-sheet .btn[onclick*="notifications"],
 body[data-page="notifications"] [class*="sheet"] .btn[onclick*="notifications"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Ménages */
 body[data-page="cleaning"] .bottom-sheet .btn[onclick*="cleaning"],
 body[data-page="cleaning"] [class*="sheet"] .btn[onclick*="cleaning"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Cautions */
 body[data-page="deposits"] .bottom-sheet .btn[onclick*="deposits"],
 body[data-page="deposits"] [class*="sheet"] .btn[onclick*="deposits"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Factures */
 body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
 body[data-page="factures"] [class*="sheet"] .btn[onclick*="factures.html"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Factures propriétaires */
 body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"],
 body[data-page="factures-proprietaires"] [class*="sheet"] .btn[onclick*="factures-proprietaires"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Livrets d'accueil */
 body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
 body[data-page="welcome"] [class*="sheet"] .btn[onclick*="welcome"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
 /* Aide */
 body[data-page="help"] .bottom-sheet .btn[onclick*="help"],
 body[data-page="help"] [class*="sheet"] .btn[onclick*="help"] {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: #E5E7EB !important;
+  color: #0F172A !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
 }
 
-/* ============================================
-   ✨ ICÔNE ACTIVE avec petit symbole
-   ============================================ */
-
-/* Ajouter une petite coche devant le bouton actif */
+/* Petite coche OK, en gris (optionnel) */
 body[data-page="settings-account"] .bottom-sheet .btn[onclick*="settings-account"]::before,
 body[data-page="notifications"] .bottom-sheet .btn[onclick*="notifications"]::before,
 body[data-page="cleaning"] .bottom-sheet .btn[onclick*="cleaning"]::before,
@@ -105,34 +107,11 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"]::before {
   content: '✓';
   margin-right: 8px;
   font-weight: 700;
-  opacity: 0.8;
+  opacity: 0.7;
+  color: #6B7280;
 }
 
-/* ============================================
-   🎨 VARIANTE : Bordure gauche au lieu du vert
-   (Décommentez si vous préférez ce style)
-   ============================================ */
-
-/*
-body[data-page="settings-account"] .bottom-sheet .btn[onclick*="settings-account"],
-body[data-page="notifications"] .bottom-sheet .btn[onclick*="notifications"],
-body[data-page="cleaning"] .bottom-sheet .btn[onclick*="cleaning"],
-body[data-page="deposits"] .bottom-sheet .btn[onclick*="deposits"],
-body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
-body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"],
-body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
-body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
-  background: rgba(16, 185, 129, 0.15) !important;
-  border-left: 4px solid #10B981 !important;
-  font-weight: 700 !important;
-  padding-left: 12px !important;
-}
-*/
-
-/* ============================================
-   🌙 DARK MODE
-   ============================================ */
-
+/* Dark mode : actif en gris foncé */
 [data-theme="dark"] body[data-page="settings-account"] .bottom-sheet .btn[onclick*="settings-account"],
 [data-theme="dark"] body[data-page="notifications"] .bottom-sheet .btn[onclick*="notifications"],
 [data-theme="dark"] body[data-page="cleaning"] .bottom-sheet .btn[onclick*="cleaning"],
@@ -141,27 +120,7 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
 [data-theme="dark"] body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"],
 [data-theme="dark"] body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
 [data-theme="dark"] body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
-  background: linear-gradient(135deg, #34D399, #10B981) !important;
+  background: rgba(255,255,255,0.10) !important;
+  color: #E5E7EB !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
 }
-
-/* ============================================
-   📱 COMPATIBILITÉ MOBILE
-   ============================================ */
-
-@media (max-width: 768px) {
-  /* Le bouton actif est légèrement plus grand sur mobile */
-  body[data-page="settings-account"] .bottom-sheet .btn[onclick*="settings-account"],
-  body[data-page="notifications"] .bottom-sheet .btn[onclick*="notifications"],
-  body[data-page="cleaning"] .bottom-sheet .btn[onclick*="cleaning"],
-  body[data-page="deposits"] .bottom-sheet .btn[onclick*="deposits"],
-  body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
-  body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"],
-  body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
-  body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
-    transform: scale(1.02);
-  }
-}
-
-/* ============================================
-   FIN DES STYLES BOUTON ACTIF
-   ============================================ */
