@@ -2348,6 +2348,28 @@
   }
 }
 </style>
+<style>
+/* FAB Nouvelle réservation - mobile only */
+@media (max-width: 900px) {
+  .fab-add-resa{
+    position: fixed;
+    right: 16px;
+    bottom: 84px;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: none;
+    background: #10B981;
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    z-index: 9999;
+  }
+  .fab-add-resa:active { transform: scale(0.98); }
+}
+</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
@@ -8216,7 +8238,33 @@ if (window.Capacitor) {
 }
 </script>    
 <script src="/js/bh-layout.js?v=5"></script>    
+<!-- FAB Nouvelle réservation (mobile) -->
+<button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
+
+<script>
+  document.getElementById('fabAddResa')?.addEventListener('click', () => {
+    const desktopBtn = document.querySelector('#addReservationBtn');
+    if (desktopBtn) desktopBtn.click();
+    else if (typeof openNewReservationModal === "function") {
+      openNewReservationModal();
+    }
+  });
+</script>
+
 </body>
 </html>    
+<!-- FAB Nouvelle réservation (mobile) -->
+<button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
+
+<script>
+  document.getElementById('fabAddResa')?.addEventListener('click', () => {
+    const desktopBtn = document.querySelector('#addReservationBtn');
+    if (desktopBtn) desktopBtn.click();
+    else if (typeof openNewReservationModal === "function") {
+      openNewReservationModal();
+    }
+  });
+</script>
+
 </body>
 </html>
