@@ -1,45 +1,46 @@
 /* ============================================
-   🎨 CORRECTIONS MENU MOBILE "PLUS" (VERSION NEUTRE)
-
-   Objectifs :
-   1. Garder les améliorations UX (espacements, hover/active, séparateurs, etc.)
-   2. Garder l'onglet "Plus" actif sur les bonnes pages
-   3. SUPPRIMER le thème "tout en vert" dans le bottom sheet
+   🎨 CORRECTIONS MENU MOBILE "PLUS"
+   
+   Ce fichier corrige :
+   1. Couleur des boutons (bleu → vert)
+   2. Onglet "Plus" actif sur les bonnes pages
+   
+   À ajouter APRÈS bottom-bar-enhanced.css
    ============================================ */
 
 /* ============================================
-   🎨 COULEURS NEUTRES (comme page Messages)
+   🎨 CORRECTION COULEURS - Tout en vert
    ============================================ */
 
-/* Bouton "primaire" du bottom sheet : neutre */
+/* Bouton primaire dans le bottom sheet (Menu Plus) */
 .btn-primary,
 .bottom-sheet .btn-primary,
 [class*="sheet"] .btn-primary {
-  background: #F3F4F6 !important;
-  color: #0F172A !important;
-  border: 1px solid #E5E7EB !important;
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: white !important;
+  border: none !important;
 }
 
-/* Hover/active légers */
 .btn-primary:hover {
-  background: #E5E7EB !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
 }
 
 .btn-primary:active {
   transform: scale(0.98);
 }
 
-/* Boutons secondaires : neutre */
+/* Boutons secondaires dans le menu */
 .btn-secondary,
 .bottom-sheet .btn-secondary,
 [class*="sheet"] .btn-secondary {
-  background: #F3F4F6 !important;
-  color: #0F172A !important;
-  border: 1px solid #E5E7EB !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
 }
 
 .btn-secondary:hover {
-  background: #E5E7EB !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
 .btn-secondary:active {
@@ -58,7 +59,7 @@
 }
 
 /* ============================================
-   ✅ ONGLET "PLUS" ACTIF automatiquement (conservé)
+   ✅ ONGLET "PLUS" ACTIF automatiquement
    ============================================ */
 
 /* Liste des pages qui doivent activer l'onglet "Plus" */
@@ -70,11 +71,10 @@ body[data-page="factures"] .tab-btn[data-tab="more"],
 body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"],
 body[data-page="welcome"] .tab-btn[data-tab="more"],
 body[data-page="help"] .tab-btn[data-tab="more"] {
-  color: var(--text-primary, #111827) !important;
-  font-weight: 700;
+  color: var(--primary-color, #10B981) !important;
 }
 
-/* Indicateur visuel sous l'onglet Plus quand actif : gris */
+/* Indicateur visuel sous l'onglet Plus quand actif */
 body[data-page="settings-account"] .tab-btn[data-tab="more"]::before,
 body[data-page="notifications"] .tab-btn[data-tab="more"]::before,
 body[data-page="cleaning"] .tab-btn[data-tab="more"]::before,
@@ -90,12 +90,12 @@ body[data-page="help"] .tab-btn[data-tab="more"]::before {
   transform: translateX(-50%);
   width: 4px;
   height: 4px;
-  background: #9CA3AF; /* gris */
+  background: #10B981;
   border-radius: 50%;
   animation: indicatorPulse 2s ease-in-out infinite;
 }
 
-/* Icône Plus qui grossit quand actif (conservé) */
+/* Icône Plus qui grossit quand actif */
 body[data-page="settings-account"] .tab-btn[data-tab="more"] i,
 body[data-page="notifications"] .tab-btn[data-tab="more"] i,
 body[data-page="cleaning"] .tab-btn[data-tab="more"] i,
@@ -120,15 +120,24 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
 }
 
 /* ============================================
-   📱 AMÉLIORATIONS DU BOTTOM SHEET (conservées)
+   📱 AMÉLIORATION DU BOTTOM SHEET
    ============================================ */
 
+/* Titre du menu avec icône verte */
 .bottom-sheet .sheet-header h3,
 .bottom-sheet-header h3 {
   color: var(--text-primary, #111827);
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Icône du titre */
+.bottom-sheet .sheet-header h3::before,
+.bottom-sheet-header h3::before {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  color: #10B981;
 }
 
 /* Espacement des boutons */
@@ -147,7 +156,28 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   opacity: 0.5;
 }
 
-/* Icônes dans les boutons */
+/* ============================================
+   🎨 HARMONISATION DARK MODE
+   ============================================ */
+
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #34D399, #10B981) !important;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: rgba(52, 211, 153, 0.1) !important;
+  color: #34D399 !important;
+  border-color: rgba(52, 211, 153, 0.2) !important;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: rgba(52, 211, 153, 0.2) !important;
+}
+
+/* ============================================
+   🔧 FIX ICÔNES DANS LES BOUTONS
+   ============================================ */
+
 .btn i {
   margin-right: 8px;
   font-size: 16px;
@@ -170,7 +200,10 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   width: 100%;
 }
 
-/* Effets hover/active */
+/* ============================================
+   ✨ EFFET HOVER/ACTIVE
+   ============================================ */
+
 .bottom-sheet .btn:hover,
 [class*="sheet"] .btn:hover {
   transform: translateX(4px);
@@ -181,10 +214,61 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   transform: scale(0.98);
 }
 
-/* Dark mode : garder neutre (sans vert) */
-[data-theme="dark"] .btn-primary,
-[data-theme="dark"] .btn-secondary {
-  background: rgba(255,255,255,0.06) !important;
-  color: #E5E7EB !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
+/* ============================================
+   🎯 CORRECTION SPÉCIFIQUE POUR CHAQUE PAGE
+   ============================================ */
+
+/* S'assurer que data-page est bien défini */
+body:not([data-page]) {
+  /* Fallback: détecter par l'URL */
 }
+
+/* Si on est sur une page du menu Plus, marquer l'onglet */
+@media (max-width: 768px) {
+  /* Notifications */
+  body[data-page="notifications"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Paramètres compte */
+  body[data-page="settings-account"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Ménages */
+  body[data-page="cleaning"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Cautions */
+  body[data-page="deposits"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Factures */
+  body[data-page="factures"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="factures-proprietaires"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Livrets */
+  body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
+  /* Aide */
+  body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
+    color: #10B981 !important;
+  }
+  
+  /* Ajouter la classe active */
+  body[data-page="notifications"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="settings-account"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="cleaning"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="deposits"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="factures"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="factures-proprietaires"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
+    /* On réutilise les styles de .active */
+  }
+}
+
+/* ============================================
+   📝 INSTRUCTIONS D'UTILISATION
+   ============================================
+   
+   Pour que l'onglet "Plus" soit actif sur une page,
+   ajoutez l'attribut data-page sur la balise <body> :
+   
+   Exemples :
+   <body data-page="notifications"> → Onglet Plus actif
+   <body data-page="cleaning"> → Onglet Plus actif
+   <body data-page="help"> → Onglet Plus actif
+   <body data-page="app"> → Onglet Dashboard actif
+   <body data-page="messages"> → Onglet Messages actif
+   <body data-page="settings"> → Onglet Logements actif
+   
+   ============================================ */
