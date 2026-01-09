@@ -2349,10 +2349,6 @@
 }
 </style>
 <style>
-.fab-add-resa:active { transform: scale(0.98); }
-}
-</style>
-<style>
 /* FAB Nouvelle réservation - mobile only */
 @media (max-width: 900px) {
   .fab-add-resa{
@@ -8249,7 +8245,7 @@ if (window.Capacitor) {
 <button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
 
 <script>
-  // FAB mobile : déclenche la même action que le bouton "+" desktop
+  // FAB mobile : ouvre la même modale que le "+" desktop
   (function(){
     const fab = document.getElementById('fabAddResa');
     if (!fab) return;
@@ -8258,35 +8254,17 @@ if (window.Capacitor) {
       e.preventDefault();
       e.stopPropagation();
 
-      // 1) Réutiliser le bouton desktop (même handlers)
+      // Appel direct de la fonction (la plus fiable sur mobile)
+      if (typeof window.openNewReservationModal === 'function') {
+        window.openNewReservationModal();
+        return;
+      }
+
+      // Fallback: cliquer le bouton desktop si la fonction n'existe pas
       const btn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
       if (btn) { btn.click(); return; }
 
-      console.warn('FAB: bouton desktop introuvable (addBookingBtn/newReservationBtn).');
-    });
-  })();
-</script>
-
-</body>
-</html>    
-<!-- FAB Nouvelle réservation (mobile) -->
-<button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
-
-<script>
-  // FAB mobile : déclenche la même action que le bouton "+" desktop
-  (function(){
-    const fab = document.getElementById('fabAddResa');
-    if (!fab) return;
-
-    fab.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // 1) Réutiliser le bouton desktop (même handlers)
-      const btn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
-      if (btn) { btn.click(); return; }
-
-      console.warn('FAB: bouton desktop introuvable (addBookingBtn/newReservationBtn).');
+      console.warn('FAB: impossible d’ouvrir la modale (fonction et bouton introuvables).');
     });
   })();
 </script>
