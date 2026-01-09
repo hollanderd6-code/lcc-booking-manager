@@ -18,26 +18,34 @@
 <body class="landing-body" data-page="index-3">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
-    <a href="/app.html" class="mobile-logo">
-      <i class="fas fa-calendar-check"></i>
-      <span class="mobile-logo-text">Boostinghost</span>
+    <a href="/app.html" class="mobile-logo" aria-label="Boostinghost">
+      <svg class="bh-logo" width="40" height="40" viewBox="0 0 64 64"
+     xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
+  <text x="32" y="43" text-anchor="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
+        font-size="34" font-weight="800" fill="#ffffff">B</text>
+</svg>
+      <span class="mobile-logo-text">
+        <span class="brand-boosting">Boosting</span><span class="brand-host">host</span>
+      </span>
     </a>
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-      <i class="fas fa-bars"></i>
-    </button>
   </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <!-- HEADER -->
   <header class="landing-header">
     <div class="landing-container header-inner">
       <div class="header-left">
         <a href="/" class="logo-link">
-          <div class="logo-icon">
-            <i class="fas fa-home"></i>
-          </div>
+          <div class="logo-icon logo-icon--svg"><svg class="bh-logo" width="40" height="40" viewBox="0 0 64 64"
+     xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
+  <text x="32" y="43" text-anchor="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
+        font-size="34" font-weight="800" fill="#ffffff">B</text>
+</svg></div>
           <div class="logo-text">
-            <span class="logo-title">Boostinghost</span>
+            <span class="logo-title"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
           </div>
         </a>
       </div>
@@ -283,6 +291,23 @@
       display: flex;
       flex-direction: column;
     }
+
+/* Branding Boostinghost */
+    .brand-boosting { color: #10B981; font-weight: 800; }
+    .brand-host { color: #0F172A; font-weight: 700; }
+
+    .mobile-header .bh-logo { width: 40px; height: 40px; }
+    .logo-icon--svg {
+      background: transparent !important;
+      box-shadow: none !important;
+      width: auto !important;
+      height: auto !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-icon--svg .bh-logo { width: 36px; height: 36px; }
+
 
     .landing-container {
       max-width: 1100px;
@@ -779,48 +804,6 @@
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
-    (function() {
-      const menuBtn = document.getElementById('mobileMenuBtn');
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
-      
-      if (menuBtn && sidebar && overlay) {
-        menuBtn.addEventListener('click', function() {
-          sidebar.classList.toggle('active');
-          overlay.classList.toggle('active');
-          
-          const icon = menuBtn.querySelector('i');
-          if (sidebar.classList.contains('active')) {
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
-          } else {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-          }
-        });
-        
-        overlay.addEventListener('click', function() {
-          sidebar.classList.remove('active');
-          overlay.classList.remove('active');
-          const icon = menuBtn.querySelector('i');
-          icon.classList.remove('fa-times');
-          icon.classList.add('fa-bars');
-        });
-        
-        if (window.innerWidth <= 1024) {
-          document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-              sidebar.classList.remove('active');
-              overlay.classList.remove('active');
-              const icon = menuBtn.querySelector('i');
-              icon.classList.remove('fa-times');
-              icon.classList.add('fa-bars');
-            });
-          });
-        }
-      }
-    })();
-    
     (function() {
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
