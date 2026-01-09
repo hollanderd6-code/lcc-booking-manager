@@ -197,17 +197,16 @@
     }
 
     .auth-logo-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #10B981, #059669);
-      color: white;
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
-      font-size: 20px;
-    }
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;     /* <-- enlever le vert */
+  box-shadow: none;            /* <-- enlever l'ombre verte */
+  border-radius: 0;            /* optionnel */
+  color: inherit;              /* optionnel */
+}
 
     .auth-logo-title {
       font-weight: 700;
