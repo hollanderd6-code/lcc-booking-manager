@@ -3570,11 +3570,12 @@ console.log(
     console.log(
       `📧 Notifications à envoyer – nouvelles: ${newReservations.length}, annulées: ${cancelledReservations.length}`
     );
-    try {
-      await notifyOwnersAboutBookings(newReservations, cancelledReservations);
-    } catch (err) {
-      console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
-    }
+      //     try {
+      //       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
+      //     } catch (err) {
+      //       console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
+      //     }
+      console.log('ℹ️ Envoi d'email désactivé - notifications push uniquement');
 
     if (newReservations.length > 0) {
       try {
@@ -3826,11 +3827,12 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
       try {
         console.log('📧 Envoi des notifications...');
         
-        // 1. Notification email propriétaire
-        if (typeof notifyOwnersAboutBookings === 'function') {
-          await notifyOwnersAboutBookings([reservation], []);
-          console.log('✅ Notification email envoyée');
-        }
+        //         // 1. Notification email propriétaire
+        //         if (typeof notifyOwnersAboutBookings === 'function') {
+        //           await notifyOwnersAboutBookings([reservation], []);
+        //           console.log('✅ Notification email envoyée');
+        //         }
+        console.log('ℹ️ Envoi d'email désactivé - notifications push uniquement');
         
         // 2. Notification push Firebase
         try {
@@ -4031,13 +4033,14 @@ app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) 
       try {
         console.log('📧 Tentative d\'envoi des notifications...');
         
-        // Vérifier que les fonctions de notification existent
-        if (typeof notifyOwnersAboutBookings === 'function') {
-          await notifyOwnersAboutBookings([reservation], []);
-          console.log('✅ Notification propriétaire envoyée');
-        } else {
-          console.log('⚠️  Fonction notifyOwnersAboutBookings non trouvée');
-        }
+        //         // Vérifier que les fonctions de notification existent
+        //         if (typeof notifyOwnersAboutBookings === 'function') {
+        //           await notifyOwnersAboutBookings([reservation], []);
+        //           console.log('✅ Notification propriétaire envoyée');
+        //         } else {
+        //           console.log('⚠️  Fonction notifyOwnersAboutBookings non trouvée');
+        //         }
+        console.log('ℹ️ Envoi d'email désactivé - notifications push uniquement');
         
         if (typeof notifyCleanersAboutNewBookings === 'function') {
           await notifyCleanersAboutNewBookings([reservation]);
