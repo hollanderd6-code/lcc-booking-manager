@@ -93,7 +93,7 @@
 <div class="user-name" id="sidebarUserName">Utilisateur</div>
 <div class="user-email" id="sidebarUserCompany">Mon espace</div>
 </div>
-<button class="btn btn-ghost btn-xs" id="logoutBtn">
+<button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
 <i class="fas fa-sign-out-alt"></i>
 </button>
 </div>
@@ -167,6 +167,7 @@
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function(e) {
         e.preventDefault();
+        e.stopPropagation();
         console.log("🚪 Déconnexion...");
         localStorage.removeItem("lcc_token");
         localStorage.removeItem("lcc_user");
