@@ -295,7 +295,7 @@ body {
 
 .user-info {
   flex: 1;
-  min-width: 0;
+  min-width: 100px; /* Force une largeur minimale pour éviter width: 0 */
 }
 
 .user-name {
@@ -1328,61 +1328,31 @@ body {
 .loading-overlay {
   position: fixed;
   inset: 0;
-  display: none;
+  display: none;                /* caché par défaut */
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.25); /* léger voile */
   z-index: 9998;
 }
 
 .loading-overlay.active {
-  display: flex;
+  display: flex;                /* affiché seulement avec .active */
 }
 
 .loading-spinner {
-  position: relative;
-  width: 60px;
-  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--bg-primary, #ffffff);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+  color: var(--text-primary, #111827);
+  font-size: 14px;
 }
 
-/* Cercle externe qui tourne avec dégradé */
-.loading-spinner::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  border-top-color: #10B981;
-  border-right-color: #10B981;
-  animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-}
-
-/* Cercle interne plus petit */
-.loading-spinner::after {
-  content: '';
-  position: absolute;
-  inset: 8px;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  border-bottom-color: #059669;
-  border-left-color: #059669;
-  animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
-}
-
-/* Animation de rotation fluide */
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Cache l'icône Font Awesome si elle existe encore */
 .loading-spinner i {
-  display: none;
+  font-size: 16px;
 }
 
 
