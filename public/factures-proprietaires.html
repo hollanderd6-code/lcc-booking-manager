@@ -313,25 +313,39 @@ input[type="number"] {
 }
 </style>
 <style>
-/* FIX BOUTON MOBILE */
+/* FIX SPÉCIFIQUE iOS SAFARI */
 @media (max-width: 768px) {
-  .main-header { display: flex !important; z-index: 100 !important; }
-  .header-actions { display: flex !important; z-index: 101 !important; }
-  .header-actions .btn { pointer-events: auto !important; touch-action: manipulation !important; min-height: 48px !important; }
-  button[onclick*="createNewInvoice"] { display: inline-flex !important; visibility: visible !important; opacity: 1 !important; z-index: 9999 !important; }
+  /* Force le bouton à être cliquable sur iOS */
+  button[onclick*="createNewInvoice"],
+  .header-actions button,
+  .btn-primary {
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: rgba(16, 185, 129, 0.3) !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    touch-action: manipulation !important;
+    -webkit-touch-callout: none !important;
+  }
+  
+  /* Assure que le header et le bouton sont au-dessus */
+  .main-header {
+    position: relative !important;
+    z-index: 1000 !important;
+  }
+  
+  .header-actions {
+    position: relative !important;
+    z-index: 1001 !important;
+  }
+  
+  /* Augmente la zone tactile pour iOS */
+  .header-actions .btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 12px 20px !important;
+  }
 }
 </style>
-<script>
-/* DEBUG MOBILE */
-setTimeout(() => {
-  const btn = document.querySelector("button[onclick*="createNewInvoice"]");
-  console.log("Bouton trouvé:", !!btn);
-  if(btn) {
-    btn.addEventListener("touchstart", () => console.log("Touch détecté"));
-    btn.addEventListener("click", () => console.log("Click détecté"));
-  }
-}, 1000);
-</script>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures-proprietaires" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires"><div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
@@ -2001,5 +2015,79 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-loader.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>       
+<!-- FIX SPÉCIFIQUE iOS SAFARI -->
+<script>
+(function() {
+  console.log("🍎 iOS Fix chargé");
+  
+  function fixButtonForIOS() {
+    // Attendre que bhHeader soit injecté
+    setTimeout(() => {
+      console.log("🔍 Recherche du bouton...");
+      
+      // Plusieurs façons de trouver le bouton
+      let btn = document.querySelector("button[onclick*=createNewInvoice]");
+      if (!btn) btn = Array.from(document.querySelectorAll("button")).find(b => b.textContent.includes("Nouvelle Facture"));
+      if (!btn) btn = document.querySelector(".btn-primary");
+      
+      if (btn) {
+        console.log("✅ Bouton trouvé:", btn);
+        
+        // ENLEVER le onclick (ne marche pas bien sur iOS)
+        btn.removeAttribute("onclick");
+        
+        // Ajouter styles iOS-friendly
+        btn.style.cursor = "pointer";
+        btn.style.webkitTapHighlightColor = "rgba(16, 185, 129, 0.3)";
+        btn.style.webkitUserSelect = "none";
+        btn.style.touchAction = "manipulation";
+        
+        // AJOUTER les events iOS-friendly
+        let touchHandled = false;
+        
+        btn.addEventListener("touchstart", function(e) {
+          console.log("👆 Touchstart détecté");
+          touchHandled = false;
+        }, { passive: true });
+        
+        btn.addEventListener("touchend", function(e) {
+          console.log("🎯 Touchend détecté");
+          e.preventDefault();
+          if (!touchHandled) {
+            touchHandled = true;
+            console.log("📞 Appel de createNewInvoice()");
+            if (typeof window.createNewInvoice === "function") {
+              window.createNewInvoice();
+            } else {
+              console.error("❌ createNewInvoice non trouvée");
+            }
+          }
+        });
+        
+        btn.addEventListener("click", function(e) {
+          console.log("🖱️ Click détecté");
+          e.preventDefault();
+          if (!touchHandled) {
+            console.log("📞 Appel de createNewInvoice() via click");
+            if (typeof window.createNewInvoice === "function") {
+              window.createNewInvoice();
+            }
+          }
+        });
+        
+        console.log("✅ Event listeners ajoutés");
+      } else {
+        console.error("❌ Bouton non trouvé");
+      }
+    }, 500);
+  }
+  
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fixButtonForIOS);
+  } else {
+    fixButtonForIOS();
+  }
+})();
+</script>
 </body>
 </html>
