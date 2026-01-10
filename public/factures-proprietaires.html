@@ -299,6 +299,19 @@ input[type="number"] {
 }
 </style>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+<style>
+/* RESPONSIVE MOBILE ÉDITEUR - AUTO-INCLUS */
+@media (max-width: 768px) {
+  .invoice-editor-layout { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+  .editor-sidebar { position: static !important; width: 100% !important; max-height: none !important; }
+  .invoice-preview-container { display: none !important; }
+  .form-control { font-size: 16px !important; padding: 10px 12px !important; }
+  .editor-section [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  .editor-section .btn { width: 100%; padding: 12px 16px !important; font-size: 15px !important; }
+  .nav-tabs { width: 100% !important; }
+  .nav-tab { flex: 1 !important; font-size: 13px !important; }
+}
+</style>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures-proprietaires" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires"><div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
