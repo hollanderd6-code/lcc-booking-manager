@@ -139,7 +139,7 @@
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
-      window.location.href = '/logout';
+      window.location.href = '/login.html';
     }
   };
 
