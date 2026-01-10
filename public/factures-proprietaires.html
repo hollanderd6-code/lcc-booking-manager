@@ -312,6 +312,64 @@ input[type="number"] {
   .nav-tab { flex: 1 !important; font-size: 13px !important; }
 }
 </style>
+<style>
+/* DÉSACTIVER PULL-TO-REFRESH iOS */
+@media (max-width: 768px) {
+  /* Empêcher le pull-to-refresh sur iOS */
+  body {
+    overscroll-behavior-y: contain !important;
+  }
+  
+  html {
+    overscroll-behavior-y: contain !important;
+  }
+  
+  /* Alternative pour anciens iOS */
+  .main-content,
+  .app-container,
+  .main-wrapper {
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* Désactiver le refresh sur tout le viewport */
+  * {
+    overscroll-behavior: contain !important;
+  }
+}
+</style>
+<script>
+// Script pour désactiver pull-to-refresh sur iOS
+(function() {
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+    let lastTouchY = 0;
+    let preventPullToRefresh = false;
+    
+    document.addEventListener("touchstart", function(e) {
+      if (e.touches.length !== 1) return;
+      lastTouchY = e.touches[0].clientY;
+      
+      // Vérifier si on est en haut de la page
+      preventPullToRefresh = window.pageYOffset === 0;
+    }, { passive: false });
+    
+    document.addEventListener("touchmove", function(e) {
+      const touchY = e.touches[0].clientY;
+      const touchYDelta = touchY - lastTouchY;
+      lastTouchY = touchY;
+      
+      // Si on scroll vers le bas ET qu on est en haut de la page
+      if (preventPullToRefresh && touchYDelta > 0) {
+        // Empêcher le pull-to-refresh
+        e.preventDefault();
+        return false;
+      }
+    }, { passive: false });
+    
+    console.log("✅ Pull-to-refresh désactivé sur iOS");
+  }
+})();
+</script>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures-proprietaires" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires"><div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
