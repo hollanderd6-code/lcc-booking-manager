@@ -776,14 +776,14 @@
         }
       }
 
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', function () {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        });
-      }
+      //       const logoutBtn = document.getElementById('logoutBtn');
+      //       if (logoutBtn) {
+      //         logoutBtn.addEventListener('click', function () {
+      //           localStorage.removeItem('lcc_token');
+      //           localStorage.removeItem('lcc_user');
+      //           window.location.href = '/login.html';
+      //         });
+      //       }
 
       // Mobile menu
       const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1121,6 +1121,7 @@ function closeBookingMessageModal() {
   </script>
 
 <script src="/js/bh-layout.js"></script>
+<script src="/js/logout-fix.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-sync.js"></script>
