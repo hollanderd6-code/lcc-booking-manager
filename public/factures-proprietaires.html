@@ -319,45 +319,94 @@ input[type="number"] {
 <span class="mobile-logo-text">Boostinghost</span>
 </a>
 </div><div class="sidebar-overlay" id="sidebarOverlay"></div>
-<!-- BOUTON TEST MOBILE UNIQUEMENT - ULTRA VISIBLE -->
-<div id="mobileTestButton" style="display:none; position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:999999; background:#ef4444; color:white; padding:20px 40px; border-radius:12px; font-size:18px; font-weight:bold; box-shadow:0 8px 30px rgba(0,0,0,0.4); text-align:center; border:3px solid yellow;">
-  🧪 NOUVELLE FACTURE (TEST)
-</div>
+<!-- BOUTON MOBILE QUI SIMULE CLIC SUR ONGLET ÉDITEUR -->
+<button id="mobileFabButton" style="display:none;">
+  <i class="fas fa-plus"></i>
+</button>
+<style>
+@media (max-width: 768px) {
+  #mobileFabButton {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+    z-index: 99999;
+    cursor: pointer;
+    font-size: 24px;
+    transition: all 0.2s;
+  }
+  #mobileFabButton:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+  }
+}
+</style>
 <script>
+// Bouton mobile qui simule un VRAI clic sur l onglet Éditeur
 (function() {
-  // Afficher uniquement sur mobile
   if (window.innerWidth <= 768) {
-    const btn = document.getElementById("mobileTestButton");
-    btn.style.display = "block";
+    const fabBtn = document.getElementById("mobileFabButton");
     
-    console.log("🧪 Bouton test créé");
-    
-    // Plusieurs types d événements
-    btn.addEventListener("touchstart", function(e) {
-      console.log("👆 Touch start");
-    });
-    
-    btn.addEventListener("touchend", function(e) {
-      e.preventDefault();
-      console.log("🎯 Touch end - Appel switchTab");
+    function openEditor() {
+      console.log("🎯 Tentative d ouverture éditeur...");
       
-      // Appeler directement switchTab au lieu de createNewInvoice
-      if (typeof window.switchTab === "function") {
-        window.switchTab("create");
-        console.log("✅ switchTab appelé");
-      } else {
-        console.error("❌ switchTab non trouvé");
+      // Méthode 1 : Simuler un clic sur le bouton onglet
+      const editorTab = document.getElementById("btn-create");
+      if (editorTab) {
+        console.log("✅ Bouton onglet trouvé, simulation clic");
+        editorTab.click();
+        return;
       }
+      
+      // Méthode 2 : Appel direct avec window
+      if (typeof window.switchTab === "function") {
+        console.log("✅ Appel direct window.switchTab");
+        window.switchTab("create");
+        return;
+      }
+      
+      // Méthode 3 : Forcer l affichage manuel
+      console.log("⚠️ Méthodes précédentes échouées, forçage manuel");
+      const tabs = document.querySelectorAll(".tab-content");
+      const navTabs = document.querySelectorAll(".nav-tab");
+      
+      tabs.forEach(t => t.classList.remove("active"));
+      navTabs.forEach(t => t.classList.remove("active"));
+      
+      const createTab = document.getElementById("tab-create");
+      const createBtn = document.getElementById("btn-create");
+      
+      if (createTab) createTab.classList.add("active");
+      if (createBtn) createBtn.classList.add("active");
+      
+      console.log("✅ Onglet forcé manuellement");
+    }
+    
+    // Événements touch ET click
+    fabBtn.addEventListener("touchend", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("👆 Touch détecté");
+      openEditor();
+    }, { passive: false });
+    
+    fabBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("🖱️ Click détecté");
+      openEditor();
     });
     
-    btn.addEventListener("click", function(e) {
-      e.preventDefault();
-      console.log("🖱️ Click - Appel switchTab");
-      
-      if (typeof window.switchTab === "function") {
-        window.switchTab("create");
-      }
-    });
+    console.log("✅ Bouton mobile FAB configuré");
   }
 })();
 </script>
