@@ -3575,7 +3575,7 @@ console.log(
       //     } catch (err) {
       //       console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
       //     }
-      console.log('ℹ️ Envoi d'email désactivé - notifications push uniquement');
+      console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
 
     if (newReservations.length > 0) {
       try {
@@ -3832,7 +3832,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         //           await notifyOwnersAboutBookings([reservation], []);
         //           console.log('✅ Notification email envoyée');
         //         }
-        console.log('ℹ️ Envoi d'email désactivé - notifications push uniquement');
+        console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
         
         // 2. Notification push Firebase
         try {
@@ -4040,7 +4040,7 @@ app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) 
         //         } else {
         //           console.log('⚠️  Fonction notifyOwnersAboutBookings non trouvée');
         //         }
-        console.log('ℹ️ Envoi d'email désactivé - notifications push uniquement');
+        console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
         
         if (typeof notifyCleanersAboutNewBookings === 'function') {
           await notifyCleanersAboutNewBookings([reservation]);
