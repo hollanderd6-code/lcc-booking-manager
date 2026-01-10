@@ -312,7 +312,7 @@ input[type="number"] {
 <div class="main-wrapper">
 <header class="top-bar">
 </header>
-<main class="main-content"><div id="bhHeaderActions"><button class="btn btn-primary" onclick="createNewInvoice()">
+<main class="main-content"><div id="bhHeaderActions" style="display:none;"><button class="btn btn-primary" onclick="createNewInvoice()">
 <i class="fa fa-plus"></i> Nouvelle Facture
 </button></div><div id="bhHeader"></div>
 <div class="dashboard-header">
@@ -1558,8 +1558,6 @@ if (window.userProfile && window.userProfile.logoUrl) {
     
     if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
     if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
-if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
-    if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
 
     // Afficher le logo si présent
     if (window.userProfile && window.userProfile.logoUrl) {
@@ -1598,7 +1596,7 @@ if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateS
 
     // Totaux
     const tbody = document.getElementById('previewBody');
-    container.innerHTML = '';
+    tbody.innerHTML = '';
     let totalHT = 0;
 
     prestations.forEach(p => {
@@ -1608,7 +1606,7 @@ if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateS
       let qtyDisplay = p.type === 'commission' ? `${p.rentalAmount}€` : p.quantity;
       let priceDisplay = p.type === 'commission' ? `${p.commissionRate}%` : `${p.unitPrice}€`;
 
-      container.innerHTML += `
+      tbody.innerHTML += `
         <tr>
           <td>${p.description}</td>
           <td style="text-align:center;">${qtyDisplay}</td>
