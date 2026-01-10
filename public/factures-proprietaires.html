@@ -312,6 +312,26 @@ input[type="number"] {
   .nav-tab { flex: 1 !important; font-size: 13px !important; }
 }
 </style>
+<style>
+/* FIX BOUTON MOBILE */
+@media (max-width: 768px) {
+  .main-header { display: flex !important; z-index: 100 !important; }
+  .header-actions { display: flex !important; z-index: 101 !important; }
+  .header-actions .btn { pointer-events: auto !important; touch-action: manipulation !important; min-height: 48px !important; }
+  button[onclick*="createNewInvoice"] { display: inline-flex !important; visibility: visible !important; opacity: 1 !important; z-index: 9999 !important; }
+}
+</style>
+<script>
+/* DEBUG MOBILE */
+setTimeout(() => {
+  const btn = document.querySelector("button[onclick*="createNewInvoice"]");
+  console.log("Bouton trouvé:", !!btn);
+  if(btn) {
+    btn.addEventListener("touchstart", () => console.log("Touch détecté"));
+    btn.addEventListener("click", () => console.log("Click détecté"));
+  }
+}, 1000);
+</script>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="factures-proprietaires" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires"><div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
