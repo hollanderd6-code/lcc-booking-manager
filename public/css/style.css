@@ -1328,31 +1328,61 @@ body {
 .loading-overlay {
   position: fixed;
   inset: 0;
-  display: none;                /* caché par défaut */
+  display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.25); /* léger voile */
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
   z-index: 9998;
 }
 
 .loading-overlay.active {
-  display: flex;                /* affiché seulement avec .active */
+  display: flex;
 }
 
 .loading-spinner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: var(--bg-primary, #ffffff);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
-  color: var(--text-primary, #111827);
-  font-size: 14px;
+  position: relative;
+  width: 60px;
+  height: 60px;
 }
 
+/* Cercle externe qui tourne avec dégradé */
+.loading-spinner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: #10B981;
+  border-right-color: #10B981;
+  animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+/* Cercle interne plus petit */
+.loading-spinner::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-bottom-color: #059669;
+  border-left-color: #059669;
+  animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
+}
+
+/* Animation de rotation fluide */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Cache l'icône Font Awesome si elle existe encore */
 .loading-spinner i {
-  font-size: 16px;
+  display: none;
 }
 
 
