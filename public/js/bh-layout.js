@@ -161,6 +161,32 @@
         overlay.classList.remove("active");
       });
     }
+
+    // ✅ BOUTON DÉCONNEXION : Attacher l'event listener après injection
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        console.log("🚪 Déconnexion...");
+        localStorage.removeItem("lcc_token");
+        localStorage.removeItem("lcc_user");
+        window.location.href = "/login.html";
+      });
+      console.log("✅ Bouton déconnexion configuré dans bh-layout.js");
+    }
+
+    // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
+    const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    if (user.firstName) {
+      const nameEl = document.getElementById('sidebarUserName');
+      const avatarEl = document.getElementById('sidebarUserAvatar');
+      if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+      if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+    }
+    if (user.company) {
+      const companyEl = document.getElementById('sidebarUserCompany');
+      if (companyEl) companyEl.textContent = user.company;
+    }
   }
 
   function injectHeader() {
