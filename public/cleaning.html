@@ -679,14 +679,14 @@
         }
       }
 
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', function () {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        });
-      }
+      //       const logoutBtn = document.getElementById('logoutBtn');
+      //       if (logoutBtn) {
+      //         logoutBtn.addEventListener('click', function () {
+      //           localStorage.removeItem('lcc_token');
+      //           localStorage.removeItem('lcc_user');
+      //           window.location.href = '/login.html';
+      //         });
+      //       }
     })();
 
     // --------------------------
@@ -1280,27 +1280,27 @@ function formatDateFr(dateStr) {
       }
     })();
     
-    document.getElementById('logoutBtn')?.addEventListener('click', function() {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
-    });
+    //     document.getElementById('logoutBtn')?.addEventListener('click', function() {
+    //       localStorage.removeItem('lcc_token');
+    //       localStorage.removeItem('lcc_user');
+    //       window.location.href = '/login.html';
+    //     });
     
-    (function() {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      if (user.firstName) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
-        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-      }
-      if (user.company) {
-        const companyEl = document.getElementById('sidebarUserCompany');
-        if (companyEl) companyEl.textContent = user.company;
-      }
-    })();
+    //     (function() {
+    //       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    //       if (user.firstName) {
+    //         const nameEl = document.getElementById('sidebarUserName');
+    //         const avatarEl = document.getElementById('sidebarUserAvatar');
+    //         if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+    //         if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+    //       }
+    //       if (user.company) {
+    //         const companyEl = document.getElementById('sidebarUserCompany');
+    //         if (companyEl) companyEl.textContent = user.company;
+    //       }
+    //     })();
   </script>
-<script src="/js/bh-layout.js"></script>   
+<script src="/js/bh-layout.js?v=2"></script>   
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-loader.js"></script> 
