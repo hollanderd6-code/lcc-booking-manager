@@ -2,10 +2,6 @@
   "appId": "com.boostinghost.app",
   "appName": "Boostinghost",
   "webDir": "public",
-  "server": {
-    "url": "https://lcc-booking-manager.onrender.com",
-    "cleartext": true
-  },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
@@ -24,3 +20,25 @@
     }
   }
 }
+```
+
+**J'ai ENLEVÉ la section `"server"` !**
+
+---
+
+## 💡 POURQUOI ?
+
+### Avec `"server.url"` :
+```
+App ouvre → Charge https://lcc-booking-manager.onrender.com
+         → capacitor.js n'est pas dans le serveur distant
+         → Capacitor undefined
+         → Face ID ne marche pas
+```
+
+### Sans `"server.url"` :
+```
+App ouvre → Charge les fichiers locaux dans ios/App/App/public/
+         → capacitor.js est inclus
+         → Capacitor disponible ✅
+         → Face ID marche ! 🎉
