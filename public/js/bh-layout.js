@@ -31,7 +31,6 @@
 <a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
 <i class="fas fa-calendar"></i>
 <span>Calendrier</span>
-<span class="nav-badge" id="navTotalReservations">0</span>
 </a>
 <a class="nav-item" data-page="messages" href="/messages.html">
 <i class="fas fa-comment-dots"></i>
@@ -111,6 +110,10 @@
     if (!ph) return;
 
     ph.innerHTML = SIDEBAR_HTML;
+    
+    // ❌ DÉSACTIVÉ : Le badge Messages est maintenant géré par messages-badge-dynamic.js
+    // qui crée un badge ROUGE (.badge-count) au lieu d'un badge VERT (.nav-badge)
+    /*
     // Ensure Messages badge exists for chat-owner.js
     const messagesLink = document.querySelector('.nav-item[data-page="messages"]');
     if (messagesLink && !document.getElementById('unreadCount')) {
@@ -120,6 +123,7 @@
       badge.textContent = '0';
       messagesLink.appendChild(badge);
     }
+    */
 
 
     // Active link based on body[data-page]
