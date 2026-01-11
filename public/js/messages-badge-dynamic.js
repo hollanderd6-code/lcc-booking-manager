@@ -77,37 +77,57 @@
   // ============================================
   
   function updateBadge(count) {
-    const messagesTab = document.querySelector('.mobile-tab[data-tab="messages"]') ||
-                       document.querySelector('.tab-btn[data-tab="messages"]');
+    // 📱 Mobile : chercher .mobile-tab ou .tab-btn
+    const mobileTab = document.querySelector('.mobile-tab[data-tab="messages"]') ||
+                      document.querySelector('.tab-btn[data-tab="messages"]');
     
-    if (!messagesTab) {
-      console.warn('⚠️ Onglet Messages non trouvé');
+    // 💻 Desktop : chercher .nav-item
+    const desktopNav = document.querySelector('.nav-item[data-page="messages"]');
+    
+    if (!mobileTab && !desktopNav) {
+      console.warn('⚠️ Onglet/Nav Messages non trouvé');
       return;
     }
 
-    // Mettre à jour l'attribut data-count
-    messagesTab.setAttribute('data-count', count);
+    // Fonction pour mettre à jour un élément
+    function updateElement(element, isMobile) {
+      if (!element) return;
+      
+      // Mettre à jour l'attribut data-count
+      element.setAttribute('data-count', count);
 
-    // Si le badge n'existe pas encore, le créer
-    let badge = messagesTab.querySelector('.badge-count');
-    
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'badge-count';
-      messagesTab.appendChild(badge);
-      console.log('✅ Badge créé');
+      // Si le badge n'existe pas encore, le créer
+      let badge = element.querySelector('.badge-count');
+      
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'badge-count';
+        element.appendChild(badge);
+        console.log(`✅ Badge créé (${isMobile ? 'mobile' : 'desktop'})`);
+      }
+
+      // Afficher le badge
+      if (count > 99) {
+        badge.textContent = '99+';
+      } else {
+        badge.textContent = count;
+      }
+      
+      // Sur desktop : masquer si 0, sur mobile : toujours afficher
+      badge.style.display = (count > 0 || isMobile) ? 'flex' : 'none';
     }
 
-    // Toujours afficher le badge (même pour 0)
-    if (count > 99) {
-      badge.textContent = '99+';
-    } else {
-      badge.textContent = count;
+    // Mettre à jour mobile (si existe)
+    if (mobileTab) {
+      updateElement(mobileTab, true);
     }
     
-    badge.style.display = 'flex';
+    // Mettre à jour desktop (si existe)
+    if (desktopNav) {
+      updateElement(desktopNav, false);
+    }
 
-    console.log('✅ Badge mis à jour:', badge.textContent);
+    console.log('✅ Badge mis à jour:', count);
   }
 
   // ============================================
