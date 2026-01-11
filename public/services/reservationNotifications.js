@@ -157,25 +157,30 @@ async function handleReservationNotifications({
 
   const promises = [];
 
+  // ❌ EMAILS NOUVELLES RÉSERVATIONS DÉSACTIVÉS - Utiliser notifications push uniquement
+  // if (doNew && created.length) {
+  //   for (const res of created) {
+  //     const { subject, text, html } = buildNewReservationEmail(res, {
+  //       ownerName,
+  //     });
+  //     promises.push(
+  //       sendEmail({
+  //         to: ownerEmail,
+  //         subject,
+  //         text,
+  //         html,
+  //       }).catch((err) => {
+  //         console.error(
+  //           '[notifications] Erreur envoi e-mail nouvelle réservation :',
+  //           err
+  //         );
+  //       })
+  //     );
+  //   }
+  // }
+  
   if (doNew && created.length) {
-    for (const res of created) {
-      const { subject, text, html } = buildNewReservationEmail(res, {
-        ownerName,
-      });
-      promises.push(
-        sendEmail({
-          to: ownerEmail,
-          subject,
-          text,
-          html,
-        }).catch((err) => {
-          console.error(
-            '[notifications] Erreur envoi e-mail nouvelle réservation :',
-            err
-          );
-        })
-      );
-    }
+    console.log(`ℹ️ ${created.length} nouvelle(s) réservation(s) détectée(s) - emails désactivés, notifications push uniquement`);
   }
 
   if (doCancelled && deleted.length) {
