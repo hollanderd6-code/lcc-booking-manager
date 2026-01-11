@@ -136,10 +136,23 @@ function updateStats() {
   const unread = allConversations.reduce((sum, conv) => sum + (parseInt(conv.unread_count) || 0), 0);
   const active = allConversations.filter(conv => conv.status === 'active').length;
   
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statUnread').textContent = unread;
-  document.getElementById('statActive').textContent = active;
-  document.getElementById('unreadCount').textContent = unread || '';
+  // Mettre à jour les statistiques de la page
+  const statTotal = document.getElementById('statTotal');
+  const statUnread = document.getElementById('statUnread');
+  const statActive = document.getElementById('statActive');
+  
+  if (statTotal) statTotal.textContent = total;
+  if (statUnread) statUnread.textContent = unread;
+  if (statActive) statActive.textContent = active;
+  
+  // Mettre à jour le badge rouge dans la sidebar (géré par messages-badge-dynamic.js)
+  // On ne touche plus à ce badge ici, il est géré automatiquement
+  
+  // LEGACY: Support de l'ancien badge vert (si encore présent)
+  const oldBadge = document.getElementById('unreadCount');
+  if (oldBadge) {
+    oldBadge.textContent = unread || '';
+  }
 }
 
 // ============================================
