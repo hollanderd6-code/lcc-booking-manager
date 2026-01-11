@@ -274,6 +274,31 @@ input[type="number"] {
 .user-name{ font-weight:700; font-size:13px; color:#111827; line-height:1.1; }
 .user-email{ font-size:11px; color:#6b7280; }
 
+/* ============================================
+   🔧 CORRECTIFS BADGES
+   ============================================ */
+
+/* 1. Masquer le badge vert sur Calendrier */
+.nav-item[data-page="calendrier"] .nav-badge,
+.nav-item[href="/calendrier.html"] .nav-badge,
+.nav-item[href*="calendrier"] .nav-badge {
+  display: none !important;
+}
+
+/* 2. Empêcher le fond vert sur Messages (pour ne pas interférer avec badge rouge) */
+.nav-item[data-page="messages"].active,
+.nav-item[href="/messages.html"].active,
+.nav-item[href*="messages"].active {
+  background: transparent !important; /* Pas de fond vert */
+}
+
+/* 3. Garder juste la bordure et la couleur du texte pour Messages actif */
+.nav-item[data-page="messages"].active,
+.nav-item[href="/messages.html"].active {
+  color: #10B981; /* Texte vert */
+  border-right-color: #10B981; /* Bordure verte */
+}
+
 </style>
 <style>
 /* ✅ Uniformisation du bouton "Retour au dashboard" (header) */
