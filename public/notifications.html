@@ -297,6 +297,23 @@
 
 <!-- Page Content -->
 <div class="page-content">
+
+<!-- ℹ️ BANDEAU D'INFORMATION -->
+<div style="background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.15);">
+  <div style="display: flex; align-items: start; gap: 16px;">
+    <i class="fas fa-info-circle" style="font-size: 24px; margin-top: 2px;"></i>
+    <div>
+      <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700;">📱 Notifications push activées</h3>
+      <p style="margin: 0; font-size: 14px; line-height: 1.6; opacity: 0.95;">
+        Les <strong>emails de nouvelles réservations</strong> ont été remplacés par des <strong>notifications push instantanées</strong> sur votre application mobile Boostinghost.
+      </p>
+      <p style="margin: 8px 0 0 0; font-size: 13px; opacity: 0.85;">
+        💡 Les emails de <strong>ménages</strong> et d'<strong>annulations</strong> continuent de fonctionner normalement.
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Bloc : Nouvelle réservation -->
 <section class="card">
 <div class="card-header">
@@ -306,66 +323,34 @@
 </div>
 </div>
 <p class="card-subtitle">
-            Paramétrez les notifications qui seront envoyées à chaque création de nouvelle réservation dans le Bookingmanage.
+            Paramétrez les notifications push qui seront envoyées à chaque création de nouvelle réservation.
           </p>
+
+<!-- Notifications Push Mobile -->
 <div class="row">
 <div>
-<div class="row-label">Notifications internes (in-app)</div>
+<div class="row-label">📱 Notifications push</div>
 <div class="row-hint">
-                Affiche une alerte dans le dashboard des utilisateurs concernés.
+                Recevez une notification instantanée sur votre téléphone à chaque nouvelle réservation.
               </div>
 </div>
 <label class="switch">
-<input id="newResInApp" type="checkbox"/>
+<input id="newResPushEnabled" type="checkbox" checked/>
 <span class="slider"></span>
 </label>
 </div>
+
+<!-- Condition d'envoi -->
 <div class="row">
 <div>
-<div class="row-label">E-mails internes</div>
+<div class="row-label">Quand envoyer ?</div>
 <div class="row-hint">
-                Envoie un e-mail à la création d’une réservation.
-              </div>
-</div>
-<label class="switch">
-<input id="newResEmailEnabled" type="checkbox"/>
-<span class="slider"></span>
-</label>
-</div>
-<div class="row">
-<div>
-<div class="row-label">Destinataires e-mail</div>
-<div class="row-hint">
-                Liste d’adresses e-mail séparées par des virgules.
-              </div>
-</div>
-<input class="inline-input" id="newResEmailRecipients" placeholder="reservations@exemple.com, manager@exemple.com" type="text"/>
-</div>
-<div class="row">
-<div>
-<div class="row-label">Rôles concernés (in-app)</div>
-<div class="row-hint">
-                Les utilisateurs ayant ces rôles recevront la notification interne.
-              </div>
-</div>
-<div class="roles">
-<label><input id="roleAdmin" type="checkbox"/> Admin</label>
-<label><input id="roleManager" type="checkbox"/> Manager</label>
-<label><input id="roleReception" type="checkbox"/> Réception</label>
-<label><input id="roleHousekeeping" type="checkbox"/> Housekeeping</label>
-</div>
-</div>
-<div class="row">
-<div>
-<div class="row-label">Condition d’envoi</div>
-<div class="row-hint">
-                À quel moment doit-on déclencher les notifications ?
+                Choisissez quand vous voulez recevoir les notifications push.
               </div>
 </div>
 <div class="radio-group">
-<label><input name="newResCondition" type="radio" value="all"/> Toute nouvelle réservation</label>
+<label><input name="newResCondition" type="radio" value="all" checked/> Toutes les réservations</label>
 <label><input name="newResCondition" type="radio" value="confirmed"/> Uniquement les réservations confirmées</label>
-<label><input name="newResCondition" type="radio" value="pending"/> Réservations en attente</label>
 </div>
 </div>
 </section>
