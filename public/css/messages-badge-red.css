@@ -1,0 +1,104 @@
+/* ============================================
+   🔴 BADGE MESSAGES - ROUGE UNIFORME
+   ============================================ */
+
+/* Badge sur desktop (sidebar) */
+.nav-item[data-page="messages"] {
+  position: relative; /* Nécessaire pour le positionnement absolu du badge */
+}
+
+.nav-item[data-page="messages"] .badge-count {
+  position: absolute;
+  top: 50%;
+  right: 16px; /* Distance du bord droit */
+  transform: translateY(-50%); /* Centre verticalement */
+  
+  background: #EF4444; /* Rouge */
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  min-width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+  
+  /* Animation d'apparition */
+  animation: badge-appear 0.2s ease-out;
+}
+
+@keyframes badge-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Badge sur mobile (onglets du bas) */
+.mobile-tab[data-tab="messages"] .badge-count,
+.tab-btn[data-tab="messages"] .badge-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  
+  background: #EF4444; /* Rouge */
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+/* État actif (page messages) - Garder le badge visible */
+.nav-item[data-page="messages"].active .badge-count {
+  background: #DC2626; /* Rouge plus foncé quand actif */
+}
+
+.mobile-tab[data-tab="messages"].active .badge-count,
+.tab-btn[data-tab="messages"].active .badge-count {
+  background: #DC2626;
+}
+
+/* Animation pulse si nouveaux messages */
+.badge-count.pulse {
+  animation: badge-pulse 1s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+
+/* Mobile : animation pulse différente (pas de translateY) */
+.mobile-tab .badge-count.pulse,
+.tab-btn .badge-count.pulse {
+  animation: badge-pulse-mobile 1s ease-in-out infinite;
+}
+
+@keyframes badge-pulse-mobile {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
