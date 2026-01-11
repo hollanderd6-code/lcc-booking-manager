@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-fetch.js"></script>
-  <script src="/js/auth-manager.js"></script>
 </head>
 <body class="auth-body">
   <div class="auth-container">
@@ -66,11 +65,6 @@
         <button type="submit" class="btn btn-primary auth-submit" id="loginSubmit">
           Se connecter
         </button>
-
-        <!-- Bouton Face ID (visible seulement si disponible) -->
-        <button type="button" class="btn btn-secondary auth-submit" id="faceIdBtn" style="display:none;">
-          <i class="fas fa-face-smile"></i> Connexion avec Face ID
-        </button>
       </form>
 
       <div class="auth-footer-text">
@@ -103,77 +97,14 @@
   </div>
 
   <script>
-    // ============================================
-    // 🚀 AUTO-LOGIN AU CHARGEMENT
-    // ============================================
-    (async function() {
-      console.log('📱 Page de connexion chargée');
-
-      // Attendre que AuthManager soit prêt
-      await new Promise(resolve => {
-        if (window.AuthManager) {
-          resolve();
-        } else {
-          setTimeout(resolve, 500);
-        }
-      });
-
-      // Essayer l'auto-login
-      const isLoggedIn = await window.AuthManager.tryAutoLogin();
-      if (isLoggedIn) {
-        console.log('✅ Auto-login réussi, redirection...');
+    // Si déjà connecté, inutile de revenir ici
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (token) {
         window.location.href = '/app.html';
-        return;
-      }
-
-      // Vérifier si Face ID est disponible et activé
-      const biometricEnabled = await window.AuthManager.storage.isBiometricEnabled();
-      const biometricAvailable = await window.AuthManager.biometric.isAvailable();
-
-      if (biometricEnabled && biometricAvailable) {
-        // Afficher le bouton Face ID
-        document.getElementById('faceIdBtn').style.display = 'flex';
-        console.log('✅ Face ID disponible');
-
-        // Proposer la connexion automatique avec Face ID
-        setTimeout(async () => {
-          const shouldAuto = confirm('Voulez-vous vous connecter avec Face ID ?');
-          if (shouldAuto) {
-            await handleFaceIdLogin();
-          }
-        }, 500);
       }
     })();
 
-    // ============================================
-    // 👤 CONNEXION AVEC FACE ID
-    // ============================================
-    document.getElementById('faceIdBtn')?.addEventListener('click', handleFaceIdLogin);
-
-    async function handleFaceIdLogin() {
-      const faceIdBtn = document.getElementById('faceIdBtn');
-      const loginError = document.getElementById('loginError');
-
-      loginError.style.display = 'none';
-      faceIdBtn.disabled = true;
-      faceIdBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authentification Face ID...';
-
-      const result = await window.AuthManager.biometric.loginWithBiometric();
-
-      if (result) {
-        console.log('✅ Connexion Face ID réussie !');
-        window.location.href = '/app.html';
-      } else {
-        loginError.style.display = 'block';
-        loginError.textContent = 'Authentification Face ID échouée. Utilisez votre mot de passe.';
-        faceIdBtn.disabled = false;
-        faceIdBtn.innerHTML = '<i class="fas fa-face-smile"></i> Connexion avec Face ID';
-      }
-    }
-
-    // ============================================
-    // 🔐 CONNEXION NORMALE (email + password)
-    // ============================================
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
     const loginSubmit = document.getElementById('loginSubmit');
@@ -183,7 +114,6 @@
 
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      const rememberMe = document.querySelector('input[name="remember"]').checked;
 
       loginError.style.display = 'none';
       loginError.textContent = '';
@@ -208,28 +138,9 @@
           return;
         }
 
-        // ✅ Connexion réussie !
-        console.log('✅ Connexion réussie');
-
-        // Stocker le token et user avec Capacitor Preferences (persistant)
-        await window.AuthManager.storage.setToken(data.token);
-        await window.AuthManager.storage.setUser(data.user);
-
-        // Si "Se souvenir de moi" est coché ET biométrie disponible
-        if (rememberMe) {
-          const biometricAvailable = await window.AuthManager.biometric.isAvailable();
-          
-          if (biometricAvailable) {
-            // Proposer d'activer Face ID
-            const enableBiometric = confirm('Voulez-vous activer Face ID pour vous connecter plus rapidement la prochaine fois ?');
-            
-            if (enableBiometric) {
-              await window.AuthManager.storage.saveCredentials(email, password);
-              console.log('✅ Face ID activé !');
-              alert('✅ Face ID activé ! Vous pourrez vous connecter rapidement la prochaine fois.');
-            }
-          }
-        }
+        // Stocker le token + user
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
         // Redirection vers le dashboard
         window.location.href = '/app.html';
@@ -240,7 +151,7 @@
         loginSubmit.disabled = false;
         loginSubmit.textContent = 'Se connecter';
       }
-    });
+      });
   </script>
 
 
