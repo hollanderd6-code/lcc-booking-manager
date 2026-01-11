@@ -7284,6 +7284,21 @@ if (!row.email_verified) {
   }
 });
 
+// ============================================
+// ✅ ENDPOINT VERIFY - Pour auto-login
+// ============================================
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+  try {
+    // Si le token est valide, authenticateToken a déjà vérifié et ajouté req.user
+    res.json({
+      valid: true,
+      user: req.user
+    });
+  } catch (err) {
+    console.error('Erreur verify:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 app.get('/api/auth/me', async (req, res) => {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
