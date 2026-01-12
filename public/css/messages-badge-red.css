@@ -1,79 +1,85 @@
-/* messages-badge-red-always-visible.css */
-/* Badge Messages TOUJOURS visible en rouge */
+/* ============================================
+   🔴 BADGE MESSAGES - ROUGE UNIFORME
+   ============================================ */
 
-/* Badge Desktop (Sidebar) */
+/* Badge sur desktop (sidebar) */
+.nav-item[data-page="messages"] {
+  position: relative; /* Nécessaire pour le positionnement absolu du badge */
+}
+
 .nav-item[data-page="messages"] .badge-count {
   position: absolute;
-  right: 16px;
   top: 50%;
-  transform: translateY(-50%);
+  right: 16px; /* Distance du bord droit */
+  transform: translateY(-50%); /* Centre verticalement */
   
-  /* Style du badge */
-  background: #EF4444 !important;  /* Rouge toujours */
-  color: white !important;
-  
-  /* Taille */
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  
-  /* Centrage du texte */
-  display: flex !important;  /* TOUJOURS visible */
+  background: #EF4444; /* Rouge */
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  min-width: 22px;
+  height: 22px;
+  display: flex;
   align-items: center;
   justify-content: center;
   
-  /* Forme */
-  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
   
-  /* Typographie */
+  /* Animation d'apparition */
+  animation: badge-appear 0.2s ease-out;
+}
+
+@keyframes badge-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Badge sur mobile (onglets du bas) */
+.mobile-tab[data-tab="messages"] .badge-count,
+.tab-btn[data-tab="messages"] .badge-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  
+  background: #EF4444; /* Rouge */
+  color: white;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1;
-  
-  /* Z-index pour être au-dessus */
-  z-index: 10;
-}
-
-/* Badge Mobile (Bottom Bar) */
-.mobile-tab[data-tab="messages"] .badge-count {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  
-  /* Style du badge */
-  background: #EF4444 !important;  /* Rouge toujours */
-  color: white !important;
-  
-  /* Taille */
+  padding: 2px 6px;
+  border-radius: 10px;
   min-width: 18px;
   height: 18px;
-  padding: 0 5px;
-  
-  /* Centrage du texte */
-  display: flex !important;  /* TOUJOURS visible */
+  display: flex;
   align-items: center;
   justify-content: center;
   
-  /* Forme */
-  border-radius: 9px;
-  
-  /* Typographie */
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  
-  /* Z-index pour être au-dessus */
-  z-index: 10;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
-/* Supprimer l'ancien badge vert s'il existe encore */
-.nav-item[data-page="messages"] .nav-badge,
-.mobile-tab[data-tab="messages"] .nav-badge {
-  display: none !important;
+/* État actif (page messages) - Garder le badge visible */
+.nav-item[data-page="messages"].active .badge-count {
+  background: #DC2626; /* Rouge plus foncé quand actif */
 }
 
-/* Animation quand le nombre change */
-@keyframes badgePulse {
+.mobile-tab[data-tab="messages"].active .badge-count,
+.tab-btn[data-tab="messages"].active .badge-count {
+  background: #DC2626;
+}
+
+/* Animation pulse si nouveaux messages */
+.badge-count.pulse {
+  animation: badge-pulse 1s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
   0%, 100% {
     transform: translateY(-50%) scale(1);
   }
@@ -82,20 +88,17 @@
   }
 }
 
-.nav-item[data-page="messages"] .badge-count.updated {
-  animation: badgePulse 0.3s ease;
+/* Mobile : animation pulse différente (pas de translateY) */
+.mobile-tab .badge-count.pulse,
+.tab-btn .badge-count.pulse {
+  animation: badge-pulse-mobile 1s ease-in-out infinite;
 }
 
-/* Pour mobile, animation sans translateY */
-@keyframes badgePulseMobile {
+@keyframes badge-pulse-mobile {
   0%, 100% {
     transform: scale(1);
   }
   50% {
     transform: scale(1.1);
   }
-}
-
-.mobile-tab[data-tab="messages"] .badge-count.updated {
-  animation: badgePulseMobile 0.3s ease;
 }
