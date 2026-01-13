@@ -2,8 +2,35 @@
 (function () {
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   
+  // ✅ Détection robuste de la plateforme
+  function getDeviceType() {
+    if (!window.Capacitor || typeof window.Capacitor.getPlatform !== 'function') {
+      return 'web';
+    }
+    
+    const platform = window.Capacitor.getPlatform();
+    const ua = navigator.userAgent.toLowerCase();
+    
+    console.log('📱 Capacitor platform:', platform);
+    console.log('🌐 UserAgent:', ua);
+    
+    // Correction si Capacitor se trompe
+    if (platform === 'ios' && ua.includes('android')) {
+      console.warn('⚠️ CORRECTION: Capacitor dit iOS mais UserAgent dit Android!');
+      return 'android';
+    }
+    
+    if (platform === 'android' && (ua.includes('iphone') || ua.includes('ipad'))) {
+      console.warn('⚠️ CORRECTION: Capacitor dit Android mais UserAgent dit iOS!');
+      return 'ios';
+    }
+    
+    return platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
+  }
   
-  const deviceType = (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') ? window.Capacitor.getPlatform() : 'web';
+  const deviceType = getDeviceType();
+  console.log('✅ Device type final:', deviceType);
+  
 async function findSupabaseKey() {
     try {
       const cap = window.Capacitor;
@@ -80,7 +107,8 @@ async function findSupabaseKey() {
       }
       
       console.log('✅ JWT récupéré, envoi du token au serveur...');
-      console.log('📱 Token iOS:', token);
+      console.log('📱 Device type:', deviceType);
+      console.log('🔑 Token FCM:', token.substring(0, 30) + '...');
       
       const res = await fetch(`${API_BASE}/api/save-token`, {
         method: 'POST',
@@ -122,11 +150,13 @@ async function findSupabaseKey() {
     }
     
     console.log('🔔 Init Push (native)...');
+    console.log('📱 Device type:', deviceType);
     
     // Listeners
     PushNotifications.addListener('registration', async (token) => {
       console.log('✅✅✅ DEVICE TOKEN RECEIVED!');
-      console.log('📱 Token:', token && token.value);
+      console.log('📱 Device type:', deviceType);
+      console.log('🔑 Token:', token && token.value);
       if (token && token.value) await saveTokenToServer(token.value);
     });
     
@@ -155,7 +185,7 @@ async function findSupabaseKey() {
       }
     }
     
-    console.log('📌 Permission OK, register()...');
+    console.log('🔌 Permission OK, register()...');
     await PushNotifications.register();
     console.log('🟢 register() appelé, attente token...');
   }
