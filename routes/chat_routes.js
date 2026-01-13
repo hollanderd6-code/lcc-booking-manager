@@ -666,9 +666,9 @@ try {
   
   const notifResult = await sendNewMessageNotification(
   conversation.user_id,      // userId (propriétaire)
-  senderName || 'Voyageur',  // senderName (pas utilisé maintenant)
+  'Voyageur',                // senderName
   messagePreview,            // messagePreview
-  conversation_id            // conversationId (pour récupérer le nom de la propriété)
+  conversation_id            // conversationId
 );
 
   if (notifResult.success) {
