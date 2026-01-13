@@ -9748,6 +9748,20 @@ app.get('/chat/:photosToken/checkout-form', (req, res) => {
   console.log('✅ Route checkout-form appelée ! Token:', req.params.photosToken);
   res.sendFile(path.join(__dirname, 'public', 'html', 'checkout-form.html'));
 });
+// Route de test (à ajouter temporairement)
+app.post('/api/test-notif', async (req, res) => {
+  try {
+    const result = await sendNotification(
+      'c0FiPJpgR8W2uamYdAM5VE:APA91bGmWYKtrCmoicgRmTGCJWF5NHpauBqgt_p1F6uJ8_D43Og2wftJCUMope773X118jM88IaTkFLCtGCCdJg8GAOLhWMw7gHhK8U5Ntk2SHqb8xzKZYY',
+      '🧪 Test depuis serveur',
+      'Ça marche !',
+      { type: 'test' }
+    );
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ============================================
 // FIN DES ROUTES V2
 // ============================================
