@@ -218,6 +218,7 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
         conversationId: conversationId.toString()
       }
     );
+    console.log(`🔑 Token utilisé: ${fcm_token.substring(0, 30)}...`);
   } catch (error) {
     console.error('❌ Erreur sendNewMessageNotification:', error);
   }
