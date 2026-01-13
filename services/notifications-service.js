@@ -203,7 +203,7 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
     
     await sendNotification(
       token,
-      `📩 Nouveau message de Voyageur — ${propertyName}`,
+      `📩 Message de ${propertyName}`,
       messagePreview,
       {
         type: 'new_message',
