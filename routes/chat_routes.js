@@ -648,49 +648,24 @@ if (sender_type === 'owner') {
 
 // Envoyer une notification push au propriétaire quand un voyageur écrit
 try {
-  // Récupérer le nom de la propriété
-  const propertyResult = await pool.query(
-    'SELECT name FROM properties WHERE id = $1',
-    [conversation.property_id]
-  );
-  
-  const propertyName = propertyResult.rows.length > 0 
-    ? propertyResult.rows[0].name 
-    : 'Logement';
-  
   const { sendNewMessageNotification } = require('../services/notifications-service');
   
   const messagePreview = message.length > 100 
     ? message.substring(0, 97) + '...' 
     : message;
   
-  const notifResult = await sendNewMessageNotification(
-  conversation.user_id,      // userId (propriétaire)
-  'Voyageur',                // senderName
-  messagePreview,            // messagePreview
-  conversation_id            // conversationId
-);
-
-  if (notifResult.success) {
-    console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
-  } else {
-    console.log(`⚠️ Échec notification push: ${notifResult.error}`);
-  }
+  await sendNewMessageNotification(
+    conversation.user_id,      // userId (propriétaire)
+    'Voyageur',                // senderName
+    messagePreview,            // messagePreview
+    conversation_id            // conversationId
+  );
+  
+  console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
+  
 } catch (notifError) {
   console.error('❌ Erreur notification push:', notifError.message);
 }
-      }
-
-      res.json({
-        success: true,
-        message: newMessage
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur envoi message:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
 
   // ============================================
   // 6. MARQUER MESSAGES COMME LUS
