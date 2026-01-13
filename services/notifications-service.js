@@ -1,56 +1,104 @@
+// services/notifications-service.js
+// Service de notifications push Firebase Cloud Messaging
+
 const admin = require('firebase-admin');
 
-// Pool sera passé en paramètre
 let pool = null;
-
-function setPool(pgPool) {
-  pool = pgPool;
-}
-
-// Initialiser Firebase Admin (une seule fois)
 let firebaseInitialized = false;
 
+/**
+ * Définir le pool PostgreSQL
+ */
+function setPool(pgPool) {
+  pool = pgPool;
+  console.log('✅ Pool PostgreSQL défini dans notifications-service');
+}
+
+/**
+ * Initialiser Firebase Admin SDK
+ * Gère automatiquement :
+ * - Production (Render) : Variables d'environnement
+ * - Local : Fichier serviceAccountKey.json
+ */
 function initializeFirebase() {
-  if (!firebaseInitialized) {
-    try {
-      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-        : require('../firebase-service-account.json');
+  if (firebaseInitialized) {
+    console.log('ℹ️  Firebase déjà initialisé');
+    return;
+  }
+
+  try {
+    // ============================================
+    // MODE PRODUCTION (Render) : Variables d'environnement
+    // ============================================
+    if (process.env.FIREBASE_PRIVATE_KEY) {
+      console.log('🔧 Initialisation Firebase avec variables d\'environnement (PRODUCTION)');
+      
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          // Important : remplacer les \n littéraux par de vrais retours à la ligne
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        })
+      });
+      
+      console.log('✅ Firebase initialisé avec succès (production - env vars)');
+      firebaseInitialized = true;
+    } 
+    // ============================================
+    // MODE LOCAL : Fichier serviceAccountKey.json
+    // ============================================
+    else {
+      console.log('🔧 Initialisation Firebase avec fichier JSON (LOCAL)');
+      
+      const serviceAccount = require('../serviceAccountKey.json');
       
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
       
+      console.log('✅ Firebase initialisé avec succès (local - fichier JSON)');
       firebaseInitialized = true;
-      console.log('✅ Firebase Admin initialisé');
-    } catch (error) {
-      console.error('❌ Erreur initialisation Firebase:', error.message);
-      firebaseInitialized = false;
     }
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'initialisation de Firebase:', error);
+    console.error('   Assurez-vous que :');
+    console.error('   - Les variables d\'environnement sont définies sur Render');
+    console.error('   - OU que serviceAccountKey.json existe en local');
   }
 }
 
-// ============================================
-// FONCTIONS DE BASE
-// ============================================
-
-async function sendNotification(token, title, body, data = {}) {
-  initializeFirebase();
-  
+/**
+ * Envoyer une notification à un utilisateur
+ */
+async function sendNotification(fcmToken, title, body, data = {}) {
   if (!firebaseInitialized) {
-    console.warn('⚠️ Firebase non initialisé - notification ignorée');
-    return { success: false, error: 'Firebase not initialized' };
+    console.error('❌ Firebase non initialisé, impossible d\'envoyer la notification');
+    return { success: false, error: 'Firebase non initialisé' };
   }
-  
+
+  if (!fcmToken) {
+    console.error('❌ Token FCM manquant');
+    return { success: false, error: 'Token FCM manquant' };
+  }
+
   const message = {
-    notification: { title, body },
-    data: data,
-    token: token,
+    token: fcmToken,
+    notification: {
+      title,
+      body
+    },
+    data: Object.entries(data).reduce((acc, [key, value]) => {
+      acc[key] = String(value);
+      return acc;
+    }, {}),
     android: {
       priority: 'high',
       notification: {
         sound: 'default',
-        channelId: 'default'
+        channelId: 'default',
+        color: '#3B82F6'
       }
     },
     apns: {
@@ -62,254 +110,211 @@ async function sendNotification(token, title, body, data = {}) {
       }
     }
   };
-  
+
   try {
     const response = await admin.messaging().send(message);
+    console.log('✅ Notification envoyée:', { title, to: fcmToken.substring(0, 20) + '...' });
     return { success: true, messageId: response };
   } catch (error) {
-    console.error('❌ Erreur Firebase:', error.code, error.message);
+    console.error('❌ Erreur envoi notification:', error);
     
-    // Supprimer token invalide
-    if (pool && (error.code === 'messaging/invalid-registration-token' || 
-        error.code === 'messaging/registration-token-not-registered')) {
-      try {
-        await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [token]);
-        console.log('🗑️ Token invalide supprimé');
-      } catch (dbError) {
-        console.error('❌ Erreur suppression token:', dbError);
-      }
+    // Si le token est invalide, on pourrait le supprimer de la DB
+    if (error.code === 'messaging/invalid-registration-token' || 
+        error.code === 'messaging/registration-token-not-registered') {
+      console.warn('⚠️  Token FCM invalide ou expiré:', fcmToken.substring(0, 20) + '...');
+      // TODO: Supprimer le token de la DB
     }
     
     return { success: false, error: error.message };
   }
 }
 
-async function sendApnsNotification(apnsToken, title, body, data = {}) {
-  initializeFirebase();
-  
+/**
+ * Envoyer une notification à plusieurs utilisateurs
+ */
+async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
   if (!firebaseInitialized) {
-    console.warn('⚠️ Firebase non initialisé');
-    return { success: false, error: 'Firebase not initialized' };
+    console.error('❌ Firebase non initialisé');
+    return { success: false, error: 'Firebase non initialisé' };
   }
-  
-  const message = {
-    token: apnsToken,
-    apns: {
-      headers: {
-        'apns-priority': '10',
-        'apns-push-type': 'alert'
-      },
-      payload: {
-        aps: {
-          alert: {
-            title: title,
-            body: body
-          },
+
+  if (!fcmTokens || fcmTokens.length === 0) {
+    return { success: false, error: 'Aucun token FCM fourni' };
+  }
+
+  // Firebase limite à 500 tokens par requête
+  const batchSize = 500;
+  const results = [];
+
+  for (let i = 0; i < fcmTokens.length; i += batchSize) {
+    const batch = fcmTokens.slice(i, i + batchSize);
+    
+    const message = {
+      tokens: batch,
+      notification: { title, body },
+      data: Object.entries(data).reduce((acc, [key, value]) => {
+        acc[key] = String(value);
+        return acc;
+      }, {}),
+      android: {
+        priority: 'high',
+        notification: {
           sound: 'default',
-          badge: 1,
-          'content-available': 1
-        },
-        ...data
+          channelId: 'default'
+        }
       }
-    }
-  };
-  
-  try {
-    const response = await admin.messaging().send(message);
-    console.log('✅ Notification APNs envoyée:', response);
-    return { success: true, messageId: response };
-  } catch (error) {
-    console.error('❌ Erreur APNs:', error.code, error.message);
-    
-    // Supprimer token invalide
-    if (pool && (error.code === 'messaging/invalid-registration-token' || 
-        error.code === 'messaging/registration-token-not-registered')) {
-      try {
-        await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [apnsToken]);
-        console.log('🗑️ Token APNs invalide supprimé');
-      } catch (dbError) {
-        console.error('❌ Erreur suppression token:', dbError);
+    };
+
+    try {
+      const response = await admin.messaging().sendMulticast(message);
+      console.log(`✅ ${response.successCount}/${batch.length} notifications envoyées`);
+      
+      if (response.failureCount > 0) {
+        console.warn(`⚠️  ${response.failureCount} échecs`);
       }
+      
+      results.push(response);
+    } catch (error) {
+      console.error('❌ Erreur envoi batch:', error);
     }
-    
-    return { success: false, error: error.message };
   }
+
+  return results;
 }
 
-async function sendNotificationByUserId(userId, title, body, data = {}) {
+/**
+ * Envoyer une notification de nouveau message
+ */
+async function sendNewMessageNotification(userId, senderName, messagePreview, conversationId) {
   try {
     if (!pool) {
-      console.warn('⚠️ Pool non initialisé');
-      return { success: false, error: 'Pool not initialized' };
+      console.error('❌ Pool non défini');
+      return;
     }
-    
+
     const result = await pool.query(
-      'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
       [userId]
     );
-    
+
     if (result.rows.length === 0) {
-      return { success: false, error: 'No token' };
+      console.log(`ℹ️  Aucun token FCM pour user ${userId}`);
+      return;
     }
-    
+
     const token = result.rows[0].fcm_token;
-    const deviceType = result.rows[0].device_type || 'android';
     
-    console.log(`📱 Envoi notification à ${userId} (${deviceType})`);
-    
-    // Si c'est iOS, utiliser APNs
-    if (deviceType === 'ios') {
-      return await sendApnsNotification(token, title, body, data);
-    }
-    
-    // Sinon, utiliser FCM (Android)
-    return await sendNotification(token, title, body, data);
+    await sendNotification(
+      token,
+      `💬 Nouveau message de ${senderName}`,
+      messagePreview,
+      {
+        type: 'new_message',
+        conversationId: conversationId.toString()
+      }
+    );
   } catch (error) {
-    console.error('❌ Erreur notification:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Erreur sendNewMessageNotification:', error);
   }
 }
 
-// ============================================
-// NOTIFICATIONS PAR TYPE
-// ============================================
-
-async function sendNewMessageNotification(userId, conversationId, messagePreview, propertyName) {
-  return await sendNotificationByUserId(
-    userId,
-    '💬 Nouveau message',
-    messagePreview,
-    {
-      type: 'new_chat_message',
-      conversation_id: conversationId.toString(),
-      property_name: propertyName || 'Logement'
-    }
-  );
-}
-
-async function sendNewCleaningNotification(userId, cleaningId, propertyName, cleanerName, cleaningDate) {
-  const formattedDate = new Date(cleaningDate).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long'
-  });
-  
-  return await sendNotificationByUserId(
-    userId,
-    '🧹 Nouveau ménage assigné',
-    `${cleanerName} - ${propertyName} le ${formattedDate}`,
-    {
-      type: 'new_cleaning',
-      cleaning_id: cleaningId.toString(),
-      property_name: propertyName
-    }
-  );
-}
-
-async function sendCleaningReminderNotification(userId, cleaningId, propertyName, cleanerName, cleaningDate) {
-  return await sendNotificationByUserId(
-    userId,
-    '⏰ Rappel : Ménage demain',
-    `${cleanerName} - ${propertyName}`,
-    {
-      type: 'cleaning_reminder',
-      cleaning_id: cleaningId.toString(),
-      property_name: propertyName
-    }
-  );
-}
-
-async function sendNewInvoiceNotification(userId, invoiceId, invoiceType, amount) {
-  const typeLabel = invoiceType === 'owner' ? 'Facture propriétaire' : 'Facture';
-  const formattedAmount = new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(amount);
-  
-  return await sendNotificationByUserId(
-    userId,
-    `💰 ${typeLabel}`,
-    `Nouvelle facture de ${formattedAmount}`,
-    {
-      type: 'new_invoice',
-      invoice_id: invoiceId.toString(),
-      invoice_type: invoiceType
-    }
-  );
-}
-
-async function sendNewReservationNotification(userId, reservationId, propertyName, guestName, checkIn, checkOut, platform) {
-  const checkInDate = new Date(checkIn).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short'
-  });
-  const checkOutDate = new Date(checkOut).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short'
-  });
-  
-  const platformEmoji = platform === 'airbnb' ? '🏠' : platform === 'booking' ? '🏨' : '📅';
-  
-  return await sendNotificationByUserId(
-    userId,
-    `${platformEmoji} Nouvelle réservation`,
-    `${propertyName} - ${checkInDate} au ${checkOutDate}`,
-    {
-      type: 'new_reservation',
-      reservation_id: reservationId ? reservationId.toString() : '',
-      property_name: propertyName
-    }
-  );
-}
-
-async function sendNotificationToMultiple(tokens, title, body, data = {}) {
-  initializeFirebase();
-  
-  if (!firebaseInitialized) {
-    console.warn('⚠️ Firebase non initialisé - notification ignorée');
-    return { success: false, error: 'Firebase not initialized' };
-  }
-  
-  const message = {
-    notification: { title, body },
-    data: data,
-    tokens: tokens,
-    android: {
-      priority: 'high',
-      notification: {
-        sound: 'default',
-        channelId: 'default'
-      }
-    },
-    apns: {
-      payload: {
-        aps: {
-          sound: 'default',
-          badge: 1
-        }
-      }
-    }
-  };
-  
+/**
+ * Envoyer une notification de nouveau nettoyage
+ */
+async function sendNewCleaningNotification(userId, propertyName, date) {
   try {
-    const response = await admin.messaging().sendMulticast(message);
-    console.log(`✅ ${response.successCount} notifications envoyées`);
-    
-    if (response.failureCount > 0) {
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          console.error(`❌ Échec pour token ${idx}:`, resp.error);
-        }
-      });
-    }
-    
-    return { 
-      success: true, 
-      successCount: response.successCount,
-      failureCount: response.failureCount 
-    };
+    if (!pool) return;
+
+    const result = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) return;
+
+    await sendNotification(
+      result.rows[0].fcm_token,
+      '🧹 Nouveau ménage assigné',
+      `${propertyName} - ${date}`,
+      { type: 'new_cleaning', date }
+    );
   } catch (error) {
-    console.error('❌ Erreur multicast:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Erreur sendNewCleaningNotification:', error);
+  }
+}
+
+/**
+ * Envoyer un rappel de nettoyage
+ */
+async function sendCleaningReminderNotification(userId, propertyName, date) {
+  try {
+    if (!pool) return;
+
+    const result = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) return;
+
+    await sendNotification(
+      result.rows[0].fcm_token,
+      '⏰ Rappel : Ménage à faire',
+      `${propertyName} - ${date}`,
+      { type: 'cleaning_reminder', date }
+    );
+  } catch (error) {
+    console.error('❌ Erreur sendCleaningReminderNotification:', error);
+  }
+}
+
+/**
+ * Envoyer une notification de nouvelle facture
+ */
+async function sendNewInvoiceNotification(userId, amount, propertyName) {
+  try {
+    if (!pool) return;
+
+    const result = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) return;
+
+    await sendNotification(
+      result.rows[0].fcm_token,
+      '💳 Nouvelle facture',
+      `${amount}€ - ${propertyName}`,
+      { type: 'new_invoice', amount: amount.toString() }
+    );
+  } catch (error) {
+    console.error('❌ Erreur sendNewInvoiceNotification:', error);
+  }
+}
+
+/**
+ * Envoyer une notification de nouvelle réservation
+ */
+async function sendNewReservationNotification(userId, guestName, propertyName, checkIn) {
+  try {
+    if (!pool) return;
+
+    const result = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) return;
+
+    await sendNotification(
+      result.rows[0].fcm_token,
+      '🏠 Nouvelle réservation',
+      `${guestName} - ${propertyName} (${checkIn})`,
+      { type: 'new_reservation', checkIn }
+    );
+  } catch (error) {
+    console.error('❌ Erreur sendNewReservationNotification:', error);
   }
 }
 
@@ -317,12 +322,10 @@ module.exports = {
   setPool,
   initializeFirebase,
   sendNotification,
-  sendApnsNotification,
-  sendNotificationByUserId,
+  sendNotificationToMultiple,
   sendNewMessageNotification,
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
   sendNewInvoiceNotification,
-  sendNewReservationNotification,
-  sendNotificationToMultiple
+  sendNewReservationNotification
 };
