@@ -1,8 +1,10 @@
 // ============================================
-// 📱 GESTIONNAIRE DE NOTIFICATIONS PUSH - VERSION DEBUG
+// 📱 GESTIONNAIRE DE NOTIFICATIONS PUSH - VERSION CORRIGÉE
 // ============================================
 
 console.log('🔔 [DEBUG] Fichier push-notifications-handler.js chargé');
+
+const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
 // Fonction principale
 async function initPushNotifications() {
@@ -64,7 +66,8 @@ async function initPushNotifications() {
     // Listener notification reçue (foreground)
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       console.log('📬 [DEBUG] Notification reçue:', notification);
-      alert(`Notification: ${notification.title || ''}\n${notification.body || ''}`);
+      // Ne pas afficher d'alert en prod, juste logger
+      console.log(`Notification: ${notification.title || ''}\n${notification.body || ''}`);
     });
 
     // Listener notification cliquée
@@ -78,19 +81,18 @@ async function initPushNotifications() {
     // DEMANDER LA PERMISSION
     // ============================================
     
-    console.log('🔐 [DEBUG] Vérification permission...');
+    console.log('📝 [DEBUG] Vérification permission...');
     let permStatus = await PushNotifications.checkPermissions();
     console.log('📊 [DEBUG] Permission actuelle:', JSON.stringify(permStatus));
 
     if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
-      console.log('🔐 [DEBUG] Demande de permission...');
+      console.log('📝 [DEBUG] Demande de permission...');
       permStatus = await PushNotifications.requestPermissions();
       console.log('📊 [DEBUG] Nouvelle permission:', JSON.stringify(permStatus));
     }
 
     if (permStatus.receive !== 'granted') {
       console.warn('⚠️ [DEBUG] Permission refusée:', permStatus.receive);
-      alert('Permission refusée pour les notifications. Activez-les dans les paramètres de l\'app.');
       return;
     }
 
@@ -110,6 +112,75 @@ async function initPushNotifications() {
   }
 }
 
+// ============================================
+// 🔧 FONCTION POUR RÉCUPÉRER LE JWT (comme fcm-registration-5.js)
+// ============================================
+
+async function findSupabaseKey() {
+  try {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
+      console.error('❌ Capacitor Preferences non disponible');
+      return null;
+    }
+    
+    // Essayer différentes clés possibles
+    const possibleKeys = [
+      'sb-ztdzragdnjkastswtvzn-auth-token',
+      'supabase.auth.token',
+      '@supabase/auth-token',
+      'sb-auth-token',
+      'lcc_token'
+    ];
+    
+    console.log('🔍 Recherche de la clé Supabase...');
+    
+    for (const key of possibleKeys) {
+      const { value } = await cap.Plugins.Preferences.get({ key });
+      if (value) {
+        console.log(`✅ Clé trouvée: ${key}`);
+        return { key, value };
+      }
+    }
+    
+    console.warn('⚠️ Aucune clé Supabase trouvée');
+    return null;
+  } catch (err) {
+    console.error('❌ Erreur recherche clé:', err);
+    return null;
+  }
+}
+
+async function getSupabaseSession() {
+  const found = await findSupabaseKey();
+  if (!found) return null;
+  
+  try {
+    // Si c'est lcc_token, c'est directement le JWT
+    if (found.key === 'lcc_token') {
+      console.log('✅ JWT direct trouvé');
+      return found.value;
+    }
+    
+    // Sinon, parser le JSON
+    const session = JSON.parse(found.value);
+    console.log('✅ Session Supabase parsée');
+    
+    // Essayer différents chemins pour le token
+    const token = session.access_token || session.accessToken || session.token;
+    if (token) {
+      console.log('✅ JWT extrait de la session');
+      return token;
+    }
+    
+    console.warn('⚠️ Pas de token dans la session');
+    return null;
+  } catch (err) {
+    console.error('❌ Erreur parsing session:', err);
+    return null;
+  }
+}
+
 // Fonction pour envoyer le token au serveur
 async function saveTokenToServer(token, deviceType) {
   try {
@@ -117,18 +188,18 @@ async function saveTokenToServer(token, deviceType) {
     console.log('   Token:', token.substring(0, 30) + '...');
     console.log('   Device:', deviceType);
     
-    const authToken = localStorage.getItem('token');
+    // ✅ CORRECTION 1 : Récupérer le JWT via Preferences
+    const authToken = await getSupabaseSession();
     console.log('   Auth token:', authToken ? 'Présent' : 'Absent');
     
     if (!authToken) {
-      console.warn('⚠️ [DEBUG] Pas de token auth - sauvegarde en local');
-      localStorage.setItem('pending_fcm_token', token);
-      localStorage.setItem('pending_device_type', deviceType);
+      console.warn('⚠️ [DEBUG] Pas de token auth - impossible de sauvegarder');
       return;
     }
 
+    // ✅ CORRECTION 2 : URL absolue
     console.log('📤 [DEBUG] Envoi au serveur...');
-    const response = await fetch('/api/save-token', {
+    const response = await fetch(`${API_BASE}/api/save-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,43 +217,24 @@ async function saveTokenToServer(token, deviceType) {
 
     if (response.ok) {
       console.log('✅ [DEBUG] Token enregistré sur serveur');
-      localStorage.removeItem('pending_fcm_token');
-      localStorage.removeItem('pending_device_type');
-      alert('✅ Token enregistré avec succès !');
     } else {
       console.error('❌ [DEBUG] Erreur serveur:', data);
-      alert('❌ Erreur: ' + (data.error || 'Erreur inconnue'));
     }
 
   } catch (error) {
     console.error('❌ [DEBUG] Erreur saveTokenToServer:', error);
-    alert('❌ Erreur réseau: ' + error.message);
-  }
-}
-
-// Fonction pour envoyer un token en attente
-async function sendPendingToken() {
-  const pendingToken = localStorage.getItem('pending_fcm_token');
-  const pendingDeviceType = localStorage.getItem('pending_device_type');
-  
-  console.log('📤 [DEBUG] sendPendingToken - Token:', pendingToken ? 'Présent' : 'Absent');
-  
-  if (pendingToken && pendingDeviceType) {
-    console.log('📤 [DEBUG] Envoi du token en attente...');
-    await saveTokenToServer(pendingToken, pendingDeviceType);
   }
 }
 
 // Exposer globalement pour debug
 window.initPushNotifications = initPushNotifications;
 window.saveTokenToServer = saveTokenToServer;
-window.sendPendingToken = sendPendingToken;
 
 // Initialisation automatique avec délai
-console.log('⏰ [DEBUG] Programmation initialisation dans 2 secondes...');
+console.log('⏰ [DEBUG] Programmation initialisation dans 3 secondes...');
 setTimeout(() => {
   console.log('⏰ [DEBUG] Démarrage initialisation...');
   initPushNotifications();
-}, 2000);
+}, 3000);
 
 console.log('✅ [DEBUG] Fin du chargement du fichier');
