@@ -182,16 +182,24 @@ async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
 /**
  * Envoyer une notification de nouveau message
  */
-async function sendNewMessageNotification(userId, senderName, messagePreview, conversationId, propertyName) {
+async function sendNewMessageNotification(userId, senderName, messagePreview, conversationId) {
   try {
     if (!pool) {
       console.error('❌ Pool non défini');
       return;
     }
 
+    // Récupérer le token FCM ET le nom de la propriété
     const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-      [userId]
+      `SELECT t.fcm_token, p.name as property_name
+       FROM user_fcm_tokens t
+       LEFT JOIN conversations c ON c.user_id = t.user_id
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE t.user_id = $1 
+       AND c.id = $2
+       AND t.fcm_token IS NOT NULL
+       LIMIT 1`,
+      [userId, conversationId]
     );
 
     if (result.rows.length === 0) {
@@ -199,16 +207,15 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
       return;
     }
 
-    const token = result.rows[0].fcm_token;
+    const { fcm_token, property_name } = result.rows[0];
     
     await sendNotification(
-      token,
-      `📩 Message de ${propertyName}`,
+      fcm_token,
+      `📩 Message de ${property_name || 'Voyageur'}`,
       messagePreview,
       {
         type: 'new_message',
-        conversationId: conversationId.toString(),
-        propertyName: propertyName
+        conversationId: conversationId.toString()
       }
     );
   } catch (error) {
