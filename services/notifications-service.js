@@ -182,7 +182,7 @@ async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
 /**
  * Envoyer une notification de nouveau message
  */
-async function sendNewMessageNotification(userId, senderName, messagePreview, conversationId) {
+async function sendNewMessageNotification(userId, senderName, messagePreview, conversationId, propertyName) {
   try {
     if (!pool) {
       console.error('❌ Pool non défini');
@@ -203,11 +203,12 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
     
     await sendNotification(
       token,
-      `💬 Nouveau message de ${senderName}`,
+      `📩 Nouveau message de Voyageur — ${propertyName}`,
       messagePreview,
       {
         type: 'new_message',
-        conversationId: conversationId.toString()
+        conversationId: conversationId.toString(),
+        propertyName: propertyName
       }
     );
   } catch (error) {
