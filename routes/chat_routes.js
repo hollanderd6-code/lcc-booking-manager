@@ -666,7 +666,7 @@ try {
 } catch (notifError) {
   console.error('❌ Erreur notification push:', notifError.message);
 }
-
+}
   // ============================================
   // 6. MARQUER MESSAGES COMME LUS
   // ============================================
