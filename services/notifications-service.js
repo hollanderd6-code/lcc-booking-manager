@@ -189,7 +189,7 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
       return;
     }
 
-    // Récupérer le token FCM ET le nom de la propriété
+    // Récupérer TOUS les tokens de l'utilisateur (iPhone + Android)
     const result = await pool.query(
       `SELECT t.fcm_token, p.name as property_name
        FROM user_fcm_tokens t
@@ -197,8 +197,7 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
        LEFT JOIN properties p ON p.id = c.property_id
        WHERE t.user_id = $1 
        AND c.id = $2
-       AND t.fcm_token IS NOT NULL
-       LIMIT 1`,
+       AND t.fcm_token IS NOT NULL`,
       [userId, conversationId]
     );
 
@@ -207,23 +206,27 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
       return;
     }
 
-    const { fcm_token, property_name } = result.rows[0];
+    const property_name = result.rows[0].property_name;
     
-    await sendNotification(
-      fcm_token,
-      `📩 Message de ${property_name || 'Voyageur'}`,
-      messagePreview,
-      {
-        type: 'new_message',
-        conversationId: conversationId.toString()
-      }
-    );
-    console.log(`🔑 Token utilisé: ${fcm_token.substring(0, 30)}...`);
+    // Envoyer la notification à TOUS les appareils
+    for (const row of result.rows) {
+      await sendNotification(
+        row.fcm_token,
+        `📩 Message de ${property_name || 'Voyageur'}`,
+        messagePreview,
+        {
+          type: 'new_message',
+          conversationId: conversationId.toString()
+        }
+      );
+      
+      console.log(`🔑 Notification envoyée au token: ${row.fcm_token.substring(0, 30)}...`);
+    }
+    
   } catch (error) {
     console.error('❌ Erreur sendNewMessageNotification:', error);
   }
 }
-
 /**
  * Envoyer une notification de nouveau nettoyage
  */
