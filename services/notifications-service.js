@@ -30,17 +30,14 @@ function initializeFirebase() {
     // ============================================
     // MODE PRODUCTION (Render) : Variables d'environnement
     // ============================================
-    if (process.env.FIREBASE_PRIVATE_KEY) {
-      console.log('🔧 Initialisation Firebase avec variables d\'environnement (PRODUCTION)');
-      
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          // Important : remplacer les \n littéraux par de vrais retours à la ligne
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-        })
-      });
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.log('🔧 Initialisation Firebase avec variable JSON (PRODUCTION)');
+  
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
       
       console.log('✅ Firebase initialisé avec succès (production - env vars)');
       firebaseInitialized = true;
