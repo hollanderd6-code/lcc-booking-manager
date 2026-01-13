@@ -1154,6 +1154,12 @@ async function getCleanerAssignmentsMapForUser(userId) {
  * VERSION CORRIGÉE AVEC LOGS DÉTAILLÉS POUR DEBUGGING WHATSAPP
  */
 async function notifyOwnersAboutBookings(newReservations, cancelledReservations) {
+   // ===================================================================
+  // 🛑 EMAILS DÉSACTIVÉS : Nouvelles réservations et annulations
+  // Si vous voulez les réactiver plus tard, supprimez juste le "return;" ci-dessous
+  // ===================================================================
+  console.log('ℹ️ notifyOwnersAboutBookings appelée mais DÉSACTIVÉE (pas d\'emails envoyés)');
+  return;
   const brevoKey = process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim();
   if (!brevoKey) {
     console.log(
