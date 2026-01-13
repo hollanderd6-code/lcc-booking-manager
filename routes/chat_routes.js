@@ -665,11 +665,11 @@ try {
     : message;
   
   const notifResult = await sendNewMessageNotification(
-    conversation.user_id,  // ID du propriétaire
-    conversation_id,
-    messagePreview,
-    propertyName
-  );
+  conversation.user_id,      // userId (propriétaire)
+  senderName || 'Voyageur',  // senderName (pas utilisé maintenant)
+  messagePreview,            // messagePreview
+  conversation_id            // conversationId (pour récupérer le nom de la propriété)
+);
 
   if (notifResult.success) {
     console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
