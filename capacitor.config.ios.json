@@ -6,12 +6,12 @@
     "SplashScreen": {
       "launchShowDuration": 2000,
       "launchAutoHide": true,
-      "backgroundColor": "#3B82F6",
+      "backgroundColor": "#FFFFFF",
       "showSpinner": false
     },
     "StatusBar": {
       "style": "light",
-      "backgroundColor": "#3B82F6",
+      "backgroundColor": "#FFFFFF",
       "overlaysWebView": false
     },
     "Haptics": {
