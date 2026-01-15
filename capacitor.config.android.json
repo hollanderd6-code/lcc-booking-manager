@@ -6,13 +6,16 @@
     "SplashScreen": {
       "launchShowDuration": 2000,
       "launchAutoHide": true,
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#5BC6A3",
       "androidSplashResourceName": "splash",
-      "showSpinner": false
+      "androidScaleType": "CENTER",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
     },
     "StatusBar": {
-      "style": "dark",
-      "backgroundColor": "#FFFFFF",
+      "style": "light",
+      "backgroundColor": "#5BC6A3",
       "overlaysWebView": false
     },
     "Haptics": {
@@ -26,6 +29,6 @@
     "allowMixedContent": true,
     "captureInput": true,
     "webContentsDebuggingEnabled": true,
-    "backgroundColor": "#FFFFFF"
+    "backgroundColor": "#5BC6A3"
   }
 }
