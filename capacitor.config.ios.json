@@ -10,7 +10,7 @@
       "showSpinner": false
     },
     "StatusBar": {
-      "style": "light",
+      "style": "dark",
       "backgroundColor": "#FFFFFF",
       "overlaysWebView": false
     },
@@ -20,5 +20,8 @@
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
     }
+  },
+  "ios": {
+    "backgroundColor": "#FFFFFF"
   }
 }
