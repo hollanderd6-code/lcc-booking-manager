@@ -4,8 +4,8 @@
 
 /* Variables CSS */
 :root {
-  --primary: #3B82F6;
-  --primary-dark: #2563EB;
+  --primary: #5BC6A3;
+  --primary-dark: #4AB392;
   --success: #10B981;
   --error: #EF4444;
   --warning: #F59E0B;
@@ -20,8 +20,8 @@
 
 /* Dark Mode Variables */
 body.dark-mode {
-  --primary: #60A5FA;
-  --primary-dark: #3B82F6;
+  --primary: #5BC6A3;
+  --primary-dark: #4AB392;
   --bg-primary: #1F2937;
   --bg-secondary: #374151;
   --text-primary: #F9FAFB;
