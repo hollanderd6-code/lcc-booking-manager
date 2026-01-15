@@ -9,9 +9,7 @@
       "backgroundColor": "#5BC6A3",
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER",
-      "showSpinner": false,
-      "splashFullScreen": true,
-      "splashImmersive": true
+      "showSpinner": false
     },
     "StatusBar": {
       "style": "light",
@@ -28,7 +26,6 @@
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": true,
-    "backgroundColor": "#5BC6A3"
+    "webContentsDebuggingEnabled": true
   }
 }
