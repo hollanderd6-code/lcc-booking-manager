@@ -11,7 +11,7 @@
       "showSpinner": false
     },
     "StatusBar": {
-      "style": "light",
+      "style": "dark",
       "backgroundColor": "#FFFFFF",
       "overlaysWebView": false
     },
@@ -25,6 +25,7 @@
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": true,
+    "backgroundColor": "#FFFFFF"
   }
 }
