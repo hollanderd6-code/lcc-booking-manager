@@ -468,13 +468,38 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
   if (!isNative || !SplashScreen) return;
   
   try {
-    // ✅ Attendre 1 seconde puis cacher le splash
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 1. S'assurer que le contenu est prêt
+    await this.waitForContentReady();
+    
+    // 2. Attendre un minimum de temps pour une transition smooth
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // 3. Cacher le splash natif
     await SplashScreen.hide({ fadeOutDuration: 300 });
+    
     console.log('✅ Splash screen masqué');
   } catch (error) {
-    console.log('⚠️ Splash screen non disponible');
+    console.log('⚠️ Erreur splash screen:', error);
   }
+}
+
+// Nouvelle méthode à ajouter
+async waitForContentReady() {
+  return new Promise((resolve) => {
+    // Vérifier que les éléments critiques sont chargés
+    const checkReady = () => {
+      const calendar = document.querySelector('#calendar');
+      const mainContent = document.querySelector('[data-tab="dashboard"]');
+      
+      if (calendar && mainContent) {
+        resolve();
+      } else {
+        setTimeout(checkReady, 100);
+      }
+    };
+    
+    checkReady();
+  });
 }
 
     // ============================================
