@@ -5,6 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boostinghost – Connexion</title>
 
+  <!-- 🎨 STYLE CRITIQUE - Charge INSTANTANÉMENT pour éviter le flash blanc -->
+  <style>
+    /* Fond identique au splash natif pour transition fluide */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #7fd3a6 !important; /* Même vert que le splash Capacitor */
+      min-height: 100vh;
+      transition: background 0.6s ease;
+    }
+    
+    /* Quand la page est chargée, transition vers le vrai fond */
+    body.page-loaded {
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
+    }
+    
+    /* Animation d'apparition du contenu */
+    .auth-body {
+      opacity: 0;
+      animation: fadeInContent 0.5s ease forwards 0.2s;
+    }
+    
+    @keyframes fadeInContent {
+      from { 
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
@@ -97,10 +131,22 @@
   </div>
 
   <script>
+    // 🎬 Transition fluide du fond une fois la page chargée
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 DOM chargé, préparation de la transition...');
+      
+      // Attendre un court instant pour s'assurer que les styles sont appliqués
+      setTimeout(() => {
+        document.body.classList.add('page-loaded');
+        console.log('✨ Transition de fond activée');
+      }, 200);
+    });
+
     // Si déjà connecté, inutile de revenir ici
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (token) {
+        console.log('🔑 Token trouvé, redirection vers app...');
         window.location.href = '/app.html';
       }
     })();
@@ -142,16 +188,18 @@
         localStorage.setItem('lcc_token', data.token);
         localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
+        console.log('✅ Connexion réussie, redirection...');
+        
         // Redirection vers le dashboard
         window.location.href = '/app.html';
       } catch (err) {
-        console.error(err);
+        console.error('❌ Erreur de connexion:', err);
         loginError.style.display = 'block';
         loginError.textContent = "Erreur réseau lors de la connexion.";
         loginSubmit.disabled = false;
         loginSubmit.textContent = 'Se connecter';
       }
-      });
+    });
   </script>
 
 
