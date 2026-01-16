@@ -465,16 +465,17 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
     // ============================================
 
     async hideSplashScreen() {
-      if (!isNative || !SplashScreen) return;
-      
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await SplashScreen.hide({ fadeOutDuration: 500 });
-        console.log('✅ Splash screen masqué');
-      } catch (error) {
-        console.log('⚠️ Splash screen non disponible');
-      }
-    }
+  if (!isNative || !SplashScreen) return;
+  
+  try {
+    // ✅ Attendre 1 seconde puis cacher le splash
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await SplashScreen.hide({ fadeOutDuration: 300 });
+    console.log('✅ Splash screen masqué');
+  } catch (error) {
+    console.log('⚠️ Splash screen non disponible');
+  }
+}
 
     // ============================================
     // BOTTOM SHEET
