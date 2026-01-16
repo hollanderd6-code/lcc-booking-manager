@@ -468,38 +468,49 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
   if (!isNative || !SplashScreen) return;
   
   try {
-    // 1. S'assurer que le contenu est prêt
-    await this.waitForContentReady();
+    console.log('🎬 Attente du chargement complet...');
     
-    // 2. Attendre un minimum de temps pour une transition smooth
+    // ⏳ ATTENDRE que le DOM soit VRAIMENT prêt
+    await new Promise((resolve) => {
+      const checkReady = () => {
+        // Vérifier les éléments critiques
+        const tabs = document.querySelectorAll('[data-tab]');
+        const body = document.body;
+        const hasContent = tabs.length > 0 && body.children.length > 0;
+        
+        if (hasContent) {
+          console.log('✅ App prête, contenu détecté');
+          resolve();
+        } else {
+          console.log('⏳ En attente... Tabs:', tabs.length);
+          setTimeout(checkReady, 100);
+        }
+      };
+      
+      // Timeout max 5 secondes (au lieu de 1s)
+      setTimeout(() => {
+        console.log('⏱️ Timeout atteint, masquage forcé');
+        resolve();
+      }, 5000);
+      
+      checkReady();
+    });
+    
+    // 🎨 Délai supplémentaire pour transition smooth
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // 3. Cacher le splash natif
-    await SplashScreen.hide({ fadeOutDuration: 300 });
+    // 🎭 Masquer avec animation longue
+    await SplashScreen.hide({ fadeOutDuration: 500 });
     
-    console.log('✅ Splash screen masqué');
+    console.log('🎉 Splash masqué');
+    
   } catch (error) {
-    console.log('⚠️ Erreur splash screen:', error);
+    console.error('❌ Erreur splash:', error);
+    // Forcer après 3s en cas d'erreur
+    setTimeout(() => {
+      SplashScreen.hide({ fadeOutDuration: 300 }).catch(console.error);
+    }, 3000);
   }
-}
-
-// Nouvelle méthode à ajouter
-async waitForContentReady() {
-  return new Promise((resolve) => {
-    // Vérifier que les éléments critiques sont chargés
-    const checkReady = () => {
-      const calendar = document.querySelector('#calendar');
-      const mainContent = document.querySelector('[data-tab="dashboard"]');
-      
-      if (calendar && mainContent) {
-        resolve();
-      } else {
-        setTimeout(checkReady, 100);
-      }
-    };
-    
-    checkReady();
-  });
 }
 
     // ============================================
