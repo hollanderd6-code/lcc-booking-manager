@@ -5,14 +5,17 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
-      "launchAutoHide": false,
-      "backgroundColor": "#FFFFFF",
+      "launchAutoHide": true,
+      "backgroundColor": "#7fd3a6",
       "androidSplashResourceName": "splash",
-      "showSpinner": false
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashFullScreen": true,
+      "splashImmersive": true
     },
     "StatusBar": {
-      "style": "dark",
-      "backgroundColor": "#FFFFFF",
+      "style": "LIGHT",
+      "backgroundColor": "#7fd3a6",
       "overlaysWebView": false
     },
     "Haptics": {
