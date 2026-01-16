@@ -87,7 +87,7 @@
       
       try {
         await StatusBar.setStyle({ style: 'light' });
-        await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+await StatusBar.setBackgroundColor({ color: '#ffffff' }); 
         await StatusBar.show();
         console.log('✅ Status bar configurée');
       } catch (error) {
@@ -118,7 +118,7 @@
           if (isNative && StatusBar) {
             try {
               await StatusBar.setStyle({ style: 'light' });
-              await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+await StatusBar.setBackgroundColor({ color: '#ffffff' });
             } catch (e) {}
           }
         }
