@@ -16,9 +16,38 @@
       transition: background 0.6s ease;
     }
     
-    /* Quand la page est chargée, transition vers le vrai fond */
+    /* ⚠️ CRITIQUE : Rendre le container transparent au début */
+    .auth-container {
+      background: transparent !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+    
+    .auth-card {
+      background: transparent !important;
+    }
+    
+    .auth-side {
+      opacity: 0 !important;
+    }
+    
+    /* Quand la page est chargée, tout revient à la normale */
     body.page-loaded {
       background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
+    }
+    
+    body.page-loaded .auth-container {
+      background: var(--bg-primary, #ffffff) !important;
+      box-shadow: 0 24px 60px rgba(15,23,42,.18) !important;
+      border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    }
+    
+    body.page-loaded .auth-card {
+      background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9)) !important;
+    }
+    
+    body.page-loaded .auth-side {
+      opacity: 1 !important;
     }
     
     /* Animation d'apparition du contenu */
@@ -50,14 +79,14 @@
     <div class="auth-card">
       <div class="auth-logo">
         <div class="auth-logo-icon">
-  <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64"
-     xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
-  <text x="32" y="43" text-anchor="middle"
-        font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-        font-size="34" font-weight="800" fill="#ffffff">B</text>
-</svg>
-</div>
+          <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64"
+               xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+            <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
+            <text x="32" y="43" text-anchor="middle"
+                  font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
+                  font-size="34" font-weight="800" fill="#ffffff">B</text>
+          </svg>
+        </div>
         <div>
           <div class="auth-logo-title"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></div>
           <div class="auth-logo-subtitle">Property Manager</div>
@@ -133,24 +162,25 @@
   <script>
     // 🎬 Transition fluide du fond une fois la page chargée
     window.addEventListener('DOMContentLoaded', () => {
-      console.log('📄 DOM chargé, préparation de la transition...');
+      console.log('📄 LOGIN - DOM chargé');
       
-      // Attendre un court instant pour s'assurer que les styles sont appliqués
+      // Attendre que les styles soient appliqués
       setTimeout(() => {
         document.body.classList.add('page-loaded');
-        console.log('✨ Transition de fond activée');
+        console.log('✨ LOGIN - Transition activée');
       }, 200);
     });
 
-    // Si déjà connecté, inutile de revenir ici
+    // Si déjà connecté, redirection
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (token) {
-        console.log('🔑 Token trouvé, redirection vers app...');
+        console.log('🔑 Token trouvé, redirection...');
         window.location.href = '/app.html';
       }
     })();
 
+    // Gestion du formulaire
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
     const loginSubmit = document.getElementById('loginSubmit');
@@ -189,9 +219,8 @@
         localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
         console.log('✅ Connexion réussie, redirection...');
-        
-        // Redirection vers le dashboard
         window.location.href = '/app.html';
+        
       } catch (err) {
         console.error('❌ Erreur de connexion:', err);
         loginError.style.display = 'block';
@@ -201,7 +230,6 @@
       }
     });
   </script>
-
 
   <style>
     .auth-body {
@@ -224,11 +252,13 @@
       grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
       overflow: hidden;
       border: 1px solid rgba(226, 232, 240, 0.9);
+      transition: all 0.6s ease;
     }
 
     .auth-card {
       padding: 40px 36px 32px;
       background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9));
+      transition: all 0.6s ease;
     }
 
     .auth-logo {
@@ -389,6 +419,7 @@
       border-left: 1px solid rgba(30, 64, 175, 0.6);
       position: relative;
       overflow: hidden;
+      transition: opacity 0.6s ease;
     }
 
     .auth-side::before {
@@ -471,12 +502,11 @@
       font-size: 12px;
     }
 
-
-    /* Brand title colors (Boosting en vert) */
+    /* Brand title colors */
     .brand-boosting { color: #10B981; font-weight: 800; }
     .brand-host { color: #0F172A; font-weight: 700; }
 
-    /* Agrandir le logo */
+    /* Logo size */
     .bh-logo { width: 52px; height: 52px; }
 
     /* Responsive */
@@ -494,8 +524,6 @@
     }
 
     @media (max-width: 640px) {
-
-      /* Mobile: logo légèrement plus grand aussi */
       .bh-logo { width: 48px; height: 48px; }
       .auth-container {
         margin: 12px;
@@ -515,9 +543,9 @@
         height: 40px;
         font-size: 18px;
       }
-      .bh-logo { display:block; color:#fff; }
     }
   </style>
+  
   <script type="module" src="/js/push-notifications-handler.js"></script>
 </body>
 </html>
