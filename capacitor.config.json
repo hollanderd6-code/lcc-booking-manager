@@ -4,12 +4,11 @@
   "webDir": "public",
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 3000,
-      "launchAutoHide": false,
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 300,
       "backgroundColor": "#7fd3a6",
-      "androidSplashResourceName": "splash",
       "showSpinner": false,
-      "androidScaleType": "CENTER_CROP",
       "splashFullScreen": true,
       "splashImmersive": true
     },
@@ -17,9 +16,10 @@
       "style": "LIGHT",
       "backgroundColor": "#7fd3a6",
       "overlaysWebView": false
-    },
-    "Haptics": {
-      "enabled": true
     }
+  },
+  "ios": {
+    "backgroundColor": "#7fd3a6",
+    "contentInset": "automatic"
   }
 }
