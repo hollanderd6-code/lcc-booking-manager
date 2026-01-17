@@ -7,64 +7,52 @@
 
   <!-- 🎨 STYLE CRITIQUE - Charge INSTANTANÉMENT pour éviter le flash blanc -->
   <style>
-    /* Fond identique au splash natif pour transition fluide */
+    /* ⚠️ PRIORITÉ ABSOLUE : Fond vert identique au splash natif */
     html, body {
       margin: 0;
       padding: 0;
-      background: #7fd3a6 !important; /* Même vert que le splash Capacitor */
+      background: #7fd3a6 !important;
       min-height: 100vh;
-      transition: background 0.6s ease;
+      /* PAS de transition ici pour éviter le flash */
     }
     
-    /* ⚠️ CRITIQUE : Rendre le container transparent au début */
+    /* Tout le contenu est invisible au début */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #7fd3a6;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.8s ease;
+    }
+    
+    /* Quand la page est chargée, l'overlay disparaît progressivement */
+    body.page-loaded::before {
+      opacity: 0;
+    }
+    
+    /* Container transparent au début */
     .auth-container {
-      background: transparent !important;
-      box-shadow: none !important;
-      border: none !important;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
     }
     
-    .auth-card {
-      background: transparent !important;
+    /* Quand chargé, le container apparaît */
+    body.page-loaded .auth-container {
+      opacity: 1;
+      transform: scale(1);
     }
     
-    .auth-side {
-      opacity: 0 !important;
-    }
-    
-    /* Quand la page est chargée, tout revient à la normale */
+    /* Background final (invisible tant que l'overlay est là) */
     body.page-loaded {
       background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
-    }
-    
-    body.page-loaded .auth-container {
-      background: var(--bg-primary, #ffffff) !important;
-      box-shadow: 0 24px 60px rgba(15,23,42,.18) !important;
-      border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    }
-    
-    body.page-loaded .auth-card {
-      background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9)) !important;
-    }
-    
-    body.page-loaded .auth-side {
-      opacity: 1 !important;
-    }
-    
-    /* Animation d'apparition du contenu */
-    .auth-body {
-      opacity: 0;
-      animation: fadeInContent 0.5s ease forwards 0.2s;
-    }
-    
-    @keyframes fadeInContent {
-      from { 
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to { 
-        opacity: 1;
-        transform: translateY(0);
-      }
+      transition: background 0.8s ease;
     }
   </style>
 
@@ -160,22 +148,32 @@
   </div>
 
   <script>
-    // 🎬 Transition fluide du fond une fois la page chargée
-    window.addEventListener('DOMContentLoaded', () => {
-      console.log('📄 LOGIN - DOM chargé');
-      
-      // Attendre que les styles soient appliqués
-      setTimeout(() => {
-        document.body.classList.add('page-loaded');
-        console.log('✨ LOGIN - Transition activée');
-      }, 200);
-    });
+    // 🎬 Transition fluide - IMMÉDIATE au chargement
+    console.log('📄 LOGIN - Script chargé');
+    
+    // ⚡ Activer dès que possible
+    const activateTransition = () => {
+      console.log('✨ LOGIN - Activation de la transition');
+      document.body.classList.add('page-loaded');
+    };
+    
+    // Si le DOM est déjà chargé
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      // Petit délai pour que les fonts/images se chargent
+      setTimeout(activateTransition, 300);
+    } else {
+      // Sinon attendre DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('📄 LOGIN - DOM chargé');
+        setTimeout(activateTransition, 300);
+      });
+    }
 
     // Si déjà connecté, redirection
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (token) {
-        console.log('🔑 Token trouvé, redirection...');
+        console.log('🔒 Token trouvé, redirection...');
         window.location.href = '/app.html';
       }
     })();
@@ -237,7 +235,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       padding: 16px;
     }
@@ -252,13 +249,11 @@
       grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
       overflow: hidden;
       border: 1px solid rgba(226, 232, 240, 0.9);
-      transition: all 0.6s ease;
     }
 
     .auth-card {
       padding: 40px 36px 32px;
       background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9));
-      transition: all 0.6s ease;
     }
 
     .auth-logo {
@@ -419,7 +414,6 @@
       border-left: 1px solid rgba(30, 64, 175, 0.6);
       position: relative;
       overflow: hidden;
-      transition: opacity 0.6s ease;
     }
 
     .auth-side::before {
