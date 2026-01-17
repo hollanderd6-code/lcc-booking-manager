@@ -1,6 +1,6 @@
 // ============================================
 // 📱 BOOSTINGHOST - EXPÉRIENCE MOBILE NATIVE
-// Version compatible Capacitor + Web
+// Version corrigée - Transition splash fluide
 // ============================================
 
 (function() {
@@ -22,7 +22,6 @@
   let Haptics, StatusBar, SplashScreen;
   
   if (isCapacitor) {
-    // Les plugins sont disponibles via window.Capacitor.Plugins
     const plugins = window.Capacitor.Plugins;
     Haptics = plugins.Haptics;
     StatusBar = plugins.StatusBar;
@@ -45,6 +44,9 @@
 
     async init() {
       console.log('📱 Initialisation expérience mobile native...');
+      
+      // 🎬 PRIORITÉ 1 : Masquer le splash dès que possible
+      await this.hideSplashScreen();
       
       // Attendre que le DOM soit prêt
       if (document.readyState === 'loading') {
@@ -72,9 +74,6 @@
       // Configurer les transitions de page
       this.setupPageTransitions();
       
-      // Masquer le splash screen
-      await this.hideSplashScreen();
-      
       console.log('✅ Expérience mobile native prête !');
     }
 
@@ -87,7 +86,7 @@
       
       try {
         await StatusBar.setStyle({ style: 'light' });
-await StatusBar.setBackgroundColor({ color: '#ffffff' }); 
+        await StatusBar.setBackgroundColor({ color: '#ffffff' }); 
         await StatusBar.show();
         console.log('✅ Status bar configurée');
       } catch (error) {
@@ -118,7 +117,7 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
           if (isNative && StatusBar) {
             try {
               await StatusBar.setStyle({ style: 'light' });
-await StatusBar.setBackgroundColor({ color: '#ffffff' });
+              await StatusBar.setBackgroundColor({ color: '#ffffff' });
             } catch (e) {}
           }
         }
@@ -133,7 +132,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
     // ============================================
 
     createTabNavigation() {
-      // Vérifier si la navigation existe déjà
       if (document.querySelector('.mobile-tabs')) {
         console.log('⚠️ Navigation déjà créée');
         return;
@@ -159,7 +157,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
 
       document.body.appendChild(tabsContainer);
 
-      // Event listeners
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const tabId = btn.dataset.tab;
@@ -167,7 +164,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
         });
       });
 
-      // Ajouter padding en bas du contenu pour les tabs
       const mainContent = document.querySelector('main') || document.querySelector('.container') || document.querySelector('.main-content');
       if (mainContent) {
         mainContent.style.paddingBottom = '80px';
@@ -177,17 +173,14 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
     }
 
     async switchTab(tabId) {
-      // Haptic feedback
       await this.vibrate('light');
 
-      // Update active tab
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
       });
 
       this.currentTab = tabId;
 
-      // Émettre événement custom
       const event = new CustomEvent('tabChanged', { detail: { tab: tabId } });
       document.dispatchEvent(event);
 
@@ -215,7 +208,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
       let pulling = false;
       let refreshing = false;
 
-      // Créer l'indicateur
       const indicator = document.createElement('div');
       indicator.className = 'pull-refresh-indicator';
       indicator.innerHTML = '<i class="fas fa-sync-alt"></i>';
@@ -251,58 +243,35 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
       });
 
       mainContent.addEventListener('touchend', async (e) => {
-        if (!pulling) return;
+        if (!pulling || refreshing) return;
+
+        const finalY = e.changedTouches[0].clientY;
+        const diff = finalY - startY;
+
         pulling = false;
 
-        const diff = currentY - startY;
-
-        if (diff > this.pullRefreshThreshold && !refreshing) {
+        if (diff > this.pullRefreshThreshold) {
           refreshing = true;
           indicator.classList.add('refreshing');
-
-          // Haptic feedback
           await this.vibrate('medium');
 
-          // Émettre événement
           const event = new CustomEvent('pullRefresh');
           document.dispatchEvent(event);
 
-          // Attendre le refresh
-          try {
-            await this.refreshData();
-            await this.vibrate('success');
-          } catch (error) {
-            await this.vibrate('error');
-          }
-
-          // Reset
           setTimeout(() => {
-            indicator.style.transform = 'translateY(0) rotate(0deg)';
+            indicator.style.transform = 'translateY(0)';
             indicator.style.opacity = '0';
             indicator.classList.remove('ready', 'refreshing');
             refreshing = false;
-          }, 300);
+          }, 1500);
         } else {
-          indicator.style.transform = 'translateY(0) rotate(0deg)';
+          indicator.style.transform = 'translateY(0)';
           indicator.style.opacity = '0';
           indicator.classList.remove('ready');
         }
-
-        currentY = 0;
       }, { passive: true });
 
       console.log('✅ Pull-to-refresh configuré');
-    }
-
-    async refreshData() {
-      console.log('🔄 Refresh des données...');
-      
-      // Émettre un événement que votre code peut écouter
-      const event = new CustomEvent('dataRefreshRequested');
-      document.dispatchEvent(event);
-      
-      // Attendre un peu
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     // ============================================
@@ -313,36 +282,35 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
       const addSwipeToElement = (element) => {
         let startX = 0;
         let currentX = 0;
-        let isDragging = false;
+        let isSwiping = false;
 
-        const content = element.querySelector('.swipe-content') || element;
+        const content = element.querySelector('.swipeable-content');
         const actions = element.querySelector('.swipe-actions');
+
+        if (!content || !actions) return;
 
         element.addEventListener('touchstart', (e) => {
           startX = e.touches[0].clientX;
-          isDragging = true;
+          isSwiping = true;
         }, { passive: true });
 
         element.addEventListener('touchmove', (e) => {
-          if (!isDragging) return;
+          if (!isSwiping) return;
 
           currentX = e.touches[0].clientX;
           const diff = currentX - startX;
 
-          if (diff < 0 && actions) {
-            const distance = Math.max(diff, -100);
-            content.style.transform = `translateX(${distance}px)`;
-            content.style.transition = 'none';
+          if (diff < 0 && Math.abs(diff) < 100) {
+            content.style.transform = `translateX(${diff}px)`;
           }
         }, { passive: true });
 
-        element.addEventListener('touchend', async () => {
-          if (!isDragging) return;
-          isDragging = false;
+        element.addEventListener('touchend', async (e) => {
+          if (!isSwiping) return;
 
-          const diff = currentX - startX;
-
-          content.style.transition = 'transform 0.3s ease-out';
+          isSwiping = false;
+          const finalX = e.changedTouches[0].clientX;
+          const diff = finalX - startX;
 
           if (diff < -50 && actions) {
             content.style.transform = 'translateX(-100px)';
@@ -353,7 +321,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
         }, { passive: true });
       };
 
-      // Observer pour nouveaux éléments
       const observer = new MutationObserver((mutations) => {
         document.querySelectorAll('.swipeable-item:not(.swipe-enabled)').forEach(element => {
           addSwipeToElement(element);
@@ -362,8 +329,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
       });
 
       observer.observe(document.body, { childList: true, subtree: true });
-
-      // Appliquer aux éléments déjà présents
       document.querySelectorAll('.swipeable-item').forEach(addSwipeToElement);
 
       console.log('✅ Swipe gestures configurés');
@@ -381,7 +346,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
         });
       };
 
-      // Observer pour nouveaux boutons
       const observer = new MutationObserver(addHapticToButtons);
       observer.observe(document.body, { childList: true, subtree: true });
 
@@ -461,57 +425,39 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
     }
 
     // ============================================
-    // SPLASH SCREEN
+    // SPLASH SCREEN - VERSION OPTIMISÉE
     // ============================================
 
     async hideSplashScreen() {
-  if (!isNative || !SplashScreen) return;
-  
-  try {
-    console.log('🎬 Attente du chargement complet...');
-    
-    // ⏳ ATTENDRE que le DOM soit VRAIMENT prêt
-    await new Promise((resolve) => {
-      const checkReady = () => {
-        // Vérifier les éléments critiques
-        const tabs = document.querySelectorAll('[data-tab]');
-        const body = document.body;
-        const hasContent = tabs.length > 0 && body.children.length > 0;
+      if (!isNative || !SplashScreen) {
+        console.log('⚠️ Pas de splash screen (web ou plugin indisponible)');
+        return;
+      }
+      
+      try {
+        console.log('🎬 Masquage du splash screen...');
         
-        if (hasContent) {
-          console.log('✅ App prête, contenu détecté');
-          resolve();
-        } else {
-          console.log('⏳ En attente... Tabs:', tabs.length);
-          setTimeout(checkReady, 100);
+        // ⚡ Stratégie : masquer RAPIDEMENT avec une belle animation
+        // Le HTML a maintenant un fond vert qui prend le relais
+        
+        // Petit délai pour que le HTML soit chargé
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Masquer avec animation douce
+        await SplashScreen.hide({ fadeOutDuration: 800 });
+        
+        console.log('✅ Splash masqué avec succès');
+        
+      } catch (error) {
+        console.error('❌ Erreur splash:', error);
+        // En cas d'erreur, forcer le masquage
+        try {
+          await SplashScreen.hide({ fadeOutDuration: 300 });
+        } catch (e) {
+          console.error('❌ Impossible de masquer le splash');
         }
-      };
-      
-      // Timeout max 5 secondes (au lieu de 1s)
-      setTimeout(() => {
-        console.log('⏱️ Timeout atteint, masquage forcé');
-        resolve();
-      }, 5000);
-      
-      checkReady();
-    });
-    
-    // 🎨 Délai supplémentaire pour transition smooth
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // 🎭 Masquer avec animation longue
-    await SplashScreen.hide({ fadeOutDuration: 500 });
-    
-    console.log('🎉 Splash masqué');
-    
-  } catch (error) {
-    console.error('❌ Erreur splash:', error);
-    // Forcer après 3s en cas d'erreur
-    setTimeout(() => {
-      SplashScreen.hide({ fadeOutDuration: 300 }).catch(console.error);
-    }, 3000);
-  }
-}
+      }
+    }
 
     // ============================================
     // BOTTOM SHEET
@@ -549,7 +495,6 @@ await StatusBar.setBackgroundColor({ color: '#ffffff' });
       sheet.querySelector('.sheet-close').addEventListener('click', close);
       sheet.querySelector('.bottom-sheet-overlay').addEventListener('click', close);
 
-      // Swipe down pour fermer
       let startY = 0;
       const sheetContent = sheet.querySelector('.bottom-sheet-content');
 
