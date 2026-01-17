@@ -1,43 +1,34 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
-
-<!-- ✅ CRITICAL anti-white-flash (must be before external CSS) -->
-<style>
-  html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: 100vh !important;
-    background: #7fd3a6 !important; /* same as native splash */
-  }
-  #root, #app {
-    min-height: 100vh;
-    background: #7fd3a6;
-  }
-  /* Boot overlay */
-  #boot {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #7fd3a6;
-    z-index: 2147483647;
-  }
-  #boot img {
-    width: 180px;
-    height: 180px;
-    object-fit: contain;
-  }
-</style>
-
   <meta charset="UTF-8">
-  
-  <!-- 🚨 CRITIQUE : Ce style DOIT être EN PREMIER pour éviter le flash blanc -->
-  <style>html,body{margin:0;padding:0;background:#7fd3a6!important;min-height:100vh}</style>
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Boostinghost – Gérez vos réservations simplement</title>
+
+  <!-- 🎨 STYLE CRITIQUE - Fond vert pour transition fluide depuis splash -->
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #7fd3a6 !important; /* Même vert que le splash */
+      min-height: 100vh;
+      transition: background 0.6s ease;
+    }
+    
+    body.page-loaded {
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
+    }
+    
+    .landing-body {
+      opacity: 0;
+      animation: fadeInContent 0.5s ease forwards 0.2s;
+    }
+    
+    @keyframes fadeInContent {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -50,12 +41,6 @@
   <script src="/js/auth-fetch.js"></script>
 </head>
 <body class="landing-body" data-page="index-3">
-
-  <!-- ✅ Boot overlay (prevents WKWebView white flash) -->
-  <div id="boot" aria-hidden="true">
-    <img src="/splash.png" alt="Boostinghost">
-  </div>
-
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo" aria-label="Boostinghost">
@@ -126,7 +111,7 @@
             </a>
             <a href="/login.html" class="btn btn-ghost hero-btn">
               <i class="fas fa-sign-in-alt"></i>
-              J'ai déjà un compte
+              J’ai déjà un compte
             </a>
           </div>
           <div class="hero-footnote">
@@ -138,7 +123,7 @@
         <div class="hero-visual">
           <div class="hero-card">
             <div class="hero-card-header">
-              <span class="hero-card-title">Vue d'ensemble</span>
+              <span class="hero-card-title">Vue d’ensemble</span>
               <span class="hero-card-tag">Dashboard temps réel</span>
             </div>
             <div class="hero-stats">
@@ -151,7 +136,7 @@
                 <span class="hero-stat-value">3</span>
               </div>
               <div class="hero-stat">
-                <span class="hero-stat-label">Taux d'occupation</span>
+                <span class="hero-stat-label">Taux d’occupation</span>
                 <span class="hero-stat-value">78%</span>
               </div>
             </div>
@@ -223,7 +208,7 @@
             </div>
             <h3>Rappels intelligents</h3>
             <p>
-              Identifiez en un coup d'œil les arrivées et départs du jour, les séjours en cours et les ménages à prévoir.
+              Identifiez en un coup d’œil les arrivées et départs du jour, les séjours en cours et les ménages à prévoir.
             </p>
           </div>
         </div>
@@ -278,13 +263,13 @@
           <div class="audience-card">
             <h3>Propriétaires multi-biens</h3>
             <p>
-              Plusieurs logements sur Airbnb / Booking ? Visualisez tout d'un coup, évitez les doublons.
+              Plusieurs logements sur Airbnb / Booking ? Visualisez tout d’un coup, évitez les doublons.
             </p>
           </div>
           <div class="audience-card">
             <h3>Hôtes indépendants</h3>
             <p>
-              Même avec 1 ou 2 logements, un bon calendrier change tout : moins de stress, moins d'oubli.
+              Même avec 1 ou 2 logements, un bon calendrier change tout : moins de stress, moins d’oubli.
             </p>
           </div>
         </div>
@@ -292,7 +277,7 @@
         <div class="landing-cta">
           <h2>Prêt à simplifier votre gestion de réservations ?</h2>
           <p>
-            Créez votre espace en quelques clics et commencez à connecter vos logements dès aujourd'hui.
+            Créez votre espace en quelques clics et commencez à connecter vos logements dès aujourd’hui.
           </p>
           <div class="landing-cta-actions">
             <a href="/register.html" class="btn btn-primary hero-btn">
@@ -300,8 +285,7 @@
               Créer mon compte
             </a>
             <a href="/login.html" class="btn btn-ghost hero-btn">
-              <i class="fas fa-sign-in-alt"></i>
-              Me connecter
+              Se connecter
             </a>
           </div>
         </div>
@@ -312,141 +296,73 @@
   <!-- FOOTER -->
   <footer class="landing-footer">
     <div class="landing-container footer-inner">
-      <span class="footer-note">© 2024 Boostinghost – Tous droits réservés.</span>
-      <span>
-        <a href="#" class="footer-link">Mentions légales</a> •
-        <a href="#" class="footer-link">Confidentialité</a>
-      </span>
+      <span>© <span id="year"></span> Boostinghost</span>
+      <span class="footer-note">Outil créé par une conciergerie, pour des conciergeries.</span>
+      <a href="/login.html" class="footer-link">Accéder à mon espace</a>
     </div>
   </footer>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+  <script>
+    // Année dynamique
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 
-    body {
-      margin: 0;
-      padding: 0;
+  <style>
+    .landing-body {
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
+      color: var(--text-primary, #0f172a);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      color: var(--text-primary, #020617);
     }
 
-    .landing-container {
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 0 16px;
+/* Branding Boostinghost */
+/* Mobile fix: push down dark dashboard card */
+    @media (max-width: 640px) {
+      .landing-hero {
+        padding-top: 80px;  /* Compensation pour le header mobile fixe */
+      }
     }
 
-    .landing-header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 2px 20px rgba(15, 23, 42, 0.05);
-      padding: 10px 0;
+    /* Mobile header - hidden by default on desktop */
+    .mobile-header {
+      display: none;
     }
 
-    .header-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-    }
-
-    .logo-link {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .logo-text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-title {
-      font-weight: 700;
-      font-size: 17px;
-      letter-spacing: -0.01em;
-    }
-
+/* Keep Boostinghost on one line */
     .brand-name {
       display: inline-flex;
       align-items: baseline;
       white-space: nowrap;
       line-height: 1;
+      gap: 0;
     }
 
-    .brand-boosting {
-      color: #10B981;
-      font-weight: 800;
-      display: inline;
+    /* Mobile: show only mobile header without buttons */
+    @media (max-width: 640px) {
+      .landing-header { 
+        display: none !important;   /* removes logo + "Se connecter / Créer un compte" */
+      }
+      .mobile-header { 
+        display: flex !important;    /* show only the mobile header */
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(18px);
+        background: rgba(248, 250, 252, 0.95);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+        padding: 12px 16px;
+        align-items: center;
+      }
     }
 
-    .brand-host {
-      color: #0F172A;
-      font-weight: 700;
-      display: inline;
-    }
 
-    .header-nav {
-      display: flex;
-      gap: 6px;
-    }
+    .brand-boosting { color: #10B981; font-weight: 800; }
+    .brand-host { color: #0F172A; font-weight: 700; }
 
-    .nav-link {
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 14px;
-      color: var(--text-secondary, #4b5563);
-      text-decoration: none;
-      font-weight: 500;
-      transition: background 0.15s ease, color 0.15s ease;
-    }
-
-    .nav-link:hover {
-      background: rgba(15, 23, 42, 0.05);
-      color: var(--text-primary, #020617);
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .mobile-header {
-      display: none;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
-      padding: 10px 16px;
-    }
-
+    .mobile-header .bh-logo { width: 40px; height: 40px; }
+    
     .mobile-logo {
       display: flex;
       align-items: center;
@@ -454,35 +370,98 @@
       text-decoration: none;
       color: inherit;
     }
-
+    
     .mobile-logo-text {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .logo-icon--svg {
+      background: transparent !important;
+      box-shadow: none !important;
+      width: auto !important;
+      height: auto !important;
       display: flex;
-      flex-direction: column;
-    }
-
-    @media (max-width: 960px) {
-      .landing-header {
-        display: none;
-      }
-      .mobile-header {
-        display: block;
-      }
-    }
-
-    .btn {
-      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: var(--radius-lg, 12px);
-      font-size: 14px;
-      font-weight: 600;
+    }
+    .logo-icon--svg .bh-logo { width: 36px; height: 36px; }
+
+
+    .landing-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .landing-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+      background: rgba(248, 250, 252, 0.9);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      gap: 16px;
+    }
+
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       text-decoration: none;
-      transition: all 0.15s ease;
-      border: none;
-      cursor: pointer;
-      white-space: nowrap;
+      color: inherit;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+      color: #ecfdf5;
+      font-size: 16px;
+      box-shadow: 0 14px 40px rgba(22, 163, 74, 0.45);
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .logo-subtitle {
+      font-size: 11px;
+      color: var(--text-tertiary, #6b7280);
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      text-decoration: none;
+      color: var(--text-secondary, #4b5563);
+      font-weight: 500;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary, #111827);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .btn.small {
@@ -491,36 +470,55 @@
     }
 
     .btn-primary {
-      background: var(--primary-color, #10B981);
-      color: #ffffff;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-color, #22c55e);
+      border-radius: 999px;
+      padding: 10px 18px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(22, 163, 74, 0.35);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
     }
 
     .btn-primary:hover {
-      background: #059669;
-      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+      background: var(--primary-dark, #16a34a);
       transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(22, 163, 74, 0.5);
     }
 
     .btn-ghost {
-      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 9px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      text-decoration: none;
+      font-size: 14px;
       color: var(--text-secondary, #4b5563);
-      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease;
     }
 
     .btn-ghost:hover {
-      background: rgba(15, 23, 42, 0.04);
+      background: rgba(255, 255, 255, 1);
       border-color: rgba(148, 163, 184, 0.9);
     }
 
     .landing-hero {
-      padding: 48px 0 40px;
+      padding: 32px 0 40px;
     }
 
     .hero-inner {
       display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-      gap: 40px;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      gap: 32px;
       align-items: center;
     }
 
@@ -528,54 +526,56 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 16px;
-      border-radius: var(--radius-full, 999px);
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.2);
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.08);
       color: #047857;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
+    }
+
+    .hero-badge i {
+      font-size: 12px;
     }
 
     .hero-text h1 {
-      font-size: 42px;
-      font-weight: 800;
-      margin-bottom: 12px;
+      font-size: 30px;
       line-height: 1.15;
-      letter-spacing: -0.02em;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      color: #020617;
     }
 
     .hero-subtitle {
-      font-size: 17px;
+      font-size: 14px;
       color: var(--text-secondary, #4b5563);
-      line-height: 1.6;
-      margin-bottom: 24px;
-      max-width: 560px;
+      max-width: 480px;
+      margin-bottom: 18px;
     }
 
     .hero-actions {
       display: flex;
-      gap: 10px;
       flex-wrap: wrap;
-      margin-bottom: 16px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
 
     .hero-btn {
-      padding: 12px 20px;
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .hero-footnote {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-tertiary, #6b7280);
-      padding: 8px 14px;
-      border-radius: var(--radius-lg);
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(226, 232, 240, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-footnote i {
+      font-size: 11px;
     }
 
     .hero-visual {
@@ -584,110 +584,90 @@
     }
 
     .hero-card {
-      background: rgba(255, 255, 255, 0.98);
-      border-radius: 20px;
-      padding: 20px;
-      border: 1px solid rgba(226, 232, 240, 0.9);
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
-      max-width: 400px;
+      background: radial-gradient(circle at top left, #0f172a, #020617);
+      border-radius: 24px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(30, 64, 175, 0.5);
       width: 100%;
+      max-width: 360px;
+      color: #e5e7eb;
     }
 
     .hero-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .hero-card-title {
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 600;
+      color: #e5e7eb;
     }
 
     .hero-card-tag {
       font-size: 11px;
-      padding: 4px 10px;
-      border-radius: var(--radius-full);
-      background: rgba(34, 197, 94, 0.1);
-      color: #16a34a;
-      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.16);
+      color: #bfdbfe;
+      font-weight: 500;
+      border: 1px solid rgba(59, 130, 246, 0.5);
     }
 
     .hero-stats {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .hero-stat {
-      background: rgba(241, 245, 249, 0.8);
-      padding: 12px;
-      border-radius: 14px;
-      text-align: center;
-      border: 1px solid rgba(226, 232, 240, 0.7);
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     .hero-stat-label {
-      display: block;
-      font-size: 10px;
-      color: var(--text-tertiary, #6b7280);
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      margin-bottom: 4px;
+      font-size: 11px;
+      color: #9ca3af;
     }
 
     .hero-stat-value {
-      display: block;
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 700;
-      color: var(--text-primary);
+      color: #f9fafb;
     }
 
     .hero-calendar-placeholder {
-      background: rgba(248, 250, 252, 0.9);
-      padding: 14px;
-      border-radius: 14px;
-      border: 1px solid rgba(226, 232, 240, 0.8);
+      padding: 10px 10px 8px;
+      border-radius: 16px;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
     }
 
     .hero-calendar-row {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 0;
-      font-size: 13px;
-      color: var(--text-primary);
-    }
-
-    .hero-calendar-row + .hero-calendar-row {
-      border-top: 1px solid rgba(226, 232, 240, 0.7);
+      gap: 8px;
     }
 
     .hero-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 999px;
       flex-shrink: 0;
     }
 
-    .dot-green {
-      background: #22c55e;
-    }
-
-    .dot-blue {
-      background: #3b82f6;
-    }
-
-    .dot-orange {
-      background: #f59e0b;
-    }
+    .dot-green { background: #22c55e; }
+    .dot-blue { background: #3b82f6; }
+    .dot-orange { background: #fb923c; }
 
     .hero-line {
-      flex: 1;
-      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .hero-calendar-footer {
@@ -898,12 +878,30 @@
         align-items: flex-start;
       }
     }
+    .brand-name {
+  display: inline-flex;       /* force sur une seule ligne */
+  align-items: baseline;
+  white-space: nowrap;        /* interdit le retour à la ligne */
+  line-height: 1;
+}
+
+.brand-boosting,
+.brand-host {
+  display: inline;
+}
   </style>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
-    console.log('📄 Index.html - chargement');
-    
+    // 🎬 Transition fluide du fond une fois la page chargée
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 Index.html - DOM chargé');
+      setTimeout(() => {
+        document.body.classList.add('page-loaded');
+        console.log('✨ Transition de fond activée sur index.html');
+      }, 200);
+    });
+
     (function() {
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
@@ -936,37 +934,7 @@
         if (companyEl) companyEl.textContent = user.company;
       }
     })();
-    
-    console.log('✅ Index.html - scripts chargés');
   </script>
   <script type="module" src="/js/push-notifications-handler.js"></script>
-
-<script>
-(function () {
-  const boot = document.getElementById('boot');
-  if (!boot) return;
-
-  const hide = () => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        boot.style.transition = 'opacity 200ms ease';
-        boot.style.opacity = '0';
-        setTimeout(() => boot.remove(), 260);
-      });
-    });
-  };
-
-  // Hide as soon as DOM is ready (first paint), not waiting for fonts/images
-  if (document.readyState === 'interactive' || document.readyState === 'complete') {
-    hide();
-  } else {
-    document.addEventListener('DOMContentLoaded', hide, { once: true });
-  }
-
-  // Safety: remove anyway after 4s
-  setTimeout(() => { if (boot.isConnected) hide(); }, 4000);
-})();
-</script>
-
 </body>
 </html>
