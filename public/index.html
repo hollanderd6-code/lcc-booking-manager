@@ -2,33 +2,12 @@
 <html lang="fr" data-theme="light">
 <head>
   <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  
+  <!-- 🚨 CRITIQUE : Ce style DOIT être EN PREMIER pour éviter le flash blanc -->
+  <style>html,body{margin:0;padding:0;background:#7fd3a6!important;min-height:100vh}</style>
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Boostinghost – Gérez vos réservations simplement</title>
-
-  <!-- 🎨 STYLE CRITIQUE - Fond vert pour transition fluide depuis splash -->
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #7fd3a6 !important; /* Même vert que le splash */
-      min-height: 100vh;
-      transition: background 0.6s ease;
-    }
-    
-    body.page-loaded {
-      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
-    }
-    
-    .landing-body {
-      opacity: 0;
-      animation: fadeInContent 0.5s ease forwards 0.2s;
-    }
-    
-    @keyframes fadeInContent {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -111,7 +90,7 @@
             </a>
             <a href="/login.html" class="btn btn-ghost hero-btn">
               <i class="fas fa-sign-in-alt"></i>
-              J’ai déjà un compte
+              J'ai déjà un compte
             </a>
           </div>
           <div class="hero-footnote">
@@ -123,7 +102,7 @@
         <div class="hero-visual">
           <div class="hero-card">
             <div class="hero-card-header">
-              <span class="hero-card-title">Vue d’ensemble</span>
+              <span class="hero-card-title">Vue d'ensemble</span>
               <span class="hero-card-tag">Dashboard temps réel</span>
             </div>
             <div class="hero-stats">
@@ -136,7 +115,7 @@
                 <span class="hero-stat-value">3</span>
               </div>
               <div class="hero-stat">
-                <span class="hero-stat-label">Taux d’occupation</span>
+                <span class="hero-stat-label">Taux d'occupation</span>
                 <span class="hero-stat-value">78%</span>
               </div>
             </div>
@@ -208,7 +187,7 @@
             </div>
             <h3>Rappels intelligents</h3>
             <p>
-              Identifiez en un coup d’œil les arrivées et départs du jour, les séjours en cours et les ménages à prévoir.
+              Identifiez en un coup d'œil les arrivées et départs du jour, les séjours en cours et les ménages à prévoir.
             </p>
           </div>
         </div>
@@ -263,13 +242,13 @@
           <div class="audience-card">
             <h3>Propriétaires multi-biens</h3>
             <p>
-              Plusieurs logements sur Airbnb / Booking ? Visualisez tout d’un coup, évitez les doublons.
+              Plusieurs logements sur Airbnb / Booking ? Visualisez tout d'un coup, évitez les doublons.
             </p>
           </div>
           <div class="audience-card">
             <h3>Hôtes indépendants</h3>
             <p>
-              Même avec 1 ou 2 logements, un bon calendrier change tout : moins de stress, moins d’oubli.
+              Même avec 1 ou 2 logements, un bon calendrier change tout : moins de stress, moins d'oubli.
             </p>
           </div>
         </div>
@@ -277,7 +256,7 @@
         <div class="landing-cta">
           <h2>Prêt à simplifier votre gestion de réservations ?</h2>
           <p>
-            Créez votre espace en quelques clics et commencez à connecter vos logements dès aujourd’hui.
+            Créez votre espace en quelques clics et commencez à connecter vos logements dès aujourd'hui.
           </p>
           <div class="landing-cta-actions">
             <a href="/register.html" class="btn btn-primary hero-btn">
@@ -285,7 +264,8 @@
               Créer mon compte
             </a>
             <a href="/login.html" class="btn btn-ghost hero-btn">
-              Se connecter
+              <i class="fas fa-sign-in-alt"></i>
+              Me connecter
             </a>
           </div>
         </div>
@@ -296,99 +276,33 @@
   <!-- FOOTER -->
   <footer class="landing-footer">
     <div class="landing-container footer-inner">
-      <span>© <span id="year"></span> Boostinghost</span>
-      <span class="footer-note">Outil créé par une conciergerie, pour des conciergeries.</span>
-      <a href="/login.html" class="footer-link">Accéder à mon espace</a>
+      <span class="footer-note">© 2024 Boostinghost – Tous droits réservés.</span>
+      <span>
+        <a href="#" class="footer-link">Mentions légales</a> •
+        <a href="#" class="footer-link">Confidentialité</a>
+      </span>
     </div>
   </footer>
 
-  <script>
-    // Année dynamique
-    document.getElementById('year').textContent = new Date().getFullYear();
-  </script>
-
   <style>
-    .landing-body {
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
-      color: var(--text-primary, #0f172a);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      color: var(--text-primary, #020617);
     }
-
-/* Branding Boostinghost */
-/* Mobile fix: push down dark dashboard card */
-    @media (max-width: 640px) {
-      .landing-hero {
-        padding-top: 80px;  /* Compensation pour le header mobile fixe */
-      }
-    }
-
-    /* Mobile header - hidden by default on desktop */
-    .mobile-header {
-      display: none;
-    }
-
-/* Keep Boostinghost on one line */
-    .brand-name {
-      display: inline-flex;
-      align-items: baseline;
-      white-space: nowrap;
-      line-height: 1;
-      gap: 0;
-    }
-
-    /* Mobile: show only mobile header without buttons */
-    @media (max-width: 640px) {
-      .landing-header { 
-        display: none !important;   /* removes logo + "Se connecter / Créer un compte" */
-      }
-      .mobile-header { 
-        display: flex !important;    /* show only the mobile header */
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        backdrop-filter: blur(18px);
-        background: rgba(248, 250, 252, 0.95);
-        border-bottom: 1px solid rgba(226, 232, 240, 0.7);
-        padding: 12px 16px;
-        align-items: center;
-      }
-    }
-
-
-    .brand-boosting { color: #10B981; font-weight: 800; }
-    .brand-host { color: #0F172A; font-weight: 700; }
-
-    .mobile-header .bh-logo { width: 40px; height: 40px; }
-    
-    .mobile-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      color: inherit;
-    }
-    
-    .mobile-logo-text {
-      font-size: 16px;
-      font-weight: 700;
-    }
-    .logo-icon--svg {
-      background: transparent !important;
-      box-shadow: none !important;
-      width: auto !important;
-      height: auto !important;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .logo-icon--svg .bh-logo { width: 36px; height: 36px; }
-
 
     .landing-container {
-      max-width: 1100px;
+      max-width: 1200px;
+      width: 100%;
       margin: 0 auto;
       padding: 0 16px;
     }
@@ -396,21 +310,108 @@
     .landing-header {
       position: sticky;
       top: 0;
-      z-index: 20;
-      backdrop-filter: blur(18px);
-      background: rgba(248, 250, 252, 0.9);
-      border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 2px 20px rgba(15, 23, 42, 0.05);
+      padding: 10px 0;
     }
 
     .header-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
-      gap: 16px;
+      gap: 20px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
     }
 
     .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-name {
+      display: inline-flex;
+      align-items: baseline;
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .brand-boosting {
+      color: #10B981;
+      font-weight: 800;
+      display: inline;
+    }
+
+    .brand-host {
+      color: #0F172A;
+      font-weight: 700;
+      display: inline;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-link {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text-secondary, #4b5563);
+      text-decoration: none;
+      font-weight: 500;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .nav-link:hover {
+      background: rgba(15, 23, 42, 0.05);
+      color: var(--text-primary, #020617);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mobile-header {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      padding: 10px 16px;
+    }
+
+    .mobile-logo {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -418,50 +419,34 @@
       color: inherit;
     }
 
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 999px;
+    .mobile-logo-text {
       display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 960px) {
+      .landing-header {
+        display: none;
+      }
+      .mobile-header {
+        display: block;
+      }
+    }
+
+    .btn {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
-      color: #ecfdf5;
-      font-size: 16px;
-      box-shadow: 0 14px 40px rgba(22, 163, 74, 0.45);
-    }
-
-    .logo-title {
-      font-weight: 700;
-      font-size: 15px;
-    }
-
-    .logo-subtitle {
-      font-size: 11px;
-      color: var(--text-tertiary, #6b7280);
-    }
-
-    .header-nav {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .nav-link {
-      font-size: 13px;
-      text-decoration: none;
-      color: var(--text-secondary, #4b5563);
-      font-weight: 500;
-    }
-
-    .nav-link:hover {
-      color: var(--text-primary, #111827);
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
       gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-lg, 12px);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
     }
 
     .btn.small {
@@ -470,55 +455,36 @@
     }
 
     .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--primary-color, #22c55e);
-      border-radius: 999px;
-      padding: 10px 18px;
-      color: #fff;
-      text-decoration: none;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 10px 30px rgba(22, 163, 74, 0.35);
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      background: var(--primary-color, #10B981);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
     }
 
     .btn-primary:hover {
-      background: var(--primary-dark, #16a34a);
+      background: #059669;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
       transform: translateY(-1px);
-      box-shadow: 0 16px 40px rgba(22, 163, 74, 0.5);
     }
 
     .btn-ghost {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border-radius: 999px;
-      padding: 9px 16px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      text-decoration: none;
-      font-size: 14px;
+      background: transparent;
       color: var(--text-secondary, #4b5563);
-      background: rgba(255, 255, 255, 0.7);
-      cursor: pointer;
-      transition: background 0.12s ease, border-color 0.12s ease;
+      border: 1px solid rgba(226, 232, 240, 0.9);
     }
 
     .btn-ghost:hover {
-      background: rgba(255, 255, 255, 1);
+      background: rgba(15, 23, 42, 0.04);
       border-color: rgba(148, 163, 184, 0.9);
     }
 
     .landing-hero {
-      padding: 32px 0 40px;
+      padding: 48px 0 40px;
     }
 
     .hero-inner {
       display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
-      gap: 32px;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 40px;
       align-items: center;
     }
 
@@ -526,56 +492,54 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, 0.08);
+      padding: 8px 16px;
+      border-radius: var(--radius-full, 999px);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
       color: #047857;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 500;
-      margin-bottom: 12px;
-    }
-
-    .hero-badge i {
-      font-size: 12px;
+      margin-bottom: 16px;
     }
 
     .hero-text h1 {
-      font-size: 30px;
-      line-height: 1.15;
+      font-size: 42px;
       font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 10px;
-      color: #020617;
+      margin-bottom: 12px;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
     }
 
     .hero-subtitle {
-      font-size: 14px;
+      font-size: 17px;
       color: var(--text-secondary, #4b5563);
-      max-width: 480px;
-      margin-bottom: 18px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      max-width: 560px;
     }
 
     .hero-actions {
       display: flex;
-      flex-wrap: wrap;
       gap: 10px;
-      margin-bottom: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
     }
 
     .hero-btn {
-      font-size: 14px;
+      padding: 12px 20px;
+      font-size: 15px;
     }
 
     .hero-footnote {
-      font-size: 12px;
-      color: var(--text-tertiary, #6b7280);
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
-    }
-
-    .hero-footnote i {
-      font-size: 11px;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-tertiary, #6b7280);
+      padding: 8px 14px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(226, 232, 240, 0.6);
     }
 
     .hero-visual {
@@ -584,90 +548,110 @@
     }
 
     .hero-card {
-      background: radial-gradient(circle at top left, #0f172a, #020617);
-      border-radius: 24px;
-      padding: 18px 18px 16px;
-      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(30, 64, 175, 0.5);
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      max-width: 400px;
       width: 100%;
-      max-width: 360px;
-      color: #e5e7eb;
     }
 
     .hero-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
 
     .hero-card-title {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 600;
-      color: #e5e7eb;
     }
 
     .hero-card-tag {
       font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(59, 130, 246, 0.16);
-      color: #bfdbfe;
-      font-weight: 500;
-      border: 1px solid rgba(59, 130, 246, 0.5);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+      font-weight: 600;
     }
 
     .hero-stats {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .hero-stat {
+      background: rgba(241, 245, 249, 0.8);
+      padding: 12px;
+      border-radius: 14px;
+      text-align: center;
+      border: 1px solid rgba(226, 232, 240, 0.7);
     }
 
     .hero-stat-label {
-      font-size: 11px;
-      color: #9ca3af;
+      display: block;
+      font-size: 10px;
+      color: var(--text-tertiary, #6b7280);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      margin-bottom: 4px;
     }
 
     .hero-stat-value {
-      font-size: 18px;
+      display: block;
+      font-size: 22px;
       font-weight: 700;
-      color: #f9fafb;
+      color: var(--text-primary);
     }
 
     .hero-calendar-placeholder {
-      padding: 10px 10px 8px;
-      border-radius: 16px;
-      background: #020617;
-      color: #e5e7eb;
-      font-size: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(248, 250, 252, 0.9);
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.8);
     }
 
     .hero-calendar-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      padding: 10px 0;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .hero-calendar-row + .hero-calendar-row {
+      border-top: 1px solid rgba(226, 232, 240, 0.7);
     }
 
     .hero-dot {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 999px;
       flex-shrink: 0;
     }
 
-    .dot-green { background: #22c55e; }
-    .dot-blue { background: #3b82f6; }
-    .dot-orange { background: #fb923c; }
+    .dot-green {
+      background: #22c55e;
+    }
+
+    .dot-blue {
+      background: #3b82f6;
+    }
+
+    .dot-orange {
+      background: #f59e0b;
+    }
 
     .hero-line {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      flex: 1;
+      font-weight: 500;
     }
 
     .hero-calendar-footer {
@@ -878,30 +862,12 @@
         align-items: flex-start;
       }
     }
-    .brand-name {
-  display: inline-flex;       /* force sur une seule ligne */
-  align-items: baseline;
-  white-space: nowrap;        /* interdit le retour à la ligne */
-  line-height: 1;
-}
-
-.brand-boosting,
-.brand-host {
-  display: inline;
-}
   </style>
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
-    // 🎬 Transition fluide du fond une fois la page chargée
-    window.addEventListener('DOMContentLoaded', () => {
-      console.log('📄 Index.html - DOM chargé');
-      setTimeout(() => {
-        document.body.classList.add('page-loaded');
-        console.log('✨ Transition de fond activée sur index.html');
-      }, 200);
-    });
-
+    console.log('📄 Index.html - chargement');
+    
     (function() {
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
@@ -934,6 +900,8 @@
         if (companyEl) companyEl.textContent = user.company;
       }
     })();
+    
+    console.log('✅ Index.html - scripts chargés');
   </script>
   <script type="module" src="/js/push-notifications-handler.js"></script>
 </body>
