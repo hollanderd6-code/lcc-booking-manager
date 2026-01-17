@@ -1,35 +1,33 @@
-<!DOCTYPE html>
+x<!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Boostinghost – Gérez vos réservations simplement</title>
-
-  <!-- 🎨 STYLE CRITIQUE - Fond vert pour transition fluide depuis splash -->
-  <style>
-    html, body {
+<style>
+html, body {
       margin: 0;
       padding: 0;
-      background: #7fd3a6 !important; /* Même vert que le splash */
+      background: #7fd3a6 !important; /* Force le vert du splash */
       min-height: 100vh;
+    }
+    
+    /* On cache le contenu pour éviter de voir l'interface charger */
+    .landing-body {
+      opacity: 0;
+    }
+    
+    /* Quand l'app est prête, on affiche tout avec le dégradé bleu */
+    body.app-ready {
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
       transition: background 0.6s ease;
     }
     
-    body.page-loaded {
-      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
+    body.app-ready .landing-body {
+      opacity: 1;
+      transition: opacity 0.5s ease;
     }
-    
-    .landing-body {
-      opacity: 0;
-      animation: fadeInContent 0.5s ease forwards 0.2s;
-    }
-    
-    @keyframes fadeInContent {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
-
+  <style>
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
@@ -893,6 +891,17 @@
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
+    // Gestion du Splash Screen
+    window.addEventListener('load', () => {
+      setTimeout(async () => {
+        // On cache le logo natif
+        if (window.Capacitor && window.Capacitor.Plugins.SplashScreen) {
+          await window.Capacitor.Plugins.SplashScreen.hide();
+        }
+        // On affiche l'interface
+        document.body.classList.add('app-ready');
+      }, 400); // 400ms pour être sûr que le fond est prêt
+    });
     // 🎬 Transition fluide du fond une fois la page chargée
     window.addEventListener('DOMContentLoaded', () => {
       console.log('📄 Index.html - DOM chargé');
