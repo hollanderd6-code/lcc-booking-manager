@@ -3,6 +3,24 @@
 // ========================================
 const API_URL = 'https://lcc-booking-manager.onrender.com';
 
+// --- AJOUT POUR LE SPLASH SCREEN ---
+// On essaie de masquer le splash screen manuellement pour éviter l'écran blanc
+async function hideNativeSplashScreen() {
+  try {
+    // Dans Capacitor, les plugins sont accessibles via l'objet global Capacitor
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
+      // On attend un court instant (100ms) pour s'assurer que le premier rendu CSS vert est appliqué
+      setTimeout(async () => {
+        await window.Capacitor.Plugins.SplashScreen.hide();
+        console.log('Native Splash Screen hidden');
+      }, 100);
+    }
+  } catch (e) {
+    console.warn('SplashScreen plugin not available', e);
+  }
+}
+// ------------------------------------
+
 let allProperties = [];
 let calendar = null;
 let allReservations = [];
@@ -38,6 +56,9 @@ function normalizeSourceToKey(raw) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Platform initializing...');
+
+  // APPEL DU MASQUAGE DU SPLASH SCREEN
+  hideNativeSplashScreen();
 
   // Initialize theme
   initializeTheme();
