@@ -5,6 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Boostinghost – Gérez vos réservations simplement</title>
 
+  <!-- 🎨 STYLE CRITIQUE - Fond vert pour transition fluide depuis splash -->
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #7fd3a6 !important; /* Même vert que le splash */
+      min-height: 100vh;
+      transition: background 0.6s ease;
+    }
+    
+    body.page-loaded {
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc) !important;
+    }
+    
+    .landing-body {
+      opacity: 0;
+      animation: fadeInContent 0.5s ease forwards 0.2s;
+    }
+    
+    @keyframes fadeInContent {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
@@ -868,6 +893,15 @@
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
+    // 🎬 Transition fluide du fond une fois la page chargée
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 Index.html - DOM chargé');
+      setTimeout(() => {
+        document.body.classList.add('page-loaded');
+        console.log('✨ Transition de fond activée sur index.html');
+      }, 200);
+    });
+
     (function() {
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
