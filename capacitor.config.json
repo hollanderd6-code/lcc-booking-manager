@@ -2,12 +2,14 @@
   "appId": "com.boostinghost.app",
   "appName": "Boostinghost",
   "webDir": "public",
+  "backgroundColor": "#7fd3a6",
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 3000,
-      "launchAutoHide": true,
-      "launchFadeOutDuration": 300,
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 500,
       "backgroundColor": "#7fd3a6",
+      "androidScaleType": "CENTER_CROP",
       "showSpinner": false,
       "splashFullScreen": true,
       "splashImmersive": true
@@ -16,10 +18,22 @@
       "style": "LIGHT",
       "backgroundColor": "#7fd3a6",
       "overlaysWebView": false
+    },
+    "Haptics": {
+      "enabled": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   },
   "ios": {
     "backgroundColor": "#7fd3a6",
-    "contentInset": "automatic"
+    "contentInset": "automatic",
+    "allowsLinkPreview": false,
+    "scrollEnabled": true
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
   }
 }
