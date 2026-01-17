@@ -1,34 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
-
-<style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    background: #7fd3a6 !important;
-  }
-  #root, #app {
-    min-height: 100vh;
-    background: #7fd3a6;
-  }
-  #boot {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #7fd3a6;
-    z-index: 2147483647;
-  }
-  #boot img {
-    width: 180px;
-    height: 180px;
-    object-fit: contain;
-  }
-</style>
-
   <meta charset="UTF-8">
   
   <!-- 🚨 CRITIQUE : Ce style DOIT être EN PREMIER pour éviter le flash blanc -->
@@ -47,12 +19,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-fetch.js"></script>
 </head>
-<body>
-
-<div id="boot" aria-hidden="true">
-  <img src="/splash.png" alt="Boostinghost">
-</div>
- class="landing-body" data-page="index-3">
+<body class="landing-body" data-page="index-3">
   <!-- MOBILE HEADER -->
   <div class="mobile-header">
     <a href="/app.html" class="mobile-logo" aria-label="Boostinghost">
@@ -937,31 +904,5 @@
     console.log('✅ Index.html - scripts chargés');
   </script>
   <script type="module" src="/js/push-notifications-handler.js"></script>
-
-<script>
-(function () {
-  const boot = document.getElementById('boot');
-  if (!boot) return;
-
-  const hide = () => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        boot.style.transition = 'opacity 200ms ease';
-        boot.style.opacity = '0';
-        setTimeout(() => boot.remove(), 250);
-      });
-    });
-  };
-
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    hide();
-  } else {
-    document.addEventListener('DOMContentLoaded', hide);
-  }
-
-  setTimeout(() => { if (boot.isConnected) boot.remove(); }, 2500);
-})();
-</script>
-
 </body>
 </html>
