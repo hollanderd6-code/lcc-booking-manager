@@ -12,11 +12,11 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 0,
-      "launchAutoHide": false,
+      "launchShowDuration": 8000,
+      "launchAutoHide": true,
       "backgroundColor": "#7fd3a6",
-      "showSpinner": false,
-      "iosSpinnerStyle": "small",
+      "showSpinner": true,
+      "iosSpinnerStyle": "large",
       "spinnerColor": "#ffffff"
     }
   }
