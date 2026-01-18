@@ -1,22 +1,8 @@
 (() => {
   const originalFetch = window.fetch;
 
-  async function getToken() {
-    // Utilise SecureStorage si disponible, sinon localStorage
-    if (window.SecureStorage) {
-      return await window.SecureStorage.getItem('lcc_token');
-    }
+  function getToken() {
     return localStorage.getItem('lcc_token');
-  }
-
-  async function clearAuth() {
-    if (window.SecureStorage) {
-      await window.SecureStorage.removeItem('lcc_token');
-      await window.SecureStorage.removeItem('lcc_user');
-    } else {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-    }
   }
 
   window.fetch = async (input, init = {}) => {
@@ -38,7 +24,7 @@
       return originalFetch(input, init);
     }
 
-    const token = await getToken();
+    const token = getToken();
     const headers = new Headers(init.headers || {});
 
     if (token && !headers.get('Authorization')) {
@@ -48,7 +34,8 @@
     const res = await originalFetch(input, { ...init, headers });
 
     if (res.status === 401) {
-      await clearAuth();
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
       window.location.href = '/login.html';
     }
 
