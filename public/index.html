@@ -39,9 +39,6 @@
   <!-- Style global de la plateforme -->
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-fetch.js"></script>
-  
-  <!-- 📱 Capacitor Core -->
-  <script src="capacitor.js"></script>
 </head>
 <body class="landing-body" data-page="index-3">
   <!-- MOBILE HEADER -->
@@ -896,31 +893,14 @@
 
   <!-- MOBILE MENU SCRIPT -->
   <script>
-    // 🎬 GESTION DU SPLASHSCREEN CAPACITOR
-    if (window.Capacitor) {
-      document.addEventListener('DOMContentLoaded', async function() {
-        console.log('📱 Capacitor détecté - Gestion du SplashScreen');
-        
-        // Attendre que tout soit chargé
-        window.addEventListener('load', async function() {
-          console.log('✅ Page chargée - Masquage du SplashScreen');
-          
-          try {
-            const { SplashScreen } = window.Capacitor.Plugins;
-            
-            // Petit délai pour s'assurer que tout est bien affiché
-            setTimeout(async () => {
-              await SplashScreen.hide({
-                fadeOutDuration: 300
-              });
-              console.log('✨ SplashScreen caché avec succès');
-            }, 300);
-          } catch (error) {
-            console.error('❌ Erreur lors du masquage du SplashScreen:', error);
-          }
-        });
-      });
-    }
+    // 🎬 Transition fluide du fond une fois la page chargée
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 Index.html - DOM chargé');
+      setTimeout(() => {
+        document.body.classList.add('page-loaded');
+        console.log('✨ Transition de fond activée sur index.html');
+      }, 200);
+    });
 
     (function() {
       const currentPage = document.body.getAttribute('data-page');
