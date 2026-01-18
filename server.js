@@ -3627,6 +3627,13 @@ console.log(
         console.error('❌ Erreur notifications push réservations:', pushError.message);
       }
     }
+  } else if (isFirstSync) {
+    console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
+  }
+
+  console.log('✅ Synchronisation terminée');
+  return reservationsStore;
+}
 // ============================================
 // ROUTE DE TEST WHATSAPP AMÉLIORÉE
 // ============================================
