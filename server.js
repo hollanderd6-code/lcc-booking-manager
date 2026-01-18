@@ -3587,7 +3587,7 @@ console.log(
       try {
         await notifyCleanersAboutNewBookings(newReservations);
       } catch (err) {
-        console.error('❌ Erreur lors de l'envoi des notifications ménage:', err);
+        console.error('❌ Erreur lors de l\'envoi des notifications ménage:', err);
       }
       
       // 🔔 NOTIFICATIONS PUSH POUR LES NOUVELLES RÉSERVATIONS
