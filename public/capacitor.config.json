@@ -1,0 +1,46 @@
+{
+  "appId": "com.boostinghost.app",
+  "appName": "Boostinghost",
+  "webDir": "public",
+  "backgroundColor": "#7fd3a6",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": false,
+      "backgroundColor": "#7fd3a6",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "light",
+      "backgroundColor": "#7fd3a6",
+      "overlaysWebView": false
+    },
+    "Haptics": {
+      "enabled": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  },
+  "ios": {
+    "backgroundColor": "#7fd3a6",
+    "contentInset": "automatic",
+    "scrollEnabled": true
+  },
+  "android": {
+    "backgroundColor": "#7fd3a6",
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "url": "https://lcc-booking-manager.onrender.com",
+    "cleartext": true,
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  }
+}
