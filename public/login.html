@@ -59,8 +59,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
-  <script src="capacitor.js"></script>
-  <script src="/js/secure-storage.js"></script>
   <script src="/js/auth-fetch.js"></script>
 </head>
 <body class="auth-body">
@@ -172,8 +170,8 @@
     }
 
     // Si déjà connecté, redirection
-    (async function () {
-      const token = await SecureStorage.getItem('lcc_token');
+    (function () {
+      const token = localStorage.getItem('lcc_token');
       if (token) {
         console.log('🔒 Token trouvé, redirection...');
         window.location.href = '/app.html';
@@ -214,11 +212,11 @@
           return;
         }
 
-        // Stocker le token + user de manière sécurisée
-        await SecureStorage.setItem('lcc_token', data.token);
-        await SecureStorage.setItem('lcc_user', JSON.stringify(data.user));
+        // Stocker le token + user
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
-        console.log('✅ Connexion réussie (token sauvegardé), redirection...');
+        console.log('✅ Connexion réussie, redirection...');
         window.location.href = '/app.html';
         
       } catch (err) {
