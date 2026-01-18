@@ -922,15 +922,6 @@
       });
     }
 
-    // 🎬 Transition fluide du fond une fois la page chargée
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('📄 Index.html - DOM chargé');
-  setTimeout(() => {
-    document.body.classList.add('page-loaded');
-    console.log('✨ Transition de fond activée sur index.html');
-  }, 200);
-});
-
     (function() {
       const currentPage = document.body.getAttribute('data-page');
       if (currentPage) {
