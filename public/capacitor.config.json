@@ -11,13 +11,16 @@
     "backgroundColor": "#7fd3a6"
   },
   "plugins": {
-    "SplashScreen": {
-      "launchShowDuration": 8000,
-      "launchAutoHide": true,
+    "StatusBar": {
+      "style": "light",
       "backgroundColor": "#7fd3a6",
-      "showSpinner": true,
-      "iosSpinnerStyle": "large",
-      "spinnerColor": "#ffffff"
+      "overlaysWebView": false
+    },
+    "Haptics": {
+      "enabled": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   }
 }
