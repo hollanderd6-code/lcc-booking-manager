@@ -3584,12 +3584,49 @@ console.log(
       console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
 
     if (newReservations.length > 0) {
-      try {
-        await notifyCleanersAboutNewBookings(newReservations);
-      } catch (err) {
-        console.error('❌ Erreur lors de l’envoi des notifications ménage:', err);
+  try {
+    await notifyCleanersAboutNewBookings(newReservations);
+  } catch (err) {
+    console.error('❌ Erreur lors de l'envoi des notifications ménage:', err);
+  }
+  
+  // 🔔 NOTIFICATIONS PUSH POUR LES NOUVELLES RÉSERVATIONS
+  try {
+    for (const reservation of newReservations) {
+      // Récupérer tous les tokens FCM de l'utilisateur
+      const tokenResult = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [reservation.userId]
+      );
+      
+      if (tokenResult.rows.length > 0) {
+        const checkInDate = new Date(reservation.start).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'short'
+        });
+        
+        // Envoyer la notification à tous les appareils de l'utilisateur
+        for (const row of tokenResult.rows) {
+          await sendNotification(
+            row.fcm_token,
+            '🏠 Nouvelle réservation',
+            `${reservation.propertyName} - ${reservation.guestName || 'Voyageur'} - ${checkInDate}`,
+            {
+              type: 'new_reservation',
+              reservation_id: reservation.uid,
+              property_name: reservation.propertyName,
+              check_in: reservation.start
+            }
+          );
+          
+          console.log(`✅ Notification push envoyée pour ${reservation.propertyName}`);
+        }
       }
     }
+  } catch (pushError) {
+    console.error('❌ Erreur notifications push réservations:', pushError.message);
+  }
+}
   } else if (isFirstSync) {
     console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
   }
