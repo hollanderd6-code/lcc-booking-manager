@@ -11633,84 +11633,109 @@ cron.schedule('0 7 * * *', async () => {
 
 console.log('CRON job messages arrivee configure (tous les jours a 7h)');
 // ============================================
-// 🔔 CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
+// 🔔 CRON JOB : NOTIFICATIONS QUOTIDIENNES À 7H
 // ============================================
-
-cron.schedule('0 8 * * *', async () => {
-  console.log('🔔 CRON: Envoi des notifications quotidiennes à 8h00');
+cron.schedule('0 7 * * *', async () => {
+  console.log('🔔 CRON: Envoi des notifications quotidiennes à 7h00');
   try {
     // Récupérer tous les utilisateurs avec token FCM
     const usersResult = await pool.query(
-      `SELECT u.id, u.email, t.fcm_token 
+      `SELECT u.id, u.email, u.first_name, t.fcm_token 
        FROM users u 
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
     );
     
     for (const user of usersResult.rows) {
-      // Arrivées du jour
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // ============================================
+      // 🏠 ARRIVÉES DU JOUR
+      // ============================================
       const arrivalsResult = await pool.query(
         `SELECT r.*, p.name as property_name 
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         WHERE r.check_in >= $1 AND r.check_in < $2`,
-        [today, tomorrow]
+         WHERE r.start_date >= $1 AND r.start_date < $2
+         AND r.user_id = $3
+         AND (r.status IS NULL OR r.status != 'cancelled')`,
+        [today, tomorrow, user.id]
       );
       
-      if (arrivalsResult.rows.length > 0) {
-        const arrivals = arrivalsResult.rows;
+      const arrivals = arrivalsResult.rows;
+      
+      if (arrivals.length >= 1) {
         await sendNotification(
           user.fcm_token,
-          `🏠 ${arrivals.length} arrivée(s) aujourd'hui`,
+          `🏠 ${arrivals.length} arrivée${arrivals.length > 1 ? 's' : ''} aujourd'hui`,
           arrivals.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join('\n'),
-          { type: 'daily_arrivals' }
+          { type: 'daily_arrivals', count: arrivals.length.toString() }
         );
+        console.log(`✅ Notification arrivées envoyée (${arrivals.length})`);
       }
       
-      // Départs du jour
+      // ============================================
+      // 🚪 DÉPARTS DU JOUR
+      // ============================================
       const departuresResult = await pool.query(
         `SELECT r.*, p.name as property_name 
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         WHERE r.check_out >= $1 AND r.check_out < $2`,
-        [today, tomorrow]
+         WHERE r.end_date >= $1 AND r.end_date < $2
+         AND r.user_id = $3
+         AND (r.status IS NULL OR r.status != 'cancelled')`,
+        [today, tomorrow, user.id]
       );
       
-      if (departuresResult.rows.length > 0) {
-        const departures = departuresResult.rows;
+      const departures = departuresResult.rows;
+      
+      if (departures.length >= 1) {
         await sendNotification(
           user.fcm_token,
-          `🚪 ${departures.length} départ(s) aujourd'hui`,
-          `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`,
-          { type: 'daily_departures' }
+          `🚪 ${departures.length} départ${departures.length > 1 ? 's' : ''} aujourd'hui`,
+          departures.map(d => `${d.property_name} - ${d.guest_name || 'Voyageur'}`).join('\n'),
+          { type: 'daily_departures', count: departures.length.toString() }
         );
+        console.log(`✅ Notification départs envoyée (${departures.length})`);
+      }
+      
+      // ============================================
+      // 🧹 MÉNAGES À PRÉVOIR (= départs du jour)
+      // ============================================
+      if (departures.length >= 1) {
+        const propertyNames = departures.map(d => d.property_name).join(', ');
+        
+        await sendNotification(
+          user.fcm_token,
+          `🧹 ${departures.length} ménage${departures.length > 1 ? 's' : ''} à prévoir`,
+          `Logements à nettoyer : ${propertyNames}`,
+          { type: 'daily_cleanings', count: departures.length.toString() }
+        );
+        console.log(`✅ Notification ménages envoyée (${departures.length})`);
       }
     }
     
-    console.log('✅ Notifications quotidiennes envoyées');
+    console.log('✅ Notifications quotidiennes 7h envoyées');
   } catch (error) {
-    console.error('❌ Erreur CRON notifications:', error);
+    console.error('❌ Erreur CRON notifications 7h:', error);
   }
 }, {
   timezone: "Europe/Paris"
 });
 
-console.log('✅ CRON job notifications configuré (tous les jours à 8h)');
+console.log('✅ CRON job notifications configuré (tous les jours à 7h)');
 
 // ============================================
-// ⏰ CRON JOB : RAPPELS J-1 À 18H
+// ⏰ CRON JOB : RAPPEL J-1 À 18H
 // ============================================
-
 cron.schedule('0 18 * * *', async () => {
   console.log('⏰ CRON: Rappels J-1 à 18h');
   try {
     const usersResult = await pool.query(
-      `SELECT u.id, t.fcm_token 
+      `SELECT u.id, u.first_name, t.fcm_token 
        FROM users u 
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
@@ -11723,25 +11748,31 @@ cron.schedule('0 18 * * *', async () => {
       const dayAfter = new Date(tomorrow);
       dayAfter.setDate(dayAfter.getDate() + 1);
       
+      // ✅ CORRECTION : Utiliser start_date au lieu de checkin_date
       const arrivalsResult = await pool.query(
-        `SELECT COUNT(*) as count FROM reservations 
-         WHERE checkin_date >= $1 AND checkin_date < $2`,
-        [tomorrow, dayAfter]
+        `SELECT COUNT(*) as count 
+         FROM reservations 
+         WHERE start_date >= $1 AND start_date < $2
+         AND user_id = $3
+         AND (status IS NULL OR status != 'cancelled')`,
+        [tomorrow, dayAfter, user.id]
       );
       
       const count = parseInt(arrivalsResult.rows[0]?.count || 0);
       
-      if (count > 0) {
+      // ✅ Envoyer seulement si >= 1
+      if (count >= 1) {
         await sendNotification(
           user.fcm_token,
-          `⏰ Rappel : ${count} arrivée(s) demain`,
+          `⏰ Rappel : ${count} arrivée${count > 1 ? 's' : ''} demain`,
           'Préparez les logements',
-          { type: 'reminder_j1' }
+          { type: 'reminder_j1', count: count.toString() }
         );
+        console.log(`✅ Rappel J-1 envoyé (${count} arrivées demain)`);
       }
     }
     
-    console.log('✅ Rappels J-1 envoyés');
+    console.log('✅ Rappels J-1 traités');
   } catch (error) {
     console.error('❌ Erreur CRON rappels:', error);
   }
@@ -11750,6 +11781,7 @@ cron.schedule('0 18 * * *', async () => {
 });
 
 console.log('✅ CRON rappels J-1 configuré (18h quotidien)');
+
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
