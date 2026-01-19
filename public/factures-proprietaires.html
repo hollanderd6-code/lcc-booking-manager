@@ -405,96 +405,6 @@ input[type="number"] {
 </a>
 </div><div class="sidebar-overlay" id="sidebarOverlay"></div>
 <!-- BOUTON MOBILE QUI SIMULE CLIC SUR ONGLET ÉDITEUR -->
-<button id="mobileFabButton" style="display:none;">
-  <i class="fas fa-plus"></i>
-</button>
-<style>
-@media (max-width: 768px) {
-  #mobileFabButton {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: #10B981;
-    color: white;
-    border: none;
-    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
-    z-index: 99999;
-    cursor: pointer;
-    font-size: 24px;
-    transition: all 0.2s;
-  }
-  #mobileFabButton:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
-  }
-}
-</style>
-<script>
-// Bouton mobile qui simule un VRAI clic sur l onglet Éditeur
-(function() {
-  if (window.innerWidth <= 768) {
-    const fabBtn = document.getElementById("mobileFabButton");
-    
-    function openEditor() {
-      console.log("🎯 Tentative d ouverture éditeur...");
-      
-      // Méthode 1 : Simuler un clic sur le bouton onglet
-      const editorTab = document.getElementById("btn-create");
-      if (editorTab) {
-        console.log("✅ Bouton onglet trouvé, simulation clic");
-        editorTab.click();
-        return;
-      }
-      
-      // Méthode 2 : Appel direct avec window
-      if (typeof window.switchTab === "function") {
-        console.log("✅ Appel direct window.switchTab");
-        window.switchTab("create");
-        return;
-      }
-      
-      // Méthode 3 : Forcer l affichage manuel
-      console.log("⚠️ Méthodes précédentes échouées, forçage manuel");
-      const tabs = document.querySelectorAll(".tab-content");
-      const navTabs = document.querySelectorAll(".nav-tab");
-      
-      tabs.forEach(t => t.classList.remove("active"));
-      navTabs.forEach(t => t.classList.remove("active"));
-      
-      const createTab = document.getElementById("tab-create");
-      const createBtn = document.getElementById("btn-create");
-      
-      if (createTab) createTab.classList.add("active");
-      if (createBtn) createBtn.classList.add("active");
-      
-      console.log("✅ Onglet forcé manuellement");
-    }
-    
-    // Événements touch ET click
-    fabBtn.addEventListener("touchend", function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("👆 Touch détecté");
-      openEditor();
-    }, { passive: false });
-    
-    fabBtn.addEventListener("click", function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("🖱️ Click détecté");
-      openEditor();
-    });
-    
-    console.log("✅ Bouton mobile FAB configuré");
-  }
-})();
-</script>
 <div class="app-container">
 <!-- Sidebar -->
 <div id="bhSidebar"></div>
@@ -813,6 +723,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
     document.getElementById('btn-'+id).classList.add('active');
+    
+    // ✅ NOUVEAU : Scroll automatique vers l'onglet quand on passe à "create" (éditeur)
+    if (id === 'create') {
+      setTimeout(function() {
+        const createTab = document.getElementById('tab-create');
+        if (createTab) {
+          createTab.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start'
+          });
+        }
+      }, 100); // Petit délai pour laisser l'onglet s'afficher
+    }
   }
 
   // --- CLIENTS ---
