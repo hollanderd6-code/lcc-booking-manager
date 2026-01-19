@@ -35,24 +35,123 @@ function extractSource(item) {
   return 'ICAL';
 }
 
-function extractGuestName(ev) {
+/**
+ * ✅ NOUVEAU : Détecter si un événement est un blocage automatique
+ */
+function isBlockedEvent(ev, source) {
+  const summary = (ev.summary || '').toString().toLowerCase();
+  const description = (ev.description || '').toString().toLowerCase();
+  
+  // Mots-clés indiquant un blocage
+  const blockKeywords = [
+    'blocked',
+    'not available',
+    'unavailable',
+    'closed',
+    'bloqué',
+    'indisponible',
+    'maintenance',
+    'owner block',
+    'propriétaire'
+  ];
+  
+  // Vérifier si le résumé ou la description contient un mot-clé de blocage
+  const hasBlockKeyword = blockKeywords.some(keyword => 
+    summary.includes(keyword) || description.includes(keyword)
+  );
+  
+  // Pour Airbnb : "Not available" est toujours un blocage
+  if (source === 'AIRBNB' && (summary.includes('not available') || summary === 'busy')) {
+    return true;
+  }
+  
+  // Pour Booking : "Closed to arrival" ou "Not available" sans info voyageur
+  if (source === 'BOOKING' && (
+    summary.includes('closed') || 
+    summary.includes('not available') ||
+    summary === 'unavailable'
+  )) {
+    return true;
+  }
+  
+  return hasBlockKeyword;
+}
+
+/**
+ * ✅ AMÉLIORÉ : Extraire le nom du voyageur selon la plateforme
+ */
+function extractGuestName(ev, source) {
   const summary = (ev.summary || '').toString();
   const description = (ev.description || '').toString();
 
   let guestName = null;
 
-  let m = summary.match(/Réservation\s*:\s*(.+)$/i);
-  if (m) {
-    guestName = m[1].trim();
+  // ============================================
+  // AIRBNB : Format "Réservation : Nom du voyageur"
+  // ============================================
+  if (source === 'AIRBNB') {
+    let m = summary.match(/Réservation\s*:\s*(.+)$/i);
+    if (m) {
+      guestName = m[1].trim();
+      return guestName;
+    }
+    
+    // Autre format Airbnb : "Reserved - Nom"
+    m = summary.match(/Reserved\s*-\s*(.+)$/i);
+    if (m) {
+      guestName = m[1].trim();
+      return guestName;
+    }
+  }
+  
+  // ============================================
+  // BOOKING.COM : Plusieurs formats possibles
+  // ============================================
+  if (source === 'BOOKING') {
+    // Format 1 : Dans la description "Guest: Nom du voyageur"
+    let m = description.match(/Guest:\s*([^\n]+)/i);
+    if (m) {
+      guestName = m[1].trim();
+      return guestName;
+    }
+    
+    // Format 2 : Dans la description "Guest name: Nom"
+    m = description.match(/Guest\s*name:\s*([^\n]+)/i);
+    if (m) {
+      guestName = m[1].trim();
+      return guestName;
+    }
+    
+    // Format 3 : Dans le résumé, après le numéro de réservation
+    // Ex: "Booking.com - 123456789 - John Doe"
+    m = summary.match(/booking\.com\s*-\s*\d+\s*-\s*(.+)$/i);
+    if (m) {
+      guestName = m[1].trim();
+      return guestName;
+    }
+    
+    // Format 4 : Le résumé contient directement le nom (si pas "closed" ou "not available")
+    if (!summary.toLowerCase().includes('closed') && 
+        !summary.toLowerCase().includes('not available') &&
+        summary.length > 0) {
+      guestName = summary.trim();
+      return guestName;
+    }
   }
 
+  // ============================================
+  // AUTRES SOURCES : Chercher dans description ou résumé
+  // ============================================
+  
+  // Dans la description : "Guest: ..."
   if (!guestName) {
-    m = description.match(/Guest:\s*([^\n]+)/i);
+    const m = description.match(/Guest:\s*([^\n]+)/i);
     if (m) {
       guestName = m[1].trim();
     }
   }
 
+  // Par défaut : utiliser le résumé si disponible
   if (!guestName && summary) {
     guestName = summary.trim();
   }
@@ -60,16 +159,25 @@ function extractGuestName(ev) {
   return guestName;
 }
 
+/**
+ * ✅ AMÉLIORÉ : Mapper un événement iCal vers une réservation
+ */
 function mapEventToReservation(ev, source) {
   if (!ev.start || !ev.end) return null;
 
   const summary = (ev.summary || '').toString();
-  const summaryLower = summary.toLowerCase();
   
-  let guestName = extractGuestName(ev);
+  // ============================================
+  // 🚫 DÉTECTER LES BLOCAGES
+  // ============================================
+  const isBlocked = isBlockedEvent(ev, source);
   
-  if (source === 'BOOKING' && (summaryLower.includes('closed') || summaryLower.includes('not available'))) {
-    guestName = 'Voyageur Booking';
+  // Extraire le nom du voyageur
+  let guestName = extractGuestName(ev, source);
+  
+  // Si c'est un blocage et qu'on n'a pas de nom, mettre un indicateur
+  if (isBlocked && !guestName) {
+    guestName = 'Bloqué';
   }
 
   const start = moment(ev.start).tz(DEFAULT_TZ).toISOString();
@@ -83,6 +191,7 @@ function mapEventToReservation(ev, source) {
     platform: source,
     type: 'ical',
     guestName,
+    isBlocked,  // ✅ NOUVEAU : Flag pour identifier les blocages
     rawSummary: ev.summary || '',
     rawDescription: ev.description || ''
   };
@@ -99,7 +208,7 @@ function normalizeIcalUrls(icalUrls) {
   
   const result = icalUrls
     .map((item, index) => {
-      console.log(`🔍 Item ${index}:`, typeof item, JSON.stringify(item));
+      console.log(`🔎 Item ${index}:`, typeof item, JSON.stringify(item));
       
       if (!item) {
         console.log(`  → Item ${index} est null/undefined`);
@@ -132,7 +241,7 @@ function normalizeIcalUrls(icalUrls) {
 }
 
 async function fetchReservations(property) {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`🔵 fetchReservations pour: ${property?.name || 'INCONNU'}`);
   console.log(`🔵 property.icalUrls TYPE:`, typeof property?.icalUrls);
   console.log(`🔵 property.icalUrls IS ARRAY:`, Array.isArray(property?.icalUrls));
@@ -165,26 +274,40 @@ async function fetchReservations(property) {
       
       console.log(`✅ Fetch OK pour ${source}`);
       
+      let blockedCount = 0;
+      let reservationCount = 0;
+      
       Object.values(data).forEach(ev => {
         if (!ev || ev.type !== 'VEVENT') return;
         
         const res = mapEventToReservation(ev, source);
         if (res) {
           results.push(res);
+          
+          // Compter les blocages vs vraies réservations
+          if (res.isBlocked) {
+            blockedCount++;
+          } else {
+            reservationCount++;
+          }
         }
       });
+      
+      console.log(`  📊 ${source}: ${reservationCount} réservations, ${blockedCount} blocages`);
+      
     } catch (err) {
       console.error(`❌ Erreur iCal pour ${property.name}:`, err.message);
       console.error(`   URL problématique:`, url);
     }
   }
 
-  console.log(`🎯 ${property.name} - TOTAL: ${results.length} réservations`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`🎯 ${property.name} - TOTAL: ${results.length} événements (réservations + blocages)`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   return results;
 }
 
 module.exports = {
   fetchReservations,
-  extractSource
+  extractSource,
+  isBlockedEvent  // ✅ Exporter pour utilisation ailleurs
 };
