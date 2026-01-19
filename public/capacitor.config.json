@@ -8,6 +8,13 @@
     "cleartext": true
   },
   "ios": {
+    "backgroundColor": "#7fd3a6",
+    "contentInset": "automatic",
+    "limitsNavigationsToAppBoundDomains": true,
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "allowMixedContent": true,
     "backgroundColor": "#7fd3a6"
   },
   "plugins": {
@@ -22,5 +29,11 @@
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
     }
+  },
+  "preferences": {
+    "ScrollEnabled": "true",
+    "DisallowOverscroll": "true",
+    "UIWebViewBounce": "false",
+    "DisallowBounce": "true"
   }
 }
