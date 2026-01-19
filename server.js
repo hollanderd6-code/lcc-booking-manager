@@ -3593,6 +3593,13 @@ console.log(
       // 🔔 NOTIFICATIONS PUSH POUR LES NOUVELLES RÉSERVATIONS
       try {
         for (const reservation of newReservations) {
+          
+          // ✅ NOUVEAU : Filtrer les blocages automatiques
+          if (reservation.isBlocked) {
+            console.log(`⏭️ Blocage ignoré pour notification: ${reservation.propertyName} - ${reservation.guestName}`);
+            continue; // Passer à la réservation suivante
+          }
+          
           // Récupérer tous les tokens FCM de l'utilisateur
           const tokenResult = await pool.query(
             'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
@@ -3619,7 +3626,7 @@ console.log(
                 }
               );
               
-              console.log(`✅ Notification push envoyée pour ${reservation.propertyName}`);
+              console.log(`✅ Notification push envoyée pour ${reservation.propertyName} - ${reservation.guestName}`);
             }
           }
         }
@@ -3630,7 +3637,7 @@ console.log(
   } else if (isFirstSync) {
     console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
   }
-
+  
   console.log('✅ Synchronisation terminée');
   return reservationsStore;
 }
