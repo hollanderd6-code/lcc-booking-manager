@@ -6,8 +6,9 @@
 /* Badge sur la navigation desktop */
 .nav-item .badge-count {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
   min-width: 18px;
   height: 18px;
   padding: 0 6px;
@@ -21,6 +22,7 @@
   justify-content: center;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
   z-index: 10;
+  pointer-events: none; /* Important : empêche le badge d'interférer avec le hover */
   animation: badge-appear 0.3s ease;
 }
 
@@ -61,7 +63,7 @@
 
 /* Style hover du nav-item avec badge */
 .nav-item:hover .badge-count {
-  transform: scale(1.1);
+  /* Ne pas changer la position, juste un léger effet visuel */
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
 }
 
@@ -69,6 +71,8 @@
 .nav-item.active .badge-count {
   background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.6);
+  /* Garder le même transform */
+  transform: translateY(-50%);
 }
 
 /* Dark mode support */
