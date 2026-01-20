@@ -115,14 +115,8 @@
         badge.textContent = count;
       }
       
-      // Desktop : masquer si 0, Mobile : toujours afficher
-      if (isMobile) {
-        // Sur mobile, toujours afficher le badge
-        badge.style.display = 'flex';
-      } else {
-        // Sur desktop, masquer si 0
-        badge.style.display = count > 0 ? 'flex' : 'none';
-      }
+      // Toujours afficher le badge (mobile ET desktop)
+      badge.style.display = 'flex';
     }
 
     // Mettre à jour mobile (si existe)
