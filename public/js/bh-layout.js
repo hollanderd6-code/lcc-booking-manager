@@ -4,13 +4,7 @@
 <div class="sidebar-header">
 <a class="sidebar-logo" href="/">
 <svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
-<defs>
-<linearGradient id="bhg-sidebar" x1="0" y1="0" x2="1" y2="1">
-<stop offset="0" stop-color="#7fd3a6"/>
-<stop offset="1" stop-color="#58b88c"/>
-</linearGradient>
-</defs>
-<circle cx="20" cy="20" r="20" fill="url(#bhg-sidebar)"/>
+<circle cx="20" cy="20" r="20" fill="#5FCDA4"/>
 <text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
 </svg>
 <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
@@ -18,7 +12,7 @@
 <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
 </span>
 <span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
-      Smart Property Manager
+      SMART PROPERTY MANAGER
     </span>
 </div>
 </a>
@@ -216,17 +210,11 @@
   }
 
   function normalizeBranding() {
-    // Logo SVG "B" à réutiliser
+    // Logo SVG "B" avec cercle vert uni (comme dans votre charte graphique)
     const brandSvg = `
       <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
            xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <defs>
-          <linearGradient id="bhg-mobile" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7fd3a6"/>
-            <stop offset="1" stop-color="#58b88c"/>
-          </linearGradient>
-        </defs>
-        <circle cx="20" cy="20" r="20" fill="url(#bhg-mobile)"/>
+        <circle cx="20" cy="20" r="20" fill="#5FCDA4"/>
         <text x="20" y="26" text-anchor="middle"
               font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
               font-size="20" font-weight="800" fill="#ffffff">B</text>
