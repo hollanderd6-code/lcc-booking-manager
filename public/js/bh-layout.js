@@ -221,43 +221,32 @@
       </svg>
     `;
 
-    // Mobile header brand
+    const textHtml = `
+      <span class="mobile-logo-title">
+        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+      </span>
+      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
+    `;
+
+    // Mobile header brand - APPROCHE AGRESSIVE
     const mobileLogo = document.querySelector(".mobile-logo");
-    const mobileLogoText = document.querySelector(".mobile-logo-text");
-
-    // 1. Remplacer le texte du logo mobile
-    if (mobileLogoText) {
-      mobileLogoText.innerHTML = `
-        <span class="mobile-logo-title">
-          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-        </span>
-        <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
-      `;
-    }
-
-    // 2. Remplacer l'icône/SVG du logo mobile par le logo "B"
+    
     if (mobileLogo) {
-      // Supprimer toutes les icônes Font Awesome existantes
-      const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
-      if (oldIcon) {
-        oldIcon.remove();
-      }
-
-      // Supprimer tous les SVG existants sauf celui avec la classe .mobile-logo-mark
-      const existingSvgs = mobileLogo.querySelectorAll("svg:not(.mobile-logo-mark)");
-      existingSvgs.forEach(svg => svg.remove());
-
-      // Ajouter le nouveau logo "B" s'il n'existe pas déjà
-      if (!mobileLogo.querySelector(".mobile-logo-mark")) {
-        mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
-      }
+      // Vider complètement le contenu du logo
+      mobileLogo.innerHTML = '';
+      
+      // Reconstruire avec le bon logo
+      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+      mobileLogo.insertAdjacentHTML("beforeend", `<span class="mobile-logo-text">${textHtml}</span>`);
     }
 
-    // 3. Sidebar brand title (si nécessaire)
+    // Sidebar brand title (si nécessaire)
     const sidebarTitle = document.querySelector(".sidebar-logo-title");
-    if (sidebarTitle && !sidebarTitle.querySelector('span[style*="color:#10B981"]')) {
+    if (sidebarTitle) {
       sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
     }
+
+    console.log("✅ Logo normalisé partout");
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -265,4 +254,14 @@
     injectHeader();
     normalizeBranding();
   });
+
+  // Execute normalizeBranding early if DOM is already ready
+  if (document.readyState === 'loading') {
+    // Wait for DOMContentLoaded
+  } else {
+    // DOM already loaded, execute immediately
+    setTimeout(() => {
+      normalizeBranding();
+    }, 0);
+  }
 })();
