@@ -3,10 +3,7 @@
   const SIDEBAR_HTML = `<aside class="sidebar">
 <div class="sidebar-header">
 <a class="sidebar-logo" href="/">
-<svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
-<circle cx="20" cy="20" r="20" fill="#5FCDA4"/>
-<text x="20" y="28" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="34" font-weight="800" fill="#ffffff">B</text>
-</svg>
+<img src="/img/logo.svg" alt="Boostinghost" class="sidebar-logo-img">
 <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
 <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
 <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
