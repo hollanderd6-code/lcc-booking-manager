@@ -1,5 +1,4 @@
 /* /js/bh-layout.js — injection sidebar + header standard */
-
 (function () {
   const SIDEBAR_HTML = `<aside class="sidebar">
 <div class="sidebar-header">
