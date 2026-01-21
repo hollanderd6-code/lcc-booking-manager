@@ -1,11 +1,11 @@
-/* /js/bh-layout.js – injection sidebar + header standard */
+/* /js/bh-layout.js – injection sidebar + header standard - VERSION CORRIGÉE LOGO */
 (function () {
   const SIDEBAR_HTML = `<aside class="sidebar">
 <div class="sidebar-header">
 <a class="sidebar-logo" href="/">
 <svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
 <circle cx="20" cy="20" r="20" fill="#5FCDA4"/>
-<text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
+<text x="20" y="28" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="26" font-weight="800" fill="#ffffff">B</text>
 </svg>
 <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
 <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
@@ -159,7 +159,6 @@
         localStorage.removeItem("lcc_user");
         window.location.href = "/login.html";
       });
-      console.log("✅ Bouton déconnexion configuré dans bh-layout.js");
     }
 
     // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
@@ -210,58 +209,56 @@
   }
 
   function normalizeBranding() {
-    // Logo SVG "B" avec cercle vert uni (comme dans votre charte graphique)
-    const brandSvg = `
-      <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
-           xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <circle cx="20" cy="20" r="20" fill="#5FCDA4"/>
-        <text x="20" y="26" text-anchor="middle"
-              font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-              font-size="20" font-weight="800" fill="#ffffff">B</text>
-      </svg>
-    `;
-
-    const textHtml = `
-      <span class="mobile-logo-title">
-        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-      </span>
-      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
-    `;
-
-    // Mobile header brand - APPROCHE AGRESSIVE
-    const mobileLogo = document.querySelector(".mobile-logo");
+    console.log("🎨 Normalisation du branding...");
     
+    // Logo SVG "B" - CERCLE VERT UNI #5FCDA4
+    const BRAND_SVG = '<svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><circle cx="20" cy="20" r="20" fill="#5FCDA4"/><text x="20" y="28" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="26" font-weight="800" fill="#ffffff">B</text></svg>';
+    
+    const BRAND_TEXT = '<span class="mobile-logo-title"><span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span></span><span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>';
+
+    // 1. MOBILE HEADER - Remplacement forcé
+    const mobileLogo = document.querySelector(".mobile-logo");
     if (mobileLogo) {
-      // Vider complètement le contenu du logo
+      console.log("📱 Remplacement du logo mobile...");
+      // Vider complètement
       mobileLogo.innerHTML = '';
-      
-      // Reconstruire avec le bon logo
-      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
-      mobileLogo.insertAdjacentHTML("beforeend", `<span class="mobile-logo-text">${textHtml}</span>`);
+      // Reconstruire proprement
+      mobileLogo.innerHTML = BRAND_SVG + '<span class="mobile-logo-text">' + BRAND_TEXT + '</span>';
+      console.log("✅ Logo mobile remplacé");
+    } else {
+      console.warn("⚠️ Élément .mobile-logo non trouvé");
     }
 
-    // Sidebar brand title (si nécessaire)
+    // 2. SIDEBAR TITLE
     const sidebarTitle = document.querySelector(".sidebar-logo-title");
     if (sidebarTitle) {
       sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
+      console.log("✅ Logo sidebar mis à jour");
     }
-
-    console.log("✅ Logo normalisé partout");
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    injectSidebar();
-    injectHeader();
-    normalizeBranding();
-  });
-
-  // Execute normalizeBranding early if DOM is already ready
+  // Exécution
   if (document.readyState === 'loading') {
-    // Wait for DOMContentLoaded
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log("📄 DOM chargé");
+      injectSidebar();
+      injectHeader();
+      normalizeBranding();
+    });
   } else {
-    // DOM already loaded, execute immediately
-    setTimeout(() => {
+    // DOM déjà chargé
+    console.log("📄 DOM déjà chargé, exécution immédiate");
+    setTimeout(function() {
+      injectSidebar();
+      injectHeader();
       normalizeBranding();
     }, 0);
   }
+
+  // Double vérification après un court délai pour être sûr
+  setTimeout(function() {
+    console.log("🔄 Double vérification du logo...");
+    normalizeBranding();
+  }, 500);
+
 })();
