@@ -1,13 +1,17 @@
-/* /js/bh-layout.js — injection sidebar + header standard */
+/* /js/bh-layout.js – injection sidebar + header standard */
 (function () {
   const SIDEBAR_HTML = `<aside class="sidebar">
 <div class="sidebar-header">
 <a class="sidebar-logo" href="/">
 <svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
-<path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
-<path d="M16 36V26H24V36" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
-<path d="M20 4L4 18H10V22H30V18H36L20 4Z" fill="#10B981" stroke="#10B981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-<path d="M20 9L24 14H16L20 9Z" fill="white"></path>
+<defs>
+<linearGradient id="bhg-sidebar" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#7fd3a6"/>
+<stop offset="1" stop-color="#58b88c"/>
+</linearGradient>
+</defs>
+<circle cx="20" cy="20" r="20" fill="url(#bhg-sidebar)"/>
+<text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
 </svg>
 <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
 <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
@@ -52,7 +56,7 @@
 <span>Gestion du ménage</span>
 </a>
 <div class="nav-section">
-<div class="nav-section-title"><facturation></facturation></div>
+<div class="nav-section-title">Facturation</div>
 <a class="nav-item" href="/factures.html">
 <i class="fas fa-file-invoice"></i>
 <span>Factures clients</span>
@@ -110,21 +114,6 @@
 
     ph.innerHTML = SIDEBAR_HTML;
     
-    // ❌ DÉSACTIVÉ : Le badge Messages est maintenant géré par messages-badge-dynamic.js
-    // qui crée un badge ROUGE (.badge-count) au lieu d'un badge VERT (.nav-badge)
-    /*
-    // Ensure Messages badge exists for chat-owner.js
-    const messagesLink = document.querySelector('.nav-item[data-page="messages"]');
-    if (messagesLink && !document.getElementById('unreadCount')) {
-      const badge = document.createElement('span');
-      badge.className = 'nav-badge';
-      badge.id = 'unreadCount';
-      badge.textContent = '0';
-      messagesLink.appendChild(badge);
-    }
-    */
-
-
     // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
 
@@ -227,59 +216,63 @@
   }
 
   function normalizeBranding() {
-  // Mobile header brand
-  const mobileLogo = document.querySelector(".mobile-logo");
-  const mobileLogoText = document.querySelector(".mobile-logo-text");
-
-  // Texte (Boosting/host + sous-titre) — n'écrase pas si déjà en place
-  if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
-    mobileLogoText.innerHTML = `
-      <span class="mobile-logo-title">
-        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-      </span>
-      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
-    `;
-  }
-
-  // Logo (remplace l'icône existante / ancien SVG / injecte si rien)
-  if (mobileLogo) {
+    // Logo SVG "B" à réutiliser
     const brandSvg = `
       <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
            xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
         <defs>
-          <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="bhg-mobile" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#7fd3a6"/>
             <stop offset="1" stop-color="#58b88c"/>
           </linearGradient>
         </defs>
-        <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
+        <circle cx="20" cy="20" r="20" fill="url(#bhg-mobile)"/>
         <text x="20" y="26" text-anchor="middle"
               font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
               font-size="20" font-weight="800" fill="#ffffff">B</text>
       </svg>
     `;
 
-    const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
-    const anySvg = mobileLogo.querySelector("svg");
-    const anyImg = mobileLogo.querySelector("img");
+    // Mobile header brand
+    const mobileLogo = document.querySelector(".mobile-logo");
+    const mobileLogoText = document.querySelector(".mobile-logo-text");
 
-    if (oldIcon) {
-      oldIcon.outerHTML = brandSvg;
-    } else if (anySvg && !anySvg.classList.contains("mobile-logo-mark")) {
-      anySvg.outerHTML = brandSvg;
-    } else if (!anyImg && !anySvg) {
-      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+    // 1. Remplacer le texte du logo mobile
+    if (mobileLogoText) {
+      mobileLogoText.innerHTML = `
+        <span class="mobile-logo-title">
+          <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+        </span>
+        <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
+      `;
+    }
+
+    // 2. Remplacer l'icône/SVG du logo mobile par le logo "B"
+    if (mobileLogo) {
+      // Supprimer toutes les icônes Font Awesome existantes
+      const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
+      if (oldIcon) {
+        oldIcon.remove();
+      }
+
+      // Supprimer tous les SVG existants sauf celui avec la classe .mobile-logo-mark
+      const existingSvgs = mobileLogo.querySelectorAll("svg:not(.mobile-logo-mark)");
+      existingSvgs.forEach(svg => svg.remove());
+
+      // Ajouter le nouveau logo "B" s'il n'existe pas déjà
+      if (!mobileLogo.querySelector(".mobile-logo-mark")) {
+        mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+      }
+    }
+
+    // 3. Sidebar brand title (si nécessaire)
+    const sidebarTitle = document.querySelector(".sidebar-logo-title");
+    if (sidebarTitle && !sidebarTitle.querySelector('span[style*="color:#10B981"]')) {
+      sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
     }
   }
 
-  // Sidebar brand title if needed
-  const sidebarTitle = document.querySelector(".sidebar-logo-title");
-  if (sidebarTitle) {
-    sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
     injectSidebar();
     injectHeader();
     normalizeBranding();
