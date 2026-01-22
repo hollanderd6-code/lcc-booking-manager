@@ -16,21 +16,30 @@
     <text x="20" y="28" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="24" font-weight="800" fill="#ffffff">B</text>
   </svg>`;
 
-  const SIDEBAR_HTML = `<aside class="sidebar">
-<div class="sidebar-header">
-<a class="sidebar-logo" href="/">
-${LOGO_B_SVG}
-<div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
-<span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
-<span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
-</span>
-<span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
-      Smart Property Manager
-    </span>
-</div>
-</a>
-</div>
-<nav class="sidebar-nav">
+const SIDEBAR_HTML = `
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <a class="sidebar-logo" href="/">
+      <img 
+        src="/asset/boostinghost-icon-circle.png"
+        alt="Boostinghost"
+        style="width:40px;height:40px;flex-shrink:0;"
+      />
+
+      <div class="sidebar-logo-text" style="display:flex;flex-direction:column;justify-content:center;margin-left:10px;">
+        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif;font-size:17px;line-height:1.1;">
+          <span style="color:#10B981;font-weight:800;">Boosting</span>
+          <span style="color:#111827;font-weight:600;">host</span>
+        </span>
+        <span class="sidebar-logo-subtitle" style="font-size:10px;color:#6B7280;font-weight:500;letter-spacing:0.5px;">
+          Smart Property Manager
+        </span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+`;
 <!-- PRINCIPAL -->
 <div class="nav-section">
 <div class="nav-section-title">Principal</div>
