@@ -1,30 +1,58 @@
+// ============================================
+// 🔐 AUTH-FETCH - Intercepteur fetch intelligent
+// Version 3.0 - Corrigée pour iOS
+// ============================================
+
 (() => {
+  console.log('🚀 [AUTH-FETCH] Initialisation...');
+
   try {
     const originalFetch = window.fetch.bind(window);
 
     // URL de l'API en production (mobile)
     const API_BASE_URL = 'https://lcc-booking-manager.onrender.com';
 
+    // ============================================
+    // 🔍 DÉTECTION NATIVE
+    // ============================================
+
     const isNative = () => {
       try {
-        return !!window.Capacitor?.isNativePlatform?.() ||
+        return !!(
+          window.Capacitor?.isNativePlatform?.() ||
           window.location.protocol === 'capacitor:' ||
-          window.location.protocol === 'ionic:';
+          window.location.protocol === 'ionic:'
+        );
       } catch {
         return false;
       }
     };
 
+    // ============================================
+    // 🔑 GESTION TOKEN
+    // ============================================
+
     const getToken = () => {
-      try { return localStorage.getItem('lcc_token'); } catch { return null; }
+      try {
+        return localStorage.getItem('lcc_token');
+      } catch {
+        return null;
+      }
     };
 
-    // Normalise input -> string url (ou null si impossible)
+    // ============================================
+    // 🔗 GESTION DES URLs
+    // ============================================
+
+    /**
+     * Extrait l'URL sous forme de string
+     */
     const getUrlString = (input) => {
       try {
         if (typeof input === 'string') return input;
         if (input instanceof URL) return input.toString();
-        if (input && typeof input.url === 'string') return input.url; // Request
+        if (input instanceof Request) return input.url;
+        if (input && typeof input.url === 'string') return input.url;
         if (input && typeof input.href === 'string') return input.href;
         return null;
       } catch {
@@ -32,27 +60,69 @@
       }
     };
 
+    /**
+     * Vérifie si c'est un appel API
+     */
     const isApiCall = (urlStr) => {
       if (typeof urlStr !== 'string') return false;
-      // on cible seulement nos routes API
-      return urlStr.startsWith('/api/') || urlStr.includes('/api/');
+      // On cible uniquement nos routes API
+      return urlStr.includes('/api/');
     };
 
-    // Convertit /api/... -> https://.../api/... en mobile
+    /**
+     * Résout l'URL en fonction du contexte (web vs mobile)
+     * ⚠️ IMPORTANT: Cette fonction ne doit PAS transformer une URL déjà absolue
+     */
     const resolveUrl = (urlStr) => {
-      if (typeof urlStr !== 'string') return urlStr;
-      if (!isNative()) return urlStr;
-
-      // mobile: si relatif racine, on préfixe
-      if (urlStr.startsWith('/')) return API_BASE_URL + urlStr;
-
-      // si relatif sans slash (rare), on le rend absolu aussi
-      if (!urlStr.startsWith('http://') && !urlStr.startsWith('https://') && !urlStr.startsWith('capacitor://')) {
-        return API_BASE_URL + '/' + urlStr.replace(/^\.?\//, '');
+      if (typeof urlStr !== 'string') {
+        console.warn('⚠️ [AUTH-FETCH] URL non-string:', typeof urlStr);
+        return urlStr;
       }
 
+      const native = isNative();
+      console.log(`🔗 [AUTH-FETCH] Résolution URL: "${urlStr}" (native: ${native})`);
+
+      // Si pas en mode natif, on ne touche à rien
+      if (!native) {
+        console.log('🌐 [AUTH-FETCH] Mode web, URL inchangée:', urlStr);
+        return urlStr;
+      }
+
+      // ⚠️ CRITIQUE: Si l'URL est déjà absolue (http:// ou https://), 
+      // on ne la modifie PAS pour éviter les doublons
+      if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+        console.log('✅ [AUTH-FETCH] URL déjà absolue, inchangée:', urlStr);
+        return urlStr;
+      }
+
+      // Si c'est un protocole Capacitor, on ne touche pas
+      if (urlStr.startsWith('capacitor://') || urlStr.startsWith('ionic://')) {
+        console.log('📱 [AUTH-FETCH] Protocole natif, inchangé:', urlStr);
+        return urlStr;
+      }
+
+      // On ne préfixe que les chemins relatifs à la racine
+      if (urlStr.startsWith('/')) {
+        const resolved = API_BASE_URL + urlStr;
+        console.log(`✅ [AUTH-FETCH] URL transformée: "${urlStr}" → "${resolved}"`);
+        return resolved;
+      }
+
+      // Chemin relatif sans slash (rare)
+      if (!urlStr.startsWith('.')) {
+        const resolved = API_BASE_URL + '/' + urlStr;
+        console.log(`✅ [AUTH-FETCH] URL normalisée: "${urlStr}" → "${resolved}"`);
+        return resolved;
+      }
+
+      // Autres cas: on retourne tel quel
+      console.log('⚠️ [AUTH-FETCH] URL non modifiée (cas edge):', urlStr);
       return urlStr;
     };
+
+    // ============================================
+    // 🔓 ROUTES PUBLIQUES
+    // ============================================
 
     const publicPaths = [
       '/api/auth/login',
@@ -62,11 +132,20 @@
       '/api/webhooks/stripe'
     ];
 
+    const isPublicRoute = (urlStr) => {
+      return publicPaths.some(path => urlStr.includes(path));
+    };
+
+    // ============================================
+    // 🎯 INTERCEPTEUR FETCH
+    // ============================================
+
     window.fetch = async (input, init = {}) => {
       const urlStr = getUrlString(input);
 
       // Si on n'arrive pas à déterminer l'URL, on laisse passer
       if (!urlStr) {
+        console.warn('⚠️ [AUTH-FETCH] URL indéterminable, passthrough');
         return originalFetch(input, init);
       }
 
@@ -75,40 +154,65 @@
         return originalFetch(input, init);
       }
 
+      console.log('🎯 [AUTH-FETCH] Interception appel API:', urlStr);
+
+      // Résoudre l'URL (web vs mobile)
       const resolvedUrl = resolveUrl(urlStr);
 
-      // route publique ?
-      const isPublic = publicPaths.some(p => urlStr.includes(p));
+      // Route publique ?
+      const isPublic = isPublicRoute(urlStr);
+      console.log(`🔐 [AUTH-FETCH] Route publique: ${isPublic}`);
 
-      if (isPublic) {
-        return originalFetch(resolvedUrl, init);
-      }
-
-      // ajouter Authorization si token dispo
-      const token = getToken();
+      // Headers
       const headers = new Headers(init.headers || {});
-      if (token && !headers.get('Authorization')) {
-        headers.set('Authorization', 'Bearer ' + token);
+
+      // Ajouter Authorization si token dispo et pas déjà présent
+      if (!isPublic) {
+        const token = getToken();
+        if (token && !headers.get('Authorization')) {
+          headers.set('Authorization', 'Bearer ' + token);
+          console.log('🔑 [AUTH-FETCH] Token ajouté');
+        }
       }
 
-      const res = await originalFetch(resolvedUrl, { ...init, headers });
+      // Log de la requête finale
+      console.log('📤 [AUTH-FETCH] Requête finale:', {
+        url: resolvedUrl,
+        method: init.method || 'GET',
+        hasAuth: headers.has('Authorization')
+      });
 
-      // si 401: logout + redirection adaptée web/app
+      // Exécuter la requête
+      let res;
+      try {
+        res = await originalFetch(resolvedUrl, { ...init, headers });
+        console.log('📥 [AUTH-FETCH] Réponse:', res.status, res.statusText);
+      } catch (err) {
+        console.error('❌ [AUTH-FETCH] Erreur fetch:', err?.name, err?.message);
+        throw err;
+      }
+
+      // Si 401: logout + redirection
       if (res.status === 401) {
+        console.warn('🚨 [AUTH-FETCH] 401 Unauthorized, déconnexion...');
         try {
           localStorage.removeItem('lcc_token');
           localStorage.removeItem('lcc_user');
         } catch {}
 
-        window.location.href = isNative() ? 'login.html' : '/login.html';
+        const redirectUrl = isNative() ? 'login.html' : '/login.html';
+        console.log('🔄 [AUTH-FETCH] Redirection vers:', redirectUrl);
+        window.location.href = redirectUrl;
       }
 
       return res;
     };
 
-    console.log('✅ [AUTH-FETCH] Système initialisé (robuste)');
+    console.log('✅ [AUTH-FETCH] Système initialisé avec succès');
+    console.log('📱 [AUTH-FETCH] Mode:', isNative() ? 'NATIF' : 'WEB');
+    console.log('🌐 [AUTH-FETCH] API Base URL:', API_BASE_URL);
+
   } catch (e) {
-    // si ce script plante, on veut LE VOIR
-    console.error('❌ [AUTH-FETCH] Init failed:', e?.name, e?.message, e?.stack || e);
+    console.error('❌ [AUTH-FETCH] Échec initialisation:', e?.name, e?.message, e?.stack || e);
   }
 })();
