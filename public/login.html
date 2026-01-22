@@ -4,22 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boostinghost - Connexion</title>
- <script>
+  
+  <!-- Error handlers AVANT tout le reste -->
+  <script>
+    // Tracker toutes les erreurs
+    window.__errors = [];
+    
     window.onerror = function (msg, url, line, col, err) {
-      console.error('GLOBAL ERROR:', msg, url, line, col, err?.stack || err);
+      const error = {
+        type: 'error',
+        msg: msg,
+        url: url,
+        line: line,
+        col: col,
+        stack: err?.stack || err
+      };
+      window.__errors.push(error);
+      console.error('🚨 GLOBAL ERROR:', error);
+      return false;
     };
+    
     window.onunhandledrejection = function (e) {
-      console.error(
-        'UNHANDLED PROMISE:',
-        e?.reason?.message,
-        e?.reason?.stack || e?.reason
-      );
+      const error = {
+        type: 'unhandledRejection',
+        message: e?.reason?.message,
+        stack: e?.reason?.stack || e?.reason
+      };
+      window.__errors.push(error);
+      console.error('🚨 UNHANDLED PROMISE:', error);
     };
+    
+    console.log('✅ Error handlers installés');
   </script>
+  
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/auth-fetch.js"></script>
+  
+  <!-- ⚠️ NE PAS charger auth-fetch.js ici - on le fera manuellement après -->
 </head>
 <body class="auth-body">
   <div class="auth-container">
@@ -108,37 +130,70 @@
   </div>
   
   <script>
+    console.log('🚀 Début script login');
+    
     // ============================================
-    // 🔧 CONFIGURATION
+    // 🔧 UTILITAIRES
     // ============================================
     
-    // Détection native fiable
+    // Détection native ultra-robuste
     const IS_NATIVE = (() => {
       try {
-        return !!(window.Capacitor?.isNativePlatform?.() || 
-                 window.location.protocol === 'capacitor:' ||
-                 window.location.protocol === 'ionic:');
-      } catch {
+        const hasCapacitor = typeof window.Capacitor !== 'undefined';
+        const isNativePlatform = hasCapacitor && typeof window.Capacitor.isNativePlatform === 'function' 
+          ? window.Capacitor.isNativePlatform() 
+          : false;
+        const isCapacitorProtocol = window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
+        
+        const result = isNativePlatform || isCapacitorProtocol;
+        
+        console.log('🔍 Détection native:', {
+          hasCapacitor,
+          isNativePlatform,
+          isCapacitorProtocol,
+          protocol: window.location.protocol,
+          result
+        });
+        
+        return result;
+      } catch (e) {
+        console.error('❌ Erreur détection native:', e);
         return false;
       }
     })();
 
-    console.log('🔍 IS_NATIVE:', IS_NATIVE);
-    console.log('🔍 Protocol:', window.location.protocol);
-    console.log('🔍 Origin:', window.location.origin);
+    // URL de base API
+    const API_BASE_URL = 'https://lcc-booking-manager.onrender.com';
 
-    // ⚠️ IMPORTANT: Ne pas définir API_BASE ici !
-    // auth-fetch.js s'occupe de tout automatiquement
+    // Fonction pour construire l'URL correcte
+    function buildApiUrl(path) {
+      // Si on est sur le web, utiliser le chemin relatif (proxy)
+      if (!IS_NATIVE) {
+        console.log('🌐 Mode web, URL relative:', path);
+        return path;
+      }
+      
+      // Si on est en natif, construire l'URL complète
+      const fullUrl = API_BASE_URL + path;
+      console.log('📱 Mode natif, URL complète:', fullUrl);
+      return fullUrl;
+    }
 
     // ============================================
     // 🔐 VÉRIFICATION CONNEXION EXISTANTE
     // ============================================
     
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (token) {
-        console.log('✅ Token trouvé, redirection...');
-        window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+    (function checkExistingLogin() {
+      try {
+        const token = localStorage.getItem('lcc_token');
+        if (token) {
+          console.log('✅ Token trouvé, redirection...');
+          window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+        } else {
+          console.log('ℹ️ Pas de token, affichage formulaire');
+        }
+      } catch (e) {
+        console.error('❌ Erreur vérification token:', e);
       }
     })();
 
@@ -150,11 +205,33 @@
     const loginError = document.getElementById('loginError');
     const loginSubmit = document.getElementById('loginSubmit');
 
+    // Fonction pour afficher une erreur
+    function showError(message) {
+      console.error('❌', message);
+      loginError.style.display = 'block';
+      loginError.textContent = message;
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = 'Se connecter';
+    }
+
+    // Fonction pour logger les détails
+    function logDetails(title, data) {
+      console.log(`📊 ${title}:`, JSON.stringify(data, null, 2));
+    }
+
     loginForm.addEventListener('submit', async function (e) {
       e.preventDefault();
+      
+      console.log('📝 Formulaire soumis');
 
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
+
+      // Validation basique
+      if (!email || !password) {
+        showError('Veuillez remplir tous les champs');
+        return;
+      }
 
       // Réinitialiser l'erreur
       loginError.style.display = 'none';
@@ -165,89 +242,148 @@
       loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
 
       try {
-        console.log('📤 Envoi requête de connexion...');
-        console.log('📧 Email:', email);
+        // Construire l'URL
+        const url = buildApiUrl('/api/auth/login');
         
-        // ⚠️ IMPORTANT: Utiliser un chemin relatif SANS API_BASE
-        // auth-fetch.js va automatiquement ajouter le bon préfixe
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+        // Préparer le body
+        const body = JSON.stringify({ email, password });
+        
+        // Préparer les headers
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+
+        logDetails('Requête', { url, email, hasPassword: !!password });
+
+        // Faire la requête
+        console.log('📤 Envoi requête...');
+        const startTime = Date.now();
+        
+        let response;
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: body
+          });
+        } catch (fetchError) {
+          const duration = Date.now() - startTime;
+          console.error('❌ Erreur fetch:', {
+            name: fetchError.name,
+            message: fetchError.message,
+            duration: duration + 'ms'
+          });
+          throw fetchError;
+        }
+
+        const duration = Date.now() - startTime;
+        console.log(`📥 Réponse reçue en ${duration}ms:`, {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
         });
 
-        console.log('📥 Réponse reçue:', res.status, res.statusText);
-
-        // Vérifier le type de contenu
-        const ct = res.headers.get('content-type') || '';
-        console.log('📄 Content-Type:', ct);
+        // Lire la réponse
+        const contentType = response.headers.get('content-type') || '';
+        console.log('📄 Content-Type:', contentType);
 
         let data;
         try {
-          if (ct.includes('application/json')) {
-            data = await res.json();
-            console.log('✅ JSON parsé:', data);
+          if (contentType.includes('application/json')) {
+            data = await response.json();
+            logDetails('Données JSON', data);
           } else {
-            const text = await res.text();
-            console.log('⚠️ Réponse non-JSON:', text);
-            data = { error: text };
+            const text = await response.text();
+            console.warn('⚠️ Réponse non-JSON:', text.substring(0, 200));
+            data = { error: 'Réponse serveur invalide: ' + text.substring(0, 100) };
           }
-        } catch (parseErr) {
-          console.error('❌ Erreur parsing réponse:', parseErr);
-          data = { error: 'Réponse serveur invalide' };
+        } catch (parseError) {
+          console.error('❌ Erreur parsing réponse:', parseError);
+          data = { error: 'Impossible de lire la réponse du serveur' };
         }
 
-        if (!res.ok) {
-          console.error('❌ Erreur serveur:', res.status, data);
-          loginError.style.display = 'block';
-          loginError.textContent = data.error || `Erreur ${res.status}: ${res.statusText}`;
-          loginSubmit.disabled = false;
-          loginSubmit.textContent = 'Se connecter';
+        // Vérifier le status
+        if (!response.ok) {
+          const errorMsg = data.error || data.message || `Erreur ${response.status}`;
+          showError(errorMsg);
+          return;
+        }
+
+        // Vérifier que les données sont valides
+        if (!data.token || !data.user) {
+          console.error('❌ Réponse invalide:', data);
+          showError('Réponse serveur invalide (token ou user manquant)');
           return;
         }
 
         // Succès !
         console.log('✅ Connexion réussie !');
-        console.log('👤 User:', data.user);
-        console.log('🔑 Token:', data.token ? 'présent' : 'absent');
+        logDetails('User', data.user);
 
-        // Stocker le token + user
-        localStorage.setItem('lcc_token', data.token);
-        localStorage.setItem('lcc_user', JSON.stringify(data.user));
-
-        console.log('💾 Données sauvegardées dans localStorage');
+        // Stocker les données
+        try {
+          localStorage.setItem('lcc_token', data.token);
+          localStorage.setItem('lcc_user', JSON.stringify(data.user));
+          console.log('💾 Données sauvegardées');
+        } catch (storageError) {
+          console.error('❌ Erreur sauvegarde localStorage:', storageError);
+          showError('Impossible de sauvegarder la connexion');
+          return;
+        }
 
         // Redirection
         const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
         console.log('🔄 Redirection vers:', redirectUrl);
-        window.location.href = redirectUrl;
-
-      } catch (err) {
-        console.error('❌ ERREUR CATCH:', err);
-        console.error('📛 Name:', err?.name);
-        console.error('💬 Message:', err?.message);
-        console.error('📚 Stack:', err?.stack);
-        console.error('🌍 Current URL:', window.location.href);
-        console.error('🔗 Origin:', window.location.origin);
-        console.error('📱 IS_NATIVE:', IS_NATIVE);
-
-        // Message d'erreur détaillé pour debug
-        let errorMsg = "Erreur réseau lors de la connexion";
         
-        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
-          errorMsg = "Impossible de contacter le serveur. Vérifiez votre connexion internet.";
-        } else if (err.name === 'NetworkError') {
-          errorMsg = "Erreur réseau. Êtes-vous connecté à internet ?";
-        } else if (err.message) {
-          errorMsg = `Erreur: ${err.message}`;
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 100);
+
+      } catch (error) {
+        console.error('❌ ERREUR CATCH:');
+        console.error('  Name:', error?.name);
+        console.error('  Message:', error?.message);
+        console.error('  Stack:', error?.stack);
+        
+        // Diagnostic détaillé
+        console.error('🔍 Diagnostic:');
+        console.error('  URL actuelle:', window.location.href);
+        console.error('  Origin:', window.location.origin);
+        console.error('  Protocol:', window.location.protocol);
+        console.error('  IS_NATIVE:', IS_NATIVE);
+        console.error('  API_BASE_URL:', API_BASE_URL);
+        
+        // Afficher les erreurs accumulées
+        if (window.__errors && window.__errors.length > 0) {
+          console.error('🚨 Erreurs précédentes:', window.__errors);
         }
 
-        loginError.style.display = 'block';
-        loginError.textContent = errorMsg;
-        loginSubmit.disabled = false;
-        loginSubmit.textContent = 'Se connecter';
+        // Message d'erreur pour l'utilisateur
+        let errorMsg = 'Erreur de connexion';
+        
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          errorMsg = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
+        } else if (error.name === 'NetworkError') {
+          errorMsg = 'Erreur réseau. Êtes-vous connecté à internet ?';
+        } else if (error.message) {
+          errorMsg = `Erreur: ${error.message}`;
+        }
+
+        showError(errorMsg);
       }
     });
+    
+    console.log('✅ Script login chargé');
+    
+    // Afficher un résumé après 1 seconde
+    setTimeout(() => {
+      console.log('📊 RÉSUMÉ:');
+      console.log('  IS_NATIVE:', IS_NATIVE);
+      console.log('  Protocol:', window.location.protocol);
+      console.log('  Erreurs JS:', window.__errors.length);
+      console.log('  Form ready:', !!loginForm);
+      console.log('  Capacitor:', typeof window.Capacitor !== 'undefined');
+    }, 1000);
   </script>
 
   <style>
@@ -518,11 +654,10 @@
       font-size: 12px;
     }
 
-    /* Brand title colors (Boosting en vert) */
+    /* Brand title colors */
     .brand-boosting { color: #10B981; font-weight: 800; }
     .brand-host { color: #0F172A; font-weight: 700; }
 
-    /* Agrandir le logo */
     .bh-logo { width: 52px; height: 52px; }
 
     /* Responsive */
@@ -540,7 +675,6 @@
     }
 
     @media (max-width: 640px) {
-      /* Mobile: logo légèrement plus grand aussi */
       .bh-logo { width: 48px; height: 48px; }
       .auth-container {
         margin: 12px;
@@ -560,9 +694,9 @@
         height: 40px;
         font-size: 18px;
       }
-      .bh-logo { display:block; color:#fff; }
     }
   </style>
+  
   <script type="module" src="/js/push-notifications-handler.js"></script>
 </body>
 </html>
