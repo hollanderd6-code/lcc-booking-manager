@@ -107,20 +107,44 @@
     </div>
   </div>
   
-    <script>
-    // Détection Capacitor (app native)
-    const IS_NATIVE = !!window.Capacitor?.isNativePlatform?.();
+  <script>
+    // ============================================
+    // 🔧 CONFIGURATION
+    // ============================================
+    
+    // Détection native fiable
+    const IS_NATIVE = (() => {
+      try {
+        return !!(window.Capacitor?.isNativePlatform?.() || 
+                 window.location.protocol === 'capacitor:' ||
+                 window.location.protocol === 'ionic:');
+      } catch {
+        return false;
+      }
+    })();
 
-    // Backend API (uniquement pour l'app native)
-    const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
+    console.log('🔍 IS_NATIVE:', IS_NATIVE);
+    console.log('🔍 Protocol:', window.location.protocol);
+    console.log('🔍 Origin:', window.location.origin);
 
-    // Si déjà connecté, inutile de revenir ici
+    // ⚠️ IMPORTANT: Ne pas définir API_BASE ici !
+    // auth-fetch.js s'occupe de tout automatiquement
+
+    // ============================================
+    // 🔐 VÉRIFICATION CONNEXION EXISTANTE
+    // ============================================
+    
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (token) {
+        console.log('✅ Token trouvé, redirection...');
         window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
       }
     })();
+
+    // ============================================
+    // 📝 GESTION DU FORMULAIRE
+    // ============================================
 
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
@@ -132,55 +156,99 @@
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
 
+      // Réinitialiser l'erreur
       loginError.style.display = 'none';
       loginError.textContent = '';
 
+      // Désactiver le bouton
       loginSubmit.disabled = true;
       loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
 
       try {
-        // IMPORTANT:
-        // - Web: API_BASE = '' → /api/auth/login sur ton domaine web
-        // - App Capacitor: API_BASE = https://... → appel direct à ton backend
-        const res = await fetch(`${API_BASE}/api/auth/login`, {
+        console.log('📤 Envoi requête de connexion...');
+        console.log('📧 Email:', email);
+        
+        // ⚠️ IMPORTANT: Utiliser un chemin relatif SANS API_BASE
+        // auth-fetch.js va automatiquement ajouter le bon préfixe
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
 
-        // Ne pas supposer que la réponse est toujours du JSON (erreur HTML, 502, etc.)
+        console.log('📥 Réponse reçue:', res.status, res.statusText);
+
+        // Vérifier le type de contenu
         const ct = res.headers.get('content-type') || '';
-        const data = ct.includes('application/json')
-          ? await res.json()
-          : { error: await res.text() };
+        console.log('📄 Content-Type:', ct);
+
+        let data;
+        try {
+          if (ct.includes('application/json')) {
+            data = await res.json();
+            console.log('✅ JSON parsé:', data);
+          } else {
+            const text = await res.text();
+            console.log('⚠️ Réponse non-JSON:', text);
+            data = { error: text };
+          }
+        } catch (parseErr) {
+          console.error('❌ Erreur parsing réponse:', parseErr);
+          data = { error: 'Réponse serveur invalide' };
+        }
 
         if (!res.ok) {
+          console.error('❌ Erreur serveur:', res.status, data);
           loginError.style.display = 'block';
-          loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
+          loginError.textContent = data.error || `Erreur ${res.status}: ${res.statusText}`;
           loginSubmit.disabled = false;
           loginSubmit.textContent = 'Se connecter';
           return;
         }
 
+        // Succès !
+        console.log('✅ Connexion réussie !');
+        console.log('👤 User:', data.user);
+        console.log('🔑 Token:', data.token ? 'présent' : 'absent');
+
         // Stocker le token + user
         localStorage.setItem('lcc_token', data.token);
         localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
-        // Redirection vers le dashboard (web + app)
-        window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+        console.log('💾 Données sauvegardées dans localStorage');
+
+        // Redirection
+        const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+        console.log('🔄 Redirection vers:', redirectUrl);
+        window.location.href = redirectUrl;
+
       } catch (err) {
-        console.error('LOGIN ERROR:', err?.name, err?.message, err);
-        console.error('STACK:', err?.stack);
-        console.log('href=', window.location.href, 'origin=', window.location.origin);
+        console.error('❌ ERREUR CATCH:', err);
+        console.error('📛 Name:', err?.name);
+        console.error('💬 Message:', err?.message);
+        console.error('📚 Stack:', err?.stack);
+        console.error('🌍 Current URL:', window.location.href);
+        console.error('🔗 Origin:', window.location.origin);
+        console.error('📱 IS_NATIVE:', IS_NATIVE);
+
+        // Message d'erreur détaillé pour debug
+        let errorMsg = "Erreur réseau lors de la connexion";
+        
+        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+          errorMsg = "Impossible de contacter le serveur. Vérifiez votre connexion internet.";
+        } else if (err.name === 'NetworkError') {
+          errorMsg = "Erreur réseau. Êtes-vous connecté à internet ?";
+        } else if (err.message) {
+          errorMsg = `Erreur: ${err.message}`;
+        }
 
         loginError.style.display = 'block';
-        loginError.textContent = "Erreur réseau lors de la connexion.";
+        loginError.textContent = errorMsg;
         loginSubmit.disabled = false;
         loginSubmit.textContent = 'Se connecter';
       }
     });
   </script>
-
 
   <style>
     .auth-body {
