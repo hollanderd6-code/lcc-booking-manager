@@ -135,14 +135,8 @@
         console.log(`✅ Badge créé (${isMobile ? 'mobile' : 'desktop'})`);
       }
 
-      // Afficher ou masquer le badge selon le count
-      if (count > 0) {
-        badge.textContent = count > 99 ? '99+' : count;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
+      // Toujours afficher le badge
+badge.style.display = 'flex';
 
     // Mettre à jour mobile (si existe)
     if (mobileTab) {
