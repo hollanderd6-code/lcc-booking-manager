@@ -1,10 +1,11 @@
 /* ============================================
-   📢 BADGE MESSAGES - VERSION DESKTOP + MOBILE
+   🔢 BADGE MESSAGES - VERSION CORRIGÉE
    
    ✅ Affiche le badge sur desktop (nav-item)
    ✅ Affiche le badge sur mobile (mobile-tab)
    ✅ Mise à jour en temps réel avec Socket.io
-   ✅ Gestion intelligente des badges
+   ✅ Gestion robuste avec MutationObserver
+   ✅ Attend que la sidebar soit injectée
    ============================================ */
 
 (function() {
@@ -12,6 +13,9 @@
 
   const API_URL = window.location.origin;
   let socket = null;
+  let badgeInitialized = false;
+  let retryCount = 0;
+  const MAX_RETRIES = 10;
 
   // ============================================
   // 📊 CHARGER LE NOMBRE DE MESSAGES NON LUS
@@ -21,7 +25,7 @@
     try {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
-        console.log('⚠️ Pas de token - Badge = 0');
+        console.log('⚠️ Badge: Pas de token - Badge = 0');
         updateBadge(0);
         return;
       }
@@ -34,42 +38,30 @@
       });
 
       if (!response.ok) {
-        console.warn('⚠️ Erreur API (status:', response.status, ') - Badge = 0');
+        console.warn('⚠️ Badge: Erreur API (status:', response.status, ') - Badge = 0');
         updateBadge(0);
         return;
       }
 
       const data = await response.json();
       
-      console.log('📦 Données reçues:', data);
-      
       // Compter les messages non lus
       let totalUnread = 0;
       
       if (data.conversations && Array.isArray(data.conversations)) {
-        console.log(`📋 ${data.conversations.length} conversation(s) trouvée(s)`);
-        
-        data.conversations.forEach((conv, index) => {
+        data.conversations.forEach((conv) => {
           const unreadCount = parseInt(conv.unread_count) || 0;
-          
-          if (unreadCount > 0) {
-            console.log(`  - Conv ${index + 1} (${conv.guest_name || 'Sans nom'}): ${unreadCount} non lu(s)`);
-          }
-          
           totalUnread += unreadCount;
         });
-      } else {
-        console.warn('⚠️ Format de réponse inattendu:', data);
       }
 
       // Mettre à jour le badge
       updateBadge(totalUnread);
       
-      console.log('🔔 Total messages non lus:', totalUnread);
+      console.log('📬 Badge Messages: Total non lus =', totalUnread);
 
     } catch (error) {
-      console.error('❌ Erreur chargement badge:', error);
-      // En cas d'erreur, afficher 0
+      console.error('❌ Badge: Erreur chargement:', error);
       updateBadge(0);
     }
   }
@@ -87,9 +79,17 @@
     const desktopNav = document.querySelector('.nav-item[data-page="messages"]');
     
     if (!mobileTab && !desktopNav) {
-      console.warn('⚠️ Onglet/Nav Messages non trouvé');
+      // Les éléments n'existent pas encore, on réessaiera plus tard
+      if (!badgeInitialized && retryCount < MAX_RETRIES) {
+        retryCount++;
+        console.log(`⏳ Badge: Éléments non trouvés, retry ${retryCount}/${MAX_RETRIES}...`);
+        setTimeout(() => updateBadge(count), 200);
+      }
       return;
     }
+
+    badgeInitialized = true;
+    retryCount = 0;
 
     // Fonction pour mettre à jour un élément
     function updateElement(element, isMobile) {
@@ -104,31 +104,54 @@
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'badge-count';
+        
+        // Style inline pour garantir l'affichage
+        badge.style.cssText = `
+          position: absolute;
+          top: ${isMobile ? '4px' : '8px'};
+          right: ${isMobile ? '50%' : '8px'};
+          transform: ${isMobile ? 'translateX(12px)' : 'none'};
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          background: #EF4444;
+          color: white;
+          font-size: 11px;
+          font-weight: 600;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        `;
+        
+        // S'assurer que le parent a position relative
+        if (getComputedStyle(element).position === 'static') {
+          element.style.position = 'relative';
+        }
+        
         element.appendChild(badge);
         console.log(`✅ Badge créé (${isMobile ? 'mobile' : 'desktop'})`);
       }
 
-      // Afficher le badge
-      if (count > 99) {
-        badge.textContent = '99+';
+      // Afficher ou masquer le badge selon le count
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex';
       } else {
-        badge.textContent = count;
+        badge.style.display = 'none';
       }
-      
-      // Toujours afficher le badge (mobile ET desktop)
-      badge.style.display = 'flex';
     }
 
     // Mettre à jour mobile (si existe)
     if (mobileTab) {
       updateElement(mobileTab, true);
-      console.log('📱 Badge mobile mis à jour:', count);
     }
     
     // Mettre à jour desktop (si existe)
     if (desktopNav) {
       updateElement(desktopNav, false);
-      console.log('💻 Badge desktop mis à jour:', count);
     }
   }
 
@@ -139,7 +162,7 @@
   function connectSocket() {
     // Vérifier si Socket.io est disponible
     if (typeof io === 'undefined') {
-      console.warn('⚠️ Socket.io non disponible - Badge statique');
+      console.warn('⚠️ Badge: Socket.io non disponible - Badge statique');
       return;
     }
 
@@ -147,56 +170,41 @@
       socket = io(API_URL);
 
       socket.on('connect', () => {
-        console.log('✅ Socket connecté pour le badge');
+        console.log('✅ Badge: Socket connecté');
         
         // Rejoindre la room utilisateur
         const userId = getUserId();
         if (userId) {
           socket.emit('join_user_room', userId);
-          console.log('🔌 Room user rejointe:', userId);
         }
       });
 
       // Écouter les nouveaux messages
-      socket.on('new_message', (message) => {
-        console.log('🔔 Nouveau message reçu:', message);
-        // Attendre 500ms avant de recharger (laisser le temps au serveur de mettre à jour)
-        setTimeout(() => {
-          loadUnreadCount();
-        }, 500);
+      socket.on('new_message', () => {
+        setTimeout(loadUnreadCount, 500);
       });
 
       // Écouter les notifications
-      socket.on('new_notification', (notification) => {
-        console.log('🔔 Nouvelle notification:', notification);
-        setTimeout(() => {
-          loadUnreadCount();
-        }, 500);
+      socket.on('new_notification', () => {
+        setTimeout(loadUnreadCount, 500);
       });
 
-      // Écouter les messages lus (pour mettre à jour le badge)
-      socket.on('messages_read', (data) => {
-        console.log('👀 Messages marqués comme lus:', data);
-        setTimeout(() => {
-          loadUnreadCount();
-        }, 300);
+      // Écouter les messages lus
+      socket.on('messages_read', () => {
+        setTimeout(loadUnreadCount, 300);
       });
 
       socket.on('disconnect', () => {
-        console.log('❌ Socket déconnecté');
-      });
-
-      socket.on('error', (error) => {
-        console.error('❌ Erreur Socket:', error);
+        console.log('⚠️ Badge: Socket déconnecté');
       });
 
     } catch (error) {
-      console.error('❌ Erreur connexion Socket:', error);
+      console.error('❌ Badge: Erreur connexion Socket:', error);
     }
   }
 
   // ============================================
-  // 🔐 RÉCUPÉRER L'ID UTILISATEUR
+  // 🔑 RÉCUPÉRER L'ID UTILISATEUR
   // ============================================
   
   function getUserId() {
@@ -207,7 +215,7 @@
         return user.id;
       }
     } catch (error) {
-      console.error('❌ Erreur lecture user:', error);
+      console.error('❌ Badge: Erreur lecture user:', error);
     }
     return null;
   }
@@ -217,28 +225,41 @@
   // ============================================
   
   function startPeriodicRefresh() {
-    // Recharger toutes les 30 secondes (backup si Socket.io ne fonctionne pas)
     setInterval(() => {
-      console.log('🔄 Refresh périodique du badge...');
       loadUnreadCount();
     }, 30000); // 30 secondes
   }
 
   // ============================================
-  // 👂 ÉCOUTER LES CHANGEMENTS DE PAGE
+  // 👁️ OBSERVER LES CHANGEMENTS DU DOM
   // ============================================
   
-  function setupPageChangeListeners() {
-    // Écouter les clics sur le lien Messages
-    const messagesLinks = document.querySelectorAll('a[href*="messages"]');
-    messagesLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        // Quand on clique sur Messages, recharger le badge après un délai
-        setTimeout(() => {
-          loadUnreadCount();
-        }, 1000);
-      });
+  function setupMutationObserver() {
+    const observer = new MutationObserver((mutations) => {
+      // Vérifier si la sidebar ou les tabs ont été ajoutés
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          const desktopNav = document.querySelector('.nav-item[data-page="messages"]');
+          const mobileTab = document.querySelector('.tab-btn[data-tab="messages"]');
+          
+          if ((desktopNav || mobileTab) && !badgeInitialized) {
+            console.log('🔍 Badge: Éléments détectés via MutationObserver');
+            loadUnreadCount();
+            break;
+          }
+        }
+      }
     });
+
+    observer.observe(document.body, { 
+      childList: true, 
+      subtree: true 
+    });
+
+    // Déconnecter après 10 secondes pour économiser les ressources
+    setTimeout(() => {
+      observer.disconnect();
+    }, 10000);
   }
 
   // ============================================
@@ -246,33 +267,41 @@
   // ============================================
   
   function init() {
-    // Attendre que le DOM soit prêt
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-      return;
-    }
+    console.log('🚀 Badge Messages: Initialisation...');
+    
+    // Écouter l'événement sidebarReady émis par bh-layout.js
+    document.addEventListener('sidebarReady', () => {
+      console.log('📢 Badge: Événement sidebarReady reçu');
+      setTimeout(loadUnreadCount, 100);
+    });
 
-    // Attendre que les onglets soient créés
-    setTimeout(() => {
-      console.log('🚀 Initialisation badge messages (Desktop + Mobile)...');
-      
-      // Charger le compteur
-      loadUnreadCount();
-      
-      // Connecter Socket.io pour les mises à jour temps réel
-      connectSocket();
-      
-      // Backup : recharger périodiquement
-      startPeriodicRefresh();
-      
-      // Écouter les changements de page
-      setupPageChangeListeners();
-      
-    }, 500); // Attendre 500ms que les onglets soient créés
+    // Setup MutationObserver pour détecter quand les éléments sont créés
+    setupMutationObserver();
+    
+    // Essayer de charger immédiatement
+    loadUnreadCount();
+    
+    // Connecter Socket.io
+    connectSocket();
+    
+    // Backup : recharger périodiquement
+    startPeriodicRefresh();
+    
+    // Réessayer après des délais progressifs
+    setTimeout(loadUnreadCount, 300);
+    setTimeout(loadUnreadCount, 700);
+    setTimeout(loadUnreadCount, 1500);
   }
 
-  // Démarrer
-  init();
+  // ============================================
+  // DÉMARRAGE
+  // ============================================
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
   // ============================================
   // 🌐 EXPOSER GLOBALEMENT POUR DÉBOGAGE
@@ -286,10 +315,9 @@
     console.log('🔍 DEBUG BADGE:');
     console.log('- API_URL:', API_URL);
     console.log('- Token:', localStorage.getItem('lcc_token') ? 'Présent' : 'Absent');
-    console.log('- User:', localStorage.getItem('lcc_user'));
     console.log('- Socket:', socket ? 'Connecté' : 'Non connecté');
+    console.log('- Badge initialisé:', badgeInitialized);
     
-    // Vérifier les éléments DOM
     const mobileTab = document.querySelector('.mobile-tab[data-tab="messages"]') ||
                       document.querySelector('.tab-btn[data-tab="messages"]');
     const desktopNav = document.querySelector('.nav-item[data-page="messages"]');
@@ -299,14 +327,9 @@
     
     if (desktopNav) {
       const badge = desktopNav.querySelector('.badge-count');
-      console.log('- Desktop Badge:', badge ? 'Créé' : 'Pas encore créé');
-      if (badge) {
-        console.log('  - Contenu:', badge.textContent);
-        console.log('  - Display:', badge.style.display);
-      }
+      console.log('- Desktop Badge:', badge ? `Créé (${badge.textContent})` : 'Pas encore créé');
     }
     
-    // Forcer le rechargement
     console.log('🔄 Rechargement forcé...');
     loadUnreadCount();
   };
