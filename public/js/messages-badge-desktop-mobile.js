@@ -105,7 +105,7 @@
       badge.style.cssText = `
         position: absolute !important;
         top: 4px !important;
-        right: 50% !important;
+        right: 70% !important;
         transform: translateX(18px) !important;
         min-width: 18px !important;
         height: 18px !important;
