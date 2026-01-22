@@ -145,7 +145,9 @@
         // Redirection vers le dashboard
         window.location.href = '/app.html';
       } catch (err) {
-        console.error(err);
+        console.error('LOGIN ERROR:', err?.name, err?.message, err);
+console.error('STACK:', err?.stack);
+console.log('href=', window.location.href, 'origin=', window.location.origin);
         loginError.style.display = 'block';
         loginError.textContent = "Erreur réseau lors de la connexion.";
         loginSubmit.disabled = false;
