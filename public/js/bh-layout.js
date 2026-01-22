@@ -1,9 +1,9 @@
-/* /js/bh-layout.js — injection sidebar + header standard */
-/* VERSION CORRIGÉE - Logo "B" partout (sidebar + mobile) */
+/* /js/bh-layout.js – injection sidebar + header standard */
+/* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
 (function () {
   
   // ============================================
-  // 🎨 LOGO "B" BOOSTINGHOST (utilisé partout)
+  // 🎨 LOGO "B" BOOSTINGHOST (utilisé partout) - GRAND FORMAT
   // ============================================
   const LOGO_B_SVG = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
     <defs>
@@ -13,7 +13,7 @@
       </linearGradient>
     </defs>
     <circle cx="20" cy="20" r="20" fill="url(#bhGradient)"/>
-    <text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
+    <text x="20" y="28" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="24" font-weight="800" fill="#ffffff">B</text>
   </svg>`;
 
   const SIDEBAR_HTML = `<aside class="sidebar">
@@ -197,7 +197,7 @@ ${LOGO_B_SVG}
 
     // ✅ Émettre un événement quand la sidebar est prête
     document.dispatchEvent(new CustomEvent('sidebarReady'));
-    console.log("✅ Sidebar injectée avec logo B");
+    console.log("✅ Sidebar injectée avec logo B grand format");
   }
 
   function injectHeader() {
@@ -248,20 +248,49 @@ ${LOGO_B_SVG}
       }
     }
 
-    // 2. REMPLACER L'ICÔNE PAR LE LOGO SVG "B"
+    // 2. REMPLACER L'ICÔNE PAR LE LOGO SVG "B" GRAND FORMAT
     if (mobileLogo) {
       const existingSvg = mobileLogo.querySelector("svg");
       
-      if (!existingSvg) {
-        // Supprimer l'ancienne icône FontAwesome si présente
-        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-']");
+      // Vérifier si c'est bien notre SVG avec le bon format
+      const needsUpdate = !existingSvg || 
+                         !existingSvg.querySelector('text[font-size="24"]');
+      
+      if (needsUpdate) {
+        // Supprimer l'ancien contenu
+        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg");
         if (oldIcon) {
           oldIcon.remove();
         }
-        // Injecter le logo B
+        // Injecter le logo B grand format
         mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
       }
     }
+  }
+
+  // ============================================
+  // 🎨 FORCE LE REMPLACEMENT DU LOGO SIDEBAR
+  // ============================================
+  function forceUpdateSidebarLogo() {
+    // Trouve tous les logos dans la sidebar
+    const sidebarLogos = document.querySelectorAll('.sidebar-logo svg, .sidebar-header svg');
+    
+    sidebarLogos.forEach(svg => {
+      const textElement = svg.querySelector('text');
+      if (textElement) {
+        // Vérifie si c'est notre bon format (font-size 24)
+        const fontSize = textElement.getAttribute('font-size');
+        if (fontSize !== '24') {
+          console.log('🔄 Mise à jour du logo sidebar détecté (mauvaise taille)...');
+          // Remplace le SVG parent
+          const parent = svg.parentElement;
+          if (parent) {
+            svg.remove();
+            parent.insertAdjacentHTML('afterbegin', LOGO_B_SVG);
+          }
+        }
+      }
+    });
   }
 
   // ============================================
@@ -274,10 +303,19 @@ ${LOGO_B_SVG}
     injectHeader();
     normalizeBranding();
     
-    // Réappliquer le branding après un court délai
-    setTimeout(normalizeBranding, 100);
+    // Réappliquer le branding et forcer la mise à jour après un court délai
+    setTimeout(() => {
+      normalizeBranding();
+      forceUpdateSidebarLogo();
+    }, 100);
     
-    console.log("✅ bh-layout.js - Prêt");
+    // Vérification supplémentaire après 500ms
+    setTimeout(() => {
+      forceUpdateSidebarLogo();
+      normalizeBranding();
+    }, 500);
+    
+    console.log("✅ bh-layout.js - Prêt avec logo unifié");
   }
 
   // Démarrer dès que le DOM est prêt
@@ -291,7 +329,8 @@ ${LOGO_B_SVG}
   window.bhLayout = {
     normalizeBranding,
     injectSidebar,
-    injectHeader
+    injectHeader,
+    forceUpdateSidebarLogo
   };
 
 })();
