@@ -1,15 +1,25 @@
 /* /js/bh-layout.js — injection sidebar + header standard */
-/* VERSION CORRIGÉE - Logo B uniforme + Badge Messages stable */
+/* VERSION CORRIGÉE - Logo "B" partout (sidebar + mobile) */
 (function () {
+  
+  // ============================================
+  // 🎨 LOGO "B" BOOSTINGHOST (utilisé partout)
+  // ============================================
+  const LOGO_B_SVG = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+    <defs>
+      <linearGradient id="bhGradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7fd3a6"/>
+        <stop offset="1" stop-color="#58b88c"/>
+      </linearGradient>
+    </defs>
+    <circle cx="20" cy="20" r="20" fill="url(#bhGradient)"/>
+    <text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
+  </svg>`;
+
   const SIDEBAR_HTML = `<aside class="sidebar">
 <div class="sidebar-header">
 <a class="sidebar-logo" href="/">
-<svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
-<path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
-<path d="M16 36V26H24V36" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
-<path d="M20 4L4 18H10V22H30V18H36L20 4Z" fill="#10B981" stroke="#10B981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-<path d="M20 9L24 14H16L20 9Z" fill="white"></path>
-</svg>
+${LOGO_B_SVG}
 <div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
 <span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
 <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
@@ -100,20 +110,6 @@
 </aside>`;
 
   // ============================================
-  // 🎨 SVG DU LOGO "B" BOOSTINGHOST
-  // ============================================
-  const BRAND_SVG = `<svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-    <defs>
-      <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#7fd3a6"/>
-        <stop offset="1" stop-color="#58b88c"/>
-      </linearGradient>
-    </defs>
-    <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
-    <text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
-  </svg>`;
-
-  // ============================================
   // 📝 TEXTE DU LOGO MOBILE
   // ============================================
   const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
@@ -201,7 +197,7 @@
 
     // ✅ Émettre un événement quand la sidebar est prête
     document.dispatchEvent(new CustomEvent('sidebarReady'));
-    console.log("✅ Sidebar injectée - événement sidebarReady émis");
+    console.log("✅ Sidebar injectée avec logo B");
   }
 
   function injectHeader() {
@@ -238,77 +234,34 @@
   }
 
   // ============================================
-  // 🎨 NORMALISATION DU BRANDING - VERSION CORRIGÉE
+  // 🎨 NORMALISATION DU BRANDING MOBILE
   // ============================================
   function normalizeBranding() {
     const mobileLogo = document.querySelector(".mobile-logo");
     const mobileLogoText = document.querySelector(".mobile-logo-text");
 
-    console.log("🎨 normalizeBranding() - Début");
-    console.log("  - mobileLogo trouvé:", !!mobileLogo);
-    console.log("  - mobileLogoText trouvé:", !!mobileLogoText);
-
-    // ============================================
     // 1. REMPLACER LE TEXTE DU LOGO MOBILE
-    // ============================================
     if (mobileLogoText) {
-      // Vérifier si c'est déjà le bon texte
       const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
-      
       if (!hasCorrectBranding) {
-        console.log("  → Remplacement du texte (ancien contenu:", mobileLogoText.textContent.trim(), ")");
         mobileLogoText.innerHTML = BRAND_TEXT_HTML;
-      } else {
-        console.log("  → Texte déjà correct");
       }
     }
 
-    // ============================================
     // 2. REMPLACER L'ICÔNE PAR LE LOGO SVG "B"
-    // ============================================
     if (mobileLogo) {
-      // Vérifier si le logo SVG est déjà présent
-      const existingSvg = mobileLogo.querySelector("svg.mobile-logo-mark");
+      const existingSvg = mobileLogo.querySelector("svg");
       
-      if (existingSvg) {
-        console.log("  → Logo SVG 'B' déjà présent");
-      } else {
-        // Chercher et supprimer l'ancienne icône FontAwesome
+      if (!existingSvg) {
+        // Supprimer l'ancienne icône FontAwesome si présente
         const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-']");
         if (oldIcon) {
-          console.log("  → Suppression de l'ancienne icône:", oldIcon.className);
           oldIcon.remove();
         }
-
-        // Chercher et supprimer l'ancien SVG (maison)
-        const oldSvg = mobileLogo.querySelector("svg:not(.mobile-logo-mark)");
-        if (oldSvg) {
-          console.log("  → Suppression de l'ancien SVG");
-          oldSvg.remove();
-        }
-
-        // Chercher et supprimer l'ancienne image
-        const oldImg = mobileLogo.querySelector("img");
-        if (oldImg) {
-          console.log("  → Suppression de l'ancienne image");
-          oldImg.remove();
-        }
-
-        // Injecter le nouveau logo SVG "B" au début
-        mobileLogo.insertAdjacentHTML("afterbegin", BRAND_SVG);
-        console.log("  → Logo SVG 'B' injecté");
+        // Injecter le logo B
+        mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
       }
     }
-
-    // ============================================
-    // 3. SIDEBAR BRAND TITLE
-    // ============================================
-    const sidebarTitle = document.querySelector(".sidebar-logo-title");
-    if (sidebarTitle) {
-      sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
-    }
-
-    console.log("🎨 normalizeBranding() - Terminé");
   }
 
   // ============================================
@@ -321,9 +274,8 @@
     injectHeader();
     normalizeBranding();
     
-    // Réappliquer le branding après un court délai (au cas où d'autres scripts modifient le DOM)
+    // Réappliquer le branding après un court délai
     setTimeout(normalizeBranding, 100);
-    setTimeout(normalizeBranding, 500);
     
     console.log("✅ bh-layout.js - Prêt");
   }
