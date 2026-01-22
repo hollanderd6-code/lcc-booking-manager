@@ -97,75 +97,62 @@
   </div>
 
   <script>
-  // Si déjà connecté, inutile de revenir ici
-  (function () {
-    const token = localStorage.getItem('lcc_token');
-    if (token) {
-      window.location.href = '/app.html';
-    }
-  })();
-
-  const API_BASE = "https://lcc-booking-manager.onrender.com";
-
-  const loginForm = document.getElementById('loginForm');
-  const loginError = document.getElementById('loginError');
-  const loginSubmit = document.getElementById('loginSubmit');
-
-  loginForm.addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    loginError.style.display = 'none';
-    loginError.textContent = '';
-
-    loginSubmit.disabled = true;
-    loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
-
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      // ✅ Parsing JSON sécurisé
-      let data;
-      const ct = res.headers.get("content-type") || "";
-
-      if (ct.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        console.error("Réponse non JSON :", res.status, text);
-        throw new Error("Réponse serveur invalide");
+    // Si déjà connecté, inutile de revenir ici
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (token) {
+        window.location.href = '/app.html';
       }
+    })();
 
-      if (!res.ok) {
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const loginSubmit = document.getElementById('loginSubmit');
+
+    loginForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      loginError.style.display = 'none';
+      loginError.textContent = '';
+
+      loginSubmit.disabled = true;
+      loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          loginError.style.display = 'block';
+          loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
+          loginSubmit.disabled = false;
+          loginSubmit.textContent = 'Se connecter';
+          return;
+        }
+
+        // Stocker le token + user
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+        // Redirection vers le dashboard
+        window.location.href = '/app.html';
+      } catch (err) {
+        console.error(err);
         loginError.style.display = 'block';
-        loginError.textContent =
-          data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
-        return;
+        loginError.textContent = "Erreur réseau lors de la connexion.";
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = 'Se connecter';
       }
-
-      // ✅ Stockage token + user
-      localStorage.setItem('lcc_token', data.token);
-      localStorage.setItem('lcc_user', JSON.stringify(data.user));
-
-      // ✅ Redirection
-      window.location.href = '/app.html';
-
-    } catch (err) {
-      console.error(err);
-      loginError.style.display = 'block';
-      loginError.textContent = "Erreur réseau ou serveur indisponible.";
-    } finally {
-      loginSubmit.disabled = false;
-      loginSubmit.textContent = 'Se connecter';
-    }
-  });
-</script>
+    });
+  </script>
 
 
   <style>
