@@ -97,64 +97,78 @@
   </div>
 
   <script>
-    // Si déjà connecté, inutile de revenir ici
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (token) {
-        window.location.href = '/app.html';
-      }
-    })();
+  // Détection Capacitor
+  const IS_NATIVE = !!window.Capacitor?.isNativePlatform?.();
 
-    const loginForm = document.getElementById('loginForm');
-    const loginError = document.getElementById('loginError');
-    const loginSubmit = document.getElementById('loginSubmit');
+  // Backend API (uniquement pour l'app)
+  const API_BASE = IS_NATIVE
+    ? 'https://lcc-booking-manager.onrender.com'
+    : '';
 
-    loginForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
+  // Si déjà connecté
+  (function () {
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
+      window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+    }
+  })();
 
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
+  const loginSubmit = document.getElementById('loginSubmit');
 
-      loginError.style.display = 'none';
-      loginError.textContent = '';
+  loginForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-      loginSubmit.disabled = true;
-      loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
 
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
+    loginError.style.display = 'none';
+    loginError.textContent = '';
 
-        const data = await res.json();
+    loginSubmit.disabled = true;
+    loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
 
-        if (!res.ok) {
-          loginError.style.display = 'block';
-          loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
-          loginSubmit.disabled = false;
-          loginSubmit.textContent = 'Se connecter';
-          return;
-        }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
 
-        // Stocker le token + user
-        localStorage.setItem('lcc_token', data.token);
-        localStorage.setItem('lcc_user', JSON.stringify(data.user));
+      const ct = res.headers.get('content-type') || '';
+      const data = ct.includes('application/json')
+        ? await res.json()
+        : { error: await res.text() };
 
-        // Redirection vers le dashboard
-        window.location.href = '/app.html';
-      } catch (err) {
-        console.error('LOGIN ERROR:', err?.name, err?.message, err);
-console.error('STACK:', err?.stack);
-console.log('href=', window.location.href, 'origin=', window.location.origin);
+      if (!res.ok) {
         loginError.style.display = 'block';
-        loginError.textContent = "Erreur réseau lors de la connexion.";
+        loginError.textContent =
+          data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
         loginSubmit.disabled = false;
         loginSubmit.textContent = 'Se connecter';
+        return;
       }
-    });
-  </script>
+
+      // Stockage session
+      localStorage.setItem('lcc_token', data.token);
+      localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+      // Redirection OK web + app
+      window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+
+    } catch (err) {
+      console.error('LOGIN ERROR:', err?.name, err?.message, err);
+      console.error('STACK:', err?.stack);
+      console.log('href=', window.location.href, 'origin=', window.location.origin);
+
+      loginError.style.display = 'block';
+      loginError.textContent = "Erreur réseau lors de la connexion.";
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = 'Se connecter';
+    }
+  });
+</script>
 
   <style>
     .auth-body {
