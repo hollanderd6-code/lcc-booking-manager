@@ -1,4 +1,5 @@
 /* /js/bh-layout.js — injection sidebar + header standard */
+/* VERSION CORRIGÉE - Logo B uniforme + Badge Messages stable */
 (function () {
   const SIDEBAR_HTML = `<aside class="sidebar">
 <div class="sidebar-header">
@@ -52,12 +53,12 @@
 <span>Gestion du ménage</span>
 </a>
 <div class="nav-section">
-<div class="nav-section-title"><facturation></facturation></div>
-<a class="nav-item" href="/factures.html">
+<div class="nav-section-title">Facturation</div>
+<a class="nav-item" data-page="factures" href="/factures.html">
 <i class="fas fa-file-invoice"></i>
 <span>Factures clients</span>
 </a>
-<a class="nav-item" href="/factures-proprietaires.html">
+<a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
 <i class="fas fa-file-invoice-dollar"></i>
 <span>Factures propriétaires</span>
 </a>
@@ -98,6 +99,28 @@
 </div>
 </aside>`;
 
+  // ============================================
+  // 🎨 SVG DU LOGO "B" BOOSTINGHOST
+  // ============================================
+  const BRAND_SVG = `<svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+    <defs>
+      <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7fd3a6"/>
+        <stop offset="1" stop-color="#58b88c"/>
+      </linearGradient>
+    </defs>
+    <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
+    <text x="20" y="26" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="20" font-weight="800" fill="#ffffff">B</text>
+  </svg>`;
+
+  // ============================================
+  // 📝 TEXTE DU LOGO MOBILE
+  // ============================================
+  const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
+    <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+  </span>
+  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
+
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -109,21 +132,6 @@
     if (!ph) return;
 
     ph.innerHTML = SIDEBAR_HTML;
-    
-    // ❌ DÉSACTIVÉ : Le badge Messages est maintenant géré par messages-badge-dynamic.js
-    // qui crée un badge ROUGE (.badge-count) au lieu d'un badge VERT (.nav-badge)
-    /*
-    // Ensure Messages badge exists for chat-owner.js
-    const messagesLink = document.querySelector('.nav-item[data-page="messages"]');
-    if (messagesLink && !document.getElementById('unreadCount')) {
-      const badge = document.createElement('span');
-      badge.className = 'nav-badge';
-      badge.id = 'unreadCount';
-      badge.textContent = '0';
-      messagesLink.appendChild(badge);
-    }
-    */
-
 
     // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
@@ -176,7 +184,6 @@
         localStorage.removeItem("lcc_user");
         window.location.href = "/login.html";
       });
-      console.log("✅ Bouton déconnexion configuré dans bh-layout.js");
     }
 
     // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
@@ -191,6 +198,10 @@
       const companyEl = document.getElementById('sidebarUserCompany');
       if (companyEl) companyEl.textContent = user.company;
     }
+
+    // ✅ Émettre un événement quand la sidebar est prête
+    document.dispatchEvent(new CustomEvent('sidebarReady'));
+    console.log("✅ Sidebar injectée - événement sidebarReady émis");
   }
 
   function injectHeader() {
@@ -226,62 +237,109 @@
     `;
   }
 
+  // ============================================
+  // 🎨 NORMALISATION DU BRANDING - VERSION CORRIGÉE
+  // ============================================
   function normalizeBranding() {
-  // Mobile header brand
-  const mobileLogo = document.querySelector(".mobile-logo");
-  const mobileLogoText = document.querySelector(".mobile-logo-text");
+    const mobileLogo = document.querySelector(".mobile-logo");
+    const mobileLogoText = document.querySelector(".mobile-logo-text");
 
-  // Texte (Boosting/host + sous-titre) — n'écrase pas si déjà en place
-  if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
-    mobileLogoText.innerHTML = `
-      <span class="mobile-logo-title">
-        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-      </span>
-      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
-    `;
-  }
+    console.log("🎨 normalizeBranding() - Début");
+    console.log("  - mobileLogo trouvé:", !!mobileLogo);
+    console.log("  - mobileLogoText trouvé:", !!mobileLogoText);
 
-  // Logo (remplace l'icône existante / ancien SVG / injecte si rien)
-  if (mobileLogo) {
-    const brandSvg = `
-      <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
-           xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <defs>
-          <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7fd3a6"/>
-            <stop offset="1" stop-color="#58b88c"/>
-          </linearGradient>
-        </defs>
-        <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
-        <text x="20" y="26" text-anchor="middle"
-              font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-              font-size="20" font-weight="800" fill="#ffffff">B</text>
-      </svg>
-    `;
-
-    const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
-    const anySvg = mobileLogo.querySelector("svg");
-    const anyImg = mobileLogo.querySelector("img");
-
-    if (oldIcon) {
-      oldIcon.outerHTML = brandSvg;
-    } else if (anySvg && !anySvg.classList.contains("mobile-logo-mark")) {
-      anySvg.outerHTML = brandSvg;
-    } else if (!anyImg && !anySvg) {
-      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+    // ============================================
+    // 1. REMPLACER LE TEXTE DU LOGO MOBILE
+    // ============================================
+    if (mobileLogoText) {
+      // Vérifier si c'est déjà le bon texte
+      const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
+      
+      if (!hasCorrectBranding) {
+        console.log("  → Remplacement du texte (ancien contenu:", mobileLogoText.textContent.trim(), ")");
+        mobileLogoText.innerHTML = BRAND_TEXT_HTML;
+      } else {
+        console.log("  → Texte déjà correct");
+      }
     }
+
+    // ============================================
+    // 2. REMPLACER L'ICÔNE PAR LE LOGO SVG "B"
+    // ============================================
+    if (mobileLogo) {
+      // Vérifier si le logo SVG est déjà présent
+      const existingSvg = mobileLogo.querySelector("svg.mobile-logo-mark");
+      
+      if (existingSvg) {
+        console.log("  → Logo SVG 'B' déjà présent");
+      } else {
+        // Chercher et supprimer l'ancienne icône FontAwesome
+        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-']");
+        if (oldIcon) {
+          console.log("  → Suppression de l'ancienne icône:", oldIcon.className);
+          oldIcon.remove();
+        }
+
+        // Chercher et supprimer l'ancien SVG (maison)
+        const oldSvg = mobileLogo.querySelector("svg:not(.mobile-logo-mark)");
+        if (oldSvg) {
+          console.log("  → Suppression de l'ancien SVG");
+          oldSvg.remove();
+        }
+
+        // Chercher et supprimer l'ancienne image
+        const oldImg = mobileLogo.querySelector("img");
+        if (oldImg) {
+          console.log("  → Suppression de l'ancienne image");
+          oldImg.remove();
+        }
+
+        // Injecter le nouveau logo SVG "B" au début
+        mobileLogo.insertAdjacentHTML("afterbegin", BRAND_SVG);
+        console.log("  → Logo SVG 'B' injecté");
+      }
+    }
+
+    // ============================================
+    // 3. SIDEBAR BRAND TITLE
+    // ============================================
+    const sidebarTitle = document.querySelector(".sidebar-logo-title");
+    if (sidebarTitle) {
+      sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
+    }
+
+    console.log("🎨 normalizeBranding() - Terminé");
   }
 
-  // Sidebar brand title if needed
-  const sidebarTitle = document.querySelector(".sidebar-logo-title");
-  if (sidebarTitle) {
-    sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
+  // ============================================
+  // 🚀 INITIALISATION
+  // ============================================
+  function init() {
+    console.log("🚀 bh-layout.js - Initialisation...");
+    
     injectSidebar();
     injectHeader();
     normalizeBranding();
-  });
+    
+    // Réappliquer le branding après un court délai (au cas où d'autres scripts modifient le DOM)
+    setTimeout(normalizeBranding, 100);
+    setTimeout(normalizeBranding, 500);
+    
+    console.log("✅ bh-layout.js - Prêt");
+  }
+
+  // Démarrer dès que le DOM est prêt
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  // Exposer pour débogage
+  window.bhLayout = {
+    normalizeBranding,
+    injectSidebar,
+    injectHeader
+  };
+
 })();
