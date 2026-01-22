@@ -6,36 +6,28 @@
   <title>Boostinghost - Connexion</title>
   
   <script>
+    console.log('🟢 Error handlers installés');
     window.onerror = function (msg, url, line, col, err) {
-      console.error('GLOBAL ERROR:', msg, url, line, col, err?.stack || err);
+      console.error('🚨 GLOBAL ERROR:', {msg, url, line, col, stack: err?.stack});
+      return false;
     };
     window.onunhandledrejection = function (e) {
-      console.error(
-        'UNHANDLED PROMISE:',
-        e?.reason?.message,
-        e?.reason?.stack || e?.reason
-      );
+      console.error('🚨 UNHANDLED PROMISE:', e?.reason);
     };
   </script>
   
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
-  
-  <!-- ⚠️ NE PAS charger auth-fetch.js ici - il sera chargé après le DOM -->
 </head>
 <body class="auth-body">
   <div class="auth-container">
-    <!-- Colonne formulaire -->
     <div class="auth-card">
       <div class="auth-logo">
         <div class="auth-logo-icon">
-          <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64"
-               xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+          <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
-            <text x="32" y="43" text-anchor="middle"
-                  font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-                  font-size="34" font-weight="800" fill="#ffffff">B</text>
+            <text x="32" y="43" text-anchor="middle" font-family="Inter, system-ui" font-size="34" font-weight="800" fill="#ffffff">B</text>
           </svg>
         </div>
         <div>
@@ -45,16 +37,14 @@
       </div>
 
       <h1 class="auth-title">Connexion</h1>
-      <p class="auth-subtitle">
-        Accédez à votre espace de gestion des réservations.
-      </p>
+      <p class="auth-subtitle">Accédez à votre espace de gestion des réservations.</p>
 
       <form class="auth-form" id="loginForm">
         <div class="form-group">
           <label for="email">Adresse e-mail</label>
           <div class="input-with-icon">
             <i class="fas fa-envelope"></i>
-            <input type="email" id="email" name="email" placeholder="vous@exemple.com" required>
+            <input type="email" id="email" name="email" placeholder="vous@exemple.com" required autocomplete="email">
           </div>
         </div>
 
@@ -62,7 +52,7 @@
           <label for="password">Mot de passe</label>
           <div class="input-with-icon">
             <i class="fas fa-lock"></i>
-            <input type="password" id="password" name="password" placeholder="••••••••" required>
+            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
           </div>
         </div>
 
@@ -82,22 +72,17 @@
       </form>
 
       <div class="auth-footer-text">
-        Pas encore de compte ?
-        <a href="/register.html" class="auth-link">Créer un compte</a>
+        Pas encore de compte ? <a href="/register.html" class="auth-link">Créer un compte</a>
       </div>
     </div>
 
-    <!-- Colonne droite "marketing" -->
     <div class="auth-side">
       <div class="auth-side-badge">
         <i class="fas fa-calendar-check"></i>
         Synchronisation Airbnb & Booking en temps réel
       </div>
       <h2>Gérez vos logements en quelques clics</h2>
-      <p>
-        Synchronisation automatique Airbnb / Booking, vision claire de vos séjours,
-        messages rapides pour vos voyageurs... Tout au même endroit.
-      </p>
+      <p>Synchronisation automatique Airbnb / Booking, vision claire de vos séjours, messages rapides pour vos voyageurs... Tout au même endroit.</p>
       <ul>
         <li><i class="fas fa-check"></i> Vue calendrier unifiée</li>
         <li><i class="fas fa-check"></i> Gestion multi-logements</li>
@@ -110,162 +95,240 @@
     </div>
   </div>
   
-  <!-- ⚠️ Charger auth-fetch.js APRÈS le DOM, avec gestion d'erreur -->
   <script>
-    (function loadAuthFetch() {
-      const script = document.createElement('script');
-      script.src = '/js/auth-fetch.js';
-      script.onerror = function() {
-        console.warn('⚠️ Impossible de charger auth-fetch.js, mode fallback activé');
-        window.__authFetchFailed = true;
-      };
-      script.onload = function() {
-        console.log('✅ auth-fetch.js chargé');
-      };
-      document.head.appendChild(script);
-    })();
-  </script>
-
-  <script>
-    console.log('🚀 [LOGIN] Script principal démarré');
+    console.log('🟢 Script principal START');
     
-    // Détection Capacitor (app native)
+    // Détection native
     const IS_NATIVE = (() => {
       try {
-        return !!(window.Capacitor?.isNativePlatform?.() ||
-                 window.location.protocol === 'capacitor:' ||
-                 window.location.protocol === 'ionic:');
-      } catch {
+        return !!(
+          window.Capacitor?.isNativePlatform?.() ||
+          window.location.protocol === 'capacitor:' ||
+          window.location.protocol === 'ionic:'
+        );
+      } catch (e) {
+        console.error('❌ Erreur détection:', e);
         return false;
       }
     })();
 
-    console.log('🔍 [LOGIN] IS_NATIVE:', IS_NATIVE);
-    console.log('🔍 [LOGIN] Protocol:', window.location.protocol);
-
-    // Backend API (uniquement pour l'app native)
     const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
+    
+    console.log('🔍 IS_NATIVE:', IS_NATIVE);
+    console.log('🔍 API_BASE:', API_BASE);
 
-    // Si déjà connecté, inutile de revenir ici
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (token) {
-        console.log('✅ [LOGIN] Token trouvé, redirection...');
-        window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
-      }
-    })();
-
-    // Attendre que le DOM soit prêt
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initLoginForm);
-    } else {
-      initLoginForm();
+    // Check token existant
+    const existingToken = localStorage.getItem('lcc_token');
+    if (existingToken) {
+      console.log('✅ Token existant, redirection...');
+      window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
     }
 
-    function initLoginForm() {
-      console.log('📝 [LOGIN] Initialisation formulaire');
+    // Attendre le DOM
+    function setupLogin() {
+      console.log('🔧 Setup login START');
       
-      const loginForm = document.getElementById('loginForm');
-      const loginError = document.getElementById('loginError');
-      const loginSubmit = document.getElementById('loginSubmit');
+      // DIAGNOSTIC: Vérifier que les éléments existent
+      const form = document.getElementById('loginForm');
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const errorDiv = document.getElementById('loginError');
+      const submitBtn = document.getElementById('loginSubmit');
 
-      // Vérifier que les éléments existent
-      if (!loginForm || !loginError || !loginSubmit) {
-        console.error('❌ [LOGIN] Éléments du formulaire introuvables!', {
-          loginForm: !!loginForm,
-          loginError: !!loginError,
-          loginSubmit: !!loginSubmit
-        });
+      console.log('🔍 Éléments trouvés:', {
+        form: !!form,
+        emailInput: !!emailInput,
+        passwordInput: !!passwordInput,
+        errorDiv: !!errorDiv,
+        submitBtn: !!submitBtn
+      });
+
+      if (!form) {
+        console.error('❌ CRITIQUE: loginForm introuvable!');
+        return;
+      }
+      if (!emailInput) {
+        console.error('❌ CRITIQUE: input email introuvable!');
+        return;
+      }
+      if (!passwordInput) {
+        console.error('❌ CRITIQUE: input password introuvable!');
         return;
       }
 
-      console.log('✅ [LOGIN] Formulaire prêt');
+      console.log('✅ Tous les éléments présents');
 
-      loginForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        
-        console.log('📤 [LOGIN] Soumission formulaire');
+      // Stocker les références
+      window.__loginElements = {
+        form,
+        emailInput,
+        passwordInput,
+        errorDiv,
+        submitBtn
+      };
 
-        const email = document.getElementById('email');
-        const password = document.getElementById('password');
-        
+      form.addEventListener('submit', handleSubmit);
+      console.log('✅ Event listener attaché');
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      console.log('');
+      console.log('='.repeat(50));
+      console.log('📝 SUBMIT DÉCLENCHÉ');
+      console.log('='.repeat(50));
+
+      // DIAGNOSTIC: Re-vérifier que les éléments existent au moment du submit
+      console.log('🔍 Vérification éléments au moment du submit:');
+      
+      const emailById = document.getElementById('email');
+      const passwordById = document.getElementById('password');
+      const errorById = document.getElementById('loginError');
+      const submitById = document.getElementById('loginSubmit');
+
+      console.log('  email via getElementById:', !!emailById);
+      console.log('  password via getElementById:', !!passwordById);
+      console.log('  error via getElementById:', !!errorById);
+      console.log('  submit via getElementById:', !!submitById);
+
+      // Vérifier les références stockées
+      console.log('🔍 Références stockées:');
+      console.log('  window.__loginElements:', !!window.__loginElements);
+      if (window.__loginElements) {
+        console.log('  emailInput:', !!window.__loginElements.emailInput);
+        console.log('  passwordInput:', !!window.__loginElements.passwordInput);
+      }
+
+      // Essayer plusieurs méthodes pour récupérer les valeurs
+      let email, password;
+      
+      try {
+        // Méthode 1: Via les références stockées (RECOMMANDÉ)
+        if (window.__loginElements?.emailInput && window.__loginElements?.passwordInput) {
+          email = window.__loginElements.emailInput.value.trim();
+          password = window.__loginElements.passwordInput.value;
+          console.log('✅ Valeurs récupérées via références stockées');
+        }
+        // Méthode 2: Via getElementById
+        else if (emailById && passwordById) {
+          email = emailById.value.trim();
+          password = passwordById.value;
+          console.log('✅ Valeurs récupérées via getElementById');
+        }
+        // Méthode 3: Via le formulaire
+        else {
+          const formData = new FormData(e.target);
+          email = formData.get('email')?.trim();
+          password = formData.get('password');
+          console.log('✅ Valeurs récupérées via FormData');
+        }
+
+        console.log('📧 Email:', email);
+        console.log('🔒 Password:', password ? '***' : '(vide)');
+
         if (!email || !password) {
-          console.error('❌ [LOGIN] Champs email/password introuvables');
+          console.error('❌ Email ou password manquant');
+          showError('Veuillez remplir tous les champs');
           return;
         }
 
-        const emailValue = email.value.trim();
-        const passwordValue = password.value;
+      } catch (err) {
+        console.error('❌ ERREUR lors de la récupération des valeurs:');
+        console.error('  Name:', err.name);
+        console.error('  Message:', err.message);
+        console.error('  Stack:', err.stack);
+        showError('Erreur technique. Veuillez réessayer.');
+        return;
+      }
 
-        loginError.style.display = 'none';
-        loginError.textContent = '';
+      // Désactiver le bouton
+      if (window.__loginElements?.submitBtn) {
+        window.__loginElements.submitBtn.disabled = true;
+        window.__loginElements.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+      }
 
-        loginSubmit.disabled = true;
-        loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+      // Cacher l'erreur
+      if (window.__loginElements?.errorDiv) {
+        window.__loginElements.errorDiv.style.display = 'none';
+      }
 
-        try {
-          console.log('🌐 [LOGIN] Envoi requête à:', `${API_BASE}/api/auth/login`);
-          console.log('📧 [LOGIN] Email:', emailValue);
+      // Faire la requête
+      const url = API_BASE + '/api/auth/login';
+      console.log('📤 Requête vers:', url);
 
-          const res = await fetch(`${API_BASE}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailValue, password: passwordValue })
-          });
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
 
-          console.log('📥 [LOGIN] Réponse:', res.status, res.statusText);
+        console.log('📥 Status:', response.status);
 
-          // Vérifier le type de contenu
-          const ct = res.headers.get('content-type') || '';
-          console.log('📄 [LOGIN] Content-Type:', ct);
-          
-          const data = ct.includes('application/json')
-            ? await res.json()
-            : { error: await res.text() };
+        const contentType = response.headers.get('content-type') || '';
+        let data;
 
-          if (!res.ok) {
-            console.error('❌ [LOGIN] Erreur serveur:', data);
-            loginError.style.display = 'block';
-            loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
-            loginSubmit.disabled = false;
-            loginSubmit.textContent = 'Se connecter';
-            return;
-          }
-
-          console.log('✅ [LOGIN] Connexion réussie!');
-          console.log('👤 [LOGIN] User:', data.user);
-
-          // Stocker le token + user
-          localStorage.setItem('lcc_token', data.token);
-          localStorage.setItem('lcc_user', JSON.stringify(data.user));
-
-          console.log('💾 [LOGIN] Données sauvegardées');
-
-          // Redirection vers le dashboard (web + app)
-          const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
-          console.log('🔄 [LOGIN] Redirection vers:', redirectUrl);
-          window.location.href = redirectUrl;
-          
-        } catch (err) {
-          console.error('❌ [LOGIN] ERREUR CATCH:');
-          console.error('  Name:', err?.name);
-          console.error('  Message:', err?.message);
-          console.error('  Stack:', err?.stack);
-          console.error('🔍 [LOGIN] Context:');
-          console.error('  URL:', window.location.href);
-          console.error('  Origin:', window.location.origin);
-          console.error('  IS_NATIVE:', IS_NATIVE);
-          console.error('  API_BASE:', API_BASE);
-
-          loginError.style.display = 'block';
-          loginError.textContent = "Erreur réseau lors de la connexion.";
-          loginSubmit.disabled = false;
-          loginSubmit.textContent = 'Se connecter';
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          console.warn('⚠️ Réponse non-JSON:', text.substring(0, 200));
+          data = { error: 'Réponse serveur invalide' };
         }
-      });
+
+        if (!response.ok) {
+          console.error('❌ Erreur serveur:', data);
+          showError(data.error || 'Erreur de connexion');
+          resetButton();
+          return;
+        }
+
+        console.log('✅ CONNEXION RÉUSSIE!');
+        console.log('👤 User:', data.user);
+
+        // Sauvegarder
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+        // Rediriger
+        const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+        console.log('🔄 Redirection vers:', redirectUrl);
+        window.location.href = redirectUrl;
+
+      } catch (err) {
+        console.error('❌ ERREUR FETCH:');
+        console.error('  Name:', err.name);
+        console.error('  Message:', err.message);
+        console.error('  Stack:', err.stack);
+        showError('Erreur réseau. Vérifiez votre connexion.');
+        resetButton();
+      }
     }
-    
-    console.log('✅ [LOGIN] Script principal chargé');
+
+    function showError(message) {
+      console.log('⚠️ Affichage erreur:', message);
+      if (window.__loginElements?.errorDiv) {
+        window.__loginElements.errorDiv.style.display = 'block';
+        window.__loginElements.errorDiv.textContent = message;
+      }
+    }
+
+    function resetButton() {
+      if (window.__loginElements?.submitBtn) {
+        window.__loginElements.submitBtn.disabled = false;
+        window.__loginElements.submitBtn.textContent = 'Se connecter';
+      }
+    }
+
+    // Lancer l'initialisation
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupLogin);
+      console.log('⏳ Attente DOM...');
+    } else {
+      setupLogin();
+    }
+
+    console.log('🟢 Script principal END');
   </script>
 
   <style>
@@ -278,11 +341,10 @@
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       padding: 16px;
     }
-
     .auth-container {
       max-width: 1000px;
       width: 100%;
-      background: var(--bg-primary, #ffffff);
+      background: #ffffff;
       border-radius: 24px;
       box-shadow: 0 24px 60px rgba(15,23,42,.18);
       display: grid;
@@ -290,43 +352,35 @@
       overflow: hidden;
       border: 1px solid rgba(226, 232, 240, 0.9);
     }
-
     .auth-card {
       padding: 40px 36px 32px;
       background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9));
     }
-
     .auth-logo {
       display: flex;
       align-items: center;
       gap: 14px;
       margin-bottom: 20px;
     }
-
     .auth-logo-icon {
       width: 56px;
       height: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: transparent;
-      box-shadow: none;
     }
-
     .auth-logo-title {
       font-weight: 700;
       font-size: 18px;
       letter-spacing: -0.01em;
     }
-
     .auth-logo-subtitle {
       font-size: 12px;
-      color: var(--text-tertiary, #6b7280);
+      color: #6b7280;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-
     .auth-title {
       font-size: 26px;
       font-weight: 700;
@@ -334,58 +388,50 @@
       letter-spacing: -0.02em;
       color: #020617;
     }
-
     .auth-subtitle {
       font-size: 14px;
-      color: var(--text-secondary, #6b7280);
+      color: #6b7280;
       margin-bottom: 28px;
       line-height: 1.5;
     }
-
     .auth-form {
       display: flex;
       flex-direction: column;
       gap: 18px;
     }
-
     .form-group label {
       font-size: 13px;
       font-weight: 500;
       margin-bottom: 6px;
       display: block;
-      color: var(--text-primary);
+      color: #1f2937;
     }
-
     .input-with-icon {
       position: relative;
       display: flex;
       align-items: center;
     }
-
     .input-with-icon i {
       position: absolute;
       left: 14px;
-      color: var(--text-tertiary, #9ca3af);
+      color: #9ca3af;
       font-size: 14px;
     }
-
     .input-with-icon input {
       width: 100%;
       padding: 11px 14px 11px 42px;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color, #e5e7eb);
-      background: var(--bg-primary, #ffffff);
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
       font-size: 14px;
-      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .1s ease;
+      transition: all .15s ease;
     }
-
     .input-with-icon input:focus {
       outline: none;
-      border-color: var(--primary-color, #10B981);
+      border-color: #10B981;
       box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
       transform: translateY(-1px);
     }
-
     .form-row-between {
       display: flex;
       align-items: center;
@@ -394,55 +440,63 @@
       margin-top: 4px;
       flex-wrap: wrap;
     }
-
     .checkbox-label {
       display: inline-flex;
       align-items: center;
       gap: 7px;
       font-size: 13px;
-      color: var(--text-secondary, #6b7280);
+      color: #6b7280;
       cursor: pointer;
     }
-
     .checkbox-label input {
       width: 16px;
       height: 16px;
-      accent-color: var(--primary-color, #10B981);
+      accent-color: #10B981;
     }
-
     .auth-error {
       margin-top: 4px;
       font-size: 13px;
       color: #b91c1c;
       background: #fef2f2;
-      border-radius: var(--radius-md);
+      border-radius: 8px;
       padding: 8px 12px;
       border: 1px solid #fecaca;
     }
-
     .auth-submit {
       margin-top: 10px;
       width: 100%;
-      justify-content: center;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #10B981;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all .15s ease;
     }
-
+    .auth-submit:hover:not(:disabled) {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+    .auth-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
     .auth-footer-text {
       margin-top: 20px;
       font-size: 13px;
-      color: var(--text-secondary, #6b7280);
+      color: #6b7280;
       text-align: center;
     }
-
     .auth-link {
-      color: var(--primary-color, #10B981);
+      color: #10B981;
       font-weight: 500;
       text-decoration: none;
     }
-
     .auth-link:hover {
       text-decoration: underline;
     }
-
     .auth-side {
       padding: 40px 32px;
       background: radial-gradient(circle at top, #0f172a, #020617);
@@ -451,11 +505,9 @@
       flex-direction: column;
       justify-content: center;
       gap: 18px;
-      border-left: 1px solid rgba(30, 64, 175, 0.6);
       position: relative;
       overflow: hidden;
     }
-
     .auth-side::before {
       content: "";
       position: absolute;
@@ -464,18 +516,16 @@
       opacity: 0.9;
       pointer-events: none;
     }
-
     .auth-side > * {
       position: relative;
       z-index: 1;
     }
-
     .auth-side-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 8px 14px;
-      border-radius: var(--radius-full);
+      border-radius: 999px;
       background: rgba(15, 23, 42, 0.9);
       border: 1px solid rgba(148, 163, 184, 0.45);
       color: #e5e7eb;
@@ -483,25 +533,21 @@
       font-weight: 500;
       width: fit-content;
     }
-
     .auth-side-badge i {
       font-size: 13px;
       color: #10B981;
     }
-
     .auth-side h2 {
       font-size: 22px;
       font-weight: 700;
       margin-bottom: 4px;
       letter-spacing: -0.01em;
     }
-
     .auth-side p {
       font-size: 14px;
       color: #cbd5e1;
       line-height: 1.6;
     }
-
     .auth-side ul {
       list-style: none;
       padding: 0;
@@ -511,18 +557,15 @@
       gap: 10px;
       font-size: 14px;
     }
-
     .auth-side li {
       display: flex;
       align-items: center;
     }
-
     .auth-side li i {
       margin-right: 10px;
       color: #10B981;
       font-size: 14px;
     }
-
     .auth-side-footnote {
       margin-top: 10px;
       font-size: 12px;
@@ -531,54 +574,26 @@
       align-items: center;
       gap: 7px;
     }
-
-    .auth-side-footnote i {
-      font-size: 12px;
-    }
-
-    /* Brand title colors (Boosting en vert) */
     .brand-boosting { color: #10B981; font-weight: 800; }
     .brand-host { color: #0F172A; font-weight: 700; }
-
-    /* Agrandir le logo */
     .bh-logo { width: 52px; height: 52px; }
-
-    /* Responsive */
+    
     @media (max-width: 1024px) {
       .auth-container {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: 1fr;
         margin: 20px;
       }
-      .auth-side {
-        display: none;
-      }
-      .auth-card {
-        padding: 32px 28px 28px;
-      }
+      .auth-side { display: none; }
+      .auth-card { padding: 32px 28px 28px; }
     }
-
     @media (max-width: 640px) {
-      /* Mobile: logo légèrement plus grand aussi */
       .bh-logo { width: 48px; height: 48px; }
       .auth-container {
         margin: 12px;
         border-radius: 20px;
       }
-      .auth-card {
-        padding: 28px 20px 24px;
-      }
-      .auth-title {
-        font-size: 22px;
-      }
-      .auth-logo {
-        gap: 12px;
-      }
-      .auth-logo-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
-      }
-      .bh-logo { display:block; color:#fff; }
+      .auth-card { padding: 28px 20px 24px; }
+      .auth-title { font-size: 22px; }
     }
   </style>
   
