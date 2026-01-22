@@ -1,41 +1,167 @@
 // public/js/push-notifications-handler.js
+// Version corrigée (Capacitor iOS/Android + garde-fous plugin + sauvegarde token serveur)
 (function () {
   console.log('🔔 [DEBUG] Fichier push-notifications-handler.js chargé');
-  
+
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
-  // ✅✅✅ DÉTECTION ROBUSTE DE LA PLATEFORME ✅✅✅
+  // ---------- Helpers ----------
   function getDeviceType() {
-    if (!window.Capacitor || typeof window.Capacitor.getPlatform !== 'function') {
+    const cap = window.Capacitor;
+    const ua = (navigator.userAgent || '').toLowerCase();
+
+    if (!cap || typeof cap.getPlatform !== 'function') {
       console.log('🌐 [DEBUG] Pas de Capacitor, device type: web');
       return 'web';
     }
-    
-    const platform = window.Capacitor.getPlatform();
-    const ua = navigator.userAgent.toLowerCase();
-    
+
+    const platform = cap.getPlatform(); // 'ios' | 'android' | 'web'
     console.log('📱 [DEBUG] Capacitor.getPlatform():', platform);
     console.log('🌐 [DEBUG] User Agent:', ua);
-    
-    // ⚠️ CORRECTION : Cross-validation entre Capacitor et UserAgent
+
+    // Cross-check (certaines WebViews/UA peuvent être trompeuses)
     if (platform === 'ios' && ua.includes('android')) {
-      console.warn('⚠️⚠️⚠️ CORRECTION APPLIQUÉE : Capacitor dit iOS mais UserAgent dit Android!');
+      console.warn('⚠️ [DEBUG] Correction: platform iOS mais UA Android → android');
       return 'android';
     }
-    
-    if (platform === 'android' && (ua.includes('iphone') || ua.includes('ipad'))) {
-      console.warn('⚠️⚠️⚠️ CORRECTION APPLIQUÉE : Capacitor dit Android mais UserAgent dit iOS!');
+    if (platform === 'android' && (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ios'))) {
+      console.warn('⚠️ [DEBUG] Correction: platform Android mais UA iOS → ios');
       return 'ios';
     }
-    
-    const detectedType = platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
-    console.log('✅ [DEBUG] Device type détecté:', detectedType);
-    return detectedType;
+
+    return platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
   }
 
+  function getPushPlugin() {
+    const cap = window.Capacitor;
+
+    // Capacitor “global” (script) : plugins souvent exposés ici
+    const pn = cap?.Plugins?.PushNotifications;
+
+    // Si non présent, on ne jette PAS d’erreur : on log et on sort proprement
+    if (!pn) return null;
+
+    const hasCoreFns =
+      typeof pn.requestPermissions === 'function' &&
+      typeof pn.register === 'function' &&
+      typeof pn.addListener === 'function';
+
+    return hasCoreFns ? pn : null;
+  }
+
+  function safeJsonParse(s) {
+    try { return JSON.parse(s); } catch { return null; }
+  }
+
+  function extractAccessToken(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+
+    // formats possibles
+    if (typeof obj.access_token === 'string') return obj.access_token;
+    if (obj?.currentSession && typeof obj.currentSession.access_token === 'string') return obj.currentSession.access_token;
+    if (obj?.session && typeof obj.session.access_token === 'string') return obj.session.access_token;
+    if (obj?.data?.session && typeof obj.data.session.access_token === 'string') return obj.data.session.access_token;
+
+    return null;
+  }
+
+  async function getSupabaseJwt() {
+    // 1) localStorage (souvent le plus fiable côté WebView)
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        // pattern le plus courant: sb-<projectRef>-auth-token
+        if (k.startsWith('sb-') && k.endsWith('-auth-token')) {
+          const raw = localStorage.getItem(k);
+          const parsed = safeJsonParse(raw);
+          const token = extractAccessToken(parsed);
+          if (token) {
+            console.log('✅ [DEBUG] JWT trouvé via localStorage:', k);
+            return token;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [DEBUG] localStorage scan failed:', e);
+    }
+
+    // 2) Capacitor Preferences (si dispo)
+    try {
+      const pref = window.Capacitor?.Plugins?.Preferences;
+      if (!pref || typeof pref.get !== 'function') return null;
+
+      const possibleKeys = [
+        // clés “classiques”:
+        'supabase.auth.token',
+        'supabase-auth-token',
+        // si tu connais ton projectRef Supabase, tu peux en ajouter ici:
+        // 'sb-xxxxxxxxxxxxxxxxxxxx-auth-token'
+      ];
+
+      for (const key of possibleKeys) {
+        const { value } = await pref.get({ key });
+        if (!value) continue;
+        const parsed = safeJsonParse(value);
+        const token = extractAccessToken(parsed);
+        if (token) {
+          console.log('✅ [DEBUG] JWT trouvé via Preferences:', key);
+          return token;
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [DEBUG] Preferences scan failed:', e);
+    }
+
+    console.warn('⚠️ [DEBUG] Aucun JWT Supabase trouvé');
+    return null;
+  }
+
+  async function saveTokenToServer(pushToken, deviceType) {
+    console.log('💾 [DEBUG] saveTokenToServer appelée');
+    console.log('   Token:', String(pushToken).slice(0, 30) + '...');
+    console.log('   Device:', deviceType);
+
+    try {
+      const jwt = await getSupabaseJwt();
+      console.log('   Auth token:', jwt ? 'Présent' : 'Absent');
+
+      if (!jwt) {
+        console.warn('⚠️ [DEBUG] Pas de token auth - impossible de sauvegarder');
+        return;
+      }
+
+      console.log('📤 [DEBUG] Envoi au serveur...');
+      const res = await fetch(`${API_BASE}/api/save-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          token: pushToken,
+          device_type: deviceType,
+        }),
+      });
+
+      const ct = res.headers.get('content-type') || '';
+      const data = ct.includes('application/json') ? await res.json() : { raw: await res.text() };
+
+      if (!res.ok) {
+        console.error('❌ [DEBUG] Erreur serveur:', res.status, data);
+        return;
+      }
+
+      console.log('✅✅✅ [DEBUG] TOKEN SAUVEGARDÉ SUR SERVEUR !', data);
+    } catch (err) {
+      console.error('❌ [DEBUG] Erreur réseau:', err?.name, err?.message, err);
+    }
+  }
+
+  // ---------- Main init ----------
   async function initPushNotifications() {
     console.log('🔔 [DEBUG] initPushNotifications appelée');
-    
+
     if (window.__pushInitDone) {
       console.log('⏭️ [DEBUG] Push déjà initialisé, skip');
       return;
@@ -48,7 +174,7 @@
       return;
     }
 
-    const platform = cap.getPlatform();
+    const platform = cap.getPlatform?.();
     console.log('📱 [DEBUG] Platform:', platform);
 
     if (platform !== 'ios' && platform !== 'android') {
@@ -56,158 +182,56 @@
       return;
     }
 
-    console.log('✅ [DEBUG] On est sur mobile:', platform);
-
-    const PushNotifications = cap.Plugins && cap.Plugins.PushNotifications;
+    const PushNotifications = getPushPlugin();
     if (!PushNotifications) {
-      console.error('❌ [DEBUG] Plugin PushNotifications introuvable');
+      console.error('❌ [DEBUG] Plugin PushNotifications introuvable (non installé/sync iOS/Android ?)');
+      // Important: on sort proprement, sans casser le reste de l’app (login etc.)
       return;
     }
 
-    console.log('✅ [DEBUG] Plugin PushNotifications trouvé');
+    const deviceType = getDeviceType();
+    console.log('✅ [DEBUG] On est sur mobile:', deviceType);
 
+    // Listeners
     PushNotifications.addListener('registration', async (token) => {
-      console.log('✅ [DEBUG] Token reçu:', token && token.value);
-      if (!token || !token.value) {
-        console.error('❌ [DEBUG] Token invalide');
-        return;
-      }
-      
-      const deviceType = getDeviceType();
-      console.log('📱 [DEBUG] Device type:', deviceType);
-      
-      await saveTokenToServer(token.value, deviceType);
+      const tokenValue = token?.value || token;
+      console.log('✅ [DEBUG] Registration success:', tokenValue);
+
+      try {
+        localStorage.setItem('push_token', String(tokenValue));
+      } catch {}
+
+      await saveTokenToServer(String(tokenValue), deviceType);
     });
 
     PushNotifications.addListener('registrationError', (error) => {
-      console.error('❌ [DEBUG] Erreur registration:', error);
+      console.error('❌ [DEBUG] Registration error:', error);
     });
 
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('📩 [DEBUG] Notif reçue (foreground):', notification);
+      console.log('📩 [DEBUG] Push received:', notification);
     });
 
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('👆 [DEBUG] Notif tapped:', notification);
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('👉 [DEBUG] Push action performed:', action);
     });
 
-    const permStatus = await PushNotifications.checkPermissions();
-    console.log('📊 [DEBUG] Permission actuelle:', permStatus);
-
-    if (!permStatus || permStatus.receive !== 'granted') {
-      const requestStatus = await PushNotifications.requestPermissions();
-      console.log('📊 [DEBUG] Permission demandée:', requestStatus);
-      
-      if (!requestStatus || requestStatus.receive !== 'granted') {
-        console.warn('⛔ [DEBUG] Permission refusée');
-        return;
-      }
-    }
-
-    console.log('✅ [DEBUG] Permission accordée');
-    await PushNotifications.register();
-    console.log('✅ [DEBUG] Register() appelé avec succès');
-  }
-
-  async function findSupabaseKey() {
+    // Permission + register
     try {
-      const cap = window.Capacitor;
-      if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
-        console.error('❌ Capacitor Preferences non disponible');
-        return null;
-      }
+      console.log('🔐 [DEBUG] Demande permission...');
+      const perm = await PushNotifications.requestPermissions();
+      console.log('🔐 [DEBUG] Permission result:', perm);
 
-      const possibleKeys = [
-        'sb-ztdzragdnjkastswtvzn-auth-token',
-        'supabase.auth.token',
-        '@supabase/auth-token',
-        'sb-auth-token',
-        'lcc_token'
-      ];
-
-      console.log('🔍 Recherche de la clé Supabase...');
-
-      for (const key of possibleKeys) {
-        const { value } = await cap.Plugins.Preferences.get({ key });
-        if (value) {
-          console.log('✅ Clé trouvée:', key);
-          return { key, value };
-        }
-      }
-
-      console.warn('⚠️ Aucune clé Supabase trouvée');
-      return null;
-    } catch (err) {
-      console.error('❌ Erreur recherche clé:', err);
-      return null;
-    }
-  }
-
-  async function getSupabaseSession() {
-    const found = await findSupabaseKey();
-    if (!found) return null;
-
-    try {
-      if (found.key === 'lcc_token') {
-        console.log('✅ JWT direct trouvé');
-        return found.value;
-      }
-
-      const session = JSON.parse(found.value);
-      console.log('✅ Session parsée');
-
-      const token = session.access_token || session.accessToken || session.token;
-      if (token) {
-        console.log('✅ JWT extrait');
-        return token;
-      }
-
-      console.warn('⚠️ Pas de token dans la session');
-      return null;
-    } catch (err) {
-      console.error('❌ Erreur parsing session:', err);
-      return null;
-    }
-  }
-
-  async function saveTokenToServer(token, deviceType) {
-    console.log('💾 [DEBUG] saveTokenToServer appelée');
-    console.log('   Token:', token.substring(0, 30) + '...');
-    console.log('   Device:', deviceType);
-
-    try {
-      const jwt = await getSupabaseSession();
-      console.log('   Auth token:', jwt ? 'Présent' : 'Absent');
-
-      if (!jwt) {
-        console.warn('⚠️ [DEBUG] Pas de token auth - impossible de sauvegarder');
+      if (perm?.receive !== 'granted') {
+        console.warn('⚠️ [DEBUG] Permission refusée');
         return;
       }
 
-      console.log('📤 [DEBUG] Envoi au serveur...');
-
-      const res = await fetch(`${API_BASE}/api/save-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          token,
-          device_type: deviceType
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        console.error('❌ [DEBUG] Erreur serveur:', res.status, data);
-        return;
-      }
-
-      console.log('✅✅✅ [DEBUG] TOKEN SAUVEGARDÉ SUR SERVEUR !', data);
+      console.log('✅ [DEBUG] Permission accordée → register()');
+      await PushNotifications.register();
+      console.log('✅ [DEBUG] register() appelé avec succès');
     } catch (err) {
-      console.error('❌ [DEBUG] Erreur réseau:', err);
+      console.error('❌ [DEBUG] Erreur request/register:', err?.name, err?.message, err);
     }
   }
 
