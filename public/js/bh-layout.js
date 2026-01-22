@@ -1,5 +1,10 @@
+(function () {
+  'use strict';
+
 /* /js/bh-layout.js – injection sidebar + header standard */
 /* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
+const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
+
 const SIDEBAR_HTML = `
 <aside class="sidebar">
   <div class="sidebar-header">
@@ -232,21 +237,23 @@ const SIDEBAR_HTML = `
       }
     }
 
-    // 2. REMPLACER L'ICÔNE PAR LE LOGO SVG "B" GRAND FORMAT
+    // 2. REMPLACER L'ICÔNE PAR LE LOGO "B" (IMG) GRAND FORMAT
     if (mobileLogo) {
-      const existingSvg = mobileLogo.querySelector("svg");
-      
-      // Vérifier si c'est bien notre SVG avec le bon format
-      const needsUpdate = !existingSvg || 
-                         !existingSvg.querySelector('text[font-size="24"]');
-      
+      const existingLogo = mobileLogo.querySelector("img, svg");
+
+      // Besoin de MAJ si aucun logo, ou si img != notre fichier, ou si SVG présent (legacy)
+      const needsUpdate =
+        !existingLogo ||
+        (existingLogo.tagName.toLowerCase() === "img" &&
+          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png")) ||
+        existingLogo.tagName.toLowerCase() === "svg";
+
       if (needsUpdate) {
-        // Supprimer l'ancien contenu
-        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg");
-        if (oldIcon) {
-          oldIcon.remove();
-        }
-        // Injecter le logo B grand format
+        // Supprimer l'ancien contenu (FontAwesome / svg / img)
+        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg, img");
+        if (oldIcon) oldIcon.remove();
+
+        // Injecter le logo (img)
         mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
       }
     }
@@ -256,23 +263,21 @@ const SIDEBAR_HTML = `
   // 🎨 FORCE LE REMPLACEMENT DU LOGO SIDEBAR
   // ============================================
   function forceUpdateSidebarLogo() {
-    // Trouve tous les logos dans la sidebar
-    const sidebarLogos = document.querySelectorAll('.sidebar-logo svg, .sidebar-header svg');
-    
-    sidebarLogos.forEach(svg => {
-      const textElement = svg.querySelector('text');
-      if (textElement) {
-        // Vérifie si c'est notre bon format (font-size 24)
-        const fontSize = textElement.getAttribute('font-size');
-        if (fontSize !== '24') {
-          console.log('🔄 Mise à jour du logo sidebar détecté (mauvaise taille)...');
-          // Remplace le SVG parent
-          const parent = svg.parentElement;
-          if (parent) {
-            svg.remove();
-            parent.insertAdjacentHTML('afterbegin', LOGO_B_SVG);
-          }
-        }
+    // Force le logo sidebar (remplace les anciens SVG éventuels par l'IMG)
+    const sidebarAnchors = document.querySelectorAll(".sidebar-logo");
+
+    sidebarAnchors.forEach(a => {
+      const existing = a.querySelector("img, svg");
+      const isOkImg =
+        existing &&
+        existing.tagName.toLowerCase() === "img" &&
+        ((existing.getAttribute("src") || "").includes("boostinghost-icon-circle.png") ||
+         (existing.src || "").includes("boostinghost-icon-circle.png"));
+
+      if (!isOkImg) {
+        const old = a.querySelector("svg, img");
+        if (old) old.remove();
+        a.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
       }
     });
   }
@@ -318,3 +323,4 @@ const SIDEBAR_HTML = `
   };
 
 })();
+
