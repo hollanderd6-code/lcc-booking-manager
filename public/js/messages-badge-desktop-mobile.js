@@ -1,5 +1,6 @@
 /* ============================================
    🔢 BADGE MESSAGES - AFFICHAGE PERMANENT
+   Badge à droite sur mobile
    ============================================ */
 
 (function() {
@@ -100,24 +101,25 @@
         z-index: 100 !important;
       `;
     } else {
+      // MOBILE : Badge à droite du texte "Messages"
       badge.style.cssText = `
         position: absolute !important;
-        top: 2px !important;
-        right: 50% !important;
-        transform: translateX(16px) !important;
-        min-width: 16px !important;
-        height: 16px !important;
-        padding: 0 4px !important;
+        top: 50% !important;
+        right: -2px !important;
+        transform: translateY(-50%) !important;
+        min-width: 18px !important;
+        height: 18px !important;
+        padding: 0 5px !important;
         background: #EF4444 !important;
         color: white !important;
         font-size: 10px !important;
         font-weight: 700 !important;
-        border-radius: 8px !important;
+        border-radius: 9px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         z-index: 100 !important;
-        border: 2px solid white !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
       `;
     }
 
