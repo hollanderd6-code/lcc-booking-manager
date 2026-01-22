@@ -1,30 +1,12 @@
 /* /js/bh-layout.js – injection sidebar + header standard */
 /* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
-(function () {
-  
-  // ============================================
-  // 🎨 LOGO "B" BOOSTINGHOST (utilisé partout) - GRAND FORMAT
-  // ============================================
-  const LOGO_B_SVG = `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-    <defs>
-      <linearGradient id="bhGradient" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#7fd3a6"/>
-        <stop offset="1" stop-color="#58b88c"/>
-      </linearGradient>
-    </defs>
-    <circle cx="20" cy="20" r="20" fill="url(#bhGradient)"/>
-    <text x="20" y="28" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="24" font-weight="800" fill="#ffffff">B</text>
-  </svg>`;
-
 const SIDEBAR_HTML = `
 <aside class="sidebar">
   <div class="sidebar-header">
     <a class="sidebar-logo" href="/">
-      <img 
-        src="/asset/boostinghost-icon-circle.png"
-        alt="Boostinghost"
-        style="width:40px;height:40px;flex-shrink:0;"
-      />
+      <img src="/asset/boostinghost-icon-circle.png"
+           alt="Boostinghost"
+           style="width:40px;height:40px;flex-shrink:0;" />
 
       <div class="sidebar-logo-text" style="display:flex;flex-direction:column;justify-content:center;margin-left:10px;">
         <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif;font-size:17px;line-height:1.1;">
@@ -39,84 +21,77 @@ const SIDEBAR_HTML = `
   </div>
 
   <nav class="sidebar-nav">
+    <!-- PRINCIPAL -->
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-item active" data-page="app" href="/app.html">
+        <i class="fas fa-th-large"></i><span>Dashboard</span>
+      </a>
+      <a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
+        <i class="fas fa-calendar"></i><span>Calendrier</span>
+      </a>
+      <a class="nav-item" data-page="messages" href="/messages.html">
+        <i class="fas fa-comment-dots"></i><span>Messages</span>
+      </a>
+    </div>
+
+    <!-- GESTION -->
+    <div class="nav-section">
+      <div class="nav-section-title">Gestion</div>
+      <a class="nav-item" data-page="settings" href="/settings.html">
+        <i class="fas fa-home"></i><span>Mes logements</span>
+      </a>
+      <a class="nav-item" data-page="welcome" href="/welcome.html">
+        <i class="fas fa-book-open"></i><span>Livret d'accueil</span>
+      </a>
+      <a class="nav-item" data-page="cleaning" href="/cleaning.html">
+        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
+      </a>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Facturation</div>
+        <a class="nav-item" data-page="factures" href="/factures.html">
+          <i class="fas fa-file-invoice"></i><span>Factures clients</span>
+        </a>
+        <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
+          <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
+        </a>
+      </div>
+
+      <a class="nav-item" data-page="deposits" href="/deposits.html">
+        <i class="fas fa-shield-alt"></i><span>Cautions</span>
+      </a>
+      <a class="nav-item" data-page="notifications" href="/notifications.html">
+        <i class="fas fa-bell"></i><span>Notifications</span>
+      </a>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div class="nav-section">
+      <div class="nav-section-title">Paramètres</div>
+      <a class="nav-item" data-page="settings-account" href="/settings-account.html">
+        <i class="fas fa-cog"></i><span>Paramètres</span>
+      </a>
+      <a class="nav-item" data-page="help" href="/help.html">
+        <i class="fas fa-question-circle"></i><span>Aide</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile">
+      <div class="user-avatar" id="sidebarUserAvatar">C</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Utilisateur</div>
+        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+</aside>
 `;
-<!-- PRINCIPAL -->
-<div class="nav-section">
-<div class="nav-section-title">Principal</div>
-<a class="nav-item active" data-page="app" href="/app.html">
-<i class="fas fa-th-large"></i>
-<span>Dashboard</span>
-</a>
-<a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
-<i class="fas fa-calendar"></i>
-<span>Calendrier</span>
-</a>
-<a class="nav-item" data-page="messages" href="/messages.html">
-<i class="fas fa-comment-dots"></i>
-<span>Messages</span>
-</a>
-</div>
-<!-- GESTION -->
-<div class="nav-section">
-<div class="nav-section-title">Gestion</div>
-<a class="nav-item" data-page="settings" href="/settings.html">
-<i class="fas fa-home"></i>
-<span>Mes logements</span>
-</a>
-<a class="nav-item" data-page="welcome" href="/welcome.html">
-<i class="fas fa-book-open"></i>
-<span>Livret d'accueil</span>
-</a>
-<a class="nav-item" data-page="cleaning" href="/cleaning.html">
-<i class="fas fa-broom"></i>
-<span>Gestion du ménage</span>
-</a>
-<div class="nav-section">
-<div class="nav-section-title">Facturation</div>
-<a class="nav-item" data-page="factures" href="/factures.html">
-<i class="fas fa-file-invoice"></i>
-<span>Factures clients</span>
-</a>
-<a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
-<i class="fas fa-file-invoice-dollar"></i>
-<span>Factures propriétaires</span>
-</a>
-</div>
-<a class="nav-item" data-page="deposits" href="/deposits.html">
-<i class="fas fa-shield-alt"></i>
-<span>Cautions</span>
-</a>
-<a class="nav-item" data-page="notifications" href="/notifications.html">
-<i class="fas fa-bell"></i>
-<span>Notifications</span>
-</a>
-</div>
-<!-- PARAMÈTRES -->
-<div class="nav-section">
-<div class="nav-section-title">Paramètres</div>
-<a class="nav-item" data-page="settings-account" href="/settings-account.html">
-<i class="fas fa-cog"></i>
-<span>Paramètres</span>
-</a>
-<a class="nav-item" data-page="help" href="/help.html">
-<i class="fas fa-question-circle"></i>
-<span>Aide</span>
-</a>
-</div>
-</nav>
-<div class="sidebar-footer">
-<div class="user-profile">
-<div class="user-avatar" id="sidebarUserAvatar">C</div>
-<div class="user-info">
-<div class="user-name" id="sidebarUserName">Utilisateur</div>
-<div class="user-email" id="sidebarUserCompany">Mon espace</div>
-</div>
-<button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
-<i class="fas fa-sign-out-alt"></i>
-</button>
-</div>
-</div>
-</aside>`;
 
   // ============================================
   // 📝 TEXTE DU LOGO MOBILE
