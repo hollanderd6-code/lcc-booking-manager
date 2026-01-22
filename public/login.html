@@ -95,7 +95,14 @@
       </div>
     </div>
   </div>
-
+<script>
+  window.onerror = function (msg, url, line, col, err) {
+    console.error('GLOBAL ERROR:', msg, url, line, col, err?.stack || err);
+  };
+  window.onunhandledrejection = function (e) {
+    console.error('UNHANDLED PROMISE:', e?.reason?.message, e?.reason?.stack || e?.reason);
+  };
+</script>
     <script>
     // Détection Capacitor (app native)
     const IS_NATIVE = !!window.Capacitor?.isNativePlatform?.();
