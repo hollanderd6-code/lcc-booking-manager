@@ -1,6 +1,6 @@
 /* ============================================
    🔢 BADGE MESSAGES - AFFICHAGE PERMANENT
-   Badge à droite sur mobile
+   Badge en haut à droite de l'icône sur mobile
    ============================================ */
 
 (function() {
@@ -101,12 +101,12 @@
         z-index: 100 !important;
       `;
     } else {
-      // MOBILE : Badge à droite du texte "Messages"
+      // MOBILE : Badge en haut à droite de l'icône (style iOS)
       badge.style.cssText = `
         position: absolute !important;
-        top: 50% !important;
-        right: -2px !important;
-        transform: translateY(-50%) !important;
+        top: 4px !important;
+        right: 50% !important;
+        transform: translateX(18px) !important;
         min-width: 18px !important;
         height: 18px !important;
         padding: 0 5px !important;
