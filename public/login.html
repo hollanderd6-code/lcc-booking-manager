@@ -5,43 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boostinghost - Connexion</title>
   
-  <!-- Error handlers AVANT tout le reste -->
   <script>
-    // Tracker toutes les erreurs
-    window.__errors = [];
-    
     window.onerror = function (msg, url, line, col, err) {
-      const error = {
-        type: 'error',
-        msg: msg,
-        url: url,
-        line: line,
-        col: col,
-        stack: err?.stack || err
-      };
-      window.__errors.push(error);
-      console.error('🚨 GLOBAL ERROR:', error);
-      return false;
+      console.error('GLOBAL ERROR:', msg, url, line, col, err?.stack || err);
     };
-    
     window.onunhandledrejection = function (e) {
-      const error = {
-        type: 'unhandledRejection',
-        message: e?.reason?.message,
-        stack: e?.reason?.stack || e?.reason
-      };
-      window.__errors.push(error);
-      console.error('🚨 UNHANDLED PROMISE:', error);
+      console.error(
+        'UNHANDLED PROMISE:',
+        e?.reason?.message,
+        e?.reason?.stack || e?.reason
+      );
     };
-    
-    console.log('✅ Error handlers installés');
   </script>
   
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
   
-  <!-- ⚠️ NE PAS charger auth-fetch.js ici - on le fera manuellement après -->
+  <!-- ⚠️ NE PAS charger auth-fetch.js ici - il sera chargé après le DOM -->
 </head>
 <body class="auth-body">
   <div class="auth-container">
@@ -129,261 +110,162 @@
     </div>
   </div>
   
+  <!-- ⚠️ Charger auth-fetch.js APRÈS le DOM, avec gestion d'erreur -->
   <script>
-    console.log('🚀 Début script login');
+    (function loadAuthFetch() {
+      const script = document.createElement('script');
+      script.src = '/js/auth-fetch.js';
+      script.onerror = function() {
+        console.warn('⚠️ Impossible de charger auth-fetch.js, mode fallback activé');
+        window.__authFetchFailed = true;
+      };
+      script.onload = function() {
+        console.log('✅ auth-fetch.js chargé');
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
+
+  <script>
+    console.log('🚀 [LOGIN] Script principal démarré');
     
-    // ============================================
-    // 🔧 UTILITAIRES
-    // ============================================
-    
-    // Détection native ultra-robuste
+    // Détection Capacitor (app native)
     const IS_NATIVE = (() => {
       try {
-        const hasCapacitor = typeof window.Capacitor !== 'undefined';
-        const isNativePlatform = hasCapacitor && typeof window.Capacitor.isNativePlatform === 'function' 
-          ? window.Capacitor.isNativePlatform() 
-          : false;
-        const isCapacitorProtocol = window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
-        
-        const result = isNativePlatform || isCapacitorProtocol;
-        
-        console.log('🔍 Détection native:', {
-          hasCapacitor,
-          isNativePlatform,
-          isCapacitorProtocol,
-          protocol: window.location.protocol,
-          result
-        });
-        
-        return result;
-      } catch (e) {
-        console.error('❌ Erreur détection native:', e);
+        return !!(window.Capacitor?.isNativePlatform?.() ||
+                 window.location.protocol === 'capacitor:' ||
+                 window.location.protocol === 'ionic:');
+      } catch {
         return false;
       }
     })();
 
-    // URL de base API
-    const API_BASE_URL = 'https://lcc-booking-manager.onrender.com';
+    console.log('🔍 [LOGIN] IS_NATIVE:', IS_NATIVE);
+    console.log('🔍 [LOGIN] Protocol:', window.location.protocol);
 
-    // Fonction pour construire l'URL correcte
-    function buildApiUrl(path) {
-      // Si on est sur le web, utiliser le chemin relatif (proxy)
-      if (!IS_NATIVE) {
-        console.log('🌐 Mode web, URL relative:', path);
-        return path;
-      }
-      
-      // Si on est en natif, construire l'URL complète
-      const fullUrl = API_BASE_URL + path;
-      console.log('📱 Mode natif, URL complète:', fullUrl);
-      return fullUrl;
-    }
+    // Backend API (uniquement pour l'app native)
+    const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
 
-    // ============================================
-    // 🔐 VÉRIFICATION CONNEXION EXISTANTE
-    // ============================================
-    
-    (function checkExistingLogin() {
-      try {
-        const token = localStorage.getItem('lcc_token');
-        if (token) {
-          console.log('✅ Token trouvé, redirection...');
-          window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
-        } else {
-          console.log('ℹ️ Pas de token, affichage formulaire');
-        }
-      } catch (e) {
-        console.error('❌ Erreur vérification token:', e);
+    // Si déjà connecté, inutile de revenir ici
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (token) {
+        console.log('✅ [LOGIN] Token trouvé, redirection...');
+        window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
       }
     })();
 
-    // ============================================
-    // 📝 GESTION DU FORMULAIRE
-    // ============================================
-
-    const loginForm = document.getElementById('loginForm');
-    const loginError = document.getElementById('loginError');
-    const loginSubmit = document.getElementById('loginSubmit');
-
-    // Fonction pour afficher une erreur
-    function showError(message) {
-      console.error('❌', message);
-      loginError.style.display = 'block';
-      loginError.textContent = message;
-      loginSubmit.disabled = false;
-      loginSubmit.textContent = 'Se connecter';
+    // Attendre que le DOM soit prêt
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initLoginForm);
+    } else {
+      initLoginForm();
     }
 
-    // Fonction pour logger les détails
-    function logDetails(title, data) {
-      console.log(`📊 ${title}:`, JSON.stringify(data, null, 2));
-    }
-
-    loginForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
+    function initLoginForm() {
+      console.log('📝 [LOGIN] Initialisation formulaire');
       
-      console.log('📝 Formulaire soumis');
+      const loginForm = document.getElementById('loginForm');
+      const loginError = document.getElementById('loginError');
+      const loginSubmit = document.getElementById('loginSubmit');
 
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-
-      // Validation basique
-      if (!email || !password) {
-        showError('Veuillez remplir tous les champs');
+      // Vérifier que les éléments existent
+      if (!loginForm || !loginError || !loginSubmit) {
+        console.error('❌ [LOGIN] Éléments du formulaire introuvables!', {
+          loginForm: !!loginForm,
+          loginError: !!loginError,
+          loginSubmit: !!loginSubmit
+        });
         return;
       }
 
-      // Réinitialiser l'erreur
-      loginError.style.display = 'none';
-      loginError.textContent = '';
+      console.log('✅ [LOGIN] Formulaire prêt');
 
-      // Désactiver le bouton
-      loginSubmit.disabled = true;
-      loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
-
-      try {
-        // Construire l'URL
-        const url = buildApiUrl('/api/auth/login');
+      loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
         
-        // Préparer le body
-        const body = JSON.stringify({ email, password });
-        
-        // Préparer les headers
-        const headers = {
-          'Content-Type': 'application/json'
-        };
+        console.log('📤 [LOGIN] Soumission formulaire');
 
-        logDetails('Requête', { url, email, hasPassword: !!password });
-
-        // Faire la requête
-        console.log('📤 Envoi requête...');
-        const startTime = Date.now();
+        const email = document.getElementById('email');
+        const password = document.getElementById('password');
         
-        let response;
+        if (!email || !password) {
+          console.error('❌ [LOGIN] Champs email/password introuvables');
+          return;
+        }
+
+        const emailValue = email.value.trim();
+        const passwordValue = password.value;
+
+        loginError.style.display = 'none';
+        loginError.textContent = '';
+
+        loginSubmit.disabled = true;
+        loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+
         try {
-          response = await fetch(url, {
+          console.log('🌐 [LOGIN] Envoi requête à:', `${API_BASE}/api/auth/login`);
+          console.log('📧 [LOGIN] Email:', emailValue);
+
+          const res = await fetch(`${API_BASE}/api/auth/login`, {
             method: 'POST',
-            headers: headers,
-            body: body
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailValue, password: passwordValue })
           });
-        } catch (fetchError) {
-          const duration = Date.now() - startTime;
-          console.error('❌ Erreur fetch:', {
-            name: fetchError.name,
-            message: fetchError.message,
-            duration: duration + 'ms'
-          });
-          throw fetchError;
-        }
 
-        const duration = Date.now() - startTime;
-        console.log(`📥 Réponse reçue en ${duration}ms:`, {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
-        });
+          console.log('📥 [LOGIN] Réponse:', res.status, res.statusText);
 
-        // Lire la réponse
-        const contentType = response.headers.get('content-type') || '';
-        console.log('📄 Content-Type:', contentType);
+          // Vérifier le type de contenu
+          const ct = res.headers.get('content-type') || '';
+          console.log('📄 [LOGIN] Content-Type:', ct);
+          
+          const data = ct.includes('application/json')
+            ? await res.json()
+            : { error: await res.text() };
 
-        let data;
-        try {
-          if (contentType.includes('application/json')) {
-            data = await response.json();
-            logDetails('Données JSON', data);
-          } else {
-            const text = await response.text();
-            console.warn('⚠️ Réponse non-JSON:', text.substring(0, 200));
-            data = { error: 'Réponse serveur invalide: ' + text.substring(0, 100) };
+          if (!res.ok) {
+            console.error('❌ [LOGIN] Erreur serveur:', data);
+            loginError.style.display = 'block';
+            loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
+            loginSubmit.disabled = false;
+            loginSubmit.textContent = 'Se connecter';
+            return;
           }
-        } catch (parseError) {
-          console.error('❌ Erreur parsing réponse:', parseError);
-          data = { error: 'Impossible de lire la réponse du serveur' };
-        }
 
-        // Vérifier le status
-        if (!response.ok) {
-          const errorMsg = data.error || data.message || `Erreur ${response.status}`;
-          showError(errorMsg);
-          return;
-        }
+          console.log('✅ [LOGIN] Connexion réussie!');
+          console.log('👤 [LOGIN] User:', data.user);
 
-        // Vérifier que les données sont valides
-        if (!data.token || !data.user) {
-          console.error('❌ Réponse invalide:', data);
-          showError('Réponse serveur invalide (token ou user manquant)');
-          return;
-        }
-
-        // Succès !
-        console.log('✅ Connexion réussie !');
-        logDetails('User', data.user);
-
-        // Stocker les données
-        try {
+          // Stocker le token + user
           localStorage.setItem('lcc_token', data.token);
           localStorage.setItem('lcc_user', JSON.stringify(data.user));
-          console.log('💾 Données sauvegardées');
-        } catch (storageError) {
-          console.error('❌ Erreur sauvegarde localStorage:', storageError);
-          showError('Impossible de sauvegarder la connexion');
-          return;
-        }
 
-        // Redirection
-        const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
-        console.log('🔄 Redirection vers:', redirectUrl);
-        
-        setTimeout(() => {
+          console.log('💾 [LOGIN] Données sauvegardées');
+
+          // Redirection vers le dashboard (web + app)
+          const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+          console.log('🔄 [LOGIN] Redirection vers:', redirectUrl);
           window.location.href = redirectUrl;
-        }, 100);
+          
+        } catch (err) {
+          console.error('❌ [LOGIN] ERREUR CATCH:');
+          console.error('  Name:', err?.name);
+          console.error('  Message:', err?.message);
+          console.error('  Stack:', err?.stack);
+          console.error('🔍 [LOGIN] Context:');
+          console.error('  URL:', window.location.href);
+          console.error('  Origin:', window.location.origin);
+          console.error('  IS_NATIVE:', IS_NATIVE);
+          console.error('  API_BASE:', API_BASE);
 
-      } catch (error) {
-        console.error('❌ ERREUR CATCH:');
-        console.error('  Name:', error?.name);
-        console.error('  Message:', error?.message);
-        console.error('  Stack:', error?.stack);
-        
-        // Diagnostic détaillé
-        console.error('🔍 Diagnostic:');
-        console.error('  URL actuelle:', window.location.href);
-        console.error('  Origin:', window.location.origin);
-        console.error('  Protocol:', window.location.protocol);
-        console.error('  IS_NATIVE:', IS_NATIVE);
-        console.error('  API_BASE_URL:', API_BASE_URL);
-        
-        // Afficher les erreurs accumulées
-        if (window.__errors && window.__errors.length > 0) {
-          console.error('🚨 Erreurs précédentes:', window.__errors);
+          loginError.style.display = 'block';
+          loginError.textContent = "Erreur réseau lors de la connexion.";
+          loginSubmit.disabled = false;
+          loginSubmit.textContent = 'Se connecter';
         }
-
-        // Message d'erreur pour l'utilisateur
-        let errorMsg = 'Erreur de connexion';
-        
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-          errorMsg = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
-        } else if (error.name === 'NetworkError') {
-          errorMsg = 'Erreur réseau. Êtes-vous connecté à internet ?';
-        } else if (error.message) {
-          errorMsg = `Erreur: ${error.message}`;
-        }
-
-        showError(errorMsg);
-      }
-    });
+      });
+    }
     
-    console.log('✅ Script login chargé');
-    
-    // Afficher un résumé après 1 seconde
-    setTimeout(() => {
-      console.log('📊 RÉSUMÉ:');
-      console.log('  IS_NATIVE:', IS_NATIVE);
-      console.log('  Protocol:', window.location.protocol);
-      console.log('  Erreurs JS:', window.__errors.length);
-      console.log('  Form ready:', !!loginForm);
-      console.log('  Capacitor:', typeof window.Capacitor !== 'undefined');
-    }, 1000);
+    console.log('✅ [LOGIN] Script principal chargé');
   </script>
 
   <style>
@@ -654,10 +536,11 @@
       font-size: 12px;
     }
 
-    /* Brand title colors */
+    /* Brand title colors (Boosting en vert) */
     .brand-boosting { color: #10B981; font-weight: 800; }
     .brand-host { color: #0F172A; font-weight: 700; }
 
+    /* Agrandir le logo */
     .bh-logo { width: 52px; height: 52px; }
 
     /* Responsive */
@@ -675,6 +558,7 @@
     }
 
     @media (max-width: 640px) {
+      /* Mobile: logo légèrement plus grand aussi */
       .bh-logo { width: 48px; height: 48px; }
       .auth-container {
         margin: 12px;
@@ -694,6 +578,7 @@
         height: 40px;
         font-size: 18px;
       }
+      .bh-logo { display:block; color:#fff; }
     }
   </style>
   
