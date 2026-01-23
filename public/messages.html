@@ -792,7 +792,6 @@
     headers: { 'Authorization': 'Bearer ' + token }
   });
 
-<<<<<<< HEAD
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           localStorage.removeItem('lcc_token');
@@ -818,13 +817,6 @@
       }
     } catch (err) {
       console.error('Erreur vérification abonnement:', err);
-=======
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_user');
-      window.location.href = '/login.html';
->>>>>>> f9f5ec61238ee872790881854c9fcfe928f76bb3
     }
     return;
   }
