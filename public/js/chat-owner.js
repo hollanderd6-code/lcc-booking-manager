@@ -1,7 +1,14 @@
 // ============================================
 // CONFIGURATION & STATE
 // ============================================
-const API_URL = window.location.origin;
+// Détection du mode natif (Capacitor)
+const IS_NATIVE = window.Capacitor?.isNativePlatform() || false;
+const API_URL = IS_NATIVE 
+  ? 'https://lcc-booking-manager.onrender.com'
+  : window.location.origin;
+
+console.log('🔌 [SOCKET] API_URL:', API_URL, '(Native:', IS_NATIVE + ')');
+
 let socket = null;
 let allConversations = [];
 let currentConversationId = null;
@@ -531,7 +538,19 @@ Au plaisir de vous accueillir ! 🏠`;
 // SOCKET.IO
 // ============================================
 function connectSocket() {
-  socket = io(API_URL);
+  console.log('🔌 [SOCKET] Connexion à:', API_URL);
+  
+  // Options Socket.io optimisées pour mobile natif
+  const socketOptions = {
+    transports: ['websocket', 'polling'], // Websocket en premier
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
+    timeout: 20000
+  };
+  
+  socket = io(API_URL, socketOptions);
   
   socket.on('connect', () => {
     console.log('✅ Socket connecté');
@@ -540,6 +559,10 @@ function connectSocket() {
     if (userId) {
       socket.emit('join_user_room', userId);
     }
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error('❌ [SOCKET] Erreur de connexion:', error.message);
   });
   
   socket.on('new_message', (message) => {
