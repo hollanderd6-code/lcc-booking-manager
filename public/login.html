@@ -6,7 +6,14 @@
   <title>Boostinghost - Connexion</title>
   
   <script>
-    console.log('🟢 Error handlers installés');
+    // ⚡⚡⚡ MARQUEUR UNIQUE - VERSION CORRIGÉE ⚡⚡⚡
+    console.log('');
+    console.log('╔════════════════════════════════════════╗');
+    console.log('║  ✅ LOGIN.HTML VERSION CORRIGÉE V3    ║');
+    console.log('║  📅 ' + new Date().toISOString() + '  ║');
+    console.log('╚════════════════════════════════════════╝');
+    console.log('');
+    
     window.onerror = function (msg, url, line, col, err) {
       console.error('🚨 GLOBAL ERROR:', {msg, url, line, col, stack: err?.stack});
       return false;
@@ -44,7 +51,7 @@
           <label for="email">Adresse e-mail</label>
           <div class="input-with-icon">
             <i class="fas fa-envelope"></i>
-            <input type="email" id="email" name="email" placeholder="vous@exemple.com" required autocomplete="email">
+            <input type="email" id="email" name="email" placeholder="vous@exemple.com" required>
           </div>
         </div>
 
@@ -52,7 +59,7 @@
           <label for="password">Mot de passe</label>
           <div class="input-with-icon">
             <i class="fas fa-lock"></i>
-            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+            <input type="password" id="password" name="password" placeholder="••••••••" required>
           </div>
         </div>
 
@@ -96,239 +103,160 @@
   </div>
   
   <script>
-    console.log('🟢 Script principal START');
+    console.log('🟢 [V3] Script principal START');
     
-    // Détection native
     const IS_NATIVE = (() => {
       try {
-        return !!(
+        const result = !!(
           window.Capacitor?.isNativePlatform?.() ||
           window.location.protocol === 'capacitor:' ||
           window.location.protocol === 'ionic:'
         );
+        console.log('🔍 [V3] IS_NATIVE:', result);
+        return result;
       } catch (e) {
-        console.error('❌ Erreur détection:', e);
+        console.error('❌ [V3] Erreur détection:', e);
         return false;
       }
     })();
 
     const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
-    
-    console.log('🔍 IS_NATIVE:', IS_NATIVE);
-    console.log('🔍 API_BASE:', API_BASE);
+    console.log('🔍 [V3] API_BASE:', API_BASE);
 
-    // Check token existant
-    const existingToken = localStorage.getItem('lcc_token');
-    if (existingToken) {
-      console.log('✅ Token existant, redirection...');
+    // Check token
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
+      console.log('✅ [V3] Token trouvé, redirection...');
       window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+    } else {
+      console.log('ℹ️ [V3] Pas de token');
     }
 
-    // Attendre le DOM
-    function setupLogin() {
-      console.log('🔧 Setup login START');
+    // Setup
+    function setup() {
+      console.log('🔧 [V3] Setup login');
       
-      // DIAGNOSTIC: Vérifier que les éléments existent
       const form = document.getElementById('loginForm');
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
       const errorDiv = document.getElementById('loginError');
       const submitBtn = document.getElementById('loginSubmit');
 
-      console.log('🔍 Éléments trouvés:', {
-        form: !!form,
-        emailInput: !!emailInput,
-        passwordInput: !!passwordInput,
-        errorDiv: !!errorDiv,
-        submitBtn: !!submitBtn
+      if (!form || !emailInput || !passwordInput || !errorDiv || !submitBtn) {
+        console.error('❌ [V3] Éléments manquants!');
+        return;
+      }
+
+      console.log('✅ [V3] Éléments OK');
+
+      // Stocker les refs
+      const refs = { form, emailInput, passwordInput, errorDiv, submitBtn };
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('');
+        console.log('═══════════════════════════════════════');
+        console.log('📝 [V3] SUBMIT CLICKED');
+        console.log('═══════════════════════════════════════');
+
+        let email, password;
+
+        try {
+          // Récupérer les valeurs
+          email = refs.emailInput.value.trim();
+          password = refs.passwordInput.value;
+          
+          console.log('✅ [V3] Valeurs récupérées');
+          console.log('📧 [V3] Email:', email);
+          console.log('🔒 [V3] Password:', password ? '***' : '(vide)');
+
+          if (!email || !password) {
+            refs.errorDiv.style.display = 'block';
+            refs.errorDiv.textContent = 'Veuillez remplir tous les champs';
+            return;
+          }
+
+        } catch (err) {
+          console.error('❌ [V3] ERREUR récupération valeurs:');
+          console.error('  Name:', err.name);
+          console.error('  Message:', err.message);
+          console.error('  Stack:', err.stack);
+          refs.errorDiv.style.display = 'block';
+          refs.errorDiv.textContent = 'Erreur technique';
+          return;
+        }
+
+        // UI
+        refs.errorDiv.style.display = 'none';
+        refs.submitBtn.disabled = true;
+        refs.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+
+        // Request
+        const url = API_BASE + '/api/auth/login';
+        console.log('📤 [V3] Requête:', url);
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          console.log('📥 [V3] Status:', response.status);
+
+          const ct = response.headers.get('content-type') || '';
+          let data;
+
+          if (ct.includes('application/json')) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            console.warn('⚠️ [V3] Non-JSON:', text.substring(0, 100));
+            data = { error: 'Réponse serveur invalide' };
+          }
+
+          if (!response.ok) {
+            console.error('❌ [V3] Erreur:', data);
+            refs.errorDiv.style.display = 'block';
+            refs.errorDiv.textContent = data.error || 'Erreur de connexion';
+            refs.submitBtn.disabled = false;
+            refs.submitBtn.textContent = 'Se connecter';
+            return;
+          }
+
+          console.log('✅ [V3] SUCCÈS!');
+          console.log('👤 [V3] User:', data.user);
+
+          localStorage.setItem('lcc_token', data.token);
+          localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+          const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+          console.log('🔄 [V3] Redirection:', redirectUrl);
+          window.location.href = redirectUrl;
+
+        } catch (err) {
+          console.error('❌ [V3] ERREUR FETCH:');
+          console.error('  Name:', err.name);
+          console.error('  Message:', err.message);
+          console.error('  Stack:', err.stack);
+          refs.errorDiv.style.display = 'block';
+          refs.errorDiv.textContent = 'Erreur réseau';
+          refs.submitBtn.disabled = false;
+          refs.submitBtn.textContent = 'Se connecter';
+        }
       });
 
-      if (!form) {
-        console.error('❌ CRITIQUE: loginForm introuvable!');
-        return;
-      }
-      if (!emailInput) {
-        console.error('❌ CRITIQUE: input email introuvable!');
-        return;
-      }
-      if (!passwordInput) {
-        console.error('❌ CRITIQUE: input password introuvable!');
-        return;
-      }
-
-      console.log('✅ Tous les éléments présents');
-
-      // Stocker les références
-      window.__loginElements = {
-        form,
-        emailInput,
-        passwordInput,
-        errorDiv,
-        submitBtn
-      };
-
-      form.addEventListener('submit', handleSubmit);
-      console.log('✅ Event listener attaché');
+      console.log('✅ [V3] Event listener OK');
     }
 
-    async function handleSubmit(e) {
-      e.preventDefault();
-      console.log('');
-      console.log('='.repeat(50));
-      console.log('📝 SUBMIT DÉCLENCHÉ');
-      console.log('='.repeat(50));
-
-      // DIAGNOSTIC: Re-vérifier que les éléments existent au moment du submit
-      console.log('🔍 Vérification éléments au moment du submit:');
-      
-      const emailById = document.getElementById('email');
-      const passwordById = document.getElementById('password');
-      const errorById = document.getElementById('loginError');
-      const submitById = document.getElementById('loginSubmit');
-
-      console.log('  email via getElementById:', !!emailById);
-      console.log('  password via getElementById:', !!passwordById);
-      console.log('  error via getElementById:', !!errorById);
-      console.log('  submit via getElementById:', !!submitById);
-
-      // Vérifier les références stockées
-      console.log('🔍 Références stockées:');
-      console.log('  window.__loginElements:', !!window.__loginElements);
-      if (window.__loginElements) {
-        console.log('  emailInput:', !!window.__loginElements.emailInput);
-        console.log('  passwordInput:', !!window.__loginElements.passwordInput);
-      }
-
-      // Essayer plusieurs méthodes pour récupérer les valeurs
-      let email, password;
-      
-      try {
-        // Méthode 1: Via les références stockées (RECOMMANDÉ)
-        if (window.__loginElements?.emailInput && window.__loginElements?.passwordInput) {
-          email = window.__loginElements.emailInput.value.trim();
-          password = window.__loginElements.passwordInput.value;
-          console.log('✅ Valeurs récupérées via références stockées');
-        }
-        // Méthode 2: Via getElementById
-        else if (emailById && passwordById) {
-          email = emailById.value.trim();
-          password = passwordById.value;
-          console.log('✅ Valeurs récupérées via getElementById');
-        }
-        // Méthode 3: Via le formulaire
-        else {
-          const formData = new FormData(e.target);
-          email = formData.get('email')?.trim();
-          password = formData.get('password');
-          console.log('✅ Valeurs récupérées via FormData');
-        }
-
-        console.log('📧 Email:', email);
-        console.log('🔒 Password:', password ? '***' : '(vide)');
-
-        if (!email || !password) {
-          console.error('❌ Email ou password manquant');
-          showError('Veuillez remplir tous les champs');
-          return;
-        }
-
-      } catch (err) {
-        console.error('❌ ERREUR lors de la récupération des valeurs:');
-        console.error('  Name:', err.name);
-        console.error('  Message:', err.message);
-        console.error('  Stack:', err.stack);
-        showError('Erreur technique. Veuillez réessayer.');
-        return;
-      }
-
-      // Désactiver le bouton
-      if (window.__loginElements?.submitBtn) {
-        window.__loginElements.submitBtn.disabled = true;
-        window.__loginElements.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
-      }
-
-      // Cacher l'erreur
-      if (window.__loginElements?.errorDiv) {
-        window.__loginElements.errorDiv.style.display = 'none';
-      }
-
-      // Faire la requête
-      const url = API_BASE + '/api/auth/login';
-      console.log('📤 Requête vers:', url);
-
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-
-        console.log('📥 Status:', response.status);
-
-        const contentType = response.headers.get('content-type') || '';
-        let data;
-
-        if (contentType.includes('application/json')) {
-          data = await response.json();
-        } else {
-          const text = await response.text();
-          console.warn('⚠️ Réponse non-JSON:', text.substring(0, 200));
-          data = { error: 'Réponse serveur invalide' };
-        }
-
-        if (!response.ok) {
-          console.error('❌ Erreur serveur:', data);
-          showError(data.error || 'Erreur de connexion');
-          resetButton();
-          return;
-        }
-
-        console.log('✅ CONNEXION RÉUSSIE!');
-        console.log('👤 User:', data.user);
-
-        // Sauvegarder
-        localStorage.setItem('lcc_token', data.token);
-        localStorage.setItem('lcc_user', JSON.stringify(data.user));
-
-        // Rediriger
-        const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
-        console.log('🔄 Redirection vers:', redirectUrl);
-        window.location.href = redirectUrl;
-
-      } catch (err) {
-        console.error('❌ ERREUR FETCH:');
-        console.error('  Name:', err.name);
-        console.error('  Message:', err.message);
-        console.error('  Stack:', err.stack);
-        showError('Erreur réseau. Vérifiez votre connexion.');
-        resetButton();
-      }
-    }
-
-    function showError(message) {
-      console.log('⚠️ Affichage erreur:', message);
-      if (window.__loginElements?.errorDiv) {
-        window.__loginElements.errorDiv.style.display = 'block';
-        window.__loginElements.errorDiv.textContent = message;
-      }
-    }
-
-    function resetButton() {
-      if (window.__loginElements?.submitBtn) {
-        window.__loginElements.submitBtn.disabled = false;
-        window.__loginElements.submitBtn.textContent = 'Se connecter';
-      }
-    }
-
-    // Lancer l'initialisation
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setupLogin);
-      console.log('⏳ Attente DOM...');
+      document.addEventListener('DOMContentLoaded', setup);
+      console.log('⏳ [V3] Attente DOM...');
     } else {
-      setupLogin();
+      setup();
     }
 
-    console.log('🟢 Script principal END');
+    console.log('🟢 [V3] Script principal END');
   </script>
 
   <style>
@@ -588,10 +516,7 @@
     }
     @media (max-width: 640px) {
       .bh-logo { width: 48px; height: 48px; }
-      .auth-container {
-        margin: 12px;
-        border-radius: 20px;
-      }
+      .auth-container { margin: 12px; border-radius: 20px; }
       .auth-card { padding: 28px 20px 24px; }
       .auth-title { font-size: 22px; }
     }
