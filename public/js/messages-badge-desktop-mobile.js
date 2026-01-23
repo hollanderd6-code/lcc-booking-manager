@@ -5,8 +5,12 @@
 
 (function() {
   'use strict';
+  
+  const IS_NATIVE = window.Capacitor?.isNativePlatform() || false;
+  const API_URL = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : window.location.origin;
 
-  const API_URL = window.location.origin;
+  console.log('🔔 [BADGE] IS_NATIVE:', IS_NATIVE);
+  console.log('🔔 [BADGE] API_URL:', API_URL);
 
   // ============================================
   // 📊 CHARGER LE NOMBRE DE MESSAGES NON LUS
@@ -16,16 +20,20 @@
     try {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
-        console.log('⚠️ Badge: Pas de token');
+        console.log('⚠️ [BADGE] Pas de token');
         return;
       }
+
+      console.log('📤 [BADGE] Fetch:', `${API_URL}/api/chat/conversations`);
 
       const response = await fetch(`${API_URL}/api/chat/conversations`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      console.log('📥 [BADGE] Status:', response.status);
+
       if (!response.ok) {
-        console.warn('⚠️ Badge: Erreur API', response.status);
+        console.warn('⚠️ [BADGE] Erreur API', response.status);
         return;
       }
 
@@ -38,11 +46,11 @@
         });
       }
 
-      console.log('📬 Badge: Total non lus =', totalUnread);
+      console.log('📬 [BADGE] Total:', totalUnread);
       updateAllBadges(totalUnread);
 
     } catch (error) {
-      console.error('❌ Badge: Erreur:', error);
+      console.error('❌ [BADGE] Erreur:', error);
     }
   }
 
@@ -51,12 +59,14 @@
   // ============================================
   
   function updateAllBadges(count) {
+    console.log('🎨 [BADGE] Update all:', count);
+    
     // Desktop - sidebar
     const desktopNav = document.querySelector('.nav-item[data-page="messages"]');
     if (desktopNav) {
       updateSingleBadge(desktopNav, count, 'desktop');
     } else {
-      console.log('⚠️ Badge: .nav-item[data-page="messages"] non trouvé');
+      console.log('⚠️ [BADGE] Desktop nav non trouvé');
     }
     
     // Mobile - bottom tabs
@@ -77,7 +87,7 @@
       badge = document.createElement('span');
       badge.className = 'badge-count';
       element.appendChild(badge);
-      console.log('✅ Badge créé (' + type + ')');
+      console.log('✅ [BADGE] Créé (' + type + ')');
     }
 
     // Appliquer les styles directement - TOUJOURS VISIBLE
@@ -124,7 +134,7 @@
     }
 
     badge.textContent = count > 99 ? '99+' : count;
-    console.log('✅ Badge mis à jour (' + type + '):', count);
+    console.log('✅ [BADGE] ' + type + ':', count);
   }
 
   // ============================================
@@ -132,7 +142,7 @@
   // ============================================
   
   function init() {
-    console.log('🚀 Badge Messages: Initialisation...');
+    console.log('🔔 [BADGE] Init...');
     
     // Essayer immédiatement
     loadUnreadCount();
@@ -148,7 +158,7 @@
     
     // Écouter quand la sidebar est prête
     document.addEventListener('sidebarReady', () => {
-      console.log('📢 Badge: sidebarReady reçu');
+      console.log('📢 [BADGE] sidebarReady reçu');
       setTimeout(loadUnreadCount, 100);
     });
   }
