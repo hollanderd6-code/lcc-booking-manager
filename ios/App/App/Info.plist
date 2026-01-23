@@ -51,5 +51,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+  <key>NSUserNotificationsUsageDescription</key>
+  <string>Nous avons besoin d'envoyer des notifications pour les nouveaux messages</string>
 </dict>
 </plist>

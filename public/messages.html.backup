@@ -12,7 +12,8 @@
 <!-- CSS plateforme -->
 <link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/messages-badge-red.css">    
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">    
     <!-- CSS Chat moderne -->
 <link href="/css/chat-modern.css" rel="stylesheet">
     
@@ -578,7 +579,81 @@
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+<script>
+(function() {
+  'use strict';
+  
+  console.log('🌐 [API FIX] Initialisation...');
+  
+  // Détection native
+  const IS_NATIVE = !!(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === 'capacitor:' ||
+    window.location.protocol === 'ionic:'
+  );
+
+  // URL de l'API
+  const API_BASE_URL = IS_NATIVE 
+    ? 'https://lcc-booking-manager.onrender.com' 
+    : window.location.origin;
+
+  // Exposer globalement
+  window.API_BASE = API_BASE_URL;
+  window.API_URL = API_BASE_URL;
+  window.IS_NATIVE = IS_NATIVE;
+
+  console.log('🌐 [API FIX] IS_NATIVE:', IS_NATIVE);
+  console.log('🌐 [API FIX] API_BASE:', API_BASE_URL);
+  console.log('🌐 [API FIX] Protocol:', window.location.protocol);
+
+  // Helper pour construire les URLs
+  window.buildApiUrl = function(path) {
+    if (path.startsWith('/')) {
+      return API_BASE_URL + path;
+    }
+    return API_BASE_URL + '/' + path;
+  };
+
+  // ⚡ IMPORTANT: Intercepter fetch pour réécrire automatiquement les URLs
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init) {
+    let url = input;
+    
+    // Si c'est un string qui commence par /api/
+    if (typeof input === 'string' && input.startsWith('/api/')) {
+      url = window.buildApiUrl(input);
+      console.log('🔄 [API FIX] Rewrite:', input, '→', url);
+    }
+    
+    return originalFetch(url, init);
+  };
+
+  console.log('✅ [API FIX] Activé et prêt');
+})();
+</script>
 <!-- MOBILE HEADER -->
+
+<!-- ⚡ FIX iOS API ⚡ -->
+<script>
+(function() {
+  const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:');
+  const API_BASE_URL = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : window.location.origin;
+  window.API_BASE = API_BASE_URL;
+  window.API_URL = API_BASE_URL;
+  
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init) {
+    if (typeof input === 'string' && input.startsWith('/api/')) {
+      const url = API_BASE_URL + input;
+      console.log('🔄 [API]', input, '→', url);
+      return originalFetch(url, init);
+    }
+    return originalFetch(input, init);
+  };
+  
+  console.log('✅ [API] iOS fix:', API_BASE_URL);
+})();
+</script>
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
 <i class="fas fa-calendar-check"></i>
@@ -712,10 +787,10 @@
       return;
     }
 
-    try {
-      const res = await fetch('/api/subscription/status', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
+   try {
+  const res = await fetch('/api/subscription/status', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
 
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
@@ -726,6 +801,12 @@
         return;
       }
 
+      // ⚡ Vérifier content-type avant parsing
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.warn('⚠️ Subscription non-JSON');
+        return;
+      }
       const data = await res.json();
 
       if (data.status === 'expired' || data.status === 'canceled') {
@@ -737,7 +818,10 @@
     } catch (err) {
       console.error('Erreur vérification abonnement:', err);
     }
-  })();
+    return;
+  }
+
+  // ✅ Vérifier que c'est du JSON
 
     (function() {
       const token = localStorage.getItem('lcc_token');
@@ -1125,7 +1209,7 @@ function closeBookingMessageModal() {
 <script src="/js/logout-fix.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
-<script src="/js/messages-badge-sync.js"></script>
 <script src="/js/chat-emoji-photo.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>    
 </body>
 </html>

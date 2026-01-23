@@ -3551,6 +3551,24 @@
 
   // Afficher les infos utilisateur dans la sidebar
   (function () {
+  // ✅ FirebaseMessaging: iOS only + éviter init multiple
+  if (window.__firebasePushInitDone) {
+    console.log('⚠️ Firebase push déjà initialisé, on skip');
+    return;
+  }
+  const cap = window.Capacitor;
+  const platform = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : null;
+  if (platform && platform !== 'ios') {
+    console.log('ℹ️ Firebase push ignoré (platform: ' + platform + ')');
+    return;
+  }
+  window.__firebasePushInitDone = true;
+
+    const token = localStorage.getItem('lcc_token');
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
     
     const rawUser = localStorage.getItem('lcc_user');
     let user = null;
@@ -8048,6 +8066,8 @@ if (document.readyState === 'loading') {
 <!-- 📱 Expérience Mobile Native -->
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/fcm-registration.js"></script>
+<script type="module" src="/js/push-notifications-handler.js"></script>
 <script>
 (function() {
   const el = document.querySelector('.calendar-grid-wrapper');
@@ -8084,91 +8104,91 @@ if (document.readyState === 'loading') {
 </script>    
 <script src="/js/push-notifications-handler.js"></script>    
 <script>
-// console.log('🚀 FIREBASE MESSAGING PUSH CODE');
-// (function () {
-//   const API_BASE = 'https://lcc-booking-manager.onrender.com';
-//   
-//   async function getJWTFromWeb() {
-//     const jwt = localStorage.getItem('lcc_token');
-//     if (jwt) {
-//       console.log('✅ JWT trouvé');
-//       return jwt;
-//     }
-//     console.warn('⚠️ Pas de JWT');
-//     return null;
-//   }
-//   
-//   async function saveTokenToServer(token) {
-//     console.log('💾 Sauvegarde token FCM:', token);
-//     try {
-//       const jwt = await getJWTFromWeb();
-//       if (!jwt) return;
-//       
-//       const res = await fetch(`${API_BASE}/api/save-token`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           'Authorization': `Bearer ${jwt}`,
-//         },
-//         body: JSON.stringify({ 
-//           token,
-//           device_type: 'ios'
-//         }),
-//       });
-//       
-//       const data = await res.json();
-//       console.log('✅ Token FCM sauvegardé:', data);
-//     } catch (err) {
-//       console.error('❌ Erreur:', err);
-//     }
-//   }
-//   
-//   async function initFirebasePush() {
-//     const cap = window.Capacitor;
-//     if (!cap || !cap.isNativePlatform()) {
-//       console.log('🌐 Web: pas de push');
-//       return;
-//     }
-//     
-//     const { FirebaseMessaging } = cap.Plugins;
-//     if (!FirebaseMessaging) {
-//       console.error('❌ FirebaseMessaging plugin introuvable');
-//       return;
-//     }
-//     
-//     console.log('🔥 Init Firebase Messaging...');
-//     
-//     try {
-//       // Demander permission
-//       const permResult = await FirebaseMessaging.requestPermissions();
-//       console.log('🔐 Permission:', permResult);
-//       
-//       if (permResult.receive !== 'granted') {
-//         console.warn('⛔ Permission refusée');
-//         return;
-//       }
-//       
-//       // Récupérer le token FCM
-//       const { token } = await FirebaseMessaging.getToken();
-//       console.log('✅ Token FCM reçu:', token);
-//       
-//       if (token) {
-//         await saveTokenToServer(token);
-//       }
-//       
-//       // Écouter les nouveaux tokens
-//       FirebaseMessaging.addListener('tokenReceived', async (event) => {
-//         console.log('🔄 Nouveau token FCM:', event.token);
-//         await saveTokenToServer(event.token);
-//       });
-//       
-//     } catch (error) {
-//       console.error('❌ Erreur Firebase Messaging:', error);
-//     }
-//   }
-//   
-//   setTimeout(() => {
-//     initFirebasePush();
+console.log('🚀 FIREBASE MESSAGING PUSH CODE');
+(function () {
+  const API_BASE = 'https://lcc-booking-manager.onrender.com';
+  
+  async function getJWTFromWeb() {
+    const jwt = localStorage.getItem('lcc_token');
+    if (jwt) {
+      console.log('✅ JWT trouvé');
+      return jwt;
+    }
+    console.warn('⚠️ Pas de JWT');
+    return null;
+  }
+  
+  async function saveTokenToServer(token) {
+    console.log('💾 Sauvegarde token FCM:', token);
+    try {
+      const jwt = await getJWTFromWeb();
+      if (!jwt) return;
+      
+      const res = await fetch(`${API_BASE}/api/save-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ 
+          token,
+          device_type: 'ios'
+        }),
+      });
+      
+      const data = await res.json();
+      console.log('✅ Token FCM sauvegardé:', data);
+    } catch (err) {
+      console.error('❌ Erreur:', err);
+    }
+  }
+  
+  async function initFirebasePush() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform()) {
+      console.log('🌐 Web: pas de push');
+      return;
+    }
+    
+    const { FirebaseMessaging } = cap.Plugins;
+    if (!FirebaseMessaging) {
+      console.error('❌ FirebaseMessaging plugin introuvable');
+      return;
+    }
+    
+    console.log('🔥 Init Firebase Messaging...');
+    
+    try {
+      // Demander permission
+      const permResult = await FirebaseMessaging.requestPermissions();
+      console.log('🔐 Permission:', permResult);
+      
+      if (permResult.receive !== 'granted') {
+        console.warn('⛔ Permission refusée');
+        return;
+      }
+      
+      // Récupérer le token FCM
+      const { token } = await FirebaseMessaging.getToken();
+      console.log('✅ Token FCM reçu:', token);
+      
+      if (token) {
+        await saveTokenToServer(token);
+      }
+      
+      // Écouter les nouveaux tokens
+      FirebaseMessaging.addListener('tokenReceived', async (event) => {
+        console.log('🔄 Nouveau token FCM:', event.token);
+        await saveTokenToServer(event.token);
+      });
+      
+    } catch (error) {
+      console.error('❌ Erreur Firebase Messaging:', error);
+    }
+  }
+  
+  setTimeout(() => {
+    initFirebasePush();
   }, 3000);
 })();
 </script>
