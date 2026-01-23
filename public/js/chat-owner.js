@@ -96,7 +96,6 @@ async function loadProperties() {
 }
 
 // ============================================
-    console.log("📤 [CHAT] Fetching conversations:", url);
 // CHARGEMENT DES CONVERSATIONS
 // ============================================
 async function loadConversations() {
@@ -110,6 +109,8 @@ async function loadConversations() {
     let url = `/api/chat/conversations?`;
     if (status) url += `status=${status}&`;
     if (propertyId) url += `property_id=${propertyId}&`;
+    
+    console.log("📤 [CHAT] Fetching conversations:", url);
     
     const response = await fetch(url, {
       headers: {
