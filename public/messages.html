@@ -579,6 +579,58 @@
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+<script>
+(function() {
+  'use strict';
+  
+  console.log('🌐 [API FIX] Initialisation...');
+  
+  // Détection native
+  const IS_NATIVE = !!(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === 'capacitor:' ||
+    window.location.protocol === 'ionic:'
+  );
+
+  // URL de l'API
+  const API_BASE_URL = IS_NATIVE 
+    ? 'https://lcc-booking-manager.onrender.com' 
+    : window.location.origin;
+
+  // Exposer globalement
+  window.API_BASE = API_BASE_URL;
+  window.API_URL = API_BASE_URL;
+  window.IS_NATIVE = IS_NATIVE;
+
+  console.log('🌐 [API FIX] IS_NATIVE:', IS_NATIVE);
+  console.log('🌐 [API FIX] API_BASE:', API_BASE_URL);
+  console.log('🌐 [API FIX] Protocol:', window.location.protocol);
+
+  // Helper pour construire les URLs
+  window.buildApiUrl = function(path) {
+    if (path.startsWith('/')) {
+      return API_BASE_URL + path;
+    }
+    return API_BASE_URL + '/' + path;
+  };
+
+  // ⚡ IMPORTANT: Intercepter fetch pour réécrire automatiquement les URLs
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init) {
+    let url = input;
+    
+    // Si c'est un string qui commence par /api/
+    if (typeof input === 'string' && input.startsWith('/api/')) {
+      url = window.buildApiUrl(input);
+      console.log('🔄 [API FIX] Rewrite:', input, '→', url);
+    }
+    
+    return originalFetch(url, init);
+  };
+
+  console.log('✅ [API FIX] Activé et prêt');
+})();
+</script>
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
