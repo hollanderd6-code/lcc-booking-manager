@@ -1,0 +1,187 @@
+/* ============================================
+   🔴 BADGE MESSAGES - STYLES UNIFIÉS
+   Desktop + Mobile
+   ============================================ */
+
+/* ============================================
+   DESKTOP - Badge sur .nav-item
+   ============================================ */
+
+.nav-item[data-page="messages"] {
+  position: relative !important;
+}
+
+.nav-item[data-page="messages"] .badge-count {
+  position: absolute !important;
+  top: 50% !important;
+  right: 12px !important;
+  transform: translateY(-50%) !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 6px !important;
+  background: #EF4444 !important;
+  color: white !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3) !important;
+  animation: badgePulse 2s ease-in-out infinite !important;
+}
+
+/* Masquer si count = 0 */
+.nav-item[data-page="messages"][data-count="0"] .badge-count,
+.nav-item[data-page="messages"]:not([data-count]) .badge-count {
+  display: none !important;
+}
+
+/* ============================================
+   MOBILE - Badge sur .tab-btn
+   ============================================ */
+
+.tab-btn[data-tab="messages"],
+.mobile-tab[data-tab="messages"] {
+  position: relative !important;
+}
+
+.tab-btn[data-tab="messages"] .badge-count,
+.mobile-tab[data-tab="messages"] .badge-count {
+  position: absolute !important;
+  top: 2px !important;
+  right: 50% !important;
+  transform: translateX(14px) !important;
+  min-width: 16px !important;
+  height: 16px !important;
+  padding: 0 4px !important;
+  background: #EF4444 !important;
+  color: white !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  border: 2px solid white !important;
+}
+
+/* Masquer si count = 0 */
+.tab-btn[data-tab="messages"][data-count="0"] .badge-count,
+.tab-btn[data-tab="messages"]:not([data-count]) .badge-count,
+.mobile-tab[data-tab="messages"][data-count="0"] .badge-count,
+.mobile-tab[data-tab="messages"]:not([data-count]) .badge-count {
+  display: none !important;
+}
+
+/* ============================================
+   ANIMATION
+   ============================================ */
+
+@keyframes badgePulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-50%) scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Animation mobile */
+.tab-btn[data-tab="messages"] .badge-count,
+.mobile-tab[data-tab="messages"] .badge-count {
+  animation: badgePulseMobile 2s ease-in-out infinite !important;
+}
+
+@keyframes badgePulseMobile {
+  0%, 100% {
+    transform: translateX(14px) scale(1);
+  }
+  50% {
+    transform: translateX(14px) scale(1.1);
+  }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+[data-theme="dark"] .nav-item[data-page="messages"] .badge-count,
+[data-theme="dark"] .tab-btn[data-tab="messages"] .badge-count,
+[data-theme="dark"] .mobile-tab[data-tab="messages"] .badge-count {
+  background: #DC2626 !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4) !important;
+}
+
+/* ============================================
+   MOBILE LOGO STYLES
+   ============================================ */
+
+.mobile-logo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+}
+
+.mobile-logo-mark {
+  flex-shrink: 0 !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.mobile-logo-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.mobile-logo-title {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+.mobile-logo-subtitle {
+  font-size: 9px !important;
+  color: #6B7280 !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+/* ============================================
+   MOBILE HEADER
+   ============================================ */
+
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #E5E7EB !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    height: 60px !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-theme="dark"] .mobile-header {
+    background: #1F2937 !important;
+    border-bottom-color: #374151 !important;
+  }
+
+  [data-theme="dark"] .mobile-logo-subtitle {
+    color: #9CA3AF !important;
+  }
+}

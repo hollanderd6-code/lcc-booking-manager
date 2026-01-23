@@ -8,7 +8,10 @@
       "launchAutoHide": true,
       "backgroundColor": "#FFFFFF",
       "androidSplashResourceName": "splash",
-      "showSpinner": false
+      "androidScaleType": "CENTER",
+      "showSpinner": false,
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#10B981"
     },
     "StatusBar": {
       "style": "dark",
@@ -17,6 +20,18 @@
     },
     "Haptics": {
       "enabled": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
+  },
+  "ios": {
+    "backgroundColor": "#FFFFFF",
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
   }
 }

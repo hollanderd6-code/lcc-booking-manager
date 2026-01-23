@@ -1,103 +1,110 @@
-/* /js/bh-layout.js — injection sidebar + header standard */
-
 (function () {
-  const SIDEBAR_HTML = `<aside class="sidebar">
-<div class="sidebar-header">
-<a class="sidebar-logo" href="/">
-<svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
-<path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
-<path d="M16 36V26H24V36" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
-<path d="M20 4L4 18H10V22H30V18H36L20 4Z" fill="#10B981" stroke="#10B981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-<path d="M20 9L24 14H16L20 9Z" fill="white"></path>
-</svg>
-<div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
-<span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
-<span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
-</span>
-<span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
-      Smart Property Manager
-    </span>
-</div>
-</a>
-</div>
-<nav class="sidebar-nav">
-<!-- PRINCIPAL -->
-<div class="nav-section">
-<div class="nav-section-title">Principal</div>
-<a class="nav-item active" data-page="app" href="/app.html">
-<i class="fas fa-th-large"></i>
-<span>Dashboard</span>
-</a>
-<a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
-<i class="fas fa-calendar"></i>
-<span>Calendrier</span>
-</a>
-<a class="nav-item" data-page="messages" href="/messages.html">
-<i class="fas fa-comment-dots"></i>
-<span>Messages</span>
-</a>
-</div>
-<!-- GESTION -->
-<div class="nav-section">
-<div class="nav-section-title">Gestion</div>
-<a class="nav-item" data-page="settings" href="/settings.html">
-<i class="fas fa-home"></i>
-<span>Mes logements</span>
-</a>
-<a class="nav-item" data-page="welcome" href="/welcome.html">
-<i class="fas fa-book-open"></i>
-<span>Livret d'accueil</span>
-</a>
-<a class="nav-item" data-page="cleaning" href="/cleaning.html">
-<i class="fas fa-broom"></i>
-<span>Gestion du ménage</span>
-</a>
-<div class="nav-section">
-<div class="nav-section-title"><facturation></facturation></div>
-<a class="nav-item" href="/factures.html">
-<i class="fas fa-file-invoice"></i>
-<span>Factures clients</span>
-</a>
-<a class="nav-item" href="/factures-proprietaires.html">
-<i class="fas fa-file-invoice-dollar"></i>
-<span>Factures propriétaires</span>
-</a>
-</div>
-<a class="nav-item" data-page="deposits" href="/deposits.html">
-<i class="fas fa-shield-alt"></i>
-<span>Cautions</span>
-</a>
-<a class="nav-item" data-page="notifications" href="/notifications.html">
-<i class="fas fa-bell"></i>
-<span>Notifications</span>
-</a>
-</div>
-<!-- PARAMÈTRES -->
-<div class="nav-section">
-<div class="nav-section-title">Paramètres</div>
-<a class="nav-item" data-page="settings-account" href="/settings-account.html">
-<i class="fas fa-cog"></i>
-<span>Paramètres</span>
-</a>
-<a class="nav-item" data-page="help" href="/help.html">
-<i class="fas fa-question-circle"></i>
-<span>Aide</span>
-</a>
-</div>
-</nav>
-<div class="sidebar-footer">
-<div class="user-profile">
-<div class="user-avatar" id="sidebarUserAvatar">C</div>
-<div class="user-info">
-<div class="user-name" id="sidebarUserName">Utilisateur</div>
-<div class="user-email" id="sidebarUserCompany">Mon espace</div>
-</div>
-<button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
-<i class="fas fa-sign-out-alt"></i>
-</button>
-</div>
-</div>
-</aside>`;
+  'use strict';
+
+/* /js/bh-layout.js – injection sidebar + header standard */
+/* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
+const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
+
+const SIDEBAR_HTML = `
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <a class="sidebar-logo" href="/">
+      <img src="/asset/boostinghost-icon-circle.png"
+           alt="Boostinghost"
+           style="width:40px;height:40px;flex-shrink:0;" />
+
+      <div class="sidebar-logo-text" style="display:flex;flex-direction:column;justify-content:center;margin-left:10px;">
+        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif;font-size:17px;line-height:1.1;">
+          <span style="color:#10B981;font-weight:800;">Boosting</span>
+          <span style="color:#111827;font-weight:600;">host</span>
+        </span>
+        <span class="sidebar-logo-subtitle" style="font-size:10px;color:#6B7280;font-weight:500;letter-spacing:0.5px;">
+          Smart Property Manager
+        </span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- PRINCIPAL -->
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-item active" data-page="app" href="/app.html">
+        <i class="fas fa-th-large"></i><span>Dashboard</span>
+      </a>
+      <a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
+        <i class="fas fa-calendar"></i><span>Calendrier</span>
+      </a>
+      <a class="nav-item" data-page="messages" href="/messages.html">
+        <i class="fas fa-comment-dots"></i><span>Messages</span>
+      </a>
+    </div>
+
+    <!-- GESTION -->
+    <div class="nav-section">
+      <div class="nav-section-title">Gestion</div>
+      <a class="nav-item" data-page="settings" href="/settings.html">
+        <i class="fas fa-home"></i><span>Mes logements</span>
+      </a>
+      <a class="nav-item" data-page="welcome" href="/welcome.html">
+        <i class="fas fa-book-open"></i><span>Livret d'accueil</span>
+      </a>
+      <a class="nav-item" data-page="cleaning" href="/cleaning.html">
+        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
+      </a>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Facturation</div>
+        <a class="nav-item" data-page="factures" href="/factures.html">
+          <i class="fas fa-file-invoice"></i><span>Factures clients</span>
+        </a>
+        <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
+          <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
+        </a>
+      </div>
+
+      <a class="nav-item" data-page="deposits" href="/deposits.html">
+        <i class="fas fa-shield-alt"></i><span>Cautions</span>
+      </a>
+      <a class="nav-item" data-page="notifications" href="/notifications.html">
+        <i class="fas fa-bell"></i><span>Notifications</span>
+      </a>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div class="nav-section">
+      <div class="nav-section-title">Paramètres</div>
+      <a class="nav-item" data-page="settings-account" href="/settings-account.html">
+        <i class="fas fa-cog"></i><span>Paramètres</span>
+      </a>
+      <a class="nav-item" data-page="help" href="/help.html">
+        <i class="fas fa-question-circle"></i><span>Aide</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile">
+      <div class="user-avatar" id="sidebarUserAvatar">C</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Utilisateur</div>
+        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+`;
+
+  // ============================================
+  // 📝 TEXTE DU LOGO MOBILE
+  // ============================================
+  const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
+    <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+  </span>
+  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -110,21 +117,6 @@
     if (!ph) return;
 
     ph.innerHTML = SIDEBAR_HTML;
-    
-    // ❌ DÉSACTIVÉ : Le badge Messages est maintenant géré par messages-badge-dynamic.js
-    // qui crée un badge ROUGE (.badge-count) au lieu d'un badge VERT (.nav-badge)
-    /*
-    // Ensure Messages badge exists for chat-owner.js
-    const messagesLink = document.querySelector('.nav-item[data-page="messages"]');
-    if (messagesLink && !document.getElementById('unreadCount')) {
-      const badge = document.createElement('span');
-      badge.className = 'nav-badge';
-      badge.id = 'unreadCount';
-      badge.textContent = '0';
-      messagesLink.appendChild(badge);
-    }
-    */
-
 
     // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
@@ -177,7 +169,6 @@
         localStorage.removeItem("lcc_user");
         window.location.href = "/login.html";
       });
-      console.log("✅ Bouton déconnexion configuré dans bh-layout.js");
     }
 
     // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
@@ -192,6 +183,10 @@
       const companyEl = document.getElementById('sidebarUserCompany');
       if (companyEl) companyEl.textContent = user.company;
     }
+
+    // ✅ Émettre un événement quand la sidebar est prête
+    document.dispatchEvent(new CustomEvent('sidebarReady'));
+    console.log("✅ Sidebar injectée avec logo B grand format");
   }
 
   function injectHeader() {
@@ -227,62 +222,105 @@
     `;
   }
 
+  // ============================================
+  // 🎨 NORMALISATION DU BRANDING MOBILE
+  // ============================================
   function normalizeBranding() {
-  // Mobile header brand
-  const mobileLogo = document.querySelector(".mobile-logo");
-  const mobileLogoText = document.querySelector(".mobile-logo-text");
+    const mobileLogo = document.querySelector(".mobile-logo");
+    const mobileLogoText = document.querySelector(".mobile-logo-text");
 
-  // Texte (Boosting/host + sous-titre) — n'écrase pas si déjà en place
-  if (mobileLogoText && !mobileLogoText.querySelector(".mobile-logo-subtitle")) {
-    mobileLogoText.innerHTML = `
-      <span class="mobile-logo-title">
-        <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-      </span>
-      <span class="mobile-logo-subtitle">SMART PROPERTY MANAGER</span>
-    `;
-  }
+    // 1. REMPLACER LE TEXTE DU LOGO MOBILE
+    if (mobileLogoText) {
+      const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
+      if (!hasCorrectBranding) {
+        mobileLogoText.innerHTML = BRAND_TEXT_HTML;
+      }
+    }
 
-  // Logo (remplace l'icône existante / ancien SVG / injecte si rien)
-  if (mobileLogo) {
-    const brandSvg = `
-      <svg class="mobile-logo-mark" width="40" height="40" viewBox="0 0 40 40"
-           xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-        <defs>
-          <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7fd3a6"/>
-            <stop offset="1" stop-color="#58b88c"/>
-          </linearGradient>
-        </defs>
-        <circle cx="20" cy="20" r="20" fill="url(#bhg)"/>
-        <text x="20" y="26" text-anchor="middle"
-              font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-              font-size="20" font-weight="800" fill="#ffffff">B</text>
-      </svg>
-    `;
+    // 2. REMPLACER L'ICÔNE PAR LE LOGO "B" (IMG) GRAND FORMAT
+    if (mobileLogo) {
+      const existingLogo = mobileLogo.querySelector("img, svg");
 
-    const oldIcon = mobileLogo.querySelector("i.fas, i.fa");
-    const anySvg = mobileLogo.querySelector("svg");
-    const anyImg = mobileLogo.querySelector("img");
+      // Besoin de MAJ si aucun logo, ou si img != notre fichier, ou si SVG présent (legacy)
+      const needsUpdate =
+        !existingLogo ||
+        (existingLogo.tagName.toLowerCase() === "img" &&
+          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png")) ||
+        existingLogo.tagName.toLowerCase() === "svg";
 
-    if (oldIcon) {
-      oldIcon.outerHTML = brandSvg;
-    } else if (anySvg && !anySvg.classList.contains("mobile-logo-mark")) {
-      anySvg.outerHTML = brandSvg;
-    } else if (!anyImg && !anySvg) {
-      mobileLogo.insertAdjacentHTML("afterbegin", brandSvg);
+      if (needsUpdate) {
+        // Supprimer l'ancien contenu (FontAwesome / svg / img)
+        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg, img");
+        if (oldIcon) oldIcon.remove();
+
+        // Injecter le logo (img)
+        mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
+      }
     }
   }
 
-  // Sidebar brand title if needed
-  const sidebarTitle = document.querySelector(".sidebar-logo-title");
-  if (sidebarTitle) {
-    sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
-  }
-}
+  // ============================================
+  // 🎨 FORCE LE REMPLACEMENT DU LOGO SIDEBAR
+  // ============================================
+  function forceUpdateSidebarLogo() {
+    // Force le logo sidebar (remplace les anciens SVG éventuels par l'IMG)
+    const sidebarAnchors = document.querySelectorAll(".sidebar-logo");
 
-document.addEventListener("DOMContentLoaded", () => {
+    sidebarAnchors.forEach(a => {
+      const existing = a.querySelector("img, svg");
+      const isOkImg =
+        existing &&
+        existing.tagName.toLowerCase() === "img" &&
+        ((existing.getAttribute("src") || "").includes("boostinghost-icon-circle.png") ||
+         (existing.src || "").includes("boostinghost-icon-circle.png"));
+
+      if (!isOkImg) {
+        const old = a.querySelector("svg, img");
+        if (old) old.remove();
+        a.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
+      }
+    });
+  }
+
+  // ============================================
+  // 🚀 INITIALISATION
+  // ============================================
+  function init() {
+    console.log("🚀 bh-layout.js - Initialisation...");
+    
     injectSidebar();
     injectHeader();
     normalizeBranding();
-  });
+    
+    // Réappliquer le branding et forcer la mise à jour après un court délai
+    setTimeout(() => {
+      normalizeBranding();
+      forceUpdateSidebarLogo();
+    }, 100);
+    
+    // Vérification supplémentaire après 500ms
+    setTimeout(() => {
+      forceUpdateSidebarLogo();
+      normalizeBranding();
+    }, 500);
+    
+    console.log("✅ bh-layout.js - Prêt avec logo unifié");
+  }
+
+  // Démarrer dès que le DOM est prêt
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  // Exposer pour débogage
+  window.bhLayout = {
+    normalizeBranding,
+    injectSidebar,
+    injectHeader,
+    forceUpdateSidebarLogo
+  };
+
 })();
+

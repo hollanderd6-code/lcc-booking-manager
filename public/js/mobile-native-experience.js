@@ -87,7 +87,7 @@
       
       try {
         await StatusBar.setStyle({ style: 'light' });
-        await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
         await StatusBar.show();
         console.log('✅ Status bar configurée');
       } catch (error) {
@@ -110,7 +110,7 @@
           if (isNative && StatusBar) {
             try {
               await StatusBar.setStyle({ style: 'dark' });
-              await StatusBar.setBackgroundColor({ color: '#1F2937' });
+              await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
             } catch (e) {}
           }
         } else {
@@ -118,7 +118,7 @@
           if (isNative && StatusBar) {
             try {
               await StatusBar.setStyle({ style: 'light' });
-              await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+              await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
             } catch (e) {}
           }
         }
