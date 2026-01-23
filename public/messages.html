@@ -765,32 +765,38 @@
       return;
     }
 
-    try {
-      const res = await fetch('/api/subscription/status', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
+   try {
+  const res = await fetch('/api/subscription/status', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
 
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        }
-        return;
-      }
-
-      const data = await res.json();
-
-      if (data.status === 'expired' || data.status === 'canceled') {
-        localStorage.removeItem('lcc_token');
-        localStorage.removeItem('lcc_user');
-        window.location.href = '/login.html?reason=expired';
-        return;
-      }
-    } catch (err) {
-      console.error('Erreur vérification abonnement:', err);
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
     }
-  })();
+    return;
+  }
+
+  // ✅ Vérifier que c'est du JSON
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    console.warn('⚠️ Réponse subscription non-JSON, status:', res.status);
+    return;
+  }
+
+  const data = await res.json();
+
+  if (data.status === 'expired' || data.status === 'canceled') {
+    localStorage.removeItem('lcc_token');
+    localStorage.removeItem('lcc_user');
+    window.location.href = '/login.html?reason=expired';
+    return;
+  }
+} catch (err) {
+  console.error('Erreur vérification abonnement:', err);
+}
 
     (function() {
       const token = localStorage.getItem('lcc_token');
