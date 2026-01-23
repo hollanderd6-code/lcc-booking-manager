@@ -1,120 +1,214 @@
 // public/js/push-notifications-handler.js
-// Version Firebase Cloud Messaging avec support lcc_token
 (function () {
-  console.log('🔔 [DEBUG] Fichier push-notifications-handler.js chargé (version Firebase)');
-
+  console.log('🔔 [DEBUG] Fichier push-notifications-handler.js chargé');
+  
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
+  // ✅✅✅ DÉTECTION ROBUSTE DE LA PLATEFORME ✅✅✅
   function getDeviceType() {
-    const cap = window.Capacitor;
-    const ua = (navigator.userAgent || '').toLowerCase();
-
-    if (!cap || typeof cap.getPlatform !== 'function') {
+    if (!window.Capacitor || typeof window.Capacitor.getPlatform !== 'function') {
+      console.log('🌐 [DEBUG] Pas de Capacitor, device type: web');
       return 'web';
+    }
+    
+    const platform = window.Capacitor.getPlatform();
+    const ua = navigator.userAgent.toLowerCase();
+    
+    console.log('📱 [DEBUG] Capacitor.getPlatform():', platform);
+    console.log('🌐 [DEBUG] User Agent:', ua);
+    
+    // ⚠️ CORRECTION : Cross-validation entre Capacitor et UserAgent
+    if (platform === 'ios' && ua.includes('android')) {
+      console.warn('⚠️⚠️⚠️ CORRECTION APPLIQUÉE : Capacitor dit iOS mais UserAgent dit Android!');
+      return 'android';
+    }
+    
+    if (platform === 'android' && (ua.includes('iphone') || ua.includes('ipad'))) {
+      console.warn('⚠️⚠️⚠️ CORRECTION APPLIQUÉE : Capacitor dit Android mais UserAgent dit iOS!');
+      return 'ios';
+    }
+    
+    const detectedType = platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
+    console.log('✅ [DEBUG] Device type détecté:', detectedType);
+    return detectedType;
+  }
+
+  async function initPushNotifications() {
+    console.log('🔔 [DEBUG] initPushNotifications appelée');
+    console.log('🔔 [DEBUG] typeof Capacitor:', typeof window.Capacitor);
+    console.log('🔔 [DEBUG] window.Capacitor:', window.Capacitor);
+    
+    if (window.__pushInitDone) {
+      console.log('⏭️ [DEBUG] Push déjà initialisé, skip');
+      return;
+    }
+    window.__pushInitDone = true;
+
+    const cap = window.Capacitor;
+    if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) {
+      console.log('🌐 [DEBUG] Pas en natif, skip push');
+      return;
     }
 
     const platform = cap.getPlatform();
+    console.log('📱 [DEBUG] Platform:', platform);
 
-    if (platform === 'ios' && ua.includes('android')) {
-      return 'android';
-    }
-    if (platform === 'android' && (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ios'))) {
-      return 'ios';
+    if (platform !== 'ios' && platform !== 'android') {
+      console.log('🌐 [DEBUG] Pas iOS/Android, skip push');
+      return;
     }
 
-    return platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
+    console.log('✅ [DEBUG] On est sur mobile:', platform);
+
+    const PushNotifications = cap.Plugins && cap.Plugins.PushNotifications;
+    if (!PushNotifications) {
+      console.error('❌ [DEBUG] Plugin PushNotifications introuvable');
+      return;
+    }
+
+    console.log('✅ [DEBUG] Plugin PushNotifications trouvé');
+
+    // ===== LISTENERS =====
+    console.log('📝 [DEBUG] Ajout des listeners...');
+
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('✅ [DEBUG] Token reçu:', token && token.value);
+      if (!token || !token.value) {
+        console.error('❌ [DEBUG] Token invalide');
+        return;
+      }
+      
+      const deviceType = getDeviceType();
+      console.log('📱 [DEBUG] Device type:', deviceType);
+      
+      await saveTokenToServer(token.value, deviceType);
+    });
+
+    PushNotifications.addListener('registrationError', (error) => {
+      console.error('❌ [DEBUG] Erreur registration:', error);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('📩 [DEBUG] Notif reçue (foreground):', notification);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      console.log('👆 [DEBUG] Notif tapped:', notification);
+    });
+
+    console.log('✅ [DEBUG] Listeners ajoutés');
+
+    // ===== PERMISSIONS =====
+    console.log('📝 [DEBUG] Vérification permission...');
+    const permStatus = await PushNotifications.checkPermissions();
+    console.log('📊 [DEBUG] Permission actuelle:', permStatus);
+
+    if (!permStatus || permStatus.receive !== 'granted') {
+      console.log('📝 [DEBUG] Demande permission...');
+      const requestStatus = await PushNotifications.requestPermissions();
+      console.log('📊 [DEBUG] Permission demandée:', requestStatus);
+      
+      if (!requestStatus || requestStatus.receive !== 'granted') {
+        console.warn('⛔ [DEBUG] Permission refusée');
+        return;
+      }
+    }
+
+    console.log('✅ [DEBUG] Permission accordée');
+
+    // ===== REGISTER =====
+    console.log('📝 [DEBUG] Appel PushNotifications.register()...');
+    await PushNotifications.register();
+    console.log('✅ [DEBUG] Register() appelé avec succès');
   }
 
-  function getFirebaseMessaging() {
-    const cap = window.Capacitor;
-    const fcm = cap?.Plugins?.FirebaseMessaging;
-
-    if (!fcm) {
-      console.error('❌ [DEBUG] Plugin FirebaseMessaging introuvable');
-      return null;
-    }
-
-    return fcm;
-  }
-
-  async function getSupabaseJwt() {
-    console.log('🔍 [DEBUG] === DÉBUT RECHERCHE JWT ===');
-    
-    // Chercher directement lcc_token
+  // ===== RECHERCHE TOKEN SUPABASE =====
+  async function findSupabaseKey() {
     try {
-      const lccToken = localStorage.getItem('lcc_token');
-      if (lccToken) {
-        console.log('✅ [DEBUG] JWT trouvé dans lcc_token');
-        return lccToken;
+      const cap = window.Capacitor;
+      if (!cap || !cap.Plugins || !cap.Plugins.Preferences) {
+        console.error('❌ Capacitor Preferences non disponible');
+        return null;
       }
-    } catch (e) {
-      console.warn('⚠️ [DEBUG] Erreur lecture lcc_token:', e);
-    }
 
-    // Sinon scanner toutes les clés
-    try {
-      const allKeys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k) allKeys.push(k);
-      }
-      console.log('📋 [DEBUG] Toutes les clés localStorage:', allKeys);
+      const possibleKeys = [
+        'sb-ztdzragdnjkastswtvzn-auth-token',
+        'supabase.auth.token',
+        '@supabase/auth-token',
+        'sb-auth-token',
+        'lcc_token'
+      ];
 
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        
-        if (k.includes('supabase') || k.includes('auth') || k.startsWith('sb-')) {
-          const raw = localStorage.getItem(k);
-          console.log(\`🔑 [DEBUG] Clé trouvée: \${k}\`);
-          
-          try {
-            const parsed = JSON.parse(raw);
-            const token = parsed?.access_token || parsed?.session?.access_token || parsed?.data?.session?.access_token;
-            if (token) {
-              console.log('✅ [DEBUG] JWT trouvé via localStorage:', k);
-              return token;
-            }
-          } catch {}
+      console.log('🔍 Recherche de la clé Supabase...');
+
+      for (const key of possibleKeys) {
+        const { value } = await cap.Plugins.Preferences.get({ key });
+        if (value) {
+          console.log('✅ Clé trouvée:', key);
+          return { key, value };
         }
       }
-    } catch (e) {
-      console.warn('⚠️ [DEBUG] localStorage scan failed:', e);
-    }
 
-    console.warn('❌ [DEBUG] Aucun JWT Supabase trouvé');
-    return null;
+      console.warn('⚠️ Aucune clé Supabase trouvée');
+      return null;
+    } catch (err) {
+      console.error('❌ Erreur recherche clé:', err);
+      return null;
+    }
   }
 
-  async function saveTokenToServer(fcmToken, deviceType) {
+  async function getSupabaseSession() {
+    const found = await findSupabaseKey();
+    if (!found) return null;
+
+    try {
+      if (found.key === 'lcc_token') {
+        console.log('✅ JWT direct trouvé');
+        return found.value;
+      }
+
+      const session = JSON.parse(found.value);
+      console.log('✅ Session parsée');
+
+      const token = session.access_token || session.accessToken || session.token;
+      if (token) {
+        console.log('✅ JWT extrait');
+        return token;
+      }
+
+      console.warn('⚠️ Pas de token dans la session');
+      return null;
+    } catch (err) {
+      console.error('❌ Erreur parsing session:', err);
+      return null;
+    }
+  }
+
+  async function saveTokenToServer(token, deviceType) {
     console.log('💾 [DEBUG] saveTokenToServer appelée');
-    console.log('   Token FCM:', String(fcmToken).slice(0, 30) + '...');
+    console.log('   Token:', token.substring(0, 30) + '...');
     console.log('   Device:', deviceType);
 
     try {
-      const jwt = await getSupabaseJwt();
-      console.log('   Auth token:', jwt ? 'Présent (longueur: ' + jwt.length + ')' : 'Absent');
+      const jwt = await getSupabaseSession();
+      console.log('   Auth token:', jwt ? 'Présent' : 'Absent');
 
       if (!jwt) {
-        console.warn('⚠️ [DEBUG] Pas de token auth - sauvegarde en attente');
-        try {
-          localStorage.setItem('pending_fcm_token', fcmToken);
-          localStorage.setItem('pending_device_type', deviceType);
-          console.log('💾 [DEBUG] Token FCM sauvegardé localement pour retry');
-        } catch {}
+        console.warn('⚠️ [DEBUG] Pas de token auth - impossible de sauvegarder');
         return;
       }
 
       console.log('📤 [DEBUG] Envoi au serveur...');
-      const res = await fetch(\`\${API_BASE}/api/save-token\`, {
+
+      const res = await fetch(`${API_BASE}/api/save-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': \`Bearer \${jwt}\`,
+          'Authorization': `Bearer ${jwt}`,
         },
         body: JSON.stringify({
-          token: fcmToken,
-          device_type: deviceType,
+          token,
+          device_type: deviceType
         }),
       });
 
@@ -125,118 +219,18 @@
         return;
       }
 
-      console.log('✅✅✅ [DEBUG] TOKEN FCM SAUVEGARDÉ !', data);
-      
-      try {
-        localStorage.removeItem('pending_fcm_token');
-        localStorage.removeItem('pending_device_type');
-      } catch {}
-      
+      console.log('✅✅✅ [DEBUG] TOKEN SAUVEGARDÉ SUR SERVEUR !', data);
     } catch (err) {
       console.error('❌ [DEBUG] Erreur réseau:', err);
     }
   }
 
-  async function retryPendingToken() {
-    try {
-      const pendingToken = localStorage.getItem('pending_fcm_token');
-      const pendingDevice = localStorage.getItem('pending_device_type');
-      
-      if (pendingToken && pendingDevice) {
-        console.log('🔄 [DEBUG] Token FCM en attente, retry...');
-        await saveTokenToServer(pendingToken, pendingDevice);
-      }
-    } catch (e) {
-      console.error('❌ [DEBUG] Erreur retry:', e);
-    }
-  }
-
-  async function initPushNotifications() {
-    console.log('🔔 [DEBUG] initPushNotifications appelée');
-
-    if (window.__pushInitDone) {
-      console.log('⏭️ [DEBUG] Push déjà initialisé');
-      return;
-    }
-    window.__pushInitDone = true;
-
-    const cap = window.Capacitor;
-    if (!cap?.isNativePlatform?.()) {
-      console.log('🌐 [DEBUG] Pas en natif');
-      return;
-    }
-
-    const platform = cap.getPlatform?.();
-    if (platform !== 'ios' && platform !== 'android') {
-      console.log('🌐 [DEBUG] Pas iOS/Android');
-      return;
-    }
-
-    const FirebaseMessaging = getFirebaseMessaging();
-    if (!FirebaseMessaging) {
-      console.error('❌ [DEBUG] FirebaseMessaging non disponible');
-      return;
-    }
-
-    const deviceType = getDeviceType();
-    console.log('📱 [DEBUG] Platform:', platform);
-    console.log('✅ [DEBUG] On est sur mobile:', deviceType);
-
-    FirebaseMessaging.addListener('notificationReceived', (notification) => {
-      console.log('📩 [DEBUG] Notification reçue:', notification);
-    });
-
-    FirebaseMessaging.addListener('notificationActionPerformed', (action) => {
-      console.log('👉 [DEBUG] Notification action:', action);
-    });
-
-    FirebaseMessaging.addListener('tokenReceived', async (result) => {
-      const fcmToken = result?.token;
-      console.log('✅✅✅ [DEBUG] FCM Token received:', fcmToken);
-
-      if (fcmToken) {
-        try {
-          localStorage.setItem('fcm_token', fcmToken);
-        } catch {}
-        await saveTokenToServer(fcmToken, deviceType);
-      }
-    });
-
-    try {
-      console.log('🔐 [DEBUG] Demande permission...');
-      const perm = await FirebaseMessaging.requestPermissions();
-      console.log('🔐 [DEBUG] Permission result:', perm);
-
-      if (perm?.receive !== 'granted') {
-        console.warn('⚠️ [DEBUG] Permission refusée');
-        return;
-      }
-
-      console.log('✅ [DEBUG] Permission accordée → getToken()');
-      const tokenResult = await FirebaseMessaging.getToken();
-      const fcmToken = tokenResult?.token;
-
-      console.log('🔑 [DEBUG] FCM Token obtenu:', fcmToken);
-
-      if (fcmToken) {
-        try {
-          localStorage.setItem('fcm_token', fcmToken);
-        } catch {}
-        await saveTokenToServer(fcmToken, deviceType);
-      }
-    } catch (err) {
-      console.error('❌ [DEBUG] Erreur:', err);
-    }
-
-    // Retry pending token si existe
-    setTimeout(() => {
-      retryPendingToken();
-    }, 2000);
-  }
-
-  window.retryFCMTokenSave = retryPendingToken;
-
+  // ===== AUTO-START =====
+  console.log('⏰ [DEBUG] Programmation initialisation dans 3 secondes...');
   setTimeout(() => {
+    console.log('⏰ [DEBUG] Démarrage initialisation...');
     initPushNotifications();
   }, 3000);
+
+  console.log('✅ [DEBUG] Fin du chargement du fichier');
 })();
