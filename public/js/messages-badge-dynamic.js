@@ -1,14 +1,29 @@
 /* ============================================
-   🔔 BADGE MESSAGES - VERSION CORRIGÉE
+   🔔 BADGE MESSAGES - VERSION CORRIGÉE iOS
    
    Affiche toujours le badge (même pour 0)
-   Meilleur comptage des messages non lus
+   Gestion robuste des erreurs
+   Compatible iOS/Android
    ============================================ */
 
 (function() {
   'use strict';
 
-  const API_URL = window.location.origin;
+  // Détection native
+  const IS_NATIVE = !!(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === 'capacitor:' ||
+    window.location.protocol === 'ionic:'
+  );
+
+  const API_URL = IS_NATIVE 
+    ? 'https://lcc-booking-manager.onrender.com' 
+    : window.location.origin;
+
+  console.log('🔔 [BADGE] Initialisation...');
+  console.log('🔔 [BADGE] API_URL:', API_URL);
+  console.log('🔔 [BADGE] IS_NATIVE:', IS_NATIVE);
+
   let socket = null;
 
   // ============================================
@@ -19,33 +34,54 @@
     try {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
-        console.log('⚠️ Pas de token - Badge = 0');
+        console.log('⚠️ [BADGE] Pas de token - Badge = 0');
         updateBadge(0);
         return;
       }
 
+      console.log('📤 [BADGE] Requête conversations...');
+
+      // Construire l'URL complète
+      const url = `${API_URL}/api/chat/conversations`;
+      console.log('📤 [BADGE] URL:', url);
+
       // Appel API pour récupérer les conversations
-      const response = await fetch(`${API_URL}/api/chat/conversations`, {
+      const response = await fetch(url, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
+      console.log('📥 [BADGE] Response status:', response.status);
+
       if (!response.ok) {
-        console.warn('⚠️ Erreur API (status:', response.status, ') - Badge = 0');
+        console.warn(`⚠️ [BADGE] Erreur API (${response.status}) - Badge = 0`);
+        updateBadge(0);
+        return;
+      }
+
+      // Vérifier que c'est du JSON
+      const contentType = response.headers.get('content-type') || '';
+      console.log('📄 [BADGE] Content-Type:', contentType);
+
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ [BADGE] Réponse non-JSON:', text.substring(0, 200));
         updateBadge(0);
         return;
       }
 
       const data = await response.json();
       
-      console.log('📦 Données reçues:', data);
+      console.log('📦 [BADGE] Données reçues:', data);
       
       // Compter les messages non lus
       let totalUnread = 0;
       
       if (data.conversations && Array.isArray(data.conversations)) {
-        console.log(`📋 ${data.conversations.length} conversation(s) trouvée(s)`);
+        console.log(`📋 [BADGE] ${data.conversations.length} conversation(s)`);
         
         data.conversations.forEach((conv, index) => {
           const unreadCount = parseInt(conv.unread_count) || 0;
@@ -57,16 +93,20 @@
           totalUnread += unreadCount;
         });
       } else {
-        console.warn('⚠️ Format de réponse inattendu:', data);
+        console.warn('⚠️ [BADGE] Format de réponse inattendu:', data);
       }
 
       // Mettre à jour le badge
       updateBadge(totalUnread);
       
-      console.log('🔔 Total messages non lus:', totalUnread);
+      console.log('🔔 [BADGE] Total messages non lus:', totalUnread);
 
     } catch (error) {
-      console.error('❌ Erreur chargement badge:', error);
+      console.error('❌ [BADGE] Erreur chargement:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       // En cas d'erreur, afficher 0
       updateBadge(0);
     }
@@ -77,6 +117,8 @@
   // ============================================
   
   function updateBadge(count) {
+    console.log('🎨 [BADGE] Mise à jour:', count);
+
     // 📱 Mobile : chercher .mobile-tab ou .tab-btn
     const mobileTab = document.querySelector('.mobile-tab[data-tab="messages"]') ||
                       document.querySelector('.tab-btn[data-tab="messages"]');
@@ -85,7 +127,7 @@
     const desktopNav = document.querySelector('.nav-item[data-page="messages"]');
     
     if (!mobileTab && !desktopNav) {
-      console.warn('⚠️ Onglet/Nav Messages non trouvé');
+      console.warn('⚠️ [BADGE] Onglet/Nav Messages non trouvé');
       return;
     }
 
@@ -103,7 +145,7 @@
         badge = document.createElement('span');
         badge.className = 'badge-count';
         element.appendChild(badge);
-        console.log(`✅ Badge créé (${isMobile ? 'mobile' : 'desktop'})`);
+        console.log(`✅ [BADGE] Badge créé (${isMobile ? 'mobile' : 'desktop'})`);
       }
 
       // Afficher le badge
@@ -120,14 +162,14 @@
     // Mettre à jour mobile (si existe)
     if (mobileTab) {
       updateElement(mobileTab, true);
+      console.log('✅ [BADGE] Mobile mis à jour');
     }
     
     // Mettre à jour desktop (si existe)
     if (desktopNav) {
       updateElement(desktopNav, false);
+      console.log('✅ [BADGE] Desktop mis à jour');
     }
-
-    console.log('✅ Badge mis à jour:', count);
   }
 
   // ============================================
@@ -137,28 +179,28 @@
   function connectSocket() {
     // Vérifier si Socket.io est disponible
     if (typeof io === 'undefined') {
-      console.warn('⚠️ Socket.io non disponible - Badge statique');
+      console.warn('⚠️ [BADGE] Socket.io non disponible - Badge statique');
       return;
     }
 
     try {
+      console.log('🔌 [BADGE] Connexion Socket.io...');
       socket = io(API_URL);
 
       socket.on('connect', () => {
-        console.log('✅ Socket connecté pour le badge');
+        console.log('✅ [BADGE] Socket connecté');
         
         // Rejoindre la room utilisateur
         const userId = getUserId();
         if (userId) {
           socket.emit('join_user_room', userId);
-          console.log('🔌 Room user rejointe:', userId);
+          console.log('🔌 [BADGE] Room user rejointe:', userId);
         }
       });
 
       // Écouter les nouveaux messages
       socket.on('new_message', (message) => {
-        console.log('🔔 Nouveau message reçu:', message);
-        // Attendre 500ms avant de recharger (laisser le temps au serveur de mettre à jour)
+        console.log('🔔 [BADGE] Nouveau message reçu:', message);
         setTimeout(() => {
           loadUnreadCount();
         }, 500);
@@ -166,18 +208,18 @@
 
       // Écouter les notifications
       socket.on('new_notification', (notification) => {
-        console.log('🔔 Nouvelle notification:', notification);
+        console.log('🔔 [BADGE] Nouvelle notification:', notification);
         setTimeout(() => {
           loadUnreadCount();
         }, 500);
       });
 
       socket.on('disconnect', () => {
-        console.log('❌ Socket déconnecté');
+        console.log('❌ [BADGE] Socket déconnecté');
       });
 
     } catch (error) {
-      console.error('❌ Erreur connexion Socket:', error);
+      console.error('❌ [BADGE] Erreur connexion Socket:', error);
     }
   }
 
@@ -193,7 +235,7 @@
         return user.id;
       }
     } catch (error) {
-      console.error('❌ Erreur lecture user:', error);
+      console.error('❌ [BADGE] Erreur lecture user:', error);
     }
     return null;
   }
@@ -205,7 +247,7 @@
   function startPeriodicRefresh() {
     // Recharger toutes les 30 secondes (backup si Socket.io ne fonctionne pas)
     setInterval(() => {
-      console.log('🔄 Refresh périodique du badge...');
+      console.log('🔄 [BADGE] Refresh périodique...');
       loadUnreadCount();
     }, 30000); // 30 secondes
   }
@@ -223,7 +265,7 @@
 
     // Attendre que les onglets soient créés (mobile-tabs)
     setTimeout(() => {
-      console.log('📱 Initialisation badge messages...');
+      console.log('🔔 [BADGE] Initialisation...');
       
       // Charger le compteur
       loadUnreadCount();
@@ -234,14 +276,14 @@
       // Backup : recharger périodiquement
       startPeriodicRefresh();
       
-    }, 500); // Attendre 500ms que les onglets soient créés
+    }, 1000); // Attendre 1s que les onglets soient créés
   }
 
   // Démarrer
   init();
 
   // ============================================
-  // 🌍 EXPOSER GLOBALEMENT POUR DÉBOGAGE
+  // 🌐 EXPOSER GLOBALEMENT POUR DÉBOGAGE
   // ============================================
   
   window.updateMessagesBadge = updateBadge;
@@ -250,13 +292,17 @@
   // Pour déboguer depuis la console
   window.debugBadge = function() {
     console.log('🔍 DEBUG BADGE:');
+    console.log('- IS_NATIVE:', IS_NATIVE);
     console.log('- API_URL:', API_URL);
     console.log('- Token:', localStorage.getItem('lcc_token') ? 'Présent' : 'Absent');
     console.log('- User:', localStorage.getItem('lcc_user'));
     console.log('- Socket:', socket ? 'Connecté' : 'Non connecté');
     
     // Forcer le rechargement
+    console.log('🔄 Rechargement forcé...');
     loadUnreadCount();
   };
+
+  console.log('✅ [BADGE] Script chargé');
 
 })();
