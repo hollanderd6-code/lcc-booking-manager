@@ -61,25 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadProperties() {
   try {
     const token = localStorage.getItem('lcc_token');
-    console.log("📤 [CHAT] Fetching properties:", "/api/properties");
-    const response = await fetch(`/api/properties`, {
+    const response = await fetch(`${API_URL}/api/properties`, {
       headers: {
         'Authorization': 'Bearer ' + token
       }
     });
     
- // ⚡ Vérifier content-type
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      console.error('❌ Conversations non-JSON');
-      throw new Error('Réponse invalide');
-    }    if (!response.ok) return;
+    if (!response.ok) return;
     
-    // ⚡ Vérifier content-type
-    if (!contentType.includes('application/json')) {
-      console.warn('⚠️ Properties non-JSON');
-      return;
-    }
     const data = await response.json();
     const select = document.getElementById('filterProperty');
     
@@ -96,7 +85,6 @@ async function loadProperties() {
 }
 
 // ============================================
-    console.log("📤 [CHAT] Fetching conversations:", url);
 // CHARGEMENT DES CONVERSATIONS
 // ============================================
 async function loadConversations() {
@@ -107,7 +95,7 @@ async function loadConversations() {
     const status = document.getElementById('filterStatus').value;
     const propertyId = document.getElementById('filterProperty').value;
     
-    let url = `/api/chat/conversations?`;
+    let url = `${API_URL}/api/chat/conversations?`;
     if (status) url += `status=${status}&`;
     if (propertyId) url += `property_id=${propertyId}&`;
     
@@ -277,7 +265,7 @@ async function openChat(conversationId) {
 async function markMessagesAsRead(conversationId) {
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`/api/chat/conversations/${conversationId}/mark-read`, {
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/mark-read`, {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + token,
@@ -333,7 +321,7 @@ function closeChat() {
 async function loadMessages(conversationId) {
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages`, {
       headers: {
         'Authorization': 'Bearer ' + token
       }
@@ -377,7 +365,7 @@ async function sendMessageOwner() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`/api/chat/send`, {
+    const response = await fetch(`${API_URL}/api/chat/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -630,7 +618,7 @@ async function deleteConversation(conversationId, event) {
   try {
     const token = localStorage.getItem('lcc_token');
     
-    const response = await fetch(`/api/chat/conversations/${conversationId}`, {
+    const response = await fetch(`${API_URL}/api/chat/conversations/${conversationId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': 'Bearer ' + token

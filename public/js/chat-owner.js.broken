@@ -76,6 +76,7 @@ async function loadProperties() {
     }    if (!response.ok) return;
     
     // ⚡ Vérifier content-type
+    const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
       console.warn('⚠️ Properties non-JSON');
       return;

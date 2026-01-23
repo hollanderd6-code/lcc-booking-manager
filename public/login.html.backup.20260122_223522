@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boostinghost – Connexion</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/auth-fetch.js"></script>
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <!-- Colonne formulaire -->
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+  <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64"
+     xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
+  <text x="32" y="43" text-anchor="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
+        font-size="34" font-weight="800" fill="#ffffff">B</text>
+</svg>
+</div>
+        <div>
+          <div class="auth-logo-title"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></div>
+          <div class="auth-logo-subtitle">Property Manager</div>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Connexion</h1>
+      <p class="auth-subtitle">
+        Accédez à votre espace de gestion des réservations.
+      </p>
+
+      <form class="auth-form" id="loginForm">
+        <div class="form-group">
+          <label for="email">Adresse e-mail</label>
+          <div class="input-with-icon">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="email" name="email" placeholder="vous@exemple.com" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <div class="input-with-icon">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="password" name="password" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <div class="form-row-between">
+          <label class="checkbox-label">
+            <input type="checkbox" name="remember">
+            <span>Se souvenir de moi</span>
+          </label>
+          <a href="#" class="auth-link">Mot de passe oublié ?</a>
+        </div>
+
+        <div id="loginError" class="auth-error" style="display:none;"></div>
+
+        <button type="submit" class="btn btn-primary auth-submit" id="loginSubmit">
+          Se connecter
+        </button>
+      </form>
+
+      <div class="auth-footer-text">
+        Pas encore de compte ?
+        <a href="/register.html" class="auth-link">Créer un compte</a>
+      </div>
+    </div>
+
+    <!-- Colonne droite "marketing" -->
+    <div class="auth-side">
+      <div class="auth-side-badge">
+        <i class="fas fa-calendar-check"></i>
+        Synchronisation Airbnb & Booking en temps réel
+      </div>
+      <h2>Gérez vos logements en quelques clics</h2>
+      <p>
+        Synchronisation automatique Airbnb / Booking, vision claire de vos séjours,
+        messages rapides pour vos voyageurs… Tout au même endroit.
+      </p>
+      <ul>
+        <li><i class="fas fa-check"></i> Vue calendrier unifiée</li>
+        <li><i class="fas fa-check"></i> Gestion multi-logements</li>
+        <li><i class="fas fa-check"></i> Rappels arrivées / départs</li>
+      </ul>
+      <div class="auth-side-footnote">
+        <i class="fas fa-shield-alt"></i>
+        Accès sécurisé • Données hébergées en Europe
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Si déjà connecté, inutile de revenir ici
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (token) {
+        window.location.href = '/app.html';
+      }
+    })();
+
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const loginSubmit = document.getElementById('loginSubmit');
+
+    loginForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      loginError.style.display = 'none';
+      loginError.textContent = '';
+
+      loginSubmit.disabled = true;
+      loginSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          loginError.style.display = 'block';
+          loginError.textContent = data.error || "Impossible de se connecter. Vérifiez vos identifiants.";
+          loginSubmit.disabled = false;
+          loginSubmit.textContent = 'Se connecter';
+          return;
+        }
+
+        // Stocker le token + user
+        localStorage.setItem('lcc_token', data.token);
+        localStorage.setItem('lcc_user', JSON.stringify(data.user));
+
+        // Redirection vers le dashboard
+        window.location.href = '/app.html';
+      } catch (err) {
+        console.error(err);
+        loginError.style.display = 'block';
+        loginError.textContent = "Erreur réseau lors de la connexion.";
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = 'Se connecter';
+      }
+      });
+  </script>
+
+
+  <style>
+    .auth-body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top left, #e0f2fe, #f8fafc);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 16px;
+    }
+
+    .auth-container {
+      max-width: 1000px;
+      width: 100%;
+      background: var(--bg-primary, #ffffff);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(15,23,42,.18);
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
+      overflow: hidden;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .auth-card {
+      padding: 40px 36px 32px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,1), rgba(239,246,255,0.9));
+    }
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .auth-logo-icon {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .auth-logo-title {
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .auth-logo-subtitle {
+      font-size: 12px;
+      color: var(--text-tertiary, #6b7280);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+      color: #020617;
+    }
+
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary, #6b7280);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: block;
+      color: var(--text-primary);
+    }
+
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-icon i {
+      position: absolute;
+      left: 14px;
+      color: var(--text-tertiary, #9ca3af);
+      font-size: 14px;
+    }
+
+    .input-with-icon input {
+      width: 100%;
+      padding: 11px 14px 11px 42px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color, #e5e7eb);
+      background: var(--bg-primary, #ffffff);
+      font-size: 14px;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .1s ease;
+    }
+
+    .input-with-icon input:focus {
+      outline: none;
+      border-color: var(--primary-color, #10B981);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .form-row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: var(--text-secondary, #6b7280);
+      cursor: pointer;
+    }
+
+    .checkbox-label input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary-color, #10B981);
+    }
+
+    .auth-error {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #b91c1c;
+      background: #fef2f2;
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      border: 1px solid #fecaca;
+    }
+
+    .auth-submit {
+      margin-top: 10px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .auth-footer-text {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-secondary, #6b7280);
+      text-align: center;
+    }
+
+    .auth-link {
+      color: var(--primary-color, #10B981);
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .auth-link:hover {
+      text-decoration: underline;
+    }
+
+    .auth-side {
+      padding: 40px 32px;
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      border-left: 1px solid rgba(30, 64, 175, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-side::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 60%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .auth-side > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-side-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius-full);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      color: #e5e7eb;
+      font-size: 12px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    .auth-side-badge i {
+      font-size: 13px;
+      color: #10B981;
+    }
+
+    .auth-side h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+
+    .auth-side p {
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .auth-side ul {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .auth-side li {
+      display: flex;
+      align-items: center;
+    }
+
+    .auth-side li i {
+      margin-right: 10px;
+      color: #10B981;
+      font-size: 14px;
+    }
+
+    .auth-side-footnote {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .auth-side-footnote i {
+      font-size: 12px;
+    }
+
+
+    /* Brand title colors (Boosting en vert) */
+    .brand-boosting { color: #10B981; font-weight: 800; }
+    .brand-host { color: #0F172A; font-weight: 700; }
+
+    /* Agrandir le logo */
+    .bh-logo { width: 52px; height: 52px; }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .auth-container {
+        grid-template-columns: minmax(0, 1fr);
+        margin: 20px;
+      }
+      .auth-side {
+        display: none;
+      }
+      .auth-card {
+        padding: 32px 28px 28px;
+      }
+    }
+
+    @media (max-width: 640px) {
+
+      /* Mobile: logo légèrement plus grand aussi */
+      .bh-logo { width: 48px; height: 48px; }
+      .auth-container {
+        margin: 12px;
+        border-radius: 20px;
+      }
+      .auth-card {
+        padding: 28px 20px 24px;
+      }
+      .auth-title {
+        font-size: 22px;
+      }
+      .auth-logo {
+        gap: 12px;
+      }
+      .auth-logo-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+      .bh-logo { display:block; color:#fff; }
+    }
+  </style>
+  <script type="module" src="/js/push-notifications-handler.js"></script>
+</body>
+</html>
