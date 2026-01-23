@@ -1,10 +1,7 @@
 // ============================================
 // CONFIGURATION & STATE
 // ============================================
-// ⚡ iOS Fix: Utiliser l'API_BASE défini globalement ou fallback
-const API_URL = window.API_BASE || window.location.origin;
-
-console.log('🔧 [CHAT-OWNER] API_URL:', API_URL);
+const API_URL = window.location.origin;
 let socket = null;
 let allConversations = [];
 let currentConversationId = null;
@@ -72,13 +69,6 @@ async function loadProperties() {
     
     if (!response.ok) return;
     
-    // ⚡ Vérifier que c'est du JSON avant de parser
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      console.warn('⚠️ [CHAT-OWNER] Réponse properties non-JSON');
-      return;
-    }
-    
     const data = await response.json();
     const select = document.getElementById('filterProperty');
     
@@ -117,13 +107,6 @@ async function loadConversations() {
     
     if (!response.ok) {
       throw new Error('Erreur chargement conversations');
-    }
-    
-    // ⚡ Vérifier que c'est du JSON avant de parser
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      console.error('❌ [CHAT-OWNER] Réponse conversations non-JSON');
-      throw new Error('Réponse serveur invalide');
     }
     
     const data = await response.json();
