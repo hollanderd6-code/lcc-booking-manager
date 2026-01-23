@@ -118,7 +118,7 @@
           if (isNative && StatusBar) {
             try {
               await StatusBar.setStyle({ style: 'light' });
-              await StatusBar.setBackgroundColor({ color: '#3B82F6' });
+              await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
             } catch (e) {}
           }
         }
