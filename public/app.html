@@ -3551,24 +3551,6 @@
 
   // Afficher les infos utilisateur dans la sidebar
   (function () {
-  // ✅ FirebaseMessaging: iOS only + éviter init multiple
-  if (window.__firebasePushInitDone) {
-    console.log('⚠️ Firebase push déjà initialisé, on skip');
-    return;
-  }
-  const cap = window.Capacitor;
-  const platform = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : null;
-  if (platform && platform !== 'ios') {
-    console.log('ℹ️ Firebase push ignoré (platform: ' + platform + ')');
-    return;
-  }
-  window.__firebasePushInitDone = true;
-
-    const token = localStorage.getItem('lcc_token');
-    if (!token) {
-      window.location.href = '/login.html';
-      return;
-    }
     
     const rawUser = localStorage.getItem('lcc_user');
     let user = null;
