@@ -6334,6 +6334,46 @@ app.get('/api/cleaning/checklists', async (req, res) => {
   }
 });
 // ============================================
+// ROUTE GET : Récupérer les assignations de ménage
+// ============================================
+app.get('/api/cleaning/assignments', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        ca.*,
+        p.name as property_name,
+        p.color as property_color,
+        c.first_name as cleaner_first_name,
+        c.last_name as cleaner_last_name,
+        c.name as cleaner_name,
+        c.phone as cleaner_phone,
+        c.email as cleaner_email
+      FROM cleaning_assignments ca
+      LEFT JOIN properties p ON ca.property_id = p.id
+      LEFT JOIN cleaners c ON ca.cleaner_id = c.id
+      WHERE ca.user_id = $1
+      ORDER BY ca.created_at DESC`,
+      [user.id]
+    );
+
+    res.json({ 
+      success: true, 
+      assignments: result.rows 
+    });
+  } catch (error) {
+    console.error('Erreur GET /api/cleaning/assignments:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur serveur' 
+    });
+  }
+});
+// ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 // ============================================
 
