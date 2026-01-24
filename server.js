@@ -6346,30 +6346,35 @@ app.get('/api/cleaning/assignments', async (req, res) => {
     const result = await pool.query(
       `SELECT 
         ca.*,
-        p.name as property_name,
-        p.color as property_color,
-        c.first_name as cleaner_first_name,
-        c.last_name as cleaner_last_name,
         c.name as cleaner_name,
         c.phone as cleaner_phone,
         c.email as cleaner_email
       FROM cleaning_assignments ca
-      LEFT JOIN properties p ON ca.property_id = p.id
       LEFT JOIN cleaners c ON ca.cleaner_id = c.id
       WHERE ca.user_id = $1
       ORDER BY ca.created_at DESC`,
       [user.id]
     );
 
+    // Enrichir avec les infos des properties depuis PROPERTIES (en mémoire)
+    const enrichedAssignments = result.rows.map(assignment => {
+      const property = PROPERTIES.find(p => p.id === assignment.property_id);
+      return {
+        ...assignment,
+        property_name: property?.name || 'Logement inconnu',
+        property_color: property?.color || '#999999'
+      };
+    });
+
     res.json({ 
       success: true, 
-      assignments: result.rows 
+      assignments: enrichedAssignments 
     });
   } catch (error) {
     console.error('Erreur GET /api/cleaning/assignments:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erreur serveur' 
+      error: error.message 
     });
   }
 });
