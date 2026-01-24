@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Boostinghost – Serrures Connectées</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/menu-plus-fixes.css" rel="stylesheet"/>
+<link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">
+<style>
+  html, body {
+    margin: 0 !important;
+  }
+  .app-container {
+    margin-top: 0 !important;
+  }
+  .main-header {
+    margin-top: 0 !important;
+  }
+  .page-content {
+    margin-top: 0 !important;
+    max-width: 1100px;
+  }
+  
+  /* DESIGN SYSTEM */
+  :root {
+    --lock-primary: #7C3AED;
+    --lock-primary-light: #A78BFA;
+    --lock-success: #10B981;
+    --lock-warning: #F59E0B;
+    --lock-danger: #EF4444;
+  }
+
+  /* CARDS */
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title i {
+    color: var(--lock-primary);
+  }
+
+  /* STATUS BADGES */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-connected {
+    background: #D1FAE5;
+    color: #065F46;
+  }
+
+  .status-disconnected {
+    background: #FEE2E2;
+    color: #991B1B;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--lock-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #6D28D9;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: #F3F4F6;
+    color: #374151;
+  }
+
+  .btn-secondary:hover {
+    background: #E5E7EB;
+  }
+
+  .btn-success {
+    background: var(--lock-success);
+    color: white;
+  }
+
+  .btn-danger {
+    background: var(--lock-danger);
+    color: white;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .empty-state-icon {
+    font-size: 64px;
+    color: #D1D5DB;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-text {
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 24px;
+  }
+
+  /* LOCK LIST */
+  .lock-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .lock-item {
+    background: #F9FAFB;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .lock-item:hover {
+    border-color: var(--lock-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(124, 58, 237, 0.1);
+  }
+
+  .lock-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .lock-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--lock-primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+  }
+
+  .lock-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+
+  .lock-type {
+    font-size: 12px;
+    color: #6B7280;
+  }
+
+  .lock-property {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #E5E7EB;
+  }
+
+  .property-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #EDE9FE;
+    color: #5B21B6;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    margin-bottom: 24px;
+  }
+
+  .modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+
+  .modal-subtitle {
+    font-size: 14px;
+    color: #6B7280;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--lock-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  .form-help {
+    font-size: 12px;
+    color: #6B7280;
+    margin-top: 6px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  /* LOADING */
+  .loading {
+    text-align: center;
+    padding: 40px;
+  }
+
+  .spinner {
+    border: 3px solid #F3F4F6;
+    border-top: 3px solid var(--lock-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .lock-list {
+      grid-template-columns: 1fr;
+    }
+    
+    .modal {
+      padding: 24px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Sidebar (BH Layout) -->
+  <div id="bhSidebar"></div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header avec actions -->
+    <div id="bhHeaderActions" style="display:none;">
+      <button class="btn btn-primary" onclick="openConnectModal()">
+        <i class="fa fa-plug"></i>
+        Connecter Igloohome
+      </button>
+    </div>
+
+    <div class="page-content">
+      <!-- En-tête -->
+      <div style="margin-bottom: 32px;">
+        <h1 style="font-size: 28px; font-weight: 800; color: #111827; margin-bottom: 8px;">
+          🔐 Serrures Connectées
+        </h1>
+        <p style="font-size: 14px; color: #6B7280;">
+          Gérez vos serrures Igloohome et générez automatiquement des codes d'accès pour vos voyageurs
+        </p>
+      </div>
+
+      <!-- Status de connexion API -->
+      <div class="card" id="apiStatusCard">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa fa-cloud"></i>
+            Connexion API Igloohome
+          </div>
+          <div id="apiStatus"></div>
+        </div>
+        <div id="apiStatusContent"></div>
+      </div>
+
+      <!-- Liste des serrures -->
+      <div class="card" id="locksCard">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa fa-lock"></i>
+            Mes Serrures
+            <span id="lockCount" style="background: #F3F4F6; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: #6B7280;"></span>
+          </div>
+          <button class="btn btn-secondary" onclick="syncLocks()" id="syncBtn">
+            <i class="fa fa-sync"></i>
+            Synchroniser
+          </button>
+        </div>
+        
+        <div id="locksContent">
+          <!-- Loading state -->
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Chargement des serrures...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Codes d'accès récents -->
+      <div class="card" id="codesCard" style="display: none;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa fa-key"></i>
+            Codes d'Accès Récents
+          </div>
+        </div>
+        <div id="codesContent"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal : Connecter API Igloohome -->
+<div class="modal-overlay" id="connectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Connecter Igloohome</div>
+      <div class="modal-subtitle">
+        Connectez votre compte Igloohome pour gérer vos serrures automatiquement
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Client ID</label>
+      <input type="text" class="form-input" id="clientId" placeholder="Votre Client ID Igloohome"/>
+      <div class="form-help">
+        Trouvez vos credentials dans votre compte développeur Igloohome
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Client Secret</label>
+      <input type="password" class="form-input" id="clientSecret" placeholder="Votre Client Secret"/>
+    </div>
+
+    <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+      <div style="display: flex; gap: 10px;">
+        <i class="fa fa-info-circle" style="color: #D97706; margin-top: 2px;"></i>
+        <div style="font-size: 13px; color: #92400E;">
+          <strong>Besoin d'aide ?</strong><br/>
+          Visitez <a href="https://developer.igloohome.co" target="_blank" style="color: #D97706; text-decoration: underline;">developer.igloohome.co</a> pour obtenir vos credentials API
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeConnectModal()">
+        Annuler
+      </button>
+      <button class="btn btn-primary" onclick="connectIgloohome()">
+        <i class="fa fa-plug"></i>
+        Connecter
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Associer serrure à logement -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Associer à un logement</div>
+      <div class="modal-subtitle" id="assignLockName"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Sélectionner un logement</label>
+      <select class="form-input" id="propertySelect">
+        <option value="">-- Choisir un logement --</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeAssignModal()">
+        Annuler
+      </button>
+      <button class="btn btn-success" onclick="assignLockToProperty()">
+        <i class="fa fa-check"></i>
+        Associer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/auth-fetch.js"></script>
+<script>
+// ============================================
+// VARIABLES GLOBALES
+// ============================================
+const token = localStorage.getItem('lcc_token');
+if (!token) {
+  window.location.href = '/login.html';
+}
+
+let apiConnection = null;
+let locks = [];
+let properties = [];
+let selectedLock = null;
+
+// ============================================
+// INITIALISATION
+// ============================================
+async function init() {
+  await loadApiStatus();
+  await loadProperties();
+  await loadLocks();
+}
+
+// ============================================
+// API STATUS
+// ============================================
+async function loadApiStatus() {
+  try {
+    const res = await fetch('/api/smart-locks/status', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    
+    apiConnection = data.connection;
+    
+    if (data.connection && data.connection.is_active) {
+      document.getElementById('apiStatus').innerHTML = 
+        '<span class="status-badge status-connected"><i class="fa fa-check-circle"></i> Connecté</span>';
+      document.getElementById('apiStatusContent').innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 14px;">
+          <div>
+            <div style="color: #6B7280; margin-bottom: 4px;">Provider</div>
+            <div style="font-weight: 600; color: #111827;">Igloohome</div>
+          </div>
+          <div>
+            <div style="color: #6B7280; margin-bottom: 4px;">Statut</div>
+            <div style="font-weight: 600; color: #10B981;">Actif</div>
+          </div>
+          <div>
+            <div style="color: #6B7280; margin-bottom: 4px;">Dernière sync</div>
+            <div style="font-weight: 600; color: #111827;">${formatDate(data.connection.updated_at)}</div>
+          </div>
+        </div>
+        <button class="btn btn-danger" onclick="disconnectApi()" style="margin-top: 16px;">
+          <i class="fa fa-unlink"></i>
+          Déconnecter
+        </button>
+      `;
+      
+      // Montrer le bouton de sync
+      document.getElementById('syncBtn').style.display = 'inline-flex';
+    } else {
+      document.getElementById('apiStatus').innerHTML = 
+        '<span class="status-badge status-disconnected"><i class="fa fa-times-circle"></i> Non connecté</span>';
+      document.getElementById('apiStatusContent').innerHTML = `
+        <div class="empty-state" style="padding: 40px 20px;">
+          <div style="font-size: 48px; margin-bottom: 12px;">🔌</div>
+          <div style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 8px;">
+            API Igloohome non connectée
+          </div>
+          <div style="font-size: 14px; color: #6B7280; margin-bottom: 20px;">
+            Connectez votre compte Igloohome pour commencer à gérer vos serrures
+          </div>
+          <button class="btn btn-primary" onclick="openConnectModal()">
+            <i class="fa fa-plug"></i>
+            Connecter maintenant
+          </button>
+        </div>
+      `;
+      
+      // Cacher le bouton de sync
+      document.getElementById('syncBtn').style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Erreur chargement status API:', err);
+  }
+}
+
+// ============================================
+// SERRURES
+// ============================================
+async function loadLocks() {
+  try {
+    const res = await fetch('/api/smart-locks', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    
+    locks = data.locks || [];
+    document.getElementById('lockCount').textContent = locks.length;
+    
+    if (locks.length === 0) {
+      document.getElementById('locksContent').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔒</div>
+          <div class="empty-state-title">Aucune serrure</div>
+          <div class="empty-state-text">
+            ${apiConnection ? 'Cliquez sur "Synchroniser" pour récupérer vos serrures depuis Igloohome' : 'Connectez d\'abord votre API Igloohome'}
+          </div>
+        </div>
+      `;
+    } else {
+      renderLocks();
+    }
+  } catch (err) {
+    console.error('Erreur chargement serrures:', err);
+    document.getElementById('locksContent').innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #EF4444;">
+        <i class="fa fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 12px;"></i>
+        <div>Erreur de chargement des serrures</div>
+      </div>
+    `;
+  }
+}
+
+function renderLocks() {
+  const html = locks.map(lock => {
+    const assignment = lock.assignment;
+    const propertyName = assignment ? assignment.property_name : null;
+    
+    return `
+      <div class="lock-item" onclick="openAssignModal(${lock.id})">
+        <div class="lock-item-header">
+          <div style="flex: 1;">
+            <div class="lock-name">${lock.lock_name}</div>
+            <div class="lock-type">${lock.lock_type || 'Serrure connectée'}</div>
+          </div>
+          <div class="lock-icon">
+            <i class="fa fa-lock"></i>
+          </div>
+        </div>
+        
+        ${lock.serial_number ? `
+          <div style="font-size: 12px; color: #9CA3AF; margin-top: 8px;">
+            S/N: ${lock.serial_number}
+          </div>
+        ` : ''}
+        
+        ${propertyName ? `
+          <div class="lock-property">
+            <i class="fa fa-home" style="color: #9CA3AF; font-size: 12px;"></i>
+            <span class="property-badge">${propertyName}</span>
+          </div>
+        ` : `
+          <div class="lock-property">
+            <i class="fa fa-exclamation-circle" style="color: #F59E0B;"></i>
+            <span style="font-size: 12px; color: #F59E0B; font-weight: 600;">Non associée</span>
+          </div>
+        `}
+      </div>
+    `;
+  }).join('');
+  
+  document.getElementById('locksContent').innerHTML = `<div class="lock-list">${html}</div>`;
+}
+
+// ============================================
+// SYNCHRONISATION
+// ============================================
+async function syncLocks() {
+  const btn = document.getElementById('syncBtn');
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Synchronisation...';
+  btn.disabled = true;
+  
+  try {
+    const res = await fetch('/api/smart-locks/sync', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert(`✅ Synchronisation réussie !\n${data.added || 0} serrure(s) ajoutée(s)`);
+      await loadLocks();
+    } else {
+      alert('❌ ' + (data.error || 'Erreur de synchronisation'));
+    }
+  } catch (err) {
+    console.error('Erreur sync:', err);
+    alert('❌ Erreur de synchronisation');
+  } finally {
+    btn.innerHTML = originalHTML;
+    btn.disabled = false;
+  }
+}
+
+// ============================================
+// PROPRIÉTÉS
+// ============================================
+async function loadProperties() {
+  try {
+    const res = await fetch('/api/properties', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    properties = data.properties || [];
+  } catch (err) {
+    console.error('Erreur chargement propriétés:', err);
+  }
+}
+
+// ============================================
+// MODALS
+// ============================================
+function openConnectModal() {
+  document.getElementById('connectModal').classList.add('active');
+}
+
+function closeConnectModal() {
+  document.getElementById('connectModal').classList.remove('active');
+  document.getElementById('clientId').value = '';
+  document.getElementById('clientSecret').value = '';
+}
+
+async function connectIgloohome() {
+  const clientId = document.getElementById('clientId').value.trim();
+  const clientSecret = document.getElementById('clientSecret').value.trim();
+  
+  if (!clientId || !clientSecret) {
+    return alert('⚠️ Veuillez remplir tous les champs');
+  }
+  
+  try {
+    const res = await fetch('/api/smart-locks/connect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ clientId, clientSecret })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert('✅ Connexion réussie à Igloohome !');
+      closeConnectModal();
+      await loadApiStatus();
+      await loadLocks();
+    } else {
+      alert('❌ ' + (data.error || 'Erreur de connexion'));
+    }
+  } catch (err) {
+    console.error('Erreur connexion:', err);
+    alert('❌ Erreur de connexion');
+  }
+}
+
+async function disconnectApi() {
+  if (!confirm('⚠️ Êtes-vous sûr de vouloir déconnecter votre API Igloohome ?')) {
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/smart-locks/disconnect', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (res.ok) {
+      alert('✅ API déconnectée');
+      await loadApiStatus();
+      await loadLocks();
+    }
+  } catch (err) {
+    console.error('Erreur déconnexion:', err);
+    alert('❌ Erreur de déconnexion');
+  }
+}
+
+function openAssignModal(lockId) {
+  selectedLock = locks.find(l => l.id === lockId);
+  if (!selectedLock) return;
+  
+  document.getElementById('assignLockName').textContent = selectedLock.lock_name;
+  
+  const select = document.getElementById('propertySelect');
+  select.innerHTML = '<option value="">-- Choisir un logement --</option>' +
+    properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  
+  // Pré-sélectionner si déjà assigné
+  if (selectedLock.assignment) {
+    select.value = selectedLock.assignment.property_id;
+  }
+  
+  document.getElementById('assignModal').classList.add('active');
+}
+
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('active');
+  selectedLock = null;
+}
+
+async function assignLockToProperty() {
+  const propertyId = document.getElementById('propertySelect').value;
+  
+  if (!propertyId) {
+    return alert('⚠️ Veuillez sélectionner un logement');
+  }
+  
+  try {
+    const res = await fetch('/api/smart-locks/assign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        lockId: selectedLock.id,
+        propertyId: propertyId
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert('✅ Serrure associée au logement !');
+      closeAssignModal();
+      await loadLocks();
+    } else {
+      alert('❌ ' + (data.error || 'Erreur d\'association'));
+    }
+  } catch (err) {
+    console.error('Erreur assign:', err);
+    alert('❌ Erreur d\'association');
+  }
+}
+
+// ============================================
+// HELPERS
+// ============================================
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('fr-FR', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Init au chargement
+window.addEventListener('DOMContentLoaded', init);
+</script>
+
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+</body>
+</html>
