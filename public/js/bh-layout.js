@@ -66,10 +66,10 @@ const SIDEBAR_HTML = `
       <a class="nav-item" data-page="deposits" href="/deposits.html">
         <i class="fas fa-shield-alt"></i><span>Cautions</span>
       </a>
-      <a class="nav-item" data-page="notifications" href="/notifications.html">
-        <i class="fas fa-bell"></i><span>Notifications</span>
-      </a>
-    </div>
+      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
+<i class="fas fa-lock"></i>
+<span>Serrures connectées</span>
+</a>
 
     <!-- PARAMÈTRES -->
     <div class="nav-section">
