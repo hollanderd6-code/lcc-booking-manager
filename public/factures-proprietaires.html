@@ -1965,6 +1965,24 @@ function getSelectedProperties() {
     renderEditorPrestations();
     updatePreview();
     switchTab('create');
+    
+    // ✅ Scroll automatique vers l'éditeur
+    setTimeout(() => {
+      const editorTab = document.getElementById('tab-create');
+      if (editorTab) {
+        editorTab.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+        
+        // Sur mobile, scroll un peu plus haut pour compenser la barre supérieure
+        if (window.innerWidth <= 768) {
+          setTimeout(() => {
+            window.scrollBy({ top: -80, behavior: 'smooth' });
+          }, 400);
+        }
+      }
+    }, 100);
   };
 window.viewOwnerInvoiceReadOnly = async function(id) {
   try {
