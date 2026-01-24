@@ -1,6 +1,6 @@
 // ============================================
-// GESTION DES ONGLETS MOBILES
-// A inclure sur toutes les pages de l'app
+// 📱 GESTION DES ONGLETS MOBILES
+// À inclure sur toutes les pages de l'app
 // ============================================
 
 (function() {
@@ -19,14 +19,14 @@
   };
 
   // ============================================
-  // DETECTION DE LA PAGE ACTIVE
+  // ✅ DÉTECTION DE LA PAGE ACTIVE - CORRIGÉE
   // ============================================
   
   const currentPath = window.location.pathname;
-  const dataPage = document.body.getAttribute('data-page');
+  const dataPage = document.body.getAttribute('data-page'); // ✅ Lire data-page du body
   let activeTab = 'dashboard';
 
-  // Pages du menu "Plus" (detection prioritaire)
+  // ✅ Pages du menu "Plus" (détection prioritaire)
   const PLUS_PAGES = [
     'notifications',
     'settings-account', 
@@ -38,12 +38,12 @@
     'help'
   ];
 
-  // Verifier data-page="settings" en priorite
+  // ✅ Vérifier data-page="settings" en priorité
   if (dataPage === 'settings') {
-    // settings.html (Mes logements) -> Onglet Logements
+    // settings.html (Mes logements) → Onglet Logements
     activeTab = 'properties';
   } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
-    // Pages du menu Plus -> Onglet Plus
+    // Pages du menu Plus → Onglet Plus
     activeTab = 'more';
   } else if (currentPath.includes('messages')) {
     activeTab = 'messages';
@@ -55,7 +55,7 @@
   }
 
   // ============================================
-  // ECOUTER LES CHANGEMENTS D'ONGLET
+  // ÉCOUTER LES CHANGEMENTS D'ONGLET
   // ============================================
   
   document.addEventListener('tabChanged', (e) => {
@@ -77,12 +77,12 @@
     if (!window.mobileApp) return;
     
     window.mobileApp.createBottomSheet({
-      title: 'Menu',
+      title: '⚙️ Menu',
       content: `
         <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
           
           <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-user-cog"></i> Parametres du compte
+            <i class="fas fa-user-cog"></i> Paramètres du compte
           </button>
           
           <button class="btn btn-secondary" onclick="window.location.href='/notifications.html'" style="width: 100%; justify-content: flex-start;">
@@ -92,7 +92,7 @@
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
           
           <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-broom"></i> Menages
+            <i class="fas fa-broom"></i> Ménages
           </button>
           
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
@@ -106,7 +106,7 @@
           </button>
           
           <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-file-invoice-dollar"></i> Factures proprietaires
+            <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
           </button>
           
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
@@ -122,7 +122,7 @@
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
           
           <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-sign-out-alt"></i> Deconnexion
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
           </button>
           
         </div>
@@ -136,7 +136,7 @@
   // ============================================
 
   window.confirmLogout = function() {
-    if (confirm('Etes-vous sur de vouloir vous deconnecter ?')) {
+    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
       window.location.href = '/login.html';
@@ -148,7 +148,7 @@
   // ============================================
   
   function setActiveTab() {
-    // Attendre que les onglets soient crees
+    // Attendre que les onglets soient créés
     setTimeout(() => {
       const tabs = document.querySelectorAll('.tab-btn');
       tabs.forEach(tab => {
@@ -169,6 +169,6 @@
     setActiveTab();
   }
 
-  console.log('Gestion des onglets mobile initialisee (page:', activeTab, ')');
+  console.log('✅ Gestion des onglets mobile initialisée (page:', activeTab, ')');
 
 })();
