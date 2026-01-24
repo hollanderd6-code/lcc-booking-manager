@@ -276,7 +276,7 @@ input[type="number"] {
 .user-email{ font-size:11px; color:#6b7280; }
 
 /* ============================================
-   🔧 CORRECTIFS BADGES
+   [DEBUG] CORRECTIFS BADGES
    ============================================ */
 
 /* 1. Masquer le badge vert sur Calendrier */
@@ -302,7 +302,7 @@ input[type="number"] {
 
 </style>
 <style>
-/* ✅ Uniformisation du bouton "Retour au dashboard" (header) */
+/* [OK] Uniformisation du bouton "Retour au dashboard" (header) */
 .main-header .header-actions .btn.btn-ghost{
   border-radius: 999px !important;
   border: 1px solid rgba(148, 163, 184, 0.45) !important;
@@ -394,7 +394,7 @@ input[type="number"] {
       }
     }, { passive: false });
     
-    console.log("✅ Pull-to-refresh désactivé sur iOS");
+    console.log("[OK] Pull-to-refresh désactivé sur iOS");
   }
 })();
 </script>
@@ -443,19 +443,19 @@ input[type="number"] {
     const fabBtn = document.getElementById("mobileFabButton");
     
     function openEditor() {
-      console.log("🎯 Tentative d ouverture éditeur...");
+      console.log("[TARGET] Tentative d ouverture éditeur...");
       
       // Méthode 1 : Simuler un clic sur le bouton onglet
       const editorTab = document.getElementById("btn-create");
       if (editorTab) {
-        console.log("✅ Bouton onglet trouvé, simulation clic");
+        console.log("[OK] Bouton onglet trouvé, simulation clic");
         editorTab.click();
         return;
       }
       
       // Méthode 2 : Appel direct avec window
       if (typeof window.switchTab === "function") {
-        console.log("✅ Appel direct window.switchTab");
+        console.log("[OK] Appel direct window.switchTab");
         window.switchTab("create");
         return;
       }
@@ -474,7 +474,7 @@ input[type="number"] {
       if (createTab) createTab.classList.add("active");
       if (createBtn) createBtn.classList.add("active");
       
-      console.log("✅ Onglet forcé manuellement");
+      console.log("[OK] Onglet forcé manuellement");
     }
     
     // Événements touch ET click
@@ -492,7 +492,7 @@ input[type="number"] {
       openEditor();
     });
     
-    console.log("✅ Bouton mobile FAB configuré");
+    console.log("[OK] Bouton mobile FAB configuré");
   }
 })();
 </script>
@@ -735,7 +735,7 @@ input[type="number"] {
 </div>
 </div>
 <script>
-console.log('🚀 Script principal chargé');
+console.log('[INIT] Script principal charge');
 let token = localStorage.getItem('lcc_token');
   let clients = [];
   let prestations = [];
@@ -760,7 +760,7 @@ let token = localStorage.getItem('lcc_token');
 
   // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('🔧 Initialisation de la page factures...');
+  console.log('[INIT] Initialisation de la page factures...');
   if(!token) return window.location.href='/login.html';
   
   // User Info
@@ -774,27 +774,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Charger les données une par une pour éviter le blocage
   try {
-    console.log('📥 Chargement des clients...');
+    console.log('[LOAD] Chargement des clients...');
     await loadClients();
-    console.log('✅ Clients chargés');
+    console.log('[OK] Clients chargés');
   } catch(e) {
-    console.error('❌ Erreur clients:', e);
+    console.error('[ERROR] Erreur clients:', e);
   }
   
   try {
-    console.log('📥 Chargement des factures...');
+    console.log('[LOAD] Chargement des factures...');
     await loadInvoices();
-    console.log('✅ Factures chargées');
+    console.log('[OK] Factures chargées');
   } catch(e) {
-    console.error('❌ Erreur factures:', e);
+    console.error('[ERROR] Erreur factures:', e);
   }
   
   try {
-    console.log('📥 Chargement du profil...');
+    console.log('[LOAD] Chargement du profil...');
     await loadUserProfile();
-    console.log('✅ Profil chargé');
+    console.log('[OK] Profil chargé');
   } catch(e) {
-    console.error('❌ Erreur profil:', e);
+    console.error('[ERROR] Erreur profil:', e);
   }
   
   // Profil émetteur (APRÈS loadUserProfile pour ne pas écraser le logo)
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Attendre que le DOM soit prêt avant d'appeler updatePreview
   setTimeout(() => updatePreview(), 100);
   
-  console.log('✅ Initialisation terminée');
+  console.log('[OK] Initialisation terminée');
 });
 
   // --- TABS ---
@@ -1067,7 +1067,7 @@ async function loadInvoices() {
     console.log('📦 Données reçues:', data);
     
     const invs = data.invoices || [];
-    console.log('📊 Nombre de factures:', invs.length);
+    console.log('[DATA] Nombre de factures:', invs.length);
     
     window.ownerInvoices = invs;
 
@@ -1191,9 +1191,9 @@ async function loadInvoices() {
 
     document.getElementById('statsRevenue').textContent = formatMoney(totalRev);
     document.getElementById('statsPending').textContent = formatMoney(totalPending);
-    console.log('✅ loadInvoices() - Terminé avec succès');
+    console.log('[OK] loadInvoices() - Terminé avec succès');
   } catch (e) {
-    console.error('❌ loadInvoices() - Erreur:', e);
+    console.error('[ERROR] loadInvoices() - Erreur:', e);
     const container = document.getElementById('invoicesCardsGrid');
     if (container) {
       container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1; color:#dc2626;">Erreur lors du chargement des factures. Veuillez réessayer.</div>';
@@ -1251,7 +1251,7 @@ window.sendOwnerInvoice = async function (id) {
       console.error(json);
       return alert(json.error || 'Erreur lors de l\'envoi');
     }
-    alert('Facture envoyée ✅');
+    alert('Facture envoyée [OK]');
     loadInvoices();
   } catch (e) {
     console.error(e);
@@ -1460,7 +1460,7 @@ window.finalizeOwnerInvoice = async function (id) {
       console.error(json);
       return alert(json.error || 'Erreur lors de la validation');
     }
-    alert('Facture passée en “Facturée” ✅');
+    alert('Facture passée en “Facturée” [OK]');
     loadInvoices();
   } catch (e) {
     console.error(e);
@@ -1485,7 +1485,7 @@ window.markOwnerInvoicePaid = async function (id) {
       console.error(json);
       return alert(json.error || 'Erreur lors de la mise à jour du paiement');
     }
-    alert('Facture marquée comme encaissée ✅');
+    alert('Facture marquée comme encaissée [OK]');
     loadInvoices();
   } catch (e) {
     console.error(e);
@@ -1895,7 +1895,7 @@ function getSelectedProperties() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        alert('✅ Facture enregistrée !');
+        alert('[OK] Facture enregistrée !');
         prestations = [];
         prestationCounter = 0;
         renderEditorPrestations();
@@ -1935,7 +1935,7 @@ function getSelectedProperties() {
     updatePreview();
     switchTab('create');
     
-    // ✅ Scroll automatique vers l'éditeur
+    // [OK] Scroll automatique vers l'éditeur
     setTimeout(() => {
       const editorTab = document.getElementById('tab-create');
       if (editorTab) {
@@ -2044,23 +2044,23 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     document.getElementById('clientModal').classList.add('active');
   };
   window.editClient = function(clientId) {
-  console.log('🔧 editClient appelé avec ID:', clientId);
-  console.log('📊 Liste des clients:', clients);
+  console.log('[DEBUG] editClient appelé avec ID:', clientId);
+  console.log('[DATA] Liste des clients:', clients);
   
   const client = clients.find(c => c.id == clientId);
   if (!client) {
-    console.error('❌ Client introuvable pour ID:', clientId);
+    console.error('[ERROR] Client introuvable pour ID:', clientId);
     alert('Client introuvable');
     return;
   }
   
-  console.log('✅ Client trouvé:', client);
+  console.log('[OK] Client trouvé:', client);
   editingClientId = clientId;
   
   const titleEl = document.getElementById('clientModalTitle');
   if (titleEl) {
     titleEl.textContent = 'Modifier le client';
-    console.log('✅ Titre modal changé');
+    console.log('[OK] Titre modal changé');
   }
   
   // Cocher le bon type
@@ -2069,7 +2069,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   } else {
     document.querySelector('input[name="clientType"][value="individual"]').checked = true;
   }
-  console.log('✅ Type client coché');
+  console.log('[OK] Type client coché');
   toggleClientType();
   
   // Remplir les champs
@@ -2080,15 +2080,15 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   document.getElementById('clientAddress').value = client.address || '';
   document.getElementById('clientPostalCode').value = client.postal_code || '';
   document.getElementById('clientCity').value = client.city || '';
-  console.log('✅ Champs remplis');
+  console.log('[OK] Champs remplis');
   
   // Ouvrir le modal
   document.getElementById('clientModal').classList.add('active');
-  console.log('✅ Modal client ouvert');
+  console.log('[OK] Modal client ouvert');
   
   // Fermer la modal des stats
   closeStatsModal();
-  console.log('✅ editClient terminé');
+  console.log('[OK] editClient terminé');
 };
   window.closeClientModal = function() {
     document.getElementById('clientModal').classList.remove('active');
