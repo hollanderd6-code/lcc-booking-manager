@@ -1034,7 +1034,7 @@ clients.forEach(function(c) {
   htmlContent += 
     '<li style="padding:8px 0; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
       '<span>' + name + '</span>' +
-      "<button onclick=\"editClient(" + c.id + ")\" style=\"padding:4px 12px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px;\">✏️ Modifier</button>" +
+      "<button onclick=\"editClient('" + c.id + "')\" style=\"padding:4px 12px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px;\">✏️ Modifier</button>" +
     '</li>';
 });
 htmlContent += '</ul>';
