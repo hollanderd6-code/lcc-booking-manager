@@ -734,13 +734,16 @@ input[type="number"] {
 <button class="btn btn-primary" onclick="saveClient()" style="width:100%;">Enregistrer</button>
 </div>
 </div>
-<script src="/js/auth-fetch.js"></script>
+<!-- <script src="/js/auth-fetch.js"></script> -->
 <script>
+console.log('🚀 Script factures-proprietaires chargé avec succès');
+
 let token = localStorage.getItem('lcc_token');
   let clients = [];
   let prestations = [];
   let prestationCounter = 0;
   let editingInvoiceId = null;
+  let editingClientId = null; // Variable pour stocker l'ID du client en cours d'édition
   let isReadOnlyMode = false;
   let emitterProfile = {
     company: '',
@@ -2075,16 +2078,27 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     document.getElementById('clientModal').classList.add('active');
   };
   window.editClient = function(clientId) {
+  console.log('🔧 editClient appelé avec ID:', clientId);
+  console.log('📊 Clients disponibles:', clients);
+  
   const client = clients.find(c => c.id == clientId);
   if (!client) {
+    console.error('❌ Client introuvable pour ID:', clientId);
     alert('Client introuvable');
     return;
   }
   
+  console.log('✅ Client trouvé:', client);
+  
   editingClientId = clientId;
   
   const titleEl = document.getElementById('clientModalTitle');
-  if (titleEl) titleEl.textContent = 'Modifier le client';
+  if (titleEl) {
+    titleEl.textContent = 'Modifier le client';
+    console.log('✅ Titre modal changé');
+  } else {
+    console.error('❌ Element clientModalTitle introuvable');
+  }
   
   // Cocher le bon type
   if (client.client_type === 'business') {
@@ -2092,6 +2106,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   } else {
     document.querySelector('input[name="clientType"][value="individual"]').checked = true;
   }
+  console.log('✅ Type client coché:', client.client_type);
+  
   toggleClientType();
   
   // Remplir les champs
@@ -2103,11 +2119,20 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   document.getElementById('clientPostalCode').value = client.postal_code || '';
   document.getElementById('clientCity').value = client.city || '';
   
+  console.log('✅ Champs remplis');
+  
   // Ouvrir le modal
-  document.getElementById('clientModal').classList.add('active');
+  const clientModal = document.getElementById('clientModal');
+  if (clientModal) {
+    clientModal.classList.add('active');
+    console.log('✅ Modal client ouvert');
+  } else {
+    console.error('❌ Element clientModal introuvable');
+  }
   
   // Fermer la modal des stats
   closeStatsModal();
+  console.log('✅ Modal stats fermé');
 };
   window.closeClientModal = function() {
     document.getElementById('clientModal').classList.remove('active');
