@@ -2,7 +2,7 @@
 <html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<parameter name="content">width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Boostinghost – Serrures Connectées</title>
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -15,339 +15,342 @@
 <link href="/css/menu-plus-fixes.css" rel="stylesheet"/>
 <link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link href="/css/cleaning-cards-style.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
-<link rel="stylesheet" href="/css/messages-badge-desktop.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">    
 <style>
-  html, body {
-    margin: 0 !important;
-  }
-  .app-container {
-    margin-top: 0 !important;
-  }
-  .main-header {
-    margin-top: 0 !important;
-  }
-  .page-content {
-    margin-top: 0 !important;
-    max-width: 1100px;
-  }
-  
-  /* DESIGN SYSTEM */
-  :root {
-    --lock-primary: #7C3AED;
-    --lock-primary-light: #A78BFA;
-    --lock-success: #10B981;
-    --lock-warning: #F59E0B;
-    --lock-danger: #EF4444;
-  }
+    html, body {
+      margin: 0 !important;
+    }
+    .app-container {
+      margin-top: 0 !important;
+    }
+    .main-header {
+      margin-top: 0 !important;
+    }
+    .page-content {
+      margin-top: 0 !important;
+      max-width: 900px;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
 
-  /* CARDS */
-  .card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 24px;
-    border: 1px solid #e5e7eb;
-  }
+    .card {
+      background: var(--bg-primary);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .card-title i {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
 
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color-subtle);
+    }
+    .row:last-child {
+      border-bottom: none;
+    }
+    .row-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .row-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
 
-  .card-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #111827;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+    /* STATUS BADGES */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-connected {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+    .status-disconnected {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
 
-  .card-title i {
-    color: var(--lock-primary);
-  }
-
-  /* STATUS BADGES */
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .status-connected {
-    background: #D1FAE5;
-    color: #065F46;
-  }
-
-  .status-disconnected {
-    background: #FEE2E2;
-    color: #991B1B;
-  }
-
-  /* BUTTONS */
-  .btn {
-    padding: 10px 20px;
-    border-radius: 10px;
-    border: none;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .btn-primary {
-    background: var(--lock-primary);
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background: #6D28D9;
-    transform: translateY(-1px);
-  }
-
-  .btn-secondary {
-    background: #F3F4F6;
-    color: #374151;
-  }
-
-  .btn-secondary:hover {
-    background: #E5E7EB;
-  }
-
-  .btn-success {
-    background: var(--lock-success);
-    color: white;
-  }
-
-  .btn-danger {
-    background: var(--lock-danger);
-    color: white;
-  }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-  }
-
-  .empty-state-icon {
-    font-size: 64px;
-    color: #D1D5DB;
-    margin-bottom: 16px;
-  }
-
-  .empty-state-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 8px;
-  }
-
-  .empty-state-text {
-    font-size: 14px;
-    color: #6B7280;
-    margin-bottom: 24px;
-  }
-
-  /* LOCK LIST */
-  .lock-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-  }
-
-  .lock-item {
-    background: #F9FAFB;
-    border: 2px solid #E5E7EB;
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-
-  .lock-item:hover {
-    border-color: var(--lock-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(124, 58, 237, 0.1);
-  }
-
-  .lock-item-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-  }
-
-  .lock-icon {
-    width: 48px;
-    height: 48px;
-    background: var(--lock-primary);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 24px;
-  }
-
-  .lock-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 4px;
-  }
-
-  .lock-type {
-    font-size: 12px;
-    color: #6B7280;
-  }
-
-  .lock-property {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #E5E7EB;
-  }
-
-  .property-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    background: #EDE9FE;
-    color: #5B21B6;
-  }
-
-  /* MODAL */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .modal-overlay.active {
-    display: flex;
-  }
-
-  .modal {
-    background: white;
-    border-radius: 16px;
-    padding: 32px;
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .modal-header {
-    margin-bottom: 24px;
-  }
-
-  .modal-title {
-    font-size: 24px;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 8px;
-  }
-
-  .modal-subtitle {
-    font-size: 14px;
-    color: #6B7280;
-  }
-
-  .form-group {
-    margin-bottom: 20px;
-  }
-
-  .form-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 8px;
-  }
-
-  .form-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #D1D5DB;
-    border-radius: 8px;
-    font-size: 14px;
-    box-sizing: border-box;
-  }
-
-  .form-input:focus {
-    outline: none;
-    border-color: var(--lock-primary);
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-  }
-
-  .form-help {
-    font-size: 12px;
-    color: #6B7280;
-    margin-top: 6px;
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 24px;
-  }
-
-  /* LOADING */
-  .loading {
-    text-align: center;
-    padding: 40px;
-  }
-
-  .spinner {
-    border: 3px solid #F3F4F6;
-    border-top: 3px solid var(--lock-primary);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 16px;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  /* RESPONSIVE */
-  @media (max-width: 768px) {
+    /* LOCK LIST */
     .lock-list {
-      grid-template-columns: 1fr;
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
     }
-    
+    .lock-item {
+      background: var(--bg-secondary, #f9fafb);
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 12px;
+      padding: 14px 16px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .lock-item:hover {
+      background: var(--bg-primary, #fff);
+      border-color: var(--primary-color, #10B981);
+      box-shadow: var(--shadow-sm);
+    }
+    .lock-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .lock-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+    .lock-type {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .lock-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary-color, #10B981);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .lock-property {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color-subtle);
+      font-size: 12px;
+    }
+    .property-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #EDE9FE;
+      color: #5B21B6;
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    .empty-state-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .empty-state-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary-color, #10B981);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark, #059669);
+    }
+    .btn-secondary {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--text-primary);
+    }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+    .btn-danger {
+      background: #EF4444;
+      color: white;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    /* MODALS */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
     .modal {
+      background: white;
+      border-radius: 16px;
       padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
     }
-  }
+    .modal-header {
+      margin-bottom: 20px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color, #d1d5db);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary-color, #10B981);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+    }
+    .form-help {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* ALERT BOX */
+    .alert-box {
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
+    }
+    .alert-box i {
+      color: #D97706;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .alert-content {
+      font-size: 12px;
+      color: #92400E;
+    }
+    .alert-content strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .alert-content a {
+      color: #D97706;
+      text-decoration: underline;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 30px;
+    }
+    .spinner {
+      border: 3px solid #F3F4F6;
+      border-top: 3px solid var(--primary-color, #10B981);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 </style>
 </head>
 <body>
@@ -368,17 +371,15 @@
 
     <div class="page-content">
       <!-- En-tête -->
-      <div style="margin-bottom: 32px;">
-        <h1 style="font-size: 28px; font-weight: 800; color: #111827; margin-bottom: 8px;">
-          🔐 Serrures Connectées
-        </h1>
-        <p style="font-size: 14px; color: #6B7280;">
-          Gérez vos serrures Igloohome et générez automatiquement des codes d'accès pour vos voyageurs
-        </p>
-      </div>
+      <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">
+        🔐 Serrures Connectées
+      </h1>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">
+        Gérez vos serrures Igloohome et générez automatiquement des codes d'accès
+      </p>
 
       <!-- Status de connexion API -->
-      <div class="card" id="apiStatusCard">
+      <div class="card">
         <div class="card-header">
           <div class="card-title">
             <i class="fa fa-cloud"></i>
@@ -390,14 +391,14 @@
       </div>
 
       <!-- Liste des serrures -->
-      <div class="card" id="locksCard">
+      <div class="card">
         <div class="card-header">
           <div class="card-title">
             <i class="fa fa-lock"></i>
             Mes Serrures
-            <span id="lockCount" style="background: #F3F4F6; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: #6B7280;"></span>
+            <span id="lockCount" style="background: var(--bg-secondary, #f3f4f6); padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--text-secondary);"></span>
           </div>
-          <button class="btn btn-secondary" onclick="syncLocks()" id="syncBtn">
+          <button class="btn btn-secondary btn-sm" onclick="syncLocks()" id="syncBtn" style="display: none;">
             <i class="fa fa-sync"></i>
             Synchroniser
           </button>
@@ -407,20 +408,9 @@
           <!-- Loading state -->
           <div class="loading">
             <div class="spinner"></div>
-            <p>Chargement des serrures...</p>
+            <p style="font-size: 13px; color: var(--text-secondary);">Chargement des serrures...</p>
           </div>
         </div>
-      </div>
-
-      <!-- Codes d'accès récents -->
-      <div class="card" id="codesCard" style="display: none;">
-        <div class="card-header">
-          <div class="card-title">
-            <i class="fa fa-key"></i>
-            Codes d'Accès Récents
-          </div>
-        </div>
-        <div id="codesContent"></div>
       </div>
 
     </div>
@@ -450,13 +440,11 @@
       <input type="password" class="form-input" id="clientSecret" placeholder="Votre Client Secret"/>
     </div>
 
-    <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-      <div style="display: flex; gap: 10px;">
-        <i class="fa fa-info-circle" style="color: #D97706; margin-top: 2px;"></i>
-        <div style="font-size: 13px; color: #92400E;">
-          <strong>Besoin d'aide ?</strong><br/>
-          Visitez <a href="https://developer.igloohome.co" target="_blank" style="color: #D97706; text-decoration: underline;">developer.igloohome.co</a> pour obtenir vos credentials API
-        </div>
+    <div class="alert-box">
+      <i class="fa fa-info-circle"></i>
+      <div class="alert-content">
+        <strong>Besoin d'aide ?</strong>
+        Visitez <a href="https://developer.igloohome.co" target="_blank">developer.igloohome.co</a> pour obtenir vos credentials API
       </div>
     </div>
 
@@ -491,7 +479,7 @@
       <button class="btn btn-secondary" onclick="closeAssignModal()">
         Annuler
       </button>
-      <button class="btn btn-success" onclick="assignLockToProperty()">
+      <button class="btn btn-primary" onclick="assignLockToProperty()">
         <i class="fa fa-check"></i>
         Associer
       </button>
@@ -535,52 +523,51 @@ async function loadApiStatus() {
     
     apiConnection = data.connection;
     
-    if (data.connection && data.connection.is_active) {
+    if (data.connected && data.connection) {
       document.getElementById('apiStatus').innerHTML = 
         '<span class="status-badge status-connected"><i class="fa fa-check-circle"></i> Connecté</span>';
+      
+      const lastSync = data.connection.updated_at ? formatDate(data.connection.updated_at) : 'Jamais';
+      
       document.getElementById('apiStatusContent').innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 14px;">
+        <div class="row">
           <div>
-            <div style="color: #6B7280; margin-bottom: 4px;">Provider</div>
-            <div style="font-weight: 600; color: #111827;">Igloohome</div>
+            <div class="row-label">Provider</div>
+            <div class="row-hint">Igloohome</div>
           </div>
-          <div>
-            <div style="color: #6B7280; margin-bottom: 4px;">Statut</div>
-            <div style="font-weight: 600; color: #10B981;">Actif</div>
-          </div>
-          <div>
-            <div style="color: #6B7280; margin-bottom: 4px;">Dernière sync</div>
-            <div style="font-weight: 600; color: #111827;">${formatDate(data.connection.updated_at)}</div>
+          <div style="text-align: right;">
+            <div style="font-weight: 600; font-size: 13px; color: var(--primary-color, #10B981);">Actif</div>
           </div>
         </div>
-        <button class="btn btn-danger" onclick="disconnectApi()" style="margin-top: 16px;">
-          <i class="fa fa-unlink"></i>
-          Déconnecter
-        </button>
+        <div class="row">
+          <div>
+            <div class="row-label">Dernière synchronisation</div>
+            <div class="row-hint">${lastSync}</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="disconnectApi()">
+            <i class="fa fa-unlink"></i>
+            Déconnecter
+          </button>
+        </div>
       `;
       
-      // Montrer le bouton de sync
       document.getElementById('syncBtn').style.display = 'inline-flex';
     } else {
       document.getElementById('apiStatus').innerHTML = 
         '<span class="status-badge status-disconnected"><i class="fa fa-times-circle"></i> Non connecté</span>';
+      
       document.getElementById('apiStatusContent').innerHTML = `
-        <div class="empty-state" style="padding: 40px 20px;">
-          <div style="font-size: 48px; margin-bottom: 12px;">🔌</div>
-          <div style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 8px;">
-            API Igloohome non connectée
-          </div>
-          <div style="font-size: 14px; color: #6B7280; margin-bottom: 20px;">
-            Connectez votre compte Igloohome pour commencer à gérer vos serrures
-          </div>
-          <button class="btn btn-primary" onclick="openConnectModal()">
+        <div class="empty-state">
+          <div class="empty-state-icon">🔌</div>
+          <div class="empty-state-title">API Igloohome non connectée</div>
+          <div class="empty-state-text">Connectez votre compte Igloohome pour commencer</div>
+          <button class="btn btn-primary" onclick="openConnectModal()" style="margin-top: 16px;">
             <i class="fa fa-plug"></i>
             Connecter maintenant
           </button>
         </div>
       `;
       
-      // Cacher le bouton de sync
       document.getElementById('syncBtn').style.display = 'none';
     }
   } catch (err) {
@@ -607,7 +594,7 @@ async function loadLocks() {
           <div class="empty-state-icon">🔒</div>
           <div class="empty-state-title">Aucune serrure</div>
           <div class="empty-state-text">
-            ${apiConnection ? 'Cliquez sur "Synchroniser" pour récupérer vos serrures depuis Igloohome' : 'Connectez d\'abord votre API Igloohome'}
+            ${apiConnection ? 'Cliquez sur "Synchroniser" pour récupérer vos serrures' : 'Connectez d\'abord votre API Igloohome'}
           </div>
         </div>
       `;
@@ -617,9 +604,10 @@ async function loadLocks() {
   } catch (err) {
     console.error('Erreur chargement serrures:', err);
     document.getElementById('locksContent').innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #EF4444;">
-        <i class="fa fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 12px;"></i>
-        <div>Erreur de chargement des serrures</div>
+      <div class="empty-state">
+        <div class="empty-state-icon" style="color: #EF4444;">⚠️</div>
+        <div class="empty-state-title">Erreur de chargement</div>
+        <div class="empty-state-text">Impossible de charger les serrures</div>
       </div>
     `;
   }
@@ -636,27 +624,22 @@ function renderLocks() {
           <div style="flex: 1;">
             <div class="lock-name">${lock.lock_name}</div>
             <div class="lock-type">${lock.lock_type || 'Serrure connectée'}</div>
+            ${lock.serial_number ? `<div class="row-hint" style="margin-top: 4px;">S/N: ${lock.serial_number}</div>` : ''}
           </div>
           <div class="lock-icon">
             <i class="fa fa-lock"></i>
           </div>
         </div>
         
-        ${lock.serial_number ? `
-          <div style="font-size: 12px; color: #9CA3AF; margin-top: 8px;">
-            S/N: ${lock.serial_number}
-          </div>
-        ` : ''}
-        
         ${propertyName ? `
           <div class="lock-property">
-            <i class="fa fa-home" style="color: #9CA3AF; font-size: 12px;"></i>
+            <i class="fa fa-home" style="color: var(--text-secondary); font-size: 11px;"></i>
             <span class="property-badge">${propertyName}</span>
           </div>
         ` : `
           <div class="lock-property">
             <i class="fa fa-exclamation-circle" style="color: #F59E0B;"></i>
-            <span style="font-size: 12px; color: #F59E0B; font-weight: 600;">Non associée</span>
+            <span style="font-size: 12px; color: #F59E0B; font-weight: 600;">Non associée à un logement</span>
           </div>
         `}
       </div>
@@ -791,7 +774,6 @@ function openAssignModal(lockId) {
   select.innerHTML = '<option value="">-- Choisir un logement --</option>' +
     properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   
-  // Pré-sélectionner si déjà assigné
   if (selectedLock.assignment) {
     select.value = selectedLock.assignment.property_id;
   }
