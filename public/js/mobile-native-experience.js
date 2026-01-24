@@ -143,7 +143,7 @@
         { id: 'dashboard', icon: 'fa-home', label: 'Accueil' },
         { id: 'calendar', icon: 'fa-calendar', label: 'Calendrier' },
         { id: 'messages', icon: 'fa-comment', label: 'Messages', badge: 0 },
-        { id: 'smart-locks', icon: 'fa-lock', label: 'Serrures' },
+        { id: 'properties', icon: 'fa-building', label: 'Logements' },
         { id: 'more', icon: 'fa-ellipsis-h', label: 'Plus' }
       ];
 
