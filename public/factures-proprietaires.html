@@ -1493,35 +1493,6 @@ window.markOwnerInvoicePaid = async function (id) {
   }
 };
 
-
-window.editClient = function(clientId) {
-    const client = clients.find(c => c.id == clientId);
-    if (!client) {
-        alert("Client introuvable.");
-        return;
-    }
-
-    editingClientId = clientId;
-
-    const titleEl = document.getElementById('clientModalTitle');
-    if (titleEl) titleEl.textContent = 'Modifier le client';
-
-    const type = client.client_type || (client.company_name ? 'business' : 'individual');
-    const radio = document.querySelector(`input[name="clientType"][value="${type}"]`);
-    if (radio) radio.checked = true;
-    toggleClientType();
-
-    document.getElementById("clientFirstName").value   = client.first_name   || "";
-    document.getElementById("clientLastName").value    = client.last_name    || "";
-    document.getElementById("clientCompanyName").value = client.company_name || "";
-    document.getElementById("clientEmail").value       = client.email        || "";
-    document.getElementById("clientAddress").value     = client.address      || "";
-    document.getElementById("clientPostalCode").value  = client.postal_code  || "";
-    document.getElementById("clientCity").value        = client.city         || "";
-
-    document.getElementById("clientModal").classList.add("active");
-};
-
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
   window.addPrestation = function(type) {
     if (isReadOnlyMode) return;
