@@ -14,6 +14,7 @@
     dashboard: '/app.html',
     calendar: '/app.html#calendar',
     messages: '/messages.html',
+    'smart-locks': '/smart-locks.html',
     properties: '/settings.html',  // Logements
     more: 'bottomsheet'
   };
@@ -28,7 +29,7 @@
 
   // ✅ Pages du menu "Plus" (détection prioritaire)
   const PLUS_PAGES = [
-    'notifications',
+    'smart-locks',
     'settings-account', 
     'cleaning',
     'deposits',
@@ -42,11 +43,16 @@
   if (dataPage === 'settings') {
     // settings.html (Mes logements) → Onglet Logements
     activeTab = 'properties';
+  } else if (dataPage === 'smart-locks') {
+    // smart-locks.html → Onglet Serrures
+    activeTab = 'smart-locks';
   } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
     // Pages du menu Plus → Onglet Plus
     activeTab = 'more';
   } else if (currentPath.includes('messages')) {
     activeTab = 'messages';
+  } else if (currentPath.includes('smart-locks')) {
+    activeTab = 'smart-locks';
   } else if (currentPath.includes('settings')) {
     // Fallback pour /settings.html sans data-page
     activeTab = 'properties';
@@ -85,8 +91,8 @@
             <i class="fas fa-user-cog"></i> Paramètres du compte
           </button>
           
-          <button class="btn btn-secondary" onclick="window.location.href='/notifications.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-bell"></i> Notifications
+          <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
+            <i class="fas fa-lock"></i> Serrures connectées
           </button>
           
           <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
