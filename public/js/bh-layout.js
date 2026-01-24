@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-/* /js/bh-layout.js – injection sidebar + header standard */
-/* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
+/* /js/bh-layout.js - injection sidebar + header standard */
+/* VERSION CORRIGEE - Logo "B" unifie partout (sidebar + mobile) avec grand B */
 const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
 
 const SIDEBAR_HTML = `
@@ -50,7 +50,7 @@ const SIDEBAR_HTML = `
         <i class="fas fa-book-open"></i><span>Livret d'accueil</span>
       </a>
       <a class="nav-item" data-page="cleaning" href="/cleaning.html">
-        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
+        <i class="fas fa-broom"></i><span>Gestion du menage</span>
       </a>
 
       <div class="nav-section">
@@ -59,7 +59,7 @@ const SIDEBAR_HTML = `
           <i class="fas fa-file-invoice"></i><span>Factures clients</span>
         </a>
         <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
-          <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
+          <i class="fas fa-file-invoice-dollar"></i><span>Factures proprietaires</span>
         </a>
       </div>
 
@@ -71,11 +71,11 @@ const SIDEBAR_HTML = `
       </a>
     </div>
 
-    <!-- PARAMÈTRES -->
+    <!-- PARAMETRES -->
     <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
+      <div class="nav-section-title">Parametres</div>
       <a class="nav-item" data-page="settings-account" href="/settings-account.html">
-        <i class="fas fa-cog"></i><span>Paramètres</span>
+        <i class="fas fa-cog"></i><span>Parametres</span>
       </a>
       <a class="nav-item" data-page="help" href="/help.html">
         <i class="fas fa-question-circle"></i><span>Aide</span>
@@ -99,7 +99,7 @@ const SIDEBAR_HTML = `
 `;
 
   // ============================================
-  // 📝 TEXTE DU LOGO MOBILE
+  // TEXTE DU LOGO MOBILE
   // ============================================
   const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
     <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
@@ -158,20 +158,20 @@ const SIDEBAR_HTML = `
       });
     }
 
-    // ✅ BOUTON DÉCONNEXION : Attacher l'event listener après injection
+    // BOUTON DECONNEXION : Attacher l'event listener apres injection
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("🚪 Déconnexion...");
+        console.log("Deconnexion...");
         localStorage.removeItem("lcc_token");
         localStorage.removeItem("lcc_user");
         window.location.href = "/login.html";
       });
     }
 
-    // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
+    // INFOS UTILISATEUR : Remplir nom, avatar, company
     const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
     if (user.firstName) {
       const nameEl = document.getElementById('sidebarUserName');
@@ -184,9 +184,9 @@ const SIDEBAR_HTML = `
       if (companyEl) companyEl.textContent = user.company;
     }
 
-    // ✅ Émettre un événement quand la sidebar est prête
+    // Emettre un evenement quand la sidebar est prete
     document.dispatchEvent(new CustomEvent('sidebarReady'));
-    console.log("✅ Sidebar injectée avec logo B grand format");
+    console.log("Sidebar injectee avec logo B grand format");
   }
 
   function injectHeader() {
@@ -223,7 +223,7 @@ const SIDEBAR_HTML = `
   }
 
   // ============================================
-  // 🎨 NORMALISATION DU BRANDING MOBILE
+  // NORMALISATION DU BRANDING MOBILE
   // ============================================
   function normalizeBranding() {
     const mobileLogo = document.querySelector(".mobile-logo");
@@ -237,11 +237,11 @@ const SIDEBAR_HTML = `
       }
     }
 
-    // 2. REMPLACER L'ICÔNE PAR LE LOGO "B" (IMG) GRAND FORMAT
+    // 2. REMPLACER L'ICONE PAR LE LOGO "B" (IMG) GRAND FORMAT
     if (mobileLogo) {
       const existingLogo = mobileLogo.querySelector("img, svg");
 
-      // Besoin de MAJ si aucun logo, ou si img != notre fichier, ou si SVG présent (legacy)
+      // Besoin de MAJ si aucun logo, ou si img != notre fichier, ou si SVG present (legacy)
       const needsUpdate =
         !existingLogo ||
         (existingLogo.tagName.toLowerCase() === "img" &&
@@ -260,10 +260,10 @@ const SIDEBAR_HTML = `
   }
 
   // ============================================
-  // 🎨 FORCE LE REMPLACEMENT DU LOGO SIDEBAR
+  // FORCE LE REMPLACEMENT DU LOGO SIDEBAR
   // ============================================
   function forceUpdateSidebarLogo() {
-    // Force le logo sidebar (remplace les anciens SVG éventuels par l'IMG)
+    // Force le logo sidebar (remplace les anciens SVG eventuels par l'IMG)
     const sidebarAnchors = document.querySelectorAll(".sidebar-logo");
 
     sidebarAnchors.forEach(a => {
@@ -283,38 +283,38 @@ const SIDEBAR_HTML = `
   }
 
   // ============================================
-  // 🚀 INITIALISATION
+  // INITIALISATION
   // ============================================
   function init() {
-    console.log("🚀 bh-layout.js - Initialisation...");
+    console.log("bh-layout.js - Initialisation...");
     
     injectSidebar();
     injectHeader();
     normalizeBranding();
     
-    // Réappliquer le branding et forcer la mise à jour après un court délai
+    // Reappliquer le branding et forcer la mise a jour apres un court delai
     setTimeout(() => {
       normalizeBranding();
       forceUpdateSidebarLogo();
     }, 100);
     
-    // Vérification supplémentaire après 500ms
+    // Verification supplementaire apres 500ms
     setTimeout(() => {
       forceUpdateSidebarLogo();
       normalizeBranding();
     }, 500);
     
-    console.log("✅ bh-layout.js - Prêt avec logo unifié");
+    console.log("bh-layout.js - Pret avec logo unifie");
   }
 
-  // Démarrer dès que le DOM est prêt
+  // Demarrer des que le DOM est pret
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
 
-  // Exposer pour débogage
+  // Exposer pour debogage
   window.bhLayout = {
     normalizeBranding,
     injectSidebar,
@@ -323,4 +323,3 @@ const SIDEBAR_HTML = `
   };
 
 })();
-
