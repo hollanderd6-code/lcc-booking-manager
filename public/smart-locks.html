@@ -318,14 +318,7 @@
 </div>
 
 <script>
-// Vérifier le token mais laisser le temps à bh-layout de se charger
-setTimeout(() => {
-  const token = localStorage.getItem('lcc_token');
-  if (!token) {
-    window.location.href = '/login.html';
-  }
-}, 100);
-
+// Pas de vérification du token ici, bh-layout.js s'en charge
 const token = localStorage.getItem('lcc_token');
 let apiConnection = null;
 let locks = [];
@@ -333,12 +326,7 @@ let properties = [];
 let selectedLock = null;
 
 async function init() {
-  // Re-vérifier le token avant d'initialiser
-  if (!localStorage.getItem('lcc_token')) {
-    window.location.href = '/login.html';
-    return;
-  }
-  
+  // Initialiser l'app
   await loadApiStatus();
   await loadProperties();
   await loadLocks();
