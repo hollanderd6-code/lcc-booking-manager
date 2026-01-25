@@ -6388,8 +6388,7 @@ app.get('/api/cleaning/assignments', async (req, res) => {
 // ============================================
 // ROUTES API - SERRURES CONNECTÉES
 // ============================================
-app.use('/api/smart-locks', smartLocksRoutes);
-
+app.use('/api/smart-locks', authenticateToken, smartLocksRoutes);
 // ============================================
 
 app.get('/api/properties', authenticateUser, checkSubscription, async (req, res) => {

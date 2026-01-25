@@ -187,6 +187,58 @@
     }
 
 </style>
+<!-- Script auth + user + logout -->
+<script src="/js/auth-fetch.js"></script>
+<script>
+(function () {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
+
+  const rawUser = localStorage.getItem('lcc_user');
+  let user = null;
+
+  try {
+    user = rawUser ? JSON.parse(rawUser) : null;
+  } catch (e) {
+    console.error('Impossible de lire lcc_user', e);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (user) {
+      const nameEl = document.getElementById('sidebarUserName');
+      const companyEl = document.getElementById('sidebarUserCompany');
+      const avatarEl = document.getElementById('sidebarUserAvatar');
+
+      if (nameEl) {
+        nameEl.textContent = user.firstName
+          ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+          : (user.email || 'Mon compte');
+      }
+
+      if (companyEl) {
+        companyEl.textContent = user.company || 'Mon espace';
+      }
+
+      if (avatarEl) {
+        const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+        avatarEl.textContent = initial.toUpperCase();
+      }
+    }
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        localStorage.removeItem('lcc_token');
+        localStorage.removeItem('lcc_user');
+        window.location.href = '/login.html';
+      });
+    }
+  });
+})();
+</script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-page="smart-locks">
@@ -607,7 +659,6 @@ window.addEventListener('DOMContentLoaded', init);
 
 </script>
 
-<script src="/js/auth-fetch.js"></script>
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
