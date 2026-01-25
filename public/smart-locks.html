@@ -114,6 +114,8 @@
       .sidebar.active { transform: translateX(0); }
       .main-wrapper { margin-left: 0; }
       .menu-toggle { display: block; }
+      .mobile-header { display: flex; justify-content: center; align-items: center; }
+      .mobile-menu-btn { display: none; }
     }
     @media (min-width: 1025px) { .menu-toggle { display: none; } }
 </style>
@@ -121,13 +123,10 @@
 <body data-page="smart-locks">
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
-<a class="mobile-logo" href="/app.html">
+<a class="mobile-logo" href="/app.html" style="margin: 0 auto;">
 <i class="fas fa-calendar-check"></i>
 <span class="mobile-logo-text">Boostinghost</span>
 </a>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
