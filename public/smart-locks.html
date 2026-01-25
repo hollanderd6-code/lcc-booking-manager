@@ -314,13 +314,27 @@
 
 <script src="/js/auth-fetch.js"></script>
 <script>
-const token = localStorage.getItem('lcc_token');
-if (!token) window.location.href = '/login.html';
+// Attendre que la page soit complètement chargée
+document.addEventListener('DOMContentLoaded', function() {
+  token = localStorage.getItem('lcc_token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
+
+  // Initialiser l'app
+  initApp();
+});
 
 let apiConnection = null;
 let locks = [];
 let properties = [];
 let selectedLock = null;
+let token = null; // Token sera initialisé au chargement
+
+async function initApp() {
+  await init();
+}
 
 async function init() {
   await loadApiStatus();
@@ -598,7 +612,8 @@ async function assignLockToProperty() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', init);
+// Init géré plus haut dans DOMContentLoaded
+
 </script>
 
 <script src="/js/bh-layout.js"></script>
