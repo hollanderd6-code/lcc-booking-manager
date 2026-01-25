@@ -118,6 +118,74 @@
       .mobile-menu-btn { display: none; }
     }
     @media (min-width: 1025px) { .menu-toggle { display: none; } }
+
+    /* BOTTOM SHEET STYLES */
+    .bottom-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+    .bottom-sheet.open {
+      pointer-events: auto;
+    }
+    .bottom-sheet-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0);
+      transition: background 0.3s ease;
+    }
+    .bottom-sheet.open .bottom-sheet-overlay {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    .bottom-sheet-content {
+      position: relative;
+      width: 100%;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      max-height: 80vh;
+    }
+    .bottom-sheet.open .bottom-sheet-content {
+      transform: translateY(0);
+    }
+    .sheet-handle {
+      width: 40px;
+      height: 4px;
+      background: #d1d5db;
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .sheet-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .sheet-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      color: #6b7280;
+    }
+    .sheet-body {
+      /* Styles pour le contenu */
+    }
+
 </style>
 </head>
 <body data-page="smart-locks">
