@@ -187,6 +187,17 @@
     }
 
 </style>
+<script src="/js/auth-fetch.js"></script>
+<script>
+(function() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
+})();
+</script>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-page="smart-locks">
 <!-- MOBILE HEADER -->
@@ -264,20 +275,24 @@
     <div class="modal-subtitle">Connectez votre compte Igloohome pour gérer vos serrures</div>
 
     <div class="form-group">
-      <label>Client ID</label>
-      <input type="text" class="form-control" id="clientId" placeholder="Votre Client ID Igloohome"/>
-      <div class="form-help">Trouvez vos credentials dans votre compte développeur</div>
+      <label>Client ID (API ID)</label>
+      <input type="text" class="form-control" id="clientId" placeholder="Ex: 72BZWrP540hDO3reWsGorF"/>
+      <div class="form-help">Copiez l'"API ID" depuis votre portail iglooaccess</div>
     </div>
 
     <div class="form-group">
-      <label>Client Secret</label>
-      <input type="password" class="form-control" id="clientSecret" placeholder="Votre Client Secret"/>
+      <label>Client Secret (API Key)</label>
+      <input type="password" class="form-control" id="clientSecret" placeholder="Cliquez sur les *** pour révéler la clé"/>
+      <div class="form-help">Copiez l'"API Key" (cliquez sur les *** pour l'afficher)</div>
     </div>
 
     <div class="alert-box">
       <div class="alert-content">
-        <strong>Besoin d'aide ?</strong>
-        Visitez <a href="https://developer.igloohome.co" target="_blank">developer.igloohome.co</a> pour obtenir vos credentials
+        <strong>📱 Nouveau système iglooaccess</strong><br>
+        1️⃣ Créez un compte sur <a href="https://developer.igloocompany.co" target="_blank">developer.igloocompany.co</a><br>
+        2️⃣ Connectez-vous et cliquez sur "API Access" dans le menu<br>
+        3️⃣ Copiez votre Client ID et Client Secret<br>
+        <small style="margin-top:8px;display:block;opacity:0.8;">💡 30 jours d'essai gratuit, puis $2/serrure/mois</small>
       </div>
     </div>
 
@@ -312,11 +327,8 @@
   </div>
 </div>
 
-<script src="/js/auth-fetch.js"></script>
 <script>
 const token = localStorage.getItem('lcc_token');
-if (!token) window.location.href = '/login.html';
-
 let apiConnection = null;
 let locks = [];
 let properties = [];
@@ -598,7 +610,9 @@ async function assignLockToProperty() {
   }
 }
 
+// Init au chargement de la page
 window.addEventListener('DOMContentLoaded', init);
+
 </script>
 
 <script src="/js/bh-layout.js"></script>

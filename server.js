@@ -33,6 +33,7 @@ const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ✅ IMPORT DES ROUTES DU CHAT
 // ============================================
 const { setupChatRoutes } = require('./routes/chat_routes');
+const smartLocksRoutes = require('./routes/smart-locks-routes');
 // ============================================
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
 // ============================================
@@ -1587,6 +1588,9 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // APP / STRIPE / STORE
 // ============================================
 const app = express();
+
+// Rendre les variables globales disponibles pour les routes
+app.locals.pool = pool;
 
 // Augmenter la limite pour les uploads de photos
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -6380,6 +6384,12 @@ app.get('/api/cleaning/assignments', async (req, res) => {
 });
 // ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
+
+// ============================================
+// ROUTES API - SERRURES CONNECTÉES
+// ============================================
+app.use('/api/smart-locks', smartLocksRoutes);
+
 // ============================================
 
 app.get('/api/properties', authenticateUser, checkSubscription, async (req, res) => {
@@ -11824,6 +11834,7 @@ console.log('✅ Service de notifications initialisé');
   
   // ✅ Charger les propriétés
   await loadProperties();
+  app.locals.PROPERTIES = PROPERTIES;
   
   // ✅ Charger les réservations depuis PostgreSQL
   await loadReservationsFromDB();

@@ -1,454 +1,627 @@
-// routes/smart-locks-routes.js
-// Routes API pour la gestion des serrures connectées Igloohome
+<!DOCTYPE html>
 
-const express = require('express');
-const router = express.Router();
-const igloohomeService = require('../services/igloohome-service');
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
+<meta content="no-cache" http-equiv="Pragma"/>
+<meta content="0" http-equiv="Expires"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Boostinghost – Serrures Connectées</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link href="/css/invoices-cards-style.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">    
+<style>
+    /* FIX iOS POUR APP MOBILE */
+    html, body {
+      margin: 0 !important;
+    }
+    .app-container {
+      margin-top: 0 !important;
+    }
+    .page-content {
+      margin-top: 0 !important;
+      max-width: 1100px;
+    }
+    
+    /* DESIGN SYSTEM */
+    :root { --primary: #10B981; --primary-dark: #059669; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
-// Helper pour obtenir l'utilisateur depuis le token
-async function getUserFromToken(req, pool) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return null;
+    html, body { margin: 0; padding: 0; background: var(--bg-body); font-family: 'Inter', sans-serif; height: 100%; overflow-x: hidden; }
+    .app-container { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 260px; background: white; border-right: 1px solid #e5e7eb; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 24px; }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #111827; font-weight: 800; font-size: 18px; }
+    .nav-section-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin: 24px 24px 8px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 24px; color: #4b5563; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; border-right: 3px solid transparent; }
+    .nav-item:hover { background: #f9fafb; color: #111827; }
+    .nav-item.active { background: #ecfdf5; color: #10B981; border-right-color: #10B981; }
+    .nav-item i { width: 20px; text-align: center; }
 
-  const token = authHeader.replace('Bearer ', '');
-  const result = await pool.query('SELECT id FROM users WHERE id = $1', [token]);
+    /* CONTENT */
+    .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
+    .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
+    .main-content { padding: 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+
+    /* DASHBOARD */
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .page-title { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
+    .page-subtitle { color: #6b7280; font-size: 14px; margin-top: 4px; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 8px; display: block; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #111827; }
+
+    /* TABS */
+    .nav-tabs { display: inline-flex; background: #e5e7eb; padding: 4px; border-radius: 10px; margin-bottom: 24px; }
+    .nav-tab { padding: 8px 24px; border-radius: 8px; border: none; background: transparent; font-weight: 600; color: #4b5563; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .nav-tab.active { background: white; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+
+    /* LOCK LIST */
+    .lock-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .lock-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; transition: all 0.2s; cursor: pointer; }
+    .lock-item:hover { border-color: #10B981; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .lock-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .lock-icon { width: 48px; height: 48px; background: #10B981; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
+    .lock-name { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+    .lock-type { font-size: 12px; color: #6b7280; }
+    .lock-property { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; }
+    .property-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; background: #EDE9FE; color: #5B21B6; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #374151; }
+    .btn-danger { background: #ef4444; color: white; }
+
+    /* MODALS */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: white; border-radius: 16px; width: 90%; max-width: 500px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .modal-subtitle { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #374151; }
+    .form-control { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+    .form-help { font-size: 11px; color: #6b7280; margin-top: 4px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    .alert-box { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+    .alert-box .alert-content { font-size: 12px; color: #92400E; }
+    .alert-box strong { display: block; margin-bottom: 4px; }
+    .alert-box a { color: #D97706; text-decoration: underline; }
+
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .status-connected { background: #D1FAE5; color: #065F46; }
+    .status-disconnected { background: #FEE2E2; color: #991B1B; }
+
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+    .empty-state-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .empty-state-text { font-size: 14px; color: #6b7280; margin-bottom: 20px; }
+
+    @media (max-width: 1024px) {
+      .sidebar { transform: translateX(-100%); } 
+      .sidebar.active { transform: translateX(0); }
+      .main-wrapper { margin-left: 0; }
+      .menu-toggle { display: block; }
+      .mobile-header { display: flex; justify-content: center; align-items: center; }
+      .mobile-menu-btn { display: none; }
+    }
+    @media (min-width: 1025px) { .menu-toggle { display: none; } }
+
+    /* BOTTOM SHEET STYLES */
+    .bottom-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+    .bottom-sheet.open {
+      pointer-events: auto;
+    }
+    .bottom-sheet-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0);
+      transition: background 0.3s ease;
+    }
+    .bottom-sheet.open .bottom-sheet-overlay {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    .bottom-sheet-content {
+      position: relative;
+      width: 100%;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      max-height: 80vh;
+    }
+    .bottom-sheet.open .bottom-sheet-content {
+      transform: translateY(0);
+    }
+    .sheet-handle {
+      width: 40px;
+      height: 4px;
+      background: #d1d5db;
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .sheet-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .sheet-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      color: #6b7280;
+    }
+    .sheet-body {
+      /* Styles pour le contenu */
+    }
+
+</style>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
+</head>
+<body data-page="smart-locks">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html" style="margin: 0 auto;">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Boostinghost</span>
+</a>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<div class="main-wrapper">
+<header class="top-bar"></header>
+<main class="main-content">
+<div id="bhHeaderActions" style="display:none;">
+<button class="btn btn-primary" onclick="openConnectModal()">
+<i class="fa fa-plug"></i> Connecter Igloohome
+</button>
+</div>
+<div id="bhHeader"></div>
+
+<div class="dashboard-header">
+<div>
+<h1 class="page-title">Serrures Connectées</h1>
+<p class="page-subtitle">Gérez vos serrures Igloohome et codes d'accès automatiques.</p>
+</div>
+</div>
+
+<div class="stats-row">
+<div class="stat-card">
+<span class="stat-label">Connexion API</span>
+<span class="stat-value" id="apiStatus" style="font-size: 14px;"></span>
+</div>
+<div class="stat-card">
+<span class="stat-label">Mes Serrures</span>
+<span class="stat-value" id="lockCount">0</span>
+</div>
+<div class="stat-card">
+<span class="stat-label">Codes Générés</span>
+<span class="stat-value" id="codesCount">0</span>
+</div>
+</div>
+
+<div class="nav-tabs">
+<button class="nav-tab active" id="btn-locks" onclick="switchTab('locks')">Mes Serrures</button>
+<button class="nav-tab" id="btn-config" onclick="switchTab('config')">Configuration</button>
+</div>
+
+<div class="tab-content active" id="tab-locks">
+<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:20px;">
+<div id="locksContent">
+<div class="empty-state">
+<div class="empty-state-icon">⏳</div>
+<div class="empty-state-title">Chargement...</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-config">
+<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:20px;">
+<div id="configContent"></div>
+</div>
+</div>
+
+</main>
+</div>
+
+<!-- Modal : Connecter API -->
+<div class="modal-overlay" id="connectModal">
+  <div class="modal-content">
+    <div class="modal-title">Connecter Igloohome</div>
+    <div class="modal-subtitle">Connectez votre compte Igloohome pour gérer vos serrures</div>
+
+    <div class="form-group">
+      <label>Client ID (API ID)</label>
+      <input type="text" class="form-control" id="clientId" placeholder="Ex: 72BZWrP540hDO3reWsGorF"/>
+      <div class="form-help">Copiez l'"API ID" depuis votre portail iglooaccess</div>
+    </div>
+
+    <div class="form-group">
+      <label>Client Secret (API Key)</label>
+      <input type="password" class="form-control" id="clientSecret" placeholder="Cliquez sur les *** pour révéler la clé"/>
+      <div class="form-help">Copiez l'"API Key" (cliquez sur les *** pour l'afficher)</div>
+    </div>
+
+    <div class="alert-box">
+      <div class="alert-content">
+        <strong>📱 Nouveau système iglooaccess</strong><br>
+        1️⃣ Créez un compte sur <a href="https://developer.igloocompany.co" target="_blank">developer.igloocompany.co</a><br>
+        2️⃣ Connectez-vous et cliquez sur "API Access" dans le menu<br>
+        3️⃣ Copiez votre Client ID et Client Secret<br>
+        <small style="margin-top:8px;display:block;opacity:0.8;">💡 30 jours d'essai gratuit, puis $2/serrure/mois</small>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeConnectModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="connectIgloohome()">
+        <i class="fa fa-plug"></i> Connecter
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Associer -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-content">
+    <div class="modal-title">Associer à un logement</div>
+    <div class="modal-subtitle" id="assignLockName"></div>
+
+    <div class="form-group">
+      <label>Sélectionner un logement</label>
+      <select class="form-control" id="propertySelect">
+        <option value="">-- Choisir un logement --</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeAssignModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="assignLockToProperty()">
+        <i class="fa fa-check"></i> Associer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Vérifier le token mais laisser le temps à bh-layout de se charger
+setTimeout(() => {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    window.location.href = '/login.html';
+  }
+}, 100);
+
+const token = localStorage.getItem('lcc_token');
+let apiConnection = null;
+let locks = [];
+let properties = [];
+let selectedLock = null;
+
+async function init() {
+  // Re-vérifier le token avant d'initialiser
+  if (!localStorage.getItem('lcc_token')) {
+    window.location.href = '/login.html';
+    return;
+  }
   
-  if (result.rows.length === 0) return null;
-  return result.rows[0];
+  await loadApiStatus();
+  await loadProperties();
+  await loadLocks();
 }
 
-// ============================================
-// GET /api/smart-locks/status
-// Vérifier le statut de connexion API
-// ============================================
-router.get('/status', async (req, res) => {
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('btn-'+id).classList.add('active');
+}
+
+async function loadApiStatus() {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const result = await req.app.locals.pool.query(
-      `SELECT id, provider, is_active, created_at, updated_at, token_expires_at
-       FROM smart_locks_api
-       WHERE user_id = $1 AND provider = 'igloohome'
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [user.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.json({
-        connected: false,
-        connection: null
-      });
-    }
-
-    const connection = result.rows[0];
+    const res = await fetch('/api/smart-locks/status', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
     
-    res.json({
-      connected: connection.is_active,
-      connection: {
-        id: connection.id,
-        provider: connection.provider,
-        is_active: connection.is_active,
-        created_at: connection.created_at,
-        updated_at: connection.updated_at,
-        token_expires_at: connection.token_expires_at
-      }
-    });
-  } catch (error) {
-    console.error('Erreur status API:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================
-// POST /api/smart-locks/connect
-// Connecter l'API Igloohome
-// ============================================
-router.post('/connect', async (req, res) => {
-  try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { clientId, clientSecret } = req.body;
-
-    if (!clientId || !clientSecret) {
-      return res.status(400).json({ error: 'Client ID et Secret requis' });
-    }
-
-    // Tester la connexion en obtenant un token
-    let tokenData;
-    try {
-      tokenData = await igloohomeService.getAccessToken(clientId, clientSecret);
-    } catch (error) {
-      return res.status(400).json({ 
-        error: 'Identifiants Igloohome invalides',
-        details: error.message
-      });
-    }
-
-    // Calculer la date d'expiration
-    const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
-
-    // Vérifier si une connexion existe déjà
-    const existing = await req.app.locals.pool.query(
-      'SELECT id FROM smart_locks_api WHERE user_id = $1 AND provider = $2',
-      [user.id, 'igloohome']
-    );
-
-    if (existing.rows.length > 0) {
-      // Mettre à jour
-      await req.app.locals.pool.query(
-        `UPDATE smart_locks_api 
-         SET client_id = $1, client_secret = $2, access_token = $3, 
-             token_expires_at = $4, is_active = true, updated_at = NOW()
-         WHERE user_id = $5 AND provider = 'igloohome'`,
-        [clientId, clientSecret, tokenData.access_token, expiresAt, user.id]
-      );
+    apiConnection = data.connection;
+    
+    if (data.connected) {
+      document.getElementById('apiStatus').innerHTML = '<span class="status-badge status-connected"><i class="fa fa-check-circle"></i> Connecté</span>';
+      loadConfigTab(true);
     } else {
-      // Créer
-      await req.app.locals.pool.query(
-        `INSERT INTO smart_locks_api 
-         (user_id, provider, client_id, client_secret, access_token, token_expires_at, is_active)
-         VALUES ($1, 'igloohome', $2, $3, $4, $5, true)`,
-        [user.id, clientId, clientSecret, tokenData.access_token, expiresAt]
-      );
+      document.getElementById('apiStatus').innerHTML = '<span class="status-badge status-disconnected"><i class="fa fa-times-circle"></i> Non connecté</span>';
+      loadConfigTab(false);
     }
-
-    res.json({
-      success: true,
-      message: 'API Igloohome connectée avec succès'
-    });
-  } catch (error) {
-    console.error('Erreur connexion API:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+  } catch (err) {
+    console.error('Erreur:', err);
   }
-});
+}
 
-// ============================================
-// POST /api/smart-locks/disconnect
-// Déconnecter l'API
-// ============================================
-router.post('/disconnect', async (req, res) => {
+function loadConfigTab(isConnected) {
+  const html = isConnected ? `
+    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">API Igloohome Connectée</h3>
+    <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">Votre API Igloohome est active</p>
+    <button class="btn btn-primary" onclick="syncLocks()">
+      <i class="fa fa-sync"></i> Synchroniser les serrures
+    </button>
+    <button class="btn btn-danger" onclick="disconnectApi()" style="margin-left: 10px;">
+      <i class="fa fa-unlink"></i> Déconnecter
+    </button>
+  ` : `
+    <div class="empty-state">
+      <div class="empty-state-icon">🔌</div>
+      <div class="empty-state-title">API non connectée</div>
+      <div class="empty-state-text">Connectez votre API Igloohome pour commencer</div>
+      <button class="btn btn-primary" onclick="openConnectModal()">
+        <i class="fa fa-plug"></i> Connecter maintenant
+      </button>
+    </div>
+  `;
+  document.getElementById('configContent').innerHTML = html;
+}
+
+async function loadLocks() {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    await req.app.locals.pool.query(
-      `UPDATE smart_locks_api 
-       SET is_active = false, updated_at = NOW()
-       WHERE user_id = $1 AND provider = 'igloohome'`,
-      [user.id]
-    );
-
-    res.json({
-      success: true,
-      message: 'API déconnectée'
+    const res = await fetch('/api/smart-locks', {
+      headers: { 'Authorization': 'Bearer ' + token }
     });
-  } catch (error) {
-    console.error('Erreur déconnexion:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    const data = await res.json();
+    
+    locks = data.locks || [];
+    document.getElementById('lockCount').textContent = locks.length;
+    
+    if (locks.length === 0) {
+      document.getElementById('locksContent').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔒</div>
+          <div class="empty-state-title">Aucune serrure</div>
+          <div class="empty-state-text">
+            ${apiConnection ? 'Synchronisez pour récupérer vos serrures' : 'Connectez d\'abord votre API'}
+          </div>
+        </div>
+      `;
+    } else {
+      renderLocks();
+    }
+  } catch (err) {
+    console.error('Erreur:', err);
+    document.getElementById('locksContent').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon" style="color: #ef4444;">⚠️</div>
+        <div class="empty-state-title">Erreur de chargement</div>
+      </div>
+    `;
   }
-});
+}
 
-// ============================================
-// GET /api/smart-locks
-// Liste des serrures de l'utilisateur
-// ============================================
-router.get('/', async (req, res) => {
+function renderLocks() {
+  const html = locks.map(lock => {
+    const assignment = lock.assignment;
+    const propertyName = assignment ? assignment.property_name : null;
+    
+    return `
+      <div class="lock-item" onclick="openAssignModal(${lock.id})">
+        <div class="lock-item-header">
+          <div style="flex: 1;">
+            <div class="lock-name">${lock.lock_name}</div>
+            <div class="lock-type">${lock.lock_type || 'Serrure connectée'}</div>
+            ${lock.serial_number ? `<div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">S/N: ${lock.serial_number}</div>` : ''}
+          </div>
+          <div class="lock-icon">
+            <i class="fa fa-lock"></i>
+          </div>
+        </div>
+        
+        ${propertyName ? `
+          <div class="lock-property">
+            <i class="fa fa-home" style="color: #9ca3af; font-size: 12px;"></i>
+            <span class="property-badge">${propertyName}</span>
+          </div>
+        ` : `
+          <div class="lock-property">
+            <i class="fa fa-exclamation-circle" style="color: #F59E0B;"></i>
+            <span style="font-size: 12px; color: #F59E0B; font-weight: 600;">Non associée</span>
+          </div>
+        `}
+      </div>
+    `;
+  }).join('');
+  
+  document.getElementById('locksContent').innerHTML = `<div class="lock-list">${html}</div>`;
+}
+
+async function syncLocks() {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+    const res = await fetch('/api/smart-locks/sync', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert(`✅ Synchronisation réussie !\n${data.added || 0} serrure(s) ajoutée(s)`);
+      await loadLocks();
+    } else {
+      alert('❌ ' + (data.error || 'Erreur'));
     }
-
-    const result = await req.app.locals.pool.query(
-      `SELECT 
-        sl.*,
-        la.property_id,
-        la.id as assignment_id
-       FROM smart_locks sl
-       LEFT JOIN lock_assignments la ON la.lock_id = sl.id AND la.is_active = true
-       WHERE sl.user_id = $1 AND sl.is_active = true
-       ORDER BY sl.created_at DESC`,
-      [user.id]
-    );
-
-    // Enrichir avec les noms de propriétés
-    const locks = result.rows.map(lock => {
-      let propertyName = null;
-      
-      if (lock.property_id) {
-        // Chercher le nom de la propriété dans PROPERTIES (variable globale du serveur)
-        const property = req.app.locals.PROPERTIES?.find(p => p.id === lock.property_id);
-        propertyName = property?.name || 'Logement inconnu';
-      }
-
-      return {
-        ...lock,
-        assignment: lock.property_id ? {
-          property_id: lock.property_id,
-          property_name: propertyName,
-          assignment_id: lock.assignment_id
-        } : null
-      };
-    });
-
-    res.json({
-      success: true,
-      locks: locks
-    });
-  } catch (error) {
-    console.error('Erreur liste serrures:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+  } catch (err) {
+    alert('❌ Erreur de synchronisation');
   }
-});
+}
 
-// ============================================
-// POST /api/smart-locks/sync
-// Synchroniser les serrures depuis Igloohome
-// ============================================
-router.post('/sync', async (req, res) => {
+async function loadProperties() {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    // Récupérer la connexion API
-    const apiResult = await req.app.locals.pool.query(
-      `SELECT id, client_id, client_secret, access_token, token_expires_at
-       FROM smart_locks_api
-       WHERE user_id = $1 AND provider = 'igloohome' AND is_active = true`,
-      [user.id]
-    );
-
-    if (apiResult.rows.length === 0) {
-      return res.status(400).json({ error: 'API non connectée' });
-    }
-
-    const apiConnection = apiResult.rows[0];
-
-    // Rafraîchir le token si nécessaire
-    let accessToken = apiConnection.access_token;
-    const refreshedToken = await igloohomeService.refreshTokenIfNeeded(
-      req.app.locals.pool,
-      apiConnection.id,
-      apiConnection.client_id,
-      apiConnection.client_secret,
-      apiConnection.token_expires_at
-    );
-
-    if (refreshedToken) {
-      accessToken = refreshedToken;
-    }
-
-    // Récupérer les serrures depuis Igloohome
-    const locks = await igloohomeService.getLocks(accessToken);
-
-    let added = 0;
-    let updated = 0;
-
-    for (const lock of locks) {
-      const lockId = lock.id || lock.lock_id;
-      const lockName = lock.name || lock.lock_name || 'Serrure sans nom';
-      const lockType = lock.type || lock.lock_type || 'Smart Lock';
-      const serialNumber = lock.serial_number || lock.sn;
-      const batteryLevel = lock.battery_level;
-
-      // Vérifier si existe déjà
-      const existing = await req.app.locals.pool.query(
-        'SELECT id FROM smart_locks WHERE user_id = $1 AND lock_id = $2',
-        [user.id, lockId]
-      );
-
-      if (existing.rows.length > 0) {
-        // Mettre à jour
-        await req.app.locals.pool.query(
-          `UPDATE smart_locks 
-           SET lock_name = $1, lock_type = $2, serial_number = $3, 
-               battery_level = $4, last_sync_at = NOW(), updated_at = NOW()
-           WHERE user_id = $5 AND lock_id = $6`,
-          [lockName, lockType, serialNumber, batteryLevel, user.id, lockId]
-        );
-        updated++;
-      } else {
-        // Créer
-        await req.app.locals.pool.query(
-          `INSERT INTO smart_locks 
-           (user_id, api_id, lock_id, lock_name, lock_type, serial_number, battery_level, last_sync_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-          [user.id, apiConnection.id, lockId, lockName, lockType, serialNumber, batteryLevel]
-        );
-        added++;
-      }
-    }
-
-    res.json({
-      success: true,
-      message: 'Synchronisation réussie',
-      added: added,
-      updated: updated,
-      total: locks.length
+    const res = await fetch('/api/properties', {
+      headers: { 'Authorization': 'Bearer ' + token }
     });
-  } catch (error) {
-    console.error('Erreur sync:', error);
-    res.status(500).json({ 
-      error: 'Erreur de synchronisation',
-      details: error.message
-    });
+    const data = await res.json();
+    properties = data.properties || [];
+  } catch (err) {
+    console.error('Erreur:', err);
   }
-});
+}
 
-// ============================================
-// POST /api/smart-locks/assign
-// Associer une serrure à un logement
-// ============================================
-router.post('/assign', async (req, res) => {
+function openConnectModal() {
+  document.getElementById('connectModal').classList.add('active');
+}
+
+function closeConnectModal() {
+  document.getElementById('connectModal').classList.remove('active');
+  document.getElementById('clientId').value = '';
+  document.getElementById('clientSecret').value = '';
+}
+
+async function connectIgloohome() {
+  const clientId = document.getElementById('clientId').value.trim();
+  const clientSecret = document.getElementById('clientSecret').value.trim();
+  
+  if (!clientId || !clientSecret) {
+    return alert('⚠️ Veuillez remplir tous les champs');
+  }
+  
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { lockId, propertyId } = req.body;
-
-    if (!lockId || !propertyId) {
-      return res.status(400).json({ error: 'Lock ID et Property ID requis' });
-    }
-
-    // Vérifier que la serrure appartient à l'utilisateur
-    const lockResult = await req.app.locals.pool.query(
-      'SELECT id FROM smart_locks WHERE id = $1 AND user_id = $2',
-      [lockId, user.id]
-    );
-
-    if (lockResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Serrure introuvable' });
-    }
-
-    // Supprimer toute assignation existante pour ce logement
-    await req.app.locals.pool.query(
-      'DELETE FROM lock_assignments WHERE user_id = $1 AND property_id = $2',
-      [user.id, propertyId]
-    );
-
-    // Créer la nouvelle assignation
-    await req.app.locals.pool.query(
-      `INSERT INTO lock_assignments (user_id, property_id, lock_id)
-       VALUES ($1, $2, $3)`,
-      [user.id, propertyId, lockId]
-    );
-
-    res.json({
-      success: true,
-      message: 'Serrure associée au logement'
+    const res = await fetch('/api/smart-locks/connect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ clientId, clientSecret })
     });
-  } catch (error) {
-    console.error('Erreur assignation:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert('✅ Connexion réussie !');
+      closeConnectModal();
+      await loadApiStatus();
+      await loadLocks();
+    } else {
+      alert('❌ ' + (data.error || 'Erreur'));
+    }
+  } catch (err) {
+    alert('❌ Erreur de connexion');
   }
-});
+}
 
-// ============================================
-// POST /api/smart-locks/generate-code
-// Générer un code d'accès pour une réservation
-// ============================================
-router.post('/generate-code', async (req, res) => {
+async function disconnectApi() {
+  if (!confirm('⚠️ Déconnecter l\'API Igloohome ?')) return;
+  
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const { propertyId, reservationKey, guestName, startDate, endDate } = req.body;
-
-    if (!propertyId || !reservationKey || !startDate || !endDate) {
-      return res.status(400).json({ error: 'Données manquantes' });
-    }
-
-    // Récupérer la serrure associée au logement
-    const lockResult = await req.app.locals.pool.query(
-      `SELECT sl.*, sla.client_id, sla.client_secret, sla.access_token, sla.token_expires_at, sla.id as api_id
-       FROM smart_locks sl
-       JOIN lock_assignments la ON la.lock_id = sl.id
-       JOIN smart_locks_api sla ON sla.id = sl.api_id
-       WHERE la.property_id = $1 AND la.user_id = $2 AND la.is_active = true AND sla.is_active = true`,
-      [propertyId, user.id]
-    );
-
-    if (lockResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Aucune serrure associée à ce logement' });
-    }
-
-    const lock = lockResult.rows[0];
-
-    // Rafraîchir le token si nécessaire
-    let accessToken = lock.access_token;
-    const refreshedToken = await igloohomeService.refreshTokenIfNeeded(
-      req.app.locals.pool,
-      lock.api_id,
-      lock.client_id,
-      lock.client_secret,
-      lock.token_expires_at
-    );
-
-    if (refreshedToken) {
-      accessToken = refreshedToken;
-    }
-
-    // Générer le code PIN
-    const pinData = await igloohomeService.generatePinCode(
-      accessToken,
-      lock.lock_id,
-      startDate,
-      endDate,
-      guestName || 'Guest'
-    );
-
-    // Sauvegarder en base
-    await req.app.locals.pool.query(
-      `INSERT INTO access_codes 
-       (user_id, lock_id, reservation_key, guest_name, access_code, pin_code, start_date, end_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (user_id, reservation_key, lock_id) 
-       DO UPDATE SET access_code = $5, pin_code = $6, start_date = $7, end_date = $8, updated_at = NOW()`,
-      [
-        user.id,
-        lock.id,
-        reservationKey,
-        guestName,
-        pinData.pin_id,
-        pinData.pin_code || pinData.algo_pin,
-        startDate,
-        endDate
-      ]
-    );
-
-    res.json({
-      success: true,
-      message: 'Code d\'accès généré',
-      code: {
-        pin_code: pinData.pin_code || pinData.algo_pin,
-        algo_pin: pinData.algo_pin,
-        start_date: startDate,
-        end_date: endDate,
-        lock_name: lock.lock_name
-      }
+    const res = await fetch('/api/smart-locks/disconnect', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
     });
-  } catch (error) {
-    console.error('Erreur génération code:', error);
-    res.status(500).json({ 
-      error: 'Erreur de génération du code',
-      details: error.message
-    });
+    
+    if (res.ok) {
+      alert('✅ API déconnectée');
+      await loadApiStatus();
+      await loadLocks();
+    }
+  } catch (err) {
+    alert('❌ Erreur');
   }
-});
+}
 
-module.exports = router;
+function openAssignModal(lockId) {
+  selectedLock = locks.find(l => l.id === lockId);
+  if (!selectedLock) return;
+  
+  document.getElementById('assignLockName').textContent = selectedLock.lock_name;
+  
+  const select = document.getElementById('propertySelect');
+  select.innerHTML = '<option value="">-- Choisir un logement --</option>' +
+    properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  
+  if (selectedLock.assignment) {
+    select.value = selectedLock.assignment.property_id;
+  }
+  
+  document.getElementById('assignModal').classList.add('active');
+}
+
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('active');
+  selectedLock = null;
+}
+
+async function assignLockToProperty() {
+  const propertyId = document.getElementById('propertySelect').value;
+  
+  if (!propertyId) {
+    return alert('⚠️ Veuillez sélectionner un logement');
+  }
+  
+  try {
+    const res = await fetch('/api/smart-locks/assign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        lockId: selectedLock.id,
+        propertyId: propertyId
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert('✅ Serrure associée !');
+      closeAssignModal();
+      await loadLocks();
+    } else {
+      alert('❌ ' + (data.error || 'Erreur'));
+    }
+  } catch (err) {
+    alert('❌ Erreur');
+  }
+}
+
+// Init au chargement de la page
+window.addEventListener('DOMContentLoaded', init);
+
+</script>
+
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+</body>
+</html>
