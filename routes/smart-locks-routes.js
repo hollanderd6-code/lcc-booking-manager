@@ -3,30 +3,13 @@
 
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const igloohomeService = require('../services/igloohome-service');
 
-// Helper pour obtenir l'utilisateur depuis le token
-async function getUserFromToken(req, pool) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return null;
-
-  const token = authHeader.replace('Bearer ', '');
-  
-  try {
-    // Décoder le JWT pour extraire l'ID utilisateur
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
-    // Récupérer l'utilisateur depuis la base de données
-    const result = await pool.query('SELECT id FROM users WHERE id = $1', [decoded.userId]);
-    
-    if (result.rows.length === 0) return null;
-    return result.rows[0];
-  } catch (error) {
-    console.error('Erreur décodage token:', error.message);
-    return null;
-  }
-}
+// ============================================
+// NOTE IMPORTANTE :
+// Ces routes utilisent le middleware authenticateToken
+// défini dans server.js, qui ajoute req.user automatiquement
+// ============================================
 
 // ============================================
 // GET /api/smart-locks/status
@@ -34,10 +17,8 @@ async function getUserFromToken(req, pool) {
 // ============================================
 router.get('/status', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    // req.user est défini par le middleware authenticateToken
+    const userId = req.user.id;
 
     const result = await req.app.locals.pool.query(
       `SELECT id, provider, is_active, created_at, updated_at, token_expires_at
@@ -45,7 +26,7 @@ router.get('/status', async (req, res) => {
        WHERE user_id = $1 AND provider = 'igloohome'
        ORDER BY created_at DESC
        LIMIT 1`,
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0) {
@@ -80,11 +61,7 @@ router.get('/status', async (req, res) => {
 // ============================================
 router.post('/connect', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
+    const userId = req.user.id;
     const { clientId, clientSecret } = req.body;
 
     if (!clientId || !clientSecret) {
@@ -108,7 +85,7 @@ router.post('/connect', async (req, res) => {
     // Vérifier si une connexion existe déjà
     const existing = await req.app.locals.pool.query(
       'SELECT id FROM smart_locks_api WHERE user_id = $1 AND provider = $2',
-      [user.id, 'igloohome']
+      [userId, 'igloohome']
     );
 
     if (existing.rows.length > 0) {
@@ -118,7 +95,7 @@ router.post('/connect', async (req, res) => {
          SET client_id = $1, client_secret = $2, access_token = $3, 
              token_expires_at = $4, is_active = true, updated_at = NOW()
          WHERE user_id = $5 AND provider = 'igloohome'`,
-        [clientId, clientSecret, tokenData.access_token, expiresAt, user.id]
+        [clientId, clientSecret, tokenData.access_token, expiresAt, userId]
       );
     } else {
       // Créer
@@ -126,7 +103,7 @@ router.post('/connect', async (req, res) => {
         `INSERT INTO smart_locks_api 
          (user_id, provider, client_id, client_secret, access_token, token_expires_at, is_active)
          VALUES ($1, 'igloohome', $2, $3, $4, $5, true)`,
-        [user.id, clientId, clientSecret, tokenData.access_token, expiresAt]
+        [userId, clientId, clientSecret, tokenData.access_token, expiresAt]
       );
     }
 
@@ -146,16 +123,13 @@ router.post('/connect', async (req, res) => {
 // ============================================
 router.post('/disconnect', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const userId = req.user.id;
 
     await req.app.locals.pool.query(
       `UPDATE smart_locks_api 
        SET is_active = false, updated_at = NOW()
        WHERE user_id = $1 AND provider = 'igloohome'`,
-      [user.id]
+      [userId]
     );
 
     res.json({
@@ -174,10 +148,7 @@ router.post('/disconnect', async (req, res) => {
 // ============================================
 router.get('/', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const userId = req.user.id;
 
     const result = await req.app.locals.pool.query(
       `SELECT 
@@ -188,7 +159,7 @@ router.get('/', async (req, res) => {
        LEFT JOIN lock_assignments la ON la.lock_id = sl.id AND la.is_active = true
        WHERE sl.user_id = $1 AND sl.is_active = true
        ORDER BY sl.created_at DESC`,
-      [user.id]
+      [userId]
     );
 
     // Enrichir avec les noms de propriétés
@@ -227,17 +198,14 @@ router.get('/', async (req, res) => {
 // ============================================
 router.post('/sync', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const userId = req.user.id;
 
     // Récupérer la connexion API
     const apiResult = await req.app.locals.pool.query(
       `SELECT id, client_id, client_secret, access_token, token_expires_at
        FROM smart_locks_api
        WHERE user_id = $1 AND provider = 'igloohome' AND is_active = true`,
-      [user.id]
+      [userId]
     );
 
     if (apiResult.rows.length === 0) {
@@ -276,7 +244,7 @@ router.post('/sync', async (req, res) => {
       // Vérifier si existe déjà
       const existing = await req.app.locals.pool.query(
         'SELECT id FROM smart_locks WHERE user_id = $1 AND lock_id = $2',
-        [user.id, lockId]
+        [userId, lockId]
       );
 
       if (existing.rows.length > 0) {
@@ -286,7 +254,7 @@ router.post('/sync', async (req, res) => {
            SET lock_name = $1, lock_type = $2, serial_number = $3, 
                battery_level = $4, last_sync_at = NOW(), updated_at = NOW()
            WHERE user_id = $5 AND lock_id = $6`,
-          [lockName, lockType, serialNumber, batteryLevel, user.id, lockId]
+          [lockName, lockType, serialNumber, batteryLevel, userId, lockId]
         );
         updated++;
       } else {
@@ -295,7 +263,7 @@ router.post('/sync', async (req, res) => {
           `INSERT INTO smart_locks 
            (user_id, api_id, lock_id, lock_name, lock_type, serial_number, battery_level, last_sync_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-          [user.id, apiConnection.id, lockId, lockName, lockType, serialNumber, batteryLevel]
+          [userId, apiConnection.id, lockId, lockName, lockType, serialNumber, batteryLevel]
         );
         added++;
       }
@@ -323,11 +291,7 @@ router.post('/sync', async (req, res) => {
 // ============================================
 router.post('/assign', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
+    const userId = req.user.id;
     const { lockId, propertyId } = req.body;
 
     if (!lockId || !propertyId) {
@@ -337,7 +301,7 @@ router.post('/assign', async (req, res) => {
     // Vérifier que la serrure appartient à l'utilisateur
     const lockResult = await req.app.locals.pool.query(
       'SELECT id FROM smart_locks WHERE id = $1 AND user_id = $2',
-      [lockId, user.id]
+      [lockId, userId]
     );
 
     if (lockResult.rows.length === 0) {
@@ -347,14 +311,14 @@ router.post('/assign', async (req, res) => {
     // Supprimer toute assignation existante pour ce logement
     await req.app.locals.pool.query(
       'DELETE FROM lock_assignments WHERE user_id = $1 AND property_id = $2',
-      [user.id, propertyId]
+      [userId, propertyId]
     );
 
     // Créer la nouvelle assignation
     await req.app.locals.pool.query(
       `INSERT INTO lock_assignments (user_id, property_id, lock_id)
        VALUES ($1, $2, $3)`,
-      [user.id, propertyId, lockId]
+      [userId, propertyId, lockId]
     );
 
     res.json({
@@ -373,11 +337,7 @@ router.post('/assign', async (req, res) => {
 // ============================================
 router.post('/generate-code', async (req, res) => {
   try {
-    const user = await getUserFromToken(req, req.app.locals.pool);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
+    const userId = req.user.id;
     const { propertyId, reservationKey, guestName, startDate, endDate } = req.body;
 
     if (!propertyId || !reservationKey || !startDate || !endDate) {
@@ -391,7 +351,7 @@ router.post('/generate-code', async (req, res) => {
        JOIN lock_assignments la ON la.lock_id = sl.id
        JOIN smart_locks_api sla ON sla.id = sl.api_id
        WHERE la.property_id = $1 AND la.user_id = $2 AND la.is_active = true AND sla.is_active = true`,
-      [propertyId, user.id]
+      [propertyId, userId]
     );
 
     if (lockResult.rows.length === 0) {
@@ -431,7 +391,7 @@ router.post('/generate-code', async (req, res) => {
        ON CONFLICT (user_id, reservation_key, lock_id) 
        DO UPDATE SET access_code = $5, pin_code = $6, start_date = $7, end_date = $8, updated_at = NOW()`,
       [
-        user.id,
+        userId,
         lock.id,
         reservationKey,
         guestName,
