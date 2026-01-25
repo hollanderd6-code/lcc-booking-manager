@@ -3,6 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const igloohomeService = require('../services/igloohome-service');
 
 // Helper pour obtenir l'utilisateur depuis le token
@@ -11,10 +12,20 @@ async function getUserFromToken(req, pool) {
   if (!authHeader) return null;
 
   const token = authHeader.replace('Bearer ', '');
-  const result = await pool.query('SELECT id FROM users WHERE id = $1', [token]);
   
-  if (result.rows.length === 0) return null;
-  return result.rows[0];
+  try {
+    // Décoder le JWT pour extraire l'ID utilisateur
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    // Récupérer l'utilisateur depuis la base de données
+    const result = await pool.query('SELECT id FROM users WHERE id = $1', [decoded.userId]);
+    
+    if (result.rows.length === 0) return null;
+    return result.rows[0];
+  } catch (error) {
+    console.error('Erreur décodage token:', error.message);
+    return null;
+  }
 }
 
 // ============================================
