@@ -187,6 +187,25 @@
     }
 
 </style>
+<script src="/js/auth-fetch.js"></script>
+<script>
+(function() {
+  // Attendre un peu que les autres scripts se chargent
+  let checkCount = 0;
+  const checkAuth = setInterval(() => {
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
+      clearInterval(checkAuth);
+      return;
+    }
+    checkCount++;
+    if (checkCount > 20) { // Après 2 secondes (20 x 100ms)
+      clearInterval(checkAuth);
+      window.location.href = '/login.html';
+    }
+  }, 100);
+})();
+</script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-page="smart-locks">
@@ -607,7 +626,6 @@ window.addEventListener('DOMContentLoaded', init);
 
 </script>
 
-<script src="/js/auth-fetch.js"></script>
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
