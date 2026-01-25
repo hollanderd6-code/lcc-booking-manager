@@ -7,7 +7,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
-<title>Serrures Connectées</title>
+<title>Boostinghost – Serrures Connectées</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
@@ -47,7 +47,7 @@
     /* CONTENT */
     .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
     .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-    .main-content { padding: 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    .main-content { padding: 64px 32px 32px 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     /* DASHBOARD */
     .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -188,6 +188,15 @@
 
 </style>
 <script src="/js/auth-fetch.js"></script>
+<script>
+(function() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
+})();
+</script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-page="smart-locks">
