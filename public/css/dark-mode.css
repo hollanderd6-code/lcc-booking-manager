@@ -1,4 +1,4 @@
-/* Mode sombre automatique - Compatible avec tous les navigateurs */
+/* Mode sombre automatique - Version améliorée */
 
 @media (prefers-color-scheme: dark) {
   /* Fond général */
@@ -7,9 +7,12 @@
     color: #e2e8f0 !important;
   }
   
-  /* Cards et containers */
-  .card, .modal-content, .bottom-sheet-content, 
-  .property-card, .settings-container, section {
+  /* Cards et containers - SAUF ceux avec couleur spécifique */
+  .card:not([style*="background"]), 
+  .modal-content, 
+  .property-card:not([style*="background"]), 
+  .settings-container, 
+  section:not([style*="background"]) {
     background-color: #1e293b !important;
     color: #e2e8f0 !important;
   }
@@ -21,7 +24,10 @@
   }
   
   /* Inputs et formulaires */
-  input, textarea, select, .form-control {
+  input:not([type="button"]):not([type="submit"]), 
+  textarea, 
+  select, 
+  .form-control {
     background-color: #0f172a !important;
     color: #e2e8f0 !important;
     border-color: #334155 !important;
@@ -31,17 +37,26 @@
     color: #64748b !important;
   }
   
-  /* Textes */
-  h1, h2, h3, h4, h5, h6, p, span, label, div {
+  /* Textes génériques - NE PAS forcer si déjà coloré */
+  p:not([style*="color"]), 
+  span:not([style*="color"]):not(.badge):not([class*="status"]), 
+  label:not([style*="color"]), 
+  div:not([style*="color"]):not([class*="badge"]):not([class*="status"]) {
     color: #e2e8f0 !important;
   }
   
+  /* Headers - Garder leur style mais adapter le fond si blanc */
+  h1, h2, h3, h4, h5, h6 {
+    color: #f1f5f9 !important;
+  }
+  
+  /* Textes secondaires */
   .text-muted, .text-secondary, .form-help {
     color: #94a3b8 !important;
   }
   
   /* Bordures */
-  .border, hr, [style*="border"] {
+  .border, hr {
     border-color: #334155 !important;
   }
   
@@ -63,8 +78,15 @@
     border-color: #334155 !important;
   }
   
-  /* Hover states */
-  .property-card:hover, .card:hover {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+  /* NE PAS toucher aux éléments avec classes de couleur */
+  [class*="bg-"], [class*="text-"], .badge, [class*="status"], 
+  .btn-primary, .btn-success, .btn-danger, .btn-warning {
+    /* Garder leurs couleurs d'origine */
+  }
+  
+  /* Header calendrier - adapter légèrement */
+  [style*="background-color: rgb(16, 185, 129)"],
+  [style*="background: rgb(16, 185, 129)"] {
+    filter: brightness(0.9) !important;
   }
 }
