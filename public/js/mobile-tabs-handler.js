@@ -43,16 +43,11 @@
   if (dataPage === 'settings') {
     // settings.html (Mes logements) → Onglet Logements
     activeTab = 'properties';
-  } else if (dataPage === 'smart-locks') {
-    // smart-locks.html → Onglet Serrures
-    activeTab = 'smart-locks';
   } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
     // Pages du menu Plus → Onglet Plus
     activeTab = 'more';
   } else if (currentPath.includes('messages')) {
     activeTab = 'messages';
-  } else if (currentPath.includes('smart-locks')) {
-    activeTab = 'smart-locks';
   } else if (currentPath.includes('settings')) {
     // Fallback pour /settings.html sans data-page
     activeTab = 'properties';
