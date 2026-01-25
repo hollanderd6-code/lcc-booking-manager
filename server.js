@@ -1591,7 +1591,6 @@ const app = express();
 
 // Rendre les variables globales disponibles pour les routes
 app.locals.pool = pool;
-app.locals.PROPERTIES = PROPERTIES;
 
 // Augmenter la limite pour les uploads de photos
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -11835,6 +11834,7 @@ console.log('✅ Service de notifications initialisé');
   
   // ✅ Charger les propriétés
   await loadProperties();
+  app.locals.PROPERTIES = PROPERTIES;
   
   // ✅ Charger les réservations depuis PostgreSQL
   await loadReservationsFromDB();
