@@ -150,7 +150,12 @@
     .support-link a:hover {
       text-decoration: underline;
     }
-    .bh-logo { display:block; color:#fff; }
+    .bh-logo { 
+      display: block; 
+      width: 100px; 
+      height: 100px; 
+      object-fit: contain; 
+    }
   </style>
 
 <script src="/js/auth-fetch.js"></script>
@@ -158,14 +163,8 @@
 <body>
   <div class="container">
     <div class="icon">
-  <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64"
-     xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
-  <text x="32" y="43" text-anchor="middle"
-        font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-        font-size="34" font-weight="800" fill="#ffffff">B</text>
-</svg>
-</div>
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" class="bh-logo">
+    </div>
 
     <h1>Votre essai gratuit est terminé</h1>
     
@@ -198,22 +197,15 @@
     </div>
 
     <div class="support-link">
-      Des questions ? <a href="mailto:support@boostinghost.com">Contactez-nous</a>
+      Des questions ? <a href="/cdn-cgi/l/email-protection#52212722223d202612303d3d21263b3c353a3d21267c313d3f">Contactez-nous</a>
     </div>
   </div>
 
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     function logout() {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
       window.location.href = '/login.html';
     }
 
-    // Empêcher le retour arrière
-    history.pushState(null, null, location.href);
-    window.onpopstate = function () {
-      history.go(1);
-    };
-  </script>
-</body>
-</html>
+    // Empêcher le retou
