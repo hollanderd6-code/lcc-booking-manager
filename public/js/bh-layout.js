@@ -1,110 +1,104 @@
+/* /js/bh-layout.js — injection sidebar + header standard */
+
 (function () {
-  'use strict';
-
-/* /js/bh-layout.js – injection sidebar + header standard */
-/* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
-const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
-
-const SIDEBAR_HTML = `
-<aside class="sidebar">
-  <div class="sidebar-header">
-    <a class="sidebar-logo" href="/">
-      <img src="/asset/boostinghost-icon-circle.png"
-           alt="Boostinghost"
-           style="width:40px;height:40px;flex-shrink:0;" />
-
-      <div class="sidebar-logo-text" style="display:flex;flex-direction:column;justify-content:center;margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Inter',sans-serif;font-size:17px;line-height:1.1;">
-          <span style="color:#10B981;font-weight:800;">Boosting</span>
-          <span style="color:#111827;font-weight:600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px;color:#6B7280;font-weight:500;letter-spacing:0.5px;">
-          Smart Property Manager
-        </span>
-      </div>
-    </a>
-  </div>
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-      <a class="nav-item active" data-page="app" href="/app.html">
-        <i class="fas fa-th-large"></i><span>Dashboard</span>
-      </a>
-      <a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
-        <i class="fas fa-calendar"></i><span>Calendrier</span>
-      </a>
-      <a class="nav-item" data-page="messages" href="/messages.html">
-        <i class="fas fa-comment-dots"></i><span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION -->
-    <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
-      <a class="nav-item" data-page="settings" href="/settings.html">
-        <i class="fas fa-home"></i><span>Mes logements</span>
-      </a>
-      <a class="nav-item" data-page="welcome" href="/welcome.html">
-        <i class="fas fa-book-open"></i><span>Livret d'accueil</span>
-      </a>
-      <a class="nav-item" data-page="cleaning" href="/cleaning.html">
-        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
-      </a>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Facturation</div>
-        <a class="nav-item" data-page="factures" href="/factures.html">
-          <i class="fas fa-file-invoice"></i><span>Factures clients</span>
-        </a>
-        <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
-          <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
-        </a>
-      </div>
-
-      <a class="nav-item" data-page="deposits" href="/deposits.html">
-        <i class="fas fa-shield-alt"></i><span>Cautions</span>
-      </a>
-      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
-<i class="fas fa-lock"></i>
-<span>Serrures connectées</span>
+  const SIDEBAR_HTML = `<aside class="sidebar">
+<div class="sidebar-header">
+<a class="sidebar-logo" href="/">
+<svg fill="none" height="40" style="flex-shrink:0;" viewbox="0 0 40 40" width="40" xmlns="http://www.w3.org/2000/svg">
+<path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<path d="M16 36V26H24V36" stroke="#3B82F6" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<path d="M20 4L4 18H10V22H30V18H36L20 4Z" fill="#10B981" stroke="#10B981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M20 9L24 14H16L20 9Z" fill="white"></path>
+</svg>
+<div class="sidebar-logo-text" style="display: flex; flex-direction: column; justify-content: center; margin-left: 10px;">
+<span class="sidebar-logo-title" style="font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.1;">
+<span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
+</span>
+<span class="sidebar-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px;">
+      Smart Property Manager
+    </span>
+</div>
 </a>
-
-    <!-- PARAMÈTRES -->
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
-      <a class="nav-item" data-page="settings-account" href="/settings-account.html">
-        <i class="fas fa-cog"></i><span>Paramètres</span>
-      </a>
-      <a class="nav-item" data-page="help" href="/help.html">
-        <i class="fas fa-question-circle"></i><span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="sidebarUserAvatar">C</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
-      </div>
-      <button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-`;
-
-  // ============================================
-  // 📝 TEXTE DU LOGO MOBILE
-  // ============================================
-  const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
-    <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
-  </span>
-  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
+</div>
+<nav class="sidebar-nav">
+<!-- PRINCIPAL -->
+<div class="nav-section">
+<div class="nav-section-title">Principal</div>
+<a class="nav-item active" data-page="app" href="/app.html">
+<i class="fas fa-th-large"></i>
+<span>Dashboard</span>
+</a>
+<a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
+<i class="fas fa-calendar"></i>
+<span>Calendrier</span>
+<span class="nav-badge" id="navTotalReservations">0</span>
+</a>
+<a class="nav-item" data-page="messages" href="/messages.html">
+<i class="fas fa-comment-dots"></i>
+<span>Messages</span>
+</a>
+</div>
+<!-- GESTION -->
+<div class="nav-section">
+<div class="nav-section-title">Gestion</div>
+<a class="nav-item" data-page="settings" href="/settings.html">
+<i class="fas fa-home"></i>
+<span>Mes logements</span>
+</a>
+<a class="nav-item" data-page="welcome" href="/welcome.html">
+<i class="fas fa-book-open"></i>
+<span>Livret d'accueil</span>
+</a>
+<a class="nav-item" data-page="cleaning" href="/cleaning.html">
+<i class="fas fa-broom"></i>
+<span>Gestion du ménage</span>
+</a>
+<div class="nav-section">
+<div class="nav-section-title"><facturation></facturation></div>
+<a class="nav-item" href="/factures.html">
+<i class="fas fa-file-invoice"></i>
+<span>Factures clients</span>
+</a>
+<a class="nav-item" href="/factures-proprietaires.html">
+<i class="fas fa-file-invoice-dollar"></i>
+<span>Factures propriétaires</span>
+</a>
+</div>
+<a class="nav-item" data-page="deposits" href="/deposits.html">
+<i class="fas fa-shield-alt"></i>
+<span>Cautions</span>
+</a>
+<a class="nav-item" data-page="notifications" href="/notifications.html">
+<i class="fas fa-bell"></i>
+<span>Notifications</span>
+</a>
+</div>
+<!-- PARAMÈTRES -->
+<div class="nav-section">
+<div class="nav-section-title">Paramètres</div>
+<a class="nav-item" data-page="settings-account" href="/settings-account.html">
+<i class="fas fa-cog"></i>
+<span>Paramètres</span>
+</a>
+<a class="nav-item" data-page="help" href="/help.html">
+<i class="fas fa-question-circle"></i>
+<span>Aide</span>
+</a>
+</div>
+</nav>
+<div class="sidebar-footer">
+<div class="user-profile">
+<div class="user-avatar" id="sidebarUserAvatar">C</div>
+<div class="user-info">
+<div class="user-name" id="sidebarUserName">Utilisateur</div>
+<div class="user-email" id="sidebarUserCompany">Mon espace</div>
+</div>
+<button class="btn btn-ghost btn-xs" id="logoutBtn">
+<i class="fas fa-sign-out-alt"></i>
+</button>
+</div>
+</div>
+</aside>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -117,6 +111,16 @@ const SIDEBAR_HTML = `
     if (!ph) return;
 
     ph.innerHTML = SIDEBAR_HTML;
+    // Ensure Messages badge exists for chat-owner.js
+    const messagesLink = document.querySelector('.nav-item[data-page="messages"]');
+    if (messagesLink && !document.getElementById('unreadCount')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      badge.id = 'unreadCount';
+      badge.textContent = '0';
+      messagesLink.appendChild(badge);
+    }
+
 
     // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
@@ -157,36 +161,6 @@ const SIDEBAR_HTML = `
         overlay.classList.remove("active");
       });
     }
-
-    // ✅ BOUTON DÉCONNEXION : Attacher l'event listener après injection
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("🚪 Déconnexion...");
-        localStorage.removeItem("lcc_token");
-        localStorage.removeItem("lcc_user");
-        window.location.href = "/login.html";
-      });
-    }
-
-    // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
-    const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    if (user.firstName) {
-      const nameEl = document.getElementById('sidebarUserName');
-      const avatarEl = document.getElementById('sidebarUserAvatar');
-      if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-      if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
-    }
-    if (user.company) {
-      const companyEl = document.getElementById('sidebarUserCompany');
-      if (companyEl) companyEl.textContent = user.company;
-    }
-
-    // ✅ Émettre un événement quand la sidebar est prête
-    document.dispatchEvent(new CustomEvent('sidebarReady'));
-    console.log("✅ Sidebar injectée avec logo B grand format");
   }
 
   function injectHeader() {
@@ -222,104 +196,40 @@ const SIDEBAR_HTML = `
     `;
   }
 
-  // ============================================
-  // 🎨 NORMALISATION DU BRANDING MOBILE
-  // ============================================
   function normalizeBranding() {
-    const mobileLogo = document.querySelector(".mobile-logo");
-    const mobileLogoText = document.querySelector(".mobile-logo-text");
+  // Mobile header brand
+  const mobileLogoText = document.querySelector(".mobile-logo-text");
+  if (mobileLogoText) mobileLogoText.textContent = "Boostinghost";
 
-    // 1. REMPLACER LE TEXTE DU LOGO MOBILE
-    if (mobileLogoText) {
-      const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
-      if (!hasCorrectBranding) {
-        mobileLogoText.innerHTML = BRAND_TEXT_HTML;
-      }
-    }
-
-    // 2. REMPLACER L'ICÔNE PAR LE LOGO "B" (IMG) GRAND FORMAT
-    if (mobileLogo) {
-      const existingLogo = mobileLogo.querySelector("img, svg");
-
-      // Besoin de MAJ si aucun logo, ou si img != notre fichier, ou si SVG présent (legacy)
-      const needsUpdate =
-        !existingLogo ||
-        (existingLogo.tagName.toLowerCase() === "img" &&
-          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png")) ||
-        existingLogo.tagName.toLowerCase() === "svg";
-
-      if (needsUpdate) {
-        // Supprimer l'ancien contenu (FontAwesome / svg / img)
-        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg, img");
-        if (oldIcon) oldIcon.remove();
-
-        // Injecter le logo (img)
-        mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
-      }
+  const mobileLogo = document.querySelector(".mobile-logo");
+  if (mobileLogo) {
+    // Replace icon if it's the old calendar-check
+    const icon = mobileLogo.querySelector("i.fas, i.fa");
+    if (icon) {
+      // Use a simple inline SVG close to the sidebar mark
+      icon.outerHTML = `
+        <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+          <path d="M8 20V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V20"
+                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 36V26H24V36"
+                stroke="#3B82F6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 4L4 18H10V22H30V18H36L20 4Z"
+                fill="#10B981" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 9L24 14H16L20 9Z" fill="white"/>
+        </svg>`;
     }
   }
 
-  // ============================================
-  // 🎨 FORCE LE REMPLACEMENT DU LOGO SIDEBAR
-  // ============================================
-  function forceUpdateSidebarLogo() {
-    // Force le logo sidebar (remplace les anciens SVG éventuels par l'IMG)
-    const sidebarAnchors = document.querySelectorAll(".sidebar-logo");
-
-    sidebarAnchors.forEach(a => {
-      const existing = a.querySelector("img, svg");
-      const isOkImg =
-        existing &&
-        existing.tagName.toLowerCase() === "img" &&
-        ((existing.getAttribute("src") || "").includes("boostinghost-icon-circle.png") ||
-         (existing.src || "").includes("boostinghost-icon-circle.png"));
-
-      if (!isOkImg) {
-        const old = a.querySelector("svg, img");
-        if (old) old.remove();
-        a.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
-      }
-    });
+  // Sidebar brand title if needed
+  const sidebarTitle = document.querySelector(".sidebar-logo-title");
+  if (sidebarTitle) {
+    sidebarTitle.innerHTML = '<span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>';
   }
+}
 
-  // ============================================
-  // 🚀 INITIALISATION
-  // ============================================
-  function init() {
-    console.log("🚀 bh-layout.js - Initialisation...");
-    
+document.addEventListener("DOMContentLoaded", () => {
     injectSidebar();
     injectHeader();
     normalizeBranding();
-    
-    // Réappliquer le branding et forcer la mise à jour après un court délai
-    setTimeout(() => {
-      normalizeBranding();
-      forceUpdateSidebarLogo();
-    }, 100);
-    
-    // Vérification supplémentaire après 500ms
-    setTimeout(() => {
-      forceUpdateSidebarLogo();
-      normalizeBranding();
-    }, 500);
-    
-    console.log("✅ bh-layout.js - Prêt avec logo unifié");
-  }
-
-  // Démarrer dès que le DOM est prêt
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-
-  // Exposer pour débogage
-  window.bhLayout = {
-    normalizeBranding,
-    injectSidebar,
-    injectHeader,
-    forceUpdateSidebarLogo
-  };
-
+  });
 })();
