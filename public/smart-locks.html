@@ -47,7 +47,7 @@
     /* CONTENT */
     .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
     .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-    .main-content { padding: 0 32px 32px 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    .main-content { padding: 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     /* DASHBOARD */
     .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -199,7 +199,7 @@
 </script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body data-page="smart-locks" data-kicker="GESTION" data-title="Serrures Connectées" data-subtitle="Gérez vos serrures Igloohome et codes d'accès automatiques.">
+<body data-page="smart-locks">
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html" style="margin: 0 auto;">
@@ -220,6 +220,13 @@
 </button>
 </div>
 <div id="bhHeader"></div>
+
+<div class="dashboard-header">
+<div>
+<h1 class="page-title">Serrures Connectées</h1>
+<p class="page-subtitle">Gérez vos serrures Igloohome et codes d'accès automatiques.</p>
+</div>
+</div>
 
 <div class="stats-row">
 <div class="stat-card">
@@ -268,20 +275,24 @@
     <div class="modal-subtitle">Connectez votre compte Igloohome pour gérer vos serrures</div>
 
     <div class="form-group">
-      <label>Client ID</label>
-      <input type="text" class="form-control" id="clientId" placeholder="Votre Client ID Igloohome"/>
-      <div class="form-help">Trouvez vos credentials dans votre compte développeur</div>
+      <label>Client ID (API ID)</label>
+      <input type="text" class="form-control" id="clientId" placeholder="Ex: 72BZWrP540hDO3reWsGorF"/>
+      <div class="form-help">Copiez l'"API ID" depuis votre portail iglooaccess</div>
     </div>
 
     <div class="form-group">
-      <label>Client Secret</label>
-      <input type="password" class="form-control" id="clientSecret" placeholder="Votre Client Secret"/>
+      <label>Client Secret (API Key)</label>
+      <input type="password" class="form-control" id="clientSecret" placeholder="Cliquez sur les *** pour révéler la clé"/>
+      <div class="form-help">Copiez l'"API Key" (cliquez sur les *** pour l'afficher)</div>
     </div>
 
     <div class="alert-box">
       <div class="alert-content">
-        <strong>Besoin d'aide ?</strong>
-        Visitez <a href="https://developer.igloohome.co" target="_blank">developer.igloohome.co</a> pour obtenir vos credentials
+        <strong>📱 Nouveau système iglooaccess</strong><br>
+        1️⃣ Créez un compte sur <a href="https://developer.igloocompany.co" target="_blank">developer.igloocompany.co</a><br>
+        2️⃣ Connectez-vous et cliquez sur "API Access" dans le menu<br>
+        3️⃣ Copiez votre Client ID et Client Secret<br>
+        <small style="margin-top:8px;display:block;opacity:0.8;">💡 30 jours d'essai gratuit, puis $2/serrure/mois</small>
       </div>
     </div>
 
