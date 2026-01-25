@@ -16,15 +16,8 @@
     <div class="auth-card">
       <div class="auth-logo">
         <div class="auth-logo-icon">
-  <!-- Logo Boostinghost -->
-  <svg class="bh-logo" width="56" height="56" viewBox="0 0 64 64"
-     xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <circle cx="32" cy="32" r="32" fill="#7fd3a6"/>
-  <text x="32" y="43" text-anchor="middle"
-        font-family="Inter, system-ui, -apple-system, Segoe UI, Arial"
-        font-size="34" font-weight="800" fill="#ffffff">B</text>
-</svg>
-</div>
+          <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" class="bh-logo">
+        </div>
         <div>
           <div class="auth-logo-title"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></div>
           <div class="auth-logo-subtitle">Property Manager</div>
@@ -520,7 +513,12 @@
       .form-row-two {
         grid-template-columns: 1fr;
       }
-      .bh-logo { display:block; color:#fff; }
+      .bh-logo { 
+        display: block; 
+        width: 56px; 
+        height: 56px; 
+        object-fit: contain; 
+      }
     }
   </style>
 </body>
