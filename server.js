@@ -1645,15 +1645,16 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 
         await pool.query(
           `INSERT INTO subscriptions 
-           (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_end, current_period_end)
-           VALUES ($1, $2, $3, $4, 'trial', NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
+           (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
+           VALUES ($1, $2, $3, $4, 'trial', NOW(), NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
            ON CONFLICT (user_id) 
            DO UPDATE SET
              stripe_subscription_id = $2,
              stripe_customer_id = $3,
              plan_type = $4,
              status = 'trial',
-             trial_end = NOW() + INTERVAL '14 days',
+             trial_start_date = NOW(),
+             trial_end_date = NOW() + INTERVAL '14 days',
              current_period_end = NOW() + INTERVAL '14 days',
              updated_at = NOW()`,
           [userId, subscriptionId, customerId, basePlan]
@@ -1692,7 +1693,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             `UPDATE subscriptions 
              SET 
                status = 'active',
-               trial_end = NULL,
+               trial_end_date = NULL,
                current_period_end = to_timestamp($1),
                updated_at = NOW()
              WHERE stripe_subscription_id = $2`,
