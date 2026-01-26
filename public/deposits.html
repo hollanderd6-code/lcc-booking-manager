@@ -580,7 +580,16 @@ async function copyExistingDepositMessage(reservation) {
     alert("Votre navigateur ne supporte pas la copie automatique. Voici le message :\n\n" + message);
   }
 }
-
+function copyDepositMessageByUid(uid) {
+  // Retrouver la réservation dans le tableau
+  const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
+  if (!reservation) {
+    alert('Réservation introuvable');
+    return;
+  }
+  // Appeler la fonction existante
+  copyExistingDepositMessage(reservation);
+}
     async function loadPropertiesForFilter() {
       const select = document.getElementById('propertyFilter');
       if (!select) return;
@@ -726,12 +735,13 @@ async function copyExistingDepositMessage(reservation) {
         if (isAirbnb) {
           actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
         } else if (d && d.status === 'pending' && d.checkoutUrl) {
-          actionsHtml = `
-            <button class="btn btn-secondary btn-card" onclick='copyExistingDepositMessage(${safeJson})'>
-              <i class="fas fa-copy"></i> Copier le message
-            </button>
-            <div class="card-hint">Lien déjà créé</div>
-          `;
+  // ✅ SIMPLE : Passer juste l'UID, la fonction retrouvera l'objet
+  actionsHtml = `
+    <button class="btn btn-secondary btn-card" onclick="copyDepositMessageByUid('${r.reservationUid}')">
+      <i class="fas fa-copy"></i> Copier le message
+    </button>
+    <div class="card-hint">Lien déjà créé</div>
+  `;
         } else if (!d) {
   actionsHtml = `
 <button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.reservationUid}')">
