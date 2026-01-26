@@ -2847,6 +2847,14 @@ async function loadDepositsFromDB() {
  */
 async function saveDepositToDB(deposit, userId, propertyId = null) {
   try {
+    console.log('🔍 Tentative de sauvegarde deposit:', {
+      depositId: deposit.id,
+      userId: userId,
+      reservationUid: deposit.reservationUid,
+      propertyId: propertyId,
+      amountCents: deposit.amountCents
+    });
+
     await pool.query(`
       INSERT INTO deposits (
         id, user_id, reservation_uid, property_id,
@@ -2878,7 +2886,15 @@ async function saveDepositToDB(deposit, userId, propertyId = null) {
     console.log(`✅ Deposit ${deposit.id} sauvegardé en PostgreSQL`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur saveDepositToDB:', error);
+    console.error('❌ Erreur saveDepositToDB DÉTAILLÉE:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      table: error.table,
+      column: error.column,
+      fullError: error
+    });
     return false;
   }
 }
