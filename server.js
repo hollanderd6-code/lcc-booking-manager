@@ -7972,6 +7972,11 @@ app.post('/api/deposits', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
+    // ⚠️ HARDCODE TEMPORAIRE : Forcer stripeAccountId à null pour les cautions
+    // jusqu'à résolution du problème Connect
+    user.stripeAccountId = null;
+    console.log('⚠️ stripeAccountId forcé à null pour éviter Connect');
+
     if (!stripe) {
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
