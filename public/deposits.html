@@ -534,9 +534,16 @@ function formatDateFr(dateStr) {
       }
     }
     function openDepositModalByUid(uid) {
-  const reservation = allReservationsWithDeposits.find(r => r.uid === uid);
+  // ✅ CORRIGÉ : Utiliser reservationUid au lieu de uid
+  const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
   if (!reservation) {
     alert('Réservation introuvable');
+    console.error('UID cherché:', uid);
+    console.log('Réservations disponibles:', allReservationsWithDeposits.map(r => ({
+      uid: r.reservationUid,
+      guest: r.guestName,
+      property: r.propertyName
+    })));
     return;
   }
   openDepositModal(reservation);
@@ -732,11 +739,11 @@ async function copyExistingDepositMessage(reservation) {
           `;
         } else if (!d) {
   actionsHtml = `
-    <button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.uid}')">
+    <button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.reservationUid}')">
       <i class="fas fa-link"></i> Créer un lien
     </button>
   `;
-        } else {
+} else {
           actionsHtml = '<div class="card-hint">Caution déjà gérée</div>';
         }
 
