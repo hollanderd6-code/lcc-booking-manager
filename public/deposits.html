@@ -718,12 +718,13 @@ function copyDepositLinkByUid(uid) {
 
       data.forEach((r) => {
         // 🔍 DEBUG: Voir la structure des données
-        console.log('🎴 Carte:', {
-          propertyName: r.propertyName,
+        console.log('🎴 Carte pour ' + r.propertyName + ':', {
+          reservationUid: r.reservationUid,
           hasDeposit: !!r.deposit,
           depositStatus: r.deposit?.status,
           hasCheckoutUrl: !!r.deposit?.checkoutUrl,
-          checkoutUrl: r.deposit?.checkoutUrl
+          checkoutUrl: r.deposit?.checkoutUrl,
+          fullDeposit: r.deposit
         });
         const d = r.deposit || null;
         let amountBadge = '<span class="badge badge-empty">Aucune</span>';
@@ -859,8 +860,14 @@ async function createDeposit() {
       throw new Error(data.error || 'Erreur lors de la création de la caution');
     }
 
+    // 🔍 DEBUG: Voir ce que le serveur retourne
+    console.log('✅ Caution créée, réponse serveur:', data);
+
     // ✅ Fermer la modale AVANT de recharger
     closeDepositModal();
+    
+    // ✅ Petit délai pour laisser le serveur enregistrer
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // ✅ Recharger ET réafficher les données
     await loadReservationsWithDeposits();
