@@ -534,7 +534,7 @@ function formatDateFr(dateStr) {
       }
     }
     function openDepositModalByUid(uid) {
-  const reservation = RESERVATIONS_WITH_DEPOSITS.find(r => r.uid === uid);
+  const reservation = allReservationsWithDeposits.find(r => r.uid === uid);
   if (!reservation) {
     alert('Réservation introuvable');
     return;
