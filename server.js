@@ -8050,10 +8050,22 @@ app.post('/api/deposits', async (req, res) => {
     // Si tu as un compte Stripe Connect lié, on crée la session sur CE compte
     if (user.stripeAccountId) {
       console.log('Création session de caution sur compte connecté :', user.stripeAccountId);
-      session = await stripe.checkout.sessions.create(
-        sessionParams,
-        { stripeAccount: user.stripeAccountId }
-      );
+      
+      // ✅ Pour les comptes Connect, il faut parfois spécifier explicitement les capacités
+      try {
+        session = await stripe.checkout.sessions.create(
+          {
+            ...sessionParams,
+            payment_method_types: ['card'], // Explicite pour Connect
+          },
+          { stripeAccount: user.stripeAccountId }
+        );
+      } catch (connectError) {
+        // Si erreur avec Connect, fallback sur le compte plateforme
+        console.error('❌ Erreur création sur Connect, fallback plateforme:', connectError.message);
+        console.log('🔄 Création session de caution sur le compte plateforme (fallback)');
+        session = await stripe.checkout.sessions.create(sessionParams);
+      }
     } else {
       console.log('Création session de caution sur le compte plateforme (pas de stripeAccountId)');
       session = await stripe.checkout.sessions.create(sessionParams);
