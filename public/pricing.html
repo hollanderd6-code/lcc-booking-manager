@@ -10,6 +10,294 @@
   <link rel="stylesheet" href="/css/style.css">
 
 <script src="/js/auth-fetch.js"></script>
+<style>
+  .pricing-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    font-family: 'Inter', sans-serif;
+    padding: 40px 20px;
+  }
+
+  .pricing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .pricing-header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .pricing-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .bh-logo {
+    width: 50px;
+    height: 50px;
+  }
+
+  .brand-boosting { color: #10B981; font-weight: 800; font-size: 24px; }
+  .brand-host { color: #111827; font-weight: 700; font-size: 24px; }
+
+  .pricing-header h1 {
+    font-size: 48px;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: 16px;
+  }
+
+  .pricing-header p {
+    font-size: 18px;
+    color: #6b7280;
+  }
+
+  .launch-banner {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 16px;
+    border-radius: 16px;
+    text-align: center;
+    margin-bottom: 40px;
+    font-weight: 600;
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3);
+  }
+
+  .launch-banner i {
+    font-size: 20px;
+    margin-right: 8px;
+  }
+
+  .billing-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .billing-toggle button {
+    padding: 12px 32px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .billing-toggle button.active {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+  }
+
+  .pricing-plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 32px;
+    margin-bottom: 60px;
+  }
+
+  .pricing-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .pricing-card.featured {
+    border: 3px solid #10b981;
+    transform: scale(1.05);
+  }
+
+  .pricing-card.featured:hover {
+    transform: scale(1.05) translateY(-8px);
+  }
+
+  .plan-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .featured .plan-badge {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+  }
+
+  .plan-name {
+    font-size: 28px;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: 16px;
+  }
+
+  .plan-price {
+    margin-bottom: 8px;
+  }
+
+  .price-amount {
+    font-size: 48px;
+    font-weight: 800;
+    color: #10b981;
+  }
+
+  .price-period {
+    font-size: 18px;
+    color: #6b7280;
+  }
+
+  .price-annual {
+    font-size: 14px;
+    color: #10b981;
+    font-weight: 600;
+    display: block;
+    margin-top: 8px;
+  }
+
+  .plan-description {
+    color: #6b7280;
+    margin-bottom: 24px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .plan-features {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 32px;
+  }
+
+  .plan-features li {
+    padding: 10px 0;
+    color: #374151;
+    font-size: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .plan-features i.fa-check {
+    color: #10b981;
+    margin-top: 3px;
+  }
+
+  .btn-large {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  }
+
+  .btn-ghost {
+    background: #f9fafb;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+  }
+
+  .btn-ghost:hover {
+    background: #f3f4f6;
+  }
+
+  .pricing-faq {
+    max-width: 900px;
+    margin: 0 auto 60px;
+  }
+
+  .pricing-faq h3 {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 40px;
+    color: #111827;
+  }
+
+  .faq-grid {
+    display: grid;
+    gap: 24px;
+  }
+
+  .faq-item {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    display: flex;
+    gap: 20px;
+  }
+
+  .faq-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: #f0fdf4;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #10b981;
+    font-size: 24px;
+  }
+
+  .faq-item h4 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+
+  .faq-item p {
+    color: #6b7280;
+    line-height: 1.6;
+  }
+
+  .pricing-footer {
+    text-align: center;
+    padding-top: 40px;
+    border-top: 1px solid #e5e7eb;
+    color: #6b7280;
+  }
+
+  .pricing-footer a {
+    color: #10b981;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .pricing-footer a:hover {
+    text-decoration: underline;
+  }
+</style>
 </head>
 <body class="pricing-body">
   <div class="pricing-container">
@@ -17,70 +305,117 @@
     <div class="pricing-header">
       <div class="pricing-logo">
         <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" class="bh-logo">
-        <span class="brand-boosting">Boosting</span><span class="brand-host">host</span>
+        <div>
+          <span class="brand-boosting">Boosting</span><span class="brand-host">host</span>
+        </div>
       </div>
       <h1>Choisissez votre plan</h1>
-      <p>14 jours d'essai gratuit • Sans engagement • Annulez à tout moment</p>
+      <p>30 jours d'essai gratuit • Sans carte bancaire • Annulez à tout moment</p>
+    </div>
+
+    <!-- Bannière offre de lancement -->
+    <div class="launch-banner">
+      <i class="fas fa-rocket"></i>
+      Offre de lancement : Prix réduits pour les 200 premiers clients !
+    </div>
+
+    <!-- Toggle Mensuel/Annuel -->
+    <div class="billing-toggle">
+      <button class="active" onclick="showMonthly()">Mensuel</button>
+      <button onclick="showAnnual()">Annuel <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; margin-left: 8px; font-size: 12px;">-17%</span></button>
     </div>
 
     <!-- Plans -->
     <div class="pricing-plans">
-      <!-- Plan Basic -->
+      <!-- Plan Solo -->
       <div class="pricing-card">
         <div class="plan-badge">Idéal pour démarrer</div>
-        <h2 class="plan-name">Basic</h2>
+        <h2 class="plan-name">Solo</h2>
         <div class="plan-price">
-          <span class="price-amount">5,99€</span>
-          <span class="price-period">/mois</span>
+          <span class="price-amount monthly-price">14,90€</span>
+          <span class="price-amount annual-price" style="display:none;">149€</span>
+          <span class="price-period monthly-period">/mois</span>
+          <span class="price-period annual-period" style="display:none;">/an</span>
+          <span class="price-annual annual-price" style="display:none;">soit 12,42€/mois (2 mois offerts)</span>
         </div>
         <p class="plan-description">
-          Pour gérer vos logements et réservations de manière simple et efficace.
+          <strong>1 à 3 logements</strong><br>
+          Pour propriétaires et petites locations
         </p>
 
         <ul class="plan-features">
-          <li><i class="fas fa-check"></i> Calendrier unifié</li>
-          <li><i class="fas fa-check"></i> Multi-logements illimités</li>
-          <li><i class="fas fa-check"></i> Synchronisation iCal (Airbnb, Booking)</li>
-          <li><i class="fas fa-check"></i> Gestion des messages</li>
-          <li><i class="fas fa-check"></i> Livret d'accueil personnalisé</li>
-          <li><i class="fas fa-check"></i> Gestion du ménage</li>
-          <li><i class="fas fa-check"></i> Statistiques & rapports</li>
-          <li><i class="fas fa-times text-muted"></i> Gestion des cautions Stripe</li>
-          <li><i class="fas fa-times text-muted"></i> Commission sur cautions</li>
+          <li><i class="fas fa-check"></i> Calendrier unifié (synchro iCal)</li>
+          <li><i class="fas fa-check"></i> Messages automatiques IA</li>
+          <li><i class="fas fa-check"></i> Serrures connectées Igloohome</li>
+          <li><i class="fas fa-check"></i> Gestion des ménages</li>
+          <li><i class="fas fa-check"></i> Facturation voyageurs & propriétaires</li>
+          <li><i class="fas fa-check"></i> Cautions & décomptes</li>
+          <li><i class="fas fa-check"></i> Livrets d'accueil</li>
+          <li><i class="fas fa-check"></i> Support email</li>
         </ul>
 
-        <button class="btn btn-ghost btn-large" onclick="startCheckout('basic')">
-          Essayer gratuitement
+        <button class="btn btn-ghost btn-large" onclick="startCheckout('solo')">
+          Essayer gratuitement 30 jours
         </button>
       </div>
 
-      <!-- Plan Pro -->
+      <!-- Plan Pro (Featured) -->
       <div class="pricing-card featured">
-        <div class="plan-badge badge-pro">Le plus populaire</div>
+        <div class="plan-badge">Le plus populaire</div>
         <h2 class="plan-name">Pro</h2>
         <div class="plan-price">
-          <span class="price-amount">8,99€</span>
-          <span class="price-period">/mois</span>
+          <span class="price-amount monthly-price">49€</span>
+          <span class="price-amount annual-price" style="display:none;">490€</span>
+          <span class="price-period monthly-period">/mois</span>
+          <span class="price-period annual-period" style="display:none;">/an</span>
+          <span class="price-annual annual-price" style="display:none;">soit 40,83€/mois (2 mois offerts)</span>
         </div>
         <p class="plan-description">
-          Toutes les fonctionnalités Basic + gestion avancée des cautions.
+          <strong>4 à 15 logements</strong><br>
+          Pour conciergeries et gestionnaires
         </p>
 
         <ul class="plan-features">
-          <li><i class="fas fa-check"></i> <strong>Tout du plan Basic</strong></li>
-          <li><i class="fas fa-check"></i> Gestion des cautions Stripe</li>
-          <li><i class="fas fa-check"></i> Génération de liens de paiement</li>
-          <li><i class="fas fa-check"></i> Historique des transactions</li>
-          <li><i class="fas fa-check"></i> Paiements sécurisés</li>
-          <li><i class="fas fa-check"></i> Remboursements automatiques</li>
-          <li class="feature-highlight">
-            <i class="fas fa-star"></i> 
-            Commission Boostinghost : <strong>2%</strong> sur cautions encaissées uniquement
-          </li>
+          <li><i class="fas fa-check"></i> <strong>Tout du plan Solo</strong></li>
+          <li><i class="fas fa-check"></i> Support prioritaire (email + chat)</li>
+          <li><i class="fas fa-check"></i> Statistiques avancées</li>
+          <li><i class="fas fa-check"></i> Export des données</li>
+          <li><i class="fas fa-check"></i> Multi-propriétaires</li>
+          <li><i class="fas fa-check"></i> Rapports personnalisés</li>
         </ul>
 
         <button class="btn btn-primary btn-large" onclick="startCheckout('pro')">
-          Essayer gratuitement
+          Essayer gratuitement 30 jours
+        </button>
+      </div>
+
+      <!-- Plan Business -->
+      <div class="pricing-card">
+        <div class="plan-badge">Pour les pros</div>
+        <h2 class="plan-name">Business</h2>
+        <div class="plan-price">
+          <span class="price-amount monthly-price">99€</span>
+          <span class="price-amount annual-price" style="display:none;">990€</span>
+          <span class="price-period monthly-period">/mois</span>
+          <span class="price-period annual-period" style="display:none;">/an</span>
+          <span class="price-annual annual-price" style="display:none;">soit 82,50€/mois (2 mois offerts)</span>
+        </div>
+        <p class="plan-description">
+          <strong>16 à 50 logements</strong><br>
+          Pour grosses conciergeries
+        </p>
+
+        <ul class="plan-features">
+          <li><i class="fas fa-check"></i> <strong>Tout du plan Pro</strong></li>
+          <li><i class="fas fa-check"></i> Support téléphone</li>
+          <li><i class="fas fa-check"></i> Onboarding personnalisé</li>
+          <li><i class="fas fa-check"></i> Account manager dédié</li>
+          <li><i class="fas fa-check"></i> API personnalisée</li>
+          <li><i class="fas fa-check"></i> Intégrations sur mesure</li>
+        </ul>
+
+        <button class="btn btn-ghost btn-large" onclick="startCheckout('business')">
+          Essayer gratuitement 30 jours
         </button>
       </div>
     </div>
@@ -93,15 +428,15 @@
           <div class="faq-icon"><i class="fas fa-question-circle"></i></div>
           <div>
             <h4>Comment fonctionne l'essai gratuit ?</h4>
-            <p>Vous bénéficiez de 14 jours d'accès complet sans aucune carte bancaire requise. Vous pourrez ensuite choisir de continuer avec un abonnement.</p>
+            <p>Vous bénéficiez de 30 jours d'accès complet sans aucune carte bancaire requise. Vous pourrez ensuite choisir de continuer avec un abonnement.</p>
           </div>
         </div>
 
         <div class="faq-item">
-          <div class="faq-icon"><i class="fas fa-credit-card"></i></div>
+          <div class="faq-icon"><i class="fas fa-home"></i></div>
           <div>
-            <h4>Comment fonctionne la commission de 2% ?</h4>
-            <p>La commission ne s'applique que sur les cautions effectivement encaissées. Si vous remboursez une caution, la commission est également remboursée. Stripe prélève ses propres frais séparément.</p>
+            <h4>Que se passe-t-il si j'ai plus de logements ?</h4>
+            <p>Vous pouvez changer de plan à tout moment. Par exemple, si vous passez de 3 à 5 logements, il suffit de passer au plan Pro.</p>
           </div>
         </div>
 
@@ -109,7 +444,7 @@
           <div class="faq-icon"><i class="fas fa-sync-alt"></i></div>
           <div>
             <h4>Puis-je changer de plan ?</h4>
-            <p>Oui, vous pouvez passer de Basic à Pro (ou inversement) à tout moment. Le changement prend effet immédiatement.</p>
+            <p>Oui, vous pouvez changer de plan à tout moment. Le changement prend effet immédiatement et le montant est proratisé.</p>
           </div>
         </div>
 
@@ -117,7 +452,23 @@
           <div class="faq-icon"><i class="fas fa-times-circle"></i></div>
           <div>
             <h4>Puis-je annuler mon abonnement ?</h4>
-            <p>Oui, sans engagement. Vous pouvez annuler à tout moment depuis vos paramètres. Aucun remboursement sur le mois en cours.</p>
+            <p>Oui, sans engagement. Vous pouvez annuler à tout moment depuis vos paramètres. Vous conservez l'accès jusqu'à la fin de la période payée.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon"><i class="fas fa-building"></i></div>
+          <div>
+            <h4>Y a-t-il une différence entre propriétaire et conciergerie ?</h4>
+            <p>Non ! Tous les plans incluent à la fois les fonctionnalités pour propriétaires et conciergeries. Choisissez simplement selon votre nombre de logements.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-icon"><i class="fas fa-percent"></i></div>
+          <div>
+            <h4>Y a-t-il des frais supplémentaires ?</h4>
+            <p>Non ! Tous les prix sont TTC, aucun frais caché. Les seuls frais additionnels sont ceux de Stripe pour les paiements de cautions (1,4% + 0,25€) et Igloohome pour les serrures (2$/serrure/mois).</p>
           </div>
         </div>
       </div>
@@ -130,374 +481,25 @@
   </div>
 
   <script>
-    
-  // Vérifier le statut de l'abonnement pour adapter les boutons
-  async function checkUserStatus() {
-    const token = localStorage.getItem('lcc_token');
-    
-    if (!token) return; // Non connecté, on garde "Essayer gratuitement"
-
-    try {
-      const res = await fetch('/api/subscription/status', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        
-        // Si trial expiré ou abonnement expiré, changer le texte des boutons
-        if (data.status === 'expired' || data.status === 'canceled' || 
-            (data.status === 'trial' && data.daysRemaining < 0)) {
-          
-          // Changer tous les boutons
-          const buttons = document.querySelectorAll('button[onclick*="startCheckout"]');
-          buttons.forEach(btn => {
-            btn.innerHTML = btn.innerHTML.replace('Essayer gratuitement', 'S\'abonner maintenant');
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Erreur:', err);
-    }
+  // Toggle Mensuel / Annuel
+  function showMonthly() {
+    document.querySelectorAll('.monthly-price, .monthly-period').forEach(el => el.style.display = '');
+    document.querySelectorAll('.annual-price, .annual-period').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.billing-toggle button')[0].classList.add('active');
+    document.querySelectorAll('.billing-toggle button')[1].classList.remove('active');
   }
 
-  // Appeler au chargement
-  document.addEventListener('DOMContentLoaded', checkUserStatus);
-</script>
+  function showAnnual() {
+    document.querySelectorAll('.monthly-price, .monthly-period').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.annual-price, .annual-period').forEach(el => el.style.display = '');
+    document.querySelectorAll('.billing-toggle button')[0].classList.remove('active');
+    document.querySelectorAll('.billing-toggle button')[1].classList.add('active');
+  }
 
-  <style>
-    .pricing-body {
-      min-height: 100vh;
-      background: radial-gradient(circle at top, #e0f2fe, #f8fafc);
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 40px 20px;
-    }
-
-    .pricing-container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    .pricing-header {
-      text-align: center;
-      margin-bottom: 50px;
-    }
-
-    .pricing-logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-/* Branding Boostinghost */
-    .brand-boosting { color: #10B981; font-weight: 800; }
-    .brand-host { color: var(--text-primary); font-weight: 700; }
-
-    .pricing-logo i {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #10B981, #059669);
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 18px;
-    }
-
-    .pricing-header h1 {
-      font-size: 36px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
-    }
-
-    .pricing-header p {
-      font-size: 16px;
-      color: var(--text-secondary);
-    }
-
-    .pricing-plans {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 30px;
-      margin-bottom: 60px;
-      max-width: 900px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .pricing-card {
-      background: white;
-      border-radius: 20px;
-      padding: 32px 28px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      border: 2px solid transparent;
-      transition: all 0.3s ease;
-      position: relative;
-    }
-
-    .pricing-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-    }
-
-    .pricing-card.featured {
-      border-color: #10B981;
-      box-shadow: 0 8px 30px rgba(16, 185, 129, 0.2);
-    }
-
-    .pricing-card.featured:hover {
-      box-shadow: 0 12px 50px rgba(16, 185, 129, 0.3);
-    }
-
-    .plan-badge {
-      display: inline-block;
-      padding: 6px 14px;
-      background: var(--bg-tertiary);
-      color: var(--text-secondary);
-      border-radius: var(--radius-full);
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 16px;
-    }
-
-    .plan-badge.badge-pro {
-      background: linear-gradient(135deg, #10B981, #059669);
-      color: white;
-    }
-
-    .plan-name {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 12px;
-    }
-
-    .plan-price {
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-      margin-bottom: 16px;
-    }
-
-    .price-amount {
-      font-size: 42px;
-      font-weight: 700;
-      color: var(--text-primary);
-      letter-spacing: -0.02em;
-    }
-
-    .price-period {
-      font-size: 16px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .plan-description {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin-bottom: 24px;
-      min-height: 42px;
-    }
-
-    .plan-features {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 28px 0;
-    }
-
-    .plan-features li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 0;
-      font-size: 14px;
-      color: var(--text-primary);
-      border-bottom: 1px solid var(--border-color-subtle);
-    }
-
-    .plan-features li:last-child {
-      border-bottom: none;
-    }
-
-    .plan-features li i {
-      margin-top: 2px;
-      font-size: 14px;
-      color: #10B981;
-      flex-shrink: 0;
-    }
-
-    .plan-features li i.fa-times {
-      color: var(--text-tertiary);
-    }
-
-    .text-muted {
-      color: var(--text-tertiary) !important;
-    }
-
-    .feature-highlight {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.04));
-      padding: 12px !important;
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(16, 185, 129, 0.2) !important;
-      margin-top: 8px;
-    }
-
-    .feature-highlight i {
-      color: #F59E0B !important;
-    }
-
-    .btn-large {
-      width: 100%;
-      padding: 14px 24px;
-      font-size: 15px;
-    }
-
-    .pricing-faq {
-      max-width: 900px;
-      margin: 0 auto 50px;
-      background: white;
-      border-radius: 20px;
-      padding: 40px 36px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    }
-
-    .pricing-faq h3 {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 28px;
-      text-align: center;
-    }
-
-    .faq-grid {
-      display: grid;
-      gap: 24px;
-    }
-
-    .faq-item {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-
-    .faq-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--primary-light);
-      color: var(--primary-dark);
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .faq-item h4 {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 6px;
-    }
-
-    .faq-item p {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin: 0;
-    }
-
-    .pricing-footer {
-      text-align: center;
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-
-    .pricing-footer a {
-      color: var(--primary-color);
-      font-weight: 600;
-      text-decoration: none;
-    }
-
-    .pricing-footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .pricing-body {
-        padding: 24px 16px;
-      }
-
-      .pricing-header h1 {
-        font-size: 28px;
-      }
-
-      .pricing-plans {
-        grid-template-columns: 1fr;
-        gap: 24px;
-      }
-
-      .pricing-card {
-        padding: 28px 24px;
-      }
-
-      .price-amount {
-        font-size: 36px;
-      }
-
-      .pricing-faq {
-        padding: 32px 24px;
-      }
-
-      .faq-item {
-        flex-direction: column;
-        gap: 12px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .pricing-header h1 {
-        font-size: 24px;
-      }
-
-      .pricing-header p {
-        font-size: 14px;
-      }
-
-      .plan-name {
-        font-size: 20px;
-      }
-
-      .price-amount {
-        font-size: 32px;
-      }
-      .bh-logo { 
-        display: block; 
-        width: 56px; 
-        height: 56px; 
-        object-fit: contain; 
-      }
-    }
-  </style>
-
-  
-<script>
-  // Créer une session Stripe Checkout
+  // Démarrer le checkout
   async function startCheckout(plan) {
     const token = localStorage.getItem('lcc_token');
-    
-    // Vérifier si l'utilisateur est connecté
+
     if (!token) {
       alert('Veuillez vous connecter pour souscrire à un abonnement.');
       window.location.href = '/login.html';
@@ -505,19 +507,21 @@
     }
 
     try {
-      // Désactiver le bouton pendant le chargement
       const button = event.target;
       button.disabled = true;
       button.textContent = 'Redirection vers Stripe...';
 
-      // Appeler l'API pour créer la session Checkout
+      // Déterminer si mensuel ou annuel
+      const isAnnual = document.querySelectorAll('.billing-toggle button')[1].classList.contains('active');
+      const billingPlan = isAnnual ? plan + '_annual' : plan + '_monthly';
+
       const res = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ plan: plan })
+        body: JSON.stringify({ plan: billingPlan })
       });
 
       if (!res.ok) {
@@ -526,7 +530,6 @@
 
       const data = await res.json();
 
-      // Rediriger vers Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -537,19 +540,16 @@
       console.error('Erreur checkout:', err);
       alert('Impossible de démarrer le paiement. Réessayez plus tard.');
       
-      // Réactiver le bouton
       const button = event.target;
       button.disabled = false;
-      button.textContent = 'Essayer gratuitement';
+      button.textContent = 'Essayer gratuitement 30 jours';
     }
   }
-</script>
-  <script>
-  // Adapter les boutons selon le statut de l'utilisateur
-  async function adaptButtonsToUserStatus() {
+
+  // Adapter les boutons selon le statut
+  async function checkUserStatus() {
     const token = localStorage.getItem('lcc_token');
-    
-    if (!token) return; // Non connecté, on garde "Essayer gratuitement"
+    if (!token) return;
 
     try {
       const res = await fetch('/api/subscription/status', {
@@ -559,12 +559,9 @@
       if (res.ok) {
         const data = await res.json();
         
-        // Si trial expiré ou abonnement expiré
-        if (data.status === 'expired' || 
-            data.status === 'canceled' || 
-            (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0)) {
+        if (data.status === 'expired' || data.status === 'canceled' || 
+            (data.status === 'trial' && data.daysRemaining < 0)) {
           
-          // Changer le texte de tous les boutons
           document.querySelectorAll('button[onclick*="startCheckout"]').forEach(btn => {
             btn.textContent = 'S\'abonner maintenant';
           });
@@ -575,8 +572,7 @@
     }
   }
 
-  // Appeler au chargement de la page
-  document.addEventListener('DOMContentLoaded', adaptButtonsToUserStatus);
+  document.addEventListener('DOMContentLoaded', checkUserStatus);
 </script>
 </body>
 </html>
