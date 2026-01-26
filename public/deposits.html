@@ -859,21 +859,14 @@ async function createDeposit() {
       throw new Error(data.error || 'Erreur lors de la création de la caution');
     }
 
-    // ✅ Fermer la modale AVANT de créer le message
+    // ✅ Fermer la modale AVANT de recharger
     closeDepositModal();
+    
+    // ✅ Recharger ET réafficher les données
     await loadReservationsWithDeposits();
 
-    if (data.checkoutUrl) {
-      // ✅ Utiliser la variable locale "reservation" au lieu de currentReservationForDeposit
-      const message = buildDepositMessage(reservation, data.checkoutUrl);
-
-      try {
-        await navigator.clipboard.writeText(message);
-        alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
-      } catch {
-        alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
-      }
-    }
+    // ✅ Message simple de succès
+    alert("Lien créé avec succès !");
   } catch (e) {
     console.error(e);
     errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
