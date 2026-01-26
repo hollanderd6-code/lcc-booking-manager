@@ -533,6 +533,15 @@ function formatDateFr(dateStr) {
         alert('Votre navigateur ne supporte pas la copie automatique, copiez le lien manuellement.');
       }
     }
+    function openDepositModalByUid(uid) {
+  const reservation = RESERVATIONS_WITH_DEPOSITS.find(r => r.uid === uid);
+  if (!reservation) {
+    alert('Réservation introuvable');
+    return;
+  }
+  openDepositModal(reservation);
+}
+    
 function buildDepositMessage(reservation, checkoutUrl) {
   const startFr = formatDateFr(reservation.startDate);
   const endFr = formatDateFr(reservation.endDate);
@@ -708,9 +717,7 @@ async function copyExistingDepositMessage(reservation) {
         const rawSource = r.source || r.sourceRaw || r.channel || '';
         const sourceKey = normalizeSourceToKey(rawSource);
         const isAirbnb = sourceKey === 'airbnb';
-
-        const safeJson = JSON.stringify(r).replace(/'/g, "&apos;");
-
+          
         // Actions
         let actionsHtml = '';
         
@@ -724,11 +731,11 @@ async function copyExistingDepositMessage(reservation) {
             <div class="card-hint">Lien déjà créé</div>
           `;
         } else if (!d) {
-          actionsHtml = `
-            <button class="btn btn-primary btn-card" onclick='openDepositModal(${safeJson})'>
-              <i class="fas fa-link"></i> Créer un lien
-            </button>
-          `;
+  actionsHtml = `
+    <button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.uid}')">
+      <i class="fas fa-link"></i> Créer un lien
+    </button>
+  `;
         } else {
           actionsHtml = '<div class="card-hint">Caution déjà gérée</div>';
         }
