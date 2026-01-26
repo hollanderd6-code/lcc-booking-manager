@@ -4813,35 +4813,61 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
     return res.status(401).json({ error: 'Non autorisé' });
   }
 
-  const result = [];
-  const userProps = getUserProperties(user.id);
-
-  userProps.forEach(property => {
-    const reservations = reservationsStore.properties[property.id] || [];
-
-    reservations.forEach(r => {
-      const deposit = DEPOSITS.find(d => d.reservationUid === r.uid) || null;
-
-      result.push({
-        reservationUid: r.uid,
-        propertyId: property.id,
-        propertyName: property.name,
-        startDate: r.start,
-        endDate: r.end,
-        guestName: r.guestName || '',
-        deposit: deposit
-          ? {
-              id: deposit.id,
-              amountCents: deposit.amountCents,
-              status: deposit.status,
-              checkoutUrl: deposit.checkoutUrl
-            }
-          : null
+  try {
+    // ✅ Récupérer tous les deposits de l'utilisateur depuis PostgreSQL
+    const depositsResult = await pool.query(`
+      SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id
+      FROM deposits
+      WHERE user_id = $1
+    `, [user.id]);
+    
+    // Créer un Map pour un accès rapide par reservationUid
+    const depositsMap = new Map();
+    depositsResult.rows.forEach(d => {
+      depositsMap.set(d.reservation_uid, {
+        id: d.id,
+        amountCents: d.amount_cents,
+        status: d.status,
+        checkoutUrl: d.checkout_url,
+        stripeSessionId: d.stripe_session_id
       });
     });
-  });
 
-  res.json(result);
+    const result = [];
+    const userProps = getUserProperties(user.id);
+
+    userProps.forEach(property => {
+      const reservations = reservationsStore.properties[property.id] || [];
+
+      reservations.forEach(r => {
+        // ✅ Chercher le deposit dans la Map au lieu du tableau DEPOSITS
+        const deposit = depositsMap.get(r.uid) || null;
+
+        result.push({
+          reservationUid: r.uid,
+          propertyId: property.id,
+          propertyName: property.name,
+          startDate: r.start,
+          endDate: r.end,
+          guestName: r.guestName || '',
+          source: r.source || '',
+          deposit: deposit
+            ? {
+                id: deposit.id,
+                amountCents: deposit.amountCents,
+                status: deposit.status,
+                checkoutUrl: deposit.checkoutUrl
+              }
+            : null
+        });
+      });
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur /api/reservations-with-deposits:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 // ============================================
 // ✅ GET - Réservations enrichies (risque + checklist + sous-scores)
