@@ -1391,18 +1391,40 @@ if (logoInput && logoPreview) {
 
 <!-- SCRIPT ABONNEMENT -->
 <script>
+    // ✅ NOUVEAU : Fonction avec les vrais prix
     function formatEUR(amount) {
-  const n = Number(amount || 0);
-  return n.toFixed(2).replace('.', ',') + '€';
-}
+      const n = Number(amount || 0);
+      return n.toFixed(2).replace('.', ',') + '€';
+    }
 
-function priceForPlan(planType) {
-  const p = (planType || 'basic').toLowerCase();
-  if (p === 'pro') return 8.99;
-  return 5.99; // basic
-}
+    // ✅ CORRIGÉ : Nouveaux plans et prix
+    function priceForPlan(planType) {
+      const p = (planType || 'solo').toLowerCase();
+      
+      // Nouveaux plans
+      if (p === 'solo') return 14.90;
+      if (p === 'pro') return 49.00;
+      if (p === 'business') return 99.00;
+      
+      // Anciens plans (pour compatibilité)
+      if (p === 'basic') return 14.90; // Redirection vers Solo
+      
+      return 14.90; // Par défaut : Solo
+    }
 
-async function loadSubscriptionStatus() {
+    // ✅ NOUVEAU : Retourner le nom lisible du plan
+    function planDisplayName(planType) {
+      const p = (planType || 'solo').toLowerCase();
+      
+      if (p === 'solo') return 'Solo';
+      if (p === 'pro') return 'Pro';
+      if (p === 'business') return 'Business';
+      if (p === 'basic') return 'Solo'; // Ancien nom
+      
+      return 'Solo';
+    }
+
+    async function loadSubscriptionStatus() {
       const token = localStorage.getItem('lcc_token');
       const subscriptionCard = document.getElementById('subscriptionCard');
 
@@ -1456,7 +1478,7 @@ async function loadSubscriptionStatus() {
 
         if (data.status === 'active') {
           statusBadgeClass = 'active';
-          statusBadgeText = data.planType === 'pro' ? 'Pro' : 'Basic';
+          statusBadgeText = planDisplayName(data.planType); // ✅ Utiliser le nouveau nom
           statusIcon = 'fa-check-circle';
         } else if (data.status === 'expired' || data.status === 'canceled') {
           statusBadgeClass = 'expired';
@@ -1501,7 +1523,7 @@ async function loadSubscriptionStatus() {
               <i class="fas fa-cog"></i>
               Gérer mon abonnement
             </button>
-            ${data.planType === 'basic' ? `
+            ${data.planType === 'solo' || data.planType === 'basic' ? `
               <a href="/pricing.html" class="btn btn-primary">
                 <i class="fas fa-arrow-up"></i>
                 Passer à Pro
@@ -1527,7 +1549,7 @@ async function loadSubscriptionStatus() {
             <div class="subscription-details">
               <div class="detail-row">
                 <span class="detail-label">Plan</span>
-                <span class="detail-value">${data.planType === 'pro' ? 'Pro' : 'Basic'}</span>
+                <span class="detail-value">${planDisplayName(data.planType)}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Prix</span>
@@ -1544,7 +1566,7 @@ async function loadSubscriptionStatus() {
         subscriptionCard.innerHTML = `
           <div class="subscription-header">
             <div class="subscription-info">
-              <h3>${data.displayMessage}</h3>
+              <h3>${data.displayMessage || 'Mon abonnement'}</h3>
               <div class="subscription-status">
                 <div class="status-badge ${statusBadgeClass}">
                   <i class="fas ${statusIcon}"></i>
@@ -1576,41 +1598,40 @@ async function loadSubscriptionStatus() {
     }
 
     async function openStripePortal() {
-  const token = localStorage.getItem('lcc_token');
-  if (!token) {
-    alert("Session expirée, reconnecte-toi.");
-    window.location.href = '/login.html';
-    return;
-  }
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        alert("Session expirée, reconnecte-toi.");
+        window.location.href = '/login.html';
+        return;
+      }
 
-  try {
-    const res = await fetch('/api/billing/create-portal-session', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+      try {
+        const res = await fetch('/api/billing/create-portal-session', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
 
-    // Si l'utilisateur est en essai / pas encore client Stripe, on redirige vers la page de plans
-    if (res.status === 404) {
-      alert("Le portail de facturation est disponible après souscription (hors essai).");
-      window.location.href = '/pricing.html';
-      return;
+        if (res.status === 404) {
+          alert("Le portail de facturation est disponible après souscription (hors essai).");
+          window.location.href = '/pricing.html';
+          return;
+        }
+
+        if (!res.ok) throw new Error('Erreur');
+
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert("Impossible d'ouvrir le portail.");
+        }
+      } catch (err) {
+        console.error('Erreur:', err);
+        alert("Impossible d'ouvrir le portail.");
+      }
     }
 
-    if (!res.ok) throw new Error('Erreur');
-
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert("Impossible d'ouvrir le portail.");
-    }
-  } catch (err) {
-    console.error('Erreur:', err);
-    alert("Impossible d'ouvrir le portail.");
-  }
-    }
-
-    // Charger au clic
+    // Charger au clic sur l'onglet
     document.addEventListener('DOMContentLoaded', function() {
       const tabButtons = document.querySelectorAll('.settings-tab');
       tabButtons.forEach(btn => {
@@ -1621,7 +1642,7 @@ async function loadSubscriptionStatus() {
         });
       });
     });
-  </script>
+</script>
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
