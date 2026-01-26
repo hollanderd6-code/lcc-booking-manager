@@ -860,32 +860,6 @@ async function createDeposit() {
   }
 }
 
-    closeDepositModal();
-    await loadReservationsWithDeposits();
-    if (data.checkoutUrl) {
-      // ✅ FIX : Utiliser currentReservationForDeposit au lieu de r
-      const startFr = formatDateFr(currentReservationForDeposit.startDate);
-      const endFr = formatDateFr(currentReservationForDeposit.endDate);
-      const message = `
-Bonjour ${currentReservationForDeposit.guestName || ''},
-Votre séjour au logement "${currentReservationForDeposit.propertyName || 'le logement'}"
-du ${startFr} au ${endFr} nécessite une caution.
-Voici le lien sécurisé pour procéder au paiement :
-${data.checkoutUrl}
-Merci, et à très bientôt !
-      `.trim();
-      try {
-        await navigator.clipboard.writeText(message);
-        alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
-      } catch {
-        alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
-      }
-    }
-  } catch (e) {
-    console.error(e);
-    errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
-  }
-}
 
     document.addEventListener('DOMContentLoaded', () => {
       const refreshBtn = document.getElementById('refreshBtn');
