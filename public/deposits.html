@@ -771,79 +771,68 @@ async function copyExistingDepositMessage(reservation) {
     }
 
     async function createDeposit() {
-      const errorEl = document.getElementById('depositError');
-      errorEl.textContent = '';
-      if (!currentReservationForDeposit) return;
-
-      const amountInput = document.getElementById('depositAmount');
-      const amountValue = parseFloat(amountInput.value);
-      if (!amountValue || amountValue <= 0) {
-        errorEl.textContent = 'Merci de saisir un montant valide.';
-        return;
-      }
-
-      // On mémorise ce montant comme valeur par défaut pour ce logement
-      try {
-        const defaultsRaw = localStorage.getItem('lcc_deposit_defaults') || '{}';
-        const defaults = JSON.parse(defaultsRaw);
-        if (currentReservationForDeposit.propertyId) {
-          defaults[currentReservationForDeposit.propertyId] = amountValue;
-          localStorage.setItem('lcc_deposit_defaults', JSON.stringify(defaults));
-        }
-      } catch (e) {
-        console.warn('Impossible de sauvegarder le montant par défaut de caution', e);
-      }
-
-      try {
-        const res = await fetch(API_BASE + '/deposits', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
-          },
-          body: JSON.stringify({
-            reservationUid: currentReservationForDeposit.reservationUid,
-            amount: amountValue
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || 'Erreur lors de la création de la caution');
-        }
-
-        closeDepositModal();
-        await loadReservationsWithDeposits();
-
-        if (data.checkoutUrl) {
-          const startFr = formatDateFr(r.startDate);
-const endFr = formatDateFr(r.endDate);
-
-const message = `
-Bonjour ${r.guestName || ''},
-
-Votre séjour au logement "${r.propertyName || 'le logement'}"
+  const errorEl = document.getElementById('depositError');
+  errorEl.textContent = '';
+  if (!currentReservationForDeposit) return;
+  const amountInput = document.getElementById('depositAmount');
+  const amountValue = parseFloat(amountInput.value);
+  if (!amountValue || amountValue <= 0) {
+    errorEl.textContent = 'Merci de saisir un montant valide.';
+    return;
+  }
+  // On mémorise ce montant comme valeur par défaut pour ce logement
+  try {
+    const defaultsRaw = localStorage.getItem('lcc_deposit_defaults') || '{}';
+    const defaults = JSON.parse(defaultsRaw);
+    if (currentReservationForDeposit.propertyId) {
+      defaults[currentReservationForDeposit.propertyId] = amountValue;
+      localStorage.setItem('lcc_deposit_defaults', JSON.stringify(defaults));
+    }
+  } catch (e) {
+    console.warn('Impossible de sauvegarder le montant par défaut de caution', e);
+  }
+  try {
+    const res = await fetch(API_BASE + '/deposits', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+      },
+      body: JSON.stringify({
+        reservationUid: currentReservationForDeposit.reservationUid,
+        amount: amountValue
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Erreur lors de la création de la caution');
+    }
+    closeDepositModal();
+    await loadReservationsWithDeposits();
+    if (data.checkoutUrl) {
+      // ✅ FIX : Utiliser currentReservationForDeposit au lieu de r
+      const startFr = formatDateFr(currentReservationForDeposit.startDate);
+      const endFr = formatDateFr(currentReservationForDeposit.endDate);
+      const message = `
+Bonjour ${currentReservationForDeposit.guestName || ''},
+Votre séjour au logement "${currentReservationForDeposit.propertyName || 'le logement'}"
 du ${startFr} au ${endFr} nécessite une caution.
 Voici le lien sécurisé pour procéder au paiement :
-
 ${data.checkoutUrl}
-
 Merci, et à très bientôt !
-          `.trim();
-
-
-          try {
-            await navigator.clipboard.writeText(message);
-            alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
-          } catch {
-            alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
-          }
-        }
-      } catch (e) {
-        console.error(e);
-        errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
+      `.trim();
+      try {
+        await navigator.clipboard.writeText(message);
+        alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
+      } catch {
+        alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
       }
     }
+  } catch (e) {
+    console.error(e);
+    errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
+  }
+}
 
     document.addEventListener('DOMContentLoaded', () => {
       const refreshBtn = document.getElementById('refreshBtn');
