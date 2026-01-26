@@ -4488,7 +4488,7 @@ app.get('/api/subscription/status', authenticateToken, async (req, res) => {
     if (sub.status === 'trial') {
       displayMessage = 'Essai gratuit';
     } else if (sub.status === 'active') {
-      displayMessage = sub.plan_type === 'pro' ? 'Abonnement Pro' : 'Abonnement Basic';
+      displayMessage = `Abonnement ${getPlanDisplayName(sub.plan_type)}`;
     } else if (sub.status === 'expired') {
       displayMessage = 'Abonnement expiré';
     } else if (sub.status === 'canceled') {
@@ -10028,17 +10028,94 @@ app.use('/api/welcome-books', welcomeRouter);
 3. Les dépendances nodemailer et pdfkit sont déjà installées
 */
 // ============================================
-// ROUTES STRIPE - À AJOUTER DANS server.js
-// Copier APRÈS les autres routes API, AVANT app.listen()
+// ROUTES STRIPE - À COPIER DANS server.js
+// Placer APRÈS les autres routes API, AVANT server.listen()
 // ============================================
 
-// Helper : Récupérer le Price ID selon le plan
+// ============================================
+// 1. FONCTION : Récupérer le Price ID Stripe
+// ============================================
 function getPriceIdForPlan(plan) {
-  if (plan === 'pro') {
-    return process.env.STRIPE_PRICE_PRO || null;
+  const planLower = (plan || 'solo_monthly').toLowerCase();
+  
+  // Plans Solo
+  if (planLower === 'solo_monthly' || planLower === 'solo') {
+    return process.env.STRIPE_PRICE_SOLO_MONTHLY;
   }
-  // Par défaut : basic
-  return process.env.STRIPE_PRICE_BASIC || null;
+  if (planLower === 'solo_annual') {
+    return process.env.STRIPE_PRICE_SOLO_ANNUAL;
+  }
+  
+  // Plans Pro
+  if (planLower === 'pro_monthly' || planLower === 'pro') {
+    return process.env.STRIPE_PRICE_PRO_MONTHLY;
+  }
+  if (planLower === 'pro_annual') {
+    return process.env.STRIPE_PRICE_PRO_ANNUAL;
+  }
+  
+  // Plans Business
+  if (planLower === 'business_monthly' || planLower === 'business') {
+    return process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
+  }
+  if (planLower === 'business_annual') {
+    return process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
+  }
+  
+  // ✅ Compatibilité anciens plans
+  if (planLower === 'basic' || planLower === 'basic_monthly') {
+    return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+  }
+  
+  // Par défaut : Solo mensuel
+  return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+}
+
+// ============================================
+// 2. FONCTION : Extraire le nom de base du plan
+// ============================================
+function getBasePlanName(plan) {
+  const planLower = (plan || 'solo').toLowerCase();
+  
+  if (planLower.includes('solo')) return 'solo';
+  if (planLower.includes('pro')) return 'pro';
+  if (planLower.includes('business')) return 'business';
+  if (planLower.includes('basic')) return 'solo'; // Redirection
+  
+  return 'solo';
+}
+
+// ============================================
+// 3. FONCTION : Calculer le montant du plan
+// ============================================
+function getPlanAmount(plan) {
+  const basePlan = getBasePlanName(plan);
+  const isAnnual = (plan || '').toLowerCase().includes('annual');
+  
+  if (basePlan === 'solo') {
+    return isAnnual ? 149 : 14.90;
+  }
+  if (basePlan === 'pro') {
+    return isAnnual ? 490 : 49.00;
+  }
+  if (basePlan === 'business') {
+    return isAnnual ? 990 : 99.00;
+  }
+  
+  return 14.90; // Par défaut
+}
+
+// ============================================
+// 4. FONCTION : Nom d'affichage du plan
+// ============================================
+function getPlanDisplayName(plan) {
+  const basePlan = getBasePlanName(plan);
+  
+  if (basePlan === 'solo') return 'Solo';
+  if (basePlan === 'pro') return 'Pro';
+  if (basePlan === 'business') return 'Business';
+  
+  return 'Solo';
 }
 
 // ============================================
@@ -10056,19 +10133,25 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       return res.status(500).json({ error: 'Stripe non configuré' });
     }
 
+    // Validation du plan
     const { plan } = req.body || {};
     if (!plan) {
-      return res.status(400).json({ error: 'Plan requis (basic ou pro)' });
+      return res.status(400).json({ error: 'Plan requis (solo, pro ou business)' });
+    }
+
+    const validPlans = ['solo_monthly', 'solo_annual', 'pro_monthly', 'pro_annual', 'business_monthly', 'business_annual'];
+    if (!validPlans.includes(plan.toLowerCase())) {
+      return res.status(400).json({ error: 'Plan invalide. Plans valides : solo, pro, business (monthly ou annual)' });
     }
 
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configuré' });
+      return res.status(400).json({ error: 'Plan inconnu ou non configuré dans les variables d\'environnement' });
     }
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // Créer la session Stripe Checkout
+    // ✅ Créer la session Stripe Checkout SANS trial (l'essai est géré en DB)
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -10079,7 +10162,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
         }
       ],
       subscription_data: {
-        trial_period_days: 14,
+        // ❌ PAS de trial_period_days ici car l'essai est déjà géré dans ta DB
         metadata: {
           userId: user.id,
           plan: plan
@@ -10093,7 +10176,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 
     res.json({ url: session.url });
   } catch (err) {
-    console.error('Erreur create-checkout-session:', err);
+    console.error('❌ Erreur create-checkout-session:', err);
     res.status(500).json({ error: 'Impossible de créer la session de paiement' });
   }
 });
@@ -10132,21 +10215,24 @@ app.get('/api/subscription/status', async (req, res) => {
     let daysRemaining = null;
     let isExpiringSoon = false;
 
+    // Calculer les jours restants pour les essais
     if (subscription.status === 'trial') {
       const trialEnd = new Date(subscription.trial_end_date);
       daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
       isExpiringSoon = daysRemaining <= 3 && daysRemaining > 0;
     }
 
+    // ✅ Message d'affichage avec les nouveaux noms de plans
     let displayMessage = '';
     if (subscription.status === 'trial') {
       if (daysRemaining > 0) {
         displayMessage = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} d'essai restant${daysRemaining > 1 ? 's' : ''}`;
       } else {
-        displayMessage = 'Période essai expirée';
+        displayMessage = 'Période d\'essai expirée';
       }
     } else if (subscription.status === 'active') {
-      displayMessage = `Abonnement ${subscription.plan_type === 'pro' ? 'Pro' : 'Basic'} actif`;
+      // ✅ Utiliser la nouvelle fonction pour le nom du plan
+      displayMessage = `Abonnement ${getPlanDisplayName(subscription.plan_type)} actif`;
     } else if (subscription.status === 'expired') {
       displayMessage = 'Abonnement expiré';
     } else if (subscription.status === 'canceled') {
@@ -10167,11 +10253,54 @@ app.get('/api/subscription/status', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Erreur subscription/status:', err);
+    console.error('❌ Erreur subscription/status:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
+// ============================================
+// POST /api/billing/create-portal-session
+// Créer une session Stripe Customer Portal
+// ============================================
+app.post('/api/billing/create-portal-session', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe non configuré' });
+    }
+
+    // Récupérer le customer_id Stripe de l'utilisateur
+    const result = await pool.query(
+      'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
+      [user.id]
+    );
+
+    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
+      return res.status(404).json({ 
+        error: 'Aucun abonnement Stripe trouvé',
+        message: 'Le portail est disponible après souscription'
+      });
+    }
+
+    const customerId = result.rows[0].stripe_customer_id;
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+
+    // Créer la session du portail client
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${appUrl}/settings-account.html?tab=subscription`
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('❌ Erreur create-portal-session:', err);
+    res.status(500).json({ error: 'Impossible d\'ouvrir le portail' });
+  }
+});
 // ============================================
 // POST /api/billing/create-portal-session
 // Créer un lien vers le portail client Stripe
