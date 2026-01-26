@@ -534,16 +534,11 @@ function formatDateFr(dateStr) {
       }
     }
     function openDepositModalByUid(uid) {
-  // ✅ CORRIGÉ : Utiliser reservationUid au lieu de uid
   const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
   if (!reservation) {
     alert('Réservation introuvable');
     console.error('UID cherché:', uid);
-    console.log('Réservations disponibles:', allReservationsWithDeposits.map(r => ({
-      uid: r.reservationUid,
-      guest: r.guestName,
-      property: r.propertyName
-    })));
+    console.log('Réservations disponibles:', allReservationsWithDeposits);
     return;
   }
   openDepositModal(reservation);
@@ -739,8 +734,8 @@ async function copyExistingDepositMessage(reservation) {
           `;
         } else if (!d) {
   actionsHtml = `
-    <button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.reservationUid}')">
-      <i class="fas fa-link"></i> Créer un lien
+<button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.reservationUid}')">
+<i class="fas fa-link"></i> Créer un lien
     </button>
   `;
 } else {
@@ -784,27 +779,38 @@ async function copyExistingDepositMessage(reservation) {
       container.innerHTML = html;
     }
 
-    async function createDeposit() {
+    // ============================================
+// CORRECTION FINALE : fonction createDeposit
+// Remplacer TOUTE la fonction (lignes 779-842)
+// ============================================
+
+async function createDeposit() {
   const errorEl = document.getElementById('depositError');
   errorEl.textContent = '';
   if (!currentReservationForDeposit) return;
+
   const amountInput = document.getElementById('depositAmount');
   const amountValue = parseFloat(amountInput.value);
   if (!amountValue || amountValue <= 0) {
     errorEl.textContent = 'Merci de saisir un montant valide.';
     return;
   }
+
+  // ✅ SAUVEGARDER la réservation dans une variable locale
+  const reservation = currentReservationForDeposit;
+
   // On mémorise ce montant comme valeur par défaut pour ce logement
   try {
     const defaultsRaw = localStorage.getItem('lcc_deposit_defaults') || '{}';
     const defaults = JSON.parse(defaultsRaw);
-    if (currentReservationForDeposit.propertyId) {
-      defaults[currentReservationForDeposit.propertyId] = amountValue;
+    if (reservation.propertyId) {
+      defaults[reservation.propertyId] = amountValue;
       localStorage.setItem('lcc_deposit_defaults', JSON.stringify(defaults));
     }
   } catch (e) {
     console.warn('Impossible de sauvegarder le montant par défaut de caution', e);
   }
+
   try {
     const res = await fetch(API_BASE + '/deposits', {
       method: 'POST',
@@ -813,14 +819,37 @@ async function copyExistingDepositMessage(reservation) {
         'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
       },
       body: JSON.stringify({
-        reservationUid: currentReservationForDeposit.reservationUid,
+        reservationUid: reservation.reservationUid,
         amount: amountValue
       })
     });
+
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Erreur lors de la création de la caution');
     }
+
+    // ✅ Fermer la modale AVANT de créer le message
+    closeDepositModal();
+    await loadReservationsWithDeposits();
+
+    if (data.checkoutUrl) {
+      // ✅ Utiliser la variable locale "reservation" au lieu de currentReservationForDeposit
+      const message = buildDepositMessage(reservation, data.checkoutUrl);
+
+      try {
+        await navigator.clipboard.writeText(message);
+        alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
+      } catch {
+        alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
+  }
+}
+
     closeDepositModal();
     await loadReservationsWithDeposits();
     if (data.checkoutUrl) {
