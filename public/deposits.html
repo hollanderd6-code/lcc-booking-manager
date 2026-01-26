@@ -629,6 +629,8 @@ function copyDepositMessageByUid(uid) {
         if (!res.ok) throw new Error('Erreur API');
         const data = await res.json();
         allReservationsWithDeposits = Array.isArray(data) ? data : [];
+        console.log('✅ Réservations chargées:', allReservationsWithDeposits.length);
+        console.log('📊 Première réservation:', allReservationsWithDeposits[0]);
         renderDepositsTable();
       } catch (e) {
         console.error(e);
@@ -705,6 +707,14 @@ function copyDepositMessageByUid(uid) {
       let html = '<div class="deposits-cards-grid">';
 
       data.forEach((r) => {
+        // 🔍 DEBUG: Voir la structure des données
+        console.log('🎴 Carte:', {
+          propertyName: r.propertyName,
+          hasDeposit: !!r.deposit,
+          depositStatus: r.deposit?.status,
+          hasCheckoutUrl: !!r.deposit?.checkoutUrl,
+          checkoutUrl: r.deposit?.checkoutUrl
+        });
         const d = r.deposit || null;
         let amountBadge = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
