@@ -1632,7 +1632,8 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
       case 'checkout.session.completed': {
         const session = event.data.object;
         const userId = session.client_reference_id || session.metadata?.userId;
-        const plan = session.metadata?.plan || 'basic';
+        const plan = session.metadata?.plan || 'solo_monthly';
+        const basePlan = getBasePlanName(plan);
 
         if (!userId) {
           console.error('userId manquant dans checkout.session.completed');
@@ -1643,39 +1644,95 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         const customerId = session.customer;
 
         await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             stripe_subscription_id = $1,
-             stripe_customer_id = $2,
-             plan_type = $3,
-             status = 'active',
-             current_period_end = NOW() + INTERVAL '1 month',
-             updated_at = NOW()
-           WHERE user_id = $4`,
-          [subscriptionId, customerId, plan, userId]
+          `INSERT INTO subscriptions 
+           (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_end, current_period_end)
+           VALUES ($1, $2, $3, $4, 'trial', NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
+           ON CONFLICT (user_id) 
+           DO UPDATE SET
+             stripe_subscription_id = $2,
+             stripe_customer_id = $3,
+             plan_type = $4,
+             status = 'trial',
+             trial_end = NOW() + INTERVAL '14 days',
+             current_period_end = NOW() + INTERVAL '14 days',
+             updated_at = NOW()`,
+          [userId, subscriptionId, customerId, basePlan]
         );
-const userResult = await pool.query(
-    'SELECT email, first_name FROM users WHERE id = $1',
-    [userId]
-  );
 
-  if (userResult.rows.length > 0) {
-    const userEmail = userResult.rows[0].email;
-    const userFirstName = userResult.rows[0].first_name;
-    const planAmount = plan === 'pro' ? 899 : 599;
+        const userResult = await pool.query(
+          'SELECT email, first_name FROM users WHERE id = $1',
+          [userId]
+        );
 
-    await sendSubscriptionConfirmedEmail(
-      userEmail,
-      userFirstName || 'cher membre',
-      plan,
-      planAmount
-    );
-    await logEmailSent(userId, 'subscription_confirmed', { plan, planAmount });
-  }
+        if (userResult.rows.length > 0) {
+          const userEmail = userResult.rows[0].email;
+          const userFirstName = userResult.rows[0].first_name || 'cher membre';
+          const planAmount = getPlanAmount(plan);
 
-  console.log(`✅ Abonnement ACTIF créé pour user ${userId} (plan: ${plan})`);
-  break;
-}
+          await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
+          await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
+        }
+
+        console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+        
+        if (!subscriptionId) break;
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const userId = subscription.metadata?.userId;
+        const plan = subscription.metadata?.plan;
+
+        if (invoice.billing_reason === 'subscription_create') {
+          await pool.query(
+            `UPDATE subscriptions 
+             SET 
+               status = 'active',
+               trial_end = NULL,
+               current_period_end = to_timestamp($1),
+               updated_at = NOW()
+             WHERE stripe_subscription_id = $2`,
+            [subscription.current_period_end, subscriptionId]
+          );
+
+          console.log(`✅ Abonnement ACTIF après essai: ${subscriptionId}`);
+          
+          if (userId) {
+            const userResult = await pool.query(
+              'SELECT email, first_name FROM users WHERE id = $1',
+              [userId]
+            );
+
+            if (userResult.rows.length > 0) {
+              const userEmail = userResult.rows[0].email;
+              const userFirstName = userResult.rows[0].first_name || 'cher membre';
+              const basePlan = getBasePlanName(plan || 'solo_monthly');
+              const planAmount = getPlanAmount(plan || 'solo_monthly');
+
+              await sendSubscriptionConfirmedEmail(userEmail, userFirstName, basePlan, planAmount);
+              await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
+            }
+          }
+        } else {
+          await pool.query(
+            `UPDATE subscriptions 
+             SET 
+               current_period_end = to_timestamp($1),
+               updated_at = NOW()
+             WHERE stripe_subscription_id = $2`,
+            [subscription.current_period_end, subscriptionId]
+          );
+          
+          console.log(`✅ Abonnement renouvelé: ${subscriptionId}`);
+        }
+        
+        break;
+      }
+
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const subscriptionId = subscription.id;
@@ -1684,6 +1741,7 @@ const userResult = await pool.query(
         if (subscription.status === 'trialing') status = 'trial';
         else if (subscription.status === 'canceled') status = 'canceled';
         else if (subscription.status === 'past_due') status = 'past_due';
+        else if (subscription.status === 'unpaid') status = 'expired';
 
         await pool.query(
           `UPDATE subscriptions 
@@ -1714,53 +1772,23 @@ const userResult = await pool.query(
         break;
       }
 
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = 'active',
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`✅ Paiement réussi pour subscription ${subscriptionId}`);
-        break;
-      }
-
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         const subscriptionId = invoice.subscription;
 
-        if (!subscriptionId) break;
+        if (subscriptionId) {
+          await pool.query(
+            `UPDATE subscriptions 
+             SET status = 'past_due', updated_at = NOW()
+             WHERE stripe_subscription_id = $1`,
+            [subscriptionId]
+          );
 
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'past_due', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`❌' Paiement échoué pour subscription ${subscriptionId}`);
+          console.log(`⚠️ Paiement échoué pour: ${subscriptionId}`);
+        }
         break;
       }
-
-      default:
-        console.log(`Événement non géré: ${event.type}`);
     }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.error('❌ Erreur traitement webhook:', err);
-    res.status(500).json({ error: 'Erreur traitement webhook' });
-  }
-});
 
 // Middleware
 app.use(cors());
@@ -5149,7 +5177,7 @@ async function sendVerificationEmail(email, firstName, token) {
   }
 }
 // ============================================
-// SERVICE D'EMAILS AUTOMATIQUES
+// SERVICE D'EMAILS AUTOMATIQUES - MIS À JOUR
 // ============================================
 
 // ============================================
@@ -5165,7 +5193,7 @@ async function hasEmailBeenSent(userId, emailType) {
 }
 
 // ============================================
-// FONCTION : Enregistrer l’envoi d'un email
+// FONCTION : Enregistrer l'envoi d'un email
 // ============================================
 async function logEmailSent(userId, emailType, emailData = {}) {
   await pool.query(
@@ -5176,7 +5204,7 @@ async function logEmailSent(userId, emailType, emailData = {}) {
 }
 
 // ============================================
-// EMAIL 1 : BIENVENUE APRÈS VÉRIFICATION
+// EMAIL 1 : BIENVENUE APRÈS INSCRIPTION
 // ============================================
 async function sendWelcomeEmail(email, firstName) {
   const mailOptions = {
@@ -5209,51 +5237,61 @@ async function sendWelcomeEmail(email, firstName) {
             
             <p><strong>Votre compte Boostinghost est maintenant actif !</strong></p>
             
-            <p>Vous avez accès à <strong>14 jours d'essai gratuit</strong> pour tester toutes les fonctionnalités de notre plateforme de gestion de locations courte durée.</p>
+            <p>Pour démarrer, choisissez le plan qui vous convient et profitez de <strong>14 jours d'essai gratuit</strong> sans carte bancaire.</p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
-                🚀 Accéder à mon espace
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
+                🚀 Choisir mon plan
               </a>
             </div>
             
-            <h3 style="color: #111827; margin-top: 30px;">✨ Ce que vous pouvez faire dès maintenant :</h3>
+            <h3 style="color: #111827; margin-top: 30px;">✨ Nos plans :</h3>
+            
+            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin: 12px 0;">
+              <strong>Solo - 14,90€/mois</strong> (1-3 logements)<br>
+              <span style="color: #6b7280; font-size: 14px;">Pour propriétaires individuels</span>
+            </div>
+            
+            <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 12px 0; border: 2px solid #10b981;">
+              <strong>Pro - 49€/mois</strong> (4-15 logements)<br>
+              <span style="color: #6b7280; font-size: 14px;">Pour conciergeries</span>
+            </div>
+            
+            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin: 12px 0;">
+              <strong>Business - 99€/mois</strong> (16-50 logements)<br>
+              <span style="color: #6b7280; font-size: 14px;">Pour grosses conciergeries</span>
+            </div>
+            
+            <h3 style="color: #111827; margin-top: 30px;">📦 Tout inclus dans tous les plans :</h3>
             
             <div class="feature">
               <span class="feature-icon">📅</span>
-              <div>
-                <strong>Ajoutez vos logements</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">Créez vos fiches de propriétés en quelques clics</span>
-              </div>
+              <div><strong>Calendrier unifié</strong> - Synchronisation iCal Airbnb & Booking</div>
             </div>
             
             <div class="feature">
-              <span class="feature-icon">🔗</span>
-              <div>
-                <strong>Synchronisez vos calendriers</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">Connectez Airbnb et Booking.com via iCal</span>
-              </div>
+              <span class="feature-icon">🤖</span>
+              <div><strong>Messages automatiques IA</strong> - Réponses intelligentes</div>
             </div>
             
             <div class="feature">
-              <span class="feature-icon">💬</span>
-              <div>
-                <strong>Gérez vos messages</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">Centralisez toutes vos communications</span>
-              </div>
+              <span class="feature-icon">🔐</span>
+              <div><strong>Serrures connectées</strong> - Codes d'accès Igloohome</div>
             </div>
             
             <div class="feature">
               <span class="feature-icon">🧹</span>
-              <div>
-                <strong>Organisez le ménage</strong><br>
-                <span style="color: #6b7280; font-size: 14px;">Planifiez et suivez les tâches de nettoyage</span>
-              </div>
+              <div><strong>Gestion du ménage</strong> - Planning et suivi</div>
+            </div>
+            
+            <div class="feature">
+              <span class="feature-icon">💰</span>
+              <div><strong>Facturation</strong> - Voyageurs & propriétaires</div>
             </div>
             
             <p style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
               💡 <strong>Besoin d'aide ?</strong><br>
-              Notre équipe est là pour vous accompagner : <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a>
+              Notre équipe est là : <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a>
             </p>
             
             <p>À très bientôt sur Boostinghost ! 🚀</p>
@@ -5263,7 +5301,6 @@ async function sendWelcomeEmail(email, firstName) {
             </p>
           </div>
           <div class="footer">
-            <p>Cet email a été envoyé automatiquement par Boostinghost.</p>
             <p>© ${new Date().getFullYear()} Boostinghost. Tous droits réservés.</p>
           </div>
         </div>
@@ -5277,9 +5314,97 @@ async function sendWelcomeEmail(email, firstName) {
 }
 
 // ============================================
-// EMAIL 2 : RAPPEL J-7
+// EMAIL 2 : ESSAI GRATUIT DÉMARRÉ
 // ============================================
-async function sendTrialReminder7Days(email, firstName) {
+async function sendTrialStartedEmail(email, firstName, plan, amount) {
+  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
+  const price = (amount / 100).toFixed(2);
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🎉 Votre essai gratuit de 14 jours a commencé !',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          .card { background: #f0fdf4; padding: 24px; border-radius: 8px; margin: 24px 0; border: 2px solid #10b981; }
+          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 32px;">🎉 C'est parti !</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${firstName},</p>
+            
+            <p><strong>Votre essai gratuit du plan ${planName} est maintenant actif pour 14 jours !</strong></p>
+            
+            <div class="card">
+              <p style="margin: 0 0 8px 0; color: #047857; font-size: 14px; font-weight: 600;">VOTRE PLAN</p>
+              <p style="margin: 0 0 16px 0; font-size: 28px; font-weight: 800; color: #10b981;">Plan ${planName}</p>
+              <p style="margin: 0; font-size: 16px; color: #374151;">
+                ✨ <strong>14 jours gratuits</strong><br>
+                <span style="font-size: 14px; color: #6b7280;">Puis ${price}€/mois</span>
+              </p>
+            </div>
+            
+            <p><strong>Profitez de toutes les fonctionnalités sans aucune limitation :</strong></p>
+            <ul>
+              <li>📅 Calendrier unifié (synchro iCal)</li>
+              <li>🤖 Messages automatiques IA</li>
+              <li>🔐 Serrures connectées Igloohome</li>
+              <li>🧹 Gestion des ménages</li>
+              <li>💰 Facturation voyageurs & propriétaires</li>
+              <li>🛡️ Cautions & décomptes</li>
+              <li>📖 Livrets d'accueil</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
+                🚀 Accéder à mon espace
+              </a>
+            </div>
+            
+            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+              ⚠️ <strong>Important</strong> : À la fin de l'essai, votre abonnement démarrera automatiquement. Vous pouvez annuler à tout moment depuis vos paramètres.
+            </p>
+            
+            <p style="margin-top: 30px;">Besoin d'aide ? Notre équipe est là : support@boostinghost.com</p>
+            
+            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
+              L'équipe Boostinghost
+            </p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Boostinghost</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log('✅ Email essai démarré envoyé à:', email);
+}
+
+// ============================================
+// EMAIL 3 : RAPPEL J-7
+// ============================================
+async function sendTrialReminder7Days(email, firstName, plan, amount) {
+  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
+  const price = (amount / 100).toFixed(2);
+  
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -5306,26 +5431,29 @@ async function sendTrialReminder7Days(email, firstName) {
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
-            <p>Il vous reste <strong>7 jours</strong> d'essai gratuit sur Boostinghost !</p>
+            <p>Il vous reste <strong>7 jours</strong> d'essai gratuit sur votre plan <strong>${planName}</strong> !</p>
             
             <p>C'est le moment idéal pour :</p>
             <ul>
-              <li>Tester toutes les fonctionnalités</li>
-              <li>Synchroniser tous vos calendriers</li>
-              <li>Configurer vos messages automatiques</li>
-              <li>Organiser votre planning de ménage</li>
+              <li>✅ Finaliser la configuration de vos logements</li>
+              <li>✅ Tester les messages automatiques IA</li>
+              <li>✅ Configurer vos serrures connectées</li>
+              <li>✅ Organiser votre planning de ménage</li>
             </ul>
             
-            <p>Pour continuer à profiter de Boostinghost après votre essai, choisissez le plan qui vous convient :</p>
+            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+              📅 <strong>Dans 7 jours</strong>, votre abonnement passera automatiquement à <strong>${price}€/mois</strong>.<br>
+              <span style="font-size: 14px; color: #6b7280;">Vous pouvez annuler ou changer de plan à tout moment.</span>
+            </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
-                Voir les plans
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
+                Gérer mon abonnement
               </a>
             </div>
             
             <p style="color: #6b7280; font-size: 14px;">
-              Pas encore convaincu ? Profitez au maximum de votre semaine restante !
+              Profitez au maximum de votre semaine restante !
             </p>
           </div>
           <div class="footer">
@@ -5342,9 +5470,12 @@ async function sendTrialReminder7Days(email, firstName) {
 }
 
 // ============================================
-// EMAIL 3 : RAPPEL J-3
+// EMAIL 4 : RAPPEL J-3
 // ============================================
-async function sendTrialReminder3Days(email, firstName) {
+async function sendTrialReminder3Days(email, firstName, plan, amount) {
+  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
+  const price = (amount / 100).toFixed(2);
+  
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -5360,7 +5491,7 @@ async function sendTrialReminder3Days(email, firstName) {
           .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
           .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
           .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 6px; margin: 20px 0; }
+          .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 6px; margin: 20px 0; }
           .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
         </style>
       </head>
@@ -5377,23 +5508,25 @@ async function sendTrialReminder3Days(email, firstName) {
               Votre essai gratuit se termine dans <strong>3 jours</strong>.
             </div>
             
-            <p>Pour continuer à utiliser Boostinghost sans interruption, choisissez votre plan dès maintenant :</p>
+            <p>Votre plan <strong>${planName}</strong> sera automatiquement activé à <strong>${price}€/mois</strong>.</p>
             
-            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0 0 10px 0;"><strong>Plan Basic - 5,99€/mois</strong></p>
-              <p style="margin: 0; color: #6b7280; font-size: 14px;">Toutes les fonctionnalités essentielles</p>
-            </div>
-            
-            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; border: 2px solid #10b981; margin: 20px 0;">
-              <p style="margin: 0 0 10px 0;"><strong>Plan Pro - 8,99€/mois</strong></p>
-              <p style="margin: 0; color: #6b7280; font-size: 14px;">+ Gestion des cautions Stripe (commission 2%)</p>
-            </div>
+            <p><strong>Vous souhaitez :</strong></p>
+            <ul>
+              <li>✅ Continuer avec ce plan ? Aucune action nécessaire !</li>
+              <li>🔄 Changer de plan ? Modifiez-le dès maintenant</li>
+              <li>❌ Annuler ? Faites-le avant la fin de l'essai</li>
+            </ul>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
-                Choisir mon plan
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
+                Gérer mon abonnement
               </a>
             </div>
+            
+            <p style="padding: 16px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #10b981;">
+              💡 <strong>Vous aimez Boostinghost ?</strong><br>
+              Passez à l'année et économisez 17% !
+            </p>
           </div>
           <div class="footer">
             <p>© ${new Date().getFullYear()} Boostinghost</p>
@@ -5407,14 +5540,14 @@ async function sendTrialReminder3Days(email, firstName) {
   await transporter.sendMail(mailOptions);
   console.log('✅ Email rappel J-3 envoyé à:', email);
 }
-// ============================================
-// SERVICE D'EMAILS AUTOMATIQUES (SUITE)
-// ============================================
 
 // ============================================
-// EMAIL 4 : RAPPEL J-1
+// EMAIL 5 : RAPPEL J-1
 // ============================================
-async function sendTrialReminder1Day(email, firstName) {
+async function sendTrialReminder1Day(email, firstName, plan, amount) {
+  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
+  const price = (amount / 100).toFixed(2);
+  
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -5444,27 +5577,20 @@ async function sendTrialReminder1Day(email, firstName) {
             
             <div class="alert">
               <strong style="font-size: 18px;">⏰ Votre essai gratuit se termine demain !</strong><br><br>
-              Pour continuer à utiliser Boostinghost, souscrivez à un plan dès maintenant.
+              Votre plan <strong>${planName}</strong> sera automatiquement activé à <strong>${price}€/mois</strong>.
             </div>
             
-            <p style="font-size: 16px;">Sans abonnement actif, vous perdrez l'accès à :</p>
-            <ul style="font-size: 16px;">
-              <li>Votre calendrier unifié</li>
-              <li>La synchronisation iCal</li>
-              <li>La gestion des messages</li>
-              <li>Le suivi du ménage</li>
-              <li>Toutes vos données et réservations</li>
-            </ul>
+            <p><strong>Vous voulez annuler ?</strong> Faites-le maintenant :</p>
             
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
-                🚀 Activer mon abonnement maintenant
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
+                Gérer mon abonnement
               </a>
             </div>
             
-            <p style="text-align: center; color: #6b7280; font-size: 14px;">
-              Seulement 5,99€/mois pour le plan Basic<br>
-              ou 8,99€/mois pour le plan Pro
+            <p style="text-align: center; padding: 20px; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
+              <strong>Vous restez avec nous ? Merci ! 🙏</strong><br>
+              <span style="font-size: 14px; color: #6b7280;">Votre paiement de ${price}€ sera effectué automatiquement demain.</span>
             </p>
           </div>
           <div class="footer">
@@ -5481,11 +5607,11 @@ async function sendTrialReminder1Day(email, firstName) {
 }
 
 // ============================================
-// EMAIL 5 : CONFIRMATION D'ABONNEMENT
+// EMAIL 6 : CONFIRMATION D'ABONNEMENT
 // ============================================
-async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAmount) {
-  const planName = planType === 'pro' ? 'Pro' : 'Basic';
-  const price = (planAmount / 100).toFixed(2);
+async function sendSubscriptionConfirmedEmail(email, firstName, plan, amount) {
+  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
+  const price = (amount / 100).toFixed(2);
   
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -5502,7 +5628,7 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
           .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
           .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
           .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .card { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .card { background: #f0fdf4; padding: 24px; border-radius: 8px; margin: 20px 0; border: 2px solid #10b981; }
           .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
         </style>
       </head>
@@ -5519,22 +5645,23 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
             <p>Votre abonnement Boostinghost est maintenant actif.</p>
             
             <div class="card">
-              <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Votre plan</p>
-              <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #10b981;">Plan ${planName}</p>
-              <p style="margin: 0; font-size: 14px; color: #6b7280;">
-                <strong style="font-size: 18px; color: #111827;">${price}€</strong> / mois
+              <p style="margin: 0 0 8px 0; color: #047857; font-size: 14px; font-weight: 600;">VOTRE PLAN</p>
+              <p style="margin: 0 0 16px 0; font-size: 28px; font-weight: 800; color: #10b981;">Plan ${planName}</p>
+              <p style="margin: 0; font-size: 18px; color: #111827;">
+                <strong>${price}€</strong> <span style="font-size: 14px; color: #6b7280;">/ mois</span>
               </p>
             </div>
             
-            <p>Vous avez maintenant accès à toutes les fonctionnalités de Boostinghost :</p>
+            <p><strong>Vous avez accès à :</strong></p>
             <ul>
-              <li>✅ Calendrier unifié</li>
-              <li>✅ Synchronisation iCal (Airbnb, Booking)</li>
-              <li>✅ Gestion des messages</li>
-              <li>✅ Livret d'accueil personnalisé</li>
-              <li>✅ Gestion du ménage</li>
-              <li>✅ Statistiques & rapports</li>
-              ${planType === 'pro' ? '<li>✅ Gestion des cautions Stripe (2% commission)</li>' : ''}
+              <li>✅ Calendrier unifié (synchro iCal)</li>
+              <li>✅ Messages automatiques IA</li>
+              <li>✅ Serrures connectées Igloohome</li>
+              <li>✅ Gestion des ménages</li>
+              <li>✅ Facturation voyageurs & propriétaires</li>
+              <li>✅ Cautions & décomptes</li>
+              <li>✅ Livrets d'accueil</li>
+              <li>✅ Support ${plan === 'business' ? 'téléphone' : plan === 'pro' ? 'prioritaire' : 'email'}</li>
             </ul>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -5543,9 +5670,8 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
               </a>
             </div>
             
-            <p style="padding: 16px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #10b981; margin-top: 30px;">
-              💡 <strong>Gérer mon abonnement</strong><br>
-              Vous pouvez modifier ou annuler votre abonnement à tout moment depuis votre espace compte.
+            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b; margin-top: 30px;">
+              💡 <strong>Astuce</strong> : Passez à l'abonnement annuel et économisez 17% (2 mois gratuits) !
             </p>
             
             <p style="margin-top: 30px;">Merci encore et bonne gestion ! 🚀</p>
@@ -5569,11 +5695,11 @@ async function sendSubscriptionConfirmedEmail(email, firstName, planType, planAm
 }
 
 // ============================================
-// EMAIL 6 : RAPPEL AVANT RENOUVELLEMENT
+// EMAIL 7 : RAPPEL AVANT RENOUVELLEMENT
 // ============================================
-async function sendRenewalReminderEmail(email, firstName, planType, planAmount, renewalDate) {
-  const planName = planType === 'pro' ? 'Pro' : 'Basic';
-  const price = (planAmount / 100).toFixed(2);
+async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalDate) {
+  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
+  const price = (amount / 100).toFixed(2);
   const formattedDate = new Date(renewalDate).toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: 'long',
@@ -5595,7 +5721,7 @@ async function sendRenewalReminderEmail(email, firstName, planType, planAmount, 
           .header { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
           .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
           .button { display: inline-block; background: #3b82f6; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .card { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+          .card { background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
           .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
         </style>
       </head>
@@ -5607,11 +5733,11 @@ async function sendRenewalReminderEmail(email, firstName, planType, planAmount, 
           <div class="content">
             <p>Bonjour ${firstName},</p>
             
-            <p>Votre abonnement Boostinghost <strong>Plan ${planName}</strong> sera automatiquement renouvelé dans <strong>3 jours</strong>.</p>
+            <p>Votre abonnement <strong>Plan ${planName}</strong> sera automatiquement renouvelé dans <strong>3 jours</strong>.</p>
             
             <div class="card">
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">Prochain prélèvement</p>
-              <p style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #3b82f6;">${price}€</p>
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e40af; font-weight: 600;">PROCHAIN PRÉLÈVEMENT</p>
+              <p style="margin: 0 0 16px 0; font-size: 32px; font-weight: 800; color: #3b82f6;">${price}€</p>
               <p style="margin: 0; font-size: 14px; color: #6b7280;">
                 Date : <strong>${formattedDate}</strong>
               </p>
@@ -5619,8 +5745,8 @@ async function sendRenewalReminderEmail(email, firstName, planType, planAmount, 
             
             <p>Aucune action n'est nécessaire de votre part. Le paiement sera effectué automatiquement.</p>
             
-            <p style="padding: 16px; background: #f0f9ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
-              💡 Vous souhaitez modifier ou annuler votre abonnement ? Rendez-vous dans votre espace compte.
+            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+              💡 <strong>Passez à l'année</strong> et économisez 17% (2 mois gratuits) !
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -7540,11 +7666,49 @@ app.get('/api/messages/upcoming', async (req, res) => {
 // ============================================
 
 function getPriceIdForPlan(plan) {
-  if (plan === 'pro') {
-    return process.env.STRIPE_PRICE_PRO || null;
-  }
-  // Par défaut : basic
-  return process.env.STRIPE_PRICE_BASIC || null;
+  const priceIds = {
+    // Plans mensuels
+    'solo_monthly': process.env.STRIPE_PRICE_SOLO_MONTHLY,
+    'pro_monthly': process.env.STRIPE_PRICE_PRO_MONTHLY,
+    'business_monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+    
+    // Plans annuels
+    'solo_annual': process.env.STRIPE_PRICE_SOLO_ANNUAL,
+    'pro_annual': process.env.STRIPE_PRICE_PRO_ANNUAL,
+    'business_annual': process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+    
+    // Rétrocompatibilité (anciens plans)
+    'basic': process.env.STRIPE_PRICE_BASIC,
+    'pro': process.env.STRIPE_PRICE_PRO
+  };
+  
+  return priceIds[plan] || null;
+}
+
+function getPlanAmount(plan) {
+  const amounts = {
+    // Mensuels (en centimes)
+    'solo_monthly': 1490,
+    'pro_monthly': 4900,
+    'business_monthly': 9900,
+    
+    // Annuels (en centimes)
+    'solo_annual': 14900,
+    'pro_annual': 49000,
+    'business_annual': 99000,
+    
+    // Anciens (rétrocompatibilité)
+    'basic': 599,
+    'pro': 899
+  };
+  
+  return amounts[plan] || 0;
+}
+
+function getBasePlanName(plan) {
+  // "solo_monthly" → "solo"
+  // "pro_annual" → "pro"
+  return plan.replace('_monthly', '').replace('_annual', '');
 }
 
 app.post('/api/billing/create-checkout-session', async (req, res) => {
@@ -7553,17 +7717,21 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
+    
     if (!stripe) {
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
+    
     const { plan } = req.body || {};
     if (!plan) {
-      return res.status(400).json({ error: 'Plan requis (basic ou pro)' });
+      return res.status(400).json({ error: 'Plan requis' });
     }
+    
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
       return res.status(400).json({ error: 'Plan inconnu ou non configuré' });
     }
+    
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
     
     const session = await stripe.checkout.sessions.create({
@@ -7573,18 +7741,30 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
         price: priceId,
         quantity: 1
       }],
-      // ✅ AJOUTEZ LES METADATA ICI DIRECTEMENT
       metadata: {
         userId: user.id,
-        plan: plan
+        plan: plan,
+        basePlan: getBasePlanName(plan)
       },
       customer_email: user.email,
-      client_reference_id: user.id, // ✅ IMPORTANT pour le webhook
+      client_reference_id: user.id.toString(),
+      
+      // 🎁 Essai gratuit de 14 jours
+      subscription_data: {
+        trial_period_days: 14,
+        metadata: {
+          userId: user.id,
+          plan: plan
+        }
+      },
+      
       success_url: `${appUrl}/app.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing.html`,
     });
     
+    console.log(`✅ Session Checkout créée pour user ${user.id}, plan: ${plan}`);
     res.json({ url: session.url });
+    
   } catch (err) {
     console.error('Erreur /api/billing/create-checkout-session :', err);
     res.status(500).json({ error: 'Impossible de créer la session de paiement' });
