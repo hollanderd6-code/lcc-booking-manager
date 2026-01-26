@@ -1790,6 +1790,13 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
       }
     }
 
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('❌ Erreur traitement webhook:', error);
+    res.status(500).json({ error: 'Webhook processing error' });
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
