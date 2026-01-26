@@ -10980,8 +10980,18 @@ cron.schedule('0 * * * *', async () => {
         // ============================================
         const welcomeSent = await hasEmailBeenSent(user.user_id, 'welcome');
         if (!welcomeSent && user.status === 'trial') {
-          await sendWelcomeEmail(user.email, user.first_name || 'cher membre');
-          await logEmailSent(user.user_id, 'welcome', { email: user.email });
+          try {
+            await sendWelcomeEmail(user.email, user.first_name || 'cher membre');
+            await logEmailSent(user.user_id, 'welcome', { email: user.email });
+          } catch (emailError) {
+            console.error('❌ Erreur envoi email bienvenue:', emailError.message);
+            // ✅ On enregistre quand même le log pour éviter les tentatives infinies
+            await logEmailSent(user.user_id, 'welcome', { 
+              email: user.email, 
+              error: emailError.message,
+              status: 'failed'
+            });
+          }
         }
 
         // ============================================
