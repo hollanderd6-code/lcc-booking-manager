@@ -437,34 +437,71 @@
 </div>
 <!-- MODAL: nouvelle caution -->
 <div class="modal" id="depositModal">
-<div class="modal-content">
-<div class="modal-header">
-<h2>Nouvelle caution</h2>
-<button class="modal-close" id="depositModalClose">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="modal-body">
-<div class="form-row">
-<label>Réservation</label>
-<div class="small-hint" id="depositModalReservationLabel"></div>
-</div>
-<div class="form-row">
-<label for="depositAmount">Montant de la caution (€)</label>
-<input id="depositAmount" min="1" required="" step="1" type="number"/>
-<div class="small-hint">
-            Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.
-          </div>
-</div>
-<div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
-<button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
-</div>
-</div>
-</div>
-<script>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="depositModalTitle">Nouvelle caution</h2>
+      <button class="modal-close" id="depositModalClose">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <!-- ÉTAPE 1 : FORMULAIRE -->
+    <div id="depositFormStep" class="modal-body">
+      <div class="form-row">
+        <label>Réservation</label>
+        <div class="small-hint" id="depositModalReservationLabel"></div>
+      </div>
+      <div class="form-row">
+        <label for="depositAmount">Montant de la caution (€)</label>
+        <input id="depositAmount" min="1" required step="1" type="number"/>
+        <div class="small-hint">Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.</div>
+      </div>
+      <div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
+        <button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
+      </div>
+    </div>
+    
+    <!-- ÉTAPE 2 : SUCCÈS -->
+    <div id="depositSuccessStep" class="modal-body" style="display:none;">
+      <div style="text-align:center; padding:20px 0;">
+        <div style="width:64px; height:64px; background:#10b981; border-radius:50%; margin:0 auto 16px; display:flex; align-items:center; justify-content:center;">
+          <i class="fas fa-check" style="font-size:32px; color:white;"></i>
+        </div>
+        <h3 style="margin:0 0 8px 0; color:#111827;">Lien de caution créé avec succès !</h3>
+        <p style="color:#6b7280; margin:0 0 24px 0;">Vous pouvez maintenant copier le message pour l'envoyer au voyageur</p>
+      </div>
+      
+      <div style="background:#f9fafb; padding:16px; border-radius:12px; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <i class="fas fa-link" style="color:#10b981;"></i>
+          <label style="font-weight:600; margin:0;">Lien de paiement</label>
+        </div>
+        <div style="background:white; padding:12px; border-radius:8px; border:1px solid #e5e7eb; word-break:break-all; font-size:13px; color:#6b7280; max-height:80px; overflow-y:auto;" id="depositLinkDisplay"></div>
+      </div>
+      
+      <div style="background:#f9fafb; padding:16px; border-radius:12px; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <i class="fas fa-comment-dots" style="color:#10b981;"></i>
+          <label style="font-weight:600; margin:0;">Message complet</label>
+        </div>
+        <div style="background:white; padding:12px; border-radius:8px; border:1px solid #e5e7eb; white-space:pre-wrap; font-size:13px; color:#374151; max-height:150px; overflow-y:auto;" id="depositMessageDisplay"></div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="depositCloseSuccessBtn">Fermer</button>
+        <button class="btn btn-secondary" id="depositCopyLinkBtn">
+          <i class="fas fa-link"></i> Copier le lien
+        </button>
+        <button class="btn btn-primary" id="depositCopyMessageBtn">
+          <i class="fas fa-copy"></i> Copier le message
+        </button>
+      </div>
+    </div>
+  </div>
+</div><script>
     const API_BASE = '/api';
 
     let currentReservationForDeposit = null;
@@ -521,6 +558,22 @@ function formatDateFr(dateStr) {
     function closeDepositModal() {
       document.getElementById('depositModal').classList.remove('active');
       currentReservationForDeposit = null;
+    }
+    function showDepositSuccess(checkoutUrl, reservation) {
+      const title = document.getElementById('depositModalTitle');
+      
+      // Passer à l'écran de succès
+      document.getElementById('depositFormStep').style.display = 'none';
+      document.getElementById('depositSuccessStep').style.display = 'block';
+      
+      title.textContent = 'Caution créée';
+      
+      // Afficher le lien
+      document.getElementById('depositLinkDisplay').textContent = checkoutUrl;
+      
+      // Afficher le message complet
+      const message = buildDepositMessage(reservation, checkoutUrl);
+      document.getElementById('depositMessageDisplay').textContent = message;
     }
 
     function copyText(encoded) {
@@ -806,10 +859,9 @@ async function createDeposit() {
     return;
   }
 
-  // ✅ SAUVEGARDER la réservation dans une variable locale
   const reservation = currentReservationForDeposit;
 
-  // On mémorise ce montant comme valeur par défaut pour ce logement
+  // Mémoriser le montant
   try {
     const defaultsRaw = localStorage.getItem('lcc_deposit_defaults') || '{}';
     const defaults = JSON.parse(defaultsRaw);
@@ -818,10 +870,15 @@ async function createDeposit() {
       localStorage.setItem('lcc_deposit_defaults', JSON.stringify(defaults));
     }
   } catch (e) {
-    console.warn('Impossible de sauvegarder le montant par défaut de caution', e);
+    console.warn('Impossible de sauvegarder le montant par défaut', e);
   }
 
   try {
+    const createBtn = document.getElementById('depositCreateBtn');
+    const originalText = createBtn.innerHTML;
+    createBtn.disabled = true;
+    createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+    
     const res = await fetch(API_BASE + '/deposits', {
       method: 'POST',
       headers: {
@@ -835,30 +892,59 @@ async function createDeposit() {
     });
 
     const data = await res.json();
+    
+    createBtn.disabled = false;
+    createBtn.innerHTML = originalText;
+    
     if (!res.ok) {
       throw new Error(data.error || 'Erreur lors de la création de la caution');
     }
 
-    // ✅ Fermer la modale AVANT de créer le message
-    closeDepositModal();
-    await loadReservationsWithDeposits();
+    loadReservationsWithDeposits();
 
     if (data.checkoutUrl) {
-      // ✅ Utiliser la variable locale "reservation" au lieu de currentReservationForDeposit
-      const message = buildDepositMessage(reservation, data.checkoutUrl);
-
-      try {
-        await navigator.clipboard.writeText(message);
-        alert("Message prêt à envoyer ! Il a été copié dans votre presse-papiers. Vous pouvez le coller dans Airbnb, Booking, email…");
-      } catch {
-        alert("Lien généré. Impossible de copier automatiquement, mais vous pouvez le copier depuis le tableau.");
-      }
+      // ✅ Afficher l'écran de succès
+      showDepositSuccess(data.checkoutUrl, reservation);
+    } else {
+      closeDepositModal();
+      alert('Caution créée avec succès');
     }
+    
   } catch (e) {
     console.error(e);
     errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
+    
+    const createBtn = document.getElementById('depositCreateBtn');
+    createBtn.disabled = false;
+    createBtn.innerHTML = 'Générer le lien';
   }
 }
+
+    function copyDepositLink() {
+      const link = document.getElementById('depositLinkDisplay').textContent;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+          const btn = document.getElementById('depositCopyLinkBtn');
+          const originalHTML = btn.innerHTML;
+          btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+          setTimeout(() => btn.innerHTML = originalHTML, 2000);
+        }).catch(() => alert('Impossible de copier'));
+      }
+    }
+
+    function copyDepositMessage() {
+      const message = document.getElementById('depositMessageDisplay').textContent;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(message).then(() => {
+          const btn = document.getElementById('depositCopyMessageBtn');
+          const originalHTML = btn.innerHTML;
+          btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+          setTimeout(() => btn.innerHTML = originalHTML, 2000);
+        }).catch(() => alert('Impossible de copier'));
+      }
+    }
 
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -870,6 +956,9 @@ async function createDeposit() {
       document.getElementById('depositModalClose').addEventListener('click', closeDepositModal);
       document.getElementById('depositCancelBtn').addEventListener('click', closeDepositModal);
       document.getElementById('depositCreateBtn').addEventListener('click', createDeposit);
+      document.getElementById('depositCloseSuccessBtn').addEventListener('click', closeDepositModal);
+      document.getElementById('depositCopyLinkBtn').addEventListener('click', copyDepositLink);
+      document.getElementById('depositCopyMessageBtn').addEventListener('click', copyDepositMessage);
 
       loadReservationsWithDeposits();
       loadPropertiesForFilter();
