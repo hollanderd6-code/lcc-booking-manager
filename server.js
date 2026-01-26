@@ -1589,6 +1589,9 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // ============================================
 const app = express();
 
+// ✅ Configuration de l'expéditeur des emails
+const EMAIL_FROM = `"Boostinghost" <${process.env.EMAIL_USER}>`;
+
 // Rendre les variables globales disponibles pour les routes
 app.locals.pool = pool;
 
@@ -5151,7 +5154,7 @@ async function sendVerificationEmail(email, firstName, token) {
   const verificationUrl = `${appUrl}/verify-email.html?token=${token}`;
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '✅ Vérifiez votre adresse email - Boostinghost',
     html: `
@@ -5263,7 +5266,7 @@ async function logEmailSent(userId, emailType, emailData = {}) {
 // ============================================
 async function sendWelcomeEmail(email, firstName) {
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '🎉 Bienvenue sur Boostinghost !',
     html: `
@@ -5376,7 +5379,7 @@ async function sendTrialStartedEmail(email, firstName, plan, amount) {
   const price = (amount / 100).toFixed(2);
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '🎉 Votre essai gratuit de 14 jours a commencé !',
     html: `
@@ -5461,7 +5464,7 @@ async function sendTrialReminder7Days(email, firstName, plan, amount) {
   const price = (amount / 100).toFixed(2);
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '⏰ Plus qu\'une semaine d\'essai gratuit',
     html: `
@@ -5532,7 +5535,7 @@ async function sendTrialReminder3Days(email, firstName, plan, amount) {
   const price = (amount / 100).toFixed(2);
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '🔔 Plus que 3 jours d\'essai gratuit !',
     html: `
@@ -5604,7 +5607,7 @@ async function sendTrialReminder1Day(email, firstName, plan, amount) {
   const price = (amount / 100).toFixed(2);
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '🚨 Dernier jour d\'essai gratuit !',
     html: `
@@ -5669,7 +5672,7 @@ async function sendSubscriptionConfirmedEmail(email, firstName, plan, amount) {
   const price = (amount / 100).toFixed(2);
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '✅ Abonnement confirmé - Merci !',
     html: `
@@ -5762,7 +5765,7 @@ async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalD
   });
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: '🔄 Prochain renouvellement dans 3 jours',
     html: `
@@ -7394,7 +7397,7 @@ app.post('/api/auth/register', async (req, res) => {
     const verificationUrl = `${appUrl}/verify-email.html?token=${verificationToken}`;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: EMAIL_FROM,
       to: email,
       subject: 'Vérif¦ Vérifiez votre adresse email - Boostinghost',
       html: `
