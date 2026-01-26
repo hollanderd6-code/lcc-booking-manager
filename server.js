@@ -8012,6 +8012,8 @@ app.post('/api/deposits', async (req, res) => {
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
+    // ✅ Session avec capture_method: 'manual' mais SANS user_id dans payment_intent_data
+    // pour éviter le routing automatique vers Connect
     const sessionParams = {
       mode: 'payment',
       payment_method_types: ['card'],
@@ -8031,11 +8033,11 @@ app.post('/api/deposits', async (req, res) => {
         capture_method: 'manual',
         metadata: {
           deposit_id: deposit.id,
-          reservation_uid: reservationUid,
-          user_id: user.id
+          reservation_uid: reservationUid
+          // ⚠️ On enlève user_id pour éviter le routing vers Connect
         }
       },
-      // (metadata aussi sur la Session)
+      // Metadata sur la Session (on garde user_id ici, pas de problème)
       metadata: {
         deposit_id: deposit.id,
         reservation_uid: reservationUid,
