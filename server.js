@@ -5246,11 +5246,16 @@ async function hasEmailBeenSent(userId, emailType) {
 // FONCTION : Enregistrer l'envoi d'un email
 // ============================================
 async function logEmailSent(userId, emailType, emailData = {}) {
-  await pool.query(
-    `INSERT INTO email_logs (id, user_id, email_type, email_data, sent_at, status)
-     VALUES ($1, $2, $3, $4, NOW(), 'sent')`,
-    [`email_${Date.now()}`, userId, emailType, JSON.stringify(emailData)]
-  );
+  try {
+    await pool.query(
+      `INSERT INTO email_logs (user_id, email_type, recipient_email, status, sent_at, metadata)
+       VALUES ($1, $2, $3, 'sent', NOW(), $4)`,
+      [userId, emailType, emailData.email || '', JSON.stringify(emailData)]
+    );
+  } catch (error) {
+    console.error('❌ Erreur logEmailSent:', error.message);
+    // Ne pas bloquer si le log échoue
+  }
 }
 
 // ============================================
