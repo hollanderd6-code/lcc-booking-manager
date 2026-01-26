@@ -567,17 +567,18 @@ async function copyExistingDepositMessage(reservation) {
     return;
   }
 
-  const message = buildDepositMessage(reservation, reservation.deposit.checkoutUrl);
+  // ✅ Copier uniquement le lien, pas le message complet
+  const checkoutUrl = reservation.deposit.checkoutUrl;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
-      await navigator.clipboard.writeText(message);
-      alert("Message de caution copié ! Vous pouvez le coller dans Airbnb, Booking, email…");
+      await navigator.clipboard.writeText(checkoutUrl);
+      alert("Lien de caution copié");
     } catch (e) {
-      alert("Impossible de copier automatiquement, copiez le message manuellement :\n\n" + message);
+      alert("Impossible de copier automatiquement, copiez le lien manuellement :\n\n" + checkoutUrl);
     }
   } else {
-    alert("Votre navigateur ne supporte pas la copie automatique. Voici le message :\n\n" + message);
+    alert("Votre navigateur ne supporte pas la copie automatique. Voici le lien :\n\n" + checkoutUrl);
   }
 }
 function copyDepositMessageByUid(uid) {
