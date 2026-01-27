@@ -781,6 +781,7 @@ Les paiements de locations sont versés directement sur votre compte Stripe Conn
 
     let currentReservationForDeposit = null;
     let allReservationsWithDeposits = [];
+    let allProperties = []; // ✅ Stocker les propriétés avec leur deposit_amount
 function formatDateFr(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -820,6 +821,14 @@ function formatExpirationDate(createdAt) {
 
     function getDefaultDepositAmount(propertyId) {
       if (!propertyId) return null;
+      
+      // ✅ Chercher le montant de caution dans les propriétés chargées
+      const property = allProperties.find(p => p.id === propertyId);
+      if (property && property.deposit_amount) {
+        return parseFloat(property.deposit_amount);
+      }
+      
+      // Fallback sur localStorage si jamais (pour compatibilité)
       try {
         const raw = localStorage.getItem('lcc_deposit_defaults') || '{}';
         const parsed = JSON.parse(raw);
@@ -1080,7 +1089,10 @@ function copyDepositLinkByUid(uid) {
         if (!res.ok) throw new Error('Erreur API propriétés');
         const data = await res.json(); // { properties: [...] }
 
-        (data.properties || []).forEach(p => {
+        // ✅ Stocker les propriétés globalement pour accéder à deposit_amount
+        allProperties = data.properties || [];
+
+        allProperties.forEach(p => {
           const opt = document.createElement('option');
           opt.value = p.id;
           opt.textContent = p.name;
