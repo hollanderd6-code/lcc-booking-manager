@@ -1114,9 +1114,9 @@ function copyDepositLinkByUid(uid) {
         // Icône d'expansion si détails disponibles
         const expandIcon = (d && d.status === 'paid') ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
-        // Date d'expiration (si caution créée)
+        // Date d'expiration (seulement si caution PAYÉE)
         let expirationBadge = '';
-        if (d && d.createdAt) {
+        if (d && d.status === 'paid' && d.createdAt) {
           const expirationDate = formatExpirationDate(d.createdAt);
           if (expirationDate) {
             expirationBadge = `
