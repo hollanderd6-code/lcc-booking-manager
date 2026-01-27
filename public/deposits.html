@@ -223,6 +223,25 @@
       transform: rotate(180deg);
     }
 
+    /* Date d'expiration dans le header */
+    .expiration-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #92400e;
+      white-space: nowrap;
+    }
+
+    .expiration-badge i {
+      font-size: 10px;
+    }
+
     .deposit-details {
       margin-top: 16px;
       padding-top: 16px;
@@ -585,6 +604,29 @@ function formatDateFr(dateStr) {
     return dateStr;
   }
   return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function getExpirationDate(createdAt) {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+  
+  // Ajouter 7 jours
+  const expiration = new Date(created);
+  expiration.setDate(expiration.getDate() + 7);
+  
+  return expiration;
+}
+
+function formatExpirationDate(createdAt) {
+  const expDate = getExpirationDate(createdAt);
+  if (!expDate) return '';
+  
+  return expDate.toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -1072,6 +1114,20 @@ function copyDepositLinkByUid(uid) {
         // Icône d'expansion si détails disponibles
         const expandIcon = (d && d.status === 'paid') ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
+        // Date d'expiration (si caution créée)
+        let expirationBadge = '';
+        if (d && d.createdAt) {
+          const expirationDate = formatExpirationDate(d.createdAt);
+          if (expirationDate) {
+            expirationBadge = `
+              <div class="expiration-badge">
+                <i class="fas fa-clock"></i>
+                <span>Expire le ${expirationDate}</span>
+              </div>
+            `;
+          }
+        }
+
         // Générer la carte
         const cardClass = (d && d.status === 'paid') ? 'deposit-card expandable' : 'deposit-card';
         const cardClick = (d && d.status === 'paid') ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
@@ -1080,7 +1136,10 @@ function copyDepositLinkByUid(uid) {
           <div class="${cardClass}" ${cardClick}>
             <div class="deposit-card-header">
               <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
-              ${expandIcon}
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${expirationBadge}
+                ${expandIcon}
+              </div>
             </div>
             
             <div class="deposit-card-body">
