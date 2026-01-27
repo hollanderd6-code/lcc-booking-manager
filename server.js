@@ -2713,13 +2713,6 @@ async function sendWelcomeMessageForNewReservation(pool, io, conversationId, pro
   }
 }
 
-    console.log(`✅ Message de bienvenue envoyé pour conversation ${conversationId}`);
-
-  } catch (error) {
-    console.error('❌ Erreur envoi message bienvenue:', error);
-  }
-}
-
 // ============================================
 // 🤖 MESSAGES AUTOMATIQUES - SYSTÈME CAUTIONS
 // ============================================
