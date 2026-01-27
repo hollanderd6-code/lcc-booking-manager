@@ -18,6 +18,12 @@ const nodemailer = require('nodemailer');
 const multer = require('multer');
 const Stripe = require('stripe');
 const { Pool } = require('pg');
+
+// ============================================
+// 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
+// ============================================
+const { handleIncomingMessage } = require('./integrated-chat-handler');
+const { startOnboarding } = require('./onboarding-system');
 const crypto = require('crypto');
 const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
@@ -2691,42 +2697,21 @@ if (isNewReservation) {
 } 
 
 // ============================================
-// ✅ FONCTION HELPER POUR ENVOYER LE MESSAGE DE BIENVENUE
+// ✅ FONCTION HELPER POUR DÉMARRER L'ONBOARDING
 // ============================================
 
 async function sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, userId) {
   try {
-    // Récupérer le livret d'accueil
-    const welcomeBook = await pool.query(
-      `SELECT unique_id, property_name FROM welcome_books_v2 
-       WHERE user_id = $1 AND property_name = (SELECT name FROM properties WHERE id = $2)
-       LIMIT 1`,
-      [userId, propertyId]
-    );
-
-    let welcomeContent = '👋 Bienvenue ! Nous sommes ravis de vous accueillir.';
-
-    if (welcomeBook.rows.length > 0) {
-      const bookUrl = `${process.env.APP_URL || 'http://localhost:3000'}/welcome/${welcomeBook.rows[0].unique_id}`;
-      welcomeContent += `\n\n📖 Consultez votre livret d'accueil ici : ${bookUrl}\n\nVous y trouverez toutes les informations pour votre séjour (WiFi, accès, recommandations, etc.)`;
-    }
-
-    welcomeContent += '\n\nN\'hésitez pas à nous poser vos questions ! 😊';
-
-    // Insérer le message de bienvenue
-    const messageResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
-       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
-      [conversationId, welcomeContent]
-    );
-
-    const welcomeMessage = messageResult.rows[0];
-
-    // Émettre via Socket.io si disponible
-    if (io) {
-      io.to(`conversation_${conversationId}`).emit('new_message', welcomeMessage);
-    }
+    console.log(`🎯 Démarrage de l'onboarding pour conversation ${conversationId}`);
+    
+    // Démarrer l'onboarding au lieu du message de bienvenue classique
+    await startOnboarding(conversationId, pool, io);
+    
+    console.log(`✅ Onboarding démarré pour conversation ${conversationId}`);
+  } catch (error) {
+    console.error('❌ Erreur sendWelcomeMessageForNewReservation:', error);
+  }
+}
 
     console.log(`✅ Message de bienvenue envoyé pour conversation ${conversationId}`);
 
@@ -12915,3 +12900,44 @@ console.log('✅ Service de notifications initialisé');
   console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
   console.log('');
 });
+
+// ============================================
+// 🤖 HELPER POUR TRAITER LES MESSAGES ENTRANTS
+// ============================================
+
+/**
+ * À appeler après chaque insertion de message guest dans la DB
+ * Cette fonction gère automatiquement:
+ * - L'onboarding (prénom, nom, téléphone, langue)
+ * - Les réponses automatiques (mots-clés + Groq AI)
+ */
+async function processIncomingGuestMessage(savedMessage, conversationId) {
+  try {
+    // Ne traiter que les messages des clients
+    if (savedMessage.sender_type !== 'guest') {
+      return;
+    }
+
+    // Récupérer la conversation complète avec toutes les infos
+    const convResult = await pool.query(
+      'SELECT * FROM conversations WHERE id = $1',
+      [conversationId]
+    );
+
+    if (convResult.rows.length === 0) {
+      console.log('⚠️ Conversation introuvable:', conversationId);
+      return;
+    }
+
+    const conversation = convResult.rows[0];
+
+    // Traiter le message (onboarding + réponses auto)
+    await handleIncomingMessage(savedMessage, conversation, pool, io);
+
+  } catch (error) {
+    console.error('❌ Erreur processIncomingGuestMessage:', error);
+  }
+}
+
+// Exporter pour utilisation depuis d'autres fichiers
+global.processIncomingGuestMessage = processIncomingGuestMessage;
