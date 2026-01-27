@@ -607,21 +607,24 @@ function formatDateFr(dateStr) {
     }
 
     // ========== FONCTIONS EXPANSION CARTES ==========
-    function toggleDetails(reservationUid) {
-      const card = event.currentTarget;
-      const details = document.getElementById(`details-${reservationUid}`);
+    function toggleDetails(reservationUid, event) {
+      if (!event) event = window.event;
       
+      const details = document.getElementById(`details-${reservationUid}`);
       if (!details) return;
       
-      if (details.style.display === 'none') {
+      // Trouver la carte parente
+      const card = details.closest('.deposit-card');
+      
+      if (details.style.display === 'none' || details.style.display === '') {
         details.style.display = 'block';
-        card.classList.add('expanded');
+        if (card) card.classList.add('expanded');
       } else {
         details.style.display = 'none';
-        card.classList.remove('expanded');
+        if (card) card.classList.remove('expanded');
       }
       
-      event.stopPropagation();
+      if (event) event.stopPropagation();
     }
 
     // ========== ACTIONS CAUTIONS ==========
@@ -998,7 +1001,7 @@ function copyDepositLinkByUid(uid) {
 
         // Générer la carte
         const cardClass = (d && d.status === 'paid') ? 'deposit-card expandable' : 'deposit-card';
-        const cardClick = (d && d.status === 'paid') ? `onclick="toggleDetails('${r.reservationUid}')"` : '';
+        const cardClick = (d && d.status === 'paid') ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
         
         html += `
           <div class="${cardClass}" ${cardClick}>
