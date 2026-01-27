@@ -1595,7 +1595,21 @@ const EMAIL_FROM = `"Boostinghost" <${process.env.EMAIL_USER}>`;
 // Rendre les variables globales disponibles pour les routes
 app.locals.pool = pool;
 
-// ✅ WEBHOOK STRIPE - DOIT ÊTRE AVANT bodyParser.json() pour recevoir le raw body
+// Augmenter la limite pour les uploads de photos
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
+app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
+
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+const PORT = process.env.PORT || 3000;
+
+
+// Stripe
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
+
+// ✅ WEBHOOK STRIPE (AVANT LES AUTRES MIDDLEWARES)
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -1610,255 +1624,182 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.error('❌ Erreur verification webhook:', err.message);
+    console.error('Erreur verification webhook:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   console.log('✅ Webhook Stripe reçu:', event.type);
 
   try {
-    // Gérer les événements de CAUTION
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const depositId = session.metadata?.deposit_id;
-      
-      if (depositId) {
-        console.log('💰 Mise à jour statut caution:', depositId);
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const userId = session.client_reference_id || session.metadata?.userId;
+        const plan = session.metadata?.plan || 'solo_monthly';
+        const basePlan = getBasePlanName(plan);
+
+        if (!userId) {
+          console.error('userId manquant dans checkout.session.completed');
+          break;
+        }
+
+        const subscriptionId = session.subscription;
+        const customerId = session.customer;
+
         await pool.query(
-          `UPDATE deposits SET status = 'paid', updated_at = NOW() WHERE id = $1`,
-          [depositId]
+          `INSERT INTO subscriptions 
+           (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
+           VALUES ($1, $2, $3, $4, 'trial', NOW(), NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
+           ON CONFLICT (user_id) 
+           DO UPDATE SET
+             stripe_subscription_id = $2,
+             stripe_customer_id = $3,
+             plan_type = $4,
+             status = 'trial',
+             trial_start_date = NOW(),
+             trial_end_date = NOW() + INTERVAL '14 days',
+             current_period_end = NOW() + INTERVAL '14 days',
+             updated_at = NOW()`,
+          [userId, subscriptionId, customerId, basePlan]
         );
-        console.log('✅ Statut caution mis à jour:', depositId);
-        return res.json({ received: true });
+
+        const userResult = await pool.query(
+          'SELECT email, first_name FROM users WHERE id = $1',
+          [userId]
+        );
+
+        if (userResult.rows.length > 0) {
+          const userEmail = userResult.rows[0].email;
+          const userFirstName = userResult.rows[0].first_name || 'cher membre';
+          const planAmount = getPlanAmount(plan);
+
+          await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
+          await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
+        }
+
+        console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
+        break;
       }
-    }
-    
-    if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object;
-      const depositId = paymentIntent.metadata?.deposit_id;
-      
-      if (depositId) {
-        console.log('💰 Payment Intent réussi pour caution:', depositId);
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+        
+        if (!subscriptionId) break;
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const userId = subscription.metadata?.userId;
+        const plan = subscription.metadata?.plan;
+
+        if (invoice.billing_reason === 'subscription_create') {
+          await pool.query(
+            `UPDATE subscriptions 
+             SET 
+               status = 'active',
+               trial_end_date = NULL,
+               current_period_end = to_timestamp($1),
+               updated_at = NOW()
+             WHERE stripe_subscription_id = $2`,
+            [subscription.current_period_end, subscriptionId]
+          );
+
+          console.log(`✅ Abonnement ACTIF après essai: ${subscriptionId}`);
+          
+          if (userId) {
+            const userResult = await pool.query(
+              'SELECT email, first_name FROM users WHERE id = $1',
+              [userId]
+            );
+
+            if (userResult.rows.length > 0) {
+              const userEmail = userResult.rows[0].email;
+              const userFirstName = userResult.rows[0].first_name || 'cher membre';
+              const basePlan = getBasePlanName(plan || 'solo_monthly');
+              const planAmount = getPlanAmount(plan || 'solo_monthly');
+
+              await sendSubscriptionConfirmedEmail(userEmail, userFirstName, basePlan, planAmount);
+              await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
+            }
+          }
+        } else {
+          await pool.query(
+            `UPDATE subscriptions 
+             SET 
+               current_period_end = to_timestamp($1),
+               updated_at = NOW()
+             WHERE stripe_subscription_id = $2`,
+            [subscription.current_period_end, subscriptionId]
+          );
+          
+          console.log(`✅ Abonnement renouvelé: ${subscriptionId}`);
+        }
+        
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        const subscriptionId = subscription.id;
+
+        let status = 'active';
+        if (subscription.status === 'trialing') status = 'trial';
+        else if (subscription.status === 'canceled') status = 'canceled';
+        else if (subscription.status === 'past_due') status = 'past_due';
+        else if (subscription.status === 'unpaid') status = 'expired';
+
         await pool.query(
-          `UPDATE deposits SET status = 'paid', updated_at = NOW() WHERE id = $1`,
-          [depositId]
+          `UPDATE subscriptions 
+           SET 
+             status = $1,
+             current_period_end = to_timestamp($2),
+             updated_at = NOW()
+           WHERE stripe_subscription_id = $3`,
+          [status, subscription.current_period_end, subscriptionId]
         );
-        return res.json({ received: true });
+
+        console.log(`✅ Abonnement ${subscriptionId} mis à jour: ${status}`);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        const subscriptionId = subscription.id;
+
+        await pool.query(
+          `UPDATE subscriptions 
+           SET status = 'canceled', updated_at = NOW()
+           WHERE stripe_subscription_id = $1`,
+          [subscriptionId]
+        );
+
+        console.log(`✅ Abonnement ${subscriptionId} annulé`);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+
+        if (subscriptionId) {
+          await pool.query(
+            `UPDATE subscriptions 
+             SET status = 'past_due', updated_at = NOW()
+             WHERE stripe_subscription_id = $1`,
+            [subscriptionId]
+          );
+
+          console.log(`⚠️ Paiement échoué pour: ${subscriptionId}`);
+        }
+        break;
       }
     }
 
-    res.json({ received: true });
+    res.status(200).json({ received: true });
   } catch (error) {
     console.error('❌ Erreur traitement webhook:', error);
-    res.status(500).json({ error: 'Erreur traitement webhook' });
+    res.status(500).json({ error: 'Webhook processing error' });
   }
 });
-
-// Augmenter la limite pour les uploads de photos
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-
-// ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
-app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
-
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-const PORT = process.env.PORT || 3000;
-
-
-// Stripe
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
-// 
-// // ✅ WEBHOOK STRIPE (AVANT LES AUTRES MIDDLEWARES)
-// app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-//   const sig = req.headers['stripe-signature'];
-//   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-// 
-//   if (!webhookSecret) {
-//     console.error('STRIPE_WEBHOOK_SECRET manquant');
-//     return res.status(500).send('Webhook secret not configured');
-//   }
-// 
-//   let event;
-// 
-//   try {
-//     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-//   } catch (err) {
-//     console.error('Erreur verification webhook:', err.message);
-//     return res.status(400).send(`Webhook Error: ${err.message}`);
-//   }
-// 
-//   console.log('✅ Webhook Stripe reçu:', event.type);
-// 
-//   try {
-//     switch (event.type) {
-//       case 'checkout.session.completed': {
-//         const session = event.data.object;
-//         const userId = session.client_reference_id || session.metadata?.userId;
-//         const plan = session.metadata?.plan || 'solo_monthly';
-//         const basePlan = getBasePlanName(plan);
-// 
-//         if (!userId) {
-//           console.error('userId manquant dans checkout.session.completed');
-//           break;
-//         }
-// 
-//         const subscriptionId = session.subscription;
-//         const customerId = session.customer;
-// 
-//         await pool.query(
-//           `INSERT INTO subscriptions 
-//            (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
-//            VALUES ($1, $2, $3, $4, 'trial', NOW(), NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
-//            ON CONFLICT (user_id) 
-//            DO UPDATE SET
-//              stripe_subscription_id = $2,
-//              stripe_customer_id = $3,
-//              plan_type = $4,
-//              status = 'trial',
-//              trial_start_date = NOW(),
-//              trial_end_date = NOW() + INTERVAL '14 days',
-//              current_period_end = NOW() + INTERVAL '14 days',
-//              updated_at = NOW()`,
-//           [userId, subscriptionId, customerId, basePlan]
-//         );
-// 
-//         const userResult = await pool.query(
-//           'SELECT email, first_name FROM users WHERE id = $1',
-//           [userId]
-//         );
-// 
-//         if (userResult.rows.length > 0) {
-//           const userEmail = userResult.rows[0].email;
-//           const userFirstName = userResult.rows[0].first_name || 'cher membre';
-//           const planAmount = getPlanAmount(plan);
-// 
-//           await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
-//           await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
-//         }
-// 
-//         console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
-//         break;
-//       }
-// 
-//       case 'invoice.payment_succeeded': {
-//         const invoice = event.data.object;
-//         const subscriptionId = invoice.subscription;
-//         
-//         if (!subscriptionId) break;
-// 
-//         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-//         const userId = subscription.metadata?.userId;
-//         const plan = subscription.metadata?.plan;
-// 
-//         if (invoice.billing_reason === 'subscription_create') {
-//           await pool.query(
-//             `UPDATE subscriptions 
-//              SET 
-//                status = 'active',
-//                trial_end_date = NULL,
-//                current_period_end = to_timestamp($1),
-//                updated_at = NOW()
-//              WHERE stripe_subscription_id = $2`,
-//             [subscription.current_period_end, subscriptionId]
-//           );
-// 
-//           console.log(`✅ Abonnement ACTIF après essai: ${subscriptionId}`);
-//           
-//           if (userId) {
-//             const userResult = await pool.query(
-//               'SELECT email, first_name FROM users WHERE id = $1',
-//               [userId]
-//             );
-// 
-//             if (userResult.rows.length > 0) {
-//               const userEmail = userResult.rows[0].email;
-//               const userFirstName = userResult.rows[0].first_name || 'cher membre';
-//               const basePlan = getBasePlanName(plan || 'solo_monthly');
-//               const planAmount = getPlanAmount(plan || 'solo_monthly');
-// 
-//               await sendSubscriptionConfirmedEmail(userEmail, userFirstName, basePlan, planAmount);
-//               await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
-//             }
-//           }
-//         } else {
-//           await pool.query(
-//             `UPDATE subscriptions 
-//              SET 
-//                current_period_end = to_timestamp($1),
-//                updated_at = NOW()
-//              WHERE stripe_subscription_id = $2`,
-//             [subscription.current_period_end, subscriptionId]
-//           );
-//           
-//           console.log(`✅ Abonnement renouvelé: ${subscriptionId}`);
-//         }
-//         
-//         break;
-//       }
-// 
-//       case 'customer.subscription.updated': {
-//         const subscription = event.data.object;
-//         const subscriptionId = subscription.id;
-// 
-//         let status = 'active';
-//         if (subscription.status === 'trialing') status = 'trial';
-//         else if (subscription.status === 'canceled') status = 'canceled';
-//         else if (subscription.status === 'past_due') status = 'past_due';
-//         else if (subscription.status === 'unpaid') status = 'expired';
-// 
-//         await pool.query(
-//           `UPDATE subscriptions 
-//            SET 
-//              status = $1,
-//              current_period_end = to_timestamp($2),
-//              updated_at = NOW()
-//            WHERE stripe_subscription_id = $3`,
-//           [status, subscription.current_period_end, subscriptionId]
-//         );
-// 
-//         console.log(`✅ Abonnement ${subscriptionId} mis à jour: ${status}`);
-//         break;
-//       }
-// 
-//       case 'customer.subscription.deleted': {
-//         const subscription = event.data.object;
-//         const subscriptionId = subscription.id;
-// 
-//         await pool.query(
-//           `UPDATE subscriptions 
-//            SET status = 'canceled', updated_at = NOW()
-//            WHERE stripe_subscription_id = $1`,
-//           [subscriptionId]
-//         );
-// 
-//         console.log(`✅ Abonnement ${subscriptionId} annulé`);
-//         break;
-//       }
-// 
-//       case 'invoice.payment_failed': {
-//         const invoice = event.data.object;
-//         const subscriptionId = invoice.subscription;
-// 
-//         if (subscriptionId) {
-//           await pool.query(
-//             `UPDATE subscriptions 
-//              SET status = 'past_due', updated_at = NOW()
-//              WHERE stripe_subscription_id = $1`,
-//             [subscriptionId]
-//           );
-// 
-//           console.log(`⚠️ Paiement échoué pour: ${subscriptionId}`);
-//         }
-//         break;
-//       }
-//     }
-// 
-//     res.status(200).json({ received: true });
-//   } catch (error) {
-//     console.error('❌ Erreur traitement webhook:', error);
-//     res.status(500).json({ error: 'Webhook processing error' });
-//   }
-// });
 
 // Middleware
 app.use(cors());
