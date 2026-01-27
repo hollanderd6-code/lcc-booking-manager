@@ -8018,7 +8018,8 @@ app.post('/api/deposits', async (req, res) => {
     return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
   }
 
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    // ✅ Nettoyer l'URL pour éviter les double slashes
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
 
     // ✅ Session avec capture_method: 'manual' mais SANS user_id dans payment_intent_data
     // pour éviter le routing automatique vers Connect
