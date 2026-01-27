@@ -1036,7 +1036,7 @@ function copyDepositLinkByUid(uid) {
               <div class="details-actions">
                 <h4>⚡ Actions</h4>
                 
-                <div style="margin-bottom: 12px;">
+                <div style="margin-bottom: 12px;" onclick="event.stopPropagation()">
                   <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">
                     💰 Montant à débiter (€)
                   </label>
@@ -1055,13 +1055,13 @@ function copyDepositLinkByUid(uid) {
                   </div>
                 </div>
                 
-                <button class="btn btn-warning btn-sm" onclick="captureDepositWithAmount('${d.id}', '${r.reservationUid}', ${d.amountCents})">
+                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation(); captureDepositWithAmount('${d.id}', '${r.reservationUid}', ${d.amountCents})">
                   <i class="fas fa-credit-card"></i> Débiter la caution
                 </button>
-                <button class="btn btn-success btn-sm" onclick="releaseDeposit('${d.id}')">
+                <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); releaseDeposit('${d.id}')">
                   <i class="fas fa-check-circle"></i> Libérer (tout ok)
                 </button>
-                <a href="https://dashboard.stripe.com/test/payments" target="_blank" class="btn btn-ghost btn-sm">
+                <a href="https://dashboard.stripe.com/test/payments" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
                   <i class="fas fa-external-link-alt"></i> Voir dans Stripe
                 </a>
               </div>
