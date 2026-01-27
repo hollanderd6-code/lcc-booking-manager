@@ -824,8 +824,8 @@ function formatExpirationDate(createdAt) {
       
       // ✅ Chercher le montant de caution dans les propriétés chargées
       const property = allProperties.find(p => p.id === propertyId);
-      if (property && property.deposit_amount) {
-        return parseFloat(property.deposit_amount);
+      if (property && property.depositAmount) {
+        return parseFloat(property.depositAmount);
       }
       
       // Fallback sur localStorage si jamais (pour compatibilité)
