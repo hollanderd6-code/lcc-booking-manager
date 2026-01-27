@@ -1634,6 +1634,51 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
+        
+        // 🔍 Déterminer le type de session (abonnement, caution, ou paiement)
+        const paymentType = session.metadata?.payment_type;
+        const depositId = session.metadata?.deposit_id;
+        const paymentId = session.metadata?.payment_id;
+        
+        // 💰 PAIEMENT DE LOCATION
+        if (paymentType === 'location' || paymentId) {
+          console.log('💰 Paiement de location détecté');
+          try {
+            await pool.query(`
+              UPDATE payments 
+              SET status = 'paid',
+                  stripe_payment_intent_id = $1,
+                  updated_at = NOW()
+              WHERE id = $2 OR stripe_session_id = $3
+            `, [session.payment_intent, paymentId, session.id]);
+            
+            console.log(`✅ Paiement confirmé: ${paymentId || session.id}`);
+          } catch (err) {
+            console.error('Erreur mise à jour payment:', err);
+          }
+          break;
+        }
+        
+        // 🛡️ CAUTION
+        if (depositId || session.metadata?.deposit_id) {
+          console.log('🛡️ Caution détectée');
+          try {
+            await pool.query(`
+              UPDATE deposits 
+              SET status = 'paid',
+                  stripe_payment_intent_id = $1,
+                  updated_at = NOW()
+              WHERE id = $2 OR stripe_session_id = $3
+            `, [session.payment_intent, depositId, session.id]);
+            
+            console.log(`✅ Caution confirmée: ${depositId || session.id}`);
+          } catch (err) {
+            console.error('Erreur mise à jour deposit:', err);
+          }
+          break;
+        }
+        
+        // 📝 ABONNEMENT (logique existante)
         const userId = session.client_reference_id || session.metadata?.userId;
         const plan = session.metadata?.plan || 'solo_monthly';
         const basePlan = getBasePlanName(plan);
@@ -2898,6 +2943,100 @@ async function saveDepositToDB(deposit, userId, propertyId = null) {
       column: error.column,
       fullError: error
     });
+    return false;
+  }
+}
+
+/**
+ * Créer la table payments si elle n'existe pas
+ */
+async function ensurePaymentsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reservation_uid VARCHAR(255) NOT NULL,
+        property_id VARCHAR(255),
+        amount_cents INTEGER NOT NULL,
+        platform_fee_cents INTEGER DEFAULT 0,
+        currency VARCHAR(10) DEFAULT 'eur',
+        stripe_session_id VARCHAR(255),
+        stripe_payment_intent_id VARCHAR(255),
+        checkout_url TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)
+    `);
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_payments_reservation ON payments(reservation_uid)
+    `);
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)
+    `);
+    
+    console.log('✅ Table payments vérifiée/créée');
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur création table payments:', error);
+    return false;
+  }
+}
+
+/**
+ * Sauvegarder un payment en base
+ */
+async function savePaymentToDB(payment, userId, propertyId = null) {
+  try {
+    console.log('🔍 Tentative de sauvegarde payment:', {
+      paymentId: payment.id,
+      userId: userId,
+      reservationUid: payment.reservationUid,
+      propertyId: propertyId,
+      amountCents: payment.amountCents
+    });
+
+    await pool.query(`
+      INSERT INTO payments (
+        id, user_id, reservation_uid, property_id,
+        amount_cents, platform_fee_cents, currency,
+        stripe_session_id, stripe_payment_intent_id,
+        checkout_url, status,
+        metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (id) 
+      DO UPDATE SET
+        stripe_payment_intent_id = EXCLUDED.stripe_payment_intent_id,
+        status = EXCLUDED.status,
+        checkout_url = EXCLUDED.checkout_url,
+        updated_at = NOW()
+    `, [
+      payment.id,
+      userId,
+      payment.reservationUid,
+      propertyId,
+      payment.amountCents,
+      payment.platformFeeCents || 0,
+      payment.currency || 'eur',
+      payment.stripeSessionId || null,
+      payment.stripePaymentIntentId || null,
+      payment.checkoutUrl || null,
+      payment.status || 'pending',
+      payment.metadata ? JSON.stringify(payment.metadata) : null
+    ]);
+
+    console.log(`✅ Payment ${payment.id} sauvegardé en PostgreSQL`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur savePaymentToDB:', error);
     return false;
   }
 }
@@ -8060,17 +8199,9 @@ app.post('/api/deposits', async (req, res) => {
 
     let session;
 
-    // Si tu as un compte Stripe Connect lié, on crée la session sur CE compte
-    if (user.stripeAccountId) {
-      console.log('Création session de caution sur compte connecté :', user.stripeAccountId);
-      session = await stripe.checkout.sessions.create(
-        sessionParams,
-        { stripeAccount: user.stripeAccountId }
-      );
-    } else {
-      console.log('Création session de caution sur le compte plateforme (pas de stripeAccountId)');
-      session = await stripe.checkout.sessions.create(sessionParams);
-    }
+    // ✅ CAUTIONS : TOUJOURS sur le compte plateforme (pas de Stripe Connect)
+    console.log('✅ Création caution sur compte plateforme Boostinghost');
+    session = await stripe.checkout.sessions.create(sessionParams);
 
     deposit.stripeSessionId = session.id;
     deposit.checkoutUrl = session.url;
@@ -8095,6 +8226,137 @@ await pool.query(`
     });
   }
 });
+
+// ============================================
+// POST - Créer un PAIEMENT de location (Stripe Connect avec commission 8%)
+// ============================================
+app.post('/api/payments', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    // ⚠️ VÉRIFIER que l'utilisateur a un compte Stripe Connect
+    if (!user.stripeAccountId) {
+      return res.status(400).json({ 
+        error: 'Vous devez connecter votre compte Stripe pour recevoir des paiements',
+        needsStripeConnect: true 
+      });
+    }
+
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
+    }
+
+    const { reservationUid, amount, description } = req.body;
+
+    if (!reservationUid || !amount || amount <= 0) {
+      return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
+    }
+
+    // Retrouver la réservation
+    const result = findReservationByUidForUser(reservationUid, user.id);
+    if (!result) {
+      return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
+    }
+
+    const { reservation, property } = result;
+    const amountCents = Math.round(amount * 100);
+    
+    // 💰 Calcul de la commission (8% pour la plateforme)
+    const platformFee = Math.round(amountCents * 0.08);
+    const ownerReceives = amountCents - platformFee;
+    
+    // Créer l'objet "payment"
+    const paymentId = 'pay_' + Date.now().toString(36);
+    const payment = {
+      id: paymentId,
+      reservationUid,
+      amountCents,
+      platformFeeCents: platformFee,
+      currency: 'eur',
+      status: 'pending',
+      stripeSessionId: null,
+      checkoutUrl: null,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Sauvegarder en PostgreSQL
+    const saved = await savePaymentToDB(payment, user.id, property.id);
+    
+    if (!saved) {
+      return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
+    }
+
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
+
+    // 🎯 Créer une session de paiement sur le compte Stripe Connect du propriétaire
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: description || `Location – ${property.name}`,
+            description: `Du ${reservation.start} au ${reservation.end}`
+          },
+          unit_amount: amountCents
+        },
+        quantity: 1
+      }],
+      payment_intent_data: {
+        // 💰 Commission de la plateforme (8%)
+        application_fee_amount: platformFee,
+        metadata: {
+          payment_id: payment.id,
+          reservation_uid: reservationUid,
+          property_id: property.id,
+          user_id: user.id,
+          payment_type: 'location'
+        }
+      },
+      metadata: {
+        payment_id: payment.id,
+        reservation_uid: reservationUid,
+        property_id: property.id,
+        user_id: user.id,
+        payment_type: 'location'
+      },
+      success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
+    }, {
+      stripeAccount: user.stripeAccountId // 🎯 Le compte du propriétaire
+    });
+
+    payment.stripeSessionId = session.id;
+    payment.checkoutUrl = session.url;
+    
+    // Mettre à jour après création de la session Stripe
+    await pool.query(`
+      UPDATE payments 
+      SET stripe_session_id = $1, checkout_url = $2, updated_at = NOW()
+      WHERE id = $3
+    `, [session.id, session.url, payment.id]);
+
+    console.log(`✅ Paiement créé: ${payment.id} - Montant: ${amount}€ - Commission: ${(platformFee/100).toFixed(2)}€ - Propriétaire reçoit: ${(ownerReceives/100).toFixed(2)}€`);
+
+    return res.json({
+      payment,
+      checkoutUrl: session.url,
+      amount: amount,
+      platformFee: platformFee / 100,
+      ownerReceives: ownerReceives / 100
+    });
+  } catch (err) {
+    console.error('Erreur création paiement:', err);
+    return res.status(500).json({
+      error: 'Erreur lors de la création du paiement : ' + (err.message || 'Erreur interne Stripe')
+    });
+  }
+});
+
 // GET - Liste des cautions d'un utilisateur
 app.get('/api/deposits', async (req, res) => {
   try {
@@ -8110,6 +8372,40 @@ app.get('/api/deposits', async (req, res) => {
     res.json({ deposits });
   } catch (err) {
     console.error('Erreur GET /api/deposits:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET - Liste des paiements d'un utilisateur
+app.get('/api/payments', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    const { status, propertyId } = req.query;
+    
+    let query = 'SELECT * FROM payments WHERE user_id = $1';
+    const params = [user.id];
+    
+    if (status) {
+      query += ' AND status = $2';
+      params.push(status);
+    }
+    
+    if (propertyId) {
+      query += ` AND property_id = $${params.length + 1}`;
+      params.push(propertyId);
+    }
+    
+    query += ' ORDER BY created_at DESC';
+    
+    const result = await pool.query(query, params);
+    
+    res.json({ payments: result.rows });
+  } catch (err) {
+    console.error('Erreur GET /api/payments:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -12212,6 +12508,10 @@ console.log('✅ Service de notifications initialisé');
   // ✅ Initialiser les tables livrets d'accueil
   await initWelcomeBookTables(pool);
   console.log('✅ Tables welcome_books initialisées');
+  
+  // ✅ Initialiser la table payments
+  await ensurePaymentsTable();
+  console.log('✅ Table payments initialisée');
   
   // ✅ Charger les propriétés
   await loadProperties();
