@@ -359,6 +359,41 @@ cron.schedule('*/5 * * * *', async () => {
 console.log('CRON job synchronisation iCal configure (toutes les 5 minutes)');
 
 // ============================================
+// CRON JOB : DEMANDE DE CAUTION J-2
+// ============================================
+
+cron.schedule('0 10 * * *', async () => {
+  console.log('🕐 CRON: Envoi demandes de caution (J-2) à 10h00');
+  try {
+    await sendDepositRequestMessages(io);
+  } catch (error) {
+    console.error('❌ Erreur CRON demandes caution:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('✅ CRON job demandes de caution configuré (tous les jours à 10h, J-2 avant arrivée)');
+
+// ============================================
+// CRON JOB : INFOS D'ACCÈS JOUR J À 7H
+// ============================================
+
+cron.schedule('0 7 * * *', async () => {
+  console.log('🕐 CRON: Envoi infos d\'accès (jour J) à 7h00');
+  try {
+    await sendArrivalInfoMessages(io);
+  } catch (error) {
+    console.error('❌ Erreur CRON infos accès:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('✅ CRON job infos d\'accès configuré (tous les jours à 7h, jour d\'arrivée)');
+
+
+// ============================================
 // SERVICE DE RÉPONSES AUTOMATIQUES (INLINE)
 // ============================================
 
@@ -1672,6 +1707,11 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             `, [session.payment_intent, depositId, session.id]);
             
             console.log(`✅ Caution confirmée: ${depositId || session.id}`);
+            
+            // 🤖 Envoyer automatiquement les infos si c'est bientôt l'arrivée
+            if (depositId) {
+              await handleDepositPaid(depositId, io);
+            }
           } catch (err) {
             console.error('Erreur mise à jour deposit:', err);
           }
@@ -2692,6 +2732,307 @@ async function sendWelcomeMessageForNewReservation(pool, io, conversationId, pro
 
   } catch (error) {
     console.error('❌ Erreur envoi message bienvenue:', error);
+  }
+}
+
+// ============================================
+// 🤖 MESSAGES AUTOMATIQUES - SYSTÈME CAUTIONS
+// ============================================
+
+/**
+ * Envoyer un message automatique dans une conversation
+ */
+async function sendAutomatedMessage(conversationId, message, io) {
+  try {
+    const messageResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
+       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
+       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+      [conversationId, message]
+    );
+
+    const savedMessage = messageResult.rows[0];
+
+    // Émettre via Socket.io si disponible
+    if (io) {
+      io.to(`conversation_${conversationId}`).emit('new_message', savedMessage);
+    }
+
+    console.log(`✅ Message automatique envoyé pour conversation ${conversationId}`);
+    return savedMessage;
+  } catch (error) {
+    console.error('❌ Erreur envoi message automatique:', error);
+    return null;
+  }
+}
+
+/**
+ * Envoyer demande de caution J-2 pour réservations Booking
+ */
+async function sendDepositRequestMessages(io) {
+  try {
+    console.log('🔍 Recherche réservations Booking nécessitant une caution (J-2)...');
+    
+    // Date J-2 (dans 2 jours)
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 2);
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+
+    // Récupérer toutes les conversations arrivant dans 2 jours (Booking uniquement)
+    const conversationsResult = await pool.query(`
+      SELECT c.*, p.name as property_name, p.deposit_amount
+      FROM conversations c
+      LEFT JOIN properties p ON p.id = c.property_id
+      WHERE DATE(c.reservation_start_date) = $1
+      AND LOWER(c.platform) = 'booking'
+      AND c.status != 'cancelled'
+    `, [targetDateStr]);
+
+    const conversations = conversationsResult.rows;
+    console.log(`📋 ${conversations.length} réservations Booking dans 2 jours`);
+
+    for (const conv of conversations) {
+      // Vérifier si une caution est obligatoire pour ce logement
+      if (!conv.deposit_amount || parseFloat(conv.deposit_amount) <= 0) {
+        console.log(`⏭️ Pas de caution pour ${conv.property_name}`);
+        continue;
+      }
+
+      // Vérifier si un lien de caution existe déjà
+      const depositResult = await pool.query(
+        'SELECT * FROM deposits WHERE reservation_uid = $1 AND user_id = $2',
+        [conv.reservation_uid || '', conv.user_id]
+      );
+
+      let depositUrl = null;
+
+      if (depositResult.rows.length > 0) {
+        const deposit = depositResult.rows[0];
+        
+        // Si déjà payé, skip
+        if (deposit.status === 'paid') {
+          console.log(`✅ Caution déjà payée pour ${conv.guest_name}`);
+          continue;
+        }
+
+        depositUrl = deposit.checkout_url;
+      } else {
+        // Créer automatiquement le lien de caution
+        console.log(`🔗 Création automatique lien caution pour ${conv.guest_name}`);
+        
+        const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        const amountCents = Math.round(parseFloat(conv.deposit_amount) * 100);
+
+        const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+        
+        const sessionParams = {
+          payment_method_types: ['card'],
+          mode: 'payment',
+          line_items: [{
+            price_data: {
+              currency: 'eur',
+              unit_amount: amountCents,
+              product_data: {
+                name: `Caution - ${conv.property_name}`,
+                description: `Réservation du ${conv.reservation_start_date} au ${conv.reservation_end_date}`
+              }
+            },
+            quantity: 1
+          }],
+          payment_intent_data: {
+            capture_method: 'manual',
+            metadata: {
+              deposit_id: depositId,
+              reservation_uid: conv.reservation_uid || ''
+            }
+          },
+          metadata: {
+            deposit_id: depositId,
+            reservation_uid: conv.reservation_uid || '',
+            user_id: conv.user_id
+          },
+          success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
+          cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
+        };
+
+        let session;
+        if (conv.stripe_account_id) {
+          session = await stripe.checkout.sessions.create(sessionParams, { stripeAccount: conv.stripe_account_id });
+        } else {
+          session = await stripe.checkout.sessions.create(sessionParams);
+        }
+
+        // Sauvegarder en DB
+        await pool.query(`
+          INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW(), NOW())
+        `, [depositId, conv.user_id, conv.reservation_uid || '', conv.property_id, amountCents, session.id, session.url]);
+
+        depositUrl = session.url;
+      }
+
+      // Envoyer le message avec le lien
+      const message = `Bonjour ! 👋
+
+Votre séjour approche ! Pour finaliser votre réservation, merci de régler la caution de sécurité via ce lien :
+
+${depositUrl}
+
+Une fois la caution validée, vous recevrez toutes vos informations d'accès.
+
+À bientôt ! 😊`;
+
+      await sendAutomatedMessage(conv.id, message, io);
+    }
+
+    console.log('✅ Demandes de caution envoyées');
+  } catch (error) {
+    console.error('❌ Erreur sendDepositRequestMessages:', error);
+  }
+}
+
+/**
+ * Envoyer informations d'accès le jour J à 7h
+ */
+async function sendArrivalInfoMessages(io) {
+  try {
+    console.log('🔍 Recherche arrivées du jour pour envoi infos d\'accès...');
+    
+    // Date du jour
+    const today = new Date().toISOString().split('T')[0];
+
+    // Récupérer toutes les conversations arrivant aujourd'hui
+    const conversationsResult = await pool.query(`
+      SELECT c.*, p.name as property_name, p.deposit_amount, p.welcome_book_url
+      FROM conversations c
+      LEFT JOIN properties p ON p.id = c.property_id
+      WHERE DATE(c.reservation_start_date) = $1
+      AND c.status != 'cancelled'
+    `, [today]);
+
+    const conversations = conversationsResult.rows;
+    console.log(`📋 ${conversations.length} arrivées aujourd'hui`);
+
+    for (const conv of conversations) {
+      const platform = (conv.platform || '').toLowerCase();
+      const needsDeposit = platform === 'booking' && conv.deposit_amount && parseFloat(conv.deposit_amount) > 0;
+
+      // Si Booking + caution obligatoire, vérifier si payée
+      if (needsDeposit) {
+        const depositResult = await pool.query(
+          'SELECT status FROM deposits WHERE reservation_uid = $1 AND user_id = $2',
+          [conv.reservation_uid || '', conv.user_id]
+        );
+
+        if (depositResult.rows.length === 0 || depositResult.rows[0].status !== 'paid') {
+          console.log(`⏸️ Caution non payée pour ${conv.guest_name}, pas d'envoi infos`);
+          
+          // Envoyer un rappel
+          const depositCheck = await pool.query(
+            'SELECT checkout_url FROM deposits WHERE reservation_uid = $1 AND user_id = $2',
+            [conv.reservation_uid || '', conv.user_id]
+          );
+
+          if (depositCheck.rows.length > 0) {
+            const reminderMessage = `Bonjour ! 👋
+
+C'est aujourd'hui votre jour d'arrivée ! 
+
+Pour recevoir vos informations d'accès, merci de finaliser le règlement de votre caution de sécurité :
+
+${depositCheck.rows[0].checkout_url}
+
+À très vite ! 😊`;
+
+            await sendAutomatedMessage(conv.id, reminderMessage, io);
+          }
+          
+          continue;
+        }
+      }
+
+      // Envoyer les infos d'accès
+      let message = `Bonjour ! 🎉
+
+Bienvenue ! Vous pouvez dès à présent consulter votre livret d'accueil qui contient toutes les informations pratiques (code d'accès, wifi, instructions...) :`;
+
+      if (conv.welcome_book_url) {
+        message += `\n\n${conv.welcome_book_url}`;
+      } else {
+        message += `\n\n(Le livret d'accueil sera bientôt disponible)`;
+      }
+
+      message += `\n\nTrès bon séjour ! ✨`;
+
+      await sendAutomatedMessage(conv.id, message, io);
+    }
+
+    console.log('✅ Infos d\'accès envoyées');
+  } catch (error) {
+    console.error('❌ Erreur sendArrivalInfoMessages:', error);
+  }
+}
+
+/**
+ * Gérer l'envoi automatique quand une caution est payée
+ */
+async function handleDepositPaid(depositId, io) {
+  try {
+    console.log(`💰 Caution payée : ${depositId}, vérification envoi infos...`);
+
+    // Récupérer le deposit
+    const depositResult = await pool.query(
+      'SELECT * FROM deposits WHERE id = $1',
+      [depositId]
+    );
+
+    if (depositResult.rows.length === 0) return;
+
+    const deposit = depositResult.rows[0];
+
+    // Récupérer la conversation liée
+    const convResult = await pool.query(`
+      SELECT c.*, p.name as property_name, p.welcome_book_url
+      FROM conversations c
+      LEFT JOIN properties p ON p.id = c.property_id
+      WHERE c.reservation_uid = $1 AND c.user_id = $2
+    `, [deposit.reservation_uid, deposit.user_id]);
+
+    if (convResult.rows.length === 0) {
+      console.log(`⚠️ Conversation introuvable pour caution ${depositId}`);
+      return;
+    }
+
+    const conv = convResult.rows[0];
+
+    // Vérifier si c'est dans moins de 2 jours
+    const arrivalDate = new Date(conv.reservation_start_date);
+    const today = new Date();
+    const daysUntilArrival = Math.ceil((arrivalDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilArrival <= 2) {
+      // Envoyer les infos immédiatement
+      console.log(`📤 Envoi immédiat des infos (arrivée dans ${daysUntilArrival} jours)`);
+
+      let message = `Merci ! Votre caution a bien été enregistrée. 🎉
+
+Vous pouvez dès à présent consulter votre livret d'accueil avec toutes les informations pratiques :`;
+
+      if (conv.welcome_book_url) {
+        message += `\n\n${conv.welcome_book_url}`;
+      } else {
+        message += `\n\n(Le livret d'accueil sera bientôt disponible)`;
+      }
+
+      message += `\n\nTrès bon séjour ! ✨`;
+
+      await sendAutomatedMessage(conv.id, message, io);
+    } else {
+      console.log(`⏰ Infos seront envoyées le jour J (dans ${daysUntilArrival} jours)`);
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur handleDepositPaid:', error);
   }
 }
 
