@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
-<title>Boostinghost – Cautions</title>
+<title>Boostinghost – Cautions & Paiements</title>
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
@@ -16,6 +16,119 @@
 <link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
 <style>
+    /* ===== ONGLETS ===== */
+    .tabs-container {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    
+    .tab-button {
+      border: none;
+      background: transparent;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .tab-button:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+    
+    .tab-button.active {
+      color: var(--primary-color, #059669);
+      border-bottom-color: var(--primary-color, #059669);
+      background: transparent;
+    }
+    
+    .tab-button i {
+      font-size: 16px;
+    }
+    
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+    
+    .tab-pane.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== SECTION INFO STRIPE ===== */
+    .stripe-connect-notice {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border: 2px solid #0ea5e9;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: start;
+      gap: 16px;
+    }
+    
+    .stripe-connect-notice-icon {
+      font-size: 32px;
+      color: #0ea5e9;
+      flex-shrink: 0;
+    }
+    
+    .stripe-connect-notice-content h3 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #0c4a6e;
+    }
+    
+    .stripe-connect-notice-content p {
+      margin: 0 0 12px 0;
+      color: #075985;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .stripe-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .stripe-status-pill.connected {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+    }
+    
+    .stripe-status-pill.not-connected {
+      background: rgba(234, 179, 8, 0.1);
+      color: #92400e;
+    }
+
     html, body {
       margin: 0 !important;
       }
@@ -514,7 +627,7 @@
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="deposits" data-subtitle="Suivez et gérez les dépôts de garantie." data-title="Cautions">
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="deposits" data-subtitle="Gérez les cautions et les paiements de vos réservations." data-title="Cautions & Paiements">
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
@@ -533,6 +646,20 @@
 <main class="main-content"><div id="bhHeader"></div>
 
 <div class="page-content">
+<!-- ONGLETS -->
+<div class="tabs-container">
+<button class="tab-button active" data-tab="deposits">
+<i class="fas fa-shield-halved"></i>
+<span>Cautions</span>
+</button>
+<button class="tab-button" data-tab="payments">
+<i class="fas fa-euro-sign"></i>
+<span>Paiements de locations</span>
+</button>
+</div>
+
+<!-- ONGLET : CAUTIONS -->
+<div class="tab-pane active" id="tab-deposits">
 <section class="card">
 <div class="card-header">
 <div class="card-title">
@@ -559,6 +686,64 @@
 </div>
 </div>
 </section>
+</div>
+<!-- FIN ONGLET CAUTIONS -->
+
+<!-- ONGLET : PAIEMENTS DE LOCATIONS -->
+<div class="tab-pane" id="tab-payments">
+
+<!-- Notice Stripe Connect -->
+<div id="stripeConnectNotice" class="stripe-connect-notice" style="display:none;">
+<div class="stripe-connect-notice-icon">
+<i class="fab fa-stripe-s"></i>
+</div>
+<div class="stripe-connect-notice-content">
+<h3>⚠️ Compte Stripe Connect requis</h3>
+<p>Pour recevoir des paiements de locations directement sur votre compte, vous devez d'abord connecter votre compte Stripe Connect dans les paramètres.</p>
+<a href="/settings-account.html?tab=payments" class="btn btn-primary">
+<i class="fas fa-plug"></i>
+Connecter mon compte Stripe
+</a>
+</div>
+</div>
+
+<!-- Section paiements -->
+<section class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-euro-sign"></i>
+<span>Paiements de locations</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px;">
+<div id="stripeStatusBadge" class="stripe-status-pill not-connected" style="display:none;">
+<i class="fas fa-circle" style="font-size: 8px;"></i>
+<span>Stripe non connecté</span>
+</div>
+<button class="btn btn-ghost btn-xs" id="refreshPaymentsBtn">
+<i class="fas fa-sync-alt"></i>
+Actualiser
+</button>
+</div>
+</div>
+<p class="card-subtitle">
+Les paiements de locations sont versés directement sur votre compte Stripe Connect. Vous recevez 97% du montant (commission plateforme 3%).
+</p>
+<div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
+<label for="propertyFilterPayments" style="font-size:13px; font-weight:500;">Logement :</label>
+<select id="propertyFilterPayments">
+<option value="">Tous les logements</option>
+</select>
+</div>
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+<div id="paymentsContainer">
+<p class="empty-state">Chargement des réservations…</p>
+</div>
+</div>
+</section>
+
+</div>
+<!-- FIN ONGLET PAIEMENTS -->
+
 </div>
 </main>
 </div>
@@ -1336,6 +1521,239 @@ async function createDeposit() {
       }
     })();
   </script>
+
+<!-- GESTION DES ONGLETS ET PAIEMENTS -->
+<script>
+// ============================================
+// GESTION DES ONGLETS
+// ============================================
+(function initTabs() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.dataset.tab;
+      
+      // Désactiver tous les boutons et panes
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+      
+      // Activer le bouton et pane ciblés
+      button.classList.add('active');
+      document.getElementById('tab-' + targetTab).classList.add('active');
+      
+      // Si on affiche l'onglet paiements, vérifier Stripe et charger les données
+      if (targetTab === 'payments') {
+        checkStripeConnectStatus();
+        loadPayments();
+      }
+    });
+  });
+})();
+
+// ============================================
+// VÉRIFICATION STATUT STRIPE CONNECT
+// ============================================
+async function checkStripeConnectStatus() {
+  const notice = document.getElementById('stripeConnectNotice');
+  const badge = document.getElementById('stripeStatusBadge');
+  const paymentsContainer = document.getElementById('paymentsContainer');
+  
+  const token = localStorage.getItem('lcc_token');
+  if (!token) {
+    if (notice) notice.style.display = 'flex';
+    if (badge) badge.style.display = 'none';
+    if (paymentsContainer) paymentsContainer.innerHTML = '<p class="empty-state">Veuillez vous connecter</p>';
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/stripe/status', {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!res.ok) throw new Error('Erreur API');
+    
+    const data = await res.json();
+    
+    if (data.connected && data.charges_enabled) {
+      // Stripe connecté et fonctionnel
+      if (notice) notice.style.display = 'none';
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.className = 'stripe-status-pill connected';
+        badge.innerHTML = '<i class="fas fa-circle" style="font-size: 8px;"></i><span>Stripe connecté</span>';
+      }
+      return true;
+    } else {
+      // Stripe non connecté ou incomplet
+      if (notice) notice.style.display = 'flex';
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.className = 'stripe-status-pill not-connected';
+        badge.innerHTML = '<i class="fas fa-circle" style="font-size: 8px;"></i><span>Stripe non connecté</span>';
+      }
+      if (paymentsContainer) paymentsContainer.innerHTML = '<p class="empty-state">Connectez votre compte Stripe pour gérer les paiements</p>';
+      return false;
+    }
+  } catch (error) {
+    console.error('Erreur vérification Stripe:', error);
+    if (notice) notice.style.display = 'flex';
+    if (badge) badge.style.display = 'none';
+    return false;
+  }
+}
+
+// ============================================
+// CHARGEMENT DES PAIEMENTS (SIMILAIRE AUX CAUTIONS)
+// ============================================
+let allPayments = [];
+
+async function loadPayments() {
+  const container = document.getElementById('paymentsContainer');
+  if (!container) return;
+  
+  // Vérifier d'abord si Stripe est connecté
+  const isStripeConnected = await checkStripeConnectStatus();
+  if (!isStripeConnected) return;
+  
+  container.innerHTML = '<p class="empty-state">Chargement des paiements…</p>';
+  
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/reservations-with-deposits', {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!res.ok) throw new Error('Erreur API');
+    
+    const data = await res.json();
+    allPayments = data;
+    
+    renderPaymentsTable();
+  } catch (error) {
+    console.error('Erreur chargement paiements:', error);
+    container.innerHTML = '<p class="empty-state">Erreur lors du chargement des paiements.</p>';
+  }
+}
+
+function renderPaymentsTable() {
+  const container = document.getElementById('paymentsContainer');
+  if (!container) return;
+  
+  const select = document.getElementById('propertyFilterPayments');
+  const selectedPropertyId = select ? select.value : '';
+  
+  // Filtrer par logement
+  const filtered = allPayments.filter((r) =>
+    !selectedPropertyId || r.propertyId === selectedPropertyId
+  );
+  
+  if (!filtered.length) {
+    container.innerHTML = '<p class="empty-state">Aucune réservation pour ce filtre.</p>';
+    return;
+  }
+  
+  // TODO: Afficher les réservations pour créer des paiements
+  // Pour l'instant, on affiche juste un message
+  let html = '<div class="deposits-cards-grid">';
+  
+  filtered.forEach((r) => {
+    const startDate = new Date(r.startDate).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const endDate = new Date(r.endDate).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    html += `
+      <div class="deposit-card">
+        <div class="deposit-card-header">
+          <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
+        </div>
+        
+        <div class="deposit-card-body">
+          <div class="deposit-info-row">
+            <i class="fas fa-calendar"></i>
+            <span>${startDate} → ${endDate}</span>
+          </div>
+          
+          <div class="deposit-info-grid-simple">
+            <div class="deposit-info-item">
+              <div class="deposit-info-label">Statut</div>
+              <div class="deposit-info-value">
+                <span class="badge badge-empty">Pas de paiement</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="deposit-card-footer">
+          <button class="btn btn-primary btn-card" onclick="createPayment('${r.reservationUid}')">
+            <i class="fas fa-plus"></i> Créer un paiement
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// Fonction temporaire pour créer un paiement
+function createPayment(reservationUid) {
+  alert('Fonctionnalité de création de paiement à venir !\n\nRéservation UID: ' + reservationUid);
+}
+
+// Charger les propriétés pour le filtre
+async function loadPropertiesForPaymentsFilter() {
+  const select = document.getElementById('propertyFilterPayments');
+  if (!select) return;
+  
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties', {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    if (!res.ok) throw new Error('Erreur API propriétés');
+    const data = await res.json();
+    
+    (data.properties || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+    
+    select.addEventListener('change', renderPaymentsTable);
+  } catch (e) {
+    console.error('Erreur chargement propriétés:', e);
+  }
+}
+
+// Bouton refresh paiements
+document.addEventListener('DOMContentLoaded', () => {
+  const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
+  if (refreshPaymentsBtn) {
+    refreshPaymentsBtn.addEventListener('click', loadPayments);
+  }
+  
+  loadPropertiesForPaymentsFilter();
+});
+</script>
+
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
