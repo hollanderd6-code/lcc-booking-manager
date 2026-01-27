@@ -202,6 +202,114 @@
       color: var(--text-secondary);
     }
 
+    /* ========== CARTES EXPANDABLES ========== */
+    .deposit-card.expandable {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .deposit-card.expandable:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .expand-icon {
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: transform 0.3s ease;
+    }
+
+    .deposit-card.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    .deposit-details {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+      }
+      to {
+        opacity: 1;
+        max-height: 500px;
+      }
+    }
+
+    .details-section {
+      margin-bottom: 16px;
+    }
+
+    .details-section h4 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border-color-subtle);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .detail-value {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .details-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .details-actions h4 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: #d97706;
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .btn-sm {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
     /* ========== HEADER DASHBOARD MODERNE (comme app.html) ========== */
 
     .main-header {
@@ -498,6 +606,85 @@ function formatDateFr(dateStr) {
       }
     }
 
+    // ========== FONCTIONS EXPANSION CARTES ==========
+    function toggleDetails(reservationUid, event) {
+      if (!event) event = window.event;
+      
+      const details = document.getElementById(`details-${reservationUid}`);
+      if (!details) return;
+      
+      // Trouver la carte parente
+      const card = details.closest('.deposit-card');
+      
+      if (details.style.display === 'none' || details.style.display === '') {
+        details.style.display = 'block';
+        if (card) card.classList.add('expanded');
+      } else {
+        details.style.display = 'none';
+        if (card) card.classList.remove('expanded');
+      }
+      
+      if (event) event.stopPropagation();
+    }
+
+    // ========== ACTIONS CAUTIONS ==========
+    async function captureDeposit(depositId, amountCents) {
+      if (!confirm(`Débiter la caution de ${(amountCents/100).toFixed(2)}€ ?\n\nCette action est irréversible. L'argent sera transféré depuis la carte du client.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/deposits/${depositId}/capture`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+          },
+          body: JSON.stringify({ amountCents })
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur lors du débit');
+        }
+
+        alert('✅ Caution débitée avec succès !');
+        await loadReservationsWithDeposits();
+      } catch (error) {
+        console.error('Erreur capture:', error);
+        alert('❌ Erreur: ' + error.message);
+      }
+    }
+
+    async function releaseDeposit(depositId) {
+      if (!confirm('Libérer cette caution ?\n\nL\'autorisation sera annulée et aucun montant ne sera débité.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/deposits/${depositId}/release`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+          }
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur lors de la libération');
+        }
+
+        alert('✅ Caution libérée avec succès !');
+        await loadReservationsWithDeposits();
+      } catch (error) {
+        console.error('Erreur release:', error);
+        alert('❌ Erreur: ' + error.message);
+      }
+    }
+
     function openDepositModal(reservation) {
       currentReservationForDeposit = reservation;
 
@@ -751,34 +938,76 @@ function copyDepositLinkByUid(uid) {
         const sourceKey = normalizeSourceToKey(rawSource);
         const isAirbnb = sourceKey === 'airbnb';
           
-        // Actions
+        // Actions principales
         let actionsHtml = '';
         
         if (isAirbnb) {
           actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
         } else if (d && d.checkoutUrl) {
-          // ✅ Si un lien existe (peu importe le statut), afficher "Copier le lien"
           actionsHtml = `
-    <button class="btn btn-primary btn-card" onclick="copyDepositLinkByUid('${r.reservationUid}')">
-      <i class="fas fa-copy"></i> Copier le lien
-    </button>
-  `;
+            <button class="btn btn-primary btn-card" onclick="copyDepositLinkByUid('${r.reservationUid}')">
+              <i class="fas fa-copy"></i> Copier le lien
+            </button>
+          `;
         } else if (!d) {
-          // ✅ Si aucune caution n'existe, afficher "Créer un lien"
           actionsHtml = `
-<button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.reservationUid}')">
-<i class="fas fa-link"></i> Créer un lien
-    </button>
-  `;
+            <button class="btn btn-primary btn-card" onclick="openDepositModalByUid('${r.reservationUid}')">
+              <i class="fas fa-link"></i> Créer un lien
+            </button>
+          `;
         } else {
           actionsHtml = '<div class="card-hint">Caution déjà gérée</div>';
         }
 
+        // Actions avancées (capture/release)
+        let advancedActionsHtml = '';
+        if (d && d.status === 'paid') {
+          advancedActionsHtml = `
+            <div class="deposit-details" id="details-${r.reservationUid}" style="display: none;">
+              <div class="details-section">
+                <h4>📋 Informations</h4>
+                <div class="detail-row">
+                  <span class="detail-label">ID Caution</span>
+                  <span class="detail-value">${d.id}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Session Stripe</span>
+                  <span class="detail-value" style="font-size: 11px;">${d.stripeSessionId || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Créée le</span>
+                  <span class="detail-value">${new Date(d.createdAt || Date.now()).toLocaleString('fr-FR')}</span>
+                </div>
+              </div>
+              
+              <div class="details-actions">
+                <h4>⚡ Actions</h4>
+                <button class="btn btn-warning btn-sm" onclick="captureDeposit('${d.id}', ${d.amountCents})">
+                  <i class="fas fa-credit-card"></i> Débiter la caution
+                </button>
+                <button class="btn btn-success btn-sm" onclick="releaseDeposit('${d.id}')">
+                  <i class="fas fa-check-circle"></i> Libérer (tout ok)
+                </button>
+                <a href="https://dashboard.stripe.com/test/payments/${d.stripeSessionId}" target="_blank" class="btn btn-ghost btn-sm">
+                  <i class="fas fa-external-link-alt"></i> Voir dans Stripe
+                </a>
+              </div>
+            </div>
+          `;
+        }
+
+        // Icône d'expansion si détails disponibles
+        const expandIcon = (d && d.status === 'paid') ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
+
         // Générer la carte
+        const cardClass = (d && d.status === 'paid') ? 'deposit-card expandable' : 'deposit-card';
+        const cardClick = (d && d.status === 'paid') ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
+        
         html += `
-          <div class="deposit-card">
+          <div class="${cardClass}" ${cardClick}>
             <div class="deposit-card-header">
               <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
+              ${expandIcon}
             </div>
             
             <div class="deposit-card-body">
@@ -799,6 +1028,8 @@ function copyDepositLinkByUid(uid) {
                 </div>
               </div>
             </div>
+            
+            ${advancedActionsHtml}
             
             <div class="deposit-card-footer">
               ${actionsHtml}
