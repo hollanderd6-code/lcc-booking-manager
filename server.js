@@ -4819,7 +4819,7 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
   try {
     // ✅ Récupérer tous les deposits de l'utilisateur depuis PostgreSQL
     const depositsResult = await pool.query(`
-      SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id
+      SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
       FROM deposits
       WHERE user_id = $1
     `, [user.id]);
@@ -4832,7 +4832,8 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
         amountCents: d.amount_cents,
         status: d.status,
         checkoutUrl: d.checkout_url,
-        stripeSessionId: d.stripe_session_id
+        stripeSessionId: d.stripe_session_id,
+        createdAt: d.created_at
       });
     });
 
@@ -4859,7 +4860,8 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
                 id: deposit.id,
                 amountCents: deposit.amountCents,
                 status: deposit.status,
-                checkoutUrl: deposit.checkoutUrl
+                checkoutUrl: deposit.checkoutUrl,
+                createdAt: deposit.createdAt
               }
             : null
         });
