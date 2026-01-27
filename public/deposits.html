@@ -628,6 +628,58 @@ function formatDateFr(dateStr) {
     }
 
     // ========== ACTIONS CAUTIONS ==========
+    async function captureDepositWithAmount(depositId, reservationUid, maxAmountCents) {
+      const inputId = `capture-amount-${reservationUid}`;
+      const input = document.getElementById(inputId);
+      
+      if (!input) {
+        alert('Erreur : champ de montant introuvable');
+        return;
+      }
+      
+      const amountEuros = parseFloat(input.value);
+      
+      if (isNaN(amountEuros) || amountEuros <= 0) {
+        alert('Merci de saisir un montant valide');
+        return;
+      }
+      
+      const amountCents = Math.round(amountEuros * 100);
+      const maxAmount = maxAmountCents / 100;
+      
+      if (amountCents > maxAmountCents) {
+        alert(`Le montant ne peut pas dépasser ${maxAmount.toFixed(2)}€`);
+        return;
+      }
+      
+      if (!confirm(`Débiter ${amountEuros.toFixed(2)}€ ?\n\nCette action est irréversible. L'argent sera transféré depuis la carte du client.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/deposits/${depositId}/capture`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+          },
+          body: JSON.stringify({ amountCents })
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Erreur lors du débit');
+        }
+
+        alert(`✅ Caution débitée avec succès : ${amountEuros.toFixed(2)}€`);
+        await loadReservationsWithDeposits();
+      } catch (error) {
+        console.error('Erreur capture:', error);
+        alert('❌ Erreur: ' + error.message);
+      }
+    }
+
     async function captureDeposit(depositId, amountCents) {
       if (!confirm(`Débiter la caution de ${(amountCents/100).toFixed(2)}€ ?\n\nCette action est irréversible. L'argent sera transféré depuis la carte du client.`)) {
         return;
@@ -962,6 +1014,7 @@ function copyDepositLinkByUid(uid) {
         // Actions avancées (capture/release)
         let advancedActionsHtml = '';
         if (d && d.status === 'paid') {
+          const maxAmount = (d.amountCents / 100).toFixed(2);
           advancedActionsHtml = `
             <div class="deposit-details" id="details-${r.reservationUid}" style="display: none;">
               <div class="details-section">
@@ -971,8 +1024,8 @@ function copyDepositLinkByUid(uid) {
                   <span class="detail-value">${d.id}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Session Stripe</span>
-                  <span class="detail-value" style="font-size: 11px;">${d.stripeSessionId || 'N/A'}</span>
+                  <span class="detail-label">Montant autorisé</span>
+                  <span class="detail-value">${maxAmount} €</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Créée le</span>
@@ -982,13 +1035,33 @@ function copyDepositLinkByUid(uid) {
               
               <div class="details-actions">
                 <h4>⚡ Actions</h4>
-                <button class="btn btn-warning btn-sm" onclick="captureDeposit('${d.id}', ${d.amountCents})">
+                
+                <div style="margin-bottom: 12px;">
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">
+                    💰 Montant à débiter (€)
+                  </label>
+                  <input 
+                    type="number" 
+                    id="capture-amount-${r.reservationUid}" 
+                    value="${maxAmount}" 
+                    max="${maxAmount}" 
+                    min="0.01"
+                    step="0.01"
+                    style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px;"
+                    placeholder="Montant à débiter"
+                  />
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+                    Maximum : ${maxAmount} €
+                  </div>
+                </div>
+                
+                <button class="btn btn-warning btn-sm" onclick="captureDepositWithAmount('${d.id}', '${r.reservationUid}', ${d.amountCents})">
                   <i class="fas fa-credit-card"></i> Débiter la caution
                 </button>
                 <button class="btn btn-success btn-sm" onclick="releaseDeposit('${d.id}')">
                   <i class="fas fa-check-circle"></i> Libérer (tout ok)
                 </button>
-                <a href="https://dashboard.stripe.com/test/payments/${d.stripeSessionId}" target="_blank" class="btn btn-ghost btn-sm">
+                <a href="https://dashboard.stripe.com/test/payments" target="_blank" class="btn btn-ghost btn-sm">
                   <i class="fas fa-external-link-alt"></i> Voir dans Stripe
                 </a>
               </div>
