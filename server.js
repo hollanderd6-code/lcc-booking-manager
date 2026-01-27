@@ -1854,11 +1854,11 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 //     }
 // 
 //     res.status(200).json({ received: true });
-  } catch (error) {
-    console.error('❌ Erreur traitement webhook:', error);
-    res.status(500).json({ error: 'Webhook processing error' });
-  }
-});
+//   } catch (error) {
+//     console.error('❌ Erreur traitement webhook:', error);
+//     res.status(500).json({ error: 'Webhook processing error' });
+//   }
+// });
 
 // Middleware
 app.use(cors());
