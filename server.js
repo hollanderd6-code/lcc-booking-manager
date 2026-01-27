@@ -12291,18 +12291,26 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     const checkinDateStr = new Date(checkin_date).toISOString().split('T')[0];
     const checkoutDateStr = checkout_date ? new Date(checkout_date).toISOString().split('T')[0] : null;
 
-    const reservationResult = await pool.query(
-      `SELECT id FROM reservations 
-       WHERE property_id = $1 
-       AND DATE(start_date) = $2 
-       AND ($3::date IS NULL OR DATE(end_date) = $3)
-       AND LOWER(source) = LOWER($4)
-       LIMIT 1`,
-      [property_id, checkinDateStr, checkoutDateStr, platform]
-    );
+    // ✅ Pour les réservations "direct" ou "manuel", on skip la vérification dans la table reservations
+    const isDirectReservation = ['direct', 'manuel', 'manual'].includes(platform.toLowerCase());
+    
+    if (!isDirectReservation) {
+      // Vérifier uniquement pour Airbnb, Booking, etc.
+      const reservationResult = await pool.query(
+        `SELECT id FROM reservations 
+         WHERE property_id = $1 
+         AND DATE(start_date) = $2 
+         AND ($3::date IS NULL OR DATE(end_date) = $3)
+         AND LOWER(source) = LOWER($4)
+         LIMIT 1`,
+        [property_id, checkinDateStr, checkoutDateStr, platform]
+      );
 
-    if (reservationResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Aucune reservation trouvee' });
+      if (reservationResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Aucune reservation trouvee pour cette plateforme' });
+      }
+    } else {
+      console.log(`✅ Réservation directe/manuelle - pas de vérification dans table reservations`);
     }
 
     let conversation;
