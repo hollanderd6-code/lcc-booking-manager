@@ -1027,6 +1027,7 @@
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
+console.log('🟢 Script équipe chargé - DOM ready');
 
 // Descriptions des rôles
 const ROLE_DESCRIPTIONS = {
@@ -1154,8 +1155,17 @@ function displayTeamMembers(members) {
 
 // Ouvrir le modal d'ajout
 document.getElementById('btnAddTeamMember')?.addEventListener('click', async function() {
+  console.log('🔵 Bouton cliqué !');
   const modal = document.getElementById('addTeamMemberModal');
-  modal.style.display = 'flex';
+  console.log('🔵 Modal trouvé:', modal);
+  
+  if (!modal) {
+    console.error('❌ Modal introuvable !');
+    return;
+  }
+  
+  modal.style.display = 'block';
+  console.log('🔵 Modal display changé en block');
 
   // Charger les propriétés
   await loadPropertiesForSelect();
