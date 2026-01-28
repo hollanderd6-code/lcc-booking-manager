@@ -833,42 +833,15 @@ Au plaisir de vous accueillir ! 🏠`;
  */
 async function sendWelcomeMessage(pool, io, conversationId, propertyId, userId) {
   try {
-    // Récupérer le livret d'accueil
-    const welcomeBook = await pool.query(
-      `SELECT unique_id, property_name FROM welcome_books_v2 
-       WHERE user_id = $1 AND property_name = (SELECT name FROM properties WHERE id = $2)
-       LIMIT 1`,
-      [userId, propertyId]
-    );
-
-    let welcomeContent = '👋 Bienvenue ! Nous sommes ravis de vous accueillir.';
-
-    if (welcomeBook.rows.length > 0) {
-      const bookUrl = `${process.env.APP_URL || 'http://localhost:3000'}/welcome/${welcomeBook.rows[0].unique_id}`;
-      welcomeContent += `\n\n📖 Consultez votre livret d'accueil ici : ${bookUrl}\n\nVous y trouverez toutes les informations pour votre séjour (WiFi, accès, recommandations, etc.)`;
-    }
-
-    welcomeContent += '\n\nN\'hésitez pas à nous poser vos questions ! 😊';
-
-    // Insérer le message de bienvenue
-    const messageResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
-       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
-       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
-      [conversationId, welcomeContent]
-    );
-
-    const welcomeMessage = messageResult.rows[0];
-
-    // Émettre via Socket.io
-    if (io) {
-      io.to(`conversation_${conversationId}`).emit('new_message', welcomeMessage);
-    }
-
-    console.log(`✅ Message de bienvenue envoyé pour conversation ${conversationId}`);
-
+    console.log(`🎯 Démarrage de l'onboarding pour conversation ${conversationId}`);
+    
+    // Démarrer l'onboarding au lieu du message de bienvenue classique
+    const { startOnboarding } = require('../onboarding-system');
+    await startOnboarding(conversationId, pool, io);
+    
+    console.log(`✅ Onboarding démarré pour conversation ${conversationId}`);
   } catch (error) {
-    console.error('❌ Erreur envoi message bienvenue:', error);
+    console.error('❌ Erreur sendWelcomeMessage (onboarding):', error);
   }
 }
 
