@@ -2605,7 +2605,7 @@
 <!-- KPI 4 : Top risques du mois -->
 <article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
 <div class="kpi-header">
-<span class="kpi-label">Risques du mois</span>
+<span class="kpi-label">Risques à venir</span>
 <span class="kpi-pill kpi-pill-neutral">
 <i class="fas fa-shield-alt"></i> IA Risk
       </span>
@@ -4676,9 +4676,10 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     console.log('📊 Bookings reçus:', bookings);
     
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    now.setHours(0, 0, 0, 0); // Début de la journée actuelle
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
+    // Filtrer uniquement les réservations à partir d'aujourd'hui jusqu'à la fin du mois
     const monthRes = (bookings || []).filter(r => {
       const rawS = r.startDate || r.start;
       const rawE = r.endDate || r.end;
@@ -4686,10 +4687,11 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
       const s = parseDateSafe(rawS);
       const e = parseDateSafe(rawE);
       if (!s || !e) return false;
-      return e > monthStart && s < monthEnd;
+      // La réservation se termine après aujourd'hui ET commence avant la fin du mois
+      return e >= now && s < monthEnd;
     });
 
-    console.log('📅 Réservations du mois:', monthRes.length);
+    console.log('📅 Réservations du mois (à partir d\'aujourd\'hui):', monthRes.length);
 
     const scored = monthRes.filter(r => typeof r.riskScore === 'number');
     console.log('💯 Réservations avec score:', scored.length, scored);
@@ -4730,7 +4732,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
         // reuse your existing modal if present
         if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
         // fallback modal
-        ensureGenericModal('topRisksModal', 'Top risques du mois');
+        ensureGenericModal('topRisksModal', 'Risques à venir');
         const modal = document.getElementById('topRisksModal');
         const g = document.getElementById('topRisksModalContent');
         
@@ -4767,7 +4769,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
               ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:13px;">${r.riskSummary}</div>` : ''}
               ${tagsHtml}
             </div>`;
-          }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté sur le mois en cours.</div>`;
+          }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté pour les réservations à venir.</div>`;
         }
         
         console.log('📦 Contenu HTML généré, longueur:', g ? g.innerHTML.length : 0);
