@@ -574,7 +574,9 @@
     }
 
     .property-item {
-      height: var(--calendar-cell-height);
+      height: var(--calendar-cell-height) !important;
+      min-height: var(--calendar-cell-height) !important;
+      max-height: var(--calendar-cell-height) !important;
       padding: 0 16px;
       display: flex;
       align-items: center;
@@ -585,6 +587,7 @@
       background: white;
       cursor: pointer;
       transition: var(--transition-fast);
+      box-sizing: border-box;
     }
 
     .property-item:hover {
@@ -687,19 +690,25 @@
 
     .calendar-row {
       display: flex;
-      min-height: var(--calendar-cell-height);
+      height: var(--calendar-cell-height) !important;
+      min-height: var(--calendar-cell-height) !important;
+      max-height: var(--calendar-cell-height) !important;
       border-bottom: 1px solid var(--calendar-border);
+      box-sizing: border-box;
     }
 
     .calendar-cell {
       min-width: 0;
-      height: var(--calendar-cell-height);
+      height: var(--calendar-cell-height) !important;
+      min-height: var(--calendar-cell-height) !important;
+      max-height: var(--calendar-cell-height) !important;
       flex: 1 1 0;
       border-right: 1px solid var(--calendar-border);
       padding: 2px;
       position: relative;
       cursor: pointer;
       transition: var(--transition-fast);
+      box-sizing: border-box;
     }
 
     .calendar-cell:hover {
