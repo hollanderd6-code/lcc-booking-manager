@@ -156,45 +156,31 @@
 
     .subscription-loading {
       text-align: center;
-      padding: 48px 24px;
+      padding: 40px;
       color: var(--text-secondary);
-    }
-
-    .subscription-loading i {
-      font-size: 32px;
-      margin-bottom: 16px;
-      opacity: 0.3;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
     }
 
     .subscription-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      margin-bottom: 20px;
       flex-wrap: wrap;
       gap: 16px;
-      margin-bottom: 16px;
     }
 
     .subscription-info h3 {
-      margin: 0 0 8px 0;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
     }
 
     .subscription-status {
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .status-badge {
@@ -202,47 +188,59 @@
       align-items: center;
       gap: 6px;
       padding: 6px 12px;
-      border-radius: 999px;
+      border-radius: var(--radius-full);
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
 
-    .status-active {
-      background: rgba(34, 197, 94, 0.12);
-      color: #166534;
+    .status-badge.trial {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
     }
 
-    .status-trial {
-      background: rgba(59, 130, 246, 0.12);
-      color: #1e3a8a;
+    .status-badge.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
     }
 
-    .status-expired, .status-canceled {
-      background: rgba(239, 68, 68, 0.12);
-      color: #7f1d1d;
+    .status-badge.expired {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
     }
 
     .days-remaining {
-      font-size: 12px;
+      font-size: 14px;
       color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .days-remaining i {
+      color: var(--primary-color);
     }
 
     .subscription-actions {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       flex-wrap: wrap;
     }
 
     .subscription-details {
-      margin-top: 16px;
-      padding-top: 16px;
+      display: grid;
+      gap: 16px;
+      margin-top: 20px;
+      padding-top: 20px;
       border-top: 1px solid var(--border-color);
     }
 
     .detail-row {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      align-items: center;
       font-size: 14px;
     }
 
@@ -256,958 +254,1573 @@
     }
 
     .alert-warning {
-      margin-top: 16px;
+      background: #fffbeb;
+      border: 1px solid #fbbf24;
+      color: #92400e;
       padding: 16px;
-      background: rgba(249, 115, 22, 0.08);
-      border: 1px solid rgba(249, 115, 22, 0.2);
       border-radius: var(--radius-md);
+      margin-top: 16px;
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      color: #9a3412;
     }
 
     .alert-warning i {
-      font-size: 20px;
+      font-size: 18px;
+      color: #f59e0b;
+      flex-shrink: 0;
       margin-top: 2px;
     }
-
-    .alert-warning strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    /* ===== Facturation Stripe ===== */
-    .stripe-card {
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      border: 1px solid var(--border-color);
-      margin-top: 16px;
-    }
-
-    .stripe-card h3 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .stripe-status-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .stripe-status-row:last-child {
-      border-bottom: none;
-    }
-
-    .stripe-status-label {
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
-
-    .stripe-status-value {
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    /* ===== Onglet Équipe ===== */
-    .team-member-card {
-      background: var(--bg-secondary);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 12px;
-      transition: box-shadow 0.2s ease;
-    }
-
-    .team-member-card:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .team-member-inactive {
-      opacity: 0.6;
-      background: var(--bg-tertiary);
-    }
-
-    .team-member-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 12px;
-    }
-
-    .team-member-info {
-      display: flex;
-      gap: 16px;
-      flex: 1;
-    }
-
-    .team-member-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .team-member-details h3 {
-      margin: 0 0 4px 0;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .team-member-details p {
-      margin: 0 0 6px 0;
-      color: var(--text-secondary);
-      font-size: 13px;
-    }
-
-    .team-member-role {
-      display: inline-block;
-      padding: 4px 10px;
-      background: var(--primary-light);
-      color: var(--primary-color);
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .team-member-actions {
-      display: flex;
-      gap: 6px;
-    }
-
-    .team-member-permissions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .permission-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: rgba(59, 130, 246, 0.08);
-      color: #1e40af;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .permission-badge i {
-      font-size: 11px;
-    }
-
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
+    /* ===== INPUTS MODERNES ===== */
+    
+    /* Override des styles globaux pour cette page */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="url"],
+    textarea,
+    select {
       width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      align-items: center;
-      justify-content: center;
+      padding: 12px 16px !important;
+      font-size: 15px !important;
+      font-weight: 400 !important;
+      line-height: 1.5 !important;
+      color: var(--text-primary) !important;
+      background-color: #ffffff !important;
+      border: 1.5px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      transition: all 0.15s ease !important;
+      font-family: 'Inter', sans-serif !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
     }
 
-    .modal-content {
-      background: var(--bg-primary);
-      border-radius: var(--radius-lg);
-      width: 90%;
-      max-width: 600px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="tel"]:focus,
+    input[type="number"]:focus,
+    input[type="url"]:focus,
+    textarea:focus,
+    select:focus {
+      outline: none !important;
+      border-color: var(--primary-color) !important;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+      background-color: #ffffff !important;
     }
 
-    .modal-header {
-      padding: 24px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    input[type="text"]:hover:not(:focus),
+    input[type="email"]:hover:not(:focus),
+    input[type="password"]:hover:not(:focus),
+    input[type="tel"]:hover:not(:focus),
+    input[type="number"]:hover:not(:focus),
+    input[type="url"]:hover:not(:focus),
+    textarea:hover:not(:focus),
+    select:hover:not(:focus) {
+      border-color: #d1d5db !important;
     }
 
-    .modal-header h2 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 600;
+    input::placeholder,
+    textarea::placeholder {
+      color: #9ca3af !important;
+      opacity: 1 !important;
     }
 
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      padding: 0;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: background 0.2s;
+    /* Labels plus modernes */
+    label {
+      display: block;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      color: var(--text-primary) !important;
+      margin-bottom: 8px !important;
     }
 
-    .modal-close:hover {
-      background: var(--bg-secondary);
+    /* Form groups avec espacement */
+    .form-group {
+      margin-bottom: 20px;
     }
 
-    .modal-body {
-      padding: 24px;
+    /* Boutons radio modernes */
+    input[type="radio"] {
+      width: 20px !important;
+      height: 20px !important;
+      border: 2px solid #d1d5db !important;
+      margin-right: 8px !important;
+      cursor: pointer !important;
     }
 
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border-color);
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
+    input[type="radio"]:checked {
+      border-color: var(--primary-color) !important;
+      background-color: var(--primary-color) !important;
     }
 
-    #customPermissions {
-      margin-top: 16px;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
+    /* Upload de fichier moderne */
+    input[type="file"] {
+      padding: 10px !important;
+      border: 2px dashed #d1d5db !important;
+      background: #f9fafb !important;
+      cursor: pointer !important;
     }
 
-    #customPermissions h4 {
-      margin: 0 0 12px 0;
-      font-size: 14px;
-      font-weight: 600;
+    input[type="file"]:hover {
+      border-color: var(--primary-color) !important;
+      background: #f0fdf4 !important;
     }
 
-    .permission-group {
-      margin-bottom: 16px;
+    /* Textarea */
+    textarea {
+      min-height: 100px !important;
+      resize: vertical !important;
     }
 
-    .permission-group:last-child {
-      margin-bottom: 0;
+    /* Select avec icône */
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E") !important;
+      background-position: right 12px center !important;
+      background-repeat: no-repeat !important;
+      background-size: 20px !important;
+      padding-right: 40px !important;
     }
 
-    .permission-group h5 {
-      margin: 0 0 8px 0;
+    /* Disabled state */
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+      background-color: #f3f4f6 !important;
+      color: #9ca3af !important;
+      cursor: not-allowed !important;
+      opacity: 0.6 !important;
+    }
+
+    /* Bouton de sauvegarde moderne */
+    .btn-primary,
+    button[type="submit"] {
+      padding: 12px 24px !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      transition: all 0.15s ease !important;
+    }
+
+    .btn-primary:hover,
+    button[type="submit"]:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    /* Messages d'erreur/succès */
+    .error-message {
+      color: #dc2626;
       font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .checkbox-item {
+      margin-top: 6px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
-    .checkbox-item input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
-
-    .checkbox-item label {
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    #roleDescription {
-      margin-top: 8px;
-      padding: 12px;
-      background: rgba(59, 130, 246, 0.08);
-      border-left: 3px solid #3b82f6;
-      border-radius: 4px;
+    .success-message {
+      color: #059669;
       font-size: 13px;
-      color: var(--text-secondary);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    @media (max-width: 640px) {
-      .team-member-header {
-        flex-direction: column;
-      }
+    /* Card sections plus espacées */
+    .card {
+      padding: 28px !important;
+    }
 
-      .team-member-actions {
-        width: 100%;
-        justify-content: flex-end;
-      }
-
-      .modal-content {
-        width: 95%;
-        max-height: 95vh;
-      }
+    .card h2 {
+      margin-bottom: 24px !important;
     }
   </style>
+<script src="/js/auth-fetch.js"></script>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body>
-<!-- Top Bar -->
-<div class="bh-topbar">
-<div class="bh-logo">
-<span class="bh-logo-icon">
-<i class="fas fa-rocket"></i>
-</span>
-<span class="bh-logo-text">boostinghost</span>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Paramètres" data-page="settings-account" data-subtitle="Gérez votre compte et vos préférences." data-title="Paramètres">
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Boostinghost</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
 </div>
-<div class="bh-user">
-<div class="bh-user-info">
-<span class="bh-user-name" id="userName">Chargement...</span>
-<span class="bh-user-email" id="userEmail">...</span>
-</div>
-<div class="bh-user-avatar" id="userAvatar">...</div>
-</div>
-</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
 <!-- Sidebar -->
-<aside class="bh-sidebar">
-<nav class="bh-menu">
-<a class="bh-menu-item" href="/index.html">
-<i class="fas fa-chart-line"></i>
-<span>Tableau de bord</span>
-</a>
-<a class="bh-menu-item" href="/calendar.html">
-<i class="fas fa-calendar-alt"></i>
-<span>Calendrier</span>
-</a>
-<a class="bh-menu-item" href="/messages.html">
-<i class="fas fa-comment-dots"></i>
-<span>Messages</span>
-<span class="messages-badge" id="msgBadge" style="display:none;">0</span>
-</a>
-<a class="bh-menu-item" href="/logements.html">
-<i class="fas fa-home"></i>
-<span>Logements</span>
-</a>
-<a class="bh-menu-item" href="/menage.html">
-<i class="fas fa-broom"></i>
-<span>Ménages</span>
-</a>
-<a class="bh-menu-item" href="/finances.html">
-<i class="fas fa-wallet"></i>
-<span>Finances</span>
-</a>
-<a class="bh-menu-item active" href="/settings-account.html">
-<i class="fas fa-cog"></i>
-<span>Paramètres</span>
-</a>
-<a class="bh-menu-item" href="#" onclick="logout()">
-<i class="fas fa-sign-out-alt"></i>
-<span>Déconnexion</span>
-</a>
-</nav>
-</aside>
+<div id="bhSidebar"></div>
 <!-- Main Content -->
-<main class="main-content">
+<main class="main-content"><div id="bhHeader"></div>
+<!-- Header -->
+
+<!-- Page Content -->
 <div class="page-content">
-<h1 style="margin-bottom: 24px;">⚙️ Paramètres</h1>
 <!-- Onglets -->
 <div class="settings-tabs">
-<button class="settings-tab active" data-tab="account">
-<i class="fas fa-user-circle"></i>
-Mon compte
-</button>
-<button class="settings-tab" data-tab="security">
-<i class="fas fa-shield-alt"></i>
-Sécurité
-</button>
-<button class="settings-tab" data-tab="notifications">
-<i class="fas fa-bell"></i>
-Notifications
-</button>
-<button class="settings-tab" data-tab="subscription">
+<button class="settings-tab active" data-tab="profile">
+<i class="fas fa-user"></i>
+            Profil &amp; entreprise
+          </button>
+<button class="settings-tab" data-tab="display">
+<i class="fas fa-moon"></i>
+            Affichage
+          </button>
+<button class="settings-tab" data-tab="payments">
 <i class="fas fa-credit-card"></i>
-Abonnement
-</button>
+            Paiements &amp; Stripe
+          </button>
 <button class="settings-tab" data-tab="team">
 <i class="fas fa-users"></i>
-Équipe
-</button>
+            Équipe &amp; Accès
+          </button>
+<button class="settings-tab" data-tab="subscription">
+<i class="fas fa-crown"></i>
+    Mon abonnement
+  </button>
 </div>
-<!-- Panes -->
-<!-- Mon compte -->
-<div class="tab-pane active" id="accountPane">
-<section class="card">
+<!-- Onglet : Profil -->
+<div class="tab-pane active" data-tab="profile" id="tab-profile">
+<section class="card mb-lg">
 <div class="card-header">
-<h2>Informations personnelles</h2>
+<div class="card-title">
+<i class="fas fa-user"></i>
+                Informations personnelles
+              </div>
 </div>
 <div class="card-body">
-<form id="accountForm">
+<form class="form-grid">
 <div class="form-row-inline">
-<div class="form-group">
-<label>Prénom</label>
-<input class="form-control" id="firstName" placeholder="Jean" required="" type="text"/>
+<div class="form-row">
+<label for="profileFirstName">Prénom</label>
+<input id="profileFirstName" placeholder="Votre prénom" type="text"/>
 </div>
-<div class="form-group">
-<label>Nom</label>
-<input class="form-control" id="lastName" placeholder="Dupont" required="" type="text"/>
+<div class="form-row">
+<label for="profileLastName">Nom</label>
+<input id="profileLastName" placeholder="Votre nom" type="text"/>
 </div>
 </div>
-<div class="form-group">
-<label>Email</label>
-<input class="form-control" id="email" placeholder="jean.dupont@exemple.fr" required="" type="email"/>
+<div class="form-row">
+<label for="profileEmail">Email</label>
+<input id="profileEmail" placeholder="vous@exemple.com" type="email"/>
 </div>
-<div class="form-group">
-<label>Téléphone</label>
-<input class="form-control" id="phone" placeholder="+33 6 12 34 56 78" type="tel"/>
-</div>
-<div class="save-status-inline" id="accountSaveStatus"></div>
-<button class="btn btn-primary" type="submit">
-<i class="fas fa-save"></i>
-Enregistrer
-</button>
 </form>
 </div>
 </section>
-</div>
-<!-- Sécurité -->
-<div class="tab-pane" id="securityPane">
-<section class="card">
+<section class="card mb-lg">
 <div class="card-header">
-<h2>Modifier le mot de passe</h2>
+<div class="card-title">
+<i class="fas fa-building"></i>
+                Informations entreprise
+              </div>
 </div>
 <div class="card-body">
-<form id="passwordForm">
-<div class="form-group">
-<label>Mot de passe actuel</label>
-<input class="form-control" id="currentPassword" required="" type="password"/>
+<form class="form-grid">
+<div class="form-row">
+<label for="profileCompany">Nom de la conciergerie / entreprise</label>
+<input id="profileCompany" placeholder="La Conciergerie de Charles" type="text"/>
+<p class="settings-hint">
+                    Ce nom apparaîtra dans le header, la sidebar et dans certains messages générés.
+                  </p>
 </div>
-<div class="form-group">
-<label>Nouveau mot de passe</label>
-<input class="form-control" id="newPassword" minlength="8" required="" type="password"/>
-<p class="settings-hint">8 caractères minimum</p>
+<div class="form-row">
+<label>Type de compte</label>
+<div style="display: flex; gap: 20px; margin-top: 8px;">
+<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+<input checked="" id="accountTypeIndividual" name="accountType" type="radio" value="individual"/>
+<span>Particulier</span>
+</label>
+<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+<input id="accountTypeBusiness" name="accountType" type="radio" value="business"/>
+<span>Entreprise</span>
+</label>
 </div>
-<div class="form-group">
-<label>Confirmer le nouveau mot de passe</label>
-<input class="form-control" id="confirmPassword" minlength="8" required="" type="password"/>
 </div>
-<div class="save-status-inline" id="passwordSaveStatus"></div>
-<button class="btn btn-primary" type="submit">
-<i class="fas fa-key"></i>
-Changer le mot de passe
-</button>
+<div class="form-row">
+<label for="profileAddress">Adresse</label>
+<input id="profileAddress" placeholder="12 rue de la République" type="text"/>
+</div>
+<div class="form-row-inline">
+<div class="form-row">
+<label for="profilePostalCode">Code postal</label>
+<input id="profilePostalCode" placeholder="75001" type="text"/>
+</div>
+<div class="form-row">
+<label for="profileCity">Ville</label>
+<input id="profileCity" placeholder="Paris" type="text"/>
+</div>
+</div>
+<div class="form-row" id="siretRow" style="display: none;">
+<label for="profileSiret">Numéro SIRET</label>
+<input id="profileSiret" maxlength="17" placeholder="123 456 789 00012" type="text"/>
+<p class="settings-hint">
+                    14 chiffres - Format : XXX XXX XXX XXXXX
+                  </p>
+</div>
+<div class="form-row">
+<label for="profileLogo">Logo de l'entreprise</label>
+<div style="display:flex;gap:12px;align-items:flex-start;">
+<div id="logoPreview" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+<i class="fas fa-image" style="color:#9ca3af;font-size:24px;"></i>
+</div>
+<div style="flex:1;">
+<input accept="image/*" id="profileLogo" style="margin-bottom:8px;" type="file"/>
+<p class="settings-hint" style="margin:0;">
+        Format recommandé : PNG avec fond transparent. Taille max : 2 MB
+      </p>
+</div>
+</div>
+</div>
+<div class="form-actions" style="margin-top: 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+<button class="btn btn-primary" id="saveProfileBtn" type="button">
+<i class="fas fa-save"></i>
+                    Enregistrer le profil
+                  </button>
+<span class="save-status-inline" id="profileSaveStatus"></span>
+</div>
 </form>
 </div>
 </section>
 </div>
-<!-- Notifications -->
-<div class="tab-pane" id="notificationsPane">
-<section class="card">
+<!-- Onglet : Affichage -->
+<div class="tab-pane" data-tab="display" id="tab-display">
+<section class="card mb-lg">
 <div class="card-header">
-<h2>Préférences de notifications</h2>
+<div class="card-title">
+<i class="fas fa-moon"></i>
+                Préférences d’affichage
+              </div>
 </div>
 <div class="card-body">
-<form id="notificationsForm">
-<div class="form-group">
-<label class="checkbox-container">
-<input id="emailNotifications" type="checkbox"/>
-<span class="checkmark"></span>
-<span class="checkbox-label">Recevoir les notifications par email</span>
-</label>
-<p class="settings-hint">Nouvelles réservations, messages, etc.</p>
+<div class="form-row">
+<label for="themePreference">Thème</label>
+<select id="themePreference">
+<option value="light">Clair</option>
+<option value="dark">Sombre</option>
+<option value="system">Selon le système</option>
+</select>
+<p class="settings-hint">
+                  Le thème est appliqué sur tout Boostinghost (dashboard, calendrier, etc.).
+                </p>
 </div>
-<div class="form-group">
-<label class="checkbox-container">
-<input id="smsNotifications" type="checkbox"/>
-<span class="checkmark"></span>
-<span class="checkbox-label">Recevoir les notifications par SMS</span>
-</label>
-<p class="settings-hint">Alertes urgentes uniquement</p>
+<div class="form-actions" style="margin-top: 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+<button class="btn btn-ghost" id="applyThemeBtn" type="button">
+                  Appliquer &amp; enregistrer
+                </button>
+<span class="save-status-inline" id="themeSaveStatus"></span>
 </div>
-<div class="save-status-inline" id="notificationsSaveStatus"></div>
-<button class="btn btn-primary" type="submit">
-<i class="fas fa-save"></i>
-Enregistrer
-</button>
-</form>
 </div>
 </section>
 </div>
-<!-- Abonnement -->
-<div class="tab-pane" id="subscriptionPane">
-<section class="card">
+<!-- Onglet : Paiements & Stripe -->
+<div class="tab-pane" data-tab="payments" id="tab-payments">
+<section class="card mb-lg">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-credit-card"></i>
+                Paiements &amp; Stripe
+              </div>
+</div>
+<div class="card-body">
+<p class="page-subtitle" style="margin-bottom: 12px;">
+                Connectez votre propre compte Stripe pour encaisser directement les cautions de vos voyageurs, sans intermédiaire.
+              </p>
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+<span class="pill-status stripe-pill-loading" id="stripeStatus">
+<i class="fas fa-spinner fa-spin"></i>
+                  Chargement du statut...
+                </span>
+<small style="color: var(--text-secondary, #6b7280);">
+                  Statut de connexion Stripe pour cet espace.
+                </small>
+</div>
+<div class="form-actions" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+<button class="btn btn-primary" id="connectStripeBtn" type="button">
+<i class="fas fa-plug"></i>
+<span>Connecter mon compte Stripe</span>
+</button>
+<button class="btn btn-ghost" id="manageStripeBtn" style="display: none;" type="button">
+<i class="fas fa-external-link-alt"></i>
+<span>Gérer mon compte Stripe</span>
+</button>
+</div>
+<p style="margin-top: 10px; font-size: 12px; color: var(--text-secondary, #6b7280);">
+                Vous serez redirigé vers Stripe pour créer ou connecter votre compte. Une fois terminé, les cautions créées
+                dans <strong>Boostinghost</strong> seront encaissées sur ce compte Stripe, et non sur celui de la plateforme.
+              </p>
+</div>
+</section>
+</div>
+<div class="tab-pane" data-tab="team" id="tab-team">
+  
+  <!-- Header avec bouton d'ajout -->
+  <section class="card mb-lg">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-users"></i>
+        Gestion de l'équipe
+      </div>
+      <button class="btn btn-primary" id="btnAddTeamMember" type="button">
+        <i class="fas fa-plus"></i>
+        Ajouter un membre
+      </button>
+    </div>
+
+    <div class="card-body">
+      <p style="color: #6b7280; margin-bottom: 24px;">
+        Créez des comptes secondaires pour votre équipe (femmes de ménage, assistants, comptables). 
+        Chaque membre peut avoir des accès personnalisés selon son rôle.
+      </p>
+
+      <!-- Liste des membres -->
+      <div id="teamMembersList">
+        <div style="text-align:center; padding:48px 24px; color:#9ca3af;">
+          <i class="fas fa-users" style="font-size:48px; margin-bottom:16px; opacity:0.3;"></i>
+          <p>Aucun membre d'équipe pour le moment</p>
+          <button class="btn btn-primary" style="margin-top:16px;" type="button" onclick="document.getElementById('btnAddTeamMember').click()">
+            <i class="fas fa-plus"></i>
+            Ajouter votre premier membre
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section informations -->
+  <section class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-info-circle"></i>
+        À propos des comptes d'équipe
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid; gap:16px;">
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-shield-alt" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Sécurisé</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Chaque membre a son propre identifiant et mot de passe</p>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-cog" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Permissions granulaires</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Contrôlez précisément ce que chaque membre peut voir et faire</p>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-bell" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Notifications partagées</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Les membres reçoivent les alertes liées à leurs permissions</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-home" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Accès par propriété</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Limitez l'accès à certains logements spécifiques si nécessaire</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================ -->
+<!-- MODAL : AJOUTER UN MEMBRE -->
+<!-- ============================================ -->
+<div class="booking-modal" id="addTeamMemberModal" style="display:none;">
+  <div class="modal-overlay"></div>
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header">
+      <h2>Ajouter un membre d'équipe</h2>
+      <button class="modal-close" id="closeAddMemberModal" type="button">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form class="booking-form" id="addTeamMemberForm">
+      <!-- Informations de base -->
+      <div class="form-group">
+        <label>Email <span style="color:#ef4444;">*</span></label>
+        <input 
+          type="email" 
+          id="memberEmail" 
+          placeholder="sophie.martin@example.com"
+          required
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prénom <span style="color:#ef4444;">*</span></label>
+          <input 
+            type="text" 
+            id="memberFirstName" 
+            placeholder="Sophie"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label>Nom <span style="color:#ef4444;">*</span></label>
+          <input 
+            type="text" 
+            id="memberLastName" 
+            placeholder="Martin"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe <span style="color:#ef4444;">*</span></label>
+        <input 
+          type="password" 
+          id="memberPassword" 
+          placeholder="Minimum 8 caractères"
+          minlength="8"
+          required
+        />
+        <small style="color:#6b7280;">Le membre devra changer ce mot de passe à sa première connexion</small>
+      </div>
+
+      <!-- Rôle prédéfini -->
+      <div class="form-group">
+        <label>Rôle <span style="color:#ef4444;">*</span></label>
+        <select id="memberRole" required>
+          <option value="">-- Sélectionner un rôle --</option>
+          <option value="manager">👔 Manager / Assistant</option>
+          <option value="cleaner">🧹 Femme de ménage</option>
+          <option value="accountant">📊 Comptable</option>
+          <option value="custom">🎨 Personnalisé</option>
+        </select>
+        <small id="roleDescription" style="color:#6b7280; display:block; margin-top:8px;"></small>
+      </div>
+
+      <!-- Permissions détaillées (si rôle custom) -->
+      <div id="customPermissions" style="display:none;">
+        <div class="form-group">
+          <label style="font-weight:600; margin-bottom:12px; display:block;">
+            <i class="fas fa-shield-alt"></i>
+            Permissions détaillées
+          </label>
+
+          <div style="display:grid; gap:12px;">
+            <!-- Calendrier -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">📅 Calendrier</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewCalendar" />
+                <span>Voir le calendrier</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canEditReservations" />
+                <span>Modifier les réservations</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canCreateReservations" />
+                <span>Créer des réservations</span>
+              </label>
+            </div>
+
+            <!-- Messages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">💬 Messages</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewMessages" />
+                <span>Voir les messages</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canSendMessages" />
+                <span>Répondre aux messages</span>
+              </label>
+            </div>
+
+            <!-- Ménages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🧹 Ménages</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewCleaning" />
+                <span>Voir les ménages</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canAssignCleaning" />
+                <span>Assigner les ménages</span>
+              </label>
+            </div>
+
+            <!-- Finances -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">💰 Finances</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewFinances" />
+                <span>Voir les finances</span>
+              </label>
+            </div>
+
+            <!-- Logements -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🏠 Logements</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewProperties" />
+                <span>Voir les logements</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sélection des propriétés -->
+      <div class="form-group">
+        <label>
+          <i class="fas fa-home"></i>
+          Propriétés accessibles
+        </label>
+        <select id="memberProperties" multiple style="height:150px;">
+          <!-- Options chargées dynamiquement -->
+        </select>
+        <small style="color:#6b7280;">
+          Laissez vide pour donner accès à toutes vos propriétés. 
+          Maintenez Ctrl/Cmd pour sélectionner plusieurs propriétés.
+        </small>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelAddMember" type="button">Annuler</button>
+        <button class="btn btn-primary" type="submit">
+          <i class="fas fa-user-plus"></i>
+          Créer le compte
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- STYLE CSS POUR L'ONGLET ÉQUIPE -->
+<!-- ============================================ -->
+<style>
+.team-member-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.team-member-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.team-member-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.team-member-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.team-member-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.team-member-details h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: #111827;
+}
+
+.team-member-details p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.team-member-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 8px;
+}
+
+.team-member-permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.permission-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.permission-badge i {
+  font-size: 10px;
+}
+
+.team-member-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.team-member-inactive {
+  opacity: 0.6;
+  background: #f9fafb;
+}
+
+.team-member-inactive .team-member-avatar {
+  background: #9ca3af;
+}
+</style>
+
+</div><!-- Fin onglet team -->
+<!-- Onglet : Mon abonnement -->
+<div class="tab-pane" data-tab="subscription" id="tab-subscription">
+<section class="card mb-lg">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-crown"></i>
+                Mon abonnement
+              </div>
+</div>
+<div class="card-body">
 <div class="subscription-card" id="subscriptionCard">
 <div class="subscription-loading">
-<i class="fas fa-circle-notch"></i>
-<p>Chargement...</p>
-</div>
-</div>
-<!-- Stripe info -->
-<div class="stripe-card">
-<h3>
-<i class="fab fa-stripe"></i>
-Facturation Stripe
-</h3>
-<div class="stripe-status-row">
-<span class="stripe-status-label">Statut de connexion</span>
-<span class="pill-status stripe-pill-loading" id="stripeStatusPill">
-<i class="fas fa-circle-notch fa-spin"></i>
-Vérification...
-</span>
-</div>
-<div class="stripe-status-row">
-<span class="stripe-status-label">ID Stripe</span>
-<span class="stripe-status-value" id="stripeCustomerId">—</span>
-</div>
-<div class="stripe-status-row">
-<span class="stripe-status-label">Dernier paiement</span>
-<span class="stripe-status-value" id="stripeLastPayment">—</span>
-</div>
-</div>
-</section>
-</div>
-<!-- Équipe -->
-<div class="tab-pane" id="teamPane">
-<section class="card">
-<div class="flex items-center justify-between mb-4">
-<h2>👥 Gestion d'équipe</h2>
-<button class="btn btn-primary btn-sm" id="btnAddTeamMember">
-<i class="fas fa-plus"></i>
-Ajouter un membre
-</button>
-</div>
-<div id="teamMembersList">
-<div style="text-align:center;padding:48px 24px;color:#9ca3af;">
-<i class="fas fa-circle-notch fa-spin" style="font-size:32px;margin-bottom:16px;"></i>
-<p>Chargement...</p>
+<i class="fas fa-spinner fa-spin"></i>
+                  Chargement...
+                </div>
 </div>
 </div>
 </section>
 </div>
 </div>
 </main>
-<!-- Modal Ajouter membre -->
-<div class="modal" id="addTeamMemberModal">
-<div class="modal-content">
-<div class="modal-header">
-<h2>➕ Ajouter un membre d'équipe</h2>
-<button class="modal-close" id="closeAddMemberModal">×</button>
 </div>
-<div class="modal-body">
-<form id="addTeamMemberForm">
-<div class="form-row-inline">
-<div class="form-group">
-<label>Prénom</label>
-<input class="form-control" id="memberFirstName" placeholder="Marie" required="" type="text"/>
-</div>
-<div class="form-group">
-<label>Nom</label>
-<input class="form-control" id="memberLastName" placeholder="Martin" required="" type="text"/>
-</div>
-</div>
-<div class="form-group">
-<label>Email</label>
-<input class="form-control" id="memberEmail" placeholder="marie.martin@exemple.fr" required="" type="email"/>
-</div>
-<div class="form-group">
-<label>Mot de passe initial</label>
-<input class="form-control" id="memberPassword" minlength="8" placeholder="8 caractères minimum" required="" type="password"/>
-</div>
-<div class="form-group">
-<label>Rôle</label>
-<select class="form-control" id="memberRole" required="">
-<option value="manager">👔 Manager</option>
-<option value="cleaner">🧹 Femme de ménage</option>
-<option value="accountant">📊 Comptable</option>
-<option value="custom">🎨 Personnalisé</option>
-</select>
-<p class="settings-hint" id="roleDescription">Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.</p>
-</div>
-<div class="form-group">
-<label>Logements accessibles</label>
-<select class="form-control" id="memberProperties" multiple="" required="" style="min-height:100px;">
-<!-- Rempli dynamiquement -->
-</select>
-<p class="settings-hint">Maintenez Ctrl/Cmd pour sélectionner plusieurs logements</p>
-</div>
-<!-- Permissions personnalisées -->
-<div id="customPermissions" style="display:none;">
-<h4>Permissions personnalisées</h4>
-<div class="permission-group">
-<h5>📅 Calendrier</h5>
-<div class="checkbox-group">
-<div class="checkbox-item">
-<input id="perm_canViewCalendar" type="checkbox"/>
-<label for="perm_canViewCalendar">Voir le calendrier</label>
-</div>
-<div class="checkbox-item">
-<input id="perm_canEditReservations" type="checkbox"/>
-<label for="perm_canEditReservations">Modifier les réservations</label>
-</div>
-<div class="checkbox-item">
-<input id="perm_canCreateReservations" type="checkbox"/>
-<label for="perm_canCreateReservations">Créer des réservations</label>
-</div>
-</div>
-</div>
-<div class="permission-group">
-<h5>💬 Messages</h5>
-<div class="checkbox-group">
-<div class="checkbox-item">
-<input id="perm_canViewMessages" type="checkbox"/>
-<label for="perm_canViewMessages">Voir les messages</label>
-</div>
-<div class="checkbox-item">
-<input id="perm_canSendMessages" type="checkbox"/>
-<label for="perm_canSendMessages">Envoyer des messages</label>
-</div>
-</div>
-</div>
-<div class="permission-group">
-<h5>🧹 Ménages</h5>
-<div class="checkbox-group">
-<div class="checkbox-item">
-<input id="perm_canViewCleaning" type="checkbox"/>
-<label for="perm_canViewCleaning">Voir les ménages</label>
-</div>
-<div class="checkbox-item">
-<input id="perm_canAssignCleaning" type="checkbox"/>
-<label for="perm_canAssignCleaning">Assigner des ménages</label>
-</div>
-</div>
-</div>
-<div class="permission-group">
-<h5>💰 Finances</h5>
-<div class="checkbox-group">
-<div class="checkbox-item">
-<input id="perm_canViewFinances" type="checkbox"/>
-<label for="perm_canViewFinances">Voir les finances</label>
-</div>
-</div>
-</div>
-<div class="permission-group">
-<h5>🏠 Logements</h5>
-<div class="checkbox-group">
-<div class="checkbox-item">
-<input id="perm_canViewProperties" type="checkbox"/>
-<label for="perm_canViewProperties">Voir les logements</label>
-</div>
-</div>
-</div>
-</div>
-</form>
-</div>
-<div class="modal-footer">
-<button class="btn btn-ghost" id="cancelAddMember">Annuler</button>
-<button class="btn btn-primary" form="addTeamMemberForm" type="submit">
-<i class="fas fa-plus"></i>
-Ajouter
-</button>
-</div>
-</div>
-</div>
-<!-- Bottom Bar (mobile) -->
-<div class="bh-bottom-bar">
-<a class="bh-bottom-item" href="/index.html">
-<i class="fas fa-chart-line"></i>
-<span>Accueil</span>
-</a>
-<a class="bh-bottom-item" href="/calendar.html">
-<i class="fas fa-calendar-alt"></i>
-<span>Calendrier</span>
-</a>
-<a class="bh-bottom-item" href="/messages.html">
-<i class="fas fa-comment-dots"></i>
-<span>Messages</span>
-<span class="messages-badge" id="msgBadgeMobile" style="display:none;">0</span>
-</a>
-<a class="bh-bottom-item" href="/logements.html">
-<i class="fas fa-home"></i>
-<span>Logements</span>
-</a>
-<a class="bh-bottom-item active" href="/settings-account.html">
-<i class="fas fa-cog"></i>
-<span>Paramètres</span>
-</a>
-</div>
-<!-- Scripts -->
+<!-- Script auth + user + logout -->
 <script>
-    // ===== Global =====
-    function logout() {
-      localStorage.removeItem('lcc_token');
-      window.location.href = '/login.html';
-    }
-
-    // ===== Onglets =====
-    document.addEventListener('DOMContentLoaded', function() {
-      const tabs = document.querySelectorAll('.settings-tab');
-      const panes = document.querySelectorAll('.tab-pane');
-
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          tabs.forEach(t => t.classList.remove('active'));
-          panes.forEach(p => p.classList.remove('active'));
-
-          tab.classList.add('active');
-          const targetId = tab.dataset.tab + 'Pane';
-          document.getElementById(targetId).classList.add('active');
-        });
-      });
-    });
-
-    // ===== Chargement des données utilisateur =====
-    async function loadUserData() {
+    (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
         window.location.href = '/login.html';
         return;
       }
 
-      try {
-        const res = await fetch('/api/auth/user', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-
-        if (!res.ok) throw new Error('Erreur');
-
-        const data = await res.json();
-
-        document.getElementById('userName').textContent = data.user.first_name + ' ' + data.user.last_name;
-        document.getElementById('userEmail').textContent = data.user.email;
-        const initials = `${data.user.first_name?.charAt(0) || ''}${data.user.last_name?.charAt(0) || ''}`;
-        document.getElementById('userAvatar').textContent = initials;
-
-        // Remplir les formulaires
-        document.getElementById('firstName').value = data.user.first_name || '';
-        document.getElementById('lastName').value = data.user.last_name || '';
-        document.getElementById('email').value = data.user.email || '';
-        document.getElementById('phone').value = data.user.phone || '';
-
-        document.getElementById('emailNotifications').checked = data.user.email_notifications ?? true;
-        document.getElementById('smsNotifications').checked = data.user.sms_notifications ?? false;
-
-      } catch (error) {
-        console.error('Erreur:', error);
-        logout();
-      }
-    }
-
-    // ===== Formulaire compte =====
-    document.getElementById('accountForm')?.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const token = localStorage.getItem('lcc_token');
-
-      const data = {
-        firstName: document.getElementById('firstName').value,
-        lastName: document.getElementById('lastName').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value
-      };
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
 
       try {
-        const res = await fetch('/api/auth/update-profile', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify(data)
-        });
-
-        if (!res.ok) throw new Error('Erreur');
-
-        document.getElementById('accountSaveStatus').textContent = '✅ Enregistré !';
-        setTimeout(() => {
-          document.getElementById('accountSaveStatus').textContent = '';
-        }, 3000);
-
-      } catch (error) {
-        document.getElementById('accountSaveStatus').textContent = '❌ Erreur';
-        document.getElementById('accountSaveStatus').style.color = '#dc2626';
-      }
-    });
-
-    // ===== Formulaire mot de passe =====
-    document.getElementById('passwordForm')?.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const token = localStorage.getItem('lcc_token');
-
-      const currentPassword = document.getElementById('currentPassword').value;
-      const newPassword = document.getElementById('newPassword').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-
-      if (newPassword !== confirmPassword) {
-        document.getElementById('passwordSaveStatus').textContent = '❌ Les mots de passe ne correspondent pas';
-        document.getElementById('passwordSaveStatus').style.color = '#dc2626';
-        return;
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
       }
 
-      try {
-        const res = await fetch('/api/auth/change-password', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({ currentPassword, newPassword })
-        });
+      window.addEventListener('DOMContentLoaded', () => {
+        if (user) {
+          const nameEl = document.getElementById('sidebarUserName');
+          const companyEl = document.getElementById('sidebarUserCompany');
+          const avatarEl = document.getElementById('sidebarUserAvatar');
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Erreur');
+          if (nameEl) {
+            nameEl.textContent = user.firstName
+              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+              : (user.email || 'Mon compte');
+          }
+
+          if (companyEl) {
+            companyEl.textContent = user.company || 'Mon espace';
+          }
+
+          if (avatarEl) {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
         }
 
-        document.getElementById('passwordSaveStatus').textContent = '✅ Mot de passe changé !';
-        document.getElementById('passwordSaveStatus').style.color = '#059669';
-        this.reset();
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function () {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = '/login.html';
+          });
+        }
+      });
+    })();
+  </script>
+<!-- Script paramètres (profil + thème + notifications + Stripe + tabs) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      /* -------- TABS -------- */
+      const tabButtons = Array.from(document.querySelectorAll('.settings-tab'));
+      const tabPanes   = Array.from(document.querySelectorAll('.tab-pane'));
 
-        setTimeout(() => {
-          document.getElementById('passwordSaveStatus').textContent = '';
-        }, 3000);
-
-      } catch (error) {
-        document.getElementById('passwordSaveStatus').textContent = '❌ ' + error.message;
-        document.getElementById('passwordSaveStatus').style.color = '#dc2626';
+      function activateTab(tabName) {
+        tabButtons.forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        tabPanes.forEach(pane => {
+          pane.classList.toggle('active', pane.dataset.tab === tabName);
+        });
       }
-    });
 
-    // ===== Formulaire notifications =====
-    document.getElementById('notificationsForm')?.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const token = localStorage.getItem('lcc_token');
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const name = btn.dataset.tab;
+          activateTab(name);
+        });
+      });
 
-      const data = {
-        emailNotifications: document.getElementById('emailNotifications').checked,
-        smsNotifications: document.getElementById('smsNotifications').checked
-      };
+      /* -------- PROFIL & ENTREPRISE -------- */
 
+      const firstNameInput = document.getElementById('profileFirstName');
+      const lastNameInput  = document.getElementById('profileLastName');
+      const companyInput   = document.getElementById('profileCompany');
+      const emailInput     = document.getElementById('profileEmail');
+      const addressInput   = document.getElementById('profileAddress');
+      const postalCodeInput = document.getElementById('profilePostalCode');
+      const cityInput      = document.getElementById('profileCity');
+      const siretInput     = document.getElementById('profileSiret');
+      const accountTypeIndividual = document.getElementById('accountTypeIndividual');
+      const accountTypeBusiness = document.getElementById('accountTypeBusiness');
+      const siretRow       = document.getElementById('siretRow');
+      const saveProfileBtn = document.getElementById('saveProfileBtn');
+      const profileSaveStatus = document.getElementById('profileSaveStatus');
+      const logoInput = document.getElementById('profileLogo');
+const logoPreview = document.getElementById('logoPreview');
+
+// Aperçu du logo
+if (logoInput && logoPreview) {
+  logoInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) {
+      logoPreview.innerHTML = '<i class="fas fa-image" style="color:#9ca3af;font-size:24px;"></i>';
+      return;
+    }
+    
+    // Vérifier la taille (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Le fichier est trop volumineux (max 2 MB)');
+      logoInput.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      logoPreview.innerHTML = `<img src="${event.target.result}" style="width:100%;height:100%;object-fit:contain;">`;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+      // Fonction pour afficher/masquer le champ SIRET
+      function toggleSiretField() {
+        if (accountTypeBusiness.checked) {
+          siretRow.style.display = 'block';
+        } else {
+          siretRow.style.display = 'none';
+          siretInput.value = ''; // Vider le SIRET si on passe en particulier
+        }
+      }
+
+      // Écouter les changements de type de compte
+      accountTypeIndividual.addEventListener('change', toggleSiretField);
+      accountTypeBusiness.addEventListener('change', toggleSiretField);
+
+      // Formatage automatique du SIRET (ajout des espaces)
+      if (siretInput) {
+        siretInput.addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\s/g, ''); // Retirer les espaces
+          let formatted = '';
+          
+          // Garder uniquement les chiffres
+          value = value.replace(/\D/g, '');
+          
+          // Limiter à 14 chiffres
+          value = value.substring(0, 14);
+          
+          // Formater : XXX XXX XXX XXXXX
+          if (value.length > 0) {
+            formatted = value.substring(0, 3);
+          }
+          if (value.length > 3) {
+            formatted += ' ' + value.substring(3, 6);
+          }
+          if (value.length > 6) {
+            formatted += ' ' + value.substring(6, 9);
+          }
+          if (value.length > 9) {
+            formatted += ' ' + value.substring(9, 14);
+          }
+          
+          e.target.value = formatted;
+        });
+      }
+
+      // Charger le profil depuis l'API au chargement
+      async function loadProfileFromAPI() {
+        const token = localStorage.getItem('lcc_token');
+        if (!token) {
+          // Fallback sur localStorage si pas de token
+          const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
+          if (savedProfileRaw) {
+            try {
+              const savedProfile = JSON.parse(savedProfileRaw);
+              fillProfileFields(savedProfile);
+            } catch (e) {
+              console.error('Erreur lecture profil localStorage', e);
+            }
+          }
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+
+          if (response.ok) {
+            const profile = await response.json();
+            fillProfileFields(profile);
+            // Sauvegarder aussi en local pour fallback
+            localStorage.setItem('lcc_settings_profile', JSON.stringify(profile));
+          } else {
+            // Fallback sur localStorage
+            const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
+            if (savedProfileRaw) {
+              const savedProfile = JSON.parse(savedProfileRaw);
+              fillProfileFields(savedProfile);
+            }
+          }
+        } catch (e) {
+          console.error('Erreur chargement profil API', e);
+          // Fallback sur localStorage
+          const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
+          if (savedProfileRaw) {
+            try {
+              const savedProfile = JSON.parse(savedProfileRaw);
+              fillProfileFields(savedProfile);
+            } catch (err) {
+              console.error('Erreur lecture profil localStorage', err);
+            }
+          }
+        }
+      }
+
+     function fillProfileFields(profile) {
+  if (profile.firstName) firstNameInput.value = profile.firstName;
+  if (profile.lastName)  lastNameInput.value  = profile.lastName;
+  if (profile.company)   companyInput.value   = profile.company;
+  if (profile.email)     emailInput.value     = profile.email;
+  if (profile.address)   addressInput.value   = profile.address;
+  if (profile.postalCode) postalCodeInput.value = profile.postalCode;
+  if (profile.city)      cityInput.value      = profile.city;
+  if (profile.siret)     siretInput.value     = profile.siret;
+  
+  // Restaurer le type de compte
+  if (profile.accountType === 'business') {
+    accountTypeBusiness.checked = true;
+  } else {
+    accountTypeIndividual.checked = true;
+  }
+  toggleSiretField();
+  
+  // Charger le logo si présent
+  if (profile.logoUrl && logoPreview) {
+    logoPreview.innerHTML = `<img src="${profile.logoUrl}" style="width:100%;height:100%;object-fit:contain;">`;
+  }
+}
+
+      // Charger au démarrage
+      loadProfileFromAPI();
+
+      if (saveProfileBtn) {
+  saveProfileBtn.addEventListener('click', async function () {
+    const formData = new FormData();
+    formData.append('firstName', firstNameInput.value.trim());
+    formData.append('lastName', lastNameInput.value.trim());
+    formData.append('company', companyInput.value.trim());
+    formData.append('email', emailInput.value.trim());
+    formData.append('address', addressInput.value.trim());
+    formData.append('postalCode', postalCodeInput.value.trim());
+    formData.append('city', cityInput.value.trim());
+    formData.append('siret', siretInput.value.replace(/\s/g, ''));
+    formData.append('accountType', accountTypeIndividual.checked ? 'individual' : 'business');
+    
+    // Ajouter le logo si un fichier est sélectionné
+    if (logoInput.files && logoInput.files[0]) {
+      formData.append('logo', logoInput.files[0]);
+    }
+
+    // Créer un objet pour le localStorage
+    const dataForStorage = {
+      firstName: firstNameInput.value.trim(),
+      lastName: lastNameInput.value.trim(),
+      company: companyInput.value.trim(),
+      email: emailInput.value.trim(),
+      address: addressInput.value.trim(),
+      postalCode: postalCodeInput.value.trim(),
+      city: cityInput.value.trim(),
+      siret: siretInput.value.replace(/\s/g, ''),
+      accountType: accountTypeIndividual.checked ? 'individual' : 'business'
+    };
+
+    // Sauvegarde locale immédiate pour UX
+    localStorage.setItem('lcc_settings_profile', JSON.stringify(dataForStorage));
+
+    const rawUser = localStorage.getItem('lcc_user');
+    let user = {};
+    try {
+      user = rawUser ? JSON.parse(rawUser) : {};
+    } catch {
+      user = {};
+    }
+    if (dataForStorage.firstName) user.firstName = dataForStorage.firstName;
+    if (dataForStorage.lastName)  user.lastName  = dataForStorage.lastName;
+    if (dataForStorage.company)   user.company   = dataForStorage.company;
+    if (dataForStorage.email)     user.email     = dataForStorage.email;
+
+    localStorage.setItem('lcc_user', JSON.stringify(user));
+
+    // Sauvegarde sur le serveur
+    const token = localStorage.getItem('lcc_token');
+    if (token) {
       try {
-        const res = await fetch('/api/auth/update-notifications', {
+        const response = await fetch('/api/user/profile', {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token
+            // PAS de Content-Type avec FormData !
           },
-          body: JSON.stringify(data)
+          body: formData
         });
 
-        if (!res.ok) throw new Error('Erreur');
+        const result = await response.json();
 
-        document.getElementById('notificationsSaveStatus').textContent = '✅ Enregistré !';
-        setTimeout(() => {
-          document.getElementById('notificationsSaveStatus').textContent = '';
-        }, 3000);
-
-      } catch (error) {
-        document.getElementById('notificationsSaveStatus').textContent = '❌ Erreur';
-        document.getElementById('notificationsSaveStatus').style.color = '#dc2626';
+        if (response.ok && result.success) {
+          if (profileSaveStatus) {
+            profileSaveStatus.textContent = '✓ Profil enregistré avec succès';
+            setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
+          } else {
+            alert('Profil enregistré avec succès');
+          }
+          window.setTimeout(() => window.location.reload(), 300);
+        } else {
+          if (profileSaveStatus) {
+            profileSaveStatus.textContent = '⚠ Erreur : ' + (result.error || 'Erreur inconnue');
+            profileSaveStatus.style.color = '#dc2626';
+            setTimeout(() => { 
+              profileSaveStatus.textContent = ''; 
+              profileSaveStatus.style.color = '';
+            }, 3500);
+          } else {
+            alert('Erreur : ' + (result.error || 'Erreur inconnue'));
+          }
+        }
+      } catch (err) {
+        console.error('Erreur sauvegarde profil API', err);
+        if (profileSaveStatus) {
+          profileSaveStatus.textContent = '⚠ Profil sauvegardé localement uniquement';
+          profileSaveStatus.style.color = '#f59e0b';
+          setTimeout(() => { 
+            profileSaveStatus.textContent = ''; 
+            profileSaveStatus.style.color = '';
+          }, 3500);
+        } else {
+          alert('Profil sauvegardé localement uniquement');
+        }
       }
+    } else {
+      // Pas de token, sauvegarde locale seulement
+      if (profileSaveStatus) {
+        profileSaveStatus.textContent = 'Profil enregistré localement.';
+        setTimeout(() => { profileSaveStatus.textContent = ''; }, 2500);
+      } else {
+        alert('Profil enregistré localement');
+      }
+      window.setTimeout(() => window.location.reload(), 300);
+    }
+  });
+}
+
+      /* -------- PRÉFÉRENCES D’AFFICHAGE (THÈME) -------- */
+
+      const themeSelect = document.getElementById('themePreference');
+      const applyThemeBtn = document.getElementById('applyThemeBtn');
+      const themeSaveStatus = document.getElementById('themeSaveStatus');
+
+      function applyTheme(mode) {
+        const root = document.documentElement;
+        if (mode === 'system') {
+          const prefersDark = window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        } else if (mode === 'dark') {
+          root.setAttribute('data-theme', 'dark');
+        } else {
+          root.setAttribute('data-theme', 'light');
+        }
+      }
+
+      const savedTheme = localStorage.getItem('lcc_theme');
+      if (savedTheme && themeSelect) {
+        themeSelect.value = savedTheme;
+        applyTheme(savedTheme);
+      }
+
+      if (applyThemeBtn && themeSelect) {
+        applyThemeBtn.addEventListener('click', function () {
+          const value = themeSelect.value;
+          localStorage.setItem('lcc_theme', value);
+          applyTheme(value);
+          if (themeSaveStatus) {
+            themeSaveStatus.textContent = 'Préférence de thème enregistrée.';
+            setTimeout(() => { themeSaveStatus.textContent = ''; }, 2500);
+          } else {
+            alert('Préférence de thème enregistrée');
+          }
+        });
+      }
+
+            /* -------- NOTIFICATIONS -------- */
+
+      const notifNewReservation = document.getElementById('notifNewReservation');
+      const notifReminder       = document.getElementById('notifReminder');
+      const saveNotifBtn        = document.getElementById('saveNotifBtn');
+      const notifSaveStatus     = document.getElementById('notifSaveStatus');
+
+      const tokenNotif = localStorage.getItem('lcc_token');
+
+      async function loadNotificationSettings() {
+        if (!notifNewReservation || !notifReminder) return;
+
+        // 1) Essayer de charger depuis l'API
+        if (tokenNotif) {
+          try {
+            const res = await fetch('/api/settings/notifications', {
+              headers: {
+                'Authorization': 'Bearer ' + tokenNotif
+              }
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (typeof data.newReservation === 'boolean') {
+                notifNewReservation.checked = data.newReservation;
+              }
+              if (typeof data.reminder === 'boolean') {
+                notifReminder.checked = data.reminder;
+              }
+
+              // On garde aussi une copie locale pour l'UI
+              localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
+              return; // on s'arrête là si tout va bien
+            }
+          } catch (e) {
+            console.error('Erreur chargement notifs depuis API', e);
+          }
+        }
+
+        // 2) Fallback : lire depuis le localStorage si l'API n'a pas répondu
+        const savedNotifRaw = localStorage.getItem('lcc_settings_notif');
+        if (savedNotifRaw) {
+          try {
+            const savedNotif = JSON.parse(savedNotifRaw);
+            if (typeof savedNotif.newReservation === 'boolean') {
+              notifNewReservation.checked = savedNotif.newReservation;
+            }
+            if (typeof savedNotif.reminder === 'boolean') {
+              notifReminder.checked = savedNotif.reminder;
+            }
+          } catch (e) {
+            console.error('Erreur lecture notifs paramètres', e);
+          }
+        }
+      }
+
+      loadNotificationSettings();
+
+      if (saveNotifBtn && notifNewReservation && notifReminder) {
+        saveNotifBtn.addEventListener('click', async function () {
+          const data = {
+            newReservation: notifNewReservation.checked,
+            reminder: notifReminder.checked
+          };
+
+          // Sauvegarde locale pour l'UI
+          localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
+
+          // Sauvegarde côté serveur
+          if (tokenNotif) {
+            try {
+              const res = await fetch('/api/settings/notifications', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + tokenNotif
+                },
+                body: JSON.stringify(data)
+              });
+              if (!res.ok) {
+                console.error('Erreur API sauvegarde notifs, statut:', res.status);
+              }
+            } catch (e) {
+              console.error('Erreur sauvegarde notifs via API', e);
+            }
+          }
+
+          if (notifSaveStatus) {
+            notifSaveStatus.textContent = 'Préférences de notifications enregistrées.';
+            setTimeout(() => { notifSaveStatus.textContent = ''; }, 2500);
+          } else {
+            alert('Préférences de notifications enregistrées');
+          }
+        });
+      }
+
+      /* -------- STRIPE CONNECT -------- */
+
+      const stripeStatusEl   = document.getElementById('stripeStatus');
+      const connectStripeBtn = document.getElementById('connectStripeBtn');
+      const manageStripeBtn  = document.getElementById('manageStripeBtn');
+
+      async function refreshStripeStatus() {
+        if (!stripeStatusEl) return;
+
+        const token = localStorage.getItem('lcc_token');
+        if (!token) {
+          stripeStatusEl.textContent = 'Non connecté (session expirée)';
+          stripeStatusEl.className   = 'pill-status stripe-pill-warn';
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/stripe/status', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+
+          if (!res.ok) {
+            throw new Error('Erreur statut Stripe');
+          }
+
+          const data = await res.json();
+
+          if (data.connected) {
+            stripeStatusEl.textContent = 'Compte Stripe connecté';
+            stripeStatusEl.className   = 'pill-status stripe-pill-ok';
+
+            if (manageStripeBtn) {
+              manageStripeBtn.style.display = 'inline-flex';
+            }
+            if (connectStripeBtn) {
+              connectStripeBtn.querySelector('span').textContent =
+                'Reconnecter / compléter mon compte Stripe';
+            }
+          } else {
+            stripeStatusEl.textContent = 'Aucun compte Stripe connecté';
+            stripeStatusEl.className   = 'pill-status stripe-pill-warn';
+
+            if (manageStripeBtn) {
+              manageStripeBtn.style.display = 'none';
+            }
+            if (connectStripeBtn) {
+              connectStripeBtn.querySelector('span').textContent =
+                'Connecter mon compte Stripe';
+            }
+          }
+        } catch (e) {
+          console.error(e);
+          stripeStatusEl.textContent = 'Erreur lors du chargement de Stripe';
+          stripeStatusEl.className   = 'pill-status stripe-pill-error';
+        }
+      }
+
+      if (connectStripeBtn) {
+        connectStripeBtn.addEventListener('click', async () => {
+          const token = localStorage.getItem('lcc_token');
+          if (!token) {
+            alert("Votre session a expiré, veuillez vous reconnecter.");
+            window.location.href = '/login.html';
+            return;
+          }
+
+          try {
+            connectStripeBtn.disabled = true;
+            connectStripeBtn.querySelector('span').textContent = 'Redirection vers Stripe...';
+
+            const res = await fetch('/api/stripe/create-onboarding-link', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              }
+            });
+
+            const data = await res.json();
+
+            if (data.url) {
+              window.location.href = data.url;
+            } else {
+              alert(data.error || "Impossible de générer le lien Stripe.");
+            }
+          } catch (e) {
+            console.error(e);
+            alert("Erreur lors de la communication avec Stripe.");
+          } finally {
+            connectStripeBtn.disabled = false;
+            const label = manageStripeBtn && manageStripeBtn.style.display === 'inline-flex'
+              ? 'Reconnecter / compléter mon compte Stripe'
+              : 'Connecter mon compte Stripe';
+            connectStripeBtn.querySelector('span').textContent = label;
+          }
+        });
+      }
+
+      if (manageStripeBtn) {
+        manageStripeBtn.addEventListener('click', () => {
+          if (connectStripeBtn) {
+            connectStripeBtn.click();
+          }
+        });
+      }
+
+      refreshStripeStatus();
+      });
+  </script>
+<!-- MOBILE MENU SCRIPT -->
+<script>
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+        
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+        
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+    
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="settings-account"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+    
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      window.location.href = '/login.html';
     });
+    
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
+    })();
+  </script>
 
-    // Charger les données au chargement
-    document.addEventListener('DOMContentLoaded', loadUserData);
-
-    // ===== Onglet Abonnement =====
-
+<!-- SCRIPT ABONNEMENT -->
+<script>
+    // ✅ NOUVEAU : Fonction avec les vrais prix
     function formatEUR(amount) {
-      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+      const n = Number(amount || 0);
+      return n.toFixed(2).replace('.', ',') + '€';
     }
 
-    function planDisplayName(planType) {
-      const plans = {
-        solo: 'Solo',
-        basic: 'Basic',
-        pro: 'Pro'
-      };
-      return plans[planType] || planType;
-    }
-
+    // ✅ CORRIGÉ : Nouveaux plans et prix
     function priceForPlan(planType) {
-      const prices = {
-        solo: 29,
-        basic: 49,
-        pro: 99
-      };
-      return prices[planType] || 0;
+      const p = (planType || 'solo').toLowerCase();
+      
+      // Nouveaux plans
+      if (p === 'solo') return 14.90;
+      if (p === 'pro') return 49.00;
+      if (p === 'business') return 99.00;
+      
+      // Anciens plans (pour compatibilité)
+      if (p === 'basic') return 14.90; // Redirection vers Solo
+      
+      return 14.90; // Par défaut : Solo
+    }
+
+    // ✅ NOUVEAU : Retourner le nom lisible du plan
+    function planDisplayName(planType) {
+      const p = (planType || 'solo').toLowerCase();
+      
+      if (p === 'solo') return 'Solo';
+      if (p === 'pro') return 'Pro';
+      if (p === 'business') return 'Business';
+      if (p === 'basic') return 'Solo'; // Ancien nom
+      
+      return 'Solo';
     }
 
     async function loadSubscriptionStatus() {
       const token = localStorage.getItem('lcc_token');
       const subscriptionCard = document.getElementById('subscriptionCard');
 
-      subscriptionCard.innerHTML = `
-        <div class="subscription-loading">
-          <i class="fas fa-circle-notch"></i>
-          <p>Chargement...</p>
-        </div>
-      `;
+      if (!subscriptionCard) return;
+
+      if (!token) {
+        subscriptionCard.innerHTML = `
+          <div class="alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>Non connecté</strong><br>
+              Veuillez vous connecter pour voir votre abonnement.
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       try {
-        const res = await fetch('/api/billing/subscription-status', {
+        const res = await fetch('/api/subscription/status', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
 
-        if (!res.ok) throw new Error('Erreur réseau');
+        if (!res.ok) throw new Error('Erreur');
 
         const data = await res.json();
 
-        let statusBadgeClass = '';
-        let statusBadgeText = '';
-        let statusIcon = '';
-        let daysRemainingHTML = '';
-        let warningHTML = '';
-
-        if (data.status === 'trial') {
-          statusBadgeClass = 'status-trial';
-          statusBadgeText = 'Essai gratuit';
-          statusIcon = 'fa-flask';
-          if (data.daysRemaining !== undefined) {
-            daysRemainingHTML = `<span class="days-remaining">${data.daysRemaining} jour${data.daysRemaining > 1 ? 's' : ''} restant${data.daysRemaining > 1 ? 's' : ''}</span>`;
-          }
-          if (data.daysRemaining <= 3) {
-            warningHTML = `
-              <div class="alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                  <strong>Votre essai expire bientôt !</strong><br>
-                  Choisissez un plan pour continuer sans interruption.
-                </div>
-              </div>
-            `;
-          }
-        } else if (data.status === 'active') {
-          statusBadgeClass = 'status-active';
-          statusBadgeText = 'Actif';
-          statusIcon = 'fa-check-circle';
-        } else if (data.status === 'expired') {
-          statusBadgeClass = 'status-expired';
-          statusBadgeText = 'Expiré';
-          statusIcon = 'fa-exclamation-circle';
-          warningHTML = `
-            <div class="alert-warning">
-              <i class="fas fa-exclamation-triangle"></i>
-              <div>
-                <strong>Votre essai a expiré !</strong><br>
-                Choisissez un plan pour continuer à utiliser Boostinghost.
+        if (!data.status) {
+          subscriptionCard.innerHTML = `
+            <div class="subscription-header">
+              <div class="subscription-info">
+                <h3>Aucun abonnement actif</h3>
+                <p style="color: var(--text-secondary); margin-top: 8px;">
+                  Choisissez un plan pour continuer à utiliser Boostinghost.
+                </p>
               </div>
             </div>
+            <div class="subscription-actions" style="margin-top: 20px;">
+              <a href="/pricing.html" class="btn btn-primary">
+                <i class="fas fa-arrow-right"></i>
+                Choisir un plan
+              </a>
+            </div>
           `;
-        } else if (data.status === 'canceled') {
-          statusBadgeClass = 'status-canceled';
-          statusBadgeText = 'Annulé';
+          return;
+        }
+
+        let statusBadgeClass = 'trial';
+        let statusBadgeText = 'Essai gratuit';
+        let statusIcon = 'fa-gift';
+
+        if (data.status === 'active') {
+          statusBadgeClass = 'active';
+          statusBadgeText = planDisplayName(data.planType); // ✅ Utiliser le nouveau nom
+          statusIcon = 'fa-check-circle';
+        } else if (data.status === 'expired' || data.status === 'canceled') {
+          statusBadgeClass = 'expired';
+          statusBadgeText = 'Expiré';
           statusIcon = 'fa-times-circle';
+        }
+
+        let daysRemainingHTML = '';
+        if (data.daysRemaining !== null && data.status === 'trial') {
+          daysRemainingHTML = `
+            <div class="days-remaining">
+              <i class="fas fa-clock"></i>
+              <span><strong>${data.daysRemaining}</strong> jour${data.daysRemaining > 1 ? 's' : ''} restant${data.daysRemaining > 1 ? 's' : ''}</span>
+            </div>
+          `;
+        }
+
+        let warningHTML = '';
+        if (data.isExpiringSoon) {
           warningHTML = `
             <div class="alert-warning">
               <i class="fas fa-exclamation-triangle"></i>
@@ -1359,288 +1972,10 @@ Ajouter
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>
 
-<!-- ===== SCRIPT ÉQUIPE - VERSION CORRIGÉE ===== -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🟢 Script équipe chargé - DOM ready');
-  
-  const ROLE_DESCRIPTIONS = {
-    manager: 'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',
-    cleaner: 'Accès au calendrier (lecture) et gestion des ménages uniquement.',
-    accountant: 'Accès aux finances et au calendrier (lecture).',
-    custom: 'Choisissez manuellement chaque permission.'
-  };
-
-  // ===== Fonction de chargement des membres =====
-  async function loadTeamMembers() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch('/api/sub-accounts/list', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      if (!data.success) throw new Error(data.error);
-      
-      displayTeamMembers(data.subAccounts);
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors du chargement de l\'équipe');
-    }
-  }
-
-  // ===== Affichage des membres =====
-  function displayTeamMembers(members) {
-    const container = document.getElementById('teamMembersList');
-    
-    if (members.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center;padding:48px 24px;color:#9ca3af;">
-          <i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i>
-          <p>Aucun membre d'équipe</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = members.map(member => {
-      const initials = `${member.first_name?.charAt(0) || ''}${member.last_name?.charAt(0) || ''}`;
-      const isActive = member.is_active;
-      
-      const permissions = [];
-      if (member.can_view_calendar) permissions.push({ icon: 'calendar', label: 'Calendrier' });
-      if (member.can_view_messages) permissions.push({ icon: 'comment-dots', label: 'Messages' });
-      if (member.can_view_cleaning) permissions.push({ icon: 'broom', label: 'Ménages' });
-      if (member.can_view_finances) permissions.push({ icon: 'dollar-sign', label: 'Finances' });
-      if (member.can_view_properties) permissions.push({ icon: 'home', label: 'Logements' });
-
-      const roleLabels = {
-        manager: '👔 Manager',
-        cleaner: '🧹 Femme de ménage',
-        accountant: '📊 Comptable',
-        custom: '🎨 Personnalisé'
-      };
-
-      return `
-        <div class="team-member-card ${!isActive ? 'team-member-inactive' : ''}">
-          <div class="team-member-header">
-            <div class="team-member-info">
-              <div class="team-member-avatar">${initials}</div>
-              <div class="team-member-details">
-                <h3>${member.first_name} ${member.last_name}</h3>
-                <p>${member.email}</p>
-                <span class="team-member-role">${roleLabels[member.role] || member.role}</span>
-                ${!isActive ? '<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>' : ''}
-              </div>
-            </div>
-            <div class="team-member-actions">
-              <button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})">
-                <i class="fas fa-${isActive ? 'pause' : 'play'}-circle"></i>
-              </button>
-              <button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id}, '${member.email}')">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-          ${permissions.length > 0 ? `
-            <div class="team-member-permissions">
-              ${permissions.map(p => `
-                <span class="permission-badge">
-                  <i class="fas fa-${p.icon}"></i> ${p.label}
-                </span>
-              `).join('')}
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
-  }
-
-  // ===== CORRECTION : Initialisation du bouton avec délai =====
-  function initAddMemberButton() {
-    const btnAdd = document.getElementById('btnAddTeamMember');
-    
-    if (!btnAdd) {
-      console.warn('⚠️ Bouton btnAddTeamMember non trouvé, nouvelle tentative dans 100ms');
-      setTimeout(initAddMemberButton, 100);
-      return;
-    }
-    
-    console.log('✅ Bouton btnAddTeamMember trouvé, ajout du listener');
-    
-    btnAdd.addEventListener('click', async function(e) {
-      e.preventDefault();
-      console.log('🔵 Bouton cliqué');
-      
-      const modal = document.getElementById('addTeamMemberModal');
-      if (modal) {
-        modal.style.display = 'flex';
-        await loadPropertiesForSelect();
-      } else {
-        console.error('❌ Modal non trouvé');
-      }
-    });
-  }
-
-  // ===== Fermeture modal =====
-  const closeBtn = document.getElementById('closeAddMemberModal');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      document.getElementById('addTeamMemberModal').style.display = 'none';
-    });
-  }
-
-  const cancelBtn = document.getElementById('cancelAddMember');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => {
-      document.getElementById('addTeamMemberModal').style.display = 'none';
-    });
-  }
-
-  // ===== Changement de rôle =====
-  const roleSelect = document.getElementById('memberRole');
-  if (roleSelect) {
-    roleSelect.addEventListener('change', function() {
-      const desc = document.getElementById('roleDescription');
-      const customPerms = document.getElementById('customPermissions');
-      
-      desc.textContent = ROLE_DESCRIPTIONS[this.value] || '';
-      customPerms.style.display = this.value === 'custom' ? 'block' : 'none';
-    });
-  }
-
-  // ===== Charger les logements =====
-  async function loadPropertiesForSelect() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch('/api/properties', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      const select = document.getElementById('memberProperties');
-      select.innerHTML = data.properties.map(p => 
-        `<option value="${p.id}">${p.name}</option>`
-      ).join('');
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
-  }
-
-  // ===== Formulaire d'ajout =====
-  const addForm = document.getElementById('addTeamMemberForm');
-  if (addForm) {
-    addForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const role = document.getElementById('memberRole').value;
-      const data = {
-        email: document.getElementById('memberEmail').value,
-        password: document.getElementById('memberPassword').value,
-        firstName: document.getElementById('memberFirstName').value,
-        lastName: document.getElementById('memberLastName').value,
-        role: role,
-        propertyIds: Array.from(document.getElementById('memberProperties').selectedOptions).map(o => o.value)
-      };
-
-      if (role === 'custom') {
-        data.permissions = {
-          canViewCalendar: document.getElementById('perm_canViewCalendar')?.checked || false,
-          canEditReservations: document.getElementById('perm_canEditReservations')?.checked || false,
-          canCreateReservations: document.getElementById('perm_canCreateReservations')?.checked || false,
-          canViewMessages: document.getElementById('perm_canViewMessages')?.checked || false,
-          canSendMessages: document.getElementById('perm_canSendMessages')?.checked || false,
-          canViewCleaning: document.getElementById('perm_canViewCleaning')?.checked || false,
-          canAssignCleaning: document.getElementById('perm_canAssignCleaning')?.checked || false,
-          canViewFinances: document.getElementById('perm_canViewFinances')?.checked || false,
-          canViewProperties: document.getElementById('perm_canViewProperties')?.checked || false
-        };
-      }
-
-      try {
-        const token = localStorage.getItem('lcc_token');
-        const res = await fetch('/api/sub-accounts/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(data)
-        });
-
-        const result = await res.json();
-        if (!result.success) throw new Error(result.error);
-
-        alert('✅ Membre ajouté');
-        document.getElementById('addTeamMemberModal').style.display = 'none';
-        this.reset();
-        loadTeamMembers();
-      } catch (error) {
-        alert('❌ ' + error.message);
-      }
-    });
-  }
-
-  // ===== Fonctions globales =====
-  window.deleteTeamMember = async function(id, email) {
-    if (!confirm(`Supprimer ${email} ?`)) return;
-    
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch(`/api/sub-accounts/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      if (!data.success) throw new Error(data.error);
-      
-      alert('✅ Supprimé');
-      loadTeamMembers();
-    } catch (error) {
-      alert('❌ ' + error.message);
-    }
-  };
-
-  window.toggleTeamMember = async function(id) {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch(`/api/sub-accounts/${id}/toggle`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      if (!data.success) throw new Error(data.error);
-      
-      loadTeamMembers();
-    } catch (error) {
-      alert('❌ ' + error.message);
-    }
-  };
-
-  window.editTeamMember = function(id) {
-    alert('En développement');
-  };
-
-  // ===== Charger les membres quand on clique sur l'onglet Équipe =====
-  const teamTab = document.querySelector('[data-tab="team"]');
-  if (teamTab) {
-    teamTab.addEventListener('click', () => {
-      setTimeout(() => {
-        loadTeamMembers();
-        // CORRECTION : Réinitialiser le bouton après chargement de l'onglet
-        initAddMemberButton();
-      }, 100);
-    });
-  }
-
-  // ===== Initialisation au chargement =====
-  initAddMemberButton();
-});
+console.log('🟢 Script équipe chargé - DOM ready');
+const ROLE_DESCRIPTIONS={manager:'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',cleaner:'Accès au calendrier (lecture) et gestion des ménages uniquement.',accountant:'Accès aux finances et au calendrier (lecture).',custom:'Choisissez manuellement chaque permission.'};async function loadTeamMembers(){try{const token=localStorage.getItem('lcc_token');const res=await fetch('/api/sub-accounts/list',{headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();if(!data.success)throw new Error(data.error);displayTeamMembers(data.subAccounts);}catch(error){console.error('Erreur:',error);alert('Erreur lors du chargement de l\'équipe');}}function displayTeamMembers(members){const container=document.getElementById('teamMembersList');if(members.length===0){container.innerHTML='<div style="text-align:center;padding:48px 24px;color:#9ca3af;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i><p>Aucun membre d\'équipe</p></div>';return;}container.innerHTML=members.map(member=>{const initials=`${member.first_name?.charAt(0)||''}${member.last_name?.charAt(0)||''}`;const isActive=member.is_active;const permissions=[];if(member.can_view_calendar)permissions.push({icon:'calendar',label:'Calendrier'});if(member.can_view_messages)permissions.push({icon:'comment-dots',label:'Messages'});if(member.can_view_cleaning)permissions.push({icon:'broom',label:'Ménages'});if(member.can_view_finances)permissions.push({icon:'dollar-sign',label:'Finances'});if(member.can_view_properties)permissions.push({icon:'home',label:'Logements'});const roleLabels={manager:'👔 Manager',cleaner:'🧹 Femme de ménage',accountant:'📊 Comptable',custom:'🎨 Personnalisé'};return`<div class="team-member-card ${!isActive?'team-member-inactive':''}"><div class="team-member-header"><div class="team-member-info"><div class="team-member-avatar">${initials}</div><div class="team-member-details"><h3>${member.first_name} ${member.last_name}</h3><p>${member.email}</p><span class="team-member-role">${roleLabels[member.role]||member.role}</span>${!isActive?'<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>':''}</div></div><div class="team-member-actions"><button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})"><i class="fas fa-edit"></i></button><button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})"><i class="fas fa-${isActive?'pause':'play'}-circle"></i></button><button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id},'${member.email}')"><i class="fas fa-trash"></i></button></div></div>${permissions.length>0?`<div class="team-member-permissions">${permissions.map(p=>`<span class="permission-badge"><i class="fas fa-${p.icon}"></i> ${p.label}</span>`).join('')}</div>`:''}</div>`;}).join('');}const btnAdd=document.getElementById('btnAddTeamMember');if(btnAdd){btnAdd.addEventListener('click',async function(){console.log('🔵 Bouton cliqué');const modal=document.getElementById('addTeamMemberModal');if(modal){modal.style.display='block';await loadPropertiesForSelect();}});}document.getElementById('closeAddMemberModal')?.addEventListener('click',()=>document.getElementById('addTeamMemberModal').style.display='none');document.getElementById('cancelAddMember')?.addEventListener('click',()=>document.getElementById('addTeamMemberModal').style.display='none');document.getElementById('memberRole')?.addEventListener('change',function(){const desc=document.getElementById('roleDescription');const customPerms=document.getElementById('customPermissions');desc.textContent=ROLE_DESCRIPTIONS[this.value]||'';customPerms.style.display=this.value==='custom'?'block':'none';});async function loadPropertiesForSelect(){try{const token=localStorage.getItem('lcc_token');const res=await fetch('/api/properties',{headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();const select=document.getElementById('memberProperties');select.innerHTML=data.properties.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}catch(error){console.error('Erreur:',error);}}document.getElementById('addTeamMemberForm')?.addEventListener('submit',async function(e){e.preventDefault();const role=document.getElementById('memberRole').value;const data={email:document.getElementById('memberEmail').value,password:document.getElementById('memberPassword').value,firstName:document.getElementById('memberFirstName').value,lastName:document.getElementById('memberLastName').value,role:role,propertyIds:Array.from(document.getElementById('memberProperties').selectedOptions).map(o=>o.value)};if(role==='custom'){data.permissions={canViewCalendar:document.getElementById('perm_canViewCalendar')?.checked||false,canEditReservations:document.getElementById('perm_canEditReservations')?.checked||false,canCreateReservations:document.getElementById('perm_canCreateReservations')?.checked||false,canViewMessages:document.getElementById('perm_canViewMessages')?.checked||false,canSendMessages:document.getElementById('perm_canSendMessages')?.checked||false,canViewCleaning:document.getElementById('perm_canViewCleaning')?.checked||false,canAssignCleaning:document.getElementById('perm_canAssignCleaning')?.checked||false,canViewFinances:document.getElementById('perm_canViewFinances')?.checked||false,canViewProperties:document.getElementById('perm_canViewProperties')?.checked||false};}try{const token=localStorage.getItem('lcc_token');const res=await fetch('/api/sub-accounts/create',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(data)});const result=await res.json();if(!result.success)throw new Error(result.error);alert('✅ Membre ajouté');document.getElementById('addTeamMemberModal').style.display='none';this.reset();loadTeamMembers();}catch(error){alert('❌ '+error.message);}});window.deleteTeamMember=async function(id,email){if(!confirm(`Supprimer ${email} ?`))return;try{const token=localStorage.getItem('lcc_token');const res=await fetch(`/api/sub-accounts/${id}`,{method:'DELETE',headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();if(!data.success)throw new Error(data.error);alert('✅ Supprimé');loadTeamMembers();}catch(error){alert('❌ '+error.message);}};window.toggleTeamMember=async function(id){try{const token=localStorage.getItem('lcc_token');const res=await fetch(`/api/sub-accounts/${id}/toggle`,{method:'PUT',headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();if(!data.success)throw new Error(data.error);loadTeamMembers();}catch(error){alert('❌ '+error.message);}};window.editTeamMember=function(id){alert('En développement');};const teamTab=document.querySelector('[data-tab="team"]');if(teamTab){teamTab.addEventListener('click',()=>setTimeout(loadTeamMembers,100));}});
 </script>
 </body>
 </html>
