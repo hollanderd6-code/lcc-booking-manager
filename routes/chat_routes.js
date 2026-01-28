@@ -5,6 +5,12 @@
 const crypto = require('crypto');
 
 // ============================================
+// 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
+// ============================================
+const { handleIncomingMessage } = require('../integrated-chat-handler');
+const { startOnboarding } = require('../onboarding-system');
+
+// ============================================
 // 🤖 SERVICE DE RÉPONSES AUTOMATIQUES
 // ============================================
 
@@ -667,6 +673,31 @@ try {
   console.error('❌ Erreur notification push:', notifError.message);
 }
 } 
+
+      // ============================================
+      // 🤖 TRAITEMENT AUTOMATIQUE (Onboarding + Réponses auto)
+      // ============================================
+      if (sender_type === 'guest') {
+        try {
+          // Récupérer la conversation complète avec tous les champs nécessaires
+          const fullConvResult = await pool.query(
+            'SELECT * FROM conversations WHERE id = $1',
+            [conversation_id]
+          );
+          
+          if (fullConvResult.rows.length > 0) {
+            const fullConversation = fullConvResult.rows[0];
+            
+            // Traiter le message (onboarding + réponses auto)
+            await handleIncomingMessage(newMessage, fullConversation, pool, io);
+            
+            console.log(`✅ Message traité automatiquement pour conversation ${conversation_id}`);
+          }
+        } catch (autoError) {
+          console.error('❌ Erreur traitement auto:', autoError);
+          // Ne pas bloquer l'envoi du message même si l'auto-traitement échoue
+        }
+      }
       
       res.json({
         success: true,
