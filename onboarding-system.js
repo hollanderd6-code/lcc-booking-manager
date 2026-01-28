@@ -250,6 +250,9 @@ async function processOnboardingResponse(message, conversation, pool) {
       updateParams = [langCode, conversationId];
       await pool.query(updateQuery, updateParams);
       
+      // 🎯 METTRE À JOUR LA RÉSERVATION avec les infos collectées
+      await updateReservationWithGuestInfo(conversation, pool);
+      
       // Message de complétion dans la langue choisie
       nextMessage = getOnboardingMessage('completed', langCode, { 
         firstName: conversation.guest_first_name 
@@ -272,6 +275,50 @@ async function processOnboardingResponse(message, conversation, pool) {
     message: nextMessage,
     completed: currentStep === ONBOARDING_STEPS.LANGUAGE
   };
+}
+
+/**
+ * Mettre à jour la réservation avec les infos du voyageur
+ */
+async function updateReservationWithGuestInfo(conversation, pool) {
+  try {
+    if (!conversation.property_id || !conversation.reservation_start_date) {
+      console.log('⚠️ Pas assez d\'infos pour mettre à jour la réservation');
+      return;
+    }
+
+    const fullName = `${conversation.guest_first_name || ''} ${conversation.guest_last_name || ''}`.trim();
+    const guestPhone = conversation.guest_phone || null;
+
+    if (!fullName && !guestPhone) {
+      console.log('⚠️ Aucune info à mettre à jour dans la réservation');
+      return;
+    }
+
+    // Mettre à jour la réservation correspondante
+    const updateResult = await pool.query(
+      `UPDATE reservations 
+       SET guest_name = COALESCE($1, guest_name),
+           guest_phone = COALESCE($2, guest_phone),
+           updated_at = NOW()
+       WHERE property_id = $3 
+       AND DATE(start_date) = DATE($4)
+       AND source = $5
+       RETURNING id, uid, guest_name, guest_phone`,
+      [fullName || null, guestPhone, conversation.property_id, conversation.reservation_start_date, conversation.platform]
+    );
+
+    if (updateResult.rows.length > 0) {
+      const updated = updateResult.rows[0];
+      console.log(`✅ Réservation ${updated.uid} mise à jour avec : ${updated.guest_name} - ${updated.guest_phone}`);
+    } else {
+      console.log(`⚠️ Aucune réservation trouvée pour property_id=${conversation.property_id}, date=${conversation.reservation_start_date}, platform=${conversation.platform}`);
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur updateReservationWithGuestInfo:', error);
+    // Ne pas bloquer l'onboarding même si la mise à jour échoue
+  }
 }
 
 /**
