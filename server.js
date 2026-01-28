@@ -45,7 +45,7 @@ const smartLocksRoutes = require('./routes/smart-locks-routes');
 // ✅ IMPORT SYSTÈME DE SOUS-COMPTES
 // ============================================
 const { setupSubAccountsRoutes } = require('./sub-accounts-routes');
-const { authenticateAny, requirePermission } = require('./sub-accounts-middleware');
+const { authenticateAny, requirePermission, initializeMiddleware } = require('./sub-accounts-middleware');
 
 // ============================================
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
@@ -12271,6 +12271,7 @@ console.log('✅ Routes du chat initialisées');
 // ============================================
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
 // ============================================
+initializeMiddleware(pool); // Initialiser le middleware avec la pool
 setupSubAccountsRoutes(app, pool, authenticateToken);
 console.log('✅ Routes sous-comptes initialisées');
 
