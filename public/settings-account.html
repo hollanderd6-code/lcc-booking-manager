@@ -2291,14 +2291,13 @@ function editTeamMember(id) {
 }
 
 // Charger les membres au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
-  // Attendre que l'onglet soit visible
-  const teamTab = document.querySelector('[data-tab="team"]');
-  if (teamTab) {
-    teamTab.addEventListener('click', function() {
-      setTimeout(loadTeamMembers, 100);
-    });
-  }
+// Attendre que l'onglet soit visible
+const teamTab = document.querySelector('[data-tab="team"]');
+if (teamTab) {
+  teamTab.addEventListener('click', function() {
+    setTimeout(loadTeamMembers, 100);
+  });
+}
 
 }); // Fin DOMContentLoaded
 </script>
