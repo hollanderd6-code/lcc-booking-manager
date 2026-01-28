@@ -4357,20 +4357,80 @@ function populateEditBookingProperties(selectedPropertyId) {
     if (occupancy > 100) occupancy = 100;
 
     // inject DOM
+    
+    // ============================================
+    // 🎨 FONCTION DE CODE COULEUR POUR LES KPI
+    // ============================================
+    function applyKpiColor(element, value, type) {
+      if (!element) return;
+      
+      let color = '#000000'; // Noir par défaut
+      
+      switch(type) {
+        case 'properties': // Logements actifs
+          color = value >= 1 ? '#10B981' : '#000000';
+          break;
+          
+        case 'moves': // Check-in / Check-out
+          color = value >= 1 ? '#10B981' : '#000000';
+          break;
+          
+        case 'cleaning': // Ménages à venir
+          if (value === 0) color = '#000000';
+          else if (value <= 2) color = '#F59E0B'; // Orange
+          else color = '#EF4444'; // Rouge
+          break;
+          
+        case 'risks': // Risques à venir
+          if (value === 0) color = '#10B981'; // Vert = tout va bien
+          else if (value <= 2) color = '#F59E0B'; // Orange
+          else color = '#EF4444'; // Rouge
+          break;
+          
+        case 'deposits': // Cautions prises
+          color = value >= 1 ? '#10B981' : '#000000';
+          break;
+          
+        case 'occupancy': // Taux d'occupation (en %)
+          if (value <= 30) color = '#EF4444'; // Rouge
+          else if (value <= 50) color = '#F59E0B'; // Orange
+          else if (value <= 70) color = '#FBBF24'; // Jaune
+          else if (value <= 85) color = '#34D399'; // Vert clair
+          else color = '#10B981'; // Vert foncé
+          break;
+      }
+      
+      element.style.color = color;
+      element.style.fontWeight = '700';
+    }
+    
     const propEl = document.getElementById('kpiPropertiesValue');
-    if (propEl) propEl.textContent = properties.length || 0;
+    if (propEl) {
+      propEl.textContent = properties.length || 0;
+      applyKpiColor(propEl, properties.length || 0, 'properties');
+    }
 
     const occEl = document.getElementById('kpiOccupancyValue');
-    if (occEl) occEl.textContent = occupancy + '%';
+    if (occEl) {
+      occEl.textContent = occupancy + '%';
+      applyKpiColor(occEl, occupancy, 'occupancy');
+    }
 
     const movesVal = document.getElementById('kpiTodayMovesValue');
     const movesSub = document.getElementById('kpiTodayMovesSub');
-    if (movesVal) movesVal.textContent = (checkinsToday + checkoutsToday);
+    const totalMoves = checkinsToday + checkoutsToday;
+    if (movesVal) {
+      movesVal.textContent = totalMoves;
+      applyKpiColor(movesVal, totalMoves, 'moves');
+    }
     if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
 
     const cleanVal = document.getElementById('kpiCleaning48hValue');
     const cleanSub = document.getElementById('kpiCleaning48hSub');
-    if (cleanVal) cleanVal.textContent = cleaning48h;
+    if (cleanVal) {
+      cleanVal.textContent = cleaning48h;
+      applyKpiColor(cleanVal, cleaning48h, 'cleaning');
+    }
     if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
   }
 
@@ -4398,6 +4458,12 @@ function populateEditBookingProperties(selectedPropertyId) {
       const count = paidDeposits.length;
 
       depositsVal.textContent = count;
+      
+      // Appliquer la couleur
+      const color = count >= 1 ? '#10B981' : '#000000';
+      depositsVal.style.color = color;
+      depositsVal.style.fontWeight = '700';
+      
       if (depositsSub) {
         depositsSub.textContent = count === 0 ? 'aucune caution active' 
           : count === 1 ? '1 caution payée en cours'
@@ -4707,7 +4773,17 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
 
     const valEl = document.getElementById('kpiTopRisksValue');
     const subEl = document.getElementById('kpiTopRisksSub');
-    if (valEl) valEl.textContent = top5.length;
+    if (valEl) {
+      valEl.textContent = top5.length;
+      
+      // Appliquer la couleur en fonction du nombre de risques
+      let color = '#10B981'; // Vert par défaut (0 risque = tout va bien)
+      if (top5.length >= 3) color = '#EF4444'; // Rouge pour 3+ risques
+      else if (top5.length >= 1) color = '#F59E0B'; // Orange pour 1-2 risques
+      
+      valEl.style.color = color;
+      valEl.style.fontWeight = '700';
+    }
     
     let subText = '';
     if (criticalCount > 0) subText += `${criticalCount} critique${criticalCount > 1 ? 's' : ''} • `;
