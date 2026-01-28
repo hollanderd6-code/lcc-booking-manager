@@ -12262,6 +12262,57 @@ setupChatRoutes(app, pool, io, authenticateToken, checkSubscription);
 console.log('✅ Routes du chat initialisées');
 
 // ============================================
+// 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
+// ============================================
+
+app.post('/api/chat/send', async (req, res) => {
+  try {
+    const { conversation_id, message, sender_type, sender_name } = req.body;
+
+    if (!conversation_id || !message) {
+      return res.status(400).json({ error: 'conversation_id et message requis' });
+    }
+
+    // Insérer le message dans la DB
+    const messageResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+       VALUES ($1, $2, $3, $4, FALSE, NOW())
+       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, created_at`,
+      [conversation_id, sender_type || 'guest', sender_name || 'Voyageur', message]
+    );
+
+    const savedMessage = messageResult.rows[0];
+
+    // Émettre via Socket.io
+    if (io) {
+      io.to(`conversation_${conversation_id}`).emit('new_message', savedMessage);
+    }
+
+    // 🤖 TRAITER AUTOMATIQUEMENT (Onboarding + Réponses auto)
+    if (sender_type === 'guest') {
+      // Récupérer la conversation complète
+      const convResult = await pool.query(
+        'SELECT * FROM conversations WHERE id = $1',
+        [conversation_id]
+      );
+
+      if (convResult.rows.length > 0) {
+        const conversation = convResult.rows[0];
+        
+        // Traiter le message (onboarding + réponses auto)
+        await handleIncomingMessage(savedMessage, conversation, pool, io);
+      }
+    }
+
+    res.json({ success: true, message: savedMessage });
+
+  } catch (error) {
+    console.error('❌ Erreur /api/chat/send:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // ROUTE VERIFICATION CHAT (AJOUTEE DIRECTEMENT)
 // ============================================
 
