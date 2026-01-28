@@ -6422,18 +6422,21 @@ function findReservationForBlock(bookingBlock) {
       booking.customerName ||
       'Client inconnu';
 
+    const guestPhone = booking.guestPhone || booking.guest_phone || '';
+
     const platformRaw = booking.source || booking.platform || 'Direct';
     const platform    = String(platformRaw).toUpperCase();
 
     // 4️⃣ Contenu "de base" du modal (sans la référence technique)
     detailsContent.innerHTML = `
       <div class="detail-group">
-        <label>Voyageur</label>
+        <label>VOYAGEUR</label>
         <div class="detail-value" style="font-weight:700;">${guest}</div>
+        ${guestPhone ? `<div class="detail-value" style="font-size:14px; color:#6b7280; margin-top:4px;">📞 ${guestPhone}</div>` : ''}
       </div>
 
       <div class="detail-group">
-        <label>Logement</label>
+        <label>LOGEMENT</label>
         <div class="detail-value">${propertyName || 'Logement inconnu'}</div>
       </div>
 
@@ -6449,7 +6452,7 @@ function findReservationForBlock(bookingBlock) {
       </div>
 
       <div class="detail-group">
-        <label>Source</label>
+        <label>SOURCE</label>
         <div class="detail-value">
           <span style="
             display:inline-flex;
