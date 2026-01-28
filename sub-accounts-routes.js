@@ -2,9 +2,7 @@
 // 🔐 ROUTES API - GESTION DES SOUS-COMPTES
 // À ajouter dans server.js
 // ============================================
-
-const bcrypt = require('bcrypt');
-const { 
+const bcrypt = require('bcryptjs');
   authenticateAny,
   requireTeamManagement, 
   requirePermission,
