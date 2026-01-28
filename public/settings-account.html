@@ -1026,6 +1026,8 @@
 // GESTION DE L'ONGLET ÉQUIPE
 // ============================================
 
+document.addEventListener('DOMContentLoaded', function() {
+
 // Descriptions des rôles
 const ROLE_DESCRIPTIONS = {
   manager: 'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',
@@ -1330,7 +1332,8 @@ document.addEventListener('DOMContentLoaded', function() {
       setTimeout(loadTeamMembers, 100);
     });
   }
-});
+
+}); // Fin DOMContentLoaded
 </script>
 <!-- Onglet : Mon abonnement -->
 <div class="tab-pane" data-tab="subscription" id="tab-subscription">
