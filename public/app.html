@@ -326,6 +326,14 @@
   padding: 14px 16px;
 }
 
+/* STATUS GRID: 3 colonnes au lieu de 4 */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
   </style>
 <style>
 
@@ -2508,13 +2516,6 @@
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
-<button class="btn-icon" id="notificationsBtn" title="Notifications">
-<i class="fas fa-bell"></i>
-<span class="notification-badge"></span>
-</button>
-<button class="theme-toggle" id="themeToggle" title="Changer le thème">
-<i class="fas fa-moon"></i>
-</button>
 </div>
 </header>
 <div class="page-content">
@@ -2558,17 +2559,6 @@
 <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">
     Voir les cautions
   </button>
-</article>
-<article class="status-card">
-<div class="status-card-header">
-<div class="status-icon status-icon-ai">
-<i class="fas fa-wand-magic-sparkles"></i>
-</div>
-<span class="status-label status-ok">Actif</span>
-</div>
-<h3>Messages automatiques</h3>
-<p>Scénarios IA prêts pour vos voyageurs.</p>
-<button class="btn btn-ghost btn-xs" onclick="window.location.href='/messages.html'">Configurer</button>
 </article>
 </section>
 <!-- KPI PRINCIPAUX -->
