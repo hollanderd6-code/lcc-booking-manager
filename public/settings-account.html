@@ -477,9 +477,9 @@
 <i class="fas fa-credit-card"></i>
             Paiements &amp; Stripe
           </button>
-<button class="settings-tab" data-tab="notifications">
-<i class="fas fa-bell"></i>
-            Notifications
+<button class="settings-tab" data-tab="team">
+<i class="fas fa-users"></i>
+            Équipe &amp; Accès
           </button>
 <button class="settings-tab" data-tab="subscription">
 <i class="fas fa-crown"></i>
@@ -658,43 +658,680 @@
 </div>
 </section>
 </div>
-<!-- Onglet : Notifications -->
-<div class="tab-pane" data-tab="notifications" id="tab-notifications">
-<section class="card">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-bell"></i>
-                Notifications générales
-              </div>
+<div class="tab-pane" data-tab="team" id="tab-team">
+  
+  <!-- Header avec bouton d'ajout -->
+  <section class="card mb-lg">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-users"></i>
+        Gestion de l'équipe
+      </div>
+      <button class="btn btn-primary" id="btnAddTeamMember" type="button">
+        <i class="fas fa-plus"></i>
+        Ajouter un membre
+      </button>
+    </div>
+
+    <div class="card-body">
+      <p style="color: #6b7280; margin-bottom: 24px;">
+        Créez des comptes secondaires pour votre équipe (femmes de ménage, assistants, comptables). 
+        Chaque membre peut avoir des accès personnalisés selon son rôle.
+      </p>
+
+      <!-- Liste des membres -->
+      <div id="teamMembersList">
+        <div style="text-align:center; padding:48px 24px; color:#9ca3af;">
+          <i class="fas fa-users" style="font-size:48px; margin-bottom:16px; opacity:0.3;"></i>
+          <p>Aucun membre d'équipe pour le moment</p>
+          <button class="btn btn-primary" style="margin-top:16px;" type="button" onclick="document.getElementById('btnAddTeamMember').click()">
+            <i class="fas fa-plus"></i>
+            Ajouter votre premier membre
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section informations -->
+  <section class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-info-circle"></i>
+        À propos des comptes d'équipe
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid; gap:16px;">
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-shield-alt" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Sécurisé</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Chaque membre a son propre identifiant et mot de passe</p>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-cog" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Permissions granulaires</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Contrôlez précisément ce que chaque membre peut voir et faire</p>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-bell" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Notifications partagées</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Les membres reçoivent les alertes liées à leurs permissions</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; align-items:start;">
+          <i class="fas fa-home" style="color:#10b981; margin-top:4px;"></i>
+          <div>
+            <strong>Accès par propriété</strong>
+            <p style="color:#6b7280; margin:4px 0 0;">Limitez l'accès à certains logements spécifiques si nécessaire</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
-<div class="card-body">
-<div class="form-row">
-<label>
-<input checked="" id="notifNewReservation" type="checkbox"/>
-                  Recevoir une notification pour chaque nouvelle réservation
-                </label>
-<p class="settings-hint">
-                  Utilisé pour alimenter le module Notifications et certains rappels dans le dashboard.
-                </p>
+
+<!-- ============================================ -->
+<!-- MODAL : AJOUTER UN MEMBRE -->
+<!-- ============================================ -->
+<div class="booking-modal" id="addTeamMemberModal" style="display:none;">
+  <div class="modal-overlay"></div>
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header">
+      <h2>Ajouter un membre d'équipe</h2>
+      <button class="modal-close" id="closeAddMemberModal" type="button">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form class="booking-form" id="addTeamMemberForm">
+      <!-- Informations de base -->
+      <div class="form-group">
+        <label>Email <span style="color:#ef4444;">*</span></label>
+        <input 
+          type="email" 
+          id="memberEmail" 
+          placeholder="sophie.martin@example.com"
+          required
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prénom <span style="color:#ef4444;">*</span></label>
+          <input 
+            type="text" 
+            id="memberFirstName" 
+            placeholder="Sophie"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label>Nom <span style="color:#ef4444;">*</span></label>
+          <input 
+            type="text" 
+            id="memberLastName" 
+            placeholder="Martin"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe <span style="color:#ef4444;">*</span></label>
+        <input 
+          type="password" 
+          id="memberPassword" 
+          placeholder="Minimum 8 caractères"
+          minlength="8"
+          required
+        />
+        <small style="color:#6b7280;">Le membre devra changer ce mot de passe à sa première connexion</small>
+      </div>
+
+      <!-- Rôle prédéfini -->
+      <div class="form-group">
+        <label>Rôle <span style="color:#ef4444;">*</span></label>
+        <select id="memberRole" required>
+          <option value="">-- Sélectionner un rôle --</option>
+          <option value="manager">👔 Manager / Assistant</option>
+          <option value="cleaner">🧹 Femme de ménage</option>
+          <option value="accountant">📊 Comptable</option>
+          <option value="custom">🎨 Personnalisé</option>
+        </select>
+        <small id="roleDescription" style="color:#6b7280; display:block; margin-top:8px;"></small>
+      </div>
+
+      <!-- Permissions détaillées (si rôle custom) -->
+      <div id="customPermissions" style="display:none;">
+        <div class="form-group">
+          <label style="font-weight:600; margin-bottom:12px; display:block;">
+            <i class="fas fa-shield-alt"></i>
+            Permissions détaillées
+          </label>
+
+          <div style="display:grid; gap:12px;">
+            <!-- Calendrier -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">📅 Calendrier</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewCalendar" />
+                <span>Voir le calendrier</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canEditReservations" />
+                <span>Modifier les réservations</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canCreateReservations" />
+                <span>Créer des réservations</span>
+              </label>
+            </div>
+
+            <!-- Messages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">💬 Messages</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewMessages" />
+                <span>Voir les messages</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canSendMessages" />
+                <span>Répondre aux messages</span>
+              </label>
+            </div>
+
+            <!-- Ménages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🧹 Ménages</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewCleaning" />
+                <span>Voir les ménages</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canAssignCleaning" />
+                <span>Assigner les ménages</span>
+              </label>
+            </div>
+
+            <!-- Finances -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">💰 Finances</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewFinances" />
+                <span>Voir les finances</span>
+              </label>
+            </div>
+
+            <!-- Logements -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🏠 Logements</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewProperties" />
+                <span>Voir les logements</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sélection des propriétés -->
+      <div class="form-group">
+        <label>
+          <i class="fas fa-home"></i>
+          Propriétés accessibles
+        </label>
+        <select id="memberProperties" multiple style="height:150px;">
+          <!-- Options chargées dynamiquement -->
+        </select>
+        <small style="color:#6b7280;">
+          Laissez vide pour donner accès à toutes vos propriétés. 
+          Maintenez Ctrl/Cmd pour sélectionner plusieurs propriétés.
+        </small>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelAddMember" type="button">Annuler</button>
+        <button class="btn btn-primary" type="submit">
+          <i class="fas fa-user-plus"></i>
+          Créer le compte
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
-<div class="form-row">
-<label>
-<input id="notifReminder" type="checkbox"/>
-                  Rappels la veille d’une arrivée
-                </label>
-<p class="settings-hint">
-                  Permet de recevoir un rappel de type “Arrivée demain” pour vos séjours à venir.
-                </p>
-</div>
-<div class="form-actions" style="margin-top: 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-<button class="btn btn-primary" id="saveNotifBtn" type="button">
-                  Enregistrer les préférences
-                </button>
-<span class="save-status-inline" id="notifSaveStatus"></span>
-</div>
-</div>
-</section>
-</div>
+
+<!-- ============================================ -->
+<!-- STYLE CSS POUR L'ONGLET ÉQUIPE -->
+<!-- ============================================ -->
+<style>
+.team-member-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.team-member-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.team-member-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.team-member-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.team-member-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.team-member-details h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: #111827;
+}
+
+.team-member-details p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.team-member-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 8px;
+}
+
+.team-member-permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.permission-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.permission-badge i {
+  font-size: 10px;
+}
+
+.team-member-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.team-member-inactive {
+  opacity: 0.6;
+  background: #f9fafb;
+}
+
+.team-member-inactive .team-member-avatar {
+  background: #9ca3af;
+}
+</style>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT POUR L'ONGLET ÉQUIPE -->
+<!-- À AJOUTER DANS LA SECTION <script> -->
+<!-- ============================================ -->
+<script>
+// ============================================
+// GESTION DE L'ONGLET ÉQUIPE
+// ============================================
+
+// Descriptions des rôles
+const ROLE_DESCRIPTIONS = {
+  manager: 'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',
+  cleaner: 'Accès au calendrier (lecture) et gestion des ménages uniquement.',
+  accountant: 'Accès aux finances et au calendrier (lecture).',
+  custom: 'Choisissez manuellement chaque permission.'
+};
+
+// Charger la liste des membres
+async function loadTeamMembers() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/sub-accounts/list', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    displayTeamMembers(data.subAccounts);
+
+  } catch (error) {
+    console.error('Erreur chargement membres:', error);
+    alert('Erreur lors du chargement de l\'équipe');
+  }
+}
+
+// Afficher les membres
+function displayTeamMembers(members) {
+  const container = document.getElementById('teamMembersList');
+
+  if (members.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:48px 24px; color:#9ca3af;">
+        <i class="fas fa-users" style="font-size:48px; margin-bottom:16px; opacity:0.3;"></i>
+        <p>Aucun membre d'équipe pour le moment</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = members.map(member => {
+    const initials = `${member.first_name?.charAt(0) || ''}${member.last_name?.charAt(0) || ''}`;
+    const isActive = member.is_active;
+    
+    // Compter les permissions actives
+    const permissions = [];
+    if (member.can_view_calendar) permissions.push({ icon: 'calendar', label: 'Calendrier' });
+    if (member.can_view_messages) permissions.push({ icon: 'comment-dots', label: 'Messages' });
+    if (member.can_view_cleaning) permissions.push({ icon: 'broom', label: 'Ménages' });
+    if (member.can_view_finances) permissions.push({ icon: 'dollar-sign', label: 'Finances' });
+    if (member.can_view_properties) permissions.push({ icon: 'home', label: 'Logements' });
+
+    const roleLabels = {
+      manager: '👔 Manager',
+      cleaner: '🧹 Femme de ménage',
+      accountant: '📊 Comptable',
+      custom: '🎨 Personnalisé'
+    };
+
+    return `
+      <div class="team-member-card ${!isActive ? 'team-member-inactive' : ''}">
+        <div class="team-member-header">
+          <div class="team-member-info">
+            <div class="team-member-avatar">${initials}</div>
+            <div class="team-member-details">
+              <h3>${member.first_name} ${member.last_name}</h3>
+              <p>${member.email}</p>
+              <span class="team-member-role">${roleLabels[member.role] || member.role}</span>
+              ${!isActive ? '<span style="color:#ef4444; font-size:12px; margin-left:8px;">● Désactivé</span>' : ''}
+            </div>
+          </div>
+          <div class="team-member-actions">
+            <button 
+              class="btn btn-ghost btn-sm" 
+              onclick="editTeamMember(${member.id})"
+              title="Modifier"
+            >
+              <i class="fas fa-edit"></i>
+            </button>
+            <button 
+              class="btn btn-ghost btn-sm" 
+              onclick="toggleTeamMember(${member.id}, ${isActive})"
+              title="${isActive ? 'Désactiver' : 'Activer'}"
+            >
+              <i class="fas fa-${isActive ? 'pause' : 'play'}-circle"></i>
+            </button>
+            <button 
+              class="btn btn-ghost btn-sm" 
+              onclick="deleteTeamMember(${member.id}, '${member.email}')"
+              title="Supprimer"
+            >
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+
+        ${permissions.length > 0 ? `
+          <div class="team-member-permissions">
+            ${permissions.map(p => `
+              <span class="permission-badge">
+                <i class="fas fa-${p.icon}"></i>
+                ${p.label}
+              </span>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${member.properties && member.properties.length > 0 ? `
+          <div style="margin-top:12px; padding-top:12px; border-top:1px solid #e5e7eb;">
+            <small style="color:#6b7280;">
+              <i class="fas fa-home"></i>
+              Accès limité à ${member.properties.length} propriété(s)
+            </small>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// Ouvrir le modal d'ajout
+document.getElementById('btnAddTeamMember')?.addEventListener('click', async function() {
+  const modal = document.getElementById('addTeamMemberModal');
+  modal.style.display = 'flex';
+
+  // Charger les propriétés
+  await loadPropertiesForSelect();
+});
+
+// Fermer le modal
+document.getElementById('closeAddMemberModal')?.addEventListener('click', function() {
+  document.getElementById('addTeamMemberModal').style.display = 'none';
+  document.getElementById('addTeamMemberForm').reset();
+});
+
+document.getElementById('cancelAddMember')?.addEventListener('click', function() {
+  document.getElementById('addTeamMemberModal').style.display = 'none';
+  document.getElementById('addTeamMemberForm').reset();
+});
+
+// Changer la description selon le rôle
+document.getElementById('memberRole')?.addEventListener('change', function() {
+  const role = this.value;
+  const desc = document.getElementById('roleDescription');
+  const customPerms = document.getElementById('customPermissions');
+
+  desc.textContent = ROLE_DESCRIPTIONS[role] || '';
+
+  if (role === 'custom') {
+    customPerms.style.display = 'block';
+  } else {
+    customPerms.style.display = 'none';
+  }
+});
+
+// Charger les propriétés pour le select
+async function loadPropertiesForSelect() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+    const select = document.getElementById('memberProperties');
+
+    select.innerHTML = data.properties.map(p => 
+      `<option value="${p.id}">${p.name}</option>`
+    ).join('');
+
+  } catch (error) {
+    console.error('Erreur chargement propriétés:', error);
+  }
+}
+
+// Soumettre le formulaire
+document.getElementById('addTeamMemberForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const role = document.getElementById('memberRole').value;
+  const propertySelect = document.getElementById('memberProperties');
+  const selectedProperties = Array.from(propertySelect.selectedOptions).map(o => o.value);
+
+  const data = {
+    email: document.getElementById('memberEmail').value,
+    password: document.getElementById('memberPassword').value,
+    firstName: document.getElementById('memberFirstName').value,
+    lastName: document.getElementById('memberLastName').value,
+    role: role,
+    propertyIds: selectedProperties.length > 0 ? selectedProperties : null
+  };
+
+  // Si rôle custom, récupérer les permissions
+  if (role === 'custom') {
+    data.permissions = {
+      canViewCalendar: document.getElementById('perm_canViewCalendar')?.checked || false,
+      canEditReservations: document.getElementById('perm_canEditReservations')?.checked || false,
+      canCreateReservations: document.getElementById('perm_canCreateReservations')?.checked || false,
+      canViewMessages: document.getElementById('perm_canViewMessages')?.checked || false,
+      canSendMessages: document.getElementById('perm_canSendMessages')?.checked || false,
+      canViewCleaning: document.getElementById('perm_canViewCleaning')?.checked || false,
+      canAssignCleaning: document.getElementById('perm_canAssignCleaning')?.checked || false,
+      canViewFinances: document.getElementById('perm_canViewFinances')?.checked || false,
+      canViewProperties: document.getElementById('perm_canViewProperties')?.checked || false
+    };
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/sub-accounts/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    alert('✅ Membre ajouté avec succès !');
+    document.getElementById('addTeamMemberModal').style.display = 'none';
+    document.getElementById('addTeamMemberForm').reset();
+    loadTeamMembers();
+
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert('❌ Erreur : ' + error.message);
+  }
+});
+
+// Supprimer un membre
+async function deleteTeamMember(id, email) {
+  if (!confirm(`Supprimer définitivement ${email} ?\n\nCette action est irréversible.`)) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/sub-accounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    alert('✅ Membre supprimé');
+    loadTeamMembers();
+
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert('❌ Erreur : ' + error.message);
+  }
+}
+
+// Activer/désactiver un membre
+async function toggleTeamMember(id, currentlyActive) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/sub-accounts/${id}/toggle`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    loadTeamMembers();
+
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert('❌ Erreur : ' + error.message);
+  }
+}
+
+// Modifier un membre (TODO: à implémenter)
+function editTeamMember(id) {
+  alert('Fonctionnalité en cours de développement');
+}
+
+// Charger les membres au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  // Attendre que l'onglet soit visible
+  const teamTab = document.querySelector('[data-tab="team"]');
+  if (teamTab) {
+    teamTab.addEventListener('click', function() {
+      setTimeout(loadTeamMembers, 100);
+    });
+  }
+});
+</script>
 <!-- Onglet : Mon abonnement -->
 <div class="tab-pane" data-tab="subscription" id="tab-subscription">
 <section class="card mb-lg">
