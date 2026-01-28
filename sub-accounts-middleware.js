@@ -5,6 +5,16 @@
 
 const jwt = require('jsonwebtoken');
 
+// Variable globale pour stocker la pool
+let dbPool = null;
+
+/**
+ * Initialiser le middleware avec la pool
+ */
+function initializeMiddleware(pool) {
+  dbPool = pool;
+}
+
 /**
  * Middleware d'authentification pour sous-comptes
  * Vérifie le token JWT et charge les permissions
@@ -21,7 +31,7 @@ async function authenticateSubAccount(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Charger les infos du sous-compte avec permissions
-    const result = await req.pool.query(`
+    const result = await dbPool.query(`
       SELECT 
         sa.*,
         sp.*,
@@ -63,7 +73,7 @@ async function authenticateAny(req, res, next) {
     
     // Sous-compte ?
     if (decoded.subAccountId) {
-      const result = await req.pool.query(`
+      const result = await dbPool.query(`
         SELECT 
           sa.*,
           sp.*,
@@ -84,7 +94,7 @@ async function authenticateAny(req, res, next) {
       
     } else {
       // User principal
-      const result = await req.pool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
+      const result = await dbPool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
       
       if (result.rows.length === 0) {
         return res.status(401).json({ error: 'Utilisateur introuvable' });
@@ -217,6 +227,7 @@ function requireTeamManagement(req, res, next) {
 }
 
 module.exports = {
+  initializeMiddleware,
   authenticateSubAccount,
   authenticateAny,
   requirePermission,
