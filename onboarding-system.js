@@ -36,13 +36,11 @@ Pouvez-vous me donner votre numéro de téléphone ? (Pour vous joindre en cas d
 
 Dans quelle langue souhaitez-vous communiquer ?
 
-🇫🇷 Français
-🇬🇧 English
-🇪🇸 Español
-🇩🇪 Deutsch
-🇮🇹 Italiano
-
-Répondez avec le code : fr, en, es, de, ou it`,
+🇫🇷 Français → Tapez "fr"
+🇬🇧 English → Tapez "en"
+🇪🇸 Español → Tapez "es"
+🇩🇪 Deutsch → Tapez "de"
+🇮🇹 Italiano → Tapez "it"`,
     
     completed: `Merci {firstName} ! Votre profil est maintenant configuré. 🎉
 
