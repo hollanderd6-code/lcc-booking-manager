@@ -3,9 +3,16 @@
 // Onboarding + Réponses Auto Multilingues
 // ============================================
 
-const { needsOnboarding, processOnboardingResponse } = require('./onboarding-system');
+const { getNextOnboardingStep, processOnboardingResponse } = require('./onboarding-system');
 const { detectCategory, getAutoResponse, needsOwnerNotification } = require('./auto-responses-config-multilang');
 const { getGroqResponse, requiresHumanIntervention } = require('./groq-ai');
+
+/**
+ * Vérifier si l'onboarding est nécessaire
+ */
+function needsOnboarding(conversation) {
+  return !conversation.onboarding_completed;
+}
 
 /**
  * Traiter un message entrant du client
@@ -25,7 +32,14 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     // ========================================
     if (needsOnboarding(conversation)) {
       console.log('🎯 Onboarding en cours...');
-      return await processOnboardingResponse(conversation, message.message, pool, io);
+      const onboardingResult = await processOnboardingResponse(message, conversation, pool);
+      
+      // Envoyer la réponse d'onboarding
+      if (onboardingResult && onboardingResult.shouldRespond && onboardingResult.message) {
+        await sendBotMessage(conversation.id, onboardingResult.message, pool, io);
+      }
+      
+      return true;
     }
 
     // ========================================
