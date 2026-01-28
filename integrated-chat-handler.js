@@ -39,7 +39,15 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         await sendBotMessage(conversation.id, onboardingResult.message, pool, io);
       }
       
-      return true;
+      // Si l'onboarding vient de se terminer, mettre à jour la conversation
+      if (onboardingResult && onboardingResult.completed) {
+        console.log('✅ Onboarding terminé ! Passage aux réponses auto...');
+        conversation.onboarding_completed = true;
+        // Continuer pour traiter le message avec les réponses auto
+      } else {
+        // Onboarding pas encore terminé, on s'arrête ici
+        return true;
+      }
     }
 
     // ========================================
