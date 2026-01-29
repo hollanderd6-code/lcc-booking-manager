@@ -4949,9 +4949,9 @@ if (req.file) {
   }
 });
 // Route pour vérifier le statut de l'abonnement
-app.get('/api/subscription/status', authenticateToken, async (req, res) => {
+app.get('/api/subscription/status', authenticateAny, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.isSubAccount ? req.parentUserId : req.user.id;
 
     const result = await pool.query(
       `SELECT 
