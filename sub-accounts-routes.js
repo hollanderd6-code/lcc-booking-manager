@@ -429,12 +429,12 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sp.can_access_settings,
           sp.can_manage_team,
           
-          -- Propriétés accessibles (array format)
+          -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
             (SELECT array_agg(property_id)
              FROM sub_account_properties 
              WHERE sub_account_id = sa.id),
-            ARRAY[]::int[]
+            ARRAY[]::text[]
           ) as accessible_properties
           
         FROM sub_accounts sa
