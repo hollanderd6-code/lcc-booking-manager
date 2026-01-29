@@ -438,90 +438,6 @@
     .card h2 {
       margin-bottom: 24px !important;
     }
-
-    /* ===== MODAL STYLES ===== */
-    .booking-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .booking-modal .modal-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1;
-    }
-
-    .booking-modal .modal-content {
-      position: relative;
-      z-index: 2;
-      background: white;
-      border-radius: 12px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-
-    .booking-modal .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 24px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .booking-modal .modal-header h2 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .booking-modal .modal-close {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: #6b7280;
-      padding: 0;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-      transition: all 0.2s;
-    }
-
-    .booking-modal .modal-close:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    .booking-modal .booking-form {
-      padding: 24px;
-    }
-
-    .booking-modal .modal-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      padding: 16px 24px;
-      border-top: 1px solid #e5e7eb;
-      background: #f9fafb;
-      border-radius: 0 0 12px 12px;
-    }
   </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
@@ -2056,10 +1972,311 @@ if (logoInput && logoPreview) {
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>
 
+
 <script>
+// ============================================
+// SCRIPT COMPLET GESTION ÉQUIPE AVEC ÉDITION
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
 console.log('🟢 Script équipe chargé - DOM ready');
-const ROLE_DESCRIPTIONS={manager:'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',cleaner:'Accès au calendrier (lecture) et gestion des ménages uniquement.',accountant:'Accès aux finances et au calendrier (lecture).',custom:'Choisissez manuellement chaque permission.'};async function loadTeamMembers(){try{const token=localStorage.getItem('lcc_token');const res=await fetch('/api/sub-accounts/list',{headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();if(!data.success)throw new Error(data.error);displayTeamMembers(data.subAccounts);}catch(error){console.error('Erreur:',error);alert('Erreur lors du chargement de l\'équipe');}}function displayTeamMembers(members){const container=document.getElementById('teamMembersList');if(members.length===0){container.innerHTML='<div style="text-align:center;padding:48px 24px;color:#9ca3af;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i><p>Aucun membre d\'équipe</p></div>';return;}container.innerHTML=members.map(member=>{const initials=`${member.first_name?.charAt(0)||''}${member.last_name?.charAt(0)||''}`;const isActive=member.is_active;const permissions=[];if(member.can_view_calendar)permissions.push({icon:'calendar',label:'Calendrier'});if(member.can_view_messages)permissions.push({icon:'comment-dots',label:'Messages'});if(member.can_view_cleaning)permissions.push({icon:'broom',label:'Ménages'});if(member.can_view_finances)permissions.push({icon:'dollar-sign',label:'Finances'});if(member.can_view_properties)permissions.push({icon:'home',label:'Logements'});const roleLabels={manager:'👔 Manager',cleaner:'🧹 Femme de ménage',accountant:'📊 Comptable',custom:'🎨 Personnalisé'};return`<div class="team-member-card ${!isActive?'team-member-inactive':''}"><div class="team-member-header"><div class="team-member-info"><div class="team-member-avatar">${initials}</div><div class="team-member-details"><h3>${member.first_name} ${member.last_name}</h3><p>${member.email}</p><span class="team-member-role">${roleLabels[member.role]||member.role}</span>${!isActive?'<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>':''}</div></div><div class="team-member-actions"><button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})"><i class="fas fa-edit"></i></button><button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})"><i class="fas fa-${isActive?'pause':'play'}-circle"></i></button><button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id},'${member.email}')"><i class="fas fa-trash"></i></button></div></div>${permissions.length>0?`<div class="team-member-permissions">${permissions.map(p=>`<span class="permission-badge"><i class="fas fa-${p.icon}"></i> ${p.label}</span>`).join('')}</div>`:''}</div>`;}).join('');}const btnAdd=document.getElementById('btnAddTeamMember');if(btnAdd){btnAdd.addEventListener('click',async function(){console.log('🔵 Bouton cliqué');const modal=document.getElementById('addTeamMemberModal');if(modal){modal.style.display='flex';await loadPropertiesForSelect();}});}document.getElementById('closeAddMemberModal')?.addEventListener('click',()=>document.getElementById('addTeamMemberModal').style.display='none');document.getElementById('cancelAddMember')?.addEventListener('click',()=>document.getElementById('addTeamMemberModal').style.display='none');document.getElementById('memberRole')?.addEventListener('change',function(){const desc=document.getElementById('roleDescription');const customPerms=document.getElementById('customPermissions');desc.textContent=ROLE_DESCRIPTIONS[this.value]||'';customPerms.style.display=this.value==='custom'?'block':'none';});async function loadPropertiesForSelect(){try{const token=localStorage.getItem('lcc_token');const res=await fetch('/api/properties',{headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();const select=document.getElementById('memberProperties');select.innerHTML=data.properties.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');}catch(error){console.error('Erreur:',error);}}document.getElementById('addTeamMemberForm')?.addEventListener('submit',async function(e){e.preventDefault();const role=document.getElementById('memberRole').value;const data={email:document.getElementById('memberEmail').value,password:document.getElementById('memberPassword').value,firstName:document.getElementById('memberFirstName').value,lastName:document.getElementById('memberLastName').value,role:role,propertyIds:Array.from(document.getElementById('memberProperties').selectedOptions).map(o=>o.value)};if(role==='custom'){data.permissions={canViewCalendar:document.getElementById('perm_canViewCalendar')?.checked||false,canEditReservations:document.getElementById('perm_canEditReservations')?.checked||false,canCreateReservations:document.getElementById('perm_canCreateReservations')?.checked||false,canViewMessages:document.getElementById('perm_canViewMessages')?.checked||false,canSendMessages:document.getElementById('perm_canSendMessages')?.checked||false,canViewCleaning:document.getElementById('perm_canViewCleaning')?.checked||false,canAssignCleaning:document.getElementById('perm_canAssignCleaning')?.checked||false,canViewFinances:document.getElementById('perm_canViewFinances')?.checked||false,canViewProperties:document.getElementById('perm_canViewProperties')?.checked||false};}try{const token=localStorage.getItem('lcc_token');const res=await fetch('/api/sub-accounts/create',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(data)});const result=await res.json();if(!result.success)throw new Error(result.error);alert('✅ Membre ajouté');document.getElementById('addTeamMemberModal').style.display='none';this.reset();loadTeamMembers();}catch(error){alert('❌ '+error.message);}});window.deleteTeamMember=async function(id,email){if(!confirm(`Supprimer ${email} ?`))return;try{const token=localStorage.getItem('lcc_token');const res=await fetch(`/api/sub-accounts/${id}`,{method:'DELETE',headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();if(!data.success)throw new Error(data.error);alert('✅ Supprimé');loadTeamMembers();}catch(error){alert('❌ '+error.message);}};window.toggleTeamMember=async function(id){try{const token=localStorage.getItem('lcc_token');const res=await fetch(`/api/sub-accounts/${id}/toggle`,{method:'PUT',headers:{'Authorization':`Bearer ${token}`}});const data=await res.json();if(!data.success)throw new Error(data.error);loadTeamMembers();}catch(error){alert('❌ '+error.message);}};window.editTeamMember=function(id){alert('En développement');};const teamTab=document.querySelector('[data-tab="team"]');if(teamTab){teamTab.addEventListener('click',()=>setTimeout(loadTeamMembers,100));}});
+
+let currentEditingMemberId = null; // Pour savoir quel membre on édite
+
+const ROLE_DESCRIPTIONS = {
+  manager: 'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',
+  cleaner: 'Accès au calendrier (lecture) et gestion des ménages uniquement.',
+  accountant: 'Accès aux finances et au calendrier (lecture).',
+  custom: 'Choisissez manuellement chaque permission.'
+};
+
+// Charger la liste des membres
+async function loadTeamMembers() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/sub-accounts/list', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    displayTeamMembers(data.subAccounts);
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert('Erreur lors du chargement de l\'équipe');
+  }
+}
+
+// Afficher les membres
+function displayTeamMembers(members) {
+  const container = document.getElementById('teamMembersList');
+  if (members.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9ca3af;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i><p>Aucun membre d\'équipe</p></div>';
+    return;
+  }
+
+  container.innerHTML = members.map(member => {
+    const initials = `${member.first_name?.charAt(0) || ''}${member.last_name?.charAt(0) || ''}`;
+    const isActive = member.is_active;
+    const permissions = [];
+    if (member.can_view_calendar) permissions.push({ icon: 'calendar', label: 'Calendrier' });
+    if (member.can_view_messages) permissions.push({ icon: 'comment-dots', label: 'Messages' });
+    if (member.can_view_cleaning) permissions.push({ icon: 'broom', label: 'Ménages' });
+    if (member.can_view_finances) permissions.push({ icon: 'dollar-sign', label: 'Finances' });
+    if (member.can_view_properties) permissions.push({ icon: 'home', label: 'Logements' });
+
+    const roleLabels = {
+      manager: '👔 Manager',
+      cleaner: '🧹 Femme de ménage',
+      accountant: '📊 Comptable',
+      custom: '🎨 Personnalisé'
+    };
+
+    return `
+      <div class="team-member-card ${!isActive ? 'team-member-inactive' : ''}">
+        <div class="team-member-header">
+          <div class="team-member-info">
+            <div class="team-member-avatar">${initials}</div>
+            <div class="team-member-details">
+              <h3>${member.first_name} ${member.last_name}</h3>
+              <p>${member.email}</p>
+              <span class="team-member-role">${roleLabels[member.role] || member.role}</span>
+              ${!isActive ? '<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>' : ''}
+            </div>
+          </div>
+          <div class="team-member-actions">
+            <button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})" title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})" title="${isActive ? 'Désactiver' : 'Activer'}">
+              <i class="fas fa-${isActive ? 'pause' : 'play'}-circle"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id}, '${member.email}')" title="Supprimer">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        ${permissions.length > 0 ? `
+          <div class="team-member-permissions">
+            ${permissions.map(p => `<span class="permission-badge"><i class="fas fa-${p.icon}"></i> ${p.label}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// BOUTON AJOUTER
+const btnAdd = document.getElementById('btnAddTeamMember');
+if (btnAdd) {
+  btnAdd.addEventListener('click', async function() {
+    currentEditingMemberId = null; // Mode création
+    document.getElementById('addTeamMemberForm').reset();
+    document.querySelector('#addTeamMemberModal h2').textContent = 'Ajouter un membre d\'équipe';
+    document.querySelector('#addTeamMemberModal button[type="submit"]').innerHTML = '<i class="fas fa-user-plus"></i> Créer le compte';
+    
+    const modal = document.getElementById('addTeamMemberModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      await loadPropertiesForSelect();
+    }
+  });
+}
+
+// FERMER MODAL
+document.getElementById('closeAddMemberModal')?.addEventListener('click', () => {
+  document.getElementById('addTeamMemberModal').style.display = 'none';
+  currentEditingMemberId = null;
+});
+
+document.getElementById('cancelAddMember')?.addEventListener('click', () => {
+  document.getElementById('addTeamMemberModal').style.display = 'none';
+  currentEditingMemberId = null;
+});
+
+// CHANGEMENT DE RÔLE
+document.getElementById('memberRole')?.addEventListener('change', function() {
+  const desc = document.getElementById('roleDescription');
+  const customPerms = document.getElementById('customPermissions');
+  desc.textContent = ROLE_DESCRIPTIONS[this.value] || '';
+  customPerms.style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+// CHARGER PROPRIÉTÉS
+async function loadPropertiesForSelect() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const select = document.getElementById('memberProperties');
+    select.innerHTML = data.properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  } catch (error) {
+    console.error('Erreur:', error);
+  }
+}
+
+// SUBMIT FORMULAIRE (CRÉATION OU MODIFICATION)
+document.getElementById('addTeamMemberForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const role = document.getElementById('memberRole').value;
+  const data = {
+    email: document.getElementById('memberEmail').value,
+    firstName: document.getElementById('memberFirstName').value,
+    lastName: document.getElementById('memberLastName').value,
+    role: role,
+    propertyIds: Array.from(document.getElementById('memberProperties').selectedOptions).map(o => o.value)
+  };
+
+  // Mot de passe uniquement en création
+  const passwordField = document.getElementById('memberPassword');
+  if (passwordField.value.trim()) {
+    data.password = passwordField.value;
+  }
+
+  if (role === 'custom') {
+    data.permissions = {
+      canViewCalendar: document.getElementById('perm_canViewCalendar')?.checked || false,
+      canEditReservations: document.getElementById('perm_canEditReservations')?.checked || false,
+      canCreateReservations: document.getElementById('perm_canCreateReservations')?.checked || false,
+      canViewMessages: document.getElementById('perm_canViewMessages')?.checked || false,
+      canSendMessages: document.getElementById('perm_canSendMessages')?.checked || false,
+      canViewCleaning: document.getElementById('perm_canViewCleaning')?.checked || false,
+      canAssignCleaning: document.getElementById('perm_canAssignCleaning')?.checked || false,
+      canViewFinances: document.getElementById('perm_canViewFinances')?.checked || false,
+      canViewProperties: document.getElementById('perm_canViewProperties')?.checked || false
+    };
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    
+    // Mode édition ou création
+    const url = currentEditingMemberId 
+      ? `/api/sub-accounts/${currentEditingMemberId}/permissions`
+      : '/api/sub-accounts/create';
+    
+    const method = currentEditingMemberId ? 'PUT' : 'POST';
+    
+    const res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error);
+    
+    alert(currentEditingMemberId ? '✅ Membre modifié !' : '✅ Membre ajouté !');
+    document.getElementById('addTeamMemberModal').style.display = 'none';
+    currentEditingMemberId = null;
+    this.reset();
+    loadTeamMembers();
+  } catch (error) {
+    alert('❌ ' + error.message);
+  }
+});
+
+// FONCTION ÉDITER (GLOBALE)
+window.editTeamMember = async function(id) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/sub-accounts/list', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    
+    const member = data.subAccounts.find(m => m.id === id);
+    if (!member) throw new Error('Membre introuvable');
+    
+    // Pré-remplir le formulaire
+    currentEditingMemberId = id;
+    document.getElementById('memberEmail').value = member.email;
+    document.getElementById('memberFirstName').value = member.first_name;
+    document.getElementById('memberLastName').value = member.last_name;
+    document.getElementById('memberRole').value = member.role;
+    
+    // Masquer le champ mot de passe en édition
+    const passwordField = document.getElementById('memberPassword');
+    passwordField.removeAttribute('required');
+    passwordField.placeholder = 'Laisser vide pour ne pas changer';
+    
+    // Afficher permissions si custom
+    if (member.role === 'custom') {
+      document.getElementById('customPermissions').style.display = 'block';
+      document.getElementById('perm_canViewCalendar').checked = member.can_view_calendar;
+      document.getElementById('perm_canEditReservations').checked = member.can_edit_reservations;
+      document.getElementById('perm_canCreateReservations').checked = member.can_create_reservations;
+      document.getElementById('perm_canViewMessages').checked = member.can_view_messages;
+      document.getElementById('perm_canSendMessages').checked = member.can_send_messages;
+      document.getElementById('perm_canViewCleaning').checked = member.can_view_cleaning;
+      document.getElementById('perm_canAssignCleaning').checked = member.can_assign_cleaning;
+      document.getElementById('perm_canViewFinances').checked = member.can_view_finances;
+      document.getElementById('perm_canViewProperties').checked = member.can_view_properties;
+    }
+    
+    // Charger les propriétés et sélectionner celles du membre
+    await loadPropertiesForSelect();
+    if (member.properties && member.properties.length > 0) {
+      const select = document.getElementById('memberProperties');
+      Array.from(select.options).forEach(option => {
+        option.selected = member.properties.includes(parseInt(option.value));
+      });
+    }
+    
+    // Changer le titre du modal
+    document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
+    document.querySelector('#addTeamMemberModal button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+    
+    // Ouvrir le modal
+    document.getElementById('addTeamMemberModal').style.display = 'flex';
+  } catch (error) {
+    alert('❌ ' + error.message);
+  }
+};
+
+// FONCTION SUPPRIMER (GLOBALE)
+window.deleteTeamMember = async function(id, email) {
+  if (!confirm(`Supprimer définitivement ${email} ?\n\nCette action est irréversible.`)) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/sub-accounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    alert('✅ Membre supprimé');
+    loadTeamMembers();
+  } catch (error) {
+    alert('❌ ' + error.message);
+  }
+};
+
+// FONCTION TOGGLE (GLOBALE)
+window.toggleTeamMember = async function(id) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/sub-accounts/${id}/toggle`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    loadTeamMembers();
+  } catch (error) {
+    alert('❌ ' + error.message);
+  }
+};
+
+// CHARGER AU CLIC SUR ONGLET
+const teamTab = document.querySelector('[data-tab="team"]');
+if (teamTab) {
+  teamTab.addEventListener('click', () => setTimeout(loadTeamMembers, 100));
+}
+
+});
 </script>
 </body>
 </html>
