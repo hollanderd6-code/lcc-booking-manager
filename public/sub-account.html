@@ -2,68 +2,99 @@
 <html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Boostinghost - Espace Sous-Compte</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boostinghost - Espace Collaborateur</title>
 
-<!-- ============================================ -->
-<!-- 🔐 VÉRIFICATION AUTH SOUS-COMPTE UNIQUEMENT -->
-<!-- ============================================ -->
 <script>
-console.log('🔐 SUB-ACCOUNT PAGE - Auth Check');
-
-const IS_NATIVE = (() => {
-  try {
-    return !!(
-      window.Capacitor?.isNativePlatform?.() ||
-      window.location.protocol === 'capacitor:' ||
-      window.location.protocol === 'ionic:'
-    );
-  } catch (e) {
-    return false;
-  }
-})();
-
-const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
-
-// Vérifier que c'est bien un sous-compte
+// Vérification auth
 const token = localStorage.getItem('lcc_token');
 const accountType = localStorage.getItem('lcc_account_type');
 
 if (!token) {
-  console.log('❌ Pas de token');
-  window.location.href = IS_NATIVE ? 'login.html' : '/login.html';
+  window.location.href = '/login.html';
 } else if (accountType !== 'sub') {
-  console.log('⚠️ Compte principal détecté - Redirection vers app.html');
-  window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
-} else {
-  console.log('✅ Sous-compte détecté - Chargement de l\'interface');
+  window.location.href = '/app.html';
 }
 
-// Charger les infos utilisateur
-let currentUser = {};
-let permissions = {};
-try {
-  const userData = localStorage.getItem('lcc_user');
-  const permData = localStorage.getItem('lcc_permissions');
-  if (userData) currentUser = JSON.parse(userData);
-  if (permData) permissions = JSON.parse(permData);
-  console.log('👤 Utilisateur:', currentUser.name || currentUser.email);
-  console.log('🔐 Permissions:', permissions);
-} catch (e) {
-  console.error('Erreur chargement données:', e);
-}
+console.log('✅ Sous-compte connecté');
+console.log('🔐 Permissions:', JSON.parse(localStorage.getItem('lcc_permissions') || '{}'));
 </script>
 
-<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-<!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<!-- CSS plateforme -->
-<link href="/css/style.css?v=3" rel="stylesheet"/>
-<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
-<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/dark-mode.css">
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css" rel="stylesheet"/>
+<link href="/css/dark-mode.css" rel="stylesheet"/>
 
+<style>
+.sub-account-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.permission-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+}
+.permission-card i {
+  color: #10b981;
+  font-size: 20px;
+}
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.quick-action {
+  padding: 24px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.quick-action:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+.quick-action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+.quick-action-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #111827;
+}
+</style>
+
+<!-- STYLES PERSONNALISÉS DE VOTRE FICHIER -->
 <style>
 /* ===== LAYOUT SPÉCIFIQUE SOUS-COMPTE ===== */
 .sub-account-badge {
@@ -258,346 +289,175 @@ try {
   }
 }
 </style>
+
 </head>
 
-<body>
-<!-- Container -->
-<div class="app-container">
+<body data-page="sub-account">
 
-<!-- Sidebar -->
-<aside class="sidebar">
-  <div class="sidebar-header">
-    <a class="sidebar-logo" href="/sub-account.html">
-      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;">
-      <div class="sidebar-logo-text">
-        <span class="sidebar-logo-title">
-          <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
-        </span>
-        <span class="sidebar-logo-subtitle">Espace Sous-Compte</span>
-      </div>
-    </a>
-  </div>
-
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-      <a class="nav-item active" href="/sub-account.html">
-        <i class="fas fa-th-large"></i>
-        <span>Dashboard</span>
-      </a>
-      <a class="nav-item" href="/messages.html" id="navMessages">
-        <i class="fas fa-comment-dots"></i>
-        <span>Messages</span>
-      </a>
-    </div>
-
-    <!-- GESTION - selon permissions -->
-    <div class="nav-section" id="navGestion">
-      <div class="nav-section-title">Gestion</div>
-      <a class="nav-item" href="/settings.html" id="navProperties">
-        <i class="fas fa-home"></i>
-        <span>Mes logements</span>
-      </a>
-      <a class="nav-item" href="/cleaning.html" id="navCleaning">
-        <i class="fas fa-broom"></i>
-        <span>Gestion du ménage</span>
-      </a>
-    </div>
-
-    <!-- AIDE -->
-    <div class="nav-section">
-      <div class="nav-section-title">Support</div>
-      <a class="nav-item" href="/help.html">
-        <i class="fas fa-question-circle"></i>
-        <span>Aide</span>
-      </a>
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-profile">
-      <div class="user-avatar" id="userAvatar">U</div>
-      <div class="user-info">
-        <div class="user-name" id="userName">Sous-compte</div>
-        <div class="user-email" id="userEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c0a5ada1a9ac80a5b8a1adb0aca5eea3afad">[email&#160;protected]</a></div>
-      </div>
-      <button class="btn btn-ghost btn-xs" id="logoutBtn" title="Déconnexion">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-</aside>
-
-<!-- Main Content -->
-<main class="main-content">
-  <!-- Header -->
-  <header class="main-header">
-    <div class="header-left">
-      <div class="page-kicker">Espace collaborateur</div>
-      <h1 class="page-title">Tableau de bord</h1>
-      <p class="page-subtitle" id="welcomeMessage">
-        Bienvenue dans votre espace de travail
-      </p>
-    </div>
-  </header>
-
-  <div class="page-content">
-    
-    <!-- Badge sous-compte (visible uniquement sur desktop) -->
-    <div class="sub-account-badge" style="display: none;" id="desktopBadge">
-      <i class="fas fa-user-shield"></i>
-      <span id="badgeName">Sous-compte</span>
-    </div>
-
-    <!-- Info Banner -->
-    <div class="info-banner">
-      <i class="fas fa-info-circle"></i>
-      <div class="info-banner-content">
-        <h3>Compte limité</h3>
-        <p>Vous utilisez un compte avec permissions restreintes. Certaines fonctionnalités peuvent être désactivées.</p>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <section class="card">
-      <h2 style="margin-bottom: 4px;">Actions rapides</h2>
-      <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">Accédez rapidement aux fonctionnalités disponibles</p>
-      
-      <div class="quick-actions" id="quickActionsGrid">
-        <!-- Généré dynamiquement -->
-      </div>
-    </section>
-
-    <!-- Permissions -->
-    <section class="card">
-      <h2 style="margin-bottom: 4px;">Vos permissions</h2>
-      <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">Détail des accès autorisés sur votre compte</p>
-      
-      <div class="permissions-list" id="permissionsList">
-        <!-- Généré dynamiquement -->
-      </div>
-    </section>
-
-  </div>
-</main>
-
+<!-- Badge fixe en haut à droite -->
+<div class="sub-account-badge">
+  <i class="fas fa-user-shield"></i>
+  <span id="badgeText">Sous-compte</span>
 </div>
 
-<!-- ============================================ -->
-<!-- SCRIPTS -->
-<!-- ============================================ -->
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-// ===== DONNÉES GLOBALES =====
-// token déjà déclaré en haut du fichier
-let userData = {};
-let userPermissions = {};
+<!-- Sidebar injectée par bh-layout.js -->
+<div id="bhSidebar"></div>
 
-// Charger les données avec debug
-try {
-  const userDataStr = localStorage.getItem('lcc_user');
-  const permissionsStr = localStorage.getItem('lcc_permissions');
-  
-  console.log('📦 localStorage.lcc_user:', userDataStr);
-  console.log('📦 localStorage.lcc_permissions:', permissionsStr);
-  
-  if (userDataStr) {
-    userData = JSON.parse(userDataStr);
-  }
-  
-  if (permissionsStr) {
-    userPermissions = JSON.parse(permissionsStr);
-  }
-  
-  console.log('✅ Données parsées:', { userData, userPermissions });
-} catch (e) {
-  console.error('❌ Erreur parsing données:', e);
-}
+<!-- Main Content -->
+<div class="app-container">
+  <main class="main-content">
+    
+    <!-- Header -->
+    <header class="main-header">
+      <div class="header-left">
+        <div class="page-kicker">ESPACE COLLABORATEUR</div>
+        <h1 class="page-title">Tableau de bord</h1>
+        <p class="page-subtitle">Bienvenue dans votre espace de travail</p>
+      </div>
+    </header>
 
-// Vérifier qu'on a bien des données
-if (!token || Object.keys(userData).length === 0) {
-  console.error('❌ Données manquantes, rechargement depuis le serveur...');
-  // Tenter de recharger
-  fetch('/api/auth/verify', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.accountType === 'sub') {
-      localStorage.setItem('lcc_user', JSON.stringify(data.subAccount));
-      localStorage.setItem('lcc_permissions', JSON.stringify(data.permissions));
-      location.reload();
-    }
-  })
-  .catch(err => console.error('❌ Erreur rechargement:', err));
-}
+    <div class="page-content">
 
-// ===== INITIALISATION UI =====
-document.addEventListener('DOMContentLoaded', function() {
-  
-  console.log('🚀 Initialisation interface sous-compte');
-  
-  // ===== 1. AFFICHER LES INFOS UTILISATEUR =====
-  const firstName = userData.first_name || userData.firstName || '';
-  const lastName = userData.last_name || userData.lastName || '';
-  const email = userData.email || '';
-  const fullName = `${firstName} ${lastName}`.trim() || email || 'Sous-compte';
-  
-  console.log('👤 Infos utilisateur:', { firstName, lastName, email, fullName });
-  
-  // Afficher le nom complet
-  document.getElementById('userName').textContent = fullName;
-  document.getElementById('userEmail').textContent = email;
-  document.getElementById('badgeName').textContent = fullName;
-  document.getElementById('welcomeMessage').textContent = `Bienvenue, ${firstName || email.split('@')[0]}`;
-  document.getElementById('desktopBadge').style.display = 'flex';
-  
-  // Initiales (2 premières lettres)
-  let initials = 'U';
-  if (firstName && lastName) {
-    initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  } else if (fullName) {
-    const words = fullName.split(' ');
-    if (words.length >= 2) {
-      initials = `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
-    } else {
-      initials = fullName.substring(0, 2).toUpperCase();
-    }
-  }
-  
-  console.log('🔤 Initiales:', initials);
-  document.getElementById('userAvatar').textContent = initials;
-  
-  // ===== 4.5. AFFICHER LES PERMISSIONS =====
-  const permissionLabels = {
-    can_view_reservations: { icon: 'calendar', label: 'Voir le calendrier' },
-    can_edit_reservations: { icon: 'edit', label: 'Modifier les réservations' },
-    can_create_reservations: { icon: 'plus-circle', label: 'Créer des réservations' },
-    can_view_messages: { icon: 'comment-dots', label: 'Voir les messages' },
-    can_send_messages: { icon: 'paper-plane', label: 'Envoyer des messages' },
-    can_view_cleaning: { icon: 'broom', label: 'Voir les ménages' },
-    can_manage_cleaning: { icon: 'tasks', label: 'Gérer les ménages' },
-    can_view_finances: { icon: 'dollar-sign', label: 'Voir les finances' },
-    can_view_properties: { icon: 'home', label: 'Voir les logements' },
-    can_edit_properties: { icon: 'cog', label: 'Modifier les logements' },
-    can_manage_team: { icon: 'users', label: 'Gérer l\'équipe' }
-  };
-
-  const permissionsContainer = document.getElementById('permissionsList');
-  if (permissionsContainer && userPermissions) {
-    const activePermissions = Object.entries(userPermissions)
-      .filter(([key, value]) => value === true && permissionLabels[key])
-      .map(([key]) => {
-        const perm = permissionLabels[key];
-        return `
-          <div style="display:flex; align-items:center; gap:12px; padding:12px; background:#f0fdf4; border-radius:8px; border:1px solid #bbf7d0;">
-            <i class="fas fa-${perm.icon}" style="color:#10b981; font-size:18px;"></i>
-            <span style="font-size:14px; font-weight:500;">${perm.label}</span>
-          </div>
-        `;
-      });
-
-    if (activePermissions.length > 0) {
-      permissionsContainer.innerHTML = `
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:12px;">
-          ${activePermissions.join('')}
+      <!-- Actions rapides -->
+      <section class="card">
+        <h2>Actions rapides</h2>
+        <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+          Accédez rapidement aux fonctionnalités disponibles
+        </p>
+        <div class="quick-actions-grid" id="quickActionsGrid">
+          <!-- Rempli par JS -->
         </div>
-      `;
-    } else {
-      permissionsContainer.innerHTML = '<p style="color:#9ca3af;">Aucune permission active</p>';
-    }
-  }
+      </section>
 
-  // ===== 4.6. AFFICHER LES ACTIONS RAPIDES =====
-  const quickActions = [];
+      <!-- Permissions -->
+      <section class="card">
+        <h2>Vos permissions</h2>
+        <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+          Détail des accès autorisés sur votre compte
+        </p>
+        <div class="permissions-grid" id="permissionsGrid">
+          <!-- Rempli par JS -->
+        </div>
+      </section>
 
+    </div>
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="/js/bh-layout.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const userPermissions = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
+  const currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+  
+  console.log('📋 Permissions:', userPermissions);
+  console.log('👤 User:', currentUser);
+
+  // Mettre à jour le badge avec le nom
+  const userName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.email || 'Sous-compte';
+  document.getElementById('badgeText').textContent = userName;
+
+  // ACTIONS RAPIDES
+  const actions = [];
+  
   if (userPermissions.can_view_reservations) {
-    quickActions.push({
-      icon: 'calendar',
-      label: 'Voir le calendrier',
-      href: '/app.html#calendarSection',
-      color: '#10b981'
+    actions.push({ 
+      icon: 'fa-calendar', 
+      title: 'Calendrier',
+      subtitle: 'Voir les réservations',
+      href: '/app.html'
     });
   }
-
   if (userPermissions.can_view_messages) {
-    quickActions.push({
-      icon: 'comment-dots',
-      label: 'Messages',
-      href: '/messages.html',
-      color: '#3b82f6'
+    actions.push({ 
+      icon: 'fa-comment-dots', 
+      title: 'Messages',
+      subtitle: 'Conversations clients',
+      href: '/messages.html'
     });
   }
-
   if (userPermissions.can_view_cleaning) {
-    quickActions.push({
-      icon: 'broom',
-      label: 'Ménages',
-      href: '/cleaning.html',
-      color: '#f59e0b'
+    actions.push({ 
+      icon: 'fa-broom', 
+      title: 'Ménages',
+      subtitle: 'Planning nettoyage',
+      href: '/cleaning.html'
     });
   }
-
   if (userPermissions.can_view_properties) {
-    quickActions.push({
-      icon: 'home',
-      label: 'Logements',
-      href: '/settings.html',
-      color: '#8b5cf6'
+    actions.push({ 
+      icon: 'fa-home', 
+      title: 'Logements',
+      subtitle: 'Gérer les propriétés',
+      href: '/settings.html'
+    });
+  }
+  if (userPermissions.can_view_finances) {
+    actions.push({ 
+      icon: 'fa-dollar-sign', 
+      title: 'Finances',
+      subtitle: 'Voir les factures',
+      href: '/factures.html'
     });
   }
 
   const quickActionsGrid = document.getElementById('quickActionsGrid');
-  if (quickActionsGrid) {
-    if (quickActions.length > 0) {
-      quickActionsGrid.innerHTML = quickActions.map(action => `
-        <a href="${action.href}" class="quick-action-card" style="text-decoration:none;">
-          <div style="width:48px; height:48px; background:${action.color}15; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
-            <i class="fas fa-${action.icon}" style="color:${action.color}; font-size:24px;"></i>
-          </div>
-          <div style="font-weight:600; font-size:15px; color:#111827;">${action.label}</div>
-        </a>
-      `).join('');
-    } else {
-      quickActionsGrid.innerHTML = '<p style="color:#9ca3af;">Aucune action disponible</p>';
-    }
+  if (actions.length > 0) {
+    quickActionsGrid.innerHTML = actions.map(a => `
+      <a href="${a.href}" class="quick-action-btn">
+        <i class="fas ${a.icon}"></i>
+        <div class="title">${a.title}</div>
+        <div class="subtitle">${a.subtitle}</div>
+      </a>
+    `).join('');
+  } else {
+    quickActionsGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af;">
+        <i class="fas fa-lock" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+        <p>Aucune action disponible</p>
+        <p style="font-size: 13px;">Contactez l'administrateur</p>
+      </div>
+    `;
   }
 
-  // Ajouter le style pour les cartes
-  const style = document.createElement('style');
-  style.textContent = `
-    .quick-actions {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 16px;
-    }
-    .quick-action-card {
-      padding: 20px;
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    .quick-action-card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transform: translateY(-2px);
-    }
-  `;
-  document.head.appendChild(style);
-  
-  // ===== 5. LOGOUT =====
-  document.getElementById('logoutBtn').addEventListener('click', function() {
-    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
-      localStorage.removeItem('lcc_token');
-      localStorage.removeItem('lcc_account_type');
-      localStorage.removeItem('lcc_user');
-      localStorage.removeItem('lcc_permissions');
-      window.location.href = '/login.html';
-    }
+  // PERMISSIONS
+  const permLabels = {
+    can_view_reservations: { icon: 'fa-calendar', title: 'Voir les réservations', desc: 'Accès au calendrier' },
+    can_edit_reservations: { icon: 'fa-edit', title: 'Modifier les réservations', desc: 'Éditer les séjours' },
+    can_create_reservations: { icon: 'fa-plus-circle', title: 'Créer des réservations', desc: 'Ajouter des séjours' },
+    can_view_messages: { icon: 'fa-comment-dots', title: 'Voir les messages', desc: 'Conversations clients' },
+    can_send_messages: { icon: 'fa-paper-plane', title: 'Envoyer des messages', desc: 'Répondre aux clients' },
+    can_view_cleaning: { icon: 'fa-broom', title: 'Voir les ménages', desc: 'Planning nettoyage' },
+    can_manage_cleaning: { icon: 'fa-tasks', title: 'Gérer les ménages', desc: 'Créer des tâches' },
+    can_view_finances: { icon: 'fa-dollar-sign', title: 'Voir les finances', desc: 'Accès factures' },
+    can_edit_finances: { icon: 'fa-edit', title: 'Modifier les finances', desc: 'Éditer factures' },
+    can_view_properties: { icon: 'fa-home', title: 'Voir les logements', desc: 'Liste propriétés' },
+    can_edit_properties: { icon: 'fa-cog', title: 'Modifier les logements', desc: 'Éditer propriétés' },
+    can_manage_team: { icon: 'fa-users', title: 'Gérer l\'équipe', desc: 'Administrer sous-comptes' }
+  };
+
+  const permissionsGrid = document.getElementById('permissionsGrid');
+  const allPermissions = Object.entries(permLabels).map(([key, perm]) => {
+    const isEnabled = userPermissions[key] === true;
+    return `
+      <div class="permission-card ${isEnabled ? 'enabled' : 'disabled'}">
+        <div class="permission-icon">
+          <i class="fas ${perm.icon}"></i>
+        </div>
+        <div class="permission-content">
+          <div class="permission-title">${perm.title}</div>
+          <div class="permission-desc">${perm.desc}</div>
+        </div>
+        <div class="permission-status">
+          ${isEnabled ? '<i class="fas fa-check-circle" style="color:#10b981;"></i>' : '<i class="fas fa-times-circle" style="color:#ef4444;"></i>'}
+        </div>
+      </div>
+    `;
   });
-  
-  console.log('✅ Interface sous-compte initialisée');
+
+  permissionsGrid.innerHTML = allPermissions.join('');
 });
 </script>
 
