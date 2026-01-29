@@ -600,9 +600,6 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
       res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
   });
-
-  console.log('✅ Routes sous-comptes initialisées');
-}
 // ============================================
 // 🔧 ROUTE À AJOUTER DANS sub-accounts-routes.js
 // Pour récupérer les propriétés accessibles d'un sous-compte
@@ -674,5 +671,7 @@ app.get('/api/sub-accounts/accessible-properties', authenticateToken, async (req
 });
 
 console.log('✅ Route accessible-properties ajoutée');
+  console.log('✅ Routes sous-comptes initialisées');
+}
 
 module.exports = { setupSubAccountsRoutes };
