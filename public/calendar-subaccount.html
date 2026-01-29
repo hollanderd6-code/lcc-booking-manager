@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendrier - Boostinghost</title>
+
+<script>
+// Vérification auth
+const token = localStorage.getItem('lcc_token');
+const accountType = localStorage.getItem('lcc_account_type');
+
+if (!token) {
+  window.location.href = '/login.html';
+} else if (accountType !== 'sub') {
+  window.location.href = '/app.html'; // Compte principal va sur app normal
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css" rel="stylesheet"/>
+</head>
+
+<body data-page="calendar">
+
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+
+<div class="app-container">
+  <main class="main-content">
+    
+    <header class="main-header">
+      <div class="header-left">
+        <div class="page-kicker">CALENDRIER</div>
+        <h1 class="page-title">Réservations</h1>
+        <p class="page-subtitle">Consultez les séjours à venir</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" onclick="window.location.href='/sub-account.html'">
+          <i class="fas fa-arrow-left"></i>
+          Retour
+        </button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="card">
+        <div id="calendar"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="/js/bh-layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  
+  // Charger les réservations
+  const token = localStorage.getItem('lcc_token');
+  
+  try {
+    const res = await fetch('/api/reservations', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) {
+      throw new Error('Erreur chargement réservations');
+    }
+    
+    const data = await res.json();
+    const reservations = data.reservations || [];
+    
+    console.log('📅 Réservations:', reservations.length);
+    
+    // Initialiser FullCalendar
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      locale: 'fr',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listWeek'
+      },
+      buttonText: {
+        today: 'Aujourd\'hui',
+        month: 'Mois',
+        week: 'Semaine',
+        list: 'Liste'
+      },
+      events: reservations.map(r => ({
+        id: r.id,
+        title: r.guest_name || 'Réservation',
+        start: r.check_in,
+        end: r.check_out,
+        backgroundColor: getSourceColor(r.source),
+        borderColor: getSourceColor(r.source),
+        extendedProps: {
+          property: r.property_name,
+          guests: r.number_of_guests,
+          source: r.source
+        }
+      })),
+      eventClick: function(info) {
+        const event = info.event;
+        alert(
+          'Réservation: ' + event.title + '\n' +
+          'Logement: ' + event.extendedProps.property + '\n' +
+          'Voyageurs: ' + event.extendedProps.guests + '\n' +
+          'Plateforme: ' + event.extendedProps.source
+        );
+      }
+    });
+    
+    calendar.render();
+    
+  } catch (error) {
+    console.error('❌ Erreur:', error);
+    document.getElementById('calendar').innerHTML = `
+      <div style="text-align:center; padding:40px; color:#ef4444;">
+        <i class="fas fa-exclamation-triangle" style="font-size:48px; margin-bottom:16px;"></i>
+        <p>Erreur de chargement du calendrier</p>
+        <p style="font-size:14px; color:#9ca3af;">${error.message}</p>
+      </div>
+    `;
+  }
+});
+
+function getSourceColor(source) {
+  const colors = {
+    airbnb: '#FF5A5F',
+    booking: '#003580',
+    direct: '#10B981',
+    vrbo: '#1569C7'
+  };
+  return colors[source?.toLowerCase()] || '#6B7280';
+}
+</script>
+
+</body>
+</html>
