@@ -4440,7 +4440,6 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
 // 🔧 CORRECTION ROUTE /api/reservations
 // Remplacez la ligne 4440-4456 de votre server.js par ce code
 // ============================================
-
 app.get('/api/reservations', authenticateToken, checkSubscription, async (req, res) => {
   try {
     console.log('🔍 DEBUG /api/reservations');
@@ -4485,7 +4484,6 @@ app.get('/api/reservations', authenticateToken, checkSubscription, async (req, r
 
     } else {
       console.log('👤 Détecté comme compte principal, user ID:', req.user.id);
-      // Compte principal - accès à tout
       userId = req.user.id;
     }
 
