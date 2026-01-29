@@ -322,7 +322,7 @@ try {
         <div class="user-name" id="userName">Sous-compte</div>
         <div class="user-email" id="userEmail">email@example.com</div>
       </div>
-      <button class="btn btn-ghost btn-xs" id="logoutBtn">
+      <button class="btn btn-ghost btn-xs" id="logoutBtn" title="Déconnexion">
         <i class="fas fa-sign-out-alt"></i>
       </button>
     </div>
@@ -390,13 +390,241 @@ try {
 <script>
 // ===== DONNÉES GLOBALES =====
 const token = localStorage.getItem('lcc_token');
-const userData = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-const permissions = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
+let userData = {};
+let permissions = {};
 
-console.log('📊 Données chargées:', { userData, permissions });
+// Charger les données avec debug
+try {
+  const userDataStr = localStorage.getItem('lcc_user');
+  const permissionsStr = localStorage.getItem('lcc_permissions');
+  
+  console.log('📦 localStorage.lcc_user:', userDataStr);
+  console.log('📦 localStorage.lcc_permissions:', permissionsStr);
+  
+  if (userDataStr) {
+    userData = JSON.parse(userDataStr);
+  }
+  
+  if (permissionsStr) {
+    permissions = JSON.parse(permissionsStr);
+  }
+  
+  console.log('✅ Données parsées:', { userData, permissions });
+} catch (e) {
+  console.error('❌ Erreur parsing données:', e);
+}
+
+// Vérifier qu'on a bien des données
+if (!token || Object.keys(userData).length === 0) {
+  console.error('❌ Données manquantes, rechargement depuis le serveur...');
+  // Tenter de recharger
+  fetch('/api/auth/verify', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.accountType === 'sub') {
+      localStorage.setItem('lcc_user', JSON.stringify(data.subAccount));
+      localStorage.setItem('lcc_permissions', JSON.stringify(data.permissions));
+      location.reload();
+    }
+  })
+  .catch(err => console.error('❌ Erreur rechargement:', err));
+}
 
 // ===== INITIALISATION UI =====
 document.addEventListener('DOMContentLoaded', function() {
+  
+  console.log('🚀 Initialisation interface sous-compte');
+  
+  // ===== 1. AFFICHER LES INFOS UTILISATEUR =====
+  const firstName = userData.first_name || userData.firstName || '';
+  const lastName = userData.last_name || userData.lastName || '';
+  const email = userData.email || '';
+  const fullName = `${firstName} ${lastName}`.trim() || email || 'Sous-compte';
+  
+  console.log('👤 Infos utilisateur:', { firstName, lastName, email, fullName });
+  
+  // Afficher le nom complet
+  document.getElementById('userName').textContent = fullName;
+  document.getElementById('userEmail').textContent = email;
+  document.getElementById('badgeName').textContent = fullName;
+  document.getElementById('welcomeMessage').textContent = `Bienvenue, ${firstName || email.split('@')[0]}`;
+  document.getElementById('desktopBadge').style.display = 'flex';
+  
+  // Initiales (2 premières lettres)
+  let initials = 'U';
+  if (firstName && lastName) {
+    initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  } else if (fullName) {
+    const words = fullName.split(' ');
+    if (words.length >= 2) {
+      initials = `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+    } else {
+      initials = fullName.substring(0, 2).toUpperCase();
+    }
+  }
+  
+  console.log('🔤 Initiales:', initials);
+  document.getElementById('userAvatar').textContent = initials;
+  
+  // ===== 2. GÉNÉRER LES QUICK ACTIONS =====
+  const quickActions = [
+    {
+      icon: 'fa-comment-dots',
+      title: 'Messages',
+      subtitle: 'Conversations clients',
+      link: '/messages.html',
+      permission: 'can_view_messages'
+    },
+    {
+      icon: 'fa-calendar',
+      title: 'Réservations',
+      subtitle: 'Calendrier & séjours',
+      link: '/app.html#calendar',
+      permission: 'can_view_reservations'
+    },
+    {
+      icon: 'fa-home',
+      title: 'Logements',
+      subtitle: 'Gérer les propriétés',
+      link: '/settings.html',
+      permission: 'can_view_properties'
+    },
+    {
+      icon: 'fa-broom',
+      title: 'Ménages',
+      subtitle: 'Planning nettoyage',
+      link: '/cleaning.html',
+      permission: 'can_view_cleaning'
+    },
+    {
+      icon: 'fa-shield-alt',
+      title: 'Cautions',
+      subtitle: 'Gérer les dépôts',
+      link: '/deposits.html',
+      permission: 'can_view_deposits'
+    },
+    {
+      icon: 'fa-lock',
+      title: 'Serrures',
+      subtitle: 'Accès connectés',
+      link: '/smart-locks.html',
+      permission: 'can_manage_locks'
+    }
+  ];
+  
+  const quickActionsGrid = document.getElementById('quickActionsGrid');
+  const enabledActions = quickActions.filter(action => permissions[action.permission] === true);
+  
+  console.log('🎯 Quick actions filtrées:', enabledActions.length, '/', quickActions.length);
+  
+  if (enabledActions.length === 0) {
+    quickActionsGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af;">
+        <i class="fas fa-lock" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+        <p>Aucune fonctionnalité autorisée</p>
+        <p style="font-size: 13px;">Contactez l'administrateur pour obtenir des permissions</p>
+      </div>
+    `;
+  } else {
+    quickActionsGrid.innerHTML = enabledActions.map(action => `
+      <a href="${action.link}" class="quick-action-btn">
+        <i class="fas ${action.icon}"></i>
+        <div class="title">${action.title}</div>
+        <div class="subtitle">${action.subtitle}</div>
+      </a>
+    `).join('');
+  }
+  
+  // ===== 3. GÉNÉRER LA LISTE DES PERMISSIONS =====
+  const permissionsList = [
+    { key: 'can_view_reservations', icon: 'fa-calendar', title: 'Voir les réservations', desc: 'Accès au calendrier et aux séjours' },
+    { key: 'can_edit_reservations', icon: 'fa-edit', title: 'Modifier les réservations', desc: 'Éditer les détails des séjours' },
+    { key: 'can_view_properties', icon: 'fa-home', title: 'Voir les logements', desc: 'Accès à la liste des propriétés' },
+    { key: 'can_edit_properties', icon: 'fa-cog', title: 'Modifier les logements', desc: 'Éditer les paramètres des propriétés' },
+    { key: 'can_view_messages', icon: 'fa-comment-dots', title: 'Voir les messages', desc: 'Accès aux conversations clients' },
+    { key: 'can_send_messages', icon: 'fa-paper-plane', title: 'Envoyer des messages', desc: 'Répondre aux clients' },
+    { key: 'can_view_cleaning', icon: 'fa-broom', title: 'Voir les ménages', desc: 'Accès au planning de nettoyage' },
+    { key: 'can_manage_cleaning', icon: 'fa-tasks', title: 'Gérer les ménages', desc: 'Créer et modifier les tâches' },
+    { key: 'can_manage_team', icon: 'fa-users', title: 'Gérer l\'équipe', desc: 'Administrer les sous-comptes' },
+    { key: 'can_view_deposits', icon: 'fa-shield-alt', title: 'Voir les cautions', desc: 'Accès aux cautions clients' },
+    { key: 'can_manage_locks', icon: 'fa-lock', title: 'Gérer les serrures', desc: 'Contrôler les serrures connectées' }
+  ];
+  
+  const permissionsListEl = document.getElementById('permissionsList');
+  permissionsListEl.innerHTML = permissionsList.map(perm => {
+    const isEnabled = permissions[perm.key] === true;
+    return `
+      <div class="permission-card ${isEnabled ? 'enabled' : 'disabled'}">
+        <div class="permission-icon">
+          <i class="fas ${perm.icon}"></i>
+        </div>
+        <div class="permission-info">
+          <div class="permission-title">${perm.title}</div>
+          <div class="permission-desc">${perm.desc}</div>
+        </div>
+        <i class="fas ${isEnabled ? 'fa-check-circle' : 'fa-times-circle'}" style="color: ${isEnabled ? '#10B981' : '#9ca3af'}; font-size: 20px;"></i>
+      </div>
+    `;
+  }).join('');
+  
+  // ===== 4. FILTRER LE MENU SIDEBAR =====
+  console.log('🔧 Filtrage du menu sidebar...');
+  
+  // Messages
+  if (!permissions.can_view_messages) {
+    const navMessages = document.getElementById('navMessages');
+    if (navMessages) {
+      navMessages.style.display = 'none';
+      console.log('  🚫 Menu Messages masqué');
+    }
+  }
+  
+  // Logements
+  if (!permissions.can_view_properties) {
+    const navProperties = document.getElementById('navProperties');
+    if (navProperties) {
+      navProperties.style.display = 'none';
+      console.log('  🚫 Menu Logements masqué');
+    }
+  }
+  
+  // Ménage
+  if (!permissions.can_view_cleaning) {
+    const navCleaning = document.getElementById('navCleaning');
+    if (navCleaning) {
+      navCleaning.style.display = 'none';
+      console.log('  🚫 Menu Ménages masqué');
+    }
+  }
+  
+  // Masquer section Gestion si aucune permission
+  if (!permissions.can_view_properties && !permissions.can_view_cleaning) {
+    const navGestion = document.getElementById('navGestion');
+    if (navGestion) {
+      navGestion.style.display = 'none';
+      console.log('  🚫 Section Gestion masquée');
+    }
+  }
+  
+  // ===== 5. LOGOUT =====
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_account_type');
+      localStorage.removeItem('lcc_user');
+      localStorage.removeItem('lcc_permissions');
+      window.location.href = '/login.html';
+    }
+  });
+  
+  console.log('✅ Interface sous-compte initialisée');
+});
+</script>
+
+</body>
+</html>
   
   // Afficher les infos utilisateur
   const userName = userData.name || userData.email || 'Sous-compte';
