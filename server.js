@@ -12295,7 +12295,58 @@ console.log('✅ Routes du chat initialisées');
 initializeMiddleware(pool); // Initialiser le middleware avec la pool
 setupSubAccountsRoutes(app, pool, authenticateToken);
 console.log('✅ Routes sous-comptes initialisées');
-
+// ============================================
+// 🔐 ROUTE DE VÉRIFICATION D'AUTHENTIFICATION
+// ============================================
+app.get('/api/auth/verify', authenticateAny, async (req, res) => {
+  try {
+    console.log('🔍 Vérification auth - Type:', req.isSubAccount ? 'sub-account' : 'main');
+    
+    if (req.isSubAccount) {
+      res.json({
+        valid: true,
+        accountType: 'sub',
+        subAccount: {
+          id: req.subAccount.id,
+          name: req.subAccount.name,
+          email: req.subAccount.email,
+          parent_user_id: req.parentUserId,
+          is_active: req.subAccount.is_active
+        },
+        permissions: {
+          can_view_reservations: req.subAccount.can_view_reservations || false,
+          can_edit_reservations: req.subAccount.can_edit_reservations || false,
+          can_view_properties: req.subAccount.can_view_properties || false,
+          can_edit_properties: req.subAccount.can_edit_properties || false,
+          can_view_messages: req.subAccount.can_view_messages || false,
+          can_send_messages: req.subAccount.can_send_messages || false,
+          can_manage_team: req.subAccount.can_manage_team || false,
+          can_view_cleaning: req.subAccount.can_view_cleaning || false,
+          can_manage_cleaning: req.subAccount.can_manage_cleaning || false
+        },
+        accessibleProperties: req.subAccount.accessible_properties || []
+      });
+    } else {
+      res.json({
+        valid: true,
+        accountType: 'main',
+        user: {
+          id: req.userId,
+          email: req.user.email,
+          name: req.user.name || req.user.email,
+          created_at: req.user.created_at
+        },
+        permissions: 'all'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erreur vérification auth:', error);
+    res.status(401).json({ 
+      valid: false,
+      error: 'Session invalide' 
+    });
+  }
+});
 // ============================================
 // 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
 // ============================================
