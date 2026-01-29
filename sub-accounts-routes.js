@@ -1,6 +1,6 @@
 // ============================================
 // 📋 ROUTES API - GESTION DES SOUS-COMPTES
-// À ajouter dans server.js
+// VERSION COMPATIBLE DB EXISTANTE
 // ============================================
 
 const bcrypt = require('bcryptjs');
@@ -24,17 +24,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         password,
         firstName,
         lastName,
-        role, // 'manager', 'cleaner', 'accountant', 'custom'
-        permissions, // Objet avec les permissions
-        propertyIds // Array des IDs de propriétés accessibles
+        role,
+        permissions,
+        propertyIds
       } = req.body;
 
-      // Validation
       if (!email || !password || !firstName || !lastName) {
         return res.status(400).json({ success: false, error: 'Champs obligatoires manquants' });
       }
 
-      // Vérifier que l'email n'existe pas déjà
       const existing = await pool.query(
         'SELECT id FROM sub_accounts WHERE email = $1',
         [email]
@@ -44,10 +42,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         return res.status(400).json({ success: false, error: 'Cet email est déjà utilisé' });
       }
 
-      // Hash du mot de passe
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Créer le sous-compte
       const result = await pool.query(`
         INSERT INTO sub_accounts (
           parent_user_id,
@@ -62,137 +58,129 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
 
       const subAccount = result.rows[0];
 
-      // Déterminer les permissions selon le rôle
+      // Permissions selon le rôle
       let finalPermissions = {};
       
       if (role === 'custom' && permissions) {
-        // Permissions personnalisées (format snake_case depuis le frontend)
+        // MAPPING: Frontend (snake_case) -> DB (noms actuels)
         finalPermissions = {
-          can_view_reservations: permissions.can_view_reservations || false,
+          can_view_calendar: permissions.can_view_reservations || false,
           can_edit_reservations: permissions.can_edit_reservations || false,
           can_create_reservations: permissions.can_create_reservations || false,
+          can_delete_reservations: false,
           can_view_messages: permissions.can_view_messages || false,
           can_send_messages: permissions.can_send_messages || false,
           can_view_cleaning: permissions.can_view_cleaning || false,
-          can_manage_cleaning: permissions.can_manage_cleaning || false,
+          can_assign_cleaning: permissions.can_manage_cleaning || false,
+          can_manage_cleaning_staff: false,
+          can_view_finances: permissions.can_view_finances || false,
+          can_edit_finances: false,
           can_view_properties: permissions.can_view_properties || false,
           can_edit_properties: permissions.can_edit_properties || false,
-          can_view_finances: permissions.can_view_finances || false,
-          can_manage_team: false,
-          can_view_deposits: permissions.can_view_deposits || false,
-          can_manage_locks: permissions.can_manage_locks || false
+          can_access_settings: false,
+          can_manage_team: false
         };
       } else {
-        // Permissions prédéfinies selon le rôle
         switch(role) {
           case 'manager':
             finalPermissions = {
-              can_view_reservations: true,
+              can_view_calendar: true,
               can_edit_reservations: true,
               can_create_reservations: true,
+              can_delete_reservations: false,
               can_view_messages: true,
               can_send_messages: true,
               can_view_cleaning: true,
-              can_manage_cleaning: true,
+              can_assign_cleaning: true,
+              can_manage_cleaning_staff: false,
+              can_view_finances: false,
+              can_edit_finances: false,
               can_view_properties: true,
               can_edit_properties: false,
-              can_view_finances: false,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
+              can_access_settings: false,
+              can_manage_team: false
             };
             break;
             
           case 'cleaner':
             finalPermissions = {
-              can_view_reservations: true,
+              can_view_calendar: true,
               can_edit_reservations: false,
               can_create_reservations: false,
+              can_delete_reservations: false,
               can_view_messages: false,
               can_send_messages: false,
               can_view_cleaning: true,
-              can_manage_cleaning: true,
+              can_assign_cleaning: true,
+              can_manage_cleaning_staff: false,
+              can_view_finances: false,
+              can_edit_finances: false,
               can_view_properties: true,
               can_edit_properties: false,
-              can_view_finances: false,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
+              can_access_settings: false,
+              can_manage_team: false
             };
             break;
             
           case 'accountant':
             finalPermissions = {
-              can_view_reservations: true,
+              can_view_calendar: true,
               can_edit_reservations: false,
               can_create_reservations: false,
+              can_delete_reservations: false,
               can_view_messages: false,
               can_send_messages: false,
               can_view_cleaning: false,
-              can_manage_cleaning: false,
+              can_assign_cleaning: false,
+              can_manage_cleaning_staff: false,
+              can_view_finances: true,
+              can_edit_finances: false,
               can_view_properties: true,
               can_edit_properties: false,
-              can_view_finances: true,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
+              can_access_settings: false,
+              can_manage_team: false
             };
             break;
-            
-          default:
-            finalPermissions = {
-              can_view_reservations: false,
-              can_edit_reservations: false,
-              can_create_reservations: false,
-              can_view_messages: false,
-              can_send_messages: false,
-              can_view_cleaning: false,
-              can_manage_cleaning: false,
-              can_view_properties: false,
-              can_edit_properties: false,
-              can_view_finances: false,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
-            };
         }
       }
 
-      // Mettre à jour les permissions
       await pool.query(`
         UPDATE sub_account_permissions SET
-          can_view_reservations = $1,
+          can_view_calendar = $1,
           can_edit_reservations = $2,
           can_create_reservations = $3,
-          can_view_messages = $4,
-          can_send_messages = $5,
-          can_view_cleaning = $6,
-          can_manage_cleaning = $7,
-          can_view_properties = $8,
-          can_edit_properties = $9,
+          can_delete_reservations = $4,
+          can_view_messages = $5,
+          can_send_messages = $6,
+          can_view_cleaning = $7,
+          can_assign_cleaning = $8,
+          can_manage_cleaning_staff = $9,
           can_view_finances = $10,
-          can_manage_team = $11,
-          can_view_deposits = $12,
-          can_manage_locks = $13
-        WHERE sub_account_id = $14
+          can_edit_finances = $11,
+          can_view_properties = $12,
+          can_edit_properties = $13,
+          can_access_settings = $14,
+          can_manage_team = $15
+        WHERE sub_account_id = $16
       `, [
-        finalPermissions.can_view_reservations,
+        finalPermissions.can_view_calendar,
         finalPermissions.can_edit_reservations,
         finalPermissions.can_create_reservations,
+        finalPermissions.can_delete_reservations,
         finalPermissions.can_view_messages,
         finalPermissions.can_send_messages,
         finalPermissions.can_view_cleaning,
-        finalPermissions.can_manage_cleaning,
+        finalPermissions.can_assign_cleaning,
+        finalPermissions.can_manage_cleaning_staff,
+        finalPermissions.can_view_finances,
+        finalPermissions.can_edit_finances,
         finalPermissions.can_view_properties,
         finalPermissions.can_edit_properties,
-        finalPermissions.can_view_finances,
+        finalPermissions.can_access_settings,
         finalPermissions.can_manage_team,
-        finalPermissions.can_view_deposits,
-        finalPermissions.can_manage_locks,
         subAccount.id
       ]);
 
-      // Assigner les propriétés
       if (propertyIds && propertyIds.length > 0) {
         for (const propId of propertyIds) {
           await pool.query(
@@ -222,18 +210,17 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
   });
 
   // ============================================
-  // 2. MODIFIER UN SOUS-COMPTE (NOUVELLE ROUTE)
+  // 2. MODIFIER UN SOUS-COMPTE (ROUTE PUT)
   // ============================================
   
   app.put('/api/sub-accounts/:id', authenticateToken, async (req, res) => {
     try {
       const subAccountId = parseInt(req.params.id);
-      const { email, firstName, lastName, role, propertyIds, permissions } = req.body;
+      const { firstName, lastName, role, propertyIds, permissions } = req.body;
       const parentUserId = req.user.id;
       
-      console.log('🔄 Modification sous-compte:', { subAccountId, email, role });
+      console.log('🔄 Modification sous-compte:', { subAccountId, role });
       
-      // Vérifier que le sous-compte appartient bien au parent
       const checkOwnership = await pool.query(
         'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
         [subAccountId, parentUserId]
@@ -246,7 +233,6 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         });
       }
       
-      // Mettre à jour les informations de base (pas l'email ni le mot de passe)
       await pool.query(
         `UPDATE sub_accounts 
          SET first_name = $1, last_name = $2, role = $3, updated_at = NOW()
@@ -254,128 +240,135 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         [firstName, lastName, role, subAccountId]
       );
       
-      // Déterminer les permissions
+      // Permissions
       let finalPermissions = {};
       
       if (role === 'custom' && permissions) {
         finalPermissions = {
-          can_view_reservations: permissions.can_view_reservations || false,
+          can_view_calendar: permissions.can_view_reservations || false,
           can_edit_reservations: permissions.can_edit_reservations || false,
           can_create_reservations: permissions.can_create_reservations || false,
+          can_delete_reservations: false,
           can_view_messages: permissions.can_view_messages || false,
           can_send_messages: permissions.can_send_messages || false,
           can_view_cleaning: permissions.can_view_cleaning || false,
-          can_manage_cleaning: permissions.can_manage_cleaning || false,
+          can_assign_cleaning: permissions.can_manage_cleaning || false,
+          can_manage_cleaning_staff: false,
+          can_view_finances: permissions.can_view_finances || false,
+          can_edit_finances: false,
           can_view_properties: permissions.can_view_properties || false,
           can_edit_properties: permissions.can_edit_properties || false,
-          can_view_finances: permissions.can_view_finances || false,
-          can_manage_team: false,
-          can_view_deposits: permissions.can_view_deposits || false,
-          can_manage_locks: permissions.can_manage_locks || false
+          can_access_settings: false,
+          can_manage_team: false
         };
       } else {
-        // Permissions prédéfinies
         switch(role) {
           case 'manager':
             finalPermissions = {
-              can_view_reservations: true,
+              can_view_calendar: true,
               can_edit_reservations: true,
               can_create_reservations: true,
+              can_delete_reservations: false,
               can_view_messages: true,
               can_send_messages: true,
               can_view_cleaning: true,
-              can_manage_cleaning: true,
+              can_assign_cleaning: true,
+              can_manage_cleaning_staff: false,
+              can_view_finances: false,
+              can_edit_finances: false,
               can_view_properties: true,
               can_edit_properties: false,
-              can_view_finances: false,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
+              can_access_settings: false,
+              can_manage_team: false
             };
             break;
             
           case 'cleaner':
             finalPermissions = {
-              can_view_reservations: true,
+              can_view_calendar: true,
               can_edit_reservations: false,
               can_create_reservations: false,
+              can_delete_reservations: false,
               can_view_messages: false,
               can_send_messages: false,
               can_view_cleaning: true,
-              can_manage_cleaning: true,
+              can_assign_cleaning: true,
+              can_manage_cleaning_staff: false,
+              can_view_finances: false,
+              can_edit_finances: false,
               can_view_properties: true,
               can_edit_properties: false,
-              can_view_finances: false,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
+              can_access_settings: false,
+              can_manage_team: false
             };
             break;
             
           case 'accountant':
             finalPermissions = {
-              can_view_reservations: true,
+              can_view_calendar: true,
               can_edit_reservations: false,
               can_create_reservations: false,
+              can_delete_reservations: false,
               can_view_messages: false,
               can_send_messages: false,
               can_view_cleaning: false,
-              can_manage_cleaning: false,
+              can_assign_cleaning: false,
+              can_manage_cleaning_staff: false,
+              can_view_finances: true,
+              can_edit_finances: false,
               can_view_properties: true,
               can_edit_properties: false,
-              can_view_finances: true,
-              can_manage_team: false,
-              can_view_deposits: false,
-              can_manage_locks: false
+              can_access_settings: false,
+              can_manage_team: false
             };
             break;
         }
       }
       
-      // Mettre à jour les permissions
       await pool.query(
         `UPDATE sub_account_permissions 
-         SET can_view_reservations = $1,
+         SET can_view_calendar = $1,
              can_edit_reservations = $2,
              can_create_reservations = $3,
-             can_view_messages = $4,
-             can_send_messages = $5,
-             can_view_cleaning = $6,
-             can_manage_cleaning = $7,
-             can_view_properties = $8,
-             can_edit_properties = $9,
+             can_delete_reservations = $4,
+             can_view_messages = $5,
+             can_send_messages = $6,
+             can_view_cleaning = $7,
+             can_assign_cleaning = $8,
+             can_manage_cleaning_staff = $9,
              can_view_finances = $10,
-             can_manage_team = $11,
-             can_view_deposits = $12,
-             can_manage_locks = $13
-         WHERE sub_account_id = $14`,
+             can_edit_finances = $11,
+             can_view_properties = $12,
+             can_edit_properties = $13,
+             can_access_settings = $14,
+             can_manage_team = $15
+         WHERE sub_account_id = $16`,
         [
-          finalPermissions.can_view_reservations,
+          finalPermissions.can_view_calendar,
           finalPermissions.can_edit_reservations,
           finalPermissions.can_create_reservations,
+          finalPermissions.can_delete_reservations,
           finalPermissions.can_view_messages,
           finalPermissions.can_send_messages,
           finalPermissions.can_view_cleaning,
-          finalPermissions.can_manage_cleaning,
+          finalPermissions.can_assign_cleaning,
+          finalPermissions.can_manage_cleaning_staff,
+          finalPermissions.can_view_finances,
+          finalPermissions.can_edit_finances,
           finalPermissions.can_view_properties,
           finalPermissions.can_edit_properties,
-          finalPermissions.can_view_finances,
+          finalPermissions.can_access_settings,
           finalPermissions.can_manage_team,
-          finalPermissions.can_view_deposits,
-          finalPermissions.can_manage_locks,
           subAccountId
         ]
       );
       
-      // Mettre à jour les propriétés accessibles
       if (propertyIds !== undefined) {
-        // Supprimer les anciennes associations
         await pool.query(
           'DELETE FROM sub_account_properties WHERE sub_account_id = $1',
           [subAccountId]
         );
         
-        // Insérer les nouvelles associations
         if (propertyIds.length > 0) {
           for (const propertyId of propertyIds) {
             await pool.query(
@@ -390,8 +383,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
       
       res.json({ 
         success: true, 
-        message: 'Sous-compte modifié avec succès',
-        subAccountId: subAccountId
+        message: 'Sous-compte modifié avec succès'
       });
       
     } catch (error) {
@@ -420,22 +412,24 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sa.created_at,
           sa.last_login,
           
-          -- Permissions (format snake_case)
-          sp.can_view_reservations,
+          -- Permissions (noms DB actuels)
+          sp.can_view_calendar,
           sp.can_edit_reservations,
           sp.can_create_reservations,
+          sp.can_delete_reservations,
           sp.can_view_messages,
           sp.can_send_messages,
           sp.can_view_cleaning,
-          sp.can_manage_cleaning,
+          sp.can_assign_cleaning,
+          sp.can_manage_cleaning_staff,
           sp.can_view_finances,
+          sp.can_edit_finances,
           sp.can_view_properties,
           sp.can_edit_properties,
+          sp.can_access_settings,
           sp.can_manage_team,
-          sp.can_view_deposits,
-          sp.can_manage_locks,
           
-          -- Propriétés accessibles
+          -- Propriétés accessibles (array format)
           COALESCE(
             (SELECT array_agg(property_id)
              FROM sub_account_properties 
@@ -449,9 +443,19 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         ORDER BY sa.created_at DESC
       `, [req.user.id]);
 
+      // MAPPING: DB -> Frontend (pour compatibilité)
+      const mappedResults = result.rows.map(row => ({
+        ...row,
+        // Ajouter les noms attendus par le frontend
+        can_view_reservations: row.can_view_calendar,
+        can_manage_cleaning: row.can_assign_cleaning,
+        can_view_deposits: false, // À ajouter dans la DB plus tard
+        can_manage_locks: false   // À ajouter dans la DB plus tard
+      }));
+
       res.json({
         success: true,
-        subAccounts: result.rows
+        subAccounts: mappedResults
       });
 
     } catch (error) {
@@ -461,92 +465,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
   });
 
   // ============================================
-  // 4. MODIFIER LES PERMISSIONS (déprécié, utiliser PUT /:id)
-  // ============================================
-  
-  app.put('/api/sub-accounts/:id/permissions', authenticateToken, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { permissions, propertyIds } = req.body;
-
-      // Vérifier que le sous-compte appartient bien à l'utilisateur
-      const check = await pool.query(
-        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
-        [id, req.user.id]
-      );
-
-      if (check.rows.length === 0) {
-        return res.status(404).json({ success: false, error: 'Sous-compte introuvable' });
-      }
-
-      // Mettre à jour les permissions
-      await pool.query(`
-        UPDATE sub_account_permissions SET
-          can_view_reservations = $1,
-          can_edit_reservations = $2,
-          can_create_reservations = $3,
-          can_view_messages = $4,
-          can_send_messages = $5,
-          can_view_cleaning = $6,
-          can_manage_cleaning = $7,
-          can_view_finances = $8,
-          can_view_properties = $9,
-          can_edit_properties = $10,
-          can_manage_team = $11,
-          can_view_deposits = $12,
-          can_manage_locks = $13,
-          updated_at = NOW()
-        WHERE sub_account_id = $14
-      `, [
-        permissions.can_view_reservations || false,
-        permissions.can_edit_reservations || false,
-        permissions.can_create_reservations || false,
-        permissions.can_view_messages || false,
-        permissions.can_send_messages || false,
-        permissions.can_view_cleaning || false,
-        permissions.can_manage_cleaning || false,
-        permissions.can_view_finances || false,
-        permissions.can_view_properties || false,
-        permissions.can_edit_properties || false,
-        permissions.can_manage_team || false,
-        permissions.can_view_deposits || false,
-        permissions.can_manage_locks || false,
-        id
-      ]);
-
-      // Mettre à jour les propriétés
-      if (propertyIds !== undefined) {
-        await pool.query('DELETE FROM sub_account_properties WHERE sub_account_id = $1', [id]);
-
-        if (propertyIds.length > 0) {
-          for (const propId of propertyIds) {
-            await pool.query(
-              'INSERT INTO sub_account_properties (sub_account_id, property_id) VALUES ($1, $2)',
-              [id, propId]
-            );
-          }
-        }
-      }
-
-      console.log(`✅ Permissions mises à jour pour sous-compte ${id}`);
-
-      res.json({ success: true });
-
-    } catch (error) {
-      console.error('❌ Erreur mise à jour permissions:', error);
-      res.status(500).json({ success: false, error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 5. SUPPRIMER UN SOUS-COMPTE
+  // 4. SUPPRIMER UN SOUS-COMPTE
   // ============================================
   
   app.delete('/api/sub-accounts/:id', authenticateToken, async (req, res) => {
     try {
       const { id } = req.params;
 
-      // Vérifier appartenance
       const check = await pool.query(
         'SELECT email FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
         [id, req.user.id]
@@ -556,7 +481,6 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         return res.status(404).json({ success: false, error: 'Sous-compte introuvable' });
       }
 
-      // Supprimer (CASCADE supprimera permissions et propriétés)
       await pool.query('DELETE FROM sub_accounts WHERE id = $1', [id]);
 
       console.log(`✅ Sous-compte supprimé: ${check.rows[0].email}`);
@@ -570,7 +494,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
   });
 
   // ============================================
-  // 6. ACTIVER/DÉSACTIVER UN SOUS-COMPTE
+  // 5. ACTIVER/DÉSACTIVER UN SOUS-COMPTE
   // ============================================
   
   app.put('/api/sub-accounts/:id/toggle', authenticateToken, async (req, res) => {
@@ -600,7 +524,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
   });
 
   // ============================================
-  // 7. LOGIN SOUS-COMPTE
+  // 6. LOGIN SOUS-COMPTE
   // ============================================
   
   app.post('/api/sub-accounts/login', async (req, res) => {
@@ -611,7 +535,6 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         return res.status(400).json({ success: false, error: 'Email et mot de passe requis' });
       }
 
-      // Chercher le sous-compte
       const result = await pool.query(`
         SELECT sa.*, sp.*
         FROM sub_accounts sa
@@ -625,20 +548,17 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
 
       const subAccount = result.rows[0];
 
-      // Vérifier le mot de passe
       const validPassword = await bcrypt.compare(password, subAccount.password_hash);
 
       if (!validPassword) {
         return res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect' });
       }
 
-      // Mettre à jour last_login
       await pool.query(
         'UPDATE sub_accounts SET last_login = NOW() WHERE id = $1',
         [subAccount.id]
       );
 
-      // Générer le token
       const token = generateSubAccountToken(subAccount.id);
 
       console.log(`✅ Connexion sous-compte: ${email}`);
@@ -654,19 +574,20 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           role: subAccount.role,
           parentUserId: subAccount.parent_user_id,
           permissions: {
-            can_view_reservations: subAccount.can_view_reservations,
+            // MAPPING: DB -> Frontend
+            can_view_reservations: subAccount.can_view_calendar,
             can_edit_reservations: subAccount.can_edit_reservations,
             can_create_reservations: subAccount.can_create_reservations,
             can_view_messages: subAccount.can_view_messages,
             can_send_messages: subAccount.can_send_messages,
             can_view_cleaning: subAccount.can_view_cleaning,
-            can_manage_cleaning: subAccount.can_manage_cleaning,
+            can_manage_cleaning: subAccount.can_assign_cleaning,
             can_view_finances: subAccount.can_view_finances,
             can_view_properties: subAccount.can_view_properties,
             can_edit_properties: subAccount.can_edit_properties,
             can_manage_team: subAccount.can_manage_team,
-            can_view_deposits: subAccount.can_view_deposits,
-            can_manage_locks: subAccount.can_manage_locks
+            can_view_deposits: false, // À ajouter
+            can_manage_locks: false   // À ajouter
           }
         }
       });
