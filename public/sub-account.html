@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Boostinghost - Espace Sous-Compte</title>
+
+<!-- ============================================ -->
+<!-- 🔐 VÉRIFICATION AUTH SOUS-COMPTE UNIQUEMENT -->
+<!-- ============================================ -->
+<script>
+console.log('🔐 SUB-ACCOUNT PAGE - Auth Check');
+
+const IS_NATIVE = (() => {
+  try {
+    return !!(
+      window.Capacitor?.isNativePlatform?.() ||
+      window.location.protocol === 'capacitor:' ||
+      window.location.protocol === 'ionic:'
+    );
+  } catch (e) {
+    return false;
+  }
+})();
+
+const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
+
+// Vérifier que c'est bien un sous-compte
+const token = localStorage.getItem('lcc_token');
+const accountType = localStorage.getItem('lcc_account_type');
+
+if (!token) {
+  console.log('❌ Pas de token');
+  window.location.href = IS_NATIVE ? 'login.html' : '/login.html';
+} else if (accountType !== 'sub') {
+  console.log('⚠️ Compte principal détecté - Redirection vers app.html');
+  window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+} else {
+  console.log('✅ Sous-compte détecté - Chargement de l\'interface');
+}
+
+// Charger les infos utilisateur
+let currentUser = {};
+let permissions = {};
+try {
+  const userData = localStorage.getItem('lcc_user');
+  const permData = localStorage.getItem('lcc_permissions');
+  if (userData) currentUser = JSON.parse(userData);
+  if (permData) permissions = JSON.parse(permData);
+  console.log('👤 Utilisateur:', currentUser.name || currentUser.email);
+  console.log('🔐 Permissions:', permissions);
+} catch (e) {
+  console.error('Erreur chargement données:', e);
+}
+</script>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
+<link href="/css/style.css?v=3" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/dark-mode.css">
+
+<style>
+/* ===== LAYOUT SPÉCIFIQUE SOUS-COMPTE ===== */
+.sub-account-badge {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 25px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  animation: fadeInDown 0.5s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.permissions-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.permission-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.permission-card.enabled {
+  border-color: #10B981;
+  background: linear-gradient(to right, #f0fdf4, #ffffff);
+}
+
+.permission-card.disabled {
+  opacity: 0.5;
+  background: #f9fafb;
+}
+
+.permission-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.permission-card.enabled .permission-icon {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+}
+
+.permission-card.disabled .permission-icon {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.permission-info {
+  flex: 1;
+}
+
+.permission-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.permission-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Message d'info */
+.info-banner {
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.info-banner i {
+  font-size: 24px;
+  opacity: 0.9;
+}
+
+.info-banner-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.info-banner-content p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.95;
+}
+
+/* Menu quick actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.quick-action-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.quick-action-btn:hover {
+  border-color: #10B981;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.15);
+}
+
+.quick-action-btn i {
+  font-size: 32px;
+  color: #10B981;
+  margin-bottom: 12px;
+}
+
+.quick-action-btn .title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.quick-action-btn .subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.quick-action-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sub-account-badge {
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    padding: 8px 14px;
+  }
+  
+  .permissions-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>
+</head>
+
+<body>
+<!-- Container -->
+<div class="app-container">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <a class="sidebar-logo" href="/sub-account.html">
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;">
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">
+          <span style="color: #10B981; font-weight: 800;">Boosting</span><span style="color: #111827; font-weight: 600;">host</span>
+        </span>
+        <span class="sidebar-logo-subtitle">Espace Sous-Compte</span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- PRINCIPAL -->
+    <div class="nav-section">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-item active" href="/sub-account.html">
+        <i class="fas fa-th-large"></i>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" href="/messages.html" id="navMessages">
+        <i class="fas fa-comment-dots"></i>
+        <span>Messages</span>
+      </a>
+    </div>
+
+    <!-- GESTION - selon permissions -->
+    <div class="nav-section" id="navGestion">
+      <div class="nav-section-title">Gestion</div>
+      <a class="nav-item" href="/settings.html" id="navProperties">
+        <i class="fas fa-home"></i>
+        <span>Mes logements</span>
+      </a>
+      <a class="nav-item" href="/cleaning.html" id="navCleaning">
+        <i class="fas fa-broom"></i>
+        <span>Gestion du ménage</span>
+      </a>
+    </div>
+
+    <!-- AIDE -->
+    <div class="nav-section">
+      <div class="nav-section-title">Support</div>
+      <a class="nav-item" href="/help.html">
+        <i class="fas fa-question-circle"></i>
+        <span>Aide</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile">
+      <div class="user-avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Sous-compte</div>
+        <div class="user-email" id="userEmail">email@example.com</div>
+      </div>
+      <button class="btn btn-ghost btn-xs" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content">
+  <!-- Header -->
+  <header class="main-header">
+    <div class="header-left">
+      <div class="page-kicker">Espace collaborateur</div>
+      <h1 class="page-title">Tableau de bord</h1>
+      <p class="page-subtitle" id="welcomeMessage">
+        Bienvenue dans votre espace de travail
+      </p>
+    </div>
+  </header>
+
+  <div class="page-content">
+    
+    <!-- Badge sous-compte (visible uniquement sur desktop) -->
+    <div class="sub-account-badge" style="display: none;" id="desktopBadge">
+      <i class="fas fa-user-shield"></i>
+      <span id="badgeName">Sous-compte</span>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="info-banner">
+      <i class="fas fa-info-circle"></i>
+      <div class="info-banner-content">
+        <h3>Compte limité</h3>
+        <p>Vous utilisez un compte avec permissions restreintes. Certaines fonctionnalités peuvent être désactivées.</p>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <section class="card">
+      <h2 style="margin-bottom: 4px;">Actions rapides</h2>
+      <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">Accédez rapidement aux fonctionnalités disponibles</p>
+      
+      <div class="quick-actions" id="quickActionsGrid">
+        <!-- Généré dynamiquement -->
+      </div>
+    </section>
+
+    <!-- Permissions -->
+    <section class="card">
+      <h2 style="margin-bottom: 4px;">Vos permissions</h2>
+      <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">Détail des accès autorisés sur votre compte</p>
+      
+      <div class="permissions-list" id="permissionsList">
+        <!-- Généré dynamiquement -->
+      </div>
+    </section>
+
+  </div>
+</main>
+
+</div>
+
+<!-- ============================================ -->
+<!-- SCRIPTS -->
+<!-- ============================================ -->
+<script>
+// ===== DONNÉES GLOBALES =====
+const token = localStorage.getItem('lcc_token');
+const userData = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+const permissions = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
+
+console.log('📊 Données chargées:', { userData, permissions });
+
+// ===== INITIALISATION UI =====
+document.addEventListener('DOMContentLoaded', function() {
+  
+  // Afficher les infos utilisateur
+  const userName = userData.name || userData.email || 'Sous-compte';
+  const userEmail = userData.email || '';
+  
+  document.getElementById('userName').textContent = userName;
+  document.getElementById('userEmail').textContent = userEmail;
+  document.getElementById('badgeName').textContent = userName;
+  document.getElementById('welcomeMessage').textContent = `Bienvenue, ${userName.split(' ')[0]}`;
+  document.getElementById('desktopBadge').style.display = 'flex';
+  
+  // Avatar initial
+  const initial = userName.charAt(0).toUpperCase();
+  document.getElementById('userAvatar').textContent = initial;
+  
+  // ===== GÉNÉRER LES QUICK ACTIONS =====
+  const quickActions = [
+    {
+      icon: 'fa-comment-dots',
+      title: 'Messages',
+      subtitle: 'Conversations clients',
+      link: '/messages.html',
+      permission: 'can_view_messages'
+    },
+    {
+      icon: 'fa-calendar',
+      title: 'Réservations',
+      subtitle: 'Calendrier & séjours',
+      link: '/app.html#calendar',
+      permission: 'can_view_reservations'
+    },
+    {
+      icon: 'fa-home',
+      title: 'Logements',
+      subtitle: 'Gérer les propriétés',
+      link: '/settings.html',
+      permission: 'can_view_properties'
+    },
+    {
+      icon: 'fa-broom',
+      title: 'Ménages',
+      subtitle: 'Planning nettoyage',
+      link: '/cleaning.html',
+      permission: 'can_view_cleaning'
+    }
+  ];
+  
+  const quickActionsGrid = document.getElementById('quickActionsGrid');
+  quickActionsGrid.innerHTML = quickActions.map(action => {
+    const isEnabled = permissions[action.permission] === true;
+    return `
+      <a href="${action.link}" class="quick-action-btn ${!isEnabled ? 'disabled' : ''}">
+        <i class="fas ${action.icon}"></i>
+        <div class="title">${action.title}</div>
+        <div class="subtitle">${action.subtitle}</div>
+      </a>
+    `;
+  }).join('');
+  
+  // ===== GÉNÉRER LA LISTE DES PERMISSIONS =====
+  const permissionsList = [
+    { key: 'can_view_reservations', icon: 'fa-calendar', title: 'Voir les réservations', desc: 'Accès au calendrier et aux séjours' },
+    { key: 'can_edit_reservations', icon: 'fa-edit', title: 'Modifier les réservations', desc: 'Éditer les détails des séjours' },
+    { key: 'can_view_properties', icon: 'fa-home', title: 'Voir les logements', desc: 'Accès à la liste des propriétés' },
+    { key: 'can_edit_properties', icon: 'fa-cog', title: 'Modifier les logements', desc: 'Éditer les paramètres des propriétés' },
+    { key: 'can_view_messages', icon: 'fa-comment-dots', title: 'Voir les messages', desc: 'Accès aux conversations clients' },
+    { key: 'can_send_messages', icon: 'fa-paper-plane', title: 'Envoyer des messages', desc: 'Répondre aux clients' },
+    { key: 'can_view_cleaning', icon: 'fa-broom', title: 'Voir les ménages', desc: 'Accès au planning de nettoyage' },
+    { key: 'can_manage_cleaning', icon: 'fa-tasks', title: 'Gérer les ménages', desc: 'Créer et modifier les tâches' },
+    { key: 'can_manage_team', icon: 'fa-users', title: 'Gérer l\'équipe', desc: 'Administrer les sous-comptes' }
+  ];
+  
+  const permissionsListEl = document.getElementById('permissionsList');
+  permissionsListEl.innerHTML = permissionsList.map(perm => {
+    const isEnabled = permissions[perm.key] === true;
+    return `
+      <div class="permission-card ${isEnabled ? 'enabled' : 'disabled'}">
+        <div class="permission-icon">
+          <i class="fas ${perm.icon}"></i>
+        </div>
+        <div class="permission-info">
+          <div class="permission-title">${perm.title}</div>
+          <div class="permission-desc">${perm.desc}</div>
+        </div>
+        <i class="fas ${isEnabled ? 'fa-check-circle' : 'fa-times-circle'}" style="color: ${isEnabled ? '#10B981' : '#9ca3af'}; font-size: 20px;"></i>
+      </div>
+    `;
+  }).join('');
+  
+  // ===== FILTRER LE MENU SELON PERMISSIONS =====
+  
+  // Messages
+  if (!permissions.can_view_messages) {
+    const navMessages = document.getElementById('navMessages');
+    if (navMessages) navMessages.style.display = 'none';
+  }
+  
+  // Logements
+  if (!permissions.can_view_properties) {
+    const navProperties = document.getElementById('navProperties');
+    if (navProperties) navProperties.style.display = 'none';
+  }
+  
+  // Ménage
+  if (!permissions.can_view_cleaning) {
+    const navCleaning = document.getElementById('navCleaning');
+    if (navCleaning) navCleaning.style.display = 'none';
+  }
+  
+  // Masquer section Gestion si aucune permission
+  if (!permissions.can_view_properties && !permissions.can_view_cleaning) {
+    const navGestion = document.getElementById('navGestion');
+    if (navGestion) navGestion.style.display = 'none';
+  }
+  
+  // ===== LOGOUT =====
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_account_type');
+      localStorage.removeItem('lcc_user');
+      localStorage.removeItem('lcc_permissions');
+      window.location.href = '/login.html';
+    }
+  });
+  
+  console.log('✅ Interface sous-compte initialisée');
+});
+</script>
+
+</body>
+</html>
