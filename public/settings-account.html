@@ -2057,6 +2057,17 @@ if (logoInput && logoPreview) {
     }
 
     // Charger au clic sur l'onglet
+    document.addEventListener('DOMContentLoaded', function() {
+      const tabButtons = document.querySelectorAll('.settings-tab');
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.tab === 'subscription') {
+            setTimeout(() => loadSubscriptionStatus(), 100);
+          }
+        });
+      });
+    });
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
