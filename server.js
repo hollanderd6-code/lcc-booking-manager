@@ -4436,26 +4436,14 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
 // Remplace les routes dans server.js
 // ============================================
 
-// ============================================
-// 🔧 CORRECTION ROUTE /api/reservations
-// Remplacez la ligne 4440-4456 de votre server.js par ce code
-// ============================================
-
+// GET - Toutes les réservations du user
 app.get('/api/reservations', authenticateToken, checkSubscription, async (req, res) => {
   try {
-    console.log('🔍 DEBUG /api/reservations');
-    console.log('🔍 req.user:', JSON.stringify(req.user, null, 2));
-    console.log('🔍 req.user.isSubAccount:', req.user.isSubAccount);
-    console.log('🔍 req.user.subAccountId:', req.user.subAccountId);
-    console.log('🔍 req.user.type:', req.user.type);
-    
     let userId;
     let accessibleProperties = [];
 
     // Détecter si sous-compte
     if (req.user.isSubAccount) {
-      console.log('✅ Détecté comme sous-compte, recherche ID:', req.user.subAccountId);
-      
       // Récupérer les infos du sous-compte
       const subResult = await pool.query(`
         SELECT parent_user_id
@@ -4463,68 +4451,9 @@ app.get('/api/reservations', authenticateToken, checkSubscription, async (req, r
         WHERE id = $1
       `, [req.user.subAccountId]);
 
-      console.log('🔍 Résultat requête DB:', subResult.rows);
-
       if (subResult.rows.length === 0) {
-        console.log('❌ ERREUR: Sous-compte introuvable en DB avec ID:', req.user.subAccountId);
         return res.status(401).json({ error: 'Sous-compte introuvable' });
       }
-
-      userId = subResult.rows[0].parent_user_id;
-
-      // Récupérer les propriétés accessibles
-      const propsResult = await pool.query(`
-        SELECT property_id
-        FROM sub_account_properties
-        WHERE sub_account_id = $1
-      `, [req.user.subAccountId]);
-
-      accessibleProperties = propsResult.rows.map(r => r.property_id);
-
-      console.log(`🔐 Sous-compte ${req.user.subAccountId} - Parent: ${userId} - Propriétés: ${accessibleProperties.join(', ') || 'TOUTES'}`);
-
-    } else {
-      console.log('👤 Détecté comme compte principal, user ID:', req.user.id);
-      // Compte principal - accès à tout
-      userId = req.user.id;
-    }
-
-    // Charger les propriétés de l'utilisateur
-    const allReservations = [];
-    const userProps = getUserProperties(userId);
-
-    // Filtrer selon propriétés accessibles (si sous-compte)
-    const filteredProps = req.user.isSubAccount
-      ? userProps.filter(p => accessibleProperties.includes(parseInt(p.id)))
-      : userProps;
-
-    filteredProps.forEach(property => {
-      const propertyReservations = reservationsStore.properties[property.id] || [];
-      propertyReservations.forEach(reservation => {
-        allReservations.push({
-          ...reservation,
-          property: {
-            id: property.id,
-            name: property.name,
-            color: property.color
-          }
-        });
-      });
-    });
-
-    console.log(`📅 Réservations retournées: ${allReservations.length} (${filteredProps.length} propriétés)`);
-
-    res.json({ 
-      success: true,
-      reservations: allReservations,
-      propertyCount: filteredProps.length
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur /api/reservations:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 
       userId = subResult.rows[0].parent_user_id;
 
