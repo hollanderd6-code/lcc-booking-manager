@@ -257,23 +257,16 @@
           localStorage.setItem('lcc_user', JSON.stringify(userData));
 
           // Si sous-compte, stocker les permissions
-          if (accountType === 'sub' && data.permissions) {
-            localStorage.setItem('lcc_permissions', JSON.stringify(data.permissions));
-            console.log('🔐 Permissions:', data.permissions);
+          if (accountType === 'sub') {
+            const permissions = data.subAccount?.permissions || data.permissions || {};
+            localStorage.setItem('lcc_permissions', JSON.stringify(permissions));
+            console.log('🔐 Permissions stockées:', permissions);
           }
 
-          // Redirection selon le type de compte
-let redirectUrl;
-if (accountType === 'sub') {
-  // Sous-compte → page dédiée
-  redirectUrl = IS_NATIVE ? 'sub-account.html' : '/sub-account.html';
-  console.log('🔄 [V3] Redirection SOUS-COMPTE:', redirectUrl);
-} else {
-  // Compte principal → app.html normale
-  redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
-  console.log('🔄 [V3] Redirection COMPTE PRINCIPAL:', redirectUrl);
-}
-window.location.href = redirectUrl;
+          // Redirection
+          const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+          console.log('🔄 [V3] Redirection:', redirectUrl);
+          window.location.href = redirectUrl;
 
         } catch (err) {
           console.error('❌ [V3] ERREUR FETCH:');
