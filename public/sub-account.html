@@ -623,8 +623,8 @@ document.addEventListener('DOMContentLoaded', function() {
     can_manage_team: { icon: 'users', label: 'Gérer l\'équipe' }
   };
 
-  const permissionsList = document.getElementById('permissionsList');
-  if (permissionsList && userPermissions) {
+  const permissionsContainer = document.getElementById('permissionsList');
+  if (permissionsContainer && userPermissions) {
     const activePermissions = Object.entries(userPermissions)
       .filter(([key, value]) => value === true && permissionLabels[key])
       .map(([key]) => {
@@ -638,13 +638,13 @@ document.addEventListener('DOMContentLoaded', function() {
       });
 
     if (activePermissions.length > 0) {
-      permissionsList.innerHTML = `
+      permissionsContainer.innerHTML = `
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:12px;">
           ${activePermissions.join('')}
         </div>
       `;
     } else {
-      permissionsList.innerHTML = '<p style="color:#9ca3af;">Aucune permission active</p>';
+      permissionsContainer.innerHTML = '<p style="color:#9ca3af;">Aucune permission active</p>';
     }
   }
 
