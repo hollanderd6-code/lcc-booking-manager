@@ -2348,51 +2348,6 @@ async function authenticateUser(req, res, next) {
   }
 }
 
-async function checkSubscription(req, res, next) {
-  try {
-    const user = req.user;
-    
-    if (!user || !user.id) {
-      return res.status(401).json({ error: 'Non autorise', code: 'UNAUTHORIZED' });
-    }
-
-    const result = await pool.query(
-      `SELECT id, status, trial_end_date, current_period_end, plan_type
-      FROM subscriptions WHERE user_id = $1`,
-      [user.id]
-    );
-
-    if (result.rows.length === 0) {
-      console.error('User sans abonnement:', user.id);
-      return res.status(403).json({ error: 'Pas abonnement', code: 'NO_SUBSCRIPTION' });
-    }
-
-    const subscription = result.rows[0];
-    const now = new Date();
-
-    if (subscription.status === 'trial') {
-      const trialEnd = new Date(subscription.trial_end_date);
-      if (now > trialEnd) {
-        await pool.query(`UPDATE subscriptions SET status = 'expired' WHERE id = $1`, [subscription.id]);
-        return res.status(402).json({ error: 'Trial expire', code: 'TRIAL_EXPIRED' });
-      }
-      const days = Math.ceil((trialEnd - now) / 86400000);
-      req.subscription = { status: 'trial', days_remaining: days };
-      return next();
-    }
-
-    if (subscription.status === 'active') {
-      req.subscription = { status: 'active', plan_type: subscription.plan_type };
-      return next();
-    }
-
-    return res.status(402).json({ error: 'Abonnement inactif', code: 'SUBSCRIPTION_INACTIVE' });
-
-  } catch (error) {
-    console.error('Erreur checkSubscription:', error);
-    return res.status(500).json({ error: 'Erreur serveur' });
-  }
-}
 
 async function getSubscriptionInfo(req, res, next) {
   try {
