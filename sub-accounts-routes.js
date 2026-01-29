@@ -603,5 +603,76 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
 
   console.log('✅ Routes sous-comptes initialisées');
 }
+// ============================================
+// 🔧 ROUTE À AJOUTER DANS sub-accounts-routes.js
+// Pour récupérer les propriétés accessibles d'un sous-compte
+// ============================================
+
+// Ajouter cette route dans la fonction setupSubAccountsRoutes()
+
+app.get('/api/sub-accounts/accessible-properties', authenticateToken, async (req, res) => {
+  try {
+    // Si c'est un compte principal, il a accès à tout
+    if (!req.user.isSubAccount) {
+      const propertiesResult = await pool.query(
+        'SELECT id FROM properties WHERE user_id = $1',
+        [req.user.id]
+      );
+      
+      return res.json({
+        success: true,
+        propertyIds: propertiesResult.rows.map(r => r.id),
+        hasFullAccess: true
+      });
+    }
+
+    // Si c'est un sous-compte, récupérer ses propriétés autorisées
+    const result = await pool.query(`
+      SELECT property_id
+      FROM sub_account_properties
+      WHERE sub_account_id = $1
+    `, [req.user.subAccountId]);
+
+    const propertyIds = result.rows.map(r => r.property_id);
+
+    // Si aucune restriction (tableau vide en DB) = accès à toutes les propriétés du parent
+    if (propertyIds.length === 0) {
+      const subAccountResult = await pool.query(
+        'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+        [req.user.subAccountId]
+      );
+
+      if (subAccountResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Sous-compte introuvable' });
+      }
+
+      const parentUserId = subAccountResult.rows[0].parent_user_id;
+
+      const allPropertiesResult = await pool.query(
+        'SELECT id FROM properties WHERE user_id = $1',
+        [parentUserId]
+      );
+
+      return res.json({
+        success: true,
+        propertyIds: allPropertiesResult.rows.map(r => r.id),
+        hasFullAccess: true
+      });
+    }
+
+    // Sinon, retourner les propriétés spécifiques
+    res.json({
+      success: true,
+      propertyIds: propertyIds,
+      hasFullAccess: false
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur accessible-properties:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+console.log('✅ Route accessible-properties ajoutée');
 
 module.exports = { setupSubAccountsRoutes };
