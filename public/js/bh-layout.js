@@ -1,11 +1,29 @@
 (function () {
   'use strict';
 
-/* /js/bh-layout.js – injection sidebar + header standard */
-/* VERSION CORRIGÉE - Logo "B" unifié partout (sidebar + mobile) avec grand B */
+/* /js/bh-layout.js – injection sidebar + header avec filtrage permissions sous-comptes */
 const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
 
-const SIDEBAR_HTML = `
+function getSidebarHTML() {
+  // Vérifier si sous-compte
+  const accountType = localStorage.getItem('lcc_account_type');
+  const isSubAccount = accountType === 'sub';
+  
+  let permissions = {};
+  if (isSubAccount) {
+    try {
+      const permData = localStorage.getItem('lcc_permissions');
+      if (permData) permissions = JSON.parse(permData);
+      console.log('🔐 Permissions chargées:', permissions);
+    } catch (e) {
+      console.error('Erreur chargement permissions:', e);
+    }
+  }
+
+  // Fonction helper pour vérifier permission
+  const hasPermission = (perm) => !isSubAccount || permissions[perm] === true;
+
+  return `
 <aside class="sidebar">
   <div class="sidebar-header">
     <a class="sidebar-logo" href="/">
@@ -19,7 +37,7 @@ const SIDEBAR_HTML = `
           <span style="color:#111827;font-weight:600;">host</span>
         </span>
         <span class="sidebar-logo-subtitle" style="font-size:10px;color:#6B7280;font-weight:500;letter-spacing:0.5px;">
-          Smart Property Manager
+          ${isSubAccount ? 'ESPACE COLLABORATEUR' : 'Smart Property Manager'}
         </span>
       </div>
     </a>
@@ -29,49 +47,52 @@ const SIDEBAR_HTML = `
     <!-- PRINCIPAL -->
     <div class="nav-section">
       <div class="nav-section-title">Principal</div>
-      <a class="nav-item active" data-page="app" href="/app.html">
+      ${hasPermission('can_view_reservations') ? `
+      <a class="nav-item active" data-page="app" href="${isSubAccount ? '/sub-account.html' : '/app.html'}">
         <i class="fas fa-th-large"></i><span>Dashboard</span>
       </a>
-      <a class="nav-item" href="/app.html#calendarSection" id="navCalendarLink">
+      <a class="nav-item" href="${isSubAccount ? '/sub-account.html#calendarSection' : '/app.html#calendarSection'}" id="navCalendarLink">
         <i class="fas fa-calendar"></i><span>Calendrier</span>
       </a>
+      ` : ''}
+      ${hasPermission('can_view_messages') ? `
       <a class="nav-item" data-page="messages" href="/messages.html">
         <i class="fas fa-comment-dots"></i><span>Messages</span>
       </a>
+      ` : ''}
     </div>
 
+    ${!isSubAccount || hasPermission('can_view_properties') || hasPermission('can_view_cleaning') ? `
     <!-- GESTION -->
     <div class="nav-section">
       <div class="nav-section-title">Gestion</div>
+      ${hasPermission('can_view_properties') ? `
       <a class="nav-item" data-page="settings" href="/settings.html">
         <i class="fas fa-home"></i><span>Mes logements</span>
       </a>
-      <a class="nav-item" data-page="welcome" href="/welcome.html">
-        <i class="fas fa-book-open"></i><span>Livret d'accueil</span>
-      </a>
+      ` : ''}
+      ${hasPermission('can_view_cleaning') ? `
       <a class="nav-item" data-page="cleaning" href="/cleaning.html">
         <i class="fas fa-broom"></i><span>Gestion du ménage</span>
       </a>
+      ` : ''}
+    </div>
+    ` : ''}
 
-      <div class="nav-section">
-        <div class="nav-section-title">Facturation</div>
-        <a class="nav-item" data-page="factures" href="/factures.html">
-          <i class="fas fa-file-invoice"></i><span>Factures clients</span>
-        </a>
-        <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
-          <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
-        </a>
-      </div>
-
-      <a class="nav-item" data-page="deposits" href="/deposits.html">
-        <i class="fas fa-shield-alt"></i><span>Cautions</span>
+    ${!isSubAccount || hasPermission('can_view_finances') ? `
+    <!-- FACTURATION -->
+    <div class="nav-section">
+      <div class="nav-section-title">Facturation</div>
+      ${hasPermission('can_view_finances') ? `
+      <a class="nav-item" data-page="factures" href="/factures.html">
+        <i class="fas fa-file-invoice"></i><span>Factures clients</span>
       </a>
-      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
-<i class="fas fa-lock"></i>
-<span>Serrures connectées</span>
-</a>
+      ` : ''}
+    </div>
+    ` : ''}
 
-    <!-- PARAMÈTRES -->
+    ${!isSubAccount ? `
+    <!-- PARAMÈTRES (uniquement compte principal) -->
     <div class="nav-section">
       <div class="nav-section-title">Paramètres</div>
       <a class="nav-item" data-page="settings-account" href="/settings-account.html">
@@ -81,6 +102,7 @@ const SIDEBAR_HTML = `
         <i class="fas fa-question-circle"></i><span>Aide</span>
       </a>
     </div>
+    ` : ''}
   </nav>
 
   <div class="sidebar-footer">
@@ -88,7 +110,7 @@ const SIDEBAR_HTML = `
       <div class="user-avatar" id="sidebarUserAvatar">C</div>
       <div class="user-info">
         <div class="user-name" id="sidebarUserName">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany">Mon espace</div>
+        <div class="user-email" id="sidebarUserCompany">${isSubAccount ? 'Sous-compte' : 'Mon espace'}</div>
       </div>
       <button type="button" class="btn btn-ghost btn-xs" id="logoutBtn">
         <i class="fas fa-sign-out-alt"></i>
@@ -97,10 +119,8 @@ const SIDEBAR_HTML = `
   </div>
 </aside>
 `;
+}
 
-  // ============================================
-  // 📝 TEXTE DU LOGO MOBILE
-  // ============================================
   const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
     <span style="color:#10B981; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
   </span>
@@ -116,19 +136,16 @@ const SIDEBAR_HTML = `
     const ph = document.getElementById("bhSidebar");
     if (!ph) return;
 
-    ph.innerHTML = SIDEBAR_HTML;
+    ph.innerHTML = getSidebarHTML();
 
-    // Active link based on body[data-page]
     const page = document.body?.dataset?.page;
 
-    // 1) Active by data-page (preferred)
     if (page) {
       document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
       const match = document.querySelector(`.nav-item[data-page="${page}"]`);
       if (match) match.classList.add("active");
     }
 
-    // 2) Fallback: active by URL (useful for links without data-page, ex: factures)
     const currentPath = (window.location.pathname || "").toLowerCase();
     if (currentPath) {
       const byHref = Array.from(document.querySelectorAll(".nav-item[href]"))
@@ -139,7 +156,6 @@ const SIDEBAR_HTML = `
       }
     }
 
-    // Mobile menu toggle (works if elements exist)
     const sidebar = document.getElementById("sidebar") || document.querySelector("aside.sidebar");
     const overlay = document.getElementById("sidebarOverlay");
     const btn = document.getElementById("mobileMenuBtn");
@@ -158,7 +174,6 @@ const SIDEBAR_HTML = `
       });
     }
 
-    // ✅ BOUTON DÉCONNEXION : Attacher l'event listener après injection
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function(e) {
@@ -167,11 +182,12 @@ const SIDEBAR_HTML = `
         console.log("🚪 Déconnexion...");
         localStorage.removeItem("lcc_token");
         localStorage.removeItem("lcc_user");
+        localStorage.removeItem("lcc_account_type");
+        localStorage.removeItem("lcc_permissions");
         window.location.href = "/login.html";
       });
     }
 
-    // ✅ INFOS UTILISATEUR : Remplir nom, avatar, company
     const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
     if (user.firstName) {
       const nameEl = document.getElementById('sidebarUserName');
@@ -184,9 +200,8 @@ const SIDEBAR_HTML = `
       if (companyEl) companyEl.textContent = user.company;
     }
 
-    // ✅ Émettre un événement quand la sidebar est prête
     document.dispatchEvent(new CustomEvent('sidebarReady'));
-    console.log("✅ Sidebar injectée avec logo B grand format");
+    console.log("✅ Sidebar injectée avec filtrage permissions");
   }
 
   function injectHeader() {
@@ -199,7 +214,6 @@ const SIDEBAR_HTML = `
     const backHref = document.body.getAttribute("data-back-href") || "/app.html";
     const backLabel = document.body.getAttribute("data-back-label") || "Retour au dashboard";
 
-    // Optional custom actions (provided per-page)
     const actionsSrc = document.getElementById("bhHeaderActions");
     const customActions = actionsSrc ? actionsSrc.innerHTML : "";
 
@@ -222,14 +236,10 @@ const SIDEBAR_HTML = `
     `;
   }
 
-  // ============================================
-  // 🎨 NORMALISATION DU BRANDING MOBILE
-  // ============================================
   function normalizeBranding() {
     const mobileLogo = document.querySelector(".mobile-logo");
     const mobileLogoText = document.querySelector(".mobile-logo-text");
 
-    // 1. REMPLACER LE TEXTE DU LOGO MOBILE
     if (mobileLogoText) {
       const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
       if (!hasCorrectBranding) {
@@ -237,11 +247,9 @@ const SIDEBAR_HTML = `
       }
     }
 
-    // 2. REMPLACER L'ICÔNE PAR LE LOGO "B" (IMG) GRAND FORMAT
     if (mobileLogo) {
       const existingLogo = mobileLogo.querySelector("img, svg");
 
-      // Besoin de MAJ si aucun logo, ou si img != notre fichier, ou si SVG présent (legacy)
       const needsUpdate =
         !existingLogo ||
         (existingLogo.tagName.toLowerCase() === "img" &&
@@ -249,21 +257,15 @@ const SIDEBAR_HTML = `
         existingLogo.tagName.toLowerCase() === "svg";
 
       if (needsUpdate) {
-        // Supprimer l'ancien contenu (FontAwesome / svg / img)
         const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg, img");
         if (oldIcon) oldIcon.remove();
 
-        // Injecter le logo (img)
         mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
       }
     }
   }
 
-  // ============================================
-  // 🎨 FORCE LE REMPLACEMENT DU LOGO SIDEBAR
-  // ============================================
   function forceUpdateSidebarLogo() {
-    // Force le logo sidebar (remplace les anciens SVG éventuels par l'IMG)
     const sidebarAnchors = document.querySelectorAll(".sidebar-logo");
 
     sidebarAnchors.forEach(a => {
@@ -282,39 +284,32 @@ const SIDEBAR_HTML = `
     });
   }
 
-  // ============================================
-  // 🚀 INITIALISATION
-  // ============================================
   function init() {
-    console.log("🚀 bh-layout.js - Initialisation...");
+    console.log("🚀 bh-layout.js - Initialisation avec filtrage permissions...");
     
     injectSidebar();
     injectHeader();
     normalizeBranding();
     
-    // Réappliquer le branding et forcer la mise à jour après un court délai
     setTimeout(() => {
       normalizeBranding();
       forceUpdateSidebarLogo();
     }, 100);
     
-    // Vérification supplémentaire après 500ms
     setTimeout(() => {
       forceUpdateSidebarLogo();
       normalizeBranding();
     }, 500);
     
-    console.log("✅ bh-layout.js - Prêt avec logo unifié");
+    console.log("✅ bh-layout.js - Prêt avec filtrage permissions");
   }
 
-  // Démarrer dès que le DOM est prêt
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
 
-  // Exposer pour débogage
   window.bhLayout = {
     normalizeBranding,
     injectSidebar,
