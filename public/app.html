@@ -4884,7 +4884,45 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
         properties = Array.isArray(baseData.properties) ? baseData.properties : [];
         const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
 
-        reservations = reservationsBasic;
+        // ✅ FILTRAGE POUR SOUS-COMPTES
+        const accountType = localStorage.getItem('lcc_account_type');
+        if (accountType === 'sub') {
+          try {
+            const accessRes = await fetch(`${API_URL}/api/sub-accounts/accessible-properties`, {
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            
+            if (accessRes.ok) {
+              const accessData = await accessRes.json();
+              const accessibleIds = accessData.propertyIds || [];
+              
+              // Si pas de restriction (tableau vide) = accès à tout
+              if (accessibleIds.length > 0) {
+                // Filtrer les propriétés
+                properties = properties.filter(p => accessibleIds.includes(p.id));
+                
+                // Filtrer les réservations
+                const filteredReservations = reservationsBasic.filter(r => 
+                  accessibleIds.includes(r.property?.id) || accessibleIds.includes(r.propertyId)
+                );
+                
+                console.log(`🔐 Sous-compte: ${properties.length} logements, ${filteredReservations.length} réservations`);
+                reservations = filteredReservations;
+              } else {
+                reservations = reservationsBasic;
+                console.log('🔓 Sous-compte avec accès complet');
+              }
+            } else {
+              // En cas d'erreur, afficher tout (fallback sécurisé)
+              reservations = reservationsBasic;
+            }
+          } catch (err) {
+            console.error('Erreur filtrage sous-compte:', err);
+            reservations = reservationsBasic;
+          }
+        } else {
+          reservations = reservationsBasic;
+        }
 localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
         localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
         window.LCC_RESERVATIONS = reservations;
