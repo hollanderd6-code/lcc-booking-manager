@@ -562,6 +562,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
       const token = generateSubAccountToken(subAccount.id);
 
       console.log(`✅ Connexion sous-compte: ${email}`);
+      console.log('🔍 SubAccount object keys:', Object.keys(subAccount));
+      console.log('🔍 can_view_calendar:', subAccount.can_view_calendar);
+      console.log('🔍 can_view_messages:', subAccount.can_view_messages);
 
       res.json({
         success: true,
