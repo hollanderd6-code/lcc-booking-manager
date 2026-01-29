@@ -710,7 +710,23 @@ function authenticateToken(req, res, next) {
   const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
   try {
     const decoded = jwt.verify(token, secret);
-    req.user = decoded;
+    
+    // ✅ Détecter le type de compte
+    if (decoded.type === 'sub_account') {
+      // C'est un sous-compte
+      req.user = { 
+        id: null,
+        subAccountId: decoded.subAccountId,
+        type: 'sub',
+        isSubAccount: true
+      };
+    } else {
+      // C'est un compte principal
+      req.user = decoded;
+      req.user.type = 'main';
+      req.user.isSubAccount = false;
+    }
+    
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Token invalide' });
@@ -723,6 +739,11 @@ function authenticateToken(req, res, next) {
 
 async function checkSubscription(req, res, next) {
   try {
+    // ✅ Skip vérification pour sous-comptes
+    if (req.user && req.user.isSubAccount) {
+      return next();
+    }
+    
     const userId = req.user.id;
 
     // Récupérer l'abonnement
