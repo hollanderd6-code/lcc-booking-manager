@@ -892,15 +892,6 @@
           <option value="custom">🎨 Personnalisé</option>
         </select>
         <small id="roleDescription" style="color:#6b7280; display:block; margin-top:8px;"></small>
-        <div style="background:#EFF6FF; border-left:3px solid #3B82F6; padding:12px; margin-top:8px; border-radius:6px;">
-          <div style="font-weight:600; color:#1E40AF; font-size:13px; margin-bottom:4px;">
-            <i class="fas fa-info-circle"></i> Astuce
-          </div>
-          <div style="font-size:12px; color:#1E40AF;">
-            Pour personnaliser précisément les permissions, sélectionnez le rôle <strong>"🎨 Personnalisé"</strong>. 
-            Les autres rôles ont des permissions prédéfinies.
-          </div>
-        </div>
       </div>
 
       <!-- Permissions détaillées (si rôle custom) -->
@@ -2066,46 +2057,20 @@ if (logoInput && logoPreview) {
     }
 
     // Charger au clic sur l'onglet
-    document.addEventListener('DOMContentLoaded', function() {
-      const tabButtons = document.querySelectorAll('.settings-tab');
-      tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (btn.dataset.tab === 'subscription') {
-            setTimeout(() => loadSubscriptionStatus(), 100);
-          }
-        });
-      });
-    });
-</script>
-<script src="/js/bh-layout.js"></script>
-<script src="/js/mobile-native-experience.js"></script>
-<script src="/js/mobile-tabs-handler.js"></script>
-<script src="/js/messages-badge-desktop-mobile.js"></script>
-<script src="/js/messages-badge-dynamic.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-console.log('🟢 Script équipe chargé - DOM ready');
-<script>
-// ============================================
-// 🔧 GESTION DE L'ÉQUIPE - VERSION CORRIGÉE
-// À remplacer dans settings-account.html
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🟢 Script équipe chargé - DOM ready');
+  console.log('🟢 Script équipe - Version propre');
   
   const ROLE_DESCRIPTIONS = {
-    manager: 'Accès complet au calendrier, messages et ménages. Idéal pour un assistant ou collègue.',
+    manager: 'Accès complet au calendrier, messages et ménages.',
     cleaner: 'Accès au calendrier (lecture) et gestion des ménages uniquement.',
     accountant: 'Accès aux finances et au calendrier (lecture).',
     custom: 'Choisissez manuellement chaque permission.'
   };
   
-  // Variable pour stocker l'ID en édition
   let editingMemberId = null;
   
-  // ===== CHARGER LA LISTE DES MEMBRES =====
   async function loadTeamMembers() {
     try {
       const token = localStorage.getItem('lcc_token');
@@ -2113,36 +2078,26 @@ document.addEventListener('DOMContentLoaded', function() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      
       if (!data.success) throw new Error(data.error);
-      
       displayTeamMembers(data.subAccounts);
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors du chargement de l\'équipe');
+      alert('Erreur chargement équipe');
     }
   }
   
-  // ===== AFFICHER LA LISTE DES MEMBRES =====
   function displayTeamMembers(members) {
     const container = document.getElementById('teamMembersList');
-    
     if (members.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center;padding:48px 24px;color:#9ca3af;">
-          <i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i>
-          <p>Aucun membre d'équipe</p>
-        </div>
-      `;
+      container.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9ca3af;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i><p>Aucun membre</p></div>';
       return;
     }
     
     container.innerHTML = members.map(member => {
-      const initials = `${member.first_name?.charAt(0) || ''}${member.last_name?.charAt(0) || ''}`;
+      const initials = `${member.first_name?.charAt(0)||''}${member.last_name?.charAt(0)||''}`;
       const isActive = member.is_active;
-      
-      // Liste des permissions
       const permissions = [];
+      
       if (member.can_view_reservations) permissions.push({ icon: 'calendar', label: 'Calendrier' });
       if (member.can_view_messages) permissions.push({ icon: 'comment-dots', label: 'Messages' });
       if (member.can_view_cleaning) permissions.push({ icon: 'broom', label: 'Ménages' });
@@ -2151,65 +2106,24 @@ document.addEventListener('DOMContentLoaded', function() {
       if (member.can_view_deposits) permissions.push({ icon: 'shield-alt', label: 'Cautions' });
       if (member.can_manage_locks) permissions.push({ icon: 'lock', label: 'Serrures' });
       
-      const roleLabels = {
-        manager: '👔 Manager',
-        cleaner: '🧹 Femme de ménage',
-        accountant: '📊 Comptable',
-        custom: '🎨 Personnalisé'
-      };
+      const roleLabels = { manager: '👔 Manager', cleaner: '🧹 Femme de ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
       
-      return `
-        <div class="team-member-card ${!isActive ? 'team-member-inactive' : ''}">
-          <div class="team-member-header">
-            <div class="team-member-info">
-              <div class="team-member-avatar">${initials}</div>
-              <div class="team-member-details">
-                <h3>${member.first_name} ${member.last_name}</h3>
-                <p>${member.email}</p>
-                <span class="team-member-role">${roleLabels[member.role] || member.role}</span>
-                ${!isActive ? '<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>' : ''}
-              </div>
-            </div>
-            <div class="team-member-actions">
-              <button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})">
-                <i class="fas fa-${isActive ? 'pause' : 'play'}-circle"></i>
-              </button>
-              <button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id}, '${member.email}')">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-          ${permissions.length > 0 ? `
-            <div class="team-member-permissions">
-              ${permissions.map(p => `
-                <span class="permission-badge">
-                  <i class="fas fa-${p.icon}"></i> ${p.label}
-                </span>
-              `).join('')}
-            </div>
-          ` : ''}
-        </div>
-      `;
+      return `<div class="team-member-card ${!isActive?'team-member-inactive':''}"><div class="team-member-header"><div class="team-member-info"><div class="team-member-avatar">${initials}</div><div class="team-member-details"><h3>${member.first_name} ${member.last_name}</h3><p>${member.email}</p><span class="team-member-role">${roleLabels[member.role]||member.role}</span>${!isActive?'<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>':''}</div></div><div class="team-member-actions"><button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})"><i class="fas fa-edit"></i></button><button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})"><i class="fas fa-${isActive?'pause':'play'}-circle"></i></button><button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id},'${member.email}')"><i class="fas fa-trash"></i></button></div></div>${permissions.length>0?`<div class="team-member-permissions">${permissions.map(p=>`<span class="permission-badge"><i class="fas fa-${p.icon}"></i> ${p.label}</span>`).join('')}</div>`:''}</div>`;
     }).join('');
   }
   
-  // ===== OUVRIR LE MODAL POUR AJOUTER =====
   const btnAdd = document.getElementById('btnAddTeamMember');
   if (btnAdd) {
     btnAdd.addEventListener('click', async function() {
-      console.log('🔵 Bouton ajout cliqué');
-      
-      // Réinitialiser le formulaire
+      console.log('🔵 Bouton cliqué - Opening modal');
       editingMemberId = null;
       document.getElementById('addTeamMemberForm').reset();
       document.querySelector('#addTeamMemberModal h2').textContent = 'Ajouter un membre d\'équipe';
-      document.getElementById('memberPassword').required = true;
-      document.getElementById('memberPassword').parentElement.style.display = 'block';
-      
-      // Ouvrir le modal
+      const pwdField = document.getElementById('memberPassword');
+      if (pwdField) {
+        pwdField.required = true;
+        pwdField.parentElement.style.display = 'block';
+      }
       const modal = document.getElementById('addTeamMemberModal');
       if (modal) {
         modal.style.display = 'flex';
@@ -2218,7 +2132,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // ===== FERMER LE MODAL =====
   document.getElementById('closeAddMemberModal')?.addEventListener('click', () => {
     document.getElementById('addTeamMemberModal').style.display = 'none';
   });
@@ -2227,16 +2140,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addTeamMemberModal').style.display = 'none';
   });
   
-  // ===== CHANGER LE RÔLE =====
   document.getElementById('memberRole')?.addEventListener('change', function() {
     const desc = document.getElementById('roleDescription');
     const customPerms = document.getElementById('customPermissions');
-    
-    desc.textContent = ROLE_DESCRIPTIONS[this.value] || '';
-    customPerms.style.display = this.value === 'custom' ? 'block' : 'none';
+    if (desc) desc.textContent = ROLE_DESCRIPTIONS[this.value] || '';
+    if (customPerms) customPerms.style.display = this.value === 'custom' ? 'block' : 'none';
   });
   
-  // ===== CHARGER LES PROPRIÉTÉS =====
   async function loadPropertiesForSelect() {
     try {
       const token = localStorage.getItem('lcc_token');
@@ -2245,30 +2155,22 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       const data = await res.json();
       const select = document.getElementById('memberProperties');
+      if (!select) return;
       
       if (!data.properties || data.properties.length === 0) {
-        select.innerHTML = '<option value="">Aucun logement trouvé - Ajoutez d\'abord des logements dans Paramètres</option>';
-        console.warn('⚠️ Aucune propriété trouvée');
+        select.innerHTML = '<option value="">Aucun logement</option>';
         return;
       }
       
-      select.innerHTML = data.properties.map(p => 
-        `<option value="${p.id}">${p.name}</option>`
-      ).join('');
-      
-      console.log('✅ ' + data.properties.length + ' propriétés chargées');
+      select.innerHTML = data.properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      console.log('✅ Propriétés chargées:', data.properties.length);
     } catch (error) {
-      console.error('❌ Erreur chargement propriétés:', error);
-      const select = document.getElementById('memberProperties');
-      select.innerHTML = '<option value="">Erreur de chargement - Vérifiez votre connexion</option>';
-      alert('⚠️ Impossible de charger les logements. Vérifiez que vous avez créé au moins un logement dans Paramètres > Mes logements.');
+      console.error('Erreur propriétés:', error);
     }
   }
   
-  // ===== SOUMETTRE LE FORMULAIRE =====
   document.getElementById('addTeamMemberForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
-    
     const role = document.getElementById('memberRole').value;
     const data = {
       email: document.getElementById('memberEmail').value,
@@ -2278,12 +2180,10 @@ document.addEventListener('DOMContentLoaded', function() {
       propertyIds: Array.from(document.getElementById('memberProperties').selectedOptions).map(o => o.value)
     };
     
-    // Ajouter le mot de passe uniquement si création
     if (!editingMemberId) {
       data.password = document.getElementById('memberPassword').value;
     }
     
-    // Permissions personnalisées
     if (role === 'custom') {
       data.permissions = {
         can_view_reservations: document.getElementById('perm_canViewCalendar')?.checked || false,
@@ -2300,120 +2200,96 @@ document.addEventListener('DOMContentLoaded', function() {
         can_view_deposits: document.getElementById('perm_canViewDeposits')?.checked || false,
         can_manage_locks: document.getElementById('perm_canManageLocks')?.checked || false
       };
-      console.log('🔐 Permissions envoyées:', data.permissions);
+      console.log('🔐 Permissions:', data.permissions);
     }
     
     try {
       const token = localStorage.getItem('lcc_token');
-      const endpoint = editingMemberId 
-        ? `/api/sub-accounts/${editingMemberId}` 
-        : '/api/sub-accounts/create';
+      const endpoint = editingMemberId ? `/api/sub-accounts/${editingMemberId}` : '/api/sub-accounts/create';
       const method = editingMemberId ? 'PUT' : 'POST';
-      
-      console.log(`📤 ${method} ${endpoint}`, data);
       
       const res = await fetch(endpoint, {
         method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(data)
       });
       
       const result = await res.json();
-      
       if (!result.success) throw new Error(result.error);
       
-      alert(editingMemberId ? '✅ Membre modifié' : '✅ Membre ajouté');
+      alert(editingMemberId ? '✅ Modifié' : '✅ Ajouté');
       document.getElementById('addTeamMemberModal').style.display = 'none';
       this.reset();
       editingMemberId = null;
       loadTeamMembers();
     } catch (error) {
-      console.error('❌ Erreur:', error);
       alert('❌ ' + error.message);
     }
   });
   
-  // ===== ÉDITER UN MEMBRE =====
   window.editTeamMember = async function(id) {
     console.log('🔵 Edit:', id);
-    
     try {
       const token = localStorage.getItem('lcc_token');
       const res = await fetch('/api/sub-accounts/list', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      
       if (!data.success) throw new Error(data.error);
       
       const member = data.subAccounts.find(m => m.id === id);
       if (!member) throw new Error('Membre introuvable');
       
-      console.log('👤 Membre chargé:', member);
-      
-      // Stocker l'ID en édition
       editingMemberId = id;
-      
-      // Charger les propriétés
       await loadPropertiesForSelect();
       
-      // Remplir le formulaire
       document.getElementById('memberEmail').value = member.email;
       document.getElementById('memberFirstName').value = member.first_name;
       document.getElementById('memberLastName').value = member.last_name;
       document.getElementById('memberRole').value = member.role;
       
-      // Masquer le champ mot de passe en mode édition
-      document.getElementById('memberPassword').required = false;
-      document.getElementById('memberPassword').value = '';
-      document.getElementById('memberPassword').parentElement.style.display = 'none';
+      const pwdField = document.getElementById('memberPassword');
+      if (pwdField) {
+        pwdField.required = false;
+        pwdField.value = '';
+        pwdField.parentElement.style.display = 'none';
+      }
       
-      // Déclencher le changement de rôle pour afficher les permissions
       document.getElementById('memberRole').dispatchEvent(new Event('change'));
       
-      // Sélectionner les propriétés accessibles
       if (member.accessible_properties && member.accessible_properties.length > 0) {
         const selectEl = document.getElementById('memberProperties');
-        Array.from(selectEl.options).forEach(option => {
-          option.selected = member.accessible_properties.includes(parseInt(option.value));
-        });
+        if (selectEl) {
+          Array.from(selectEl.options).forEach(option => {
+            option.selected = member.accessible_properties.includes(parseInt(option.value));
+          });
+        }
       }
       
-      // Cocher les permissions si rôle custom
       if (member.role === 'custom') {
-        document.getElementById('perm_canViewCalendar').checked = member.can_view_reservations || false;
-        document.getElementById('perm_canEditReservations').checked = member.can_edit_reservations || false;
-        document.getElementById('perm_canCreateReservations').checked = member.can_create_reservations || false;
-        document.getElementById('perm_canViewMessages').checked = member.can_view_messages || false;
-        document.getElementById('perm_canSendMessages').checked = member.can_send_messages || false;
-        document.getElementById('perm_canViewCleaning').checked = member.can_view_cleaning || false;
-        document.getElementById('perm_canAssignCleaning').checked = member.can_manage_cleaning || false;
-        document.getElementById('perm_canViewFinances').checked = member.can_view_finances || false;
-        document.getElementById('perm_canViewProperties').checked = member.can_view_properties || false;
-        document.getElementById('perm_canViewDeposits').checked = member.can_view_deposits || false;
-        document.getElementById('perm_canManageLocks').checked = member.can_manage_locks || false;
+        if (document.getElementById('perm_canViewCalendar')) document.getElementById('perm_canViewCalendar').checked = member.can_view_reservations || false;
+        if (document.getElementById('perm_canEditReservations')) document.getElementById('perm_canEditReservations').checked = member.can_edit_reservations || false;
+        if (document.getElementById('perm_canCreateReservations')) document.getElementById('perm_canCreateReservations').checked = member.can_create_reservations || false;
+        if (document.getElementById('perm_canViewMessages')) document.getElementById('perm_canViewMessages').checked = member.can_view_messages || false;
+        if (document.getElementById('perm_canSendMessages')) document.getElementById('perm_canSendMessages').checked = member.can_send_messages || false;
+        if (document.getElementById('perm_canViewCleaning')) document.getElementById('perm_canViewCleaning').checked = member.can_view_cleaning || false;
+        if (document.getElementById('perm_canAssignCleaning')) document.getElementById('perm_canAssignCleaning').checked = member.can_manage_cleaning || false;
+        if (document.getElementById('perm_canViewFinances')) document.getElementById('perm_canViewFinances').checked = member.can_view_finances || false;
+        if (document.getElementById('perm_canViewProperties')) document.getElementById('perm_canViewProperties').checked = member.can_view_properties || false;
+        if (document.getElementById('perm_canViewDeposits')) document.getElementById('perm_canViewDeposits').checked = member.can_view_deposits || false;
+        if (document.getElementById('perm_canManageLocks')) document.getElementById('perm_canManageLocks').checked = member.can_manage_locks || false;
       }
       
-      // Changer le titre du modal
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
-      
-      // Ouvrir le modal
       document.getElementById('addTeamMemberModal').style.display = 'flex';
-      
-      console.log('✅ Modal ouvert en mode édition');
+      console.log('✅ Modal édition ouverte');
     } catch (error) {
-      console.error('❌', error);
       alert('❌ ' + error.message);
     }
   };
   
-  // ===== SUPPRIMER UN MEMBRE =====
   window.deleteTeamMember = async function(id, email) {
     if (!confirm(`Supprimer ${email} ?`)) return;
-    
     try {
       const token = localStorage.getItem('lcc_token');
       const res = await fetch(`/api/sub-accounts/${id}`, {
@@ -2421,9 +2297,7 @@ document.addEventListener('DOMContentLoaded', function() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      
       if (!data.success) throw new Error(data.error);
-      
       alert('✅ Supprimé');
       loadTeamMembers();
     } catch (error) {
@@ -2431,7 +2305,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   
-  // ===== ACTIVER/DÉSACTIVER UN MEMBRE =====
   window.toggleTeamMember = async function(id) {
     try {
       const token = localStorage.getItem('lcc_token');
@@ -2440,20 +2313,19 @@ document.addEventListener('DOMContentLoaded', function() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      
       if (!data.success) throw new Error(data.error);
-      
       loadTeamMembers();
     } catch (error) {
       alert('❌ ' + error.message);
     }
   };
   
-  // ===== CHARGER LA LISTE AU CLIC SUR L'ONGLET =====
   const teamTab = document.querySelector('[data-tab="team"]');
   if (teamTab) {
     teamTab.addEventListener('click', () => setTimeout(loadTeamMembers, 100));
   }
+  
+  console.log('✅ Script équipe initialisé');
 });
 </script>
 </body>
