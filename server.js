@@ -4523,23 +4523,6 @@ app.get('/api/reservations', authenticateToken, checkSubscription, async (req, r
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-    res.json({
-      reservations: allReservations,
-      lastSync: reservationsStore.lastSync,
-      syncStatus: reservationsStore.syncStatus,
-      properties: filteredProps.map(p => ({
-        id: p.id,
-        name: p.name,
-        color: p.color,
-        count: (reservationsStore.properties[p.id] || []).length
-      }))
-    });
-  } catch (err) {
-    console.error('❌ Erreur /api/reservations:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 // POST - Créer une réservation manuelle
 app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) => {
   console.log('📝 Nouvelle demande de création de réservation');
