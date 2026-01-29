@@ -4524,49 +4524,6 @@ app.get('/api/reservations', authenticateToken, checkSubscription, async (req, r
   }
 });
 
-      userId = subResult.rows[0].parent_user_id;
-
-      // Récupérer les propriétés accessibles
-      const propsResult = await pool.query(`
-        SELECT property_id
-        FROM sub_account_properties
-        WHERE sub_account_id = $1
-      `, [req.user.subAccountId]);
-
-      accessibleProperties = propsResult.rows.map(r => r.property_id);
-
-      console.log(`🔐 Sous-compte ${req.user.subAccountId} - Propriétés: ${accessibleProperties.join(', ')}`);
-
-    } else {
-      // Compte principal - accès à tout
-      userId = req.user.id;
-    }
-
-    // Charger les propriétés de l'utilisateur
-    const allReservations = [];
-    const userProps = getUserProperties(userId);
-
-    // Filtrer selon propriétés accessibles (si sous-compte)
-    const filteredProps = req.user.isSubAccount
-      ? userProps.filter(p => accessibleProperties.includes(parseInt(p.id)))
-      : userProps;
-
-    filteredProps.forEach(property => {
-      const propertyReservations = reservationsStore.properties[property.id] || [];
-      propertyReservations.forEach(reservation => {
-        allReservations.push({
-          ...reservation,
-          property: {
-            id: property.id,
-            name: property.name,
-            color: property.color
-          }
-        });
-      });
-    });
-
-    console.log(`📅 Réservations retournées: ${allReservations.length} (${filteredProps.length} propriétés)`);
-
     res.json({
       reservations: allReservations,
       lastSync: reservationsStore.lastSync,
