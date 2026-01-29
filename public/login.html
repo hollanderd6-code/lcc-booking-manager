@@ -263,8 +263,13 @@
             console.log('🔐 Permissions stockées:', permissions);
           }
 
-          // Redirection
-          const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+          // Redirection selon type de compte
+          let redirectUrl;
+          if (accountType === 'sub') {
+            redirectUrl = IS_NATIVE ? 'sub-account.html' : '/sub-account.html';
+          } else {
+            redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
+          }
           console.log('🔄 [V3] Redirection:', redirectUrl);
           window.location.href = redirectUrl;
 
