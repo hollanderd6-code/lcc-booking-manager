@@ -188,19 +188,37 @@
         refs.submitBtn.disabled = true;
         refs.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
 
-        // Request
-        const url = API_BASE + '/api/auth/login';
-        console.log('📤 [V3] Requête:', url);
+        // 🎯 NOUVELLE LOGIQUE : Essayer compte principal PUIS sous-compte
+        console.log('📤 [V3] Tentative connexion...');
 
         try {
-          const response = await fetch(url, {
+          // ÉTAPE 1 : Essayer compte principal
+          console.log('1️⃣ Tentative compte PRINCIPAL...');
+          const mainUrl = API_BASE + '/api/auth/login';
+          
+          let response = await fetch(mainUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
           });
 
-          console.log('📥 [V3] Status:', response.status);
+          console.log('📥 Status compte principal:', response.status);
 
+          // Si échec 401 ou 403, essayer sous-compte
+          if (response.status === 401 || response.status === 403) {
+            console.log('2️⃣ Tentative compte SOUS-COMPTE...');
+            const subUrl = API_BASE + '/api/sub-accounts/login';
+            
+            response = await fetch(subUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password })
+            });
+
+            console.log('📥 Status sous-compte:', response.status);
+          }
+
+          // Parser la réponse
           const ct = response.headers.get('content-type') || '';
           let data;
 
@@ -212,21 +230,39 @@
             data = { error: 'Réponse serveur invalide' };
           }
 
+          // Si échec final
           if (!response.ok) {
-            console.error('❌ [V3] Erreur:', data);
+            console.error('❌ [V3] Erreur finale:', data);
             refs.errorDiv.style.display = 'block';
-            refs.errorDiv.textContent = data.error || 'Erreur de connexion';
+            refs.errorDiv.textContent = data.error || 'Email ou mot de passe incorrect';
             refs.submitBtn.disabled = false;
             refs.submitBtn.textContent = 'Se connecter';
             return;
           }
 
-          console.log('✅ [V3] SUCCÈS!');
-          console.log('👤 [V3] User:', data.user);
+          // ✅ SUCCÈS !
+          console.log('✅ [V3] CONNEXION RÉUSSIE!');
+          console.log('👤 Type:', data.accountType || 'main');
+          console.log('👤 User:', data.user || data.subAccount);
 
+          // Stocker le token
           localStorage.setItem('lcc_token', data.token);
-          localStorage.setItem('lcc_user', JSON.stringify(data.user));
 
+          // Stocker le type de compte
+          const accountType = data.accountType || (data.subAccount ? 'sub' : 'main');
+          localStorage.setItem('lcc_account_type', accountType);
+
+          // Stocker les infos utilisateur
+          const userData = data.user || data.subAccount;
+          localStorage.setItem('lcc_user', JSON.stringify(userData));
+
+          // Si sous-compte, stocker les permissions
+          if (accountType === 'sub' && data.permissions) {
+            localStorage.setItem('lcc_permissions', JSON.stringify(data.permissions));
+            console.log('🔐 Permissions:', data.permissions);
+          }
+
+          // Redirection
           const redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
           console.log('🔄 [V3] Redirection:', redirectUrl);
           window.location.href = redirectUrl;
@@ -237,7 +273,7 @@
           console.error('  Message:', err.message);
           console.error('  Stack:', err.stack);
           refs.errorDiv.style.display = 'block';
-          refs.errorDiv.textContent = 'Erreur réseau';
+          refs.errorDiv.textContent = 'Erreur réseau - Vérifiez votre connexion';
           refs.submitBtn.disabled = false;
           refs.submitBtn.textContent = 'Se connecter';
         }
