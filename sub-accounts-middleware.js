@@ -200,9 +200,10 @@ function filterAccessibleReservations(reservations, subAccount) {
  * Générer un token JWT pour sous-compte
  */
 function generateSubAccountToken(subAccountId) {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
   return jwt.sign(
     { subAccountId, type: 'sub_account' },
-    process.env.JWT_SECRET,
+    secret,
     { expiresIn: '7d' }
   );
 }
