@@ -7085,11 +7085,53 @@ app.use('/api/smart-locks', authenticateToken, smartLocksRoutes);
 
 app.get('/api/properties', authenticateAny, checkSubscription, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+    // ✅ GESTION DES SOUS-COMPTES
+    let userId;
+    let accessiblePropertyIds = null;
+    
+    if (req.user.isSubAccount) {
+      // C'est un sous-compte
+      console.log('🔐 Sous-compte détecté:', req.user.subAccountId);
+      
+      // Récupérer le parent_user_id
+      const subAccountResult = await pool.query(
+        'SELECT parent_user_id FROM sub_accounts WHERE id = $1 AND is_active = TRUE',
+        [req.user.subAccountId]
+      );
+      
+      if (subAccountResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Sous-compte introuvable' });
+      }
+      
+      userId = subAccountResult.rows[0].parent_user_id;
+      
+      // Récupérer les propriétés accessibles
+      const accessResult = await pool.query(
+        'SELECT property_id FROM sub_account_properties WHERE sub_account_id = $1',
+        [req.user.subAccountId]
+      );
+      
+      accessiblePropertyIds = accessResult.rows.map(r => r.property_id);
+      console.log('🏠 Propriétés accessibles:', accessiblePropertyIds);
+      
+    } else {
+      // C'est un compte principal
+      const user = await getUserFromRequest(req);
+      if (!user) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+      userId = user.id;
     }
-    const userProps = getUserProperties(user.id);
+    
+    // Charger les propriétés du compte parent
+    let userProps = getUserProperties(userId);
+    
+    // ✅ FILTRER selon les propriétés accessibles (si sous-compte avec restrictions)
+    if (accessiblePropertyIds && accessiblePropertyIds.length > 0) {
+      userProps = userProps.filter(p => accessiblePropertyIds.includes(p.id));
+      console.log('✅ Propriétés filtrées:', userProps.length);
+    }
+    
     const properties = userProps.map(p => {
       const rawIcal = p.icalUrls || p.ical_urls || [];
       // On reconstruit un tableau d'objets { url, platform }
