@@ -240,6 +240,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         [firstName, lastName, role, subAccountId]
       );
       
+      // Permissions
       let finalPermissions = {};
       
       if (role === 'custom' && permissions) {
@@ -324,42 +325,43 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         }
       }
       
-      await pool.query(`
-        UPDATE sub_account_permissions SET
-          can_view_calendar = $1,
-          can_edit_reservations = $2,
-          can_create_reservations = $3,
-          can_delete_reservations = $4,
-          can_view_messages = $5,
-          can_send_messages = $6,
-          can_view_cleaning = $7,
-          can_assign_cleaning = $8,
-          can_manage_cleaning_staff = $9,
-          can_view_finances = $10,
-          can_edit_finances = $11,
-          can_view_properties = $12,
-          can_edit_properties = $13,
-          can_access_settings = $14,
-          can_manage_team = $15
-        WHERE sub_account_id = $16
-      `, [
-        finalPermissions.can_view_calendar,
-        finalPermissions.can_edit_reservations,
-        finalPermissions.can_create_reservations,
-        finalPermissions.can_delete_reservations,
-        finalPermissions.can_view_messages,
-        finalPermissions.can_send_messages,
-        finalPermissions.can_view_cleaning,
-        finalPermissions.can_assign_cleaning,
-        finalPermissions.can_manage_cleaning_staff,
-        finalPermissions.can_view_finances,
-        finalPermissions.can_edit_finances,
-        finalPermissions.can_view_properties,
-        finalPermissions.can_edit_properties,
-        finalPermissions.can_access_settings,
-        finalPermissions.can_manage_team,
-        subAccountId
-      ]);
+      await pool.query(
+        `UPDATE sub_account_permissions 
+         SET can_view_calendar = $1,
+             can_edit_reservations = $2,
+             can_create_reservations = $3,
+             can_delete_reservations = $4,
+             can_view_messages = $5,
+             can_send_messages = $6,
+             can_view_cleaning = $7,
+             can_assign_cleaning = $8,
+             can_manage_cleaning_staff = $9,
+             can_view_finances = $10,
+             can_edit_finances = $11,
+             can_view_properties = $12,
+             can_edit_properties = $13,
+             can_access_settings = $14,
+             can_manage_team = $15
+         WHERE sub_account_id = $16`,
+        [
+          finalPermissions.can_view_calendar,
+          finalPermissions.can_edit_reservations,
+          finalPermissions.can_create_reservations,
+          finalPermissions.can_delete_reservations,
+          finalPermissions.can_view_messages,
+          finalPermissions.can_send_messages,
+          finalPermissions.can_view_cleaning,
+          finalPermissions.can_assign_cleaning,
+          finalPermissions.can_manage_cleaning_staff,
+          finalPermissions.can_view_finances,
+          finalPermissions.can_edit_finances,
+          finalPermissions.can_view_properties,
+          finalPermissions.can_edit_properties,
+          finalPermissions.can_access_settings,
+          finalPermissions.can_manage_team,
+          subAccountId
+        ]
+      );
       
       if (propertyIds !== undefined) {
         await pool.query(
@@ -367,28 +369,34 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           [subAccountId]
         );
         
-        if (propertyIds && propertyIds.length > 0) {
-          for (const propId of propertyIds) {
+        if (propertyIds.length > 0) {
+          for (const propertyId of propertyIds) {
             await pool.query(
               'INSERT INTO sub_account_properties (sub_account_id, property_id) VALUES ($1, $2)',
-              [subAccountId, propId]
+              [subAccountId, propertyId]
             );
           }
         }
       }
       
-      console.log(`✅ Sous-compte modifié: ${subAccountId}`);
+      console.log('✅ Sous-compte modifié:', subAccountId);
       
-      res.json({ success: true });
+      res.json({ 
+        success: true, 
+        message: 'Sous-compte modifié avec succès'
+      });
       
     } catch (error) {
       console.error('❌ Erreur modification sous-compte:', error);
-      res.status(500).json({ success: false, error: 'Erreur serveur' });
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Erreur lors de la modification du sous-compte' 
+      });
     }
   });
 
   // ============================================
-  // 3. LISTER LES SOUS-COMPTES
+  // 3. LISTE DES SOUS-COMPTES
   // ============================================
   
   app.get('/api/sub-accounts/list', authenticateToken, async (req, res) => {
@@ -401,28 +409,37 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sa.last_name,
           sa.role,
           sa.is_active,
-          sa.last_login,
           sa.created_at,
+          sa.last_login,
+          
+          -- Permissions (noms DB actuels)
           sp.can_view_calendar,
           sp.can_edit_reservations,
           sp.can_create_reservations,
+          sp.can_delete_reservations,
           sp.can_view_messages,
           sp.can_send_messages,
           sp.can_view_cleaning,
           sp.can_assign_cleaning,
+          sp.can_manage_cleaning_staff,
           sp.can_view_finances,
+          sp.can_edit_finances,
           sp.can_view_properties,
           sp.can_edit_properties,
+          sp.can_access_settings,
           sp.can_manage_team,
-          ARRAY_AGG(DISTINCT sap.property_id) FILTER (WHERE sap.property_id IS NOT NULL) as accessible_properties
+          
+          -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
+          COALESCE(
+            (SELECT array_agg(property_id)
+             FROM sub_account_properties 
+             WHERE sub_account_id = sa.id),
+            ARRAY[]::text[]
+          ) as accessible_properties
+          
         FROM sub_accounts sa
         LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
-        LEFT JOIN sub_account_properties sap ON sa.id = sap.sub_account_id
         WHERE sa.parent_user_id = $1
-        GROUP BY sa.id, sp.can_view_calendar, sp.can_edit_reservations, sp.can_create_reservations,
-                 sp.can_view_messages, sp.can_send_messages, sp.can_view_cleaning, 
-                 sp.can_assign_cleaning, sp.can_view_finances, sp.can_view_properties,
-                 sp.can_edit_properties, sp.can_manage_team
         ORDER BY sa.created_at DESC
       `, [req.user.id]);
 
@@ -583,124 +600,78 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
       res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
   });
+// ============================================
+// 🔧 ROUTE À AJOUTER DANS sub-accounts-routes.js
+// Pour récupérer les propriétés accessibles d'un sous-compte
+// ============================================
 
-  // ============================================
-  // 7. VÉRIFIER LE TOKEN SUB-ACCOUNT
-  // ============================================
-  
-  app.get('/api/sub-accounts/verify', authenticateAny, async (req, res) => {
-    try {
-      // Si ce n'est pas un sous-compte
-      if (!req.user.isSubAccount) {
-        return res.json({
-          success: true,
-          isSubAccount: false
-        });
-      }
+// Ajouter cette route dans la fonction setupSubAccountsRoutes()
 
-      // Récupérer les infos du sous-compte
-      const result = await pool.query(`
-        SELECT sa.*, sp.*
-        FROM sub_accounts sa
-        LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
-        WHERE sa.id = $1 AND sa.is_active = TRUE
-      `, [req.user.subAccountId]);
-
-      if (result.rows.length === 0) {
-        return res.status(401).json({ 
-          success: false, 
-          error: 'Sous-compte introuvable ou inactif' 
-        });
-      }
-
-      const subAccount = result.rows[0];
-
-      res.json({
+app.get('/api/sub-accounts/accessible-properties', authenticateToken, async (req, res) => {
+  try {
+    // Si c'est un compte principal, il a accès à tout
+    if (!req.user.isSubAccount) {
+      const propertiesResult = await pool.query(
+        'SELECT id FROM properties WHERE user_id = $1',
+        [req.user.id]
+      );
+      
+      return res.json({
         success: true,
-        isSubAccount: true,
-        subAccount: {
-          id: subAccount.id,
-          email: subAccount.email,
-          firstName: subAccount.first_name,
-          lastName: subAccount.last_name,
-          role: subAccount.role
-        }
+        propertyIds: propertiesResult.rows.map(r => r.id),
+        hasFullAccess: true
       });
-
-    } catch (error) {
-      console.error('❌ Erreur vérification token:', error);
-      res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-  });
 
-  // ============================================
-  // 8. RÉCUPÉRER LES PROPRIÉTÉS ACCESSIBLES
-  // ============================================
+    // Si c'est un sous-compte, récupérer ses propriétés autorisées
+    const result = await pool.query(`
+      SELECT property_id
+      FROM sub_account_properties
+      WHERE sub_account_id = $1
+    `, [req.user.subAccountId]);
 
-  app.get('/api/sub-accounts/accessible-properties', authenticateAny, async (req, res) => {
-    try {
-      // Si c'est un compte principal, il a accès à tout
-      if (!req.user.isSubAccount) {
-        const propertiesResult = await pool.query(
-          'SELECT id FROM properties WHERE user_id = $1',
-          [req.user.id]
-        );
-        
-        return res.json({
-          success: true,
-          propertyIds: propertiesResult.rows.map(r => r.id),
-          hasFullAccess: true
-        });
+    const propertyIds = result.rows.map(r => r.property_id);
+
+    // Si aucune restriction (tableau vide en DB) = accès à toutes les propriétés du parent
+    if (propertyIds.length === 0) {
+      const subAccountResult = await pool.query(
+        'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+        [req.user.subAccountId]
+      );
+
+      if (subAccountResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Sous-compte introuvable' });
       }
 
-      // Si c'est un sous-compte, récupérer ses propriétés autorisées
-      const result = await pool.query(`
-        SELECT property_id
-        FROM sub_account_properties
-        WHERE sub_account_id = $1
-      `, [req.user.subAccountId]);
+      const parentUserId = subAccountResult.rows[0].parent_user_id;
 
-      const propertyIds = result.rows.map(r => r.property_id);
+      const allPropertiesResult = await pool.query(
+        'SELECT id FROM properties WHERE user_id = $1',
+        [parentUserId]
+      );
 
-      // Si aucune restriction (tableau vide en DB) = accès à toutes les propriétés du parent
-      if (propertyIds.length === 0) {
-        const subAccountResult = await pool.query(
-          'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
-          [req.user.subAccountId]
-        );
-
-        if (subAccountResult.rows.length === 0) {
-          return res.status(404).json({ success: false, error: 'Sous-compte introuvable' });
-        }
-
-        const parentUserId = subAccountResult.rows[0].parent_user_id;
-
-        const allPropertiesResult = await pool.query(
-          'SELECT id FROM properties WHERE user_id = $1',
-          [parentUserId]
-        );
-
-        return res.json({
-          success: true,
-          propertyIds: allPropertiesResult.rows.map(r => r.id),
-          hasFullAccess: true
-        });
-      }
-
-      // Sinon, retourner les propriétés spécifiques
-      res.json({
+      return res.json({
         success: true,
-        propertyIds: propertyIds,
-        hasFullAccess: false
+        propertyIds: allPropertiesResult.rows.map(r => r.id),
+        hasFullAccess: true
       });
-
-    } catch (error) {
-      console.error('❌ Erreur accessible-properties:', error);
-      res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-  });
 
-  console.log('✅ Routes sous-comptes initialisées (avec vérification token)');
+    // Sinon, retourner les propriétés spécifiques
+    res.json({
+      success: true,
+      propertyIds: propertyIds,
+      hasFullAccess: false
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur accessible-properties:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+console.log('✅ Route accessible-properties ajoutée');
+  console.log('✅ Routes sous-comptes initialisées');
 }
 
 module.exports = { setupSubAccountsRoutes };
