@@ -5287,19 +5287,46 @@ app.get('/api/availability/:propertyId', async (req, res) => {
   });
 });
 
-// GET - Réservations avec infos de caution
-app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => {
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
+// ============================================
+// ROUTE CORRIGÉE : /api/reservations-with-deposits
+// À remplacer dans server.js ligne ~5291
+// ============================================
 
+app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => {
   try {
+    // Gérer compte principal ET sous-compte
+    let userId;
+    
+    if (req.user.isSubAccount) {
+      // C'est un sous-compte - récupérer le parent_user_id
+      const subAccountResult = await pool.query(
+        'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+        [req.user.subAccountId]
+      );
+      
+      if (subAccountResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Sous-compte introuvable' });
+      }
+      
+      userId = subAccountResult.rows[0].parent_user_id;
+      console.log('🔐 Sous-compte - userId parent:', userId);
+    } else {
+      // Compte principal
+      userId = req.user.id;
+      console.log('👤 Compte principal - userId:', userId);
+    }
+
+    // Vérifier que userId existe
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
     // ✅ Récupérer tous les deposits de l'utilisateur depuis PostgreSQL
     const depositsResult = await pool.query(`
       SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
       FROM deposits
       WHERE user_id = $1
-    `, [user.id]);
+    `, [userId]);
     
     // Créer un Map pour un accès rapide par reservationUid
     const depositsMap = new Map();
@@ -5315,13 +5342,13 @@ app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => 
     });
 
     const result = [];
-    const userProps = getUserProperties(user.id);
+    const userProps = getUserProperties(userId);
 
     userProps.forEach(property => {
       const reservations = reservationsStore.properties[property.id] || [];
 
       reservations.forEach(r => {
-        // ✅ Chercher le deposit dans la Map au lieu du tableau DEPOSITS
+        // ✅ Chercher le deposit dans la Map
         const deposit = depositsMap.get(r.uid) || null;
 
         result.push({
@@ -5345,7 +5372,9 @@ app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => 
       });
     });
 
+    console.log('✅ Deposits chargés:', result.length, 'réservations');
     res.json(result);
+    
   } catch (error) {
     console.error('❌ Erreur /api/reservations-with-deposits:', error);
     res.status(500).json({ error: 'Erreur serveur' });
