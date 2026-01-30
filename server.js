@@ -7124,12 +7124,15 @@ app.get('/api/properties', authenticateAny, checkSubscription, async (req, res) 
     }
     
     // Charger les propriétés du compte parent
+    console.log('🔍 userId pour getUserProperties:', userId);
+    console.log('🔍 PROPERTIES total en mémoire:', PROPERTIES.length);
     let userProps = getUserProperties(userId);
+    console.log('🔍 userProps AVANT filtrage:', userProps.length, userProps.map(p => p.id));
     
     // ✅ FILTRER selon les propriétés accessibles (si sous-compte avec restrictions)
     if (accessiblePropertyIds && accessiblePropertyIds.length > 0) {
       userProps = userProps.filter(p => accessiblePropertyIds.includes(p.id));
-      console.log('✅ Propriétés filtrées:', userProps.length);
+      console.log('✅ Propriétés filtrées APRÈS:', userProps.length, userProps.map(p => p.id));
     }
     
     const properties = userProps.map(p => {
