@@ -2084,6 +2084,21 @@ document.addEventListener('DOMContentLoaded', function() {
   async function loadTeamMembers() {
     try {
       const token = localStorage.getItem('lcc_token');
+      
+      // ✅ NOUVEAU : Charger les propriétés d'abord pour avoir les noms
+      const propsRes = await fetch('/api/properties', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const propsData = await propsRes.json();
+      window.cachedProperties = propsData.properties || [];
+      
+      // Créer un mapping ID → Nom pour accès rapide
+      window.propertyNames = {};
+      window.cachedProperties.forEach(p => {
+        window.propertyNames[p.id] = p.name;
+      });
+      
+      // Ensuite charger les membres
       const res = await fetch('/api/sub-accounts/list', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -2118,14 +2133,12 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const roleLabels = { manager: '👔 Manager', cleaner: '🧹 Femme de ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
       
-      // ✅ NOUVEAU : Afficher les propriétés accessibles
+      // ✅ Afficher les propriétés accessibles
       let propertiesHTML = '';
       if (member.accessible_properties && member.accessible_properties.length > 0) {
-        // Charger les noms des propriétés
+        // ✅ CORRIGÉ : Utiliser le mapping window.propertyNames
         const propertyNames = member.accessible_properties.map(id => {
-          // Essayer de trouver le nom depuis le cache global
-          const prop = window.cachedProperties?.find(p => p.id === id);
-          return prop ? prop.name : id;
+          return window.propertyNames?.[id] || id;
         });
         
         propertiesHTML = `
