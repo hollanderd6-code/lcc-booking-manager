@@ -6,6 +6,22 @@
 const jwt = require('jsonwebtoken');
 
 /**
+ * Génère un token JWT pour un sous-compte
+ */
+function generateSubAccountToken(subAccountId) {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  
+  return jwt.sign(
+    {
+      subAccountId: subAccountId,
+      type: 'sub_account'
+    },
+    secret,
+    { expiresIn: '7d' }
+  );
+}
+
+/**
  * Authentifie n'importe quel type de compte (principal ou sous-compte)
  * Compatible avec authenticateToken existant
  */
@@ -49,9 +65,9 @@ function authenticateAny(req, res, next) {
 
 /**
  * Vérifie qu'un sous-compte a une permission spécifique
- * Usage: app.get('/api/messages', authenticateAny, requirePermission('can_view_messages'), ...)
+ * Usage: app.get('/api/messages', authenticateAny, requirePermission(pool, 'can_view_messages'), ...)
  */
-function requirePermission(permission) {
+function requirePermission(pool, permission) {
   return async (req, res, next) => {
     // Si compte principal, on laisse passer
     if (!req.user.isSubAccount) {
@@ -88,5 +104,6 @@ function requirePermission(permission) {
 
 module.exports = { 
   authenticateAny,
-  requirePermission
+  requirePermission,
+  generateSubAccountToken
 };
