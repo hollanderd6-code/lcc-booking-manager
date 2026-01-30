@@ -2272,7 +2272,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectEl = document.getElementById('memberProperties');
         if (selectEl) {
           Array.from(selectEl.options).forEach(option => {
-            option.selected = member.accessible_properties.includes(parseInt(option.value));
+            option.selected = member.accessible_properties.includes(option.value);
           });
         }
       }
