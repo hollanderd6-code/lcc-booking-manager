@@ -1,4 +1,4 @@
-// ============================================
+   // ============================================
 // 📋 ROUTES API - GESTION DES SOUS-COMPTES
 // VERSION COMPATIBLE DB EXISTANTE
 // ============================================
@@ -600,14 +600,61 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
       res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
   });
-// ============================================
-// 🔧 ROUTE À AJOUTER DANS sub-accounts-routes.js
-// Pour récupérer les propriétés accessibles d'un sous-compte
-// ============================================
 
-// Ajouter cette route dans la fonction setupSubAccountsRoutes()
+  // ============================================
+  // 7. VÉRIFIER LE TOKEN SUB-ACCOUNT
+  // ============================================
+  
+  app.get('/api/sub-accounts/verify', authenticateAny, async (req, res) => {
+    try {
+      // Si ce n'est pas un sous-compte
+      if (!req.user.isSubAccount) {
+        return res.json({
+          success: true,
+          isSubAccount: false
+        });
+      }
 
-app.get('/api/sub-accounts/accessible-properties', authenticateToken, async (req, res) => {
+      // Récupérer les infos du sous-compte
+      const result = await pool.query(`
+        SELECT sa.*, sp.*
+        FROM sub_accounts sa
+        LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
+        WHERE sa.id = $1 AND sa.is_active = TRUE
+      `, [req.user.subAccountId]);
+
+      if (result.rows.length === 0) {
+        return res.status(401).json({ 
+          success: false, 
+          error: 'Sous-compte introuvable ou inactif' 
+        });
+      }
+
+      const subAccount = result.rows[0];
+
+      res.json({
+        success: true,
+        isSubAccount: true,
+        subAccount: {
+          id: subAccount.id,
+          email: subAccount.email,
+          firstName: subAccount.first_name,
+          lastName: subAccount.last_name,
+          role: subAccount.role
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur vérification token:', error);
+      res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // 8. RÉCUPÉRER LES PROPRIÉTÉS ACCESSIBLES
+  // ============================================
+
+  app.get('/api/sub-accounts/accessible-properties', authenticateAny, async (req, res) => {
   try {
     // Si c'est un compte principal, il a accès à tout
     if (!req.user.isSubAccount) {
@@ -670,8 +717,7 @@ app.get('/api/sub-accounts/accessible-properties', authenticateToken, async (req
   }
 });
 
-console.log('✅ Route accessible-properties ajoutée');
-  console.log('✅ Routes sous-comptes initialisées');
+  console.log('✅ Routes sous-comptes initialisées (avec vérification token)');
 }
 
 module.exports = { setupSubAccountsRoutes };
