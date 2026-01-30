@@ -801,12 +801,12 @@ async function checkSubscription(req, res, next) {
 Pour protéger une route, ajoutez le middleware après authenticateToken :
 
 AVANT :
-app.get('/api/properties', authenticateToken, async (req, res) => {
+app.get('/api/properties', authenticateAny, async (req, res) => {
   // ...
 });
 
 APRÈS :
-app.get('/api/properties', authenticateToken, checkSubscription, async (req, res) => {
+app.get('/api/properties', authenticateAny, checkSubscription, async (req, res) => {
   // ...
 });
 
@@ -4392,7 +4392,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
 // ============================================
 
 // GET - Toutes les réservations du user
-app.get('/api/reservations', authenticateToken, checkSubscription, async (req, res) => {
+app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res) => {
   try {
     let userId;
     let accessibleProperties = [];
@@ -4470,7 +4470,7 @@ app.get('/api/reservations', authenticateToken, checkSubscription, async (req, r
   }
 });
 // POST - Créer une réservation manuelle
-app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) => {
+app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) => {
   console.log('📝 Nouvelle demande de création de réservation');
   
   try {
@@ -4615,7 +4615,7 @@ app.post('/api/bookings', authenticateUser, checkSubscription, async (req, res) 
 });
 
 // DELETE - Supprimer une réservation
-app.delete('/api/bookings/:uid', authenticateUser, checkSubscription, async (req, res) => {
+app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -4941,7 +4941,7 @@ if (req.file) {
   }
 });
 // Route pour vérifier le statut de l'abonnement
-app.get('/api/subscription/status', authenticateToken, async (req, res) => {
+app.get('/api/subscription/status', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -5355,7 +5355,7 @@ app.get('/api/reservations-with-deposits', async (req, res) => {
 // ============================================
 // ✅ GET - Réservations enrichies (risque + checklist + sous-scores)
 // ============================================
-app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async (req, res) => {
+app.get('/api/reservations/enriched', authenticateAny, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -5452,7 +5452,7 @@ app.get('/api/reservations/enriched', authenticateUser, checkSubscription, async
 // ============================================
 // ✅ Checklists V1 - toggle task
 // ============================================
-app.post('/api/checklists/:reservationUid/tasks/:taskId/toggle', authenticateUser, checkSubscription, async (req, res) => {
+app.post('/api/checklists/:reservationUid/tasks/:taskId/toggle', authenticateAny, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -5475,7 +5475,7 @@ app.post('/api/checklists/:reservationUid/tasks/:taskId/toggle', authenticateUse
 });
 
 // ✅ Checklists V1 - complete all
-app.post('/api/checklists/:reservationUid/complete', authenticateUser, checkSubscription, async (req, res) => {
+app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubscription, async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -6412,7 +6412,7 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', authenticateUser, checkSubscription, async (req, res) => {
+app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -7055,7 +7055,7 @@ app.get('/api/cleaning/assignments', async (req, res) => {
 app.use('/api/smart-locks', authenticateToken, smartLocksRoutes);
 // ============================================
 
-app.get('/api/properties', authenticateUser, checkSubscription, async (req, res) => {
+app.get('/api/properties', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -7606,7 +7606,7 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
 // ============================================
 // SUPPRIMER UN LOGEMENT
 // ============================================
-app.delete('/api/properties/:propertyId', authenticateUser, async (req, res) => {
+app.delete('/api/properties/:propertyId', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -7675,7 +7675,7 @@ app.post('/api/properties/test-ical', async (req, res) => {
   // ============================================
 // Réorganiser l'ordre des logements (SAFE)
 // ============================================
-app.put('/api/properties/:propertyId/reorder', authenticateUser, async (req, res) => {
+app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res) => {
   try {
     const user = req.user;
     const { propertyId } = req.params;
@@ -9969,7 +9969,7 @@ app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
 // NOTE : Cette route utilise l'API Brevo au lieu de SMTP
 // car Render bloque parfois le port 587
 
-app.post('/api/invoice/create', authenticateUser, async (req, res) => {
+app.post('/api/invoice/create', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -11192,7 +11192,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   // 8. GÉNÉRATION DE MESSAGE DE RÉSERVATION
   // ============================================
   
-  app.post('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+  app.post('/api/chat/generate-booking-message/:conversationId', authenticateAny, checkSubscription, async (req, res) => {
     try {
       const userId = req.user.id;
       const { conversationId } = req.params;
@@ -11537,7 +11537,7 @@ await pool.query(
 // ============================================
 
 // DELETE - Supprimer une conversation
-app.delete('/api/chat/conversations/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+app.delete('/api/chat/conversations/:conversationId', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const userId = req.user.id;
     const { conversationId } = req.params;
@@ -12278,7 +12278,7 @@ const io = new Server(server, {
 // ============================================
 // ✅ INITIALISATION DES ROUTES DU CHAT
 // ============================================
-setupChatRoutes(app, pool, io, authenticateToken, checkSubscription);
+setupChatRoutes(app, pool, io, authenticateAny, checkSubscription);
 console.log('✅ Routes du chat initialisées');
 
 // ============================================
@@ -12490,7 +12490,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 // ============================================
 // ROUTE DE TEST : Messages d'arrivée manuels
 // ============================================
-app.post('/api/test/arrival-messages', authenticateToken, async (req, res) => {
+app.post('/api/test/arrival-messages', authenticateAny, async (req, res) => {
   try {
     console.log('🧪 TEST MANUEL : Déclenchement des messages d\'arrivée');
     
@@ -12539,7 +12539,7 @@ app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => 
 // ============================================
 // ROUTE : MARQUER LES MESSAGES COMME LUS
 // ============================================
-app.post('/api/chat/conversations/:conversationId/mark-read', authenticateToken, async (req, res) => {
+app.post('/api/chat/conversations/:conversationId/mark-read', authenticateAny, async (req, res) => {
   const { conversationId } = req.params;
   
   try {
@@ -12590,7 +12590,7 @@ app.get('/api/test-notification', async (req, res) => {
 // 🔔 ROUTES NOTIFICATIONS PUSH
 // ============================================
 // Endpoint pour sauvegarder le token FCM d'un utilisateur
-app.post('/api/save-token', authenticateToken, async (req, res) => {
+app.post('/api/save-token', authenticateAny, async (req, res) => {
   try {
     const { token, device_type } = req.body;
     const userId = req.user.userId || req.user.id;
@@ -12627,7 +12627,7 @@ app.post('/api/save-token', authenticateToken, async (req, res) => {
 });
 
 // Endpoint pour envoyer une notification test
-app.post('/api/notifications/send', authenticateToken, async (req, res) => {
+app.post('/api/notifications/send', authenticateAny, async (req, res) => {
   try {
     const { token, title, body } = req.body;
     
@@ -12645,7 +12645,7 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
 });
 
 // Endpoint pour notifier les arrivées du jour
-app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res) => {
+app.post('/api/notifications/today-arrivals', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.userId;
     
@@ -12700,7 +12700,7 @@ app.post('/api/notifications/today-arrivals', authenticateToken, async (req, res
 });
 
 // Endpoint pour notifier les départs du jour
-app.post('/api/notifications/today-departures', authenticateToken, async (req, res) => {
+app.post('/api/notifications/today-departures', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.userId;
     
