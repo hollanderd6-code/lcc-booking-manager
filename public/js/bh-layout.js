@@ -7,21 +7,32 @@ const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boosting
 function getSidebarHTML() {
   // Vérifier si sous-compte
   const accountType = localStorage.getItem('lcc_account_type');
-  const isSubAccount = accountType === 'sub';
+  const isSubAccount = (accountType === 'sub'); // ✅ Strict equality
+  
+  console.log('🔍 [SIDEBAR] Account type:', accountType);
+  console.log('🔍 [SIDEBAR] Is sub-account:', isSubAccount);
   
   let permissions = {};
   if (isSubAccount) {
     try {
       const permData = localStorage.getItem('lcc_permissions');
       if (permData) permissions = JSON.parse(permData);
-      console.log('🔐 Permissions chargées:', permissions);
+      console.log('🔐 [SIDEBAR] Permissions chargées:', permissions);
     } catch (e) {
-      console.error('Erreur chargement permissions:', e);
+      console.error('❌ [SIDEBAR] Erreur chargement permissions:', e);
     }
+  } else {
+    console.log('✅ [SIDEBAR] Compte principal - Accès total');
   }
 
   // Fonction helper pour vérifier permission
-  const hasPermission = (perm) => !isSubAccount || permissions[perm] === true;
+  // ✅ CORRIGÉ : Si pas sous-compte, toujours true
+  const hasPermission = (perm) => {
+    if (!isSubAccount) {
+      return true; // Compte principal = accès total
+    }
+    return permissions[perm] === true;
+  };
 
   return `
 <aside class="sidebar">
@@ -62,13 +73,16 @@ function getSidebarHTML() {
       ` : ''}
     </div>
 
-    ${!isSubAccount || hasPermission('can_view_properties') || hasPermission('can_view_cleaning') ? `
     <!-- GESTION -->
+    ${(!isSubAccount || hasPermission('can_view_properties') || hasPermission('can_view_cleaning')) ? `
     <div class="nav-section">
       <div class="nav-section-title">Gestion</div>
       ${hasPermission('can_view_properties') ? `
       <a class="nav-item" data-page="settings" href="/settings.html">
         <i class="fas fa-home"></i><span>Mes logements</span>
+      </a>
+      <a class="nav-item" data-page="welcome" href="/welcome.html">
+        <i class="fas fa-book"></i><span>Livret d'accueil</span>
       </a>
       ` : ''}
       ${hasPermission('can_view_cleaning') ? `
@@ -79,8 +93,8 @@ function getSidebarHTML() {
     </div>
     ` : ''}
 
-    ${!isSubAccount || hasPermission('can_view_finances') ? `
     <!-- FACTURATION -->
+    ${(!isSubAccount || hasPermission('can_view_finances')) ? `
     <div class="nav-section">
       <div class="nav-section-title">Facturation</div>
       ${hasPermission('can_view_finances') ? `
@@ -88,11 +102,29 @@ function getSidebarHTML() {
         <i class="fas fa-file-invoice"></i><span>Factures clients</span>
       </a>
       ` : ''}
+      ${!isSubAccount ? `
+      <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
+        <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
+      </a>
+      ` : ''}
     </div>
     ` : ''}
 
+    <!-- AVANCÉ (compte principal uniquement) -->
     ${!isSubAccount ? `
-    <!-- PARAMÈTRES (uniquement compte principal) -->
+    <div class="nav-section">
+      <div class="nav-section-title">Avancé</div>
+      <a class="nav-item" data-page="deposits" href="/deposits.html">
+        <i class="fas fa-shield-alt"></i><span>Cautions</span>
+      </a>
+      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
+        <i class="fas fa-lock"></i><span>Serrures connectées</span>
+      </a>
+    </div>
+    ` : ''}
+
+    <!-- PARAMÈTRES (compte principal uniquement) -->
+    ${!isSubAccount ? `
     <div class="nav-section">
       <div class="nav-section-title">Paramètres</div>
       <a class="nav-item" data-page="settings-account" href="/settings-account.html">
