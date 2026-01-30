@@ -5288,8 +5288,7 @@ app.get('/api/availability/:propertyId', async (req, res) => {
 });
 
 // GET - Réservations avec infos de caution
-app.get('/api/reservations-with-deposits', async (req, res) => {
-  const user = await getUserFromRequest(req);
+app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => {  const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
   }
