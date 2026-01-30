@@ -3412,9 +3412,16 @@
   // Vérifier l'abonnement au chargement de la page
   (async function checkSubscriptionAccess() {
     const token = localStorage.getItem('lcc_token');
+    const accountType = localStorage.getItem('lcc_account_type');
     
     if (!token) {
       window.location.href = '/login.html';
+      return;
+    }
+
+    // ✅ SOUS-COMPTES : Skip la vérification d'abonnement
+    if (accountType === 'sub') {
+      console.log('✅ Sous-compte connecté, skip vérification abonnement');
       return;
     }
 
