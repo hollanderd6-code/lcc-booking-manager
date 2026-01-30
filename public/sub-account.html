@@ -1306,7 +1306,7 @@ Enregistrer
   // Si pas de token ou pas un sous-compte -> rediriger vers login
   if (!token || !isSubAccount) {
     console.log('❌ Non authentifié ou pas un sous-compte');
-    window.location.href = '/login';
+    window.location.href = '/login.html';
     return;
   }
   
@@ -1323,7 +1323,7 @@ Enregistrer
       console.log('❌ Token invalide');
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('is_sub_account');
-      window.location.href = '/login';
+      window.location.href = '/login.html';
       return;
     }
     
@@ -1333,7 +1333,7 @@ Enregistrer
       console.log('❌ Pas un sous-compte valide');
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('is_sub_account');
-      window.location.href = '/login';
+      window.location.href = '/login.html';
       return;
     }
     
@@ -1349,7 +1349,7 @@ Enregistrer
     
   } catch (error) {
     console.error('❌ Erreur vérification:', error);
-    window.location.href = '/login';
+    window.location.href = '/login.html';
   }
 })();
 </script>
