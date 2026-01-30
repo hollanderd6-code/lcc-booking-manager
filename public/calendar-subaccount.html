@@ -155,8 +155,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     console.log('🏠 Propriétés accessibles:', accessiblePropertyIds);
 
-    // 2. Charger app.html dans l'iframe
-    iframe.src = '/app.html';
+    // 2. Charger app-subaccount.html dans l'iframe (version sans vérif auth)
+    iframe.src = '/app-subaccount.html';
 
     // 3. Une fois chargé, filtrer le calendrier
     iframe.onload = function() {
