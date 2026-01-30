@@ -192,12 +192,32 @@
         throw err;
       }
 
-      // Si 401: logout + redirection
+      // Si 401: logout + redirection (SAUF pour sous-comptes sur routes non-critiques)
       if (res.status === 401) {
-        console.warn('🚨 [AUTH-FETCH] 401 Unauthorized, déconnexion...');
+        console.warn('🚨 [AUTH-FETCH] 401 Unauthorized');
+        
+        // ✅ SOUS-COMPTES : Ne pas déconnecter sur certaines routes
+        const accountType = localStorage.getItem('lcc_account_type');
+        const nonCriticalRoutes = [
+          '/api/cleaning/checklists',
+          '/api/properties',
+          '/api/subscription/status'
+        ];
+        
+        const isNonCritical = nonCriticalRoutes.some(route => urlStr.includes(route));
+        
+        if (accountType === 'sub' && isNonCritical) {
+          console.log('⚠️ [AUTH-FETCH] Sous-compte + route non-critique, pas de déconnexion');
+          return res;
+        }
+        
+        // Pour les autres cas : déconnexion
+        console.warn('🚨 [AUTH-FETCH] Déconnexion...');
         try {
           localStorage.removeItem('lcc_token');
           localStorage.removeItem('lcc_user');
+          localStorage.removeItem('lcc_account_type');
+          localStorage.removeItem('lcc_permissions');
         } catch {}
 
         const redirectUrl = isNative() ? 'login.html' : '/login.html';
