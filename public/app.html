@@ -3419,11 +3419,15 @@
       return;
     }
 
-    // ✅ SOUS-COMPTES : Skip la vérification d'abonnement
+    // ✅ SOUS-COMPTES : Accès direct sans vérification
     if (accountType === 'sub') {
-      console.log('✅ Sous-compte connecté, skip vérification abonnement');
-      return;
+      console.log('✅ Sous-compte détecté, accès autorisé sans vérification');
+      return; // On sort de la fonction, pas de vérification d'abonnement
     }
+
+    // ========================================
+    // À PARTIR D'ICI : UNIQUEMENT COMPTES PRINCIPAUX
+    // ========================================
 
     // ✅ DÉTECTER SI ON VIENT DE STRIPE
     const urlParams = new URLSearchParams(window.location.search);
@@ -3446,6 +3450,12 @@
       // ✅ ATTENDRE QUE LE WEBHOOK S'EXÉCUTE
       console.log('⏳ Paiement détecté, attente de la confirmation...');
       await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    // ✅ SOUS-COMPTES : Skip toute la vérification d'abonnement
+    if (accountType === 'sub') {
+      console.log('✅ Sous-compte, pas de vérification abonnement');
+      return;
     }
 
     try {
