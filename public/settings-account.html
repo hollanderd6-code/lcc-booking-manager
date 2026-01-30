@@ -991,12 +991,11 @@
           <i class="fas fa-home"></i>
           Propriétés accessibles
         </label>
-        <select id="memberProperties" multiple style="height:150px;">
-          <!-- Options chargées dynamiquement -->
-        </select>
+        <div id="memberProperties" style="max-height:200px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
+          <!-- Checkboxes chargées dynamiquement -->
+        </div>
         <small style="color:#6b7280;">
-          Laissez vide pour donner accès à toutes vos propriétés. 
-          Maintenez Ctrl/Cmd pour sélectionner plusieurs propriétés.
+          Laissez tout décoché pour donner accès à toutes vos propriétés.
         </small>
       </div>
 
@@ -2119,7 +2118,43 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const roleLabels = { manager: '👔 Manager', cleaner: '🧹 Femme de ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
       
-      return `<div class="team-member-card ${!isActive?'team-member-inactive':''}"><div class="team-member-header"><div class="team-member-info"><div class="team-member-avatar">${initials}</div><div class="team-member-details"><h3>${member.first_name} ${member.last_name}</h3><p>${member.email}</p><span class="team-member-role">${roleLabels[member.role]||member.role}</span>${!isActive?'<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>':''}</div></div><div class="team-member-actions"><button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})"><i class="fas fa-edit"></i></button><button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})"><i class="fas fa-${isActive?'pause':'play'}-circle"></i></button><button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id},'${member.email}')"><i class="fas fa-trash"></i></button></div></div>${permissions.length>0?`<div class="team-member-permissions">${permissions.map(p=>`<span class="permission-badge"><i class="fas fa-${p.icon}"></i> ${p.label}</span>`).join('')}</div>`:''}</div>`;
+      // ✅ NOUVEAU : Afficher les propriétés accessibles
+      let propertiesHTML = '';
+      if (member.accessible_properties && member.accessible_properties.length > 0) {
+        // Charger les noms des propriétés
+        const propertyNames = member.accessible_properties.map(id => {
+          // Essayer de trouver le nom depuis le cache global
+          const prop = window.cachedProperties?.find(p => p.id === id);
+          return prop ? prop.name : id;
+        });
+        
+        propertiesHTML = `
+          <div class="team-member-properties" style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;color:#6b7280;font-size:12px;font-weight:600;">
+              <i class="fas fa-home"></i>
+              <span>Propriétés accessibles</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${propertyNames.map(name => `
+                <span style="background:#f3f4f6;padding:4px 8px;border-radius:6px;font-size:12px;color:#374151;">
+                  ${name}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        propertiesHTML = `
+          <div class="team-member-properties" style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;">
+            <div style="display:flex;align-items:center;gap:6px;color:#10b981;font-size:12px;">
+              <i class="fas fa-check-circle"></i>
+              <span>Accès à toutes les propriétés</span>
+            </div>
+          </div>
+        `;
+      }
+      
+      return `<div class="team-member-card ${!isActive?'team-member-inactive':''}"><div class="team-member-header"><div class="team-member-info"><div class="team-member-avatar">${initials}</div><div class="team-member-details"><h3>${member.first_name} ${member.last_name}</h3><p>${member.email}</p><span class="team-member-role">${roleLabels[member.role]||member.role}</span>${!isActive?'<span style="color:#ef4444;font-size:12px;margin-left:8px;">● Désactivé</span>':''}</div></div><div class="team-member-actions"><button class="btn btn-ghost btn-sm" onclick="editTeamMember(${member.id})"><i class="fas fa-edit"></i></button><button class="btn btn-ghost btn-sm" onclick="toggleTeamMember(${member.id})"><i class="fas fa-${isActive?'pause':'play'}-circle"></i></button><button class="btn btn-ghost btn-sm" onclick="deleteTeamMember(${member.id},'${member.email}')"><i class="fas fa-trash"></i></button></div></div>${permissions.length>0?`<div class="team-member-permissions">${permissions.map(p=>`<span class="permission-badge"><i class="fas fa-${p.icon}"></i> ${p.label}</span>`).join('')}</div>`:''}${propertiesHTML}</div>`;
     }).join('');
   }
   
@@ -2165,15 +2200,30 @@ document.addEventListener('DOMContentLoaded', function() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      const select = document.getElementById('memberProperties');
-      if (!select) return;
+      const container = document.getElementById('memberProperties');
+      if (!container) return;
+      
+      // ✅ Stocker dans un cache global pour l'affichage des cartes
+      window.cachedProperties = data.properties || [];
       
       if (!data.properties || data.properties.length === 0) {
-        select.innerHTML = '<option value="">Aucun logement</option>';
+        container.innerHTML = '<div style="color:#9ca3af;padding:8px;">Aucun logement</div>';
         return;
       }
       
-      select.innerHTML = data.properties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      // ✅ NOUVEAU : Générer des checkboxes au lieu d'un select
+      container.innerHTML = data.properties.map(p => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-radius:6px;transition:background 0.2s;" 
+               onmouseover="this.style.background='#f3f4f6'" 
+               onmouseout="this.style.background='transparent'">
+          <input type="checkbox" 
+                 class="property-checkbox" 
+                 value="${p.id}" 
+                 style="width:18px;height:18px;cursor:pointer;">
+          <span style="flex:1;font-size:14px;">${p.name}</span>
+        </label>
+      `).join('');
+      
       console.log('✅ Propriétés chargées:', data.properties.length);
     } catch (error) {
       console.error('Erreur propriétés:', error);
@@ -2183,12 +2233,17 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('addTeamMemberForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const role = document.getElementById('memberRole').value;
+    
+    // ✅ NOUVEAU : Récupérer les checkboxes cochées au lieu des options sélectionnées
+    const checkedBoxes = Array.from(document.querySelectorAll('.property-checkbox:checked'));
+    const propertyIds = checkedBoxes.map(cb => cb.value);
+    
     const data = {
       email: document.getElementById('memberEmail').value,
       firstName: document.getElementById('memberFirstName').value,
       lastName: document.getElementById('memberLastName').value,
       role: role,
-      propertyIds: Array.from(document.getElementById('memberProperties').selectedOptions).map(o => o.value)
+      propertyIds: propertyIds
     };
     
     if (!editingMemberId) {
@@ -2268,13 +2323,12 @@ document.addEventListener('DOMContentLoaded', function() {
       
       document.getElementById('memberRole').dispatchEvent(new Event('change'));
       
+      // ✅ NOUVEAU : Cocher les checkboxes au lieu de sélectionner les options
       if (member.accessible_properties && member.accessible_properties.length > 0) {
-        const selectEl = document.getElementById('memberProperties');
-        if (selectEl) {
-          Array.from(selectEl.options).forEach(option => {
-            option.selected = member.accessible_properties.includes(option.value);
-          });
-        }
+        const checkboxes = document.querySelectorAll('.property-checkbox');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = member.accessible_properties.includes(checkbox.value);
+        });
       }
       
       if (member.role === 'custom') {
