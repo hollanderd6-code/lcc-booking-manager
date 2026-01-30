@@ -607,7 +607,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
 
 // Ajouter cette route dans la fonction setupSubAccountsRoutes()
 
-app.get('/api/sub-accounts/accessible-properties', authenticateToken, async (req, res) => {
+app.get('/api/sub-accounts/accessible-properties', authenticateAny, async (req, res) => {
   try {
     // Si c'est un compte principal, il a accès à tout
     if (!req.user.isSubAccount) {
