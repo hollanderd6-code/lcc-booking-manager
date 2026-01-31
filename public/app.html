@@ -4812,85 +4812,48 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
         properties = Array.isArray(baseData.properties) ? baseData.properties : [];
         const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
 
-        // ✅ FILTRAGE POUR SOUS-COMPTES
-        const accountType = localStorage.getItem('lcc_account_type');
-        if (accountType === 'sub') {
-          try {
-            const accessRes = await fetch(`${API_URL}/api/sub-accounts/accessible-properties`, {
-              headers: { Authorization: 'Bearer ' + token }
-            });
-            
-            if (accessRes.ok) {
-              const accessData = await accessRes.json();
-              const accessibleIds = accessData.propertyIds || [];
-              
-              // Si pas de restriction (tableau vide) = accès à tout
-              if (accessibleIds.length > 0) {
-                // Filtrer les propriétés
-                properties = properties.filter(p => accessibleIds.includes(p.id));
-                
-                // Filtrer les réservations
-                const filteredReservations = reservationsBasic.filter(r => 
-                  accessibleIds.includes(r.property?.id) || accessibleIds.includes(r.propertyId)
-                );
-                
-                console.log(`🔐 Sous-compte: ${properties.length} logements, ${filteredReservations.length} réservations`);
-                reservations = filteredReservations;
-              } else {
-                reservations = reservationsBasic;
-                console.log('🔓 Sous-compte avec accès complet');
-              }
-            } else {
-              // En cas d'erreur, afficher tout (fallback sécurisé)
-              reservations = reservationsBasic;
-            }
-          } catch (err) {
-            console.error('Erreur filtrage sous-compte:', err);
-            reservations = reservationsBasic;
-          }
-        } else {
-          reservations = reservationsBasic;
-        }
+        // ✅ Le serveur filtre déjà les propriétés pour les sous-comptes
+const accountType = localStorage.getItem('lcc_account_type');
+if (accountType === 'sub') {
+  console.log(`🔐 Sous-compte: ${properties.length} logements reçus du serveur (déjà filtrés)`);
+  reservations = reservationsBasic;
+} else {
+  reservations = reservationsBasic;
+}
+
 localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
-        localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
-        window.LCC_RESERVATIONS = reservations;
-        window.LCC_PROPERTIES = properties;
+localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
+window.LCC_RESERVATIONS = reservations;
+window.LCC_PROPERTIES = properties;
       } else {
         const rRaw = localStorage.getItem('LCC_RESERVATIONS');
         const pRaw = localStorage.getItem('LCC_PROPERTIES');
         reservations = rRaw ? JSON.parse(rRaw) : [];
         properties = pRaw ? JSON.parse(pRaw) : [];
       }
-
       // store latest for click handlers
       window.__LCC_KPI_STATE = { reservations, properties };
-
       if (window.renderModernCalendar) {
         window.renderModernCalendar(reservations, properties);
       }
-
       computeKpis(reservations, properties);
       // updateTopRisksKpi est maintenant appelé dans renderModernCalendar avec state.bookings
-
       const movesCard = document.getElementById('kpiTodayMovesCard');
       if (movesCard && !movesCard.dataset.bound) {
         movesCard.dataset.bound = '1';
         movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
 }
-
       const cleaningCard = document.getElementById('kpiCleaning48hCard');
       if (cleaningCard && !cleaningCard.dataset.bound) {
         cleaningCard.dataset.bound = '1';
         cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
 }
-
       // Charger les cautions pour la KPI
       loadAndUpdateDepositsKPI();
     } catch (e) {
       console.warn('Erreur KPI dashboard', e);
     }
   }
-
   document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 })();
 </script>
