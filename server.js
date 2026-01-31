@@ -45,7 +45,13 @@ const smartLocksRoutes = require('./routes/smart-locks-routes');
 // ✅ IMPORT SYSTÈME DE SOUS-COMPTES
 // ============================================
 const { setupSubAccountsRoutes } = require('./sub-accounts-routes');
-const { authenticateAny, requirePermission } = require('./sub-accounts-middleware');
+const { 
+  authenticateAny, 
+  requirePermission, 
+  loadSubAccountData, 
+  filterByAccessibleProperties, 
+  getRealUserId 
+} = require('./sub-accounts-middleware');
 
 // ============================================
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
