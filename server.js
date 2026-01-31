@@ -6697,10 +6697,18 @@ try {
 });
 
 // POST - Créer / mettre à jour / supprimer une assignation
-app.post('/api/cleaning/assignments', async (req, res) => {
+app.post('/api/cleaning/assignments', 
+  authenticateAny,
+  requirePermission(pool, 'can_assign_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6710,11 +6718,18 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       return res.status(400).json({ error: 'reservationKey et propertyId requis' });
     }
 
+    // ✅ Vérifier accès propriété si sous-compte
+    if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
+      if (!req.subAccountData.accessible_property_ids.includes(propertyId)) {
+        return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+      }
+    }
+
     // Si cleanerId vide → on supprime l'assignation
     if (!cleanerId) {
       await pool.query(
         'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-        [user.id, reservationKey]
+        [userId, reservationKey]
       );
       return res.json({
         message: 'Assignation ménage supprimée',
@@ -6723,7 +6738,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     }
 
     // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -6733,7 +6748,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       `SELECT id, name, email, phone
        FROM cleaners
        WHERE id = $1 AND user_id = $2`,
-      [cleanerId, user.id]
+      [cleanerId, userId]
     );
 
     if (cleanerResult.rows.length === 0) {
@@ -6741,17 +6756,17 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     }
 
     // D'abord, supprimer toute assignation existante pour cette réservation
-await pool.query(
-  'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-  [user.id, reservationKey]
-);
+    await pool.query(
+      'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+      [userId, reservationKey]
+    );
 
-// Puis insérer la nouvelle assignation
-await pool.query(
-  `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
-   VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-  [user.id, propertyId, reservationKey, cleanerId]
-);
+    // Puis insérer la nouvelle assignation
+    await pool.query(
+      `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+      [userId, propertyId, reservationKey, cleanerId]
+    );
 
     res.json({
       message: 'Assignation ménage enregistrée',
@@ -7027,10 +7042,17 @@ app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
   }
 });
 // GET - Liste des checklists pour un utilisateur
-app.get('/api/cleaning/checklists', async (req, res) => {
+app.get('/api/cleaning/checklists', 
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -7044,11 +7066,16 @@ app.get('/api/cleaning/checklists', async (req, res) => {
        WHERE cc.user_id = $1
        ORDER BY cc.completed_at DESC
        LIMIT 50`,
-      [user.id]
+      [userId]
     );
 
+    // ✅ Filtrer par propriétés si sous-compte
+    const filteredChecklists = req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0
+      ? result.rows.filter(c => req.subAccountData.accessible_property_ids.includes(c.property_id))
+      : result.rows;
+
     res.json({
-      checklists: result.rows
+      checklists: filteredChecklists
     });
   } catch (err) {
     console.error('Erreur GET /api/cleaning/checklists :', err);
@@ -7072,6 +7099,7 @@ app.get('/api/cleaning/assignments',
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
+    
     const result = await pool.query(
       `SELECT 
         ca.*,
@@ -7082,7 +7110,7 @@ app.get('/api/cleaning/assignments',
       LEFT JOIN cleaners c ON ca.cleaner_id = c.id
       WHERE ca.user_id = $1
       ORDER BY ca.created_at DESC`,
-      [user.id]
+      [userId]
     );
 
     // Enrichir avec les infos des properties depuis PROPERTIES (en mémoire)
@@ -7095,9 +7123,12 @@ app.get('/api/cleaning/assignments',
       };
     });
 
+    // ✅ Filtrer par propriétés accessibles si sous-compte
+    const filteredAssignments = filterByAccessibleProperties(enrichedAssignments, req);
+
     res.json({ 
       success: true, 
-      assignments: enrichedAssignments 
+      assignments: filteredAssignments 
     });
   } catch (error) {
     console.error('Erreur GET /api/cleaning/assignments:', error);
@@ -7113,10 +7144,18 @@ app.get('/api/cleaning/assignments',
 // ============================================
 // ROUTES API - SERRURES CONNECTÉES
 // ============================================
-app.use('/api/smart-locks', authenticateToken, smartLocksRoutes);
+app.use('/api/smart-locks', 
+  authenticateAny, 
+  requirePermission(pool, 'can_view_smart_locks'),
+  smartLocksRoutes
+);
 // ============================================
 
-app.get('/api/properties', authenticateAny, checkSubscription, async (req, res) => {
+app.get('/api/properties', 
+  authenticateAny, 
+  checkSubscription, 
+  requirePermission(pool, 'can_view_properties'),
+  async (req, res) => {
   try {
     // ✅ GESTION DES SOUS-COMPTES
     let userId;
@@ -7231,47 +7270,76 @@ app.get('/api/properties', authenticateAny, checkSubscription, async (req, res) 
   }
 });
 
-app.get('/api/properties/:propertyId', async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-  const { propertyId } = req.params;
-  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-  if (!property) {
-    return res.status(404).json({ error: 'Logement non trouvé' });
-  }
-  res.json({
-    id: property.id,
-    name: property.name,
-    color: property.color,
-    address: property.address || null,
-    arrivalTime: property.arrival_time || property.arrivalTime || null,
-    departureTime: property.departure_time || property.departureTime || null,
-    depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
-    photoUrl: property.photo_url || property.photoUrl || null,
+app.get('/api/properties/:propertyId', 
+  authenticateAny,
+  requirePermission(pool, 'can_view_properties'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
     
-    // ✅ NOUVEAUX CHAMPS ENRICHIS
-    welcomeBookUrl: property.welcome_book_url || null,
-    accessCode: property.access_code || null,
-    wifiName: property.wifi_name || null,
-    wifiPassword: property.wifi_password || null,
-    accessInstructions: property.access_instructions || null,
-    chatPin: property.chat_pin || null,
-    amenities: property.amenities || '{}',                    // ✅ AJOUTÉ
-    houseRules: property.house_rules || '{}',                 // ✅ AJOUTÉ
-    practicalInfo: property.practical_info || '{}',           // ✅ AJOUTÉ
-    autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,  // ✅ AJOUTÉ
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
     
-    icalUrls: property.icalUrls || property.ical_urls || [],
-    reservationCount: (reservationsStore.properties[property.id] || []).length
-  });
+    const { propertyId } = req.params;
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+    
+    // ✅ Vérifier accès si sous-compte
+    if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
+      if (!req.subAccountData.accessible_property_ids.includes(propertyId)) {
+        return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+      }
+    }
+    
+    res.json({
+      id: property.id,
+      name: property.name,
+      color: property.color,
+      address: property.address || null,
+      arrivalTime: property.arrival_time || property.arrivalTime || null,
+      departureTime: property.departure_time || property.departureTime || null,
+      depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
+      photoUrl: property.photo_url || property.photoUrl || null,
+      
+      // ✅ NOUVEAUX CHAMPS ENRICHIS
+      welcomeBookUrl: property.welcome_book_url || null,
+      accessCode: property.access_code || null,
+      wifiName: property.wifi_name || null,
+      wifiPassword: property.wifi_password || null,
+      accessInstructions: property.access_instructions || null,
+      chatPin: property.chat_pin || null,
+      amenities: property.amenities || '{}',                    // ✅ AJOUTÉ
+      houseRules: property.house_rules || '{}',                 // ✅ AJOUTÉ
+      practicalInfo: property.practical_info || '{}',           // ✅ AJOUTÉ
+      autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,  // ✅ AJOUTÉ
+      
+      icalUrls: property.icalUrls || property.ical_urls || [],
+      reservationCount: (reservationsStore.properties[property.id] || []).length
+    });
+  } catch (error) {
+    console.error('Erreur GET /api/properties/:propertyId:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-app.post('/api/properties', upload.single('photo'), async (req, res) => {
+app.post('/api/properties', 
+  authenticateAny,
+  requirePermission(pool, 'can_edit_properties'),
+  upload.single('photo'), 
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -7315,7 +7383,7 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-    const id = `${user.id}-${baseId}`;
+    const id = `${userId}-${baseId}`;
 
     // Upload vers Cloudinary si un fichier est présent
     let photoUrl = existingPhotoUrl || null;
@@ -7468,14 +7536,30 @@ app.post('/api/properties', upload.single('photo'), async (req, res) => {
 // ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
-app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) => {
+app.put('/api/properties/:propertyId', 
+  authenticateAny,
+  requirePermission(pool, 'can_edit_properties'),
+  loadSubAccountData(pool),
+  upload.single('photo'), 
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
     
     const { propertyId } = req.params;
+    
+    // ✅ Vérifier accès propriété si sous-compte
+    if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
+      if (!req.subAccountData.accessible_property_ids.includes(propertyId)) {
+        return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+      }
+    }
+    
     let body;
     try {
       body = parsePropertyBody(req);
@@ -7505,7 +7589,7 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
       chatPin 
     } = body;
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -7712,22 +7796,37 @@ app.put('/api/properties/:propertyId', upload.single('photo'), async (req, res) 
 // ============================================
 // SUPPRIMER UN LOGEMENT
 // ============================================
-app.delete('/api/properties/:propertyId', authenticateAny, async (req, res) => {
+app.delete('/api/properties/:propertyId', 
+  authenticateAny,
+  requirePermission(pool, 'can_delete_properties'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
     const { propertyId } = req.params;
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    
+    // ✅ Vérifier accès propriété si sous-compte
+    if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
+      if (!req.subAccountData.accessible_property_ids.includes(propertyId)) {
+        return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+      }
+    }
+    
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
     await pool.query(
       'DELETE FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, user.id]
+      [propertyId, userId]
     );
 
     delete reservationsStore.properties[propertyId];
@@ -8540,10 +8639,17 @@ function findReservationByUidForUser(reservationUid, userId) {
 }
 
 // GET - Récupérer la caution liée à une réservation (si existe)
-app.get('/api/deposits/:reservationUid', async (req, res) => {
+app.get('/api/deposits/:reservationUid', 
+  authenticateAny,
+  requirePermission(pool, 'can_view_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -8559,10 +8665,17 @@ app.get('/api/deposits/:reservationUid', async (req, res) => {
   }
 });
 // POST - Créer une caution Stripe pour une réservation (empreinte bancaire)
-app.post('/api/deposits', async (req, res) => {
+app.post('/api/deposits', 
+  authenticateAny,
+  requirePermission(pool, 'can_manage_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -8803,18 +8916,33 @@ app.post('/api/payments', async (req, res) => {
 });
 
 // GET - Liste des cautions d'un utilisateur
-app.get('/api/deposits', async (req, res) => {
+app.get('/api/deposits', 
+  authenticateAny,
+  requirePermission(pool, 'can_view_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
     const { status, propertyId } = req.query;
     
-    const deposits = await getUserDeposits(user.id, { status, propertyId });
+    const deposits = await getUserDeposits(userId, { status, propertyId });
     
-    res.json({ deposits });
+    // ✅ Filtrer par propriétés si sous-compte
+    let filteredDeposits = deposits;
+    if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
+      filteredDeposits = deposits.filter(d => 
+        req.subAccountData.accessible_property_ids.includes(d.property_id)
+      );
+    }
+    
+    res.json({ deposits: filteredDeposits });
   } catch (err) {
     console.error('Erreur GET /api/deposits:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -8856,10 +8984,17 @@ app.get('/api/payments', async (req, res) => {
 });
 
 // POST - Capturer une caution (débiter le client)
-app.post('/api/deposits/:depositId/capture', async (req, res) => {
+app.post('/api/deposits/:depositId/capture', 
+  authenticateAny,
+  requirePermission(pool, 'can_manage_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -8869,7 +9004,7 @@ app.post('/api/deposits/:depositId/capture', async (req, res) => {
     // Vérifier que le deposit appartient à l'utilisateur
     const deposit = await pool.query(
       'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
-      [depositId, user.id]
+      [depositId, userId]
     );
 
     if (deposit.rows.length === 0) {
@@ -8890,10 +9025,17 @@ app.post('/api/deposits/:depositId/capture', async (req, res) => {
 });
 
 // POST - Libérer une caution (annuler l'autorisation)
-app.post('/api/deposits/:depositId/release', async (req, res) => {
+app.post('/api/deposits/:depositId/release', 
+  authenticateAny,
+  requirePermission(pool, 'can_manage_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -8902,7 +9044,7 @@ app.post('/api/deposits/:depositId/release', async (req, res) => {
     // Vérifier que le deposit appartient à l'utilisateur
     const deposit = await pool.query(
       'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
-      [depositId, user.id]
+      [depositId, userId]
     );
 
     if (deposit.rows.length === 0) {
