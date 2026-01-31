@@ -7058,13 +7058,20 @@ app.get('/api/cleaning/checklists', async (req, res) => {
 // ============================================
 // ROUTE GET : Récupérer les assignations de ménage
 // ============================================
-app.get('/api/cleaning/assignments', async (req, res) => {
+app.get('/api/cleaning/assignments', 
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
-
     const result = await pool.query(
       `SELECT 
         ca.*,
