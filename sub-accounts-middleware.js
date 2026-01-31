@@ -94,16 +94,33 @@ function requirePermission(pool, permission) {
       
       // 🔧 Mapping des permissions (frontend → DB)
       const permissionMapping = {
-        // Calendrier & Réservations
+        // Calendrier & Réservations (existant)
         'can_view_reservations': 'can_view_calendar',
         'can_manage_cleaning': 'can_assign_cleaning',
         
-        // Messages (nouvelles permissions)
+        // Messages
         'can_view_conversations': 'can_view_messages',
         'can_send_messages': 'can_send_messages',
         'can_mark_read': 'can_view_messages', // Inclus dans view_messages
         'can_delete_conversations': 'can_delete_messages',
-        'can_generate_booking_messages': 'can_send_messages' // Inclus dans send_messages
+        'can_generate_booking_messages': 'can_send_messages', // Inclus dans send_messages
+        
+        // Ménages
+        'can_view_cleaning': 'can_view_cleaning',
+        'can_assign_cleaning': 'can_assign_cleaning',
+        
+        // Logements
+        'can_view_properties': 'can_view_properties',
+        'can_edit_properties': 'can_edit_properties',
+        'can_delete_properties': 'can_delete_properties',
+        
+        // Cautions
+        'can_view_deposits': 'can_view_deposits',
+        'can_manage_deposits': 'can_manage_deposits',
+        
+        // Serrures connectées
+        'can_view_smart_locks': 'can_view_smart_locks',
+        'can_manage_smart_locks': 'can_manage_smart_locks'
       };
       
       const dbPermission = permissionMapping[permission] || permission;
