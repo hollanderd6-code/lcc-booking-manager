@@ -160,7 +160,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           can_view_properties = $12,
           can_edit_properties = $13,
           can_access_settings = $14,
-          can_manage_team = $15
+          can_manage_team = $15,
+          can_view_deposits = $17,
+          can_manage_deposits = $18,
+          can_view_smart_locks = $19,
+          can_manage_smart_locks = $20,
+          can_view_invoices = $21,
+          can_manage_invoices = $22
         WHERE sub_account_id = $16
       `, [
         finalPermissions.can_view_calendar,
@@ -178,7 +184,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         finalPermissions.can_edit_properties,
         finalPermissions.can_access_settings,
         finalPermissions.can_manage_team,
-        subAccount.id
+        subAccount.id,
+        finalPermissions.can_view_deposits || false,
+        finalPermissions.can_manage_deposits || false,
+        finalPermissions.can_view_smart_locks || false,
+        finalPermissions.can_manage_smart_locks || false,
+        finalPermissions.can_view_invoices || false,
+        finalPermissions.can_manage_invoices || false
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -341,7 +353,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
              can_view_properties = $12,
              can_edit_properties = $13,
              can_access_settings = $14,
-             can_manage_team = $15
+             can_manage_team = $15,
+             can_view_deposits = $17,
+             can_manage_deposits = $18,
+             can_view_smart_locks = $19,
+             can_manage_smart_locks = $20,
+             can_view_invoices = $21,
+             can_manage_invoices = $22
          WHERE sub_account_id = $16`,
         [
           finalPermissions.can_view_calendar,
@@ -359,7 +377,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           finalPermissions.can_edit_properties,
           finalPermissions.can_access_settings,
           finalPermissions.can_manage_team,
-          subAccountId
+          subAccountId,
+          finalPermissions.can_view_deposits || false,
+          finalPermissions.can_manage_deposits || false,
+          finalPermissions.can_view_smart_locks || false,
+          finalPermissions.can_manage_smart_locks || false,
+          finalPermissions.can_view_invoices || false,
+          finalPermissions.can_manage_invoices || false
         ]
       );
       
@@ -449,8 +473,12 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         // Ajouter les noms attendus par le frontend
         can_view_reservations: row.can_view_calendar,
         can_manage_cleaning: row.can_assign_cleaning,
-        can_view_deposits: false, // À ajouter dans la DB plus tard
-        can_manage_locks: false   // À ajouter dans la DB plus tard
+        can_view_deposits: row.can_view_deposits || false,
+        can_manage_deposits: row.can_manage_deposits || false,
+        can_view_smart_locks: row.can_view_smart_locks || false,
+        can_manage_smart_locks: row.can_manage_smart_locks || false,
+        can_view_invoices: row.can_view_invoices || false,
+        can_manage_invoices: row.can_manage_invoices || false
       }));
 
       res.json({
@@ -589,8 +617,12 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
             can_view_properties: subAccount.can_view_properties,
             can_edit_properties: subAccount.can_edit_properties,
             can_manage_team: subAccount.can_manage_team,
-            can_view_deposits: false, // À ajouter
-            can_manage_locks: false   // À ajouter
+            can_view_deposits: subAccount.can_view_deposits || false,
+            can_manage_deposits: subAccount.can_manage_deposits || false,
+            can_view_smart_locks: subAccount.can_view_smart_locks || false,
+            can_manage_smart_locks: subAccount.can_manage_smart_locks || false,
+            can_view_invoices: subAccount.can_view_invoices || false,
+            can_manage_invoices: subAccount.can_manage_invoices || false
           }
         }
       });
