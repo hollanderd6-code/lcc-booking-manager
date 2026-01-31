@@ -476,10 +476,10 @@ async function loadReservations() {
     const token = localStorage.getItem('lcc_token');
 
     const response = await fetch(`${API_URL}/api/reservations`, {
-      headers: {
-        Authorization: 'Bearer ' + token
-      }
-    });
+  headers: {
+    Authorization: 'Bearer ' + token
+  }
+});
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
