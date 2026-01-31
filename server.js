@@ -9492,7 +9492,6 @@ const uploadAttachment = multer({
     cb(new Error('Format de fichier non supporté'));
   }
 });
-
 // ============================================
 // CLIENTS PROPRIÉTAIRES - CRUD
 // ============================================
@@ -9516,7 +9515,7 @@ app.get('/api/owner-clients',
        WHERE user_id = $1 
        ORDER BY 
          CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
-      [user.id]
+      [userId]  // ← CORRECTION ICI
     );
 
     res.json({ clients: result.rows });
@@ -9527,14 +9526,21 @@ app.get('/api/owner-clients',
 });
 
 // 2. DÉTAIL D'UN CLIENT
-app.get('/api/owner-clients/:id', async (req, res) => {
+app.get('/api/owner-clients/:id', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
     const result = await pool.query(
       'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-      [req.params.id, user.id]
+      [req.params.id, userId]
     );
 
     if (result.rows.length === 0) {
@@ -9549,10 +9555,17 @@ app.get('/api/owner-clients/:id', async (req, res) => {
 });
 
 // 3. CRÉER UN CLIENT
-app.post('/api/owner-clients', async (req, res) => {
+app.post('/api/owner-clients', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
     const {
       clientType,
@@ -9589,7 +9602,7 @@ app.post('/api/owner-clients', async (req, res) => {
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *`,
       [
-        user.id,
+        userId,
         clientType,
         firstName || null,
         lastName || null,
@@ -9608,10 +9621,19 @@ app.post('/api/owner-clients', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
-app.put('/api/owner-clients/:id', async (req, res) => {
+
+// 4. MODIFIER UN CLIENT
+app.put('/api/owner-clients/:id', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
     const clientId = req.params.id;
     const {
@@ -9643,7 +9665,7 @@ app.put('/api/owner-clients/:id', async (req, res) => {
       city || null,
       defaultCommissionRate || 20,
       clientId, 
-      user.id
+      userId
     ]);
 
     if (result.rows.length === 0) {
@@ -9656,17 +9678,26 @@ app.put('/api/owner-clients/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-app.delete('/api/owner-clients/:id', async (req, res) => {
+
+// 5. SUPPRIMER UN CLIENT
+app.delete('/api/owner-clients/:id', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
     const clientId = req.params.id;
 
-    // OPTIONNEL : bloquer si des factures existent déjà pour ce client
+    // Vérifier qu'il n'y a pas de factures liées
     const invRes = await pool.query(
       'SELECT COUNT(*) FROM owner_invoices WHERE client_id = $1 AND user_id = $2',
-      [clientId, user.id]
+      [clientId, userId]
     );
     const invCount = parseInt(invRes.rows[0].count, 10) || 0;
     if (invCount > 0) {
@@ -9676,49 +9707,15 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
     }
 
     const result = await pool.query(
-      'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2',
-      [clientId, user.id]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Client introuvable' });
-    }
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Erreur suppression client:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// 5. SUPPRIMER UN CLIENT
-app.delete('/api/owner-clients/:id', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
-    // Vérifier qu'il n'y a pas de factures liées
-    const checkInvoices = await pool.query(
-      'SELECT COUNT(*) as count FROM owner_invoices WHERE client_id = $1',
-      [req.params.id]
-    );
-
-    if (parseInt(checkInvoices.rows[0].count) > 0) {
-      return res.status(400).json({ 
-        error: 'Impossible de supprimer : ce client a des factures associées' 
-      });
-    }
-
-    const result = await pool.query(
       'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2 RETURNING *',
-      [req.params.id, user.id]
+      [clientId, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Client non trouvé' });
     }
 
-    res.json({ message: 'Client supprimé' });
+    res.json({ message: 'Client supprimé', success: true });
   } catch (err) {
     console.error('Erreur suppression client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
