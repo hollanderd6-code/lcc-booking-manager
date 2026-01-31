@@ -6786,6 +6786,7 @@ app.post('/api/cleaning/assignments',
 // ============================================
 
 // GET - Liste des tâches pour une personne de ménage (accès via PIN)
+// ✅ CETTE ROUTE EST OK - Pas besoin de modification (accès public via PIN)
 app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
   try {
     const { pinCode } = req.params;
@@ -6820,45 +6821,45 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     for (const assignment of assignmentsResult.rows) {
       const { reservation_key, property_id } = assignment;
       console.log('🔍 Assignment:', { reservation_key, property_id });
-  console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
+      console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
       
       // Vérifier si c'est une assignation par réservation (nouveau système)
-if (reservation_key && reservation_key !== null) {
-  const parts = reservation_key.split('_');
-  if (parts.length < 3) continue;
-  
-  // Le dernier élément est endDate, l'avant-dernier est startDate
-  // Tout ce qui est avant est le propertyId
-  const endDate = parts[parts.length - 1];
-  const startDate = parts[parts.length - 2];
-  const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
-  
-  console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
-  
-  // Ne garder que les réservations avec départ futur ou aujourd'hui
-  if (endDate < todayStr) continue;
-  
-  // Trouver la réservation complète dans reservationsStore
-  const propertyReservations = reservationsStore.properties[property_id] || [];
-  const reservation = propertyReservations.find(r => {
-    const rKey = `${property_id}_${r.start}_${r.end}`;
-    return rKey === reservation_key;
-  });
-  
-  // Récupérer le nom du logement depuis PROPERTIES
-const property = PROPERTIES.find(p => p.id === property_id);
-const propertyName = property?.name || property?.title || property?.label || property_id;
-  const guestName = reservation?.guestName || reservation?.name || '';
-  
-  tasks.push({
-    reservationKey: reservation_key,
-    propertyId: property_id,
-    propertyName,
-    guestName,
-    checkoutDate: endDate,
-    completed: false
-  });
-}
+      if (reservation_key && reservation_key !== null) {
+        const parts = reservation_key.split('_');
+        if (parts.length < 3) continue;
+        
+        // Le dernier élément est endDate, l'avant-dernier est startDate
+        // Tout ce qui est avant est le propertyId
+        const endDate = parts[parts.length - 1];
+        const startDate = parts[parts.length - 2];
+        const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
+        
+        console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
+        
+        // Ne garder que les réservations avec départ futur ou aujourd'hui
+        if (endDate < todayStr) continue;
+        
+        // Trouver la réservation complète dans reservationsStore
+        const propertyReservations = reservationsStore.properties[property_id] || [];
+        const reservation = propertyReservations.find(r => {
+          const rKey = `${property_id}_${r.start}_${r.end}`;
+          return rKey === reservation_key;
+        });
+        
+        // Récupérer le nom du logement depuis PROPERTIES
+        const property = PROPERTIES.find(p => p.id === property_id);
+        const propertyName = property?.name || property?.title || property?.label || property_id;
+        const guestName = reservation?.guestName || reservation?.name || '';
+        
+        tasks.push({
+          reservationKey: reservation_key,
+          propertyId: property_id,
+          propertyName,
+          guestName,
+          checkoutDate: endDate,
+          completed: false
+        });
+      }
       // Sinon, c'est une ancienne assignation par logement
       else if (property_id) {
         // Récupérer toutes les réservations de ce logement
@@ -6911,7 +6912,9 @@ const propertyName = property?.name || property?.title || property?.label || pro
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 // POST - Soumettre une checklist complétée
+// ✅ CETTE ROUTE EST OK - Pas besoin de modification (accès public via PIN)
 app.post('/api/cleaning/checklist', async (req, res) => {
   try {
     const { pinCode, reservationKey, propertyId, tasks, photos, notes } = req.body;
@@ -6944,18 +6947,18 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     }
     
     // Extraire la date de fin depuis reservation_key (format: propertyId_startDate_endDate)
-const parts = reservationKey.split('_');
-const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
+    const parts = reservationKey.split('_');
+    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
 
-// Récupérer les infos de la réservation depuis reservationsStore
-let reservation = null;
-const propertyReservations = reservationsStore.properties[propertyId] || [];
-reservation = propertyReservations.find(r => {
-  const rKey = `${propertyId}_${r.start}_${r.end}`;
-  return rKey === reservationKey;
-});
+    // Récupérer les infos de la réservation depuis reservationsStore
+    let reservation = null;
+    const propertyReservations = reservationsStore.properties[propertyId] || [];
+    reservation = propertyReservations.find(r => {
+      const rKey = `${propertyId}_${r.start}_${r.end}`;
+      return rKey === reservationKey;
+    });
 
-const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
+    const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
     
     // Insérer ou mettre à jour la checklist
     const result = await pool.query(
@@ -6982,11 +6985,18 @@ const guestName = reservation ? (reservation.guestName || reservation.name || ''
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 // GET - Détails d'une checklist spécifique
-app.get('/api/cleaning/checklists/:id', async (req, res) => {
+app.get('/api/cleaning/checklists/:id', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -7001,7 +7011,7 @@ app.get('/api/cleaning/checklists/:id', async (req, res) => {
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
        WHERE cc.id = $1 AND cc.user_id = $2`,
-      [id, user.id]
+      [id, userId]
     );
 
     if (result.rows.length === 0) {
@@ -7016,7 +7026,9 @@ app.get('/api/cleaning/checklists/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 // GET - Récupérer une checklist par reservation_key
+// ✅ CETTE ROUTE EST OK - Pas besoin de modification (accès public)
 app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
   try {
     const { reservationKey } = req.params;
@@ -7041,7 +7053,9 @@ app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 // GET - Liste des checklists pour un utilisateur
+// ✅ CETTE ROUTE EST DÉJÀ CORRIGÉE
 app.get('/api/cleaning/checklists', 
   authenticateAny,
   requirePermission(pool, 'can_view_cleaning'),
@@ -7082,9 +7096,9 @@ app.get('/api/cleaning/checklists',
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// ============================================
-// ROUTE GET : Récupérer les assignations de ménage
-// ============================================
+
+// GET - Récupérer les assignations de ménage
+// ✅ CETTE ROUTE EST DÉJÀ CORRIGÉE
 app.get('/api/cleaning/assignments', 
   authenticateAny,
   requirePermission(pool, 'can_view_cleaning'),
