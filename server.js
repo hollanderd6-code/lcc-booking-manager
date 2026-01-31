@@ -9498,10 +9498,18 @@ const uploadAttachment = multer({
 // ============================================
 
 // 1. LISTE DES CLIENTS
-app.get('/api/owner-clients', async (req, res) => {
+app.get('/api/owner-clients', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
     const result = await pool.query(
       `SELECT * FROM owner_clients 
