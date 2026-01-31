@@ -946,12 +946,16 @@
               </label>
             </div>
 
-            <!-- Finances -->
+            <!-- Factures -->
             <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">💰 Finances</div>
+              <div style="font-weight:600; margin-bottom:8px;">🧾 Factures</div>
               <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewFinances" />
-                <span>Voir les finances</span>
+                <input type="checkbox" id="perm_canViewInvoices" />
+                <span>Voir les factures</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="perm_canManageInvoices" />
+                <span>Créer / modifier les factures</span>
               </label>
             </div>
 
@@ -971,13 +975,21 @@
                 <input type="checkbox" id="perm_canViewDeposits" />
                 <span>Voir les cautions</span>
               </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="perm_canManageDeposits" />
+                <span>Gérer les cautions (capturer/libérer)</span>
+              </label>
             </div>
 
             <!-- Serrures connectées -->
             <div style="padding:12px; background:#f9fafb; border-radius:8px;">
               <div style="font-weight:600; margin-bottom:8px;">🔒 Serrures</div>
               <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canManageLocks" />
+                <input type="checkbox" id="perm_canViewSmartLocks" />
+                <span>Voir les serrures connectées</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="perm_canManageSmartLocks" />
                 <span>Gérer les serrures connectées</span>
               </label>
             </div>
@@ -2075,7 +2087,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const ROLE_DESCRIPTIONS = {
     manager: 'Accès complet au calendrier, messages et ménages.',
     cleaner: 'Accès au calendrier (lecture) et gestion des ménages uniquement.',
-    accountant: 'Accès aux finances et au calendrier (lecture).',
+    accountant: 'Accès aux factures et au calendrier (lecture).',
     custom: 'Choisissez manuellement chaque permission.'
   };
   
@@ -2126,10 +2138,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (member.can_view_reservations) permissions.push({ icon: 'calendar', label: 'Calendrier' });
       if (member.can_view_messages) permissions.push({ icon: 'comment-dots', label: 'Messages' });
       if (member.can_view_cleaning) permissions.push({ icon: 'broom', label: 'Ménages' });
-      if (member.can_view_finances) permissions.push({ icon: 'dollar-sign', label: 'Finances' });
+      if (member.can_view_invoices || member.can_manage_invoices) permissions.push({ icon: 'file-invoice', label: 'Factures' });
       if (member.can_view_properties) permissions.push({ icon: 'home', label: 'Logements' });
       if (member.can_view_deposits) permissions.push({ icon: 'shield-alt', label: 'Cautions' });
-      if (member.can_manage_locks) permissions.push({ icon: 'lock', label: 'Serrures' });
+      if (member.can_view_smart_locks || member.can_manage_smart_locks) permissions.push({ icon: 'lock', label: 'Serrures' });
       
       const roleLabels = { manager: '👔 Manager', cleaner: '🧹 Femme de ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
       
@@ -2274,10 +2286,13 @@ document.addEventListener('DOMContentLoaded', function() {
         can_manage_cleaning: document.getElementById('perm_canAssignCleaning')?.checked || false,
         can_view_properties: document.getElementById('perm_canViewProperties')?.checked || false,
         can_edit_properties: false,
-        can_view_finances: document.getElementById('perm_canViewFinances')?.checked || false,
+        can_view_invoices: document.getElementById('perm_canViewInvoices')?.checked || false,
+        can_manage_invoices: document.getElementById('perm_canManageInvoices')?.checked || false,
         can_manage_team: false,
         can_view_deposits: document.getElementById('perm_canViewDeposits')?.checked || false,
-        can_manage_locks: document.getElementById('perm_canManageLocks')?.checked || false
+        can_manage_deposits: document.getElementById('perm_canManageDeposits')?.checked || false,
+        can_view_smart_locks: document.getElementById('perm_canViewSmartLocks')?.checked || false,
+        can_manage_smart_locks: document.getElementById('perm_canManageSmartLocks')?.checked || false
       };
       console.log('🔐 Permissions:', data.permissions);
     }
@@ -2352,10 +2367,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('perm_canSendMessages')) document.getElementById('perm_canSendMessages').checked = member.can_send_messages || false;
         if (document.getElementById('perm_canViewCleaning')) document.getElementById('perm_canViewCleaning').checked = member.can_view_cleaning || false;
         if (document.getElementById('perm_canAssignCleaning')) document.getElementById('perm_canAssignCleaning').checked = member.can_manage_cleaning || false;
-        if (document.getElementById('perm_canViewFinances')) document.getElementById('perm_canViewFinances').checked = member.can_view_finances || false;
+        if (document.getElementById('perm_canViewInvoices')) document.getElementById('perm_canViewInvoices').checked = member.can_view_invoices || false;
+        if (document.getElementById('perm_canManageInvoices')) document.getElementById('perm_canManageInvoices').checked = member.can_manage_invoices || false;
         if (document.getElementById('perm_canViewProperties')) document.getElementById('perm_canViewProperties').checked = member.can_view_properties || false;
         if (document.getElementById('perm_canViewDeposits')) document.getElementById('perm_canViewDeposits').checked = member.can_view_deposits || false;
-        if (document.getElementById('perm_canManageLocks')) document.getElementById('perm_canManageLocks').checked = member.can_manage_locks || false;
+        if (document.getElementById('perm_canManageDeposits')) document.getElementById('perm_canManageDeposits').checked = member.can_manage_deposits || false;
+        if (document.getElementById('perm_canViewSmartLocks')) document.getElementById('perm_canViewSmartLocks').checked = member.can_view_smart_locks || false;
+        if (document.getElementById('perm_canManageSmartLocks')) document.getElementById('perm_canManageSmartLocks').checked = member.can_manage_smart_locks || false;
       }
       
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
