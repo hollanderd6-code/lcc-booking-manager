@@ -4434,8 +4434,10 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     // Filtrer selon propriétés accessibles (si sous-compte)
     const filteredProps = req.user.isSubAccount
-      ? userProps.filter(p => accessibleProperties.includes(parseInt(p.id)))
+      ? userProps.filter(p => accessibleProperties.includes(p.id))
       : userProps;
+
+    console.log(`🔍 DEBUG: userProps.length=${userProps.length}, filteredProps.length=${filteredProps.length}`);
 
     filteredProps.forEach(property => {
       const propertyReservations = reservationsStore.properties[property.id] || [];
