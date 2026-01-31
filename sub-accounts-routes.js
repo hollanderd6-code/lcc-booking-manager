@@ -78,7 +78,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           can_view_properties: permissions.can_view_properties || false,
           can_edit_properties: permissions.can_edit_properties || false,
           can_access_settings: false,
-          can_manage_team: false
+          can_manage_team: false,
+          can_view_deposits: permissions.can_view_deposits || false,
+          can_manage_deposits: permissions.can_manage_deposits || false,
+          can_view_smart_locks: permissions.can_view_smart_locks || false,
+          can_manage_smart_locks: permissions.can_manage_smart_locks || false,
+          can_view_invoices: permissions.can_view_invoices || false,
+          can_manage_invoices: permissions.can_manage_invoices || false
         };
       } else {
         switch(role) {
@@ -271,7 +277,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           can_view_properties: permissions.can_view_properties || false,
           can_edit_properties: permissions.can_edit_properties || false,
           can_access_settings: false,
-          can_manage_team: false
+          can_manage_team: false,
+          can_view_deposits: permissions.can_view_deposits || false,
+          can_manage_deposits: permissions.can_manage_deposits || false,
+          can_view_smart_locks: permissions.can_view_smart_locks || false,
+          can_manage_smart_locks: permissions.can_manage_smart_locks || false,
+          can_view_invoices: permissions.can_view_invoices || false,
+          can_manage_invoices: permissions.can_manage_invoices || false
         };
       } else {
         switch(role) {
@@ -452,6 +464,12 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sp.can_edit_properties,
           sp.can_access_settings,
           sp.can_manage_team,
+          sp.can_view_deposits,
+          sp.can_manage_deposits,
+          sp.can_view_smart_locks,
+          sp.can_manage_smart_locks,
+          sp.can_view_invoices,
+          sp.can_manage_invoices,
           
           -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
