@@ -2365,7 +2365,7 @@ async function getSubscriptionInfo(req, res, next) {
 
     const result = await pool.query(
       `SELECT status, trial_end_date, plan_type FROM subscriptions WHERE user_id = $1`,
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0) {
@@ -4350,7 +4350,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         try {
           const tokenResult = await pool.query(
             'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-            [user.id]
+            [userId]
           );
           
           if (tokenResult.rows.length > 0) {
@@ -4802,7 +4802,7 @@ app.get('/api/user/profile', async (req, res) => {
         created_at
        FROM users 
        WHERE id = $1`,
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0) {
@@ -6401,7 +6401,7 @@ app.get('/api/welcome', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT data FROM welcome_books_v2 WHERE user_id = $1',
-      [user.id]
+      [userId]
     );
 
     let data;
@@ -6466,17 +6466,10 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', 
-  authenticateAny, 
-  checkSubscription, 
-  async (req, res) => {
+app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) => {
   try {
-    // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6498,16 +6491,10 @@ app.get('/api/cleaners',
 });
 
 // POST - Créer une nouvelle personne de ménage
-app.post('/api/cleaners', 
-  authenticateAny,
-  async (req, res) => {
+app.post('/api/cleaners', async (req, res) => {
   try {
-    // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6536,7 +6523,7 @@ app.post('/api/cleaners',
       `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), NOW())
        RETURNING id, name, phone, email, notes, pin_code, is_active, created_at`,
-      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive]
+      [id, user.id, name, phone || null, email || null, notes || null, pinCode, isActive]
     );
 
     res.status(201).json({
@@ -6550,16 +6537,10 @@ app.post('/api/cleaners',
 });
 
 // PUT - Modifier une personne de ménage
-app.put('/api/cleaners/:id', 
-  authenticateAny,
-  async (req, res) => {
+app.put('/api/cleaners/:id', async (req, res) => {
   try {
-    // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6576,7 +6557,7 @@ app.put('/api/cleaners/:id',
          is_active = COALESCE($7, is_active)
        WHERE id = $1 AND user_id = $2
        RETURNING id, name, phone, email, notes, is_active, created_at`,
-      [id, userId, name, phone, email, notes, isActive]
+      [id, user.id, name, phone, email, notes, isActive]
     );
 
     if (result.rows.length === 0) {
@@ -6594,16 +6575,10 @@ app.put('/api/cleaners/:id',
 });
 
 // DELETE - Supprimer une personne de ménage
-app.delete('/api/cleaners/:id', 
-  authenticateAny,
-  async (req, res) => {
+app.delete('/api/cleaners/:id', async (req, res) => {
   try {
-    // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6612,7 +6587,7 @@ app.delete('/api/cleaners/:id',
     const result = await pool.query(
       `DELETE FROM cleaners
        WHERE id = $1 AND user_id = $2`,
-      [id, userId]
+      [id, user.id]
     );
 
     if (result.rowCount === 0) {
@@ -6625,9 +6600,101 @@ app.delete('/api/cleaners/:id',
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+app.post('/api/cleaning/assignments', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
 
-// ⚠️ SUPPRIMER CE DOUBLON (lignes ~145-240)
-// Tu as cette route EN DOUBLE ! Garde seulement celle en dessous avec les permissions
+    const { reservationKey, propertyId, cleanerId } = req.body || {};
+
+    if (!reservationKey || !propertyId) {
+      return res.status(400).json({ error: 'reservationKey et propertyId requis' });
+    }
+
+    // Si cleanerId vide → on supprime l'assignation
+    if (!cleanerId) {
+      await pool.query(
+        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+        [user.id, reservationKey]
+      );
+      return res.json({
+        message: 'Assignation ménage supprimée',
+        reservationKey
+      });
+    }
+
+    // Vérifier que le logement appartient bien à l'utilisateur
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    if (!property) {
+      return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
+    }
+
+    // Vérifier que le cleaner appartient bien à l'utilisateur
+    const cleanerResult = await pool.query(
+      `SELECT id, name, email, phone
+       FROM cleaners
+       WHERE id = $1 AND user_id = $2`,
+      [cleanerId, user.id]
+    );
+
+    if (cleanerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Personne de ménage introuvable pour cet utilisateur' });
+    }
+
+    // D'abord, supprimer toute assignation existante pour cette réservation
+    await pool.query(
+      'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
+      [user.id, reservationKey]
+    );
+
+    // Puis insérer la nouvelle assignation
+    await pool.query(
+      `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+      [user.id, propertyId, reservationKey, cleanerId]
+    );
+
+    // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
+try {
+  const { sendNewCleaningNotification } = require('./server/notifications-service');
+  
+  // Récupérer la date de fin de la réservation depuis la DB
+  const resResult = await pool.query(
+    'SELECT end_date FROM reservations WHERE uid = $1 OR id::text = $1',
+    [reservationKey]
+  );
+  
+  if (resResult.rows.length > 0) {
+    const cleaningDate = resResult.rows[0].end_date;
+    
+    await sendNewCleaningNotification(
+      user.id,
+      reservationKey,
+      property.name,
+      cleanerResult.rows[0].name,
+      cleaningDate
+    );
+    
+    console.log(`✅ Notification ménage envoyée à ${user.id}`);
+  }
+} catch (notifError) {
+  console.error('❌ Erreur notification ménage:', notifError.message);
+}
+    res.json({
+      message: 'Assignation ménage enregistrée',
+      assignment: {
+        reservationKey,
+        propertyId,
+        cleanerId
+      }
+    });
+  } catch (err) {
+    console.error('Erreur POST /api/cleaning/assignments :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // POST - Créer / mettre à jour / supprimer une assignation
 app.post('/api/cleaning/assignments', 
@@ -6701,33 +6768,6 @@ app.post('/api/cleaning/assignments',
       [userId, propertyId, reservationKey, cleanerId]
     );
 
-    // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
-    try {
-      const { sendNewCleaningNotification } = require('./server/notifications-service');
-      
-      // Récupérer la date de fin de la réservation depuis la DB
-      const resResult = await pool.query(
-        'SELECT end_date FROM reservations WHERE uid = $1 OR id::text = $1',
-        [reservationKey]
-      );
-      
-      if (resResult.rows.length > 0) {
-        const cleaningDate = resResult.rows[0].end_date;
-        
-        await sendNewCleaningNotification(
-          userId,
-          reservationKey,
-          property.name,
-          cleanerResult.rows[0].name,
-          cleaningDate
-        );
-        
-        console.log(`✅ Notification ménage envoyée à ${userId}`);
-      }
-    } catch (notifError) {
-      console.error('❌ Erreur notification ménage:', notifError.message);
-    }
-
     res.json({
       message: 'Assignation ménage enregistrée',
       assignment: {
@@ -6746,7 +6786,6 @@ app.post('/api/cleaning/assignments',
 // ============================================
 
 // GET - Liste des tâches pour une personne de ménage (accès via PIN)
-// ✅ CETTE ROUTE EST OK - Pas besoin de modification (accès public via PIN)
 app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
   try {
     const { pinCode } = req.params;
@@ -6781,45 +6820,45 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     for (const assignment of assignmentsResult.rows) {
       const { reservation_key, property_id } = assignment;
       console.log('🔍 Assignment:', { reservation_key, property_id });
-      console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
+  console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
       
       // Vérifier si c'est une assignation par réservation (nouveau système)
-      if (reservation_key && reservation_key !== null) {
-        const parts = reservation_key.split('_');
-        if (parts.length < 3) continue;
-        
-        // Le dernier élément est endDate, l'avant-dernier est startDate
-        // Tout ce qui est avant est le propertyId
-        const endDate = parts[parts.length - 1];
-        const startDate = parts[parts.length - 2];
-        const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
-        
-        console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
-        
-        // Ne garder que les réservations avec départ futur ou aujourd'hui
-        if (endDate < todayStr) continue;
-        
-        // Trouver la réservation complète dans reservationsStore
-        const propertyReservations = reservationsStore.properties[property_id] || [];
-        const reservation = propertyReservations.find(r => {
-          const rKey = `${property_id}_${r.start}_${r.end}`;
-          return rKey === reservation_key;
-        });
-        
-        // Récupérer le nom du logement depuis PROPERTIES
-        const property = PROPERTIES.find(p => p.id === property_id);
-        const propertyName = property?.name || property?.title || property?.label || property_id;
-        const guestName = reservation?.guestName || reservation?.name || '';
-        
-        tasks.push({
-          reservationKey: reservation_key,
-          propertyId: property_id,
-          propertyName,
-          guestName,
-          checkoutDate: endDate,
-          completed: false
-        });
-      }
+if (reservation_key && reservation_key !== null) {
+  const parts = reservation_key.split('_');
+  if (parts.length < 3) continue;
+  
+  // Le dernier élément est endDate, l'avant-dernier est startDate
+  // Tout ce qui est avant est le propertyId
+  const endDate = parts[parts.length - 1];
+  const startDate = parts[parts.length - 2];
+  const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
+  
+  console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
+  
+  // Ne garder que les réservations avec départ futur ou aujourd'hui
+  if (endDate < todayStr) continue;
+  
+  // Trouver la réservation complète dans reservationsStore
+  const propertyReservations = reservationsStore.properties[property_id] || [];
+  const reservation = propertyReservations.find(r => {
+    const rKey = `${property_id}_${r.start}_${r.end}`;
+    return rKey === reservation_key;
+  });
+  
+  // Récupérer le nom du logement depuis PROPERTIES
+const property = PROPERTIES.find(p => p.id === property_id);
+const propertyName = property?.name || property?.title || property?.label || property_id;
+  const guestName = reservation?.guestName || reservation?.name || '';
+  
+  tasks.push({
+    reservationKey: reservation_key,
+    propertyId: property_id,
+    propertyName,
+    guestName,
+    checkoutDate: endDate,
+    completed: false
+  });
+}
       // Sinon, c'est une ancienne assignation par logement
       else if (property_id) {
         // Récupérer toutes les réservations de ce logement
@@ -6872,9 +6911,7 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 // POST - Soumettre une checklist complétée
-// ✅ CETTE ROUTE EST OK - Pas besoin de modification (accès public via PIN)
 app.post('/api/cleaning/checklist', async (req, res) => {
   try {
     const { pinCode, reservationKey, propertyId, tasks, photos, notes } = req.body;
@@ -6907,18 +6944,18 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     }
     
     // Extraire la date de fin depuis reservation_key (format: propertyId_startDate_endDate)
-    const parts = reservationKey.split('_');
-    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
+const parts = reservationKey.split('_');
+const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
 
-    // Récupérer les infos de la réservation depuis reservationsStore
-    let reservation = null;
-    const propertyReservations = reservationsStore.properties[propertyId] || [];
-    reservation = propertyReservations.find(r => {
-      const rKey = `${propertyId}_${r.start}_${r.end}`;
-      return rKey === reservationKey;
-    });
+// Récupérer les infos de la réservation depuis reservationsStore
+let reservation = null;
+const propertyReservations = reservationsStore.properties[propertyId] || [];
+reservation = propertyReservations.find(r => {
+  const rKey = `${propertyId}_${r.start}_${r.end}`;
+  return rKey === reservationKey;
+});
 
-    const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
+const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
     
     // Insérer ou mettre à jour la checklist
     const result = await pool.query(
@@ -6945,18 +6982,11 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 // GET - Détails d'une checklist spécifique
-app.get('/api/cleaning/checklists/:id', 
-  authenticateAny,
-  async (req, res) => {
+app.get('/api/cleaning/checklists/:id', async (req, res) => {
   try {
-    // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6971,7 +7001,7 @@ app.get('/api/cleaning/checklists/:id',
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
        WHERE cc.id = $1 AND cc.user_id = $2`,
-      [id, userId]
+      [id, user.id]
     );
 
     if (result.rows.length === 0) {
@@ -6986,9 +7016,7 @@ app.get('/api/cleaning/checklists/:id',
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 // GET - Récupérer une checklist par reservation_key
-// ✅ CETTE ROUTE EST OK - Pas besoin de modification (accès public)
 app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
   try {
     const { reservationKey } = req.params;
@@ -7013,9 +7041,7 @@ app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 // GET - Liste des checklists pour un utilisateur
-// ✅ CETTE ROUTE EST DÉJÀ CORRIGÉE
 app.get('/api/cleaning/checklists', 
   authenticateAny,
   requirePermission(pool, 'can_view_cleaning'),
@@ -7056,9 +7082,9 @@ app.get('/api/cleaning/checklists',
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-// GET - Récupérer les assignations de ménage
-// ✅ CETTE ROUTE EST DÉJÀ CORRIGÉE
+// ============================================
+// ROUTE GET : Récupérer les assignations de ménage
+// ============================================
 app.get('/api/cleaning/assignments', 
   authenticateAny,
   requirePermission(pool, 'can_view_cleaning'),
@@ -8278,7 +8304,7 @@ app.get('/api/verify-email', async (req, res) => {
            verification_token_expires = NULL,
            updated_at = NOW()
        WHERE id = $1`,
-      [user.id]
+      [userId]
     );
 
     console.log('✅ Email vérifié pour:', user.email);
@@ -8934,7 +8960,7 @@ app.get('/api/payments', async (req, res) => {
     const { status, propertyId } = req.query;
     
     let query = 'SELECT * FROM payments WHERE user_id = $1';
-    const params = [user.id];
+    const params = [userId];
     
     if (status) {
       query += ' AND status = $2';
@@ -9346,7 +9372,7 @@ app.get('/api/subscription/status', async (req, res) => {
         current_period_end, stripe_subscription_id
       FROM subscriptions 
       WHERE user_id = $1`,
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0) {
@@ -9417,7 +9443,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     // Récupérer l'abonnement Stripe
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
@@ -9466,30 +9492,23 @@ const uploadAttachment = multer({
     cb(new Error('Format de fichier non supporté'));
   }
 });
+
 // ============================================
 // CLIENTS PROPRIÉTAIRES - CRUD
 // ============================================
 
 // 1. LISTE DES CLIENTS
-app.get('/api/owner-clients', 
-  authenticateAny,
-  async (req, res) => {
+app.get('/api/owner-clients', async (req, res) => {
   try {
-    // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
       `SELECT * FROM owner_clients 
        WHERE user_id = $1 
        ORDER BY 
          CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
-      [userId]  // ← CORRECTION ICI
+      [userId]
     );
 
     res.json({ clients: result.rows });
@@ -9500,17 +9519,10 @@ app.get('/api/owner-clients',
 });
 
 // 2. DÉTAIL D'UN CLIENT
-app.get('/api/owner-clients/:id', 
-  authenticateAny,
-  async (req, res) => {
+app.get('/api/owner-clients/:id', async (req, res) => {
   try {
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
       'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
@@ -9529,17 +9541,10 @@ app.get('/api/owner-clients/:id',
 });
 
 // 3. CRÉER UN CLIENT
-app.post('/api/owner-clients', 
-  authenticateAny,
-  async (req, res) => {
+app.post('/api/owner-clients', async (req, res) => {
   try {
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const {
       clientType,
@@ -9576,7 +9581,7 @@ app.post('/api/owner-clients',
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *`,
       [
-        userId,
+        user.id,
         clientType,
         firstName || null,
         lastName || null,
@@ -9595,19 +9600,10 @@ app.post('/api/owner-clients',
     res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
-
-// 4. MODIFIER UN CLIENT
-app.put('/api/owner-clients/:id', 
-  authenticateAny,
-  async (req, res) => {
+app.put('/api/owner-clients/:id', async (req, res) => {
   try {
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const clientId = req.params.id;
     const {
@@ -9639,7 +9635,7 @@ app.put('/api/owner-clients/:id',
       city || null,
       defaultCommissionRate || 20,
       clientId, 
-      userId
+      user.id
     ]);
 
     if (result.rows.length === 0) {
@@ -9652,26 +9648,17 @@ app.put('/api/owner-clients/:id',
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-// 5. SUPPRIMER UN CLIENT
-app.delete('/api/owner-clients/:id', 
-  authenticateAny,
-  async (req, res) => {
+app.delete('/api/owner-clients/:id', async (req, res) => {
   try {
-    const userId = req.user.isSubAccount 
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const clientId = req.params.id;
 
-    // Vérifier qu'il n'y a pas de factures liées
+    // OPTIONNEL : bloquer si des factures existent déjà pour ce client
     const invRes = await pool.query(
       'SELECT COUNT(*) FROM owner_invoices WHERE client_id = $1 AND user_id = $2',
-      [clientId, userId]
+      [clientId, user.id]
     );
     const invCount = parseInt(invRes.rows[0].count, 10) || 0;
     if (invCount > 0) {
@@ -9681,15 +9668,49 @@ app.delete('/api/owner-clients/:id',
     }
 
     const result = await pool.query(
+      'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [clientId, user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Client introuvable' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erreur suppression client:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 5. SUPPRIMER UN CLIENT
+app.delete('/api/owner-clients/:id', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Vérifier qu'il n'y a pas de factures liées
+    const checkInvoices = await pool.query(
+      'SELECT COUNT(*) as count FROM owner_invoices WHERE client_id = $1',
+      [req.params.id]
+    );
+
+    if (parseInt(checkInvoices.rows[0].count) > 0) {
+      return res.status(400).json({ 
+        error: 'Impossible de supprimer : ce client a des factures associées' 
+      });
+    }
+
+    const result = await pool.query(
       'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2 RETURNING *',
-      [clientId, userId]
+      [req.params.id, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Client non trouvé' });
     }
 
-    res.json({ message: 'Client supprimé', success: true });
+    res.json({ message: 'Client supprimé' });
   } catch (err) {
     console.error('Erreur suppression client:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -9715,7 +9736,7 @@ app.get('/api/owner-articles', async (req, res) => {
       `SELECT * FROM owner_articles 
        WHERE user_id = $1 AND is_active = true
        ORDER BY article_type, name`,
-      [user.id]
+      [userId]
     );
 
     res.json({ articles: result.rows });
@@ -9782,7 +9803,7 @@ app.delete('/api/owner-articles/:id', async (req, res) => {
 
     const result = await pool.query(
       'UPDATE owner_articles SET is_active = false WHERE id = $1 AND user_id = $2 RETURNING *',
-      [req.params.id, user.id]
+      [req.params.id, userId]
     );
 
     if (result.rows.length === 0) {
@@ -9802,7 +9823,7 @@ app.post('/api/owner-articles/init-defaults', async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    await pool.query('SELECT create_default_owner_articles($1)', [user.id]);
+    await pool.query('SELECT create_default_owner_articles($1)', [userId]);
 
     res.json({ message: 'Articles par défaut créés' });
   } catch (err) {
@@ -9815,10 +9836,15 @@ app.post('/api/owner-articles/init-defaults', async (req, res) => {
 // ============================================
 
 // 1. LISTE DES FACTURES PROPRIÉTAIRES
-app.get('/api/owner-invoices', async (req, res) => {
+app.get('/api/owner-invoices',
+  authenticateAny,
+  requirePermission(pool, 'can_view_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(`
             SELECT
@@ -9834,7 +9860,7 @@ app.get('/api/owner-invoices', async (req, res) => {
       JOIN owner_clients c ON c.id = i.client_id
       WHERE i.user_id = $1
       ORDER BY i.issue_date DESC, i.id DESC
-    `, [user.id]);
+    `, [userId]);
 
     res.json({ invoices: result.rows });
   } catch (err) {
@@ -9844,12 +9870,17 @@ app.get('/api/owner-invoices', async (req, res) => {
 });
 
 // 2. CRÉER UNE NOUVELLE FACTURE PROPRIÉTAIRE (BROUILLON PAR DÉFAUT)
-app.post('/api/owner-invoices', async (req, res) => {
+app.post('/api/owner-invoices',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const {
       clientId,
@@ -9929,7 +9960,7 @@ app.post('/api/owner-invoices', async (req, res) => {
       )
       RETURNING *
     `, [
-      user.id,
+      userId,
       clientId,
       periodStart || null,
       periodEnd || null,
@@ -10004,17 +10035,22 @@ if (Array.isArray(propertyIds) && propertyIds.length > 0) {
   }
 });
 // 2bis. RÉCUPÉRER UNE FACTURE PROPRIÉTAIRE PAR ID
-app.get('/api/owner-invoices/:id', async (req, res) => {
+app.get('/api/owner-invoices/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_view_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const invoiceId = req.params.id;
 
     // Facture
     const invResult = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, user.id]
+      [invoiceId, userId]
     );
 
     if (invResult.rows.length === 0) {
@@ -10045,19 +10081,24 @@ res.json({
   }
 });
 // CRÉER UN AVOIR SUR UNE FACTURE EXISTANTE
-app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
+app.post('/api/owner-invoices/:id/credit-note',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const invoiceId = req.params.id;
 
     // Récupérer la facture d'origine
     const origResult = await client.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, user.id]
+      [invoiceId, userId]
     );
 
     if (origResult.rows.length === 0) {
@@ -10196,12 +10237,20 @@ app.post('/api/owner-invoices/:id/credit-note', async (req, res) => {
 // NOTE : Cette route utilise l'API Brevo au lieu de SMTP
 // car Render bloque parfois le port 587
 
-app.post('/api/invoice/create', authenticateAny, async (req, res) => {
+app.post('/api/invoice/create',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Récupérer le profil utilisateur pour le PDF/email
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = profileResult.rows[0];
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { 
       clientName, 
@@ -10341,7 +10390,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
       await pool.query(
         `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
          VALUES ($1, $2, $3, $4, $5)`,
-        [token, user.id, invoiceNumber, pdfPath, expiresAt]
+        [token, userId, invoiceNumber, pdfPath, expiresAt]
       );
 
       // 3) Construire l'URL de download (idéalement via env)
@@ -10424,17 +10473,22 @@ const pdfUrl = `${origin}/api/invoice/download/${token}`;
 // ============================================
 
 // 6. MODIFIER UNE FACTURE BROUILLON
-app.put('/api/owner-invoices/:id', async (req, res) => {
+app.put('/api/owner-invoices/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     // Vérifier que c'est un brouillon
     const checkResult = await client.query(
       'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [req.params.id, user.id]
+      [req.params.id, userId]
     );
 
     if (checkResult.rows.length === 0) {
@@ -10569,15 +10623,20 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 });
 
 // 7. SUPPRIMER UNE FACTURE BROUILLON
-app.delete('/api/owner-invoices/:id', async (req, res) => {
+app.delete('/api/owner-invoices/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     // Vérifier que c'est un brouillon
     const checkResult = await pool.query(
       'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [req.params.id, user.id]
+      [req.params.id, userId]
     );
 
     if (checkResult.rows.length === 0) {
@@ -10597,17 +10656,22 @@ app.delete('/api/owner-invoices/:id', async (req, res) => {
   }
 });
 // 2bis. VALIDER UNE FACTURE (BROUILLON -> FACTURÉE)
-app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
+app.post('/api/owner-invoices/:id/finalize',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const invoiceId = req.params.id;
 
     // Récupérer la facture
     const result = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, user.id]
+      [invoiceId, userId]
     );
 
     if (result.rows.length === 0) {
@@ -10632,7 +10696,7 @@ app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
        SET status = $1, invoice_number = $2
        WHERE id = $3 AND user_id = $4
        RETURNING *`,
-      ['invoiced', invoiceNumber, invoiceId, user.id]
+      ['invoiced', invoiceNumber, invoiceId, userId]
     );
 
     res.json({ invoice: updateResult.rows[0] });
@@ -10643,15 +10707,20 @@ app.post('/api/owner-invoices/:id/finalize', async (req, res) => {
 });
 
 // 8. ENVOYER UN BROUILLON
-app.post('/api/owner-invoices/:id/send', async (req, res) => {
+app.post('/api/owner-invoices/:id/send',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     // Récupérer la facture
     const invoiceResult = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [req.params.id, user.id]
+      [req.params.id, userId]
     );
 
     if (invoiceResult.rows.length === 0) {
@@ -10679,6 +10748,10 @@ app.post('/api/owner-invoices/:id/send', async (req, res) => {
     // Envoyer email
     if (invoice.client_email) {
       try {
+        // Récupérer le profil pour l'email
+        const profileResult = await pool.query('SELECT company, email FROM users WHERE id = $1', [userId]);
+        const profile = profileResult.rows[0] || {};
+
         await sendOwnerInvoiceEmail({
           invoiceNumber: invoice.invoice_number,
           clientName: invoice.client_name,
@@ -10687,8 +10760,8 @@ app.post('/api/owner-invoices/:id/send', async (req, res) => {
           periodEnd: invoice.period_end,
           totalTtc: invoice.total_ttc,
           items: itemsResult.rows,
-          userCompany: user.company,
-          userEmail: user.email
+          userCompany: profile.company,
+          userEmail: profile.email
         });
       } catch (emailErr) {
         console.error('Erreur envoi email:', emailErr);
@@ -10703,17 +10776,22 @@ app.post('/api/owner-invoices/:id/send', async (req, res) => {
   }
 });
 // MARQUER UNE FACTURE COMME ENCAISSÉE
-app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
+app.post('/api/owner-invoices/:id/mark-paid',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const invoiceId = req.params.id;
 
     // Récupérer la facture
     const result = await pool.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, user.id]
+      [invoiceId, userId]
     );
 
     if (result.rows.length === 0) {
@@ -10732,7 +10810,7 @@ app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
        SET status = 'paid'
        WHERE id = $1 AND user_id = $2
        RETURNING *`,
-      [invoiceId, user.id]
+      [invoiceId, userId]
     );
 
     res.json({ success: true, invoice: updateResult.rows[0] });
@@ -10746,12 +10824,17 @@ app.post('/api/owner-invoices/:id/mark-paid', async (req, res) => {
 // ============================================
 
 // 9. CRÉER UN AVOIR
-app.post('/api/owner-credit-notes', async (req, res) => {
+app.post('/api/owner-credit-notes',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     await client.query('BEGIN');
 
@@ -10760,7 +10843,7 @@ app.post('/api/owner-credit-notes', async (req, res) => {
     // Récupérer la facture d'origine
     const invoiceResult = await client.query(
       'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, user.id]
+      [invoiceId, userId]
     );
 
     if (invoiceResult.rows.length === 0) {
@@ -10789,7 +10872,7 @@ app.post('/api/owner-credit-notes', async (req, res) => {
     // Générer numéro avoir
     const creditNumberResult = await client.query(
       'SELECT get_next_credit_note_number($1) as credit_note_number',
-      [user.id]
+      [userId]
     );
     const creditNoteNumber = creditNumberResult.rows[0].credit_note_number;
 
@@ -10803,7 +10886,7 @@ app.post('/api/owner-credit-notes', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
       RETURNING id
     `, [
-      creditNoteNumber, user.id, invoiceId, invoice.invoice_number,
+      creditNoteNumber, userId, invoiceId, invoice.invoice_number,
       invoice.client_id, invoice.client_name, invoice.client_email,
       -invoice.subtotal_ht, -invoice.subtotal_debours, -invoice.vat_amount, -invoice.total_ttc,
       reason, 'issued'
@@ -10849,16 +10932,21 @@ app.post('/api/owner-credit-notes', async (req, res) => {
 });
 
 // 10. LISTE DES AVOIRS
-app.get('/api/owner-credit-notes', async (req, res) => {
+app.get('/api/owner-credit-notes',
+  authenticateAny,
+  requirePermission(pool, 'can_view_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
       `SELECT * FROM owner_credit_notes 
        WHERE user_id = $1 
        ORDER BY issue_date DESC`,
-      [user.id]
+      [userId]
     );
 
     res.json({ creditNotes: result.rows });
@@ -10869,14 +10957,19 @@ app.get('/api/owner-credit-notes', async (req, res) => {
 });
 
 // 11. DÉTAIL AVOIR
-app.get('/api/owner-credit-notes/:id', async (req, res) => {
+app.get('/api/owner-credit-notes/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_view_invoices'),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const creditResult = await pool.query(
       'SELECT * FROM owner_credit_notes WHERE id = $1 AND user_id = $2',
-      [req.params.id, user.id]
+      [req.params.id, userId]
     );
 
     if (creditResult.rows.length === 0) {
@@ -11116,7 +11209,7 @@ app.get('/api/subscription/status', async (req, res) => {
         current_period_end, stripe_subscription_id
       FROM subscriptions 
       WHERE user_id = $1`,
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0) {
@@ -11193,7 +11286,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     // Récupérer le customer_id Stripe de l'utilisateur
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
@@ -11236,7 +11329,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     // Récupérer l'abonnement Stripe
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [user.id]
+      [userId]
     );
 
     if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
