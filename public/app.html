@@ -5376,6 +5376,7 @@ window.LCC_PROPERTIES = properties;
       renderDaysHeader(range);
       renderGrid(range);
       setTimeout(scrollCalendarToToday, 100);
+      setTimeout(initScrollSync, 150);
     }
 function scrollCalendarToToday() {
   console.log('📅 scrollCalendarToToday appelé');
@@ -5749,6 +5750,35 @@ if (j === 0 || cells.length === 1) {
 
         wrapper.appendChild(item);
       }
+    }
+
+    // ============================================
+    // SYNCHRONISATION DU SCROLL VERTICAL
+    // ============================================
+    function initScrollSync() {
+      var propertyList = document.getElementById('propertyList');
+      var calendarGrid = document.getElementById('calendarGrid');
+      
+      if (!propertyList || !calendarGrid) return;
+      
+      var isPropertyScrolling = false;
+      var isCalendarScrolling = false;
+      
+      // Synchroniser le scroll du calendrier vers la liste
+      calendarGrid.addEventListener('scroll', function() {
+        if (isPropertyScrolling) return;
+        isCalendarScrolling = true;
+        propertyList.scrollTop = calendarGrid.scrollTop;
+        setTimeout(function() { isCalendarScrolling = false; }, 10);
+      });
+      
+      // Synchroniser le scroll de la liste vers le calendrier
+      propertyList.addEventListener('scroll', function() {
+        if (isCalendarScrolling) return;
+        isPropertyScrolling = true;
+        calendarGrid.scrollTop = propertyList.scrollTop;
+        setTimeout(function() { isPropertyScrolling = false; }, 10);
+      });
     }
 
     function selectProperty(propertyId) {
