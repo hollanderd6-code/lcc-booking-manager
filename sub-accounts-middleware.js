@@ -1,6 +1,7 @@
 // ============================================
-// 🔐 MIDDLEWARE POUR SOUS-COMPTES - VERSION CORRIGÉE
+// 🔐 MIDDLEWARE POUR SOUS-COMPTES - VERSION 6
 // Authentifie les comptes principaux ET les sous-comptes
+// Gestion des permissions pour calendrier, nettoyage ET messages
 // ============================================
 
 const jwt = require('jsonwebtoken');
@@ -77,7 +78,6 @@ function requirePermission(pool, permission) {
     
     // Si sous-compte, vérifier la permission
     try {
-      // 🔧 CORRECTION : Chercher dans sub_account_permissions, pas sub_accounts !
       const { rows } = await pool.query(`
         SELECT sp.* 
         FROM sub_account_permissions sp
@@ -92,12 +92,18 @@ function requirePermission(pool, permission) {
       
       const permissions = rows[0];
       
-      // 🔧 CORRECTION : Mapping des permissions
-      // Frontend envoie: can_view_reservations
-      // DB stocke: can_view_calendar
+      // 🔧 Mapping des permissions (frontend → DB)
       const permissionMapping = {
+        // Calendrier & Réservations
         'can_view_reservations': 'can_view_calendar',
-        'can_manage_cleaning': 'can_assign_cleaning'
+        'can_manage_cleaning': 'can_assign_cleaning',
+        
+        // Messages (nouvelles permissions)
+        'can_view_conversations': 'can_view_messages',
+        'can_send_messages': 'can_send_messages',
+        'can_mark_read': 'can_view_messages', // Inclus dans view_messages
+        'can_delete_conversations': 'can_delete_messages',
+        'can_generate_booking_messages': 'can_send_messages' // Inclus dans send_messages
       };
       
       const dbPermission = permissionMapping[permission] || permission;
@@ -106,7 +112,8 @@ function requirePermission(pool, permission) {
         console.log('❌ Permission refusée:', dbPermission, 'pour sous-compte', req.user.subAccountId);
         return res.status(403).json({ 
           error: 'Permission refusée',
-          required: permission
+          required: permission,
+          message: `Vous n'avez pas la permission: ${permission}`
         });
       }
       
@@ -121,7 +128,6 @@ function requirePermission(pool, permission) {
 
 /**
  * Récupère les informations complètes d'un sous-compte (avec permissions)
- * Usage dans les routes qui ont besoin des données complètes
  */
 async function getSubAccountData(pool, subAccountId) {
   const { rows } = await pool.query(`
@@ -143,7 +149,6 @@ async function getSubAccountData(pool, subAccountId) {
 
 /**
  * Middleware qui charge les données du sous-compte dans req.subAccountData
- * Utile pour les routes qui ont besoin d'accéder aux propriétés accessibles, etc.
  */
 function loadSubAccountData(pool) {
   return async (req, res, next) => {
@@ -199,11 +204,34 @@ function filterByAccessibleProperties(data, req) {
   return data;
 }
 
+/**
+ * Récupère l'ID utilisateur réel (compte principal ou parent du sous-compte)
+ * Utile pour les requêtes qui ont besoin de l'owner_id
+ */
+async function getRealUserId(pool, req) {
+  if (!req.user.isSubAccount) {
+    return req.user.id;
+  }
+  
+  // Récupérer le parent_user_id du sous-compte
+  const { rows } = await pool.query(
+    'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+    [req.user.subAccountId]
+  );
+  
+  if (rows.length === 0) {
+    throw new Error('Sous-compte introuvable');
+  }
+  
+  return rows[0].parent_user_id;
+}
+
 module.exports = { 
   authenticateAny,
   requirePermission,
   generateSubAccountToken,
   getSubAccountData,
   loadSubAccountData,
-  filterByAccessibleProperties
+  filterByAccessibleProperties,
+  getRealUserId
 };
