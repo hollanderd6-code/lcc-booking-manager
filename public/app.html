@@ -593,6 +593,7 @@
       background: white;
       cursor: pointer;
       transition: var(--transition-fast);
+      box-sizing: content-box;
     }
 
     .property-item:hover {
@@ -696,6 +697,8 @@
     .calendar-row {
       display: flex;
       border-bottom: 1px solid var(--calendar-border);
+      box-sizing: content-box;
+      height: var(--calendar-cell-height);
     }
 
     .calendar-cell {
