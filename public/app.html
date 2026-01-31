@@ -583,7 +583,7 @@
 
     .property-item {
       height: var(--calendar-cell-height);
-      padding: 2px 16px;
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -593,7 +593,6 @@
       background: white;
       cursor: pointer;
       transition: var(--transition-fast);
-      box-sizing: border-box;
     }
 
     .property-item:hover {
@@ -704,11 +703,9 @@
       height: var(--calendar-cell-height);
       flex: 1 1 0;
       border-right: 1px solid var(--calendar-border);
-      padding: 2px;
       position: relative;
       cursor: pointer;
       transition: var(--transition-fast);
-      box-sizing: border-box;
     }
 
     .calendar-cell:hover {
