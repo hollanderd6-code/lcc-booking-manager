@@ -6466,10 +6466,17 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) => {
+app.get('/api/cleaners', 
+  authenticateAny, 
+  checkSubscription, 
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6478,7 +6485,7 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) =>
        FROM cleaners
        WHERE user_id = $1
        ORDER BY name ASC`,
-      [user.id]
+      [userId]
     );
 
     res.json({
@@ -6491,10 +6498,16 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) =>
 });
 
 // POST - Créer une nouvelle personne de ménage
-app.post('/api/cleaners', async (req, res) => {
+app.post('/api/cleaners', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6523,7 +6536,7 @@ app.post('/api/cleaners', async (req, res) => {
       `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), NOW())
        RETURNING id, name, phone, email, notes, pin_code, is_active, created_at`,
-      [id, user.id, name, phone || null, email || null, notes || null, pinCode, isActive]
+      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive]
     );
 
     res.status(201).json({
@@ -6537,10 +6550,16 @@ app.post('/api/cleaners', async (req, res) => {
 });
 
 // PUT - Modifier une personne de ménage
-app.put('/api/cleaners/:id', async (req, res) => {
+app.put('/api/cleaners/:id', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6557,7 +6576,7 @@ app.put('/api/cleaners/:id', async (req, res) => {
          is_active = COALESCE($7, is_active)
        WHERE id = $1 AND user_id = $2
        RETURNING id, name, phone, email, notes, is_active, created_at`,
-      [id, user.id, name, phone, email, notes, isActive]
+      [id, userId, name, phone, email, notes, isActive]
     );
 
     if (result.rows.length === 0) {
@@ -6575,10 +6594,16 @@ app.put('/api/cleaners/:id', async (req, res) => {
 });
 
 // DELETE - Supprimer une personne de ménage
-app.delete('/api/cleaners/:id', async (req, res) => {
+app.delete('/api/cleaners/:id', 
+  authenticateAny,
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Support des sous-comptes
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6587,7 +6612,7 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     const result = await pool.query(
       `DELETE FROM cleaners
        WHERE id = $1 AND user_id = $2`,
-      [id, user.id]
+      [id, userId]
     );
 
     if (result.rowCount === 0) {
@@ -6600,101 +6625,9 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-app.post('/api/cleaning/assignments', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
 
-    const { reservationKey, propertyId, cleanerId } = req.body || {};
-
-    if (!reservationKey || !propertyId) {
-      return res.status(400).json({ error: 'reservationKey et propertyId requis' });
-    }
-
-    // Si cleanerId vide → on supprime l'assignation
-    if (!cleanerId) {
-      await pool.query(
-        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-        [user.id, reservationKey]
-      );
-      return res.json({
-        message: 'Assignation ménage supprimée',
-        reservationKey
-      });
-    }
-
-    // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-    if (!property) {
-      return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
-    }
-
-    // Vérifier que le cleaner appartient bien à l'utilisateur
-    const cleanerResult = await pool.query(
-      `SELECT id, name, email, phone
-       FROM cleaners
-       WHERE id = $1 AND user_id = $2`,
-      [cleanerId, user.id]
-    );
-
-    if (cleanerResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Personne de ménage introuvable pour cet utilisateur' });
-    }
-
-    // D'abord, supprimer toute assignation existante pour cette réservation
-    await pool.query(
-      'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-      [user.id, reservationKey]
-    );
-
-    // Puis insérer la nouvelle assignation
-    await pool.query(
-      `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-      [user.id, propertyId, reservationKey, cleanerId]
-    );
-
-    // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
-try {
-  const { sendNewCleaningNotification } = require('./server/notifications-service');
-  
-  // Récupérer la date de fin de la réservation depuis la DB
-  const resResult = await pool.query(
-    'SELECT end_date FROM reservations WHERE uid = $1 OR id::text = $1',
-    [reservationKey]
-  );
-  
-  if (resResult.rows.length > 0) {
-    const cleaningDate = resResult.rows[0].end_date;
-    
-    await sendNewCleaningNotification(
-      user.id,
-      reservationKey,
-      property.name,
-      cleanerResult.rows[0].name,
-      cleaningDate
-    );
-    
-    console.log(`✅ Notification ménage envoyée à ${user.id}`);
-  }
-} catch (notifError) {
-  console.error('❌ Erreur notification ménage:', notifError.message);
-}
-    res.json({
-      message: 'Assignation ménage enregistrée',
-      assignment: {
-        reservationKey,
-        propertyId,
-        cleanerId
-      }
-    });
-  } catch (err) {
-    console.error('Erreur POST /api/cleaning/assignments :', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+// ⚠️ SUPPRIMER CE DOUBLON (lignes ~145-240)
+// Tu as cette route EN DOUBLE ! Garde seulement celle en dessous avec les permissions
 
 // POST - Créer / mettre à jour / supprimer une assignation
 app.post('/api/cleaning/assignments', 
@@ -6767,6 +6700,33 @@ app.post('/api/cleaning/assignments',
        VALUES ($1, $2, $3, $4, NOW(), NOW())`,
       [userId, propertyId, reservationKey, cleanerId]
     );
+
+    // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
+    try {
+      const { sendNewCleaningNotification } = require('./server/notifications-service');
+      
+      // Récupérer la date de fin de la réservation depuis la DB
+      const resResult = await pool.query(
+        'SELECT end_date FROM reservations WHERE uid = $1 OR id::text = $1',
+        [reservationKey]
+      );
+      
+      if (resResult.rows.length > 0) {
+        const cleaningDate = resResult.rows[0].end_date;
+        
+        await sendNewCleaningNotification(
+          userId,
+          reservationKey,
+          property.name,
+          cleanerResult.rows[0].name,
+          cleaningDate
+        );
+        
+        console.log(`✅ Notification ménage envoyée à ${userId}`);
+      }
+    } catch (notifError) {
+      console.error('❌ Erreur notification ménage:', notifError.message);
+    }
 
     res.json({
       message: 'Assignation ménage enregistrée',
