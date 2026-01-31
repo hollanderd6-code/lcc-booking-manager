@@ -5175,10 +5175,28 @@ app.post('/api/bookings', async (req, res) => {
 });
 
 // POST - Forcer une synchronisation
-app.post('/api/sync', async (req, res) => {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Non autorisé' });
+app.post('/api/sync', authenticateAny, async (req, res) => {
+  // Déterminer l'userId (parent si sous-compte, sinon user direct)
+  let userId;
+  
+  if (req.user.isSubAccount) {
+    const subResult = await pool.query(
+      'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+      [req.user.subAccountId]
+    );
+    
+    if (subResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Sous-compte introuvable' });
+    }
+    
+    userId = subResult.rows[0].parent_user_id;
+    console.log(`🔄 Sync demandé par sous-compte ${req.user.subAccountId} (parent: ${userId})`);
+  } else {
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+    userId = user.id;
   }
 
   if (reservationsStore.syncStatus === 'syncing') {
@@ -5190,7 +5208,7 @@ app.post('/api/sync', async (req, res) => {
 
   try {
     const result = await syncAllCalendars();
-    const userProps = getUserProperties(user.id);
+    const userProps = getUserProperties(userId);
 
     res.json({
       message: 'Synchronisation réussie',
