@@ -120,7 +120,11 @@ function requirePermission(pool, permission) {
         
         // Serrures connectées
         'can_view_smart_locks': 'can_view_smart_locks',
-        'can_manage_smart_locks': 'can_manage_smart_locks'
+        'can_manage_smart_locks': 'can_manage_smart_locks',
+        
+        // Factures
+        'can_view_invoices': 'can_view_invoices',
+        'can_manage_invoices': 'can_manage_invoices'
       };
       
       const dbPermission = permissionMapping[permission] || permission;
