@@ -94,15 +94,13 @@ function getSidebarHTML() {
     ` : ''}
 
     <!-- FACTURATION -->
-    ${(!isSubAccount || hasPermission('can_view_finances')) ? `
+    ${(!isSubAccount || hasPermission('can_view_invoices') || hasPermission('can_manage_invoices')) ? `
     <div class="nav-section">
       <div class="nav-section-title">Facturation</div>
-      ${hasPermission('can_view_finances') ? `
+      ${hasPermission('can_view_invoices') || hasPermission('can_manage_invoices') ? `
       <a class="nav-item" data-page="factures" href="/factures.html">
         <i class="fas fa-file-invoice"></i><span>Factures clients</span>
       </a>
-      ` : ''}
-      ${!isSubAccount ? `
       <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
         <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
       </a>
@@ -110,16 +108,20 @@ function getSidebarHTML() {
     </div>
     ` : ''}
 
-    <!-- AVANCÉ (compte principal uniquement) -->
-    ${!isSubAccount ? `
+    <!-- AVANCÉ -->
+    ${(!isSubAccount || hasPermission('can_view_deposits') || hasPermission('can_manage_deposits') || hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks')) ? `
     <div class="nav-section">
       <div class="nav-section-title">Avancé</div>
+      ${hasPermission('can_view_deposits') || hasPermission('can_manage_deposits') ? `
       <a class="nav-item" data-page="deposits" href="/deposits.html">
         <i class="fas fa-shield-alt"></i><span>Cautions</span>
       </a>
+      ` : ''}
+      ${hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks') ? `
       <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
         <i class="fas fa-lock"></i><span>Serrures connectées</span>
       </a>
+      ` : ''}
     </div>
     ` : ''}
 
