@@ -20,6 +20,105 @@
   };
 
   // ============================================
+  // ✅ PERMISSIONS - même logique que bh-layout.js
+  // ============================================
+
+  const accountType = localStorage.getItem('lcc_account_type');
+  const isSubAccount = (accountType === 'sub');
+  let permissions = {};
+  if (isSubAccount) {
+    try {
+      const permData = localStorage.getItem('lcc_permissions');
+      if (permData) permissions = JSON.parse(permData);
+    } catch (e) {}
+  }
+
+  const hasPermission = (perm) => {
+    if (!isSubAccount) return true;
+    return permissions[perm] === true;
+  };
+
+  // ============================================
+  // ✅ GÉNÉRATION DYNAMIQUE DU MENU SELON PERMISSIONS
+  // ============================================
+
+  function getMoreMenuButtons() {
+    let buttons = '';
+
+    // Paramètres — compte principal uniquement
+    if (!isSubAccount) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-user-cog"></i> Paramètres du compte
+        </button>`;
+    }
+
+    // Serrures connectées
+    if (hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-lock"></i> Serrures connectées
+        </button>`;
+    }
+
+    buttons += `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
+
+    // Ménages
+    if (hasPermission('can_view_cleaning') || hasPermission('can_manage_cleaning')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-broom"></i> Ménages
+        </button>
+        <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
+    }
+
+    // Cautions
+    if (hasPermission('can_view_deposits') || hasPermission('can_manage_deposits')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-shield-alt"></i> Cautions
+        </button>`;
+    }
+
+    // Factures
+    if (hasPermission('can_view_invoices') || hasPermission('can_manage_invoices')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-file-invoice"></i> Factures
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
+        </button>`;
+    }
+
+    buttons += `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
+
+    // Livrets d'accueil
+    if (hasPermission('can_view_properties')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-book-open"></i> Livrets d'accueil
+        </button>`;
+    }
+
+    // Aide — compte principal uniquement
+    if (!isSubAccount) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-question-circle"></i> Aide
+        </button>`;
+    }
+
+    buttons += `
+      <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">
+      <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
+      </button>`;
+
+    return buttons;
+  }
+
+  // ============================================
   // ✅ DÉTECTION DE LA PAGE ACTIVE - CORRIGÉE
   // ============================================
   
@@ -71,61 +170,19 @@
   });
 
   // ============================================
-  // MENU "PLUS" - TOUS LES BOUTONS EN SECONDAIRE
+  // MENU "PLUS" - FILTRÉ PAR PERMISSIONS
   // ============================================
   
   function showMoreMenu() {
+    const menuButtons = getMoreMenuButtons();
+
     // Si window.mobileApp existe, utiliser le bottom sheet natif
     if (window.mobileApp && window.mobileApp.createBottomSheet) {
       window.mobileApp.createBottomSheet({
         title: '⚙️ Menu',
         content: `
           <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-user-cog"></i> Paramètres du compte
-            </button>
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-lock"></i> Serrures connectées
-            </button>
-            
-            <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-broom"></i> Ménages
-            </button>
-            
-            <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-shield-alt"></i> Cautions
-            </button>
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-file-invoice"></i> Factures
-            </button>
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
-            </button>
-            
-            <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-book-open"></i> Livrets d'accueil
-            </button>
-            
-            <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-question-circle"></i> Aide
-            </button>
-            
-            <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
-            
-            <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
-              <i class="fas fa-sign-out-alt"></i> Déconnexion
-            </button>
-            
+            ${menuButtons}
           </div>
         `,
         height: '80%'
@@ -152,59 +209,19 @@
       sheet = document.createElement('div');
       sheet.id = 'moreMenuSheet';
       sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:white;border-radius:20px 20px 0 0;padding:20px;max-height:80vh;overflow-y:auto;z-index:10000;transform:translateY(100%);transition:transform 0.3s ease;';
-      sheet.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-          <h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-cog"></i> Menu</h3>
-          <button onclick="closeMoreMenu()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;width:32px;height:32px;">&times;</button>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-user-cog"></i> Paramètres du compte
-          </button>
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-lock"></i> Serrures connectées
-          </button>
-          
-          <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-broom"></i> Ménages
-          </button>
-          
-          <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-shield-alt"></i> Cautions
-          </button>
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-file-invoice"></i> Factures
-          </button>
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
-          </button>
-          
-          <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-book-open"></i> Livrets d'accueil
-          </button>
-          
-          <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-question-circle"></i> Aide
-          </button>
-          
-          <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
-          <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
-            <i class="fas fa-sign-out-alt"></i> Déconnexion
-          </button>
-        </div>
-      `;
       document.body.appendChild(sheet);
     }
+
+    // Regénérer le contenu à chaque ouverture
+    sheet.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-cog"></i> Menu</h3>
+        <button onclick="closeMoreMenu()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;width:32px;height:32px;">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        ${menuButtons}
+      </div>
+    `;
     
     // Afficher le menu
     overlay.style.display = 'block';
@@ -230,6 +247,8 @@
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
+      localStorage.removeItem('lcc_account_type');
+      localStorage.removeItem('lcc_permissions');
       window.location.href = '/login.html';
     }
   };
