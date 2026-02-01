@@ -151,8 +151,8 @@
     badge.id = 'subAccountReadOnlyBadge';
     badge.style.cssText = `
       position: fixed;
-      top: 10px;
-      right: 20px;
+      top: 5px;
+      right: 24px;
       background: linear-gradient(135deg, #F59E0B, #D97706);
       color: white;
       padding: 8px 16px;
