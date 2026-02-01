@@ -206,8 +206,8 @@
 
           console.log('📥 [V3] Status compte principal:', response.status);
 
-          // ÉTAPE 2 : Si échec, essayer sous-compte
-          if (response.status === 401 || response.status === 403) {
+          // ÉTAPE 2 : Si échec (n'importe quel code d'erreur), essayer sous-compte
+          if (!response.ok) {
             console.log('2️⃣ Tentative compte SOUS-COMPTE...');
             const subUrl = API_BASE + '/api/sub-accounts/login';
 
