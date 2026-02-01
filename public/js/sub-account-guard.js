@@ -152,7 +152,7 @@
     badge.style.cssText = `
       position: fixed;
       top: 20px;
-      right: 20px;
+      right: 10px; top: 12px;
       background: linear-gradient(135deg, #F59E0B, #D97706);
       color: white;
       padding: 8px 16px;
@@ -166,7 +166,7 @@
       gap: 6px;
       animation: slideInFromRight 0.4s ease;
     `;
-    badge.innerHTML = '<i class="fas fa-eye"></i> Lecture seule';
+    badge.innerHTML = '<i class="fas fa-handshake"></i> Partenaire';
     
     // Ajouter l'animation
     const style = document.createElement('style');
