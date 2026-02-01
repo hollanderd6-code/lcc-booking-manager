@@ -585,7 +585,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         SELECT sa.*, sp.*
         FROM sub_accounts sa
         LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
-        WHERE sa.email = $1 AND sa.is_active = TRUE
+        WHERE LOWER(sa.email) = LOWER($1) AND sa.is_active = TRUE
       `, [email]);
 
       if (result.rows.length === 0) {
