@@ -152,7 +152,7 @@
     badge.style.cssText = `
       position: fixed;
       top: 5px;
-      right: 30px;
+      right: 40px;
       background: linear-gradient(135deg, #F59E0B, #D97706);
       color: white;
       padding: 8px 16px;
