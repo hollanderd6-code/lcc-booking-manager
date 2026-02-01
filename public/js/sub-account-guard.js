@@ -166,7 +166,7 @@
       gap: 6px;
       animation: slideInFromRight 0.4s ease;
     `;
-    badge.innerHTML = '<i class="fas fa-eye"></i> Partenaire';
+    badge.innerHTML = 'Partenaire';
     
     // Ajouter l'animation
     const style = document.createElement('style');
