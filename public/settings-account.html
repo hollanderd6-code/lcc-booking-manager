@@ -553,10 +553,6 @@
 <i class="fas fa-user"></i>
             Profil &amp; entreprise
           </button>
-<button class="settings-tab" data-tab="display">
-<i class="fas fa-moon"></i>
-            Affichage
-          </button>
 <button class="settings-tab" data-tab="payments">
 <i class="fas fa-credit-card"></i>
             Paiements &amp; Stripe
@@ -670,36 +666,6 @@
 <span class="save-status-inline" id="profileSaveStatus"></span>
 </div>
 </form>
-</div>
-</section>
-</div>
-<!-- Onglet : Affichage -->
-<div class="tab-pane" data-tab="display" id="tab-display">
-<section class="card mb-lg">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-moon"></i>
-                Préférences d’affichage
-              </div>
-</div>
-<div class="card-body">
-<div class="form-row">
-<label for="themePreference">Thème</label>
-<select id="themePreference">
-<option value="light">Clair</option>
-<option value="dark">Sombre</option>
-<option value="system">Selon le système</option>
-</select>
-<p class="settings-hint">
-                  Le thème est appliqué sur tout Boostinghost (dashboard, calendrier, etc.).
-                </p>
-</div>
-<div class="form-actions" style="margin-top: 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-<button class="btn btn-ghost" id="applyThemeBtn" type="button">
-                  Appliquer &amp; enregistrer
-                </button>
-<span class="save-status-inline" id="themeSaveStatus"></span>
-</div>
 </div>
 </section>
 </div>
@@ -1500,45 +1466,6 @@ if (logoInput && logoPreview) {
     }
   });
 }
-
-      /* -------- PRÉFÉRENCES D’AFFICHAGE (THÈME) -------- */
-
-      const themeSelect = document.getElementById('themePreference');
-      const applyThemeBtn = document.getElementById('applyThemeBtn');
-      const themeSaveStatus = document.getElementById('themeSaveStatus');
-
-      function applyTheme(mode) {
-        const root = document.documentElement;
-        if (mode === 'system') {
-          const prefersDark = window.matchMedia &&
-            window.matchMedia('(prefers-color-scheme: dark)').matches;
-          root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-        } else if (mode === 'dark') {
-          root.setAttribute('data-theme', 'dark');
-        } else {
-          root.setAttribute('data-theme', 'light');
-        }
-      }
-
-      const savedTheme = localStorage.getItem('lcc_theme');
-      if (savedTheme && themeSelect) {
-        themeSelect.value = savedTheme;
-        applyTheme(savedTheme);
-      }
-
-      if (applyThemeBtn && themeSelect) {
-        applyThemeBtn.addEventListener('click', function () {
-          const value = themeSelect.value;
-          localStorage.setItem('lcc_theme', value);
-          applyTheme(value);
-          if (themeSaveStatus) {
-            themeSaveStatus.textContent = 'Préférence de thème enregistrée.';
-            setTimeout(() => { themeSaveStatus.textContent = ''; }, 2500);
-          } else {
-            alert('Préférence de thème enregistrée');
-          }
-        });
-      }
 
             /* -------- NOTIFICATIONS -------- */
 
