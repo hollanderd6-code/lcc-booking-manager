@@ -6474,10 +6474,13 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) => {
+app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(pool, 'can_view_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6499,10 +6502,13 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) =>
 });
 
 // POST - Créer une nouvelle personne de ménage
-app.post('/api/cleaners', async (req, res) => {
+app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6531,7 +6537,7 @@ app.post('/api/cleaners', async (req, res) => {
       `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), NOW())
        RETURNING id, name, phone, email, notes, pin_code, is_active, created_at`,
-      [id, user.id, name, phone || null, email || null, notes || null, pinCode, isActive]
+      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive]
     );
 
     res.status(201).json({
@@ -6545,10 +6551,13 @@ app.post('/api/cleaners', async (req, res) => {
 });
 
 // PUT - Modifier une personne de ménage
-app.put('/api/cleaners/:id', async (req, res) => {
+app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6565,7 +6574,7 @@ app.put('/api/cleaners/:id', async (req, res) => {
          is_active = COALESCE($7, is_active)
        WHERE id = $1 AND user_id = $2
        RETURNING id, name, phone, email, notes, is_active, created_at`,
-      [id, user.id, name, phone, email, notes, isActive]
+      [id, userId, name, phone, email, notes, isActive]
     );
 
     if (result.rows.length === 0) {
@@ -6583,10 +6592,13 @@ app.put('/api/cleaners/:id', async (req, res) => {
 });
 
 // DELETE - Supprimer une personne de ménage
-app.delete('/api/cleaners/:id', async (req, res) => {
+app.delete('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6595,7 +6607,7 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     const result = await pool.query(
       `DELETE FROM cleaners
        WHERE id = $1 AND user_id = $2`,
-      [id, user.id]
+      [id, userId]
     );
 
     if (result.rowCount === 0) {
