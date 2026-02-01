@@ -201,13 +201,15 @@
         const nonCriticalRoutes = [
           '/api/cleaning/checklists',
           '/api/properties',
-          '/api/subscription/status'
+          '/api/subscription/status',
+          '/api/auth/login',
+          '/api/sub-accounts/login'
         ];
         
         const isNonCritical = nonCriticalRoutes.some(route => urlStr.includes(route));
         
-        if (accountType === 'sub' && isNonCritical) {
-          console.log('⚠️ [AUTH-FETCH] Sous-compte + route non-critique, pas de déconnexion');
+        if (isNonCritical) {
+          console.log('⚠️ [AUTH-FETCH] Route exclue du 401 auto-logout, pas de déconnexion');
           return res;
         }
         
