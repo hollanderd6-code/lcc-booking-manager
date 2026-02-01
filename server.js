@@ -5318,7 +5318,7 @@ app.get('/api/availability/:propertyId', async (req, res) => {
 // À remplacer dans server.js ligne ~5291
 // ============================================
 
-app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => {
+app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(pool), async (req, res) => {
   try {
     // Gérer compte principal ET sous-compte
     let userId;
@@ -5368,7 +5368,15 @@ app.get('/api/reservations-with-deposits', authenticateAny, async (req, res) => 
     });
 
     const result = [];
-    const userProps = getUserProperties(userId);
+    let userProps = getUserProperties(userId);
+
+    // ✅ Filtrer par propriétés accessibles si sous-compte
+    if (req.user.isSubAccount && req.subAccountData?.accessible_property_ids?.length > 0) {
+      userProps = userProps.filter(p => 
+        req.subAccountData.accessible_property_ids.includes(p.id)
+      );
+      console.log('🔐 Sous-compte - propriétés filtrées:', userProps.map(p => p.id));
+    }
 
     userProps.forEach(property => {
       const reservations = reservationsStore.properties[property.id] || [];
