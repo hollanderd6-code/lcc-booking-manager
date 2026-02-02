@@ -328,30 +328,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Stripe Subscriptions pour les abonnements Bookinghost
+// Stripe Subscriptions pour les abonnements Bookingmanage
 const stripeSubscriptions = process.env.STRIPE_SUBSCRIPTION_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SUBSCRIPTION_SECRET_KEY) 
   : null;
-// ============================================
-// 🤖 CRON JOB - LIBÉRATION AUTO DES CAUTIONS
-// ============================================
-
-const { checkAndReleaseDeposits } = require('./cron/auto-release-deposits');
-
-// Démarrer le cron job : tous les jours à 10h00
-// Format: seconde minute heure jour mois jour-de-la-semaine
-cron.schedule('0 10 * * *', async () => {
-  console.log('🕙 [CRON] Démarrage job auto-libération cautions (10h00)');
-  try {
-    await checkAndReleaseDeposits(pool, releaseDeposit);
-  } catch (error) {
-    console.error('❌ [CRON] Erreur job cautions:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
-
-console.log('✅ Cron job auto-libération cautions initialisé (10h chaque jour)');
 
 // Ancien transporter SMTP (garde-le pour fallback)
 const smtpTransporter = nodemailer.createTransport({
@@ -2634,12 +2614,9 @@ if (isNewReservation) {
     if (propResult.rows.length > 0) {
       await sendNewReservationNotification(
         realUserId,
-        reservationId,
-        propResult.rows[0].name,
         reservation.guestName || 'Voyageur',
-        reservation.start,
-        reservation.end,
-        reservation.platform || 'direct'
+        propResult.rows[0].name,
+        reservation.start
       );
       
       console.log(`✅ Notification réservation envoyée pour ${propResult.rows[0].name}`);
