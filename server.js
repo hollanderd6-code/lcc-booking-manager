@@ -4389,52 +4389,175 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
     }
   }
 });
-// 🧪 TEST PUSH - À RETIRER APRÈS LES TESTS
-app.get('/test-push', async (req, res) => {
+// ============================================
+// 🧪 ROUTE DE TEST - FORMAT IDENTIQUE AU CHAT
+// ============================================
+// Cette route envoie EXACTEMENT le même format que les notifications
+// de chat qui fonctionnent (pour isoler le problème)
+
+app.get('/test-push-like-chat', async (req, res) => {
+  console.log('🧪 [TEST CHAT FORMAT] Début du test format chat...');
+  
   try {
     const userId = req.query.user_id;
+    
     if (!userId) {
-      return res.json({ error: 'Utilisez : /test-push?user_id=VOTRE_ID' });
+      return res.status(400).json({
+        error: '❌ Paramètre manquant',
+        message: 'Utilisez : /test-push-like-chat?user_id=VOTRE_ID'
+      });
     }
     
+    // Récupérer l'utilisateur
     const userResult = await pool.query(
-      'SELECT id, email, first_name FROM users WHERE id = $1',
+      'SELECT id, email FROM users WHERE id = $1',
       [userId]
     );
     
     if (userResult.rows.length === 0) {
-      return res.json({ error: `Utilisateur ${userId} introuvable` });
+      return res.json({ error: 'User introuvable' });
     }
     
-    const tokenResult = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+    // Récupérer TOUS les tokens (comme sendNewMessageNotification)
+    const tokensResult = await pool.query(
+      `SELECT fcm_token, device_type
+       FROM user_fcm_tokens 
+       WHERE user_id = $1 
+       AND fcm_token IS NOT NULL`,
       [userId]
     );
     
-    if (tokenResult.rows.length === 0) {
-      return res.json({ 
-        error: '❌ Pas de token FCM', 
-        solution: 'Connectez-vous sur l\'app mobile d\'abord'
-      });
+    if (tokensResult.rows.length === 0) {
+      return res.json({ error: 'Pas de token FCM' });
     }
     
-    const result = await sendNotification(
-      tokenResult.rows[0].fcm_token,
-      '🧪 TEST Push',
-      'Ça marche ! 🎉',
+    console.log(`✅ [TEST CHAT FORMAT] ${tokensResult.rows.length} token(s) trouvé(s)`);
+    
+    // Récupérer une propriété
+    const propResult = await pool.query(
+      'SELECT name FROM properties WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    
+    const propertyName = propResult.rows.length > 0 
+      ? propResult.rows[0].name 
+      : 'Voyageur';
+    
+    // Envoyer aux TOUS les appareils avec le MÊME FORMAT que le chat
+    const results = [];
+    
+    for (const row of tokensResult.rows) {
+      console.log(`📤 [TEST CHAT FORMAT] Envoi au ${row.device_type}...`);
+      
+      // ✅ FORMAT IDENTIQUE À sendNewMessageNotification
+      const result = await sendNotification(
+        row.fcm_token,
+        `📩 Message de ${propertyName}`,  // Même format de titre
+        'Ceci est un test de notification (format chat)',  // Message preview
+        {
+          type: 'new_message',  // ✅ MÊME TYPE QUE LE CHAT
+          conversationId: '99999'  // Fake conversation ID
+        }
+      );
+      
+      results.push({
+        device: row.device_type,
+        success: result.success,
+        token_preview: row.fcm_token.substring(0, 20) + '...'
+      });
+      
+      console.log(`${result.success ? '✅' : '❌'} [TEST CHAT FORMAT] ${row.device_type}: ${result.success ? 'OK' : result.error}`);
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    
+    res.json({
+      success: successCount > 0,
+      message: `✅ ${successCount}/${results.length} envoyé(s) avec FORMAT CHAT`,
+      user: userResult.rows[0].email,
+      results: results,
+      info: 'Cette notification utilise le MÊME format que le chat qui fonctionne'
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST CHAT FORMAT] Erreur:', error);
+    res.json({ error: error.message });
+  }
+});
+
+console.log('✅ Route de test format chat disponible : GET /test-push-like-chat?user_id=X');
+
+// ============================================
+// 🧪 BONUS : ROUTE POUR COMPARER LES 2 FORMATS
+// ============================================
+
+app.get('/test-push-compare', async (req, res) => {
+  try {
+    const userId = req.query.user_id;
+    if (!userId) {
+      return res.json({ error: 'user_id requis' });
+    }
+    
+    const tokensResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    
+    if (tokensResult.rows.length === 0) {
+      return res.json({ error: 'Pas de token' });
+    }
+    
+    const token = tokensResult.rows[0].fcm_token;
+    
+    // Test 1 : Format CHAT (qui marche)
+    console.log('📤 Test 1 : Format CHAT...');
+    const test1 = await sendNotification(
+      token,
+      '📩 Message de Test',
+      'Notification format CHAT',
+      { type: 'new_message', conversationId: '1' }
+    );
+    
+    // Attendre 3 secondes
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Test 2 : Format RÉSERVATION
+    console.log('📤 Test 2 : Format RÉSERVATION...');
+    const test2 = await sendNotification(
+      token,
+      '📅 Nouvelle réservation',
+      'Notification format RÉSERVATION',
+      { type: 'new_reservation', property_name: 'Test' }
+    );
+    
+    // Attendre 3 secondes
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Test 3 : Format SIMPLE
+    console.log('📤 Test 3 : Format SIMPLE...');
+    const test3 = await sendNotification(
+      token,
+      '🧪 Test Simple',
+      'Notification format SIMPLE',
       { type: 'test' }
     );
     
-    res.json({ 
-      success: result.success, 
-      message: result.success ? '✅ PUSH ENVOYÉ !' : '❌ Erreur',
-      user: userResult.rows[0].email
+    res.json({
+      message: '3 notifications envoyées avec des formats différents',
+      results: {
+        'Format CHAT (fonctionne normalement)': test1.success,
+        'Format RÉSERVATION': test2.success,
+        'Format SIMPLE': test3.success
+      },
+      next_step: 'Vérifiez lesquelles vous avez reçues sur votre téléphone'
     });
     
   } catch (error) {
     res.json({ error: error.message });
   }
 });
+
+console.log('✅ Route de comparaison disponible : GET /test-push-compare?user_id=X');
 // ============================================
 // ROUTES RÉSERVATIONS - VERSION CORRIGÉE POSTGRESQL
 // Remplace les routes dans server.js
