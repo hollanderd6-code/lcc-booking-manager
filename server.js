@@ -4389,48 +4389,50 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
     }
   }
 });
-// 🧪 ROUTE DE TEST - À RETIRER APRÈS LES TESTS
-app.get('/test-notification-resa', async (req, res) => {
+// 🧪 TEST PUSH - À RETIRER APRÈS LES TESTS
+app.get('/test-push', async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Connectez-vous d\'abord' });
+    const userId = req.query.user_id;
+    if (!userId) {
+      return res.json({ error: 'Utilisez : /test-push?user_id=VOTRE_ID' });
+    }
+    
+    const userResult = await pool.query(
+      'SELECT id, email, first_name FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.json({ error: `Utilisateur ${userId} introuvable` });
+    }
     
     const tokenResult = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [user.id]
+      [userId]
     );
     
     if (tokenResult.rows.length === 0) {
       return res.json({ 
         error: '❌ Pas de token FCM', 
-        message: 'Connectez-vous sur l\'app mobile d\'abord' 
+        solution: 'Connectez-vous sur l\'app mobile d\'abord'
       });
-    }
-    
-    const propResult = await pool.query(
-      'SELECT name FROM properties WHERE user_id = $1 LIMIT 1',
-      [user.id]
-    );
-    
-    if (propResult.rows.length === 0) {
-      return res.json({ error: '❌ Pas de propriété' });
     }
     
     const result = await sendNotification(
       tokenResult.rows[0].fcm_token,
-      '📅 TEST - Nouvelle réservation',
-      `${propResult.rows[0].name} - Demain 14h → Après-demain 11h`,
-      { type: 'new_reservation', is_test: 'true' }
+      '🧪 TEST Push',
+      'Ça marche ! 🎉',
+      { type: 'test' }
     );
     
     res.json({ 
-      success: result.success,
-      message: result.success ? '✅ NOTIFICATION ENVOYÉE !' : '❌ ERREUR',
-      details: result
+      success: result.success, 
+      message: result.success ? '✅ PUSH ENVOYÉ !' : '❌ Erreur',
+      user: userResult.rows[0].email
     });
     
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.json({ error: error.message });
   }
 });
 // ============================================
