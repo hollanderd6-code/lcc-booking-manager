@@ -1,0 +1,149 @@
+// cron/auto-release-deposits.js
+// ============================================
+// 🤖 LIBÉRATION AUTOMATIQUE DES CAUTIONS
+// ============================================
+// Tourne tous les jours à 10h :
+// - J+6 : Envoie notification push d'avertissement
+// - J+7 : Libère automatiquement la caution
+
+const { sendNotification } = require('../services/notifications-service');
+
+/**
+ * Fonction principale du cron
+ * @param {Pool} pool - PostgreSQL pool
+ * @param {Function} releaseDeposit - Fonction pour libérer une caution
+ */
+async function checkAndReleaseDeposits(pool, releaseDeposit) {
+  console.log('🤖 [CRON] Vérification des cautions à libérer...');
+  
+  try {
+    const now = new Date();
+    
+    // ============================================
+    // 1️⃣ CAUTIONS À LIBÉRER (J+7)
+    // ============================================
+    
+    // Récupérer les cautions qui ont plus de 7 jours
+    const depositsToRelease = await pool.query(`
+      SELECT d.*, p.name as property_name
+      FROM deposits d
+      LEFT JOIN properties p ON d.property_id = p.id
+      WHERE d.status = 'authorized'
+        AND d.created_at <= NOW() - INTERVAL '7 days'
+    `);
+    
+    console.log(`📊 [CRON] ${depositsToRelease.rows.length} cautions à libérer`);
+    
+    for (const deposit of depositsToRelease.rows) {
+      try {
+        console.log(`🔓 [CRON] Libération caution ${deposit.id}...`);
+        
+        // Libérer la caution
+        const success = await releaseDeposit(deposit.id);
+        
+        if (success) {
+          console.log(`✅ [CRON] Caution ${deposit.id} libérée automatiquement`);
+          
+          // Envoyer notification push au propriétaire
+          try {
+            const tokensResult = await pool.query(
+              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+              [deposit.user_id]
+            );
+            
+            if (tokensResult.rows.length > 0) {
+              const propertyName = deposit.property_name || 'Votre logement';
+              const amount = (deposit.amount_cents / 100).toFixed(2);
+              
+              await sendNotification(
+                tokensResult.rows[0].fcm_token,
+                '✅ Caution libérée',
+                `${propertyName} - ${amount}€ libérés automatiquement après 7 jours`,
+                {
+                  type: 'deposit_auto_released',
+                  deposit_id: deposit.id,
+                  property_name: propertyName,
+                  amount_cents: deposit.amount_cents
+                }
+              );
+              
+              console.log(`📲 [CRON] Notification envoyée pour caution ${deposit.id}`);
+            }
+          } catch (notifError) {
+            console.error(`❌ [CRON] Erreur notification libération ${deposit.id}:`, notifError.message);
+          }
+        } else {
+          console.error(`❌ [CRON] Échec libération caution ${deposit.id}`);
+        }
+      } catch (err) {
+        console.error(`❌ [CRON] Erreur traitement caution ${deposit.id}:`, err);
+      }
+    }
+    
+    // ============================================
+    // 2️⃣ RAPPELS AVANT LIBÉRATION (J+6)
+    // ============================================
+    
+    // Récupérer les cautions qui ont 6 jours (libération demain)
+    const depositsToRemind = await pool.query(`
+      SELECT d.*, p.name as property_name
+      FROM deposits d
+      LEFT JOIN properties p ON d.property_id = p.id
+      WHERE d.status = 'authorized'
+        AND d.created_at <= NOW() - INTERVAL '6 days'
+        AND d.created_at > NOW() - INTERVAL '7 days'
+        AND (d.reminder_sent IS NULL OR d.reminder_sent = FALSE)
+    `);
+    
+    console.log(`📊 [CRON] ${depositsToRemind.rows.length} rappels à envoyer`);
+    
+    for (const deposit of depositsToRemind.rows) {
+      try {
+        console.log(`⏰ [CRON] Envoi rappel caution ${deposit.id}...`);
+        
+        // Récupérer les tokens FCM du propriétaire
+        const tokensResult = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+          [deposit.user_id]
+        );
+        
+        if (tokensResult.rows.length > 0) {
+          const propertyName = deposit.property_name || 'Votre logement';
+          const amount = (deposit.amount_cents / 100).toFixed(2);
+          
+          await sendNotification(
+            tokensResult.rows[0].fcm_token,
+            '⏰ Rappel caution',
+            `${propertyName} - La caution de ${amount}€ sera libérée demain à 10h`,
+            {
+              type: 'deposit_reminder',
+              deposit_id: deposit.id,
+              property_name: propertyName,
+              amount_cents: deposit.amount_cents,
+              release_time: 'demain à 10h'
+            }
+          );
+          
+          // Marquer le rappel comme envoyé
+          await pool.query(
+            'UPDATE deposits SET reminder_sent = TRUE WHERE id = $1',
+            [deposit.id]
+          );
+          
+          console.log(`✅ [CRON] Rappel envoyé pour caution ${deposit.id}`);
+        } else {
+          console.log(`⚠️  [CRON] Pas de token FCM pour user ${deposit.user_id}`);
+        }
+      } catch (err) {
+        console.error(`❌ [CRON] Erreur rappel caution ${deposit.id}:`, err);
+      }
+    }
+    
+    console.log('✅ [CRON] Vérification terminée');
+    
+  } catch (error) {
+    console.error('❌ [CRON] Erreur globale:', error);
+  }
+}
+
+module.exports = { checkAndReleaseDeposits };
