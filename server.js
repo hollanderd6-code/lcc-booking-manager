@@ -5548,6 +5548,34 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
   chk.updatedAt = new Date().toISOString();
 
   await saveChecklists();
+  
+  // ✅ Envoyer notification push au propriétaire
+  try {
+    const tokensResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [user.id]
+    );
+    
+    if (tokensResult.rows.length > 0) {
+      const propertyName = chk.propertyName || chk.title || 'Logement';
+      
+      await sendNotification(
+        tokensResult.rows[0].fcm_token,
+        '✅ Ménage terminé',
+        `${propertyName} - Checklist complétée`,
+        {
+          type: 'cleaning_completed',
+          reservation_uid: reservationUid,
+          property_name: propertyName
+        }
+      );
+      
+      console.log(`✅ Notification ménage complété envoyée pour ${propertyName}`);
+    }
+  } catch (notifError) {
+    console.error('❌ Erreur notification ménage complété:', notifError.message);
+  }
+  
   res.json({ checklist: chk });
 });
 
@@ -13142,15 +13170,17 @@ cron.schedule('0 8 * * *', async () => {
         [today, tomorrow]
       );
       
-      if (arrivalsResult.rows.length > 0) {
-        const arrivals = arrivalsResult.rows;
-        await sendNotification(
-          user.fcm_token,
-          `🏠 ${arrivals.length} arrivée(s) aujourd'hui`,
-          arrivals.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join('\n'),
-          { type: 'daily_arrivals' }
-        );
-      }
+      const arrivalsCount = arrivalsResult.rows.length;
+      const arrivalsText = arrivalsCount > 0 
+        ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join('\n')
+        : 'Aucune arrivée prévue';
+      
+      await sendNotification(
+        user.fcm_token,
+        `🏠 ${arrivalsCount} arrivée(s) aujourd'hui`,
+        arrivalsText,
+        { type: 'daily_arrivals', count: arrivalsCount }
+      );
       
       // Départs du jour
       const departuresResult = await pool.query(
@@ -13161,15 +13191,17 @@ cron.schedule('0 8 * * *', async () => {
         [today, tomorrow]
       );
       
-      if (departuresResult.rows.length > 0) {
-        const departures = departuresResult.rows;
-        await sendNotification(
-          user.fcm_token,
-          `🚪 ${departures.length} départ(s) aujourd'hui`,
-          `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`,
-          { type: 'daily_departures' }
-        );
-      }
+      const departuresCount = departuresResult.rows.length;
+      const departuresText = departuresCount > 0
+        ? `Ménages à prévoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
+        : 'Aucun départ prévu';
+      
+      await sendNotification(
+        user.fcm_token,
+        `🚪 ${departuresCount} départ(s) aujourd'hui`,
+        departuresText,
+        { type: 'daily_departures', count: departuresCount }
+      );
     }
     
     console.log('✅ Notifications quotidiennes envoyées');
