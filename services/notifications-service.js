@@ -1,5 +1,13 @@
 // services/notifications-service.js
+// ============================================
+// 🔔 SERVICE DE NOTIFICATIONS PUSH - VERSION CORRIGÉE
+// ============================================
 // Service de notifications push Firebase Cloud Messaging
+// Corrections :
+// - sendNewCleaningNotification : envoi au cleaner (pas au propriétaire)
+// - sendCleaningReminderNotification : envoi au cleaner
+// - Meilleure gestion des erreurs
+// - Support multi-tokens (plusieurs appareils)
 
 const admin = require('firebase-admin');
 
@@ -30,14 +38,14 @@ function initializeFirebase() {
     // ============================================
     // MODE PRODUCTION (Render) : Variables d'environnement
     // ============================================
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  console.log('🔧 Initialisation Firebase avec variable JSON (PRODUCTION)');
-  
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.log('🔧 Initialisation Firebase avec variable JSON (PRODUCTION)');
+      
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
       
       console.log('✅ Firebase initialisé avec succès (production - env vars)');
       firebaseInitialized = true;
@@ -67,7 +75,7 @@ function initializeFirebase() {
 }
 
 /**
- * Envoyer une notification à un utilisateur
+ * Envoyer une notification à un token spécifique
  */
 async function sendNotification(fcmToken, title, body, data = {}) {
   if (!firebaseInitialized) {
@@ -95,7 +103,7 @@ async function sendNotification(fcmToken, title, body, data = {}) {
       notification: {
         sound: 'default',
         channelId: 'default',
-        color: '#3B82F6'
+        color: '#10B981'
       }
     },
     apns: {
@@ -113,13 +121,12 @@ async function sendNotification(fcmToken, title, body, data = {}) {
     console.log('✅ Notification envoyée:', { title, to: fcmToken.substring(0, 20) + '...' });
     return { success: true, messageId: response };
   } catch (error) {
-    console.error('❌ Erreur envoi notification:', error);
+    console.error('❌ Erreur envoi notification:', error.message);
     
-    // Si le token est invalide, on pourrait le supprimer de la DB
+    // Si le token est invalide, le signaler
     if (error.code === 'messaging/invalid-registration-token' || 
         error.code === 'messaging/registration-token-not-registered') {
       console.warn('⚠️  Token FCM invalide ou expiré:', fcmToken.substring(0, 20) + '...');
-      // TODO: Supprimer le token de la DB
     }
     
     return { success: false, error: error.message };
@@ -127,7 +134,7 @@ async function sendNotification(fcmToken, title, body, data = {}) {
 }
 
 /**
- * Envoyer une notification à plusieurs utilisateurs
+ * Envoyer une notification à plusieurs tokens
  */
 async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
   if (!firebaseInitialized) {
@@ -157,7 +164,16 @@ async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
         priority: 'high',
         notification: {
           sound: 'default',
-          channelId: 'default'
+          channelId: 'default',
+          color: '#10B981'
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1
+          }
         }
       }
     };
@@ -181,6 +197,7 @@ async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
 
 /**
  * Envoyer une notification de nouveau message
+ * Support multi-appareils (tous les tokens de l'utilisateur)
  */
 async function sendNewMessageNotification(userId, senderName, messagePreview, conversationId) {
   try {
@@ -189,7 +206,7 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
       return;
     }
 
-    // Récupérer TOUS les tokens de l'utilisateur (iPhone + Android)
+    // Récupérer TOUS les tokens de l'utilisateur (iPhone + Android + Web)
     const result = await pool.query(
       `SELECT t.fcm_token, p.name as property_name
        FROM user_fcm_tokens t
@@ -206,13 +223,13 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
       return;
     }
 
-    const property_name = result.rows[0].property_name;
+    const property_name = result.rows[0].property_name || 'Voyageur';
     
     // Envoyer la notification à TOUS les appareils
     for (const row of result.rows) {
       await sendNotification(
         row.fcm_token,
-        `📩 Message de ${property_name || 'Voyageur'}`,
+        `💬 Message de ${property_name}`,
         messagePreview,
         {
           type: 'new_message',
@@ -220,58 +237,117 @@ async function sendNewMessageNotification(userId, senderName, messagePreview, co
         }
       );
       
-      console.log(`🔑 Notification envoyée au token: ${row.fcm_token.substring(0, 30)}...`);
+      console.log(`📱 Notification message envoyée au token: ${row.fcm_token.substring(0, 30)}...`);
     }
     
   } catch (error) {
     console.error('❌ Erreur sendNewMessageNotification:', error);
   }
 }
-/**
- * Envoyer une notification de nouveau nettoyage
- */
-async function sendNewCleaningNotification(userId, propertyName, date) {
-  try {
-    if (!pool) return;
 
+/**
+ * ✅ CORRIGÉ : Envoyer une notification de nouveau ménage AU CLEANER
+ * @param {number} cleanerId - ID du cleaner assigné
+ * @param {string} propertyName - Nom de la propriété
+ * @param {Date} cleaningDate - Date du ménage
+ */
+async function sendNewCleaningNotification(cleanerId, propertyName, cleaningDate) {
+  try {
+    if (!pool) {
+      console.error('❌ Pool non défini');
+      return;
+    }
+
+    // ✅ Récupérer le token FCM du CLEANER (et non du propriétaire)
     const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
+      `SELECT t.fcm_token, c.name as cleaner_name, c.user_id
+       FROM cleaners c
+       LEFT JOIN user_fcm_tokens t ON t.user_id = c.user_id
+       WHERE c.id = $1`,
+      [cleanerId]
     );
 
-    if (result.rows.length === 0) return;
+    if (result.rows.length === 0) {
+      console.log(`⚠️  Cleaner ${cleanerId} non trouvé`);
+      return;
+    }
+
+    if (!result.rows[0].fcm_token) {
+      console.log(`⚠️  Aucun token FCM pour cleaner ${cleanerId} (${result.rows[0].cleaner_name})`);
+      return;
+    }
+
+    const formattedDate = new Date(cleaningDate).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
 
     await sendNotification(
       result.rows[0].fcm_token,
       '🧹 Nouveau ménage assigné',
-      `${propertyName} - ${date}`,
-      { type: 'new_cleaning', date }
+      `${propertyName} - ${formattedDate}`,
+      { 
+        type: 'new_cleaning',
+        property_name: propertyName,
+        cleaning_date: cleaningDate.toISOString()
+      }
     );
+    
+    console.log(`✅ Notification ménage envoyée au cleaner ${result.rows[0].cleaner_name} (ID: ${cleanerId})`);
+    
   } catch (error) {
     console.error('❌ Erreur sendNewCleaningNotification:', error);
   }
 }
 
 /**
- * Envoyer un rappel de nettoyage
+ * ✅ CORRIGÉ : Envoyer un rappel de ménage J-1 AU CLEANER
+ * @param {number} cleanerId - ID du cleaner assigné
+ * @param {string} propertyName - Nom de la propriété
+ * @param {Date} cleaningDate - Date du ménage
  */
-async function sendCleaningReminderNotification(userId, propertyName, date) {
+async function sendCleaningReminderNotification(cleanerId, propertyName, cleaningDate) {
   try {
-    if (!pool) return;
+    if (!pool) {
+      console.error('❌ Pool non défini');
+      return;
+    }
 
+    // ✅ Récupérer le token FCM du CLEANER
     const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-      [userId]
+      `SELECT t.fcm_token, c.name as cleaner_name
+       FROM cleaners c
+       LEFT JOIN user_fcm_tokens t ON t.user_id = c.user_id
+       WHERE c.id = $1`,
+      [cleanerId]
     );
 
-    if (result.rows.length === 0) return;
+    if (result.rows.length === 0 || !result.rows[0].fcm_token) {
+      console.log(`⚠️  Aucun token FCM pour cleaner ${cleanerId}`);
+      return;
+    }
+
+    const formattedDate = new Date(cleaningDate).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
 
     await sendNotification(
       result.rows[0].fcm_token,
-      '⏰ Rappel : Ménage à faire',
-      `${propertyName} - ${date}`,
-      { type: 'cleaning_reminder', date }
+      '⏰ Rappel : Ménage demain',
+      `${propertyName} - ${formattedDate}`,
+      { 
+        type: 'cleaning_reminder',
+        property_name: propertyName,
+        cleaning_date: cleaningDate.toISOString()
+      }
     );
+    
+    console.log(`✅ Rappel ménage envoyé au cleaner ${result.rows[0].cleaner_name} (ID: ${cleanerId})`);
+    
   } catch (error) {
     console.error('❌ Erreur sendCleaningReminderNotification:', error);
   }
@@ -316,14 +392,56 @@ async function sendNewReservationNotification(userId, guestName, propertyName, c
 
     if (result.rows.length === 0) return;
 
+    const formattedDate = new Date(checkIn).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+
     await sendNotification(
       result.rows[0].fcm_token,
       '🏠 Nouvelle réservation',
-      `${guestName} - ${propertyName} (${checkIn})`,
-      { type: 'new_reservation', checkIn }
+      `${guestName} - ${propertyName} (${formattedDate})`,
+      { 
+        type: 'new_reservation',
+        property_name: propertyName,
+        check_in: checkIn.toISOString()
+      }
     );
+    
+    console.log(`✅ Notification réservation envoyée pour ${propertyName}`);
+    
   } catch (error) {
     console.error('❌ Erreur sendNewReservationNotification:', error);
+  }
+}
+
+/**
+ * Envoyer une notification à un utilisateur par son ID
+ * (Wrapper pour simplifier l'envoi)
+ */
+async function sendNotificationByUserId(userId, title, body, data = {}) {
+  try {
+    if (!pool) {
+      console.error('❌ Pool non défini');
+      return { success: false, error: 'Pool non défini' };
+    }
+
+    const result = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      console.log(`⚠️  Aucun token FCM pour user ${userId}`);
+      return { success: false, error: 'Aucun token trouvé' };
+    }
+
+    return await sendNotification(result.rows[0].fcm_token, title, body, data);
+    
+  } catch (error) {
+    console.error('❌ Erreur sendNotificationByUserId:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -332,6 +450,7 @@ module.exports = {
   initializeFirebase,
   sendNotification,
   sendNotificationToMultiple,
+  sendNotificationByUserId,
   sendNewMessageNotification,
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
