@@ -2548,8 +2548,8 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
-    // Utiliser user_id = 1 (toutes les propriétés appartiennent au même utilisateur)
-    const realUserId = 1;
+    // ✅ Utiliser le userId passé en paramètre
+    const realUserId = userId;
     
     // Vérifier si la réservation existe déjà
     const existingResult = await pool.query(
