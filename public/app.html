@@ -3475,6 +3475,25 @@
 </script>
 <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
 <script>
+    // ✅ FONCTION HELPER
+function cleanGuestName(rawName, platform) {
+  if (!rawName) return platform ? `Voyageur ${platform}` : 'Voyageur';
+  
+  const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+  const invalidNames = ['not available', 'closed', 'reservation', 'reserved', 'blocked', 'unavailable', 'booked'];
+  
+  if (invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
+    const platformLower = (platform || '').toLowerCase();
+    if (platformLower.includes('airbnb')) return 'Voyageur Airbnb';
+    if (platformLower.includes('booking')) return 'Voyageur Booking';
+    return 'Voyageur';
+  }
+  
+  return cleaned;
+}
+
+window.cleanGuestName = cleanGuestName;
+    
     document.addEventListener('DOMContentLoaded', function () {
       /* Nouvelle réservation */
 
@@ -3655,7 +3674,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   (r.property && (r.property.name || r.property.title || r.property.label)) ||
   getPropertyNameById(propertyId, properties);
 
-              const guestName = r.guestName || r.name || '';
+const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source || r.platform);
               html += `
                 <div style="margin-bottom:8px;">
                   <strong>${propName}</strong>${guestName ? ' – ' + guestName : ''}
@@ -4397,7 +4416,7 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         return {
           type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
-          who: r.guestName || r.summary || 'Réservation',
+who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           startStr: formatDateFR(s),
@@ -4489,7 +4508,7 @@ function populateEditBookingProperties(selectedPropertyId) {
           end,
           startStr: formatDateFR(dateOnlyStr(rawStart)),
           endStr: formatDateFR(dateOnlyStr(rawEnd)),
-          who: r.guestName || r.summary || 'Réservation',
+who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           riskLevel: r.riskLevel || 'green',
@@ -4667,7 +4686,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
             const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
             const end = formatDateFR(dateOnlyStr(r.endDate||r.end));
             const prop = r.propertyName || r.propertyId || 'Logement';
-            const name = r.guestName || 'Voyageur';
+const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voyageur';
             const score = Math.round(r.riskScore||0);
             const color = window.riskColor(r.riskLevel);
             const riskLabel = r.riskLabel || r.riskLevel || '';
@@ -5537,21 +5556,8 @@ if (j === 0 || cells.length === 1) {
   // Label invité
   var guestLabel = b.guestName || 'Réservation';
 
-  // ✅ APRÈS (gère "Reserved", "Not available", "CLOSED", etc.)
-if (platform === 'airbnb') {
-  const cleaned = guestLabel.trim().replace(/^\(|\)$/g, '');
-  if (!guestLabel || /^(reserved|not available|unavailable|blocked)$/i.test(cleaned)) {
-    guestLabel = 'Voyageur Airbnb';
-  }
-}
-
-// Booking : gérer "CLOSED" et "Reservation"
-if (platform === 'booking') {
-  const cleaned = guestLabel.trim();
-  if (!guestLabel || /^(closed|reservation|blocked)$/i.test(cleaned)) {
-    guestLabel = 'Voyageur Booking';
-  }
-}
+ // ✅ Utiliser la fonction helper
+guestLabel = window.cleanGuestName(guestLabel, platform);
 
   // (optionnel) Booking : si pas de nom, on met aussi "Voyageur"
   if (platform === 'booking' && !guestLabel) {
