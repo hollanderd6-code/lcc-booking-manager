@@ -2656,18 +2656,15 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
       
       console.log(`Notification reservation iCal envoyee pour ${propResult.rows[0].name}`);
     }
-} catch (notifError) {
+  } catch (notifError) {
     console.error('Erreur notification reservation:', notifError.message);
   }
-} else if (isNewReservation && !isWithinOneYear) {
-  console.log(`Nouvelle reservation pour ${reservation.start} ignoree (au-dela de 12 mois)`);
-}
 
   // ============================================
-  // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
+  // CREATION AUTOMATIQUE DE CONVERSATION
   // ============================================
   
-  // Vérifier si une conversation existe déjà
+  // Verifier si une conversation existe deja
   const existingConv = await pool.query(
     `SELECT id FROM conversations 
      WHERE property_id = $1 
@@ -2676,7 +2673,7 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     [propertyId, reservation.start, reservation.platform || 'direct']
   );
 
-  // Si pas de conversation, en créer une
+  // Si pas de conversation, en creer une
   if (existingConv.rows.length === 0) {
     const crypto = require('crypto');
     const uniqueToken = crypto.randomBytes(32).toString('hex');
@@ -2704,14 +2701,16 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     
     const conversationId = convResult.rows[0].id;
     
-    // ✅ Envoyer le message de bienvenue automatique
+    // Envoyer le message de bienvenue automatique
     if (typeof sendWelcomeMessageForNewReservation === 'function') {
       await sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, realUserId);
     }
     
-    console.log(`✅ Conversation ${conversationId} créée automatiquement pour réservation ${reservation.uid}`);
+    console.log(`Conversation ${conversationId} creee automatiquement pour reservation ${reservation.uid}`);
   }
-}  // ← Ferme le if (isNewReservation)
+}  else if (isNewReservation && !isWithinOneYear) {
+  console.log(`Nouvelle reservation pour ${reservation.start} ignoree (au-dela de 12 mois)`);
+}
 
     return true;
   } catch (error) {
