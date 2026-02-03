@@ -4133,38 +4133,56 @@ console.log(
     }
 
     // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
-    if (cancelledReservations.length > 0) {
-      // Filtrer pour ne garder que les reservations dans les 3 prochains mois
-      const now = new Date();
-      const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
-      
-      const futureCancelledReservations = cancelledReservations.filter(r => {
-        const startDate = new Date(r.start);
-        return startDate >= now && startDate <= threeMonthsFromNow;
-      });
-      
-      if (futureCancelledReservations.length > 0) {
-        console.log(`Envoi de ${futureCancelledReservations.length} notification(s) d'annulation (sur ${cancelledReservations.length} detectees, dans les 3 mois)...`);
+if (cancelledReservations.length > 0) {
+  // Filtrer pour ne garder que les reservations dans les 3 prochains mois
+  const now = new Date();
+  const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  
+  const futureCancelledReservations = cancelledReservations.filter(r => {
+    const startDate = new Date(r.start);
+    return startDate >= now && startDate <= threeMonthsFromNow;
+  });
+  
+  if (futureCancelledReservations.length > 0) {
+    console.log(`${futureCancelledReservations.length} annulation(s) detectee(s) dans les 3 mois, verification en DB...`);
+    
+    for (const reservation of futureCancelledReservations) {
+      try {
+        // Verifier si la reservation est deja marquee comme annulee en DB
+        const dbCheck = await pool.query(
+          'SELECT status FROM reservations WHERE uid = $1',
+          [reservation.uid]
+        );
         
-        for (const reservation of futureCancelledReservations) {
-          try {
-            await sendCancelledReservationNotification(
-              reservation.userId || 1,
-              cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
-              reservation.propertyName,
-              reservation.start,
-              reservation.end
-            );
-            
-            console.log(`Notification annulation envoyee pour ${reservation.propertyName}`);
-          } catch (err) {
-            console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
-          }
+        // Si la reservation existe en DB et n'est PAS deja annulee
+        if (dbCheck.rows.length > 0 && dbCheck.rows[0].status !== 'cancelled') {
+          // Marquer comme annulee en DB
+          await pool.query(
+            'UPDATE reservations SET status = $1, updated_at = NOW() WHERE uid = $2',
+            ['cancelled', reservation.uid]
+          );
+          
+          // Envoyer la notification
+          await sendCancelledReservationNotification(
+            reservation.userId || 1,
+            cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
+            reservation.propertyName,
+            reservation.start,
+            reservation.end
+          );
+          
+          console.log(`Notification annulation envoyee pour ${reservation.propertyName} (${reservation.uid})`);
+        } else if (dbCheck.rows.length > 0 && dbCheck.rows[0].status === 'cancelled') {
+          console.log(`Annulation deja traitee pour ${reservation.propertyName} (${reservation.uid}) - pas de notification`);
         }
-      } else {
-        console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 3 mois - pas de notification`);
+      } catch (err) {
+        console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
       }
     }
+  } else {
+    console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 3 mois - pas de notification`);
+  }
+}
 
   } else if (isFirstSync) {
     console.log('Premiere synchronisation : aucune notification envoyee pour eviter les doublons.');
