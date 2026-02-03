@@ -2632,8 +2632,13 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     ]);
 
     const reservationId = result.rows[0].id;
+   // Verifier si la reservation est dans les 12 prochains mois
+   const now = new Date();
+   const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+   const reservationStart = new Date(reservation.start);
+   const isWithinOneYear = reservationStart >= now && reservationStart <= oneYearFromNow;
 
-   if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual') {
+   if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual' && isWithinOneYear) {
   try {
     const propResult = await pool.query(
       'SELECT name FROM properties WHERE id = $1',
@@ -2649,11 +2654,14 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
   reservation.end 
 );
       
-      console.log(`✅ Notification réservation iCal envoyée pour ${propResult.rows[0].name}`);
+      console.log(`Notification reservation iCal envoyee pour ${propResult.rows[0].name}`);
     }
 } catch (notifError) {
-    console.error('❌ Erreur notification réservation:', notifError.message);
+    console.error('Erreur notification reservation:', notifError.message);
   }
+} else if (isNewReservation && !isWithinOneYear) {
+  console.log(`Nouvelle reservation pour ${reservation.start} ignoree (au-dela de 12 mois)`);
+}
 
   // ============================================
   // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
@@ -4125,24 +4133,37 @@ console.log(
       }
     }
 
-    // NOTIFICATIONS POUR ANNULATIONS
+    // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT FUTURES ET DANS LES 12 MOIS)
     if (cancelledReservations.length > 0) {
-      console.log(`Envoi de ${cancelledReservations.length} notification(s) d'annulation...`);
+      // Filtrer pour ne garder que les reservations futures ET dans les 12 prochains mois
+      const now = new Date();
+      const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
       
-      for (const reservation of cancelledReservations) {
-        try {
-          await sendCancelledReservationNotification(
-            reservation.userId || 1,
-            cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
-            reservation.propertyName,
-            reservation.start,
-            reservation.end
-          );
-          
-          console.log(`Notification annulation envoyee pour ${reservation.propertyName}`);
-        } catch (err) {
-          console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
+      const futureCancelledReservations = cancelledReservations.filter(r => {
+        const startDate = new Date(r.start);
+        return startDate >= now && startDate <= oneYearFromNow;
+      });
+      
+      if (futureCancelledReservations.length > 0) {
+        console.log(`Envoi de ${futureCancelledReservations.length} notification(s) d'annulation (sur ${cancelledReservations.length} detectees, dans les 12 mois)...`);
+        
+        for (const reservation of futureCancelledReservations) {
+          try {
+            await sendCancelledReservationNotification(
+              reservation.userId || 1,
+              cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
+              reservation.propertyName,
+              reservation.start,
+              reservation.end
+            );
+            
+            console.log(`Notification annulation envoyee pour ${reservation.propertyName}`);
+          } catch (err) {
+            console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
+          }
         }
+      } else {
+        console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 12 mois - pas de notification`);
       }
     }
 
