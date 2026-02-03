@@ -4344,43 +4344,56 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
         
         // 2. Notification push Firebase - ENVOYER À TOUS LES APPAREILS
-try {
-  const tokenResult = await pool.query(
-    'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-    [user.id]
-  );
-  
-  if (tokenResult.rows.length > 0) {
-    const checkInDate = new Date(start).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short'
-    });
-    const checkOutDate = new Date(end).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short'
-    });
-    
-    // ✅ ENVOYER À TOUS LES TOKENS
-    for (const tokenRow of tokenResult.rows) {
-      await sendNotification(
-        tokenRow.fcm_token,
-        '📅 Nouvelle réservation',
-        `${property.name} - ${checkInDate} au ${checkOutDate}`,
-        {
-          type: 'new_reservation',
-          reservation_id: uid,
-          property_name: property.name
+        try {
+          const tokenResult = await pool.query(
+            'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+            [user.id]
+          );
+          
+          if (tokenResult.rows.length > 0) {
+            const checkInDate = new Date(start).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'short'
+            });
+            const checkOutDate = new Date(end).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'short'
+            });
+            
+            // ✅ ENVOYER À TOUS LES TOKENS
+            for (const tokenRow of tokenResult.rows) {
+              await sendNotification(
+                tokenRow.fcm_token,
+                '📅 Nouvelle réservation',
+                `${property.name} - ${checkInDate} au ${checkOutDate}`,
+                {
+                  type: 'new_reservation',
+                  reservation_id: uid,
+                  property_name: property.name
+                }
+              );
+              
+              console.log(`✅ Notification envoyée au ${tokenRow.device_type}`);
+            }
+            
+            console.log(`✅ ${tokenResult.rows.length} notification(s) envoyée(s) pour ${property.name}`);
+          }
+        } catch (pushError) {
+          console.error('❌ Erreur notification push:', pushError.message);
         }
-      );
-      
-      console.log(`✅ Notification envoyée au ${tokenRow.device_type}`);
-    }
+        
+      } catch (notifError) {
+        console.error('❌ Erreur notifications:', notifError.message);
+      }
+    });
     
-    console.log(`✅ ${tokenResult.rows.length} notification(s) envoyée(s) pour ${property.name}`);
+  } catch (err) {
+    console.error('❌ Erreur /api/reservations/manual:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
   }
-} catch (pushError) {
-  console.error('❌ Erreur notification push:', pushError.message);
-}
+});
 // ============================================
 // 🧪 ROUTE DE TEST - FORMAT IDENTIQUE AU CHAT
 // ============================================
