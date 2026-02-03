@@ -4347,7 +4347,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
 try {
   const tokenResult = await pool.query(
     'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-    [user.id]  // ← CHANGÉ: user.id au lieu de userId
+    [user.id]
   );
   
   if (tokenResult.rows.length > 0) {
