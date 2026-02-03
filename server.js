@@ -64,6 +64,7 @@ const {
   sendCleaningReminderNotification,
   sendNewInvoiceNotification,
   sendNewReservationNotification,
+  sendCancelledReservationNotification,
   setPool,             
   initializeFirebase    
 } = require('./services/notifications-service');
@@ -4103,7 +4104,7 @@ console.log(
   reservationsStore.lastSync = new Date();
   reservationsStore.syncStatus = 'idle';
 
-  // 🔔 Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
+ // 🔔 Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
   if (!isFirstSync && (newReservations.length > 0 || cancelledReservations.length > 0)) {
     console.log(
       `📧 Notifications à envoyer – nouvelles: ${newReservations.length}, annulées: ${cancelledReservations.length}`
@@ -4111,17 +4112,40 @@ console.log(
       //     try {
       //       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
       //     } catch (err) {
-      //       console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
+      //       console.error('❌ Erreur lors de l'envoi des notifications propriétaires:', err);
       //     }
       console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
-
+    
+    // ✅ NOTIFICATIONS POUR NOUVELLES RÉSERVATIONS
     if (newReservations.length > 0) {
       try {
         await notifyCleanersAboutNewBookings(newReservations);
       } catch (err) {
-        console.error('❌ Erreur lors de l’envoi des notifications ménage:', err);
+        console.error('❌ Erreur lors de l'envoi des notifications ménage:', err);
       }
     }
+
+    // ✅ NOTIFICATIONS POUR ANNULATIONS
+    if (cancelledReservations.length > 0) {
+      console.log(`📧 Envoi de ${cancelledReservations.length} notification(s) d'annulation...`);
+      
+      for (const reservation of cancelledReservations) {
+        try {
+          await sendCancelledReservationNotification(
+            reservation.userId || 1,
+            cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
+            reservation.propertyName,
+            reservation.start,
+            reservation.end
+          );
+          
+          console.log(`✅ Notification annulation envoyée pour ${reservation.propertyName}`);
+        } catch (err) {
+          console.error(`❌ Erreur notification annulation pour ${reservation.propertyName}:`, err);
+        }
+      }
+    }
+
   } else if (isFirstSync) {
     console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
   }
