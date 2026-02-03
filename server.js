@@ -2558,7 +2558,13 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     );
     
     const isNewReservation = existingResult.rows.length === 0;
-    
+    // ✅ AJOUTEZ CES LOGS
+console.log(`🔍 DEBUG saveReservationToDB:`);
+console.log(`   → UID: ${reservation.uid}`);
+console.log(`   → Source: ${reservation.source}`);
+console.log(`   → Type: ${reservation.type}`);
+console.log(`   → isNewReservation: ${isNewReservation}`);
+console.log(`   → realUserId: ${realUserId}`);
     // Insérer ou mettre à jour
     const result = await pool.query(`
       INSERT INTO reservations (
