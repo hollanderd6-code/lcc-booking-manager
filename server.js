@@ -4132,19 +4132,19 @@ console.log(
       }
     }
 
-    // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT FUTURES ET DANS LES 12 MOIS)
+    // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
     if (cancelledReservations.length > 0) {
-      // Filtrer pour ne garder que les reservations futures ET dans les 12 prochains mois
+      // Filtrer pour ne garder que les reservations dans les 3 prochains mois
       const now = new Date();
-      const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+      const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
       
       const futureCancelledReservations = cancelledReservations.filter(r => {
         const startDate = new Date(r.start);
-        return startDate >= now && startDate <= oneYearFromNow;
+        return startDate >= now && startDate <= threeMonthsFromNow;
       });
       
       if (futureCancelledReservations.length > 0) {
-        console.log(`Envoi de ${futureCancelledReservations.length} notification(s) d'annulation (sur ${cancelledReservations.length} detectees, dans les 12 mois)...`);
+        console.log(`Envoi de ${futureCancelledReservations.length} notification(s) d'annulation (sur ${cancelledReservations.length} detectees, dans les 3 mois)...`);
         
         for (const reservation of futureCancelledReservations) {
           try {
@@ -4162,7 +4162,7 @@ console.log(
           }
         }
       } else {
-        console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 12 mois - pas de notification`);
+        console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 3 mois - pas de notification`);
       }
     }
 
