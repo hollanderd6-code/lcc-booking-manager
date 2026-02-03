@@ -12349,7 +12349,6 @@ case 'checkout.session.completed': {
 // FIN DU SCRIPT CRON
 // ============================================
 
-// Route pour supprimer une réservation manuelle ou un blocage
 app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -12359,95 +12358,111 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     }
 
     const { propertyId, uid } = req.body || {};
-    console.log('🗑 Demande de suppression manuelle reçue :', {
-      userId: user.id,
-      propertyId,
-      uid
-    });
+    console.log('🗑 Demande de suppression reçue :', { userId: user.id, propertyId, uid });
 
     if (!propertyId || !uid) {
-      console.log('❌ Requête invalide pour suppression : propertyId ou uid manquant', {
-        propertyId,
-        uid
-      });
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
     }
 
-    const property = PROPERTIES.find(
-      (p) => p.id === propertyId && p.userId === user.id
-    );
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      console.log('❌ Logement non trouvé pour suppression', {
-        propertyId,
-        userId: user.id
-      });
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
-    if (!MANUAL_RESERVATIONS[propertyId] || MANUAL_RESERVATIONS[propertyId].length === 0) {
-      console.log('❌ Aucune réservation/blocage trouvé pour ce logement', {
-        propertyId,
-        uid
-      });
-      return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
-    }
-
-    const initialLength = MANUAL_RESERVATIONS[propertyId].length;
-    MANUAL_RESERVATIONS[propertyId] =
-      MANUAL_RESERVATIONS[propertyId].filter((r) => r.uid !== uid);
-    const newLength = MANUAL_RESERVATIONS[propertyId].length;
-
-    console.log('📊 Suppression dans MANUAL_RESERVATIONS :', {
-      propertyId,
-      uid,
-      initialLength,
-      newLength
-    });
-
-    if (initialLength === newLength) {
-      console.log(
-        '❌ Aucune entrée supprimée (uid non trouvé dans MANUAL_RESERVATIONS)',
-        { propertyId, uid }
+    // ✅ SUPPRIMER DE LA DB EN PREMIER (source de vérité)
+    let deleted = false;
+    try {
+      const deleteResult = await pool.query(
+        'DELETE FROM reservations WHERE uid = $1 AND user_id = $2 RETURNING *',
+        [uid, user.id]
       );
-      return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
+      
+      deleted = deleteResult.rowCount > 0;
+      
+      if (deleted) {
+        console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
+        
+        // 📩 ENVOYER NOTIFICATION D'ANNULATION
+        try {
+          const deletedReservation = deleteResult.rows[0];
+          
+          const tokensResult = await pool.query(
+            'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+            [user.id]
+          );
+          
+          if (tokensResult.rows.length > 0) {
+            const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'short'
+            });
+            
+            for (const tokenRow of tokensResult.rows) {
+              await sendNotification(
+                tokenRow.fcm_token,
+                '❌ Réservation annulée',
+                `${property.name} - ${cancelDate}`,
+                {
+                  type: 'reservation_cancelled',
+                  reservation_id: uid,
+                  property_name: property.name
+                }
+              );
+              
+              console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
+            }
+          }
+        } catch (notifError) {
+          console.error('❌ Erreur notification annulation:', notifError.message);
+        }
+      } else {
+        console.log(`⚠️ Réservation ${uid} non trouvée dans PostgreSQL`);
+      }
+    } catch (dbError) {
+      console.error('❌ Erreur suppression DB:', dbError.message);
+      return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
 
-    // 🔥 SUPPRIMER DE POSTGRESQL
-try {
-  const deleteResult = await pool.query(
-    'DELETE FROM reservations WHERE uid = $1',
-    [uid]
-  );
-  console.log(`✅ Réservation supprimée de PostgreSQL: ${uid} (${deleteResult.rowCount} ligne(s))`);
-} catch (dbError) {
-  console.error('❌ Erreur suppression DB:', dbError.message);
-}
+    // ✅ NETTOYER MANUAL_RESERVATIONS (si existe)
+    if (MANUAL_RESERVATIONS[propertyId]) {
+      const beforeLength = MANUAL_RESERVATIONS[propertyId].length;
+      MANUAL_RESERVATIONS[propertyId] = MANUAL_RESERVATIONS[propertyId].filter(r => r.uid !== uid);
+      const afterLength = MANUAL_RESERVATIONS[propertyId].length;
+      
+      if (beforeLength > afterLength) {
+        console.log(`✅ Supprimé de MANUAL_RESERVATIONS (${beforeLength} → ${afterLength})`);
+      }
+    }
 
-    // Mise à jour du reservationsStore (UNE SEULE FOIS)
-    if (reservationsStore.properties[propertyId]) {
-      const initialStoreLength = reservationsStore.properties[propertyId].length;
-      reservationsStore.properties[propertyId] =
-        reservationsStore.properties[propertyId].filter((r) => r.uid !== uid);
-      const newStoreLength = reservationsStore.properties[propertyId].length;
-      console.log('🧮 reservationsStore mis à jour :', {
-        propertyId,
-        uid,
-        initialStoreLength,
-        newStoreLength
+    // ✅ NETTOYER reservationsStore (si existe)
+    if (reservationsStore.properties && reservationsStore.properties[propertyId]) {
+      const beforeLength = reservationsStore.properties[propertyId].length;
+      reservationsStore.properties[propertyId] = 
+        reservationsStore.properties[propertyId].filter(r => r.uid !== uid);
+      const afterLength = reservationsStore.properties[propertyId].length;
+      
+      if (beforeLength > afterLength) {
+        console.log(`✅ Supprimé de reservationsStore (${beforeLength} → ${afterLength})`);
+      }
+    }
+
+    // ✅ Répondre avec succès (même si pas dans les caches)
+    if (deleted) {
+      // Forcer la resynchronisation
+      setImmediate(() => syncAllCalendars());
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Réservation supprimée'
       });
     } else {
-      console.log(
-        'ℹ️ Aucun entry dans reservationsStore pour ce propertyId au moment de la suppression',
-        { propertyId }
-      );
+      return res.status(404).json({
+        error: 'Réservation non trouvée'
+      });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Réservation/blocage supprimé'
-    });
   } catch (err) {
-    console.error('Erreur suppression réservation manuelle:', err);
+    console.error('❌ Erreur suppression réservation:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
