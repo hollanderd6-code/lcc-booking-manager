@@ -79,7 +79,7 @@ function cleanGuestName(rawName, platform) {
   
   const invalidNames = ['not available', 'closed', 'reservation', 'blocked', 'unavailable', 'booked'];
   
-  if (invalidNames.includes(cleaned.toLowerCase())) {
+if (invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
     if (platform && platform.toLowerCase().includes('airbnb')) {
       return 'Voyageur Airbnb';
     } else if (platform && platform.toLowerCase().includes('booking')) {
