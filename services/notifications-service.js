@@ -388,7 +388,7 @@ async function sendNewReservationNotification(userId, guestName, propertyName, c
       return;
     }
 
-    // ✅ Récupérer TOUS les tokens (Android + iOS + etc.)
+    // ✅ Récupérer TOUS les tokens (Android + iOS)
     const result = await pool.query(
       'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
