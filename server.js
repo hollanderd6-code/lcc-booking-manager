@@ -67,6 +67,30 @@ const {
   setPool,             
   initializeFirebase    
 } = require('./services/notifications-service');
+/**
+ * Nettoie le nom du voyageur extrait d'iCal
+ */
+function cleanGuestName(rawName, platform) {
+  if (!rawName) {
+    return platform ? `Voyageur ${platform}` : 'Voyageur';
+  }
+  
+  const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+  
+  const invalidNames = ['not available', 'closed', 'reservation', 'blocked', 'unavailable', 'booked'];
+  
+  if (invalidNames.includes(cleaned.toLowerCase())) {
+    if (platform && platform.toLowerCase().includes('airbnb')) {
+      return 'Voyageur Airbnb';
+    } else if (platform && platform.toLowerCase().includes('booking')) {
+      return 'Voyageur Booking';
+    } else {
+      return 'Voyageur';
+    }
+  }
+  
+  return cleaned;
+}
 // ============================================
 // ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
 // ============================================
@@ -2594,7 +2618,7 @@ console.log(`   → realUserId: ${realUserId}`);
       realUserId,
       reservation.start,
       reservation.end,
-      reservation.guestName || null,
+cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
       reservation.guestEmail || null,
       reservation.guestPhone || null,
       reservation.source || 'MANUEL',
