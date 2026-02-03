@@ -2644,7 +2644,8 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
   realUserId,
   cleanGuestName(reservation.guestName, reservation.platform || reservation.source),  
   propResult.rows[0].name,
-  reservation.start
+  reservation.start,
+  reservation.end 
 );
       
       console.log(`✅ Notification réservation iCal envoyée pour ${propResult.rows[0].name}`);
