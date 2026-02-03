@@ -4793,7 +4793,11 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
   }
 });
 
-// DELETE - Supprimer une réservation
+// ============================================
+// 🔧 CORRECTION : Route DELETE /api/bookings/:uid
+// ============================================
+// Remplacez la route ligne ~4797 dans server.js
+
 app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -4803,15 +4807,76 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
 
     const { uid } = req.params;
     
-    console.log('🗑️  Suppression de la réservation:', uid);
+    console.log('🗑️ Suppression de la réservation:', uid);
     
-    // Supprimer en PostgreSQL (pas juste en mémoire)
-    const deleted = await deleteReservationFromDB(uid);
+    // ✅ SUPPRESSION RÉELLE DE LA DB (pas juste UPDATE status)
+    let deleted = false;
+    let deletedReservation = null;
+    let propertyName = 'Logement';
     
-    if (!deleted) {
+    try {
+      const deleteResult = await pool.query(
+        `DELETE FROM reservations 
+         WHERE uid = $1 AND user_id = $2 
+         RETURNING *, (SELECT name FROM properties WHERE id = reservations.property_id) as property_name`,
+        [uid, user.id]
+      );
+      
+      deleted = deleteResult.rowCount > 0;
+      
+      if (deleted) {
+        deletedReservation = deleteResult.rows[0];
+        propertyName = deletedReservation.property_name || 'Logement';
+        console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
+      } else {
+        console.log(`⚠️ Réservation ${uid} non trouvée`);
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+    } catch (dbError) {
+      console.error('❌ Erreur suppression DB:', dbError);
       return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
-
+    
+    // ✅ ENVOYER NOTIFICATION D'ANNULATION
+    if (deleted && deletedReservation) {
+      try {
+        const tokensResult = await pool.query(
+          'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+          [user.id]
+        );
+        
+        if (tokensResult.rows.length > 0) {
+          const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short'
+          });
+          
+          for (const tokenRow of tokensResult.rows) {
+            await sendNotification(
+              tokenRow.fcm_token,
+              '❌ Réservation annulée',
+              `${propertyName} - ${cancelDate}`,
+              {
+                type: 'reservation_cancelled',
+                reservation_id: uid,
+                property_name: propertyName
+              }
+            );
+            
+            console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
+          }
+          
+          console.log(`✅ ${tokensResult.rows.length} notification(s) d'annulation envoyée(s)`);
+        }
+      } catch (notifError) {
+        console.error('❌ Erreur notification:', notifError.message);
+        // On continue, la suppression a réussi
+      }
+    }
+    
+    // ✅ Forcer la resynchronisation
+    setImmediate(() => syncAllCalendars());
+    
     console.log('✅ Réservation supprimée');
     
     res.json({ 
@@ -4824,20 +4889,6 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-// ============================================
-// NOTES IMPORTANTES :
-// ============================================
-// 
-// 1. Ces routes utilisent POSTGRESQL au lieu de reservationsStore
-// 2. La fonction saveReservationToDB doit être celle modifiée qui :
-//    - Sauvegarde en base de données
-//    - Crée automatiquement la conversation
-//    - Envoie le message de bienvenue
-// 3. Les property_id seront maintenant correctement renvoyés
-// 4. Les conversations seront créées automatiquement
-//
-// ============================================
 
 // POST - Créer un blocage manuel (dates bloquées)
 app.post('/api/blocks', async (req, res) => {
