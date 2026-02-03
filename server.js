@@ -1,4 +1,3 @@
-// -*- coding: utf-8 -*-
 require('dotenv').config();
 const express = require('express')
 const http = require('http');
@@ -4105,30 +4104,30 @@ console.log(
   reservationsStore.lastSync = new Date();
   reservationsStore.syncStatus = 'idle';
 
- // 🔔 Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
+ // Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
   if (!isFirstSync && (newReservations.length > 0 || cancelledReservations.length > 0)) {
     console.log(
-      `📧 Notifications à envoyer – nouvelles: ${newReservations.length}, annulées: ${cancelledReservations.length}`
+      `Notifications a envoyer - nouvelles: ${newReservations.length}, annulees: ${cancelledReservations.length}`
     );
       //     try {
       //       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
       //     } catch (err) {
-      //       console.error('❌ Erreur lors de l'envoi des notifications propriétaires:', err);
+      //       console.error('Erreur lors de l envoi des notifications proprietaires:', err);
       //     }
-      console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
+      console.log('Envoi email desactive - notifications push uniquement');
     
-    // ✅ NOTIFICATIONS POUR NOUVELLES RÉSERVATIONS
+    // NOTIFICATIONS POUR NOUVELLES RESERVATIONS
     if (newReservations.length > 0) {
       try {
         await notifyCleanersAboutNewBookings(newReservations);
       } catch (err) {
-        console.error('❌ Erreur lors de l'envoi des notifications ménage:', err);
+        console.error('Erreur lors de l envoi des notifications menage:', err);
       }
     }
 
-    // ✅ NOTIFICATIONS POUR ANNULATIONS
+    // NOTIFICATIONS POUR ANNULATIONS
     if (cancelledReservations.length > 0) {
-      console.log(`📧 Envoi de ${cancelledReservations.length} notification(s) d'annulation...`);
+      console.log(`Envoi de ${cancelledReservations.length} notification(s) d'annulation...`);
       
       for (const reservation of cancelledReservations) {
         try {
@@ -4140,18 +4139,18 @@ console.log(
             reservation.end
           );
           
-          console.log(`✅ Notification annulation envoyée pour ${reservation.propertyName}`);
+          console.log(`Notification annulation envoyee pour ${reservation.propertyName}`);
         } catch (err) {
-          console.error(`❌ Erreur notification annulation pour ${reservation.propertyName}:`, err);
+          console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
         }
       }
     }
 
   } else if (isFirstSync) {
-    console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
+    console.log('Premiere synchronisation : aucune notification envoyee pour eviter les doublons.');
   }
 
-  console.log('✅ Synchronisation terminée');
+  console.log('Synchronisation terminee');
   return reservationsStore;
 }
 // ============================================
