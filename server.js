@@ -2641,11 +2641,11 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     
     if (propResult.rows.length > 0) {
       await sendNewReservationNotification(
-        realUserId,
-        reservation.guestName || 'Voyageur',
-        propResult.rows[0].name,
-        reservation.start
-      );
+  realUserId,
+  cleanGuestName(reservation.guestName, reservation.platform || reservation.source),  
+  propResult.rows[0].name,
+  reservation.start
+);
       
       console.log(`✅ Notification réservation iCal envoyée pour ${propResult.rows[0].name}`);
     }
