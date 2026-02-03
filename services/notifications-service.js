@@ -414,7 +414,7 @@ async function sendNewReservationNotification(userId, guestName, propertyName, c
         { 
           type: 'new_reservation',
           property_name: propertyName,
-          check_in: checkIn.toISOString()
+          check_in: checkIn
         }
       );
       
