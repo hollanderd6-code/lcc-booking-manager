@@ -548,5 +548,6 @@ module.exports = {
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
   sendNewInvoiceNotification,
-  sendNewReservationNotification
+  sendNewReservationNotification,
+  sendCancelledReservationNotification
 };
