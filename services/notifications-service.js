@@ -445,7 +445,70 @@ async function sendNewReservationNotification(userId, guestName, propertyName, c
     console.error('   Stack:', error.stack);
   }
 }
+/**
+ * Envoyer une notification d'annulation de réservation
+ */
+async function sendCancelledReservationNotification(userId, guestName, propertyName, checkIn, checkOut) {
+  try {
+    if (!pool) {
+      console.error('❌ Pool non défini');
+      return;
+    }
 
+    // ✅ Récupérer TOUS les tokens FCM (Android + iOS + etc.)
+    const result = await pool.query(
+      'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      console.log(`ℹ️ Aucun token FCM pour user ${userId}`);
+      return;
+    }
+
+    // ✅ Fonction helper pour formater les dates
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+      return date.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    };
+
+    const checkInFormatted = formatDate(checkIn);
+    const checkOutFormatted = formatDate(checkOut);
+
+    // ✅ Créer la plage de dates
+    const dateRange = checkOut 
+      ? `${checkInFormatted} → ${checkOutFormatted}`
+      : checkInFormatted;
+
+    // ✅ ENVOYER LA NOTIFICATION À TOUS LES APPAREILS
+    for (const tokenRow of result.rows) {
+      await sendNotification(
+        tokenRow.fcm_token,
+        '❌ Réservation annulée',
+        `${guestName} - ${propertyName} (${dateRange})`,
+        { 
+          type: 'cancelled_reservation',
+          property_name: propertyName,
+          check_in: typeof checkIn === 'string' ? checkIn : checkIn.toISOString(),
+          check_out: typeof checkOut === 'string' ? checkOut : (checkOut ? checkOut.toISOString() : null)
+        }
+      );
+      
+      console.log(`📱 Notification annulation envoyée au ${tokenRow.device_type}`);
+    }
+    
+    console.log(`✅ ${result.rows.length} notification(s) d'annulation envoyée(s) pour ${propertyName}`);
+    
+  } catch (error) {
+    console.error('❌ Erreur sendCancelledReservationNotification:', error);
+    console.error('   Stack:', error.stack);
+  }
+}
 /**
  * Envoyer une notification à un utilisateur par son ID
  * (Wrapper pour simplifier l'envoi)
