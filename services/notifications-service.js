@@ -383,14 +383,21 @@ async function sendNewInvoiceNotification(userId, amount, propertyName) {
  */
 async function sendNewReservationNotification(userId, guestName, propertyName, checkIn) {
   try {
-    if (!pool) return;
+    if (!pool) {
+      console.error('❌ Pool non défini');
+      return;
+    }
 
+    // ✅ Récupérer TOUS les tokens (Android + iOS + etc.)
     const result = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
     );
 
-    if (result.rows.length === 0) return;
+    if (result.rows.length === 0) {
+      console.log(`ℹ️ Aucun token FCM pour user ${userId}`);
+      return;
+    }
 
     const formattedDate = new Date(checkIn).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -398,18 +405,23 @@ async function sendNewReservationNotification(userId, guestName, propertyName, c
       year: 'numeric'
     });
 
-    await sendNotification(
-      result.rows[0].fcm_token,
-      '🏠 Nouvelle réservation',
-      `${guestName} - ${propertyName} (${formattedDate})`,
-      { 
-        type: 'new_reservation',
-        property_name: propertyName,
-        check_in: checkIn.toISOString()
-      }
-    );
+    // ✅ ENVOYER À TOUS LES APPAREILS
+    for (const tokenRow of result.rows) {
+      await sendNotification(
+        tokenRow.fcm_token,
+        '🏠 Nouvelle réservation',
+        `${guestName} - ${propertyName} (${formattedDate})`,
+        { 
+          type: 'new_reservation',
+          property_name: propertyName,
+          check_in: checkIn.toISOString()
+        }
+      );
+      
+      console.log(`📱 Notification réservation envoyée au ${tokenRow.device_type}`);
+    }
     
-    console.log(`✅ Notification réservation envoyée pour ${propertyName}`);
+    console.log(`✅ ${result.rows.length} notification(s) envoyée(s) pour ${propertyName}`);
     
   } catch (error) {
     console.error('❌ Erreur sendNewReservationNotification:', error);
