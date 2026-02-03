@@ -2602,10 +2602,8 @@ async function saveReservationToDB(reservation, propertyId, userId) {
 
     const reservationId = result.rows[0].id;
 
-    // 🔔 NOTIFICATION SEULEMENT SI NOUVELLE RÉSERVATION
-if (isNewReservation) {
+   if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual') {
   try {
-    // Récupérer le nom de la propriété
     const propResult = await pool.query(
       'SELECT name FROM properties WHERE id = $1',
       [propertyId]
@@ -2619,7 +2617,7 @@ if (isNewReservation) {
         reservation.start
       );
       
-      console.log(`✅ Notification réservation envoyée pour ${propResult.rows[0].name}`);
+      console.log(`✅ Notification réservation iCal envoyée pour ${propResult.rows[0].name}`);
     }
 } catch (notifError) {
     console.error('❌ Erreur notification réservation:', notifError.message);
