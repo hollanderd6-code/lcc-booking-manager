@@ -5537,12 +5537,21 @@ if (j === 0 || cells.length === 1) {
   // Label invité
   var guestLabel = b.guestName || 'Réservation';
 
-  // 🟣 Cas particulier Airbnb : l’iCal met souvent "Reserved"
-  if (platform === 'airbnb') {
-    if (!guestLabel || /^reserved$/i.test(guestLabel.trim())) {
-      guestLabel = 'Voyageur';
-    }
+  // ✅ APRÈS (gère "Reserved", "Not available", "CLOSED", etc.)
+if (platform === 'airbnb') {
+  const cleaned = guestLabel.trim().replace(/^\(|\)$/g, '');
+  if (!guestLabel || /^(reserved|not available|unavailable|blocked)$/i.test(cleaned)) {
+    guestLabel = 'Voyageur Airbnb';
   }
+}
+
+// Booking : gérer "CLOSED" et "Reservation"
+if (platform === 'booking') {
+  const cleaned = guestLabel.trim();
+  if (!guestLabel || /^(closed|reservation|blocked)$/i.test(cleaned)) {
+    guestLabel = 'Voyageur Booking';
+  }
+}
 
   // (optionnel) Booking : si pas de nom, on met aussi "Voyageur"
   if (platform === 'booking' && !guestLabel) {
