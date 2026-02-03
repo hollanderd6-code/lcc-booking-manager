@@ -381,50 +381,68 @@ async function sendNewInvoiceNotification(userId, amount, propertyName) {
 /**
  * Envoyer une notification de nouvelle réservation
  */
-async function sendNewReservationNotification(userId, guestName, propertyName, checkIn) {
+async function sendNewReservationNotification(userId, guestName, propertyName, checkIn, checkOut) {
   try {
     if (!pool) {
       console.error('❌ Pool non défini');
       return;
     }
 
-    // ✅ Récupérer TOUS les tokens (Android + iOS)
+    // ✅ Récupérer TOUS les tokens FCM (Android + iOS + etc.)
     const result = await pool.query(
       'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
       [userId]
     );
 
     if (result.rows.length === 0) {
-      console.log(`ℹ️ Aucun token FCM pour user ${userId}`);
+      console.log(`ℹ️ Aucun token FCM pour user ${userId}`);  // ✅ CORRIGÉ
       return;
     }
 
-    const formattedDate = new Date(checkIn).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+    // ✅ Fonction helper pour formater les dates
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      
+      // Gérer les chaînes et les objets Date
+      const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+      
+      return date.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    };
 
-    // ✅ ENVOYER À TOUS LES APPAREILS
+    const checkInFormatted = formatDate(checkIn);
+    const checkOutFormatted = formatDate(checkOut);
+
+    // ✅ Créer la plage de dates
+    const dateRange = checkOut 
+      ? `${checkInFormatted} → ${checkOutFormatted}`
+      : checkInFormatted;
+
+    // ✅ ENVOYER LA NOTIFICATION À TOUS LES APPAREILS
     for (const tokenRow of result.rows) {
       await sendNotification(
         tokenRow.fcm_token,
         '🏠 Nouvelle réservation',
-        `${guestName} - ${propertyName} (${formattedDate})`,
+        `${guestName} - ${propertyName} (${dateRange})`,
         { 
           type: 'new_reservation',
           property_name: propertyName,
-          check_in: checkIn
+          check_in: typeof checkIn === 'string' ? checkIn : checkIn.toISOString(),
+          check_out: typeof checkOut === 'string' ? checkOut : (checkOut ? checkOut.toISOString() : null)
         }
       );
       
-      console.log(`📱 Notification réservation envoyée au ${tokenRow.device_type}`);
+      console.log(`📱 Notification réservation envoyée au ${tokenRow.device_type}`);  // ✅ CORRIGÉ
     }
     
-    console.log(`✅ ${result.rows.length} notification(s) envoyée(s) pour ${propertyName}`);
+    console.log(`✅ ${result.rows.length} notification(s) envoyée(s) pour ${propertyName}`);  // ✅ CORRIGÉ
     
   } catch (error) {
     console.error('❌ Erreur sendNewReservationNotification:', error);
+    console.error('   Stack:', error.stack);
   }
 }
 
