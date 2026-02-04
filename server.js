@@ -1812,10 +1812,9 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         const paymentType = session.metadata?.payment_type;
         const depositId = session.metadata?.deposit_id;
         const paymentId = session.metadata?.payment_id;
-        
         // 💰 PAIEMENT DE LOCATION
         if (paymentType === 'location' || paymentId) {
-          console.log('💰 Paiement de location détecté');
+          console.log('Paiement de location detecte');
           try {
             await pool.query(`
               UPDATE payments 
@@ -1825,14 +1824,14 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
               WHERE id = $2 OR stripe_session_id = $3
             `, [session.payment_intent, paymentId, session.id]);
             
-            console.log(`✅ Paiement confirmé: ${paymentId || session.id}`);
+            console.log(`Paiement confirme: ${paymentId || session.id}`);
           } catch (err) {
-            console.error('Erreur mise à jour payment:', err);
+            console.error('Erreur mise a jour payment:', err);
           }
           break;
         }
         
-      // 🛡️ CAUTION
+        // 🛡️ CAUTION
         if (depositId || session.metadata?.deposit_id) {
           console.log('Caution detectee');
           try {
@@ -1863,16 +1862,6 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             }
           } catch (err) {
             console.error('Erreur mise a jour deposit:', err);
-          }
-          break;
-        }
-            
-            // 🤖 Envoyer automatiquement les infos si c'est bientôt l'arrivée
-            if (depositId) {
-              await handleDepositPaid(depositId, io);
-            }
-          } catch (err) {
-            console.error('Erreur mise à jour deposit:', err);
           }
           break;
         }
