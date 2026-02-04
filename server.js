@@ -3658,19 +3658,40 @@ async function releaseDeposit(depositId) {
 
     const depositData = deposit.rows[0];
     
-    if (!depositData.stripe_payment_intent_id) {
-      throw new Error('Pas de Payment Intent associé');
+    // CAS 1 : Caution AVEC Stripe Payment Intent
+    if (depositData.stripe_payment_intent_id) {
+      console.log(`Liberation caution Stripe ${depositId}`);
+      
+      // Si la caution a ete capturee, il faut faire un REFUND
+      if (depositData.status === 'captured' || depositData.status === 'paid') {
+        console.log(`Creation refund pour ${depositData.stripe_payment_intent_id}`);
+        
+        const refund = await stripe.refunds.create({
+          payment_intent: depositData.stripe_payment_intent_id,
+        });
+        
+        console.log(`Refund cree : ${refund.id}`);
+        
+      } else if (depositData.status === 'authorized') {
+        // Si la caution est seulement autorisee, on peut annuler
+        console.log(`Annulation Payment Intent ${depositData.stripe_payment_intent_id}`);
+        await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
+      }
+    } 
+    // CAS 2 : Caution MANUELLE (sans Stripe)
+    else {
+      console.log(`Liberation caution manuelle ${depositId} (pas de Stripe Payment Intent)`);
     }
 
-    // Annuler via Stripe
-    await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
-
-    // Mettre à jour en base
+    // Mettre a jour en base (dans tous les cas)
     await updateDepositStatus(depositId, 'released');
-
+    
+    console.log(`Caution ${depositId} liberee avec succes`);
     return true;
+    
   } catch (error) {
-    console.error('❌ Erreur releaseDeposit:', error);
+    console.error('Erreur releaseDeposit:', error);
+    console.error('Stack:', error.stack);
     return false;
   }
 }
