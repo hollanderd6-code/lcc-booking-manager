@@ -1845,15 +1845,23 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
               depositStatus = 'captured';
             }
             
-            await pool.query(`
+            // Mettre à jour la caution - VERSION SIMPLIFIÉE
+            const updateQuery = `
               UPDATE deposits 
-              SET status = $1::text,
+              SET status = $1,
                   stripe_payment_intent_id = $2,
-                  authorized_at = CASE WHEN $1::text = 'authorized' THEN NOW() ELSE authorized_at END,
-                  captured_at = CASE WHEN $1::text = 'captured' THEN NOW() ELSE captured_at END,
                   updated_at = NOW()
               WHERE id = $3 OR stripe_session_id = $4
-            `, [depositStatus, session.payment_intent, depositId, session.id]);
+            `;
+            
+            await pool.query(updateQuery, [depositStatus, session.payment_intent, depositId, session.id]);
+            
+            // Mettre à jour les timestamps séparément pour éviter les conflits de type
+            if (depositStatus === 'authorized') {
+              await pool.query(`UPDATE deposits SET authorized_at = NOW() WHERE id = $1`, [depositId]);
+            } else if (depositStatus === 'captured') {
+              await pool.query(`UPDATE deposits SET captured_at = NOW() WHERE id = $1`, [depositId]);
+            }
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
             
