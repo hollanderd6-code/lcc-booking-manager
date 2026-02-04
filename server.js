@@ -8266,7 +8266,7 @@ app.put('/api/properties/:propertyId',
     
     await loadProperties();
 
-    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);  
 
     res.json({
       message: 'Logement modifié avec succès',
@@ -9993,7 +9993,7 @@ app.get('/api/owner-clients', async (req, res) => {
        WHERE user_id = $1 
        ORDER BY 
          CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
-      [userId]
+      [user.id]
     );
 
     res.json({ clients: result.rows });
