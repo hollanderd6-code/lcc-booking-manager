@@ -1832,19 +1832,40 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           break;
         }
         
-        // 🛡️ CAUTION
+      // 🛡️ CAUTION
         if (depositId || session.metadata?.deposit_id) {
-          console.log('🛡️ Caution détectée');
+          console.log('Caution detectee');
           try {
+            // Recuperer le Payment Intent pour verifier s'il est autorise ou capture
+            const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+            
+            // Determiner le statut en fonction de l'etat Stripe
+            let depositStatus = 'authorized';
+            if (paymentIntent.status === 'succeeded' && paymentIntent.charges.data[0]?.captured) {
+              depositStatus = 'captured';
+            }
+            
             await pool.query(`
               UPDATE deposits 
-              SET status = 'paid',
-                  stripe_payment_intent_id = $1,
+              SET status = $1,
+                  stripe_payment_intent_id = $2,
+                  authorized_at = CASE WHEN $1 = 'authorized' THEN NOW() ELSE authorized_at END,
+                  captured_at = CASE WHEN $1 = 'captured' THEN NOW() ELSE captured_at END,
                   updated_at = NOW()
-              WHERE id = $2 OR stripe_session_id = $3
-            `, [session.payment_intent, depositId, session.id]);
+              WHERE id = $3 OR stripe_session_id = $4
+            `, [depositStatus, session.payment_intent, depositId, session.id]);
             
-            console.log(`✅ Caution confirmée: ${depositId || session.id}`);
+            console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
+            
+            // Envoyer automatiquement les infos si c'est bientot l'arrivee
+            if (depositId) {
+              await handleDepositPaid(depositId, io);
+            }
+          } catch (err) {
+            console.error('Erreur mise a jour deposit:', err);
+          }
+          break;
+        }
             
             // 🤖 Envoyer automatiquement les infos si c'est bientôt l'arrivée
             if (depositId) {
