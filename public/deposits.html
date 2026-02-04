@@ -1340,8 +1340,9 @@ function copyDepositLinkByUid(uid) {
         }
 
         // Générer la carte
-        const cardClass = (d && d.status === 'paid') ? 'deposit-card expandable' : 'deposit-card';
-        const cardClick = (d && d.status === 'paid') ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
+        const hasDetails = d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released');
+        const cardClass = hasDetails ? 'deposit-card expandable' : 'deposit-card';
+        const cardClick = hasDetails ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
         
         html += `
           <div class="${cardClass}" ${cardClick}>
