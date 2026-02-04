@@ -8210,7 +8210,7 @@ app.put('/api/properties/:propertyId',
       newPracticalInfo,
       newAutoResponsesEnabled,
       propertyId,
-      userId: user.id
+userId: userId
     });
     
     const result = await pool.query(
@@ -8258,7 +8258,7 @@ app.put('/api/properties/:propertyId',
         newPracticalInfo,
         newAutoResponsesEnabled,
         propertyId,
-        user.id
+        user.Id
       ]
     );
     
@@ -8266,8 +8266,7 @@ app.put('/api/properties/:propertyId',
     
     await loadProperties();
 
-const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);  
-
+const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     res.json({
       message: 'Logement modifié avec succès',
       property: updated
@@ -8380,7 +8379,7 @@ app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res)
       `SELECT id, display_order
        FROM properties
        WHERE id = $1 AND user_id = $2`,
-      [propertyId, user.id]
+      [propertyId, userId] 
     );
 
     if (currentRes.rows.length === 0) {
@@ -8407,7 +8406,7 @@ app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res)
           ORDER BY display_order ASC
           LIMIT 1
         `,
-      [user.id, currentOrder]
+      [userId, currentOrder]
     );
 
     if (neighborRes.rows.length === 0) {
