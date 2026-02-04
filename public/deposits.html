@@ -759,35 +759,7 @@ Les paiements de locations sont versés directement sur votre compte Stripe Conn
 </div>
 </main>
 </div>
-<!-- MODAL: nouvelle caution -->
-<div class="modal" id="depositModal">
-<div class="modal-content">
-<div class="modal-header">
-<h2>Nouvelle caution</h2>
-<button class="modal-close" id="depositModalClose">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="modal-body">
-<div class="form-row">
-<label>Réservation</label>
-<div class="small-hint" id="depositModalReservationLabel"></div>
-</div>
-<div class="form-row">
-<label for="depositAmount">Montant de la caution (€)</label>
-<input id="depositAmount" min="1" required="" step="1" type="number"/>
-<div class="small-hint">
-            Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.
-          </div>
-</div>
-<div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
-<button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
-</div>
-</div>
-</div>
+<!-- MODAL DÉPLACÉ AVANT </body> -->
 <script>
     const API_BASE = '/api';
 
@@ -1851,6 +1823,38 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ Force scroll activé');
 })();
 </script>
+<!-- ============================================ -->
+<!-- MODAL : Nouvelle caution (POSITIONNÉ ICI POUR ÉVITER LES CONFLITS CSS) -->
+<!-- ============================================ -->
+<div class="modal" id="depositModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Nouvelle caution</h2>
+      <button class="modal-close" id="depositModalClose">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Réservation</label>
+        <div class="small-hint" id="depositModalReservationLabel"></div>
+      </div>
+      <div class="form-row">
+        <label for="depositAmount">Montant de la caution (€)</label>
+        <input id="depositAmount" min="1" required="" step="1" type="number"/>
+        <div class="small-hint">
+          Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.
+        </div>
+      </div>
+      <div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
+      <button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>    
