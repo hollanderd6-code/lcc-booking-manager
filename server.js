@@ -7981,7 +7981,7 @@ app.post('/api/properties',
        )`,
       [
         id,
-        user.id,
+        userId,
         name,
         color,
         JSON.stringify(normalizedIcal),
@@ -8258,7 +8258,7 @@ userId: userId
         newPracticalInfo,
         newAutoResponsesEnabled,
         propertyId,
-        user.Id
+        userId
       ]
     );
     
