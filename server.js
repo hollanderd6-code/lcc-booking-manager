@@ -3262,11 +3262,67 @@ async function syncCalendarAndSaveToPostgres(property) {
     // Sauvegarder en PostgreSQL
     await savePropertyReservations(property.id, reservations, property.userId);
     
-    // Mettre à jour le cache
-    RESERVATIONS_CACHE[property.id] = reservations;
-    reservationsStore.properties[property.id] = reservations;
+    // Marquer les réservations passées comme "completed"
+    const now = new Date();
+    await pool.query(
+      `UPDATE reservations 
+       SET status = 'completed', updated_at = NOW()
+       WHERE property_id = $1 
+       AND end_date < $2 
+       AND status = 'confirmed'`,
+      [property.id, now]
+    );
+
+    // ✅ CORRECTION : Récupérer les réservations 'completed' depuis PostgreSQL
+    const completedResult = await pool.query(
+      `SELECT 
+        id, uid, property_id, user_id,
+        start_date, end_date,
+        guest_name, guest_email, guest_phone,
+        source, platform, reservation_type,
+        price, currency, status,
+        raw_ical_data, notes,
+        created_at, updated_at, synced_at
+       FROM reservations
+       WHERE property_id = $1 
+       AND status = 'completed'
+       AND source != 'MANUEL'
+       AND reservation_type != 'manual'
+       ORDER BY start_date ASC`,
+      [property.id]
+    );
+
+    const completedReservations = completedResult.rows.map(row => ({
+      id: row.id,
+      uid: row.uid,
+      start: row.start_date,
+      end: row.end_date,
+      guestName: row.guest_name,
+      guestEmail: row.guest_email,
+      guestPhone: row.guest_phone,
+      source: row.source,
+      platform: row.platform,
+      type: row.reservation_type,
+      price: parseFloat(row.price) || 0,
+      currency: row.currency,
+      status: row.status,
+      rawData: row.raw_ical_data,
+      notes: row.notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      syncedAt: row.synced_at
+    }));
     
-    return reservations;
+    // ✅ Mettre à jour le cache avec iCal actuel + historique completed
+    const allReservations = [
+      ...reservations,
+      ...completedReservations
+    ];
+    
+    RESERVATIONS_CACHE[property.id] = allReservations;
+    reservationsStore.properties[property.id] = allReservations;
+    
+    return allReservations;
   } catch (error) {
     console.error(`❌ Erreur synchro ${property.name}:`, error);
     return [];
@@ -4198,9 +4254,6 @@ async function syncAllCalendars() {
         );
       }
 
-      // Base = iCal
-      reservationsStore.properties[property.id] = newIcalReservations;
-
       // SAUVEGARDER DANS POSTGRESQL
       if (newIcalReservations.length > 0) {
         await savePropertyReservations(property.id, newIcalReservations, property.userId);
@@ -4215,6 +4268,52 @@ async function syncAllCalendars() {
          AND status = 'confirmed'`,
         [property.id, now]
       );
+
+      // ✅ CORRECTION : Récupérer les réservations 'completed' depuis PostgreSQL
+      const completedResult = await pool.query(
+        `SELECT 
+          id, uid, property_id, user_id,
+          start_date, end_date,
+          guest_name, guest_email, guest_phone,
+          source, platform, reservation_type,
+          price, currency, status,
+          raw_ical_data, notes,
+          created_at, updated_at, synced_at
+         FROM reservations
+         WHERE property_id = $1 
+         AND status = 'completed'
+         AND source != 'MANUEL'
+         AND reservation_type != 'manual'
+         ORDER BY start_date ASC`,
+        [property.id]
+      );
+
+      const completedReservations = completedResult.rows.map(row => ({
+        id: row.id,
+        uid: row.uid,
+        start: row.start_date,
+        end: row.end_date,
+        guestName: row.guest_name,
+        guestEmail: row.guest_email,
+        guestPhone: row.guest_phone,
+        source: row.source,
+        platform: row.platform,
+        type: row.reservation_type,
+        price: parseFloat(row.price) || 0,
+        currency: row.currency,
+        status: row.status,
+        rawData: row.raw_ical_data,
+        notes: row.notes,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        syncedAt: row.synced_at
+      }));
+
+      // ✅ Base = iCal actuel + historique completed
+      reservationsStore.properties[property.id] = [
+        ...newIcalReservations,
+        ...completedReservations
+      ];
 
       console.log(`Recherche manuelles pour property.id: ${property.id}`);
       console.log(`Cles dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
