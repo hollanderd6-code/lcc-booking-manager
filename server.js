@@ -9241,7 +9241,7 @@ app.post('/api/deposits',
   deposit_id: deposit.id,
   reservation_uid: reservationUid,
   user_id: userId
-}
+},
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
     };
