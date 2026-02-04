@@ -1769,8 +1769,9 @@ const EMAIL_FROM = `"Boostinghost" <${process.env.EMAIL_USER}>`;
 app.locals.pool = pool;
 
 // Augmenter la limite pour les uploads de photos
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+// ⚠️ COMMENTÉ : bodyParser doit être APRÈS le webhook Stripe (voir ligne 2038-2041)
+// app.use(bodyParser.json({ limit: '50mb' }));
+// app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
@@ -9181,7 +9182,7 @@ app.post('/api/deposits',
     }
 
     // Retrouver la réservation dans les réservations du user
-    const result = findReservationByUidForUser(reservationUid, userId);
+    const result = findReservationByUidForUser(reservationUid, user.id);
     if (!result) {
       return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
     }
@@ -9202,7 +9203,7 @@ app.post('/api/deposits',
       createdAt: new Date().toISOString()
     };
     // ✅ NOUVEAU : Sauvegarder en PostgreSQL
-  const saved = await saveDepositToDB(deposit, userId, property.id);
+  const saved = await saveDepositToDB(deposit, user.id, property.id);
   
   if (!saved) {
     return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -9238,10 +9239,10 @@ app.post('/api/deposits',
       },
       // Metadata sur la Session (on garde user_id ici, pas de problème)
       metadata: {
-  deposit_id: deposit.id,
-  reservation_uid: reservationUid,
-  user_id: userId
-},
+        deposit_id: deposit.id,
+        reservation_uid: reservationUid,
+        user_id: user.id
+      },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
     };
