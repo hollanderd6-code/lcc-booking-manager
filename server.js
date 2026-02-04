@@ -420,6 +420,79 @@ cron.schedule('0 10 * * *', async () => {
 console.log('✅ CRON job demandes de caution configuré (tous les jours à 10h, J-2 avant arrivée)');
 
 // ============================================
+// CRON JOB : RAPPEL LIBERATION CAUTION J-1
+// ============================================
+cron.schedule('0 10 * * *', async () => {
+  console.log('CRON: Rappel liberation cautions a 10h00');
+  try {
+    // Recuperer tous les utilisateurs
+    const usersResult = await pool.query(
+      `SELECT DISTINCT u.id 
+       FROM users u 
+       JOIN user_fcm_tokens t ON u.id = t.user_id 
+       WHERE t.fcm_token IS NOT NULL`
+    );
+    
+    for (const user of usersResult.rows) {
+      // Recuperer TOUS les tokens
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      
+      if (tokensResult.rows.length === 0) continue;
+      
+      // Chercher les cautions capturees il y a 6 jours (liberation demain)
+      const sixDaysAgo = new Date();
+      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+      sixDaysAgo.setHours(0, 0, 0, 0);
+      const fiveDaysAgo = new Date(sixDaysAgo);
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() + 1);
+      
+      const depositsResult = await pool.query(
+        `SELECT d.*, c.guest_name, p.name as property_name
+         FROM deposits d
+         JOIN conversations c ON d.conversation_id = c.id
+         JOIN properties p ON c.property_id = p.id
+         WHERE p.user_id = $1
+         AND d.status = 'captured'
+         AND d.captured_at >= $2
+         AND d.captured_at < $3`,
+        [user.id, sixDaysAgo, fiveDaysAgo]
+      );
+      
+      if (depositsResult.rows.length > 0) {
+        const depositsList = depositsResult.rows
+          .map(d => `${d.property_name} - ${d.guest_name || 'Voyageur'} (${d.amount}€)`)
+          .join(', ');
+        
+        // Envoyer a TOUS les appareils
+        for (const token of tokensResult.rows) {
+          await sendNotification(
+            token.fcm_token,
+            `Rappel : ${depositsResult.rows.length} caution(s) a liberer demain`,
+            depositsList,
+            { 
+              type: 'deposit_release_reminder', 
+              count: depositsResult.rows.length.toString() 
+            }
+          );
+        }
+        
+        console.log(`Rappel liberation caution envoye a user ${user.id} : ${depositsResult.rows.length} caution(s)`);
+      }
+    }
+    
+    console.log('Rappels liberation cautions envoyes');
+  } catch (error) {
+    console.error('Erreur CRON rappels cautions:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('CRON rappels liberation cautions configure (tous les jours a 10h)');
+// ============================================
 // CRON JOB : INFOS D'ACCÈS JOUR J À 7H
 // ============================================
 
