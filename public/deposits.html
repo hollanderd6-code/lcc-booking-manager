@@ -210,22 +210,10 @@
       background: rgba(22, 163, 74, .12);
       color: #166534;
     }
-    ..badge-refunded {
+    .badge-refunded {
       background: rgba(37, 99, 235, .12);
       color: #1d4ed8;
     }
-    .badge-success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-    .badge-warning {
-      background-color: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeaa7;
-    }
-
-    .btn-xs {
 
     .btn-xs {
       padding: 4px 8px;
@@ -759,7 +747,35 @@ Les paiements de locations sont versés directement sur votre compte Stripe Conn
 </div>
 </main>
 </div>
-<!-- MODAL DÉPLACÉ AVANT </body> -->
+<!-- MODAL: nouvelle caution -->
+<div class="modal" id="depositModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2>Nouvelle caution</h2>
+<button class="modal-close" id="depositModalClose">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="modal-body">
+<div class="form-row">
+<label>Réservation</label>
+<div class="small-hint" id="depositModalReservationLabel"></div>
+</div>
+<div class="form-row">
+<label for="depositAmount">Montant de la caution (€)</label>
+<input id="depositAmount" min="1" required="" step="1" type="number"/>
+<div class="small-hint">
+            Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.
+          </div>
+</div>
+<div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
+<button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
+</div>
+</div>
+</div>
 <script>
     const API_BASE = '/api';
 
@@ -1198,18 +1214,14 @@ function copyDepositLinkByUid(uid) {
             amountBadge = '<span class="badge badge-amount">' + (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €</span>';
           }
           if (d.status === 'pending') {
-  statusBadge = '<span class="badge badge-pending">En attente</span>';
-} else if (d.status === 'paid' || d.status === 'authorized') {
-  statusBadge = '<span class="badge badge-paid">Autorisée</span>';
-} else if (d.status === 'captured') {
-  statusBadge = '<span class="badge badge-warning">Débitée</span>';
-} else if (d.status === 'released') {
-  statusBadge = '<span class="badge badge-success">Libérée</span>';
-} else if (d.status === 'refunded') {
-  statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
-} else if (d.status) {
-  statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
-}
+            statusBadge = '<span class="badge badge-pending">En attente</span>';
+          } else if (d.status === 'paid') {
+            statusBadge = '<span class="badge badge-paid">Payée</span>';
+          } else if (d.status === 'refunded') {
+            statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
+          } else if (d.status) {
+            statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
+          }
         }
 
         // Détection de la plateforme (Airbnb / Booking / etc.)
@@ -1823,38 +1835,6 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ Force scroll activé');
 })();
 </script>
-<!-- ============================================ -->
-<!-- MODAL : Nouvelle caution (POSITIONNÉ ICI POUR ÉVITER LES CONFLITS CSS) -->
-<!-- ============================================ -->
-<div class="modal" id="depositModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Nouvelle caution</h2>
-      <button class="modal-close" id="depositModalClose">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <label>Réservation</label>
-        <div class="small-hint" id="depositModalReservationLabel"></div>
-      </div>
-      <div class="form-row">
-        <label for="depositAmount">Montant de la caution (€)</label>
-        <input id="depositAmount" min="1" required="" step="1" type="number"/>
-        <div class="small-hint">
-          Le montant sera encaissé via Stripe. Vous pourrez rembourser ensuite si besoin.
-        </div>
-      </div>
-      <div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
-      <button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
-    </div>
-  </div>
-</div>
-
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>    
