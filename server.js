@@ -13472,22 +13472,29 @@ cron.schedule('0 7 * * *', async () => {
 
 console.log('CRON job messages arrivee configure (tous les jours a 7h)');
 // ============================================
-// 🔔 CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
+// CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
-
 cron.schedule('0 8 * * *', async () => {
-  console.log('🔔 CRON: Envoi des notifications quotidiennes à 8h00');
+  console.log('CRON: Envoi des notifications quotidiennes a 8h00');
   try {
-    // Récupérer tous les utilisateurs avec token FCM
+    // Recuperer tous les utilisateurs avec token FCM
     const usersResult = await pool.query(
-      `SELECT u.id, u.email, t.fcm_token 
+      `SELECT DISTINCT u.id 
        FROM users u 
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
     );
     
     for (const user of usersResult.rows) {
-      // Arrivées du jour
+      // Recuperer TOUS les tokens de l'utilisateur
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      
+      if (tokensResult.rows.length === 0) continue;
+      
+      // Arrivees du jour
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -13497,102 +13504,137 @@ cron.schedule('0 8 * * *', async () => {
         `SELECT r.*, p.name as property_name 
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         WHERE r.check_in >= $1 AND r.check_in < $2`,
-        [today, tomorrow]
+         WHERE p.user_id = $1 
+         AND r.start_date >= $2 
+         AND r.start_date < $3
+         AND r.status != 'cancelled'`,
+        [user.id, today, tomorrow]
       );
       
       const arrivalsCount = arrivalsResult.rows.length;
       const arrivalsText = arrivalsCount > 0 
-        ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join('\n')
-        : 'Aucune arrivée prévue';
+        ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join(', ')
+        : 'Aucune arrivee prevue';
       
-      await sendNotification(
-        user.fcm_token,
-        `🏠 ${arrivalsCount} arrivée(s) aujourd'hui`,
-        arrivalsText,
-        { type: 'daily_arrivals', count: arrivalsCount }
-      );
+      // Envoyer a TOUS les appareils
+      for (const token of tokensResult.rows) {
+        await sendNotification(
+          token.fcm_token,
+          `${arrivalsCount} arrivee(s) aujourd'hui`,
+          arrivalsText,
+          { type: 'daily_arrivals', count: arrivalsCount.toString() }
+        );
+      }
       
-      // Départs du jour
+      // Departs du jour
       const departuresResult = await pool.query(
         `SELECT r.*, p.name as property_name 
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         WHERE r.check_out >= $1 AND r.check_out < $2`,
-        [today, tomorrow]
+         WHERE p.user_id = $1 
+         AND r.end_date >= $2 
+         AND r.end_date < $3
+         AND r.status != 'cancelled'`,
+        [user.id, today, tomorrow]
       );
       
       const departuresCount = departuresResult.rows.length;
       const departuresText = departuresCount > 0
-        ? `Ménages à prévoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
-        : 'Aucun départ prévu';
+        ? `Menages a prevoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
+        : 'Aucun depart prevu';
       
-      await sendNotification(
-        user.fcm_token,
-        `🚪 ${departuresCount} départ(s) aujourd'hui`,
-        departuresText,
-        { type: 'daily_departures', count: departuresCount }
-      );
+      // Envoyer a TOUS les appareils
+      for (const token of tokensResult.rows) {
+        await sendNotification(
+          token.fcm_token,
+          `${departuresCount} depart(s) aujourd'hui`,
+          departuresText,
+          { type: 'daily_departures', count: departuresCount.toString() }
+        );
+      }
+      
+      console.log(`Notifications quotidiennes envoyees a user ${user.id} (${tokensResult.rows.length} appareil(s))`);
     }
     
-    console.log('✅ Notifications quotidiennes envoyées');
+    console.log('Notifications quotidiennes envoyees');
   } catch (error) {
-    console.error('❌ Erreur CRON notifications:', error);
+    console.error('Erreur CRON notifications:', error);
   }
 }, {
   timezone: "Europe/Paris"
 });
 
-console.log('✅ CRON job notifications configuré (tous les jours à 8h)');
-
+console.log('CRON job notifications configure (tous les jours a 8h)');
 // ============================================
-// ⏰ CRON JOB : RAPPELS J-1 À 18H
+// CRON JOB : RAPPELS J-1 A 18H
 // ============================================
-
 cron.schedule('0 18 * * *', async () => {
-  console.log('⏰ CRON: Rappels J-1 à 18h');
+  console.log('CRON: Rappels J-1 a 18h');
   try {
     const usersResult = await pool.query(
-      `SELECT u.id, t.fcm_token 
+      `SELECT DISTINCT u.id 
        FROM users u 
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
     );
     
     for (const user of usersResult.rows) {
+      // Recuperer TOUS les tokens
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      
+      if (tokensResult.rows.length === 0) continue;
+      
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
       const dayAfter = new Date(tomorrow);
       dayAfter.setDate(dayAfter.getDate() + 1);
       
+      // Arrivees de demain
       const arrivalsResult = await pool.query(
-        `SELECT COUNT(*) as count FROM reservations 
-         WHERE checkin_date >= $1 AND checkin_date < $2`,
-        [tomorrow, dayAfter]
+        `SELECT r.*, p.name as property_name 
+         FROM reservations r
+         JOIN properties p ON r.property_id = p.id
+         WHERE p.user_id = $1 
+         AND r.start_date >= $2 
+         AND r.start_date < $3
+         AND r.status != 'cancelled'`,
+        [user.id, tomorrow, dayAfter]
       );
       
-      const count = parseInt(arrivalsResult.rows[0]?.count || 0);
+      const count = arrivalsResult.rows.length;
       
       if (count > 0) {
-        await sendNotification(
-          user.fcm_token,
-          `⏰ Rappel : ${count} arrivée(s) demain`,
-          'Préparez les logements',
-          { type: 'reminder_j1' }
-        );
+        const propertiesList = arrivalsResult.rows
+          .map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`)
+          .join(', ');
+        
+        // Envoyer a TOUS les appareils
+        for (const token of tokensResult.rows) {
+          await sendNotification(
+            token.fcm_token,
+            `Rappel : ${count} arrivee(s) demain`,
+            propertiesList,
+            { type: 'reminder_j1', count: count.toString() }
+          );
+        }
+        
+        console.log(`Rappel J-1 envoye a user ${user.id} : ${count} arrivee(s)`);
       }
     }
     
-    console.log('✅ Rappels J-1 envoyés');
+    console.log('Rappels J-1 envoyes');
   } catch (error) {
-    console.error('❌ Erreur CRON rappels:', error);
+    console.error('Erreur CRON rappels:', error);
   }
 }, {
   timezone: "Europe/Paris"
 });
 
-console.log('✅ CRON rappels J-1 configuré (18h quotidien)');
+console.log('CRON rappels J-1 configure (18h quotidien)');
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
