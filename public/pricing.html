@@ -332,26 +332,31 @@
         <div class="plan-badge">Idéal pour démarrer</div>
         <h2 class="plan-name">Solo</h2>
         <div class="plan-price">
-          <span class="price-amount monthly-price">14,90€</span>
+          <span class="price-amount monthly-price">15€</span>
           <span class="price-amount annual-price" style="display:none;">149€</span>
           <span class="price-period monthly-period">/mois</span>
           <span class="price-period annual-period" style="display:none;">/an</span>
-          <span class="price-annual annual-price" style="display:none;">soit 12,42€/mois (2 mois offerts)</span>
+          <span class="price-annual annual-price" style="display:none;">soit 12,45€/mois (2 mois offerts)</span>
         </div>
         <p class="plan-description">
-          <strong>1 à 3 logements</strong><br>
-          Pour propriétaires et petites locations
+          <strong>1 logement inclus</strong><br>
+          Pour les propriétaires avec 1 logement
         </p>
 
         <ul class="plan-features">
-          <li><i class="fas fa-check"></i> Calendrier unifié (synchro iCal)</li>
-          <li><i class="fas fa-check"></i> Messages automatiques IA</li>
-          <li><i class="fas fa-check"></i> Serrures connectées Igloohome</li>
-          <li><i class="fas fa-check"></i> Gestion des ménages</li>
-          <li><i class="fas fa-check"></i> Facturation voyageurs & propriétaires</li>
-          <li><i class="fas fa-check"></i> Cautions & décomptes</li>
-          <li><i class="fas fa-check"></i> Livrets d'accueil</li>
-          <li><i class="fas fa-check"></i> Support email</li>
+          <li><i class="fas fa-check"></i> Gestion du logement</li>
+          <li><i class="fas fa-check"></i> Calendrier centralisé</li>
+          <li><i class="fas fa-check"></i> Synchronisation iCal (Airbnb, Booking...)</li>
+          <li><i class="fas fa-check"></i> Réservations manuelles</li>
+          <li><i class="fas fa-check"></i> Paiements directs</li>
+          <li><i class="fas fa-check"></i> Gestion des cautions</li>
+          <li><i class="fas fa-check"></i> Messagerie instantanée interne</li>
+          <li><i class="fas fa-check"></i> Gestion du ménage avec check-lists</li>
+          <li><i class="fas fa-check"></i> Assignation des intervenants</li>
+          <li><i class="fas fa-check"></i> Livret d'accueil digital</li>
+          <li><i class="fas fa-check"></i> Application mobile iOS & Android</li>
+          <li><i class="fas fa-check"></i> Factures automatiques pour voyageurs</li>
+          <li><i class="fas fa-check"></i> Support standard</li>
         </ul>
 
         <button class="btn btn-ghost btn-large" onclick="startCheckout('solo')">
@@ -359,62 +364,80 @@
         </button>
       </div>
 
-      <!-- Plan Pro (Featured) -->
+      <!-- Plan Standard (Featured) -->
       <div class="pricing-card featured">
-        <div class="plan-badge">Le plus populaire</div>
-        <h2 class="plan-name">Pro</h2>
+        <div class="plan-badge">⭐ Recommandé</div>
+        <h2 class="plan-name">Standard</h2>
         <div class="plan-price">
-          <span class="price-amount monthly-price">49€</span>
-          <span class="price-amount annual-price" style="display:none;">490€</span>
+          <span class="price-amount monthly-price">29€</span>
+          <span class="price-amount annual-price" style="display:none;">289€</span>
           <span class="price-period monthly-period">/mois</span>
           <span class="price-period annual-period" style="display:none;">/an</span>
-          <span class="price-annual annual-price" style="display:none;">soit 40,83€/mois (2 mois offerts)</span>
+          <span class="price-annual annual-price" style="display:none;">soit 24,09€/mois (2 mois offerts)</span>
         </div>
         <p class="plan-description">
-          <strong>4 à 15 logements</strong><br>
-          Pour conciergeries et gestionnaires
+          <strong>Jusqu'à 3 logements inclus</strong><br>
+          +7€/logement supplémentaire<br>
+          Pour gérer plusieurs logements simplement
         </p>
 
         <ul class="plan-features">
-          <li><i class="fas fa-check"></i> <strong>Tout du plan Solo</strong></li>
-          <li><i class="fas fa-check"></i> Support prioritaire (email + chat)</li>
-          <li><i class="fas fa-check"></i> Statistiques avancées</li>
-          <li><i class="fas fa-check"></i> Export des données</li>
-          <li><i class="fas fa-check"></i> Multi-propriétaires</li>
-          <li><i class="fas fa-check"></i> Rapports personnalisés</li>
+          <li><i class="fas fa-check"></i> Gestion multi-logements</li>
+          <li><i class="fas fa-check"></i> Calendrier centralisé multi-plateformes</li>
+          <li><i class="fas fa-check"></i> Synchronisation iCal avancée</li>
+          <li><i class="fas fa-check"></i> Réservations manuelles</li>
+          <li><i class="fas fa-check"></i> Paiements directs</li>
+          <li><i class="fas fa-check"></i> Gestion des cautions</li>
+          <li><i class="fas fa-check"></i> Messagerie instantanée interne</li>
+          <li><i class="fas fa-check"></i> Gestion du ménage & check-lists</li>
+          <li><i class="fas fa-check"></i> Assignation des équipes / intervenants</li>
+          <li><i class="fas fa-check"></i> Livret d'accueil digital par logement</li>
+          <li><i class="fas fa-check"></i> Application mobile iOS & Android</li>
+          <li><i class="fas fa-check"></i> Factures automatiques pour voyageurs</li>
+          <li><i class="fas fa-check"></i> Facturation (conciergerie → propriétaires)</li>
+          <li><i class="fas fa-check"></i> Support standard</li>
         </ul>
 
-        <button class="btn btn-primary btn-large" onclick="startCheckout('pro')">
+        <button class="btn btn-primary btn-large" onclick="startCheckout('standard')">
           Essayer gratuitement 14 jours
         </button>
       </div>
 
-      <!-- Plan Business -->
+      <!-- Plan Pro -->
       <div class="pricing-card">
-        <div class="plan-badge">Pour les pros</div>
-        <h2 class="plan-name">Business</h2>
+        <div class="plan-badge">Pour conciergeries</div>
+        <h2 class="plan-name">Pro</h2>
         <div class="plan-price">
-          <span class="price-amount monthly-price">99€</span>
-          <span class="price-amount annual-price" style="display:none;">990€</span>
+          <span class="price-amount monthly-price">49€</span>
+          <span class="price-amount annual-price" style="display:none;">489€</span>
           <span class="price-period monthly-period">/mois</span>
           <span class="price-period annual-period" style="display:none;">/an</span>
-          <span class="price-annual annual-price" style="display:none;">soit 82,50€/mois (2 mois offerts)</span>
+          <span class="price-annual annual-price" style="display:none;">soit 40,71€/mois (2 mois offerts)</span>
         </div>
         <p class="plan-description">
-          <strong>16 à 50 logements</strong><br>
-          Pour grosses conciergeries
+          <strong>Jusqu'à 6 logements inclus</strong><br>
+          +5€/logement supplémentaire<br>
+          Pour conciergeries & gestionnaires
         </p>
 
         <ul class="plan-features">
-          <li><i class="fas fa-check"></i> <strong>Tout du plan Pro</strong></li>
-          <li><i class="fas fa-check"></i> Support téléphone</li>
-          <li><i class="fas fa-check"></i> Onboarding personnalisé</li>
-          <li><i class="fas fa-check"></i> Account manager dédié</li>
-          <li><i class="fas fa-check"></i> API personnalisée</li>
-          <li><i class="fas fa-check"></i> Intégrations sur mesure</li>
+          <li><i class="fas fa-check"></i> Gestion multi-logements avancée</li>
+          <li><i class="fas fa-check"></i> Calendrier détaillé par plateforme</li>
+          <li><i class="fas fa-check"></i> Synchronisation iCal</li>
+          <li><i class="fas fa-check"></i> Réservations manuelles</li>
+          <li><i class="fas fa-check"></i> Paiements directs</li>
+          <li><i class="fas fa-check"></i> Gestion des cautions</li>
+          <li><i class="fas fa-check"></i> Messagerie instantanée interne</li>
+          <li><i class="fas fa-check"></i> Gestion du ménage & check-lists avancées</li>
+          <li><i class="fas fa-check"></i> Assignation des équipes & suivi</li>
+          <li><i class="fas fa-check"></i> Livret d'accueil digital personnalisable</li>
+          <li><i class="fas fa-check"></i> Application mobile iOS & Android</li>
+          <li><i class="fas fa-check"></i> Factures automatiques pour voyageurs</li>
+          <li><i class="fas fa-check"></i> Facturation conciergerie → propriétaires</li>
+          <li><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
         </ul>
 
-        <button class="btn btn-ghost btn-large" onclick="startCheckout('business')">
+        <button class="btn btn-ghost btn-large" onclick="startCheckout('pro')">
           Essayer gratuitement 14 jours
         </button>
       </div>
@@ -436,7 +459,7 @@
           <div class="faq-icon"><i class="fas fa-home"></i></div>
           <div>
             <h4>Que se passe-t-il si j'ai plus de logements ?</h4>
-            <p>Vous pouvez changer de plan à tout moment. Par exemple, si vous passez de 3 à 5 logements, il suffit de passer au plan Pro.</p>
+            <p>Vous pouvez changer de plan à tout moment. Par exemple, si vous avez 1 logement, prenez Solo (15€/mois). Pour 2-3 logements, passez au plan Standard (29€/mois). Pour 4-6 logements, prenez le plan Pro (49€/mois). Au-delà, des frais par logement supplémentaire s'appliquent.</p>
           </div>
         </div>
 
