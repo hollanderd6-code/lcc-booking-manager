@@ -1266,7 +1266,7 @@ function copyDepositLinkByUid(uid) {
 
         // Actions avancées (capture/release)
         let advancedActionsHtml = '';
-        if (d && d.status === 'paid') {
+        if (d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) {
           const maxAmount = (d.amountCents / 100).toFixed(2);
           advancedActionsHtml = `
             <div class="deposit-details" id="details-${r.reservationUid}" style="display: none;">
@@ -1323,11 +1323,11 @@ function copyDepositLinkByUid(uid) {
         }
 
         // Icône d'expansion si détails disponibles
-        const expandIcon = (d && d.status === 'paid') ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
+        const expandIcon = (d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
         // Date d'expiration (seulement si caution PAYÉE)
         let expirationBadge = '';
-        if (d && d.status === 'paid' && d.createdAt) {
+        if (d && (d.status === 'paid' || d.status === 'authorized') && d.createdAt) {
           const expirationDate = formatExpirationDate(d.createdAt);
           if (expirationDate) {
             expirationBadge = `
