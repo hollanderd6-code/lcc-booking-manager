@@ -214,6 +214,16 @@
       background: rgba(37, 99, 235, .12);
       color: #1d4ed8;
     }
+    .badge-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .badge-warning {
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
 
     .btn-xs {
       padding: 4px 8px;
@@ -1215,8 +1225,12 @@ function copyDepositLinkByUid(uid) {
           }
           if (d.status === 'pending') {
             statusBadge = '<span class="badge badge-pending">En attente</span>';
-          } else if (d.status === 'paid') {
-            statusBadge = '<span class="badge badge-paid">Payée</span>';
+          } else if (d.status === 'paid' || d.status === 'authorized') {
+            statusBadge = '<span class="badge badge-paid">Autorisée</span>';
+          } else if (d.status === 'captured') {
+            statusBadge = '<span class="badge badge-warning">Débitée</span>';
+          } else if (d.status === 'released') {
+            statusBadge = '<span class="badge badge-success">Libérée</span>';
           } else if (d.status === 'refunded') {
             statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
           } else if (d.status) {
