@@ -4473,7 +4473,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       console.log('❌ Logement non trouvé:', propertyId);
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -4495,7 +4495,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       propertyId: property.id,
       propertyName: property.name,
       propertyColor: property.color || '#3b82f6',
-      userId: user.id
+      userId: userId
     };
     
     console.log('✅ Réservation créée:', uid);
@@ -4896,7 +4896,7 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     // 3. VÉRIFICATION DU LOGEMENT EN POSTGRESQL
     const propertyCheck = await pool.query(
       'SELECT id, name, color FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, user.id]
+      [propertyId, userId]
     );
     
     if (propertyCheck.rows.length === 0) {
@@ -5116,7 +5116,7 @@ app.post('/api/blocks', async (req, res) => {
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -5157,7 +5157,7 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   }
 
   const { propertyId } = req.params;
-  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
 
   if (!property) {
     return res.status(404).json({ error: 'Logement non trouvé' });
@@ -5575,7 +5575,7 @@ app.post('/api/bookings', async (req, res) => {
     if (!propertyId || !checkIn || !checkOut) {
       return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
     }
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -5724,7 +5724,7 @@ app.get('/api/availability/:propertyId', async (req, res) => {
   const { propertyId } = req.params;
   const { startDate, endDate } = req.query;
 
-  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
   if (!property) {
     return res.status(404).json({ error: 'Logement non trouvé' });
   }
@@ -5890,7 +5890,7 @@ app.get('/api/reservations/enriched', authenticateAny, checkSubscription, async 
         const chk = ensureChecklistForReservation({
           reservationUid: r.uid,
           propertyId: property.id,
-          userId: user.id
+          userId: userId
         });
 
         // ✅ Deposit (Stripe) via DEPOSITS JSON
@@ -7111,7 +7111,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     }
 
     // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -8976,7 +8976,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
         quantity: 1
       }],
       metadata: {
-        userId: user.id,
+        userId: userId,
         plan: plan,
         basePlan: getBasePlanName(plan)
       },
@@ -8987,7 +8987,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       subscription_data: {
         trial_period_days: 14,
         metadata: {
-          userId: user.id,
+          userId: userId,
           plan: plan
         }
       },
@@ -9074,7 +9074,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
         type: 'express',
         email: user.email,
         metadata: {
-          userId: user.id,
+          userId: userId,
           company: user.company || ''
         }
       });
@@ -9831,7 +9831,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       subscription_data: {
         trial_period_days: 14,
         metadata: {
-          userId: user.id,
+          userId: userId,
           plan: plan
         }
       },
@@ -11665,7 +11665,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       subscription_data: {
         // ❌ PAS de trial_period_days ici car l'essai est déjà géré dans ta DB
         metadata: {
-          userId: user.id,
+          userId: userId,
           plan: plan
         }
       },
@@ -12630,13 +12630,13 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     }
 
     const { propertyId, uid } = req.body || {};
-    console.log('🗑 Demande de suppression reçue :', { userId: user.id, propertyId, uid });
+    console.log('🗑 Demande de suppression reçue :', { userId: userId, propertyId, uid });
 
     if (!propertyId || !uid) {
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
     }
 
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
