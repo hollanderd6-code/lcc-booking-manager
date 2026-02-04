@@ -449,21 +449,31 @@ cron.schedule('0 10 * * *', async () => {
       const fiveDaysAgo = new Date(sixDaysAgo);
       fiveDaysAgo.setDate(fiveDaysAgo.getDate() + 1);
       
+      // ✅ CORRECTION : Requête SQL sans JOIN (conversation_id n'existe pas)
       const depositsResult = await pool.query(
-        `SELECT d.*, c.guest_name, p.name as property_name
-         FROM deposits d
-         JOIN conversations c ON d.conversation_id = c.id
-         JOIN properties p ON c.property_id = p.id
-         WHERE p.user_id = $1
-         AND d.status = 'captured'
-         AND d.captured_at >= $2
-         AND d.captured_at < $3`,
+        `SELECT * 
+         FROM deposits 
+         WHERE user_id = $1
+         AND status = 'captured'
+         AND captured_at >= $2
+         AND captured_at < $3`,
         [user.id, sixDaysAgo, fiveDaysAgo]
       );
       
       if (depositsResult.rows.length > 0) {
-        const depositsList = depositsResult.rows
-          .map(d => `${d.property_name} - ${d.guest_name || 'Voyageur'} (${d.amount}€)`)
+        // ✅ Enrichir avec les données du store en mémoire
+        const enrichedDeposits = depositsResult.rows.map(d => {
+          const result = findReservationByUidForUser(d.reservation_uid, user.id);
+          return {
+            ...d,
+            property_name: result?.property?.name || 'Logement',
+            guest_name: result?.reservation?.guestName || 'Voyageur',
+            amount: (d.amount_cents / 100).toFixed(0)
+          };
+        });
+        
+        const depositsList = enrichedDeposits
+          .map(d => `${d.property_name} - ${d.guest_name} (${d.amount}€)`)
           .join(', ');
         
         // Envoyer a TOUS les appareils
