@@ -4037,10 +4037,20 @@ async function syncAllCalendars() {
 
       // ➕ Nouvelles réservations (présentes dans new mais pas dans old)
       const trulyNewReservations = newIcalReservations.filter(r => !oldIds.has(r.uid));
-
-      // ➖ Réservations annulées (présentes dans old mais plus dans new)
-      const cancelledForProperty = oldIcalReservations.filter(r => !newIds.has(r.uid));
-
+      
+      // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
+      const now = new Date();
+      const cancelledForProperty = oldIcalReservations.filter(r => {
+        // Si la réservation n'est plus dans le flux
+        if (!newIds.has(r.uid)) {
+          // Vérifier si c'est une réservation FUTURE
+          const endDate = new Date(r.end);
+          // Seulement considérer comme annulée si la date de fin est dans le futur
+          return endDate >= now;
+        }
+        return false;
+      });
+      
       if (trulyNewReservations.length > 0) {
         newReservations.push(
           ...trulyNewReservations.map(r => ({
@@ -4052,7 +4062,7 @@ async function syncAllCalendars() {
           }))
         );
       }
-
+      
       if (cancelledForProperty.length > 0) {
         cancelledReservations.push(
           ...cancelledForProperty.map(r => ({
@@ -4068,16 +4078,26 @@ async function syncAllCalendars() {
       // Base = iCal
       reservationsStore.properties[property.id] = newIcalReservations;
 
-     // SAUVEGARDER DANS POSTGRESQL
-if (newIcalReservations.length > 0) {
-  await savePropertyReservations(property.id, newIcalReservations, property.userId);
-}
+      // SAUVEGARDER DANS POSTGRESQL
+      if (newIcalReservations.length > 0) {
+        await savePropertyReservations(property.id, newIcalReservations, property.userId);
+      }
 
-console.log(`🔍 Recherche manuelles pour property.id: ${property.id}`);
-console.log(`🔍 Clés dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
-const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
-console.log(`🔍 Trouvé ${manualForProperty.length} réservations manuelles`);
+      // MARQUER LES RESERVATIONS PASSEES COMME "COMPLETED"
+      await pool.query(
+        `UPDATE reservations 
+         SET status = 'completed', updated_at = NOW()
+         WHERE property_id = $1 
+         AND end_date < $2 
+         AND status = 'confirmed'`,
+        [property.id, now]
+      );
 
+      console.log(`Recherche manuelles pour property.id: ${property.id}`);
+      console.log(`Cles dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
+      const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
+      console.log(`Trouve ${manualForProperty.length} reservations manuelles`);
+      
 // Ajouter les réservations manuelles SANS DOUBLON
 if (manualForProperty.length > 0) {
   // Créer un Set des UIDs déjà présents dans reservationsStore
