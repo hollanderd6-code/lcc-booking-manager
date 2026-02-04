@@ -1214,14 +1214,18 @@ function copyDepositLinkByUid(uid) {
             amountBadge = '<span class="badge badge-amount">' + (d.amountCents / 100).toFixed(2).replace('.', ',') + ' €</span>';
           }
           if (d.status === 'pending') {
-            statusBadge = '<span class="badge badge-pending">En attente</span>';
-          } else if (d.status === 'paid') {
-            statusBadge = '<span class="badge badge-paid">Payée</span>';
-          } else if (d.status === 'refunded') {
-            statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
-          } else if (d.status) {
-            statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
-          }
+  statusBadge = '<span class="badge badge-pending">En attente</span>';
+} else if (d.status === 'paid' || d.status === 'authorized') {
+  statusBadge = '<span class="badge badge-paid">Autorisée</span>';
+} else if (d.status === 'captured') {
+  statusBadge = '<span class="badge badge-warning">Débitée</span>';
+} else if (d.status === 'released') {
+  statusBadge = '<span class="badge badge-success">Libérée</span>';
+} else if (d.status === 'refunded') {
+  statusBadge = '<span class="badge badge-refunded">Remboursée</span>';
+} else if (d.status) {
+  statusBadge = `<span class="badge badge-empty">${d.status}</span>`;
+}
         }
 
         // Détection de la plateforme (Airbnb / Booking / etc.)
