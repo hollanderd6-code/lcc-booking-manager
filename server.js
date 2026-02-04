@@ -1847,10 +1847,10 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             
             await pool.query(`
               UPDATE deposits 
-              SET status = $1,
+              SET status = $1::text,
                   stripe_payment_intent_id = $2,
-                  authorized_at = CASE WHEN $1 = 'authorized' THEN NOW() ELSE authorized_at END,
-                  captured_at = CASE WHEN $1 = 'captured' THEN NOW() ELSE captured_at END,
+                  authorized_at = CASE WHEN $1::text = 'authorized' THEN NOW() ELSE authorized_at END,
+                  captured_at = CASE WHEN $1::text = 'captured' THEN NOW() ELSE captured_at END,
                   updated_at = NOW()
               WHERE id = $3 OR stripe_session_id = $4
             `, [depositStatus, session.payment_intent, depositId, session.id]);
