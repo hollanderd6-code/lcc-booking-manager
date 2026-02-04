@@ -8366,20 +8366,27 @@ app.post('/api/properties/test-ical', async (req, res) => {
 // ============================================
 app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res) => {
   try {
-    const user = req.user;
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorise' });
+    }
+    
     const { propertyId } = req.params;
-    const { direction } = req.body; // 'up' | 'down'
+    const { direction } = req.body;
 
     if (!['up', 'down'].includes(direction)) {
       return res.status(400).json({ error: 'Direction invalide' });
     }
 
-    // 🔹 Logement courant
+    // Logement courant
     const currentRes = await pool.query(
       `SELECT id, display_order
        FROM properties
        WHERE id = $1 AND user_id = $2`,
-      [propertyId, userId] 
+      [propertyId, userId]
     );
 
     if (currentRes.rows.length === 0) {
@@ -8389,7 +8396,7 @@ app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res)
     const current = currentRes.rows[0];
     const currentOrder = Number(current.display_order);
 
-    // 🔹 Voisin à échanger
+    // Voisin a echanger
     const neighborRes = await pool.query(
       direction === 'up'
         ? `
