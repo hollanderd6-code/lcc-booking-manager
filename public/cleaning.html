@@ -15,6 +15,7 @@
 <link href="/css/cleaning-cards-style.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">    
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">    
+<link href="/css/guest-info-styles.css" rel="stylesheet"/>
 <style>
     html, body {
       margin: 0 !important;
@@ -693,6 +694,78 @@
     // GESTION EQUIPE + ASSIGNATION + PLANNING
     // --------------------------
     document.addEventListener('DOMContentLoaded', () => {
+      
+      // ============================================
+      // ✅ FONCTIONS HELPERS POUR AFFICHAGE VOYAGEUR
+      // ============================================
+      
+      function cleanGuestName(reservation) {
+        if (!reservation) return 'Voyageur';
+        
+        // Si on a le guest_display_name construit par le serveur
+        if (reservation.guest_display_name && 
+            reservation.guest_display_name !== 'Voyageur' &&
+            reservation.guest_display_name.trim() !== '') {
+          return reservation.guest_display_name;
+        }
+        
+        // Construire à partir de guest_first_name et guest_last_name (onboarding)
+        if (reservation.guest_first_name) {
+          const firstName = reservation.guest_first_name.trim();
+          const lastName = reservation.guest_last_name ? reservation.guest_last_name.trim() : '';
+          return lastName ? `${firstName} ${lastName}` : firstName;
+        }
+        
+        // Fallback sur guest_name
+        const rawName = reservation.guestName || reservation.guest_name || reservation.name;
+        if (rawName && rawName !== 'undefined' && rawName !== 'null' && rawName.trim() !== '') {
+          const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+          const invalidNames = [
+            'not available', 'closed', 'reservation', 'reserved', 'blocked', 
+            'unavailable', 'booked', 'not provided', 'n/a', 'unknown', 'guest'
+          ];
+          
+          if (!invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
+            return cleaned;
+          }
+        }
+        
+        // Fallback final avec plateforme
+        const plat = (reservation.source || reservation.platform || '').toLowerCase();
+        if (plat.includes('airbnb')) return 'Voyageur Airbnb';
+        if (plat.includes('booking')) return 'Voyageur Booking';
+        
+        return 'Voyageur';
+      }
+      
+      function getGuestInitial(reservation) {
+        if (!reservation) return 'V';
+        
+        // Si on a l'initiale construite par le serveur
+        if (reservation.guest_initial && reservation.guest_initial !== 'V') {
+          return reservation.guest_initial;
+        }
+        
+        // Extraire du prénom (onboarding)
+        if (reservation.guest_first_name && reservation.guest_first_name.trim() !== '') {
+          return reservation.guest_first_name.charAt(0).toUpperCase();
+        }
+        
+        // Fallback sur guest_name
+        const name = reservation.guestName || reservation.guest_name || reservation.name;
+        if (name && name !== 'undefined' && name !== 'null' && name.trim() !== '') {
+          return name.charAt(0).toUpperCase();
+        }
+        
+        return 'V';
+      }
+      
+      // Exposer globalement
+      window.cleanGuestName = cleanGuestName;
+      window.getGuestInitial = getGuestInitial;
+      
+      console.log('✅ Fonctions helpers ménage chargées');
+      
       // NOUVELLE FONCTION : Formater une date YYYY-MM-DD en DD/MM/YYYY
       function formatDateFr(dateStr) {
         if (!dateStr) return '';
@@ -1013,7 +1086,11 @@ function formatDateFr(dateStr) {
     r.propertyName ||
     (r.property && (r.property.name || r.property.title || r.property.label)) ||
     getPropertyNameById(propertyId);
-  const guestName = r.guestName || r.name || '';
+  
+  // ✅ Utiliser les nouvelles fonctions helpers
+  const guestName = window.cleanGuestName(r);
+  const guestInitial = window.getGuestInitial(r);
+  
   const endStr = String(r.end).slice(0, 10);
   const endDateFr = formatDateFr(endStr);
   
@@ -1031,7 +1108,22 @@ function formatDateFr(dateStr) {
         
         <div class="cleaning-info-item">
           <div class="cleaning-info-label">Client</div>
-          <div class="cleaning-info-value">${guestName || '-'}</div>
+          <div class="cleaning-info-value" style="display: flex; align-items: center; gap: 8px;">
+            <span style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 28px;
+              height: 28px;
+              border-radius: 50%;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              font-size: 12px;
+              font-weight: 600;
+              flex-shrink: 0;
+            ">${guestInitial}</span>
+            <span>${guestName || '-'}</span>
+          </div>
         </div>
       </div>
       
