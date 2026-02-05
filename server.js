@@ -5073,7 +5073,11 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     console.log('✅ Logement trouvé:', property.name);
     
     // 4. CRÉATION DE LA RÉSERVATION
-    const uid = 'manual_' + Date.now();
+    // ✅ CORRECTION : UID unique avec timestamp + random pour éviter les doublons
+    const crypto = require('crypto');
+    const randomStr = crypto.randomBytes(4).toString('hex'); // 8 caractères hex
+    const uid = `manual_${Date.now()}_${randomStr}`;
+    
     const reservation = {
       uid: uid,
       start: checkIn,
