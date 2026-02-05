@@ -18,8 +18,7 @@
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link rel="stylesheet" href="/css/dark-mode.css"> 
-<link href="/css/guest-info-styles.css" rel="stylesheet"/>    
+<link rel="stylesheet" href="/css/dark-mode.css">    
 <style>
     html, body {
       margin: 0 !important;
@@ -3476,104 +3475,24 @@
 </script>
 <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
 <script>
-   // ============================================
-// FONCTIONS HELPERS POUR AFFICHAGE VOYAGEUR
-// ============================================
-
-function cleanGuestName(reservation) {
-  // Si on a le guest_display_name construit par le serveur (depuis SQL)
-  if (reservation.guest_display_name && 
-      reservation.guest_display_name !== 'Voyageur' &&
-      reservation.guest_display_name.trim() !== '') {
-    return reservation.guest_display_name;
+    // ✅ FONCTION HELPER
+function cleanGuestName(rawName, platform) {
+  if (!rawName) return platform ? `Voyageur ${platform}` : 'Voyageur';
+  
+  const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+  const invalidNames = ['not available', 'closed', 'reservation', 'reserved', 'blocked', 'unavailable', 'booked'];
+  
+  if (invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
+    const platformLower = (platform || '').toLowerCase();
+    if (platformLower.includes('airbnb')) return 'Voyageur Airbnb';
+    if (platformLower.includes('booking')) return 'Voyageur Booking';
+    return 'Voyageur';
   }
   
-  // Construire à partir de guest_first_name et guest_last_name (onboarding)
-  if (reservation.guest_first_name) {
-    const firstName = reservation.guest_first_name.trim();
-    const lastName = reservation.guest_last_name ? reservation.guest_last_name.trim() : '';
-    return lastName ? `${firstName} ${lastName}` : firstName;
-  }
-  
-  // Fallback sur guest_name (de la réservation originale)
-  if (reservation.guest_name && 
-      reservation.guest_name !== 'undefined' && 
-      reservation.guest_name !== 'null' &&
-      reservation.guest_name.trim() !== '') {
-    
-    const cleaned = reservation.guest_name.trim().replace(/^\(|\)$/g, '');
-    
-    // Ignorer les noms invalides
-    const invalidNames = [
-      'not provided', 'n/a', 'unknown', 'guest', 'réservation', 
-      'closed', 'reservation', 'client', 'voyageur booking', 'voyageur airbnb'
-    ];
-    
-    const isInvalid = invalidNames.some(invalid => 
-      cleaned.toLowerCase().includes(invalid)
-    );
-    
-    if (!isInvalid) {
-      return cleaned;
-    }
-  }
-  
-  // Fallback final avec plateforme si disponible
-  const platform = (reservation.source || reservation.platform || '').toLowerCase();
-  if (platform.includes('airbnb')) return 'Voyageur Airbnb';
-  if (platform.includes('booking')) return 'Voyageur Booking';
-  if (platform.includes('direct')) return 'Voyageur Direct';
-  
-  return 'Voyageur';
+  return cleaned;
 }
 
-function getGuestInitial(reservation) {
-  // Si on a l'initiale construite par le serveur (depuis SQL)
-  if (reservation.guest_initial && reservation.guest_initial !== 'V') {
-    return reservation.guest_initial;
-  }
-  
-  // Extraire du prénom (onboarding)
-  if (reservation.guest_first_name && reservation.guest_first_name.trim() !== '') {
-    return reservation.guest_first_name.charAt(0).toUpperCase();
-  }
-  
-  // Fallback sur guest_name
-  if (reservation.guest_name && 
-      reservation.guest_name !== 'undefined' &&
-      reservation.guest_name !== 'null' &&
-      reservation.guest_name.trim() !== '') {
-    return reservation.guest_name.charAt(0).toUpperCase();
-  }
-  
-  return 'V';
-}
-
-function getGuestPhone(reservation) {
-  // Priorité 1: guest_phone de la conversation (onboarding)
-  if (reservation.guest_phone && reservation.guest_phone.trim() !== '') {
-    return reservation.guest_phone;
-  }
-  
-  // Priorité 2: guestPhone de la réservation
-  if (reservation.guestPhone && reservation.guestPhone.trim() !== '') {
-    return reservation.guestPhone;
-  }
-  
-  // Priorité 3: guest_phone_display (construit par SQL)
-  if (reservation.guest_phone_display && reservation.guest_phone_display.trim() !== '') {
-    return reservation.guest_phone_display;
-  }
-  
-  return 'Non renseigné';
-}
-
-// Exposer globalement
 window.cleanGuestName = cleanGuestName;
-window.getGuestInitial = getGuestInitial;
-window.getGuestPhone = getGuestPhone;
-
-console.log('✅ Fonctions helpers voyageur chargées');
     
     document.addEventListener('DOMContentLoaded', function () {
       /* Nouvelle réservation */
@@ -3755,7 +3674,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   (r.property && (r.property.name || r.property.title || r.property.label)) ||
   getPropertyNameById(propertyId, properties);
 
-const guestName = window.cleanGuestName(r);
+const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source || r.platform);
               html += `
                 <div style="margin-bottom:8px;">
                   <strong>${propName}</strong>${guestName ? ' – ' + guestName : ''}
@@ -4497,7 +4416,7 @@ const guestName = window.cleanGuestName(r);
 
         return {
           type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
-who: window.cleanGuestName(r),
+who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           startStr: formatDateFR(s),
@@ -4767,7 +4686,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
             const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
             const end = formatDateFR(dateOnlyStr(r.endDate||r.end));
             const prop = r.propertyName || r.propertyId || 'Logement';
-const name = window.cleanGuestName(r);
+const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voyageur';
             const score = Math.round(r.riskScore||0);
             const color = window.riskColor(r.riskLevel);
             const riskLabel = r.riskLabel || r.riskLevel || '';
@@ -5643,9 +5562,13 @@ if (j === 0 || cells.length === 1) {
   // Label invité
   var guestLabel = b.guestName || 'Réservation';
 
-const guestLabel = window.cleanGuestName(reservation);
-const guestInitial = window.getGuestInitial(reservation);
-const guestPhone = window.getGuestPhone(reservation);
+ // ✅ Utiliser la fonction helper
+guestLabel = window.cleanGuestName(guestLabel, platform);
+
+  // (optionnel) Booking : si pas de nom, on met aussi "Voyageur"
+  if (platform === 'booking' && !guestLabel) {
+    guestLabel = 'Voyageur';
+  }
 
   var label = document.createTextNode(guestLabel);
   block.appendChild(label);
@@ -8041,12 +7964,9 @@ function renderCleaningChecklists() {
             <span>Départ : ${formattedDate}</span>
           </div>
           <div class="checklist-info-row">
-  <i class="fas fa-user"></i>
-  <div class="guest-info-inline">
-    <span class="guest-avatar-small">${window.getGuestInitial(checklist)}</span>
-    <span class="guest-name">${window.cleanGuestName(checklist)}</span>
-  </div>
-</div>
+            <i class="fas fa-user"></i>
+            <span>${checklist.guest_name || 'Voyageur'}</span>
+          </div>
           <div class="checklist-info-row">
             <i class="fas fa-user-check"></i>
             <span>${checklist.cleaner_name || 'Non assigné'}</span>
