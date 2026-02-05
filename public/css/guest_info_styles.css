@@ -1,0 +1,684 @@
+/* ============================================
+   🎨 STYLES POUR AFFICHAGE INFORMATIONS VOYAGEUR
+   ============================================ */
+
+/* ============================================
+   1. AVATARS VOYAGEUR
+   ============================================ */
+
+/* Avatar principal (conversations, détails) */
+.guest-avatar,
+.conversation-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.guest-avatar:hover,
+.conversation-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+/* Avatar petit (inline, listes) */
+.guest-avatar-small,
+.conversation-avatar-small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+/* Avatar très petit (tags, badges) */
+.guest-avatar-tiny {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+
+/* ============================================
+   2. INFORMATIONS VOYAGEUR - LAYOUT
+   ============================================ */
+
+/* Section info voyageur (horizontal avec avatar) */
+.guest-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.guest-info-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guest-info-vertical,
+.guest-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Container pour section voyageur dans modal */
+.guest-section {
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+/* Section voyageur avec bordure gauche colorée */
+.guest-section-highlighted {
+  background: var(--bg-secondary, #f8f9fa);
+  border-left: 4px solid var(--primary-color, #667eea);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+
+/* ============================================
+   3. TEXTES - NOM ET TÉLÉPHONE
+   ============================================ */
+
+/* Nom du voyageur - principal */
+.guest-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.4;
+}
+
+/* Nom du voyageur - dans listes */
+.guest-name-list {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #1e293b);
+}
+
+/* Nom du voyageur - petit */
+.guest-name-small {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary, #1e293b);
+}
+
+/* Téléphone */
+.guest-phone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-secondary, #64748b);
+  font-family: 'Inter', monospace;
+}
+
+.guest-phone i {
+  font-size: 12px;
+  color: var(--primary-color, #667eea);
+}
+
+/* Téléphone - petit */
+.guest-phone-small {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+
+/* ============================================
+   4. CONVERSATIONS - LISTE
+   ============================================ */
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.conversation-item:hover {
+  border-color: var(--primary-color, #667eea);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0; /* Pour permettre l'ellipsis */
+}
+
+.conversation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.conversation-name-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-primary, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-phone {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  font-family: 'Inter', monospace;
+}
+
+.conversation-time {
+  font-size: 12px;
+  color: var(--text-tertiary, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.conversation-details {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.conversation-last-message {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badge non lu */
+.unread-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--danger-color, #ef4444);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+
+/* ============================================
+   5. MODAL DÉTAILS RÉSERVATION
+   ============================================ */
+
+.reservation-details-modal .guest-info {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: var(--radius-lg, 12px);
+  margin-bottom: 24px;
+}
+
+.reservation-details-modal .guest-avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+}
+
+.reservation-details-modal .guest-details {
+  gap: 8px;
+}
+
+.reservation-details-modal .guest-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.reservation-details-modal .guest-phone {
+  font-size: 15px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+
+/* ============================================
+   6. CHECKLISTS
+   ============================================ */
+
+.checklist-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.checklist-info-row:last-child {
+  border-bottom: none;
+}
+
+.checklist-info-row i {
+  width: 20px;
+  text-align: center;
+  color: var(--primary-color, #667eea);
+  font-size: 14px;
+}
+
+.checklist-info-row .guest-info-inline {
+  flex: 1;
+}
+
+
+/* ============================================
+   7. CARTES MÉNAGE / CLEANING
+   ============================================ */
+
+.reservation-card {
+  background: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.reservation-card:hover {
+  border-color: var(--primary-color, #667eea);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.reservation-card .reservation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.reservation-card .guest-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reservation-card .guest-info-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reservation-card .guest-name {
+  font-size: 15px;
+}
+
+.reservation-card .property-name {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.reservation-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.date-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.date-item i {
+  width: 16px;
+  color: var(--primary-color, #667eea);
+}
+
+
+/* ============================================
+   8. BADGES ET TAGS
+   ============================================ */
+
+.platform-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-secondary, #f1f5f9);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.platform-badge.small {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.platform-badge i {
+  font-size: 11px;
+}
+
+.property-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--primary-light, #e0e7ff);
+  color: var(--primary-color, #667eea);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.conversation-status {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.conversation-status.active {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.conversation-status.pending {
+  background: #fef3c7;
+  color: #ca8a04;
+}
+
+.conversation-status.closed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+
+/* ============================================
+   9. RESPONSIVE MOBILE
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Réduire les avatars sur mobile */
+  .guest-avatar,
+  .conversation-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  /* Stack vertical sur mobile */
+  .guest-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  /* Conversations compactes */
+  .conversation-item {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .conversation-name {
+    font-size: 14px;
+  }
+  
+  .conversation-phone {
+    font-size: 11px;
+  }
+  
+  /* Cacher certains éléments sur petit écran */
+  .conversation-last-message {
+    display: none;
+  }
+  
+  /* Modal plein écran sur mobile */
+  .reservation-details-modal {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+  
+  .reservation-details-modal .guest-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  
+  .reservation-details-modal .guest-name {
+    font-size: 18px;
+  }
+}
+
+
+/* ============================================
+   10. ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Appliquer les animations */
+.conversation-item {
+  animation: fadeIn 0.3s ease;
+}
+
+.guest-info {
+  animation: slideIn 0.4s ease;
+}
+
+.reservation-card {
+  animation: fadeIn 0.3s ease;
+}
+
+
+/* ============================================
+   11. DARK MODE SUPPORT
+   ============================================ */
+
+[data-theme="dark"] .guest-avatar,
+[data-theme="dark"] .conversation-avatar {
+  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 100%);
+}
+
+[data-theme="dark"] .guest-section,
+[data-theme="dark"] .guest-section-highlighted {
+  background: var(--bg-tertiary, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+[data-theme="dark"] .conversation-item {
+  background: var(--bg-secondary, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+[data-theme="dark"] .conversation-item:hover {
+  border-color: var(--primary-color, #8b5cf6);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+[data-theme="dark"] .reservation-card {
+  background: var(--bg-secondary, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+[data-theme="dark"] .platform-badge {
+  background: var(--bg-tertiary, #0f172a);
+  color: var(--text-secondary, #94a3b8);
+}
+
+
+/* ============================================
+   12. PRINT STYLES
+   ============================================ */
+
+@media print {
+  .guest-avatar,
+  .conversation-avatar {
+    background: #667eea !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .conversation-item,
+  .reservation-card {
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+  }
+  
+  /* Cacher éléments non nécessaires */
+  .unread-badge,
+  .conversation-status,
+  .platform-badge {
+    display: none;
+  }
+}
+
+
+/* ============================================
+   13. ÉTATS SPÉCIAUX
+   ============================================ */
+
+/* Voyageur VIP */
+.guest-info.vip .guest-avatar {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.4);
+}
+
+.guest-info.vip .guest-name::after {
+  content: " ⭐";
+  margin-left: 4px;
+}
+
+/* Onboarding incomplet */
+.guest-info.incomplete .guest-avatar {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  opacity: 0.7;
+}
+
+.guest-info.incomplete .guest-name {
+  color: var(--text-tertiary, #94a3b8);
+  font-style: italic;
+}
+
+/* Téléphone non renseigné */
+.guest-phone.missing {
+  color: var(--warning-color, #f59e0b);
+  font-style: italic;
+}
+
+.guest-phone.missing i {
+  color: var(--warning-color, #f59e0b);
+}
+
+
+/* ============================================
+   NOTES D'UTILISATION
+   ============================================ */
+
+/*
+CLASSES DISPONIBLES:
+
+AVATARS:
+- .guest-avatar (48px, principal)
+- .guest-avatar-small (32px, inline)
+- .guest-avatar-tiny (24px, tags)
+
+LAYOUTS:
+- .guest-info (horizontal avec avatar)
+- .guest-info-inline (horizontal compact)
+- .guest-info-vertical (vertical)
+- .guest-section (container avec fond)
+- .guest-section-highlighted (avec bordure)
+
+TEXTES:
+- .guest-name (16px, principal)
+- .guest-name-list (14px, listes)
+- .guest-name-small (13px, compact)
+- .guest-phone (avec icône)
+- .guest-phone-small (compact)
+
+BADGES:
+- .platform-badge (plateforme)
+- .property-badge (logement)
+- .conversation-status (statut)
+- .unread-badge (non lus)
+
+ÉTATS:
+- .vip (voyageur VIP)
+- .incomplete (onboarding incomplet)
+- .missing (info manquante)
+*/
