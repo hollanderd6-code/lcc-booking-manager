@@ -5567,15 +5567,10 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
       daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // ✅ AJOUTER LE PRIX
-    let planAmount = 0;
-    if (sub.plan_type === 'basic') {
-      planAmount = 599; // 5,99€ en centimes
-    } else if (sub.plan_type === 'pro') {
-      planAmount = 899; // 8,99€ en centimes
-    }
+    // ✅ Calculer le montant avec la fonction getPlanAmount
+    const planAmount = getPlanAmount(sub.plan_type);
 
-    // ✅ AJOUTER LE DISPLAY MESSAGE
+    // ✅ Message d'affichage
     let displayMessage = 'Abonnement';
     if (sub.status === 'trial') {
       displayMessage = 'Essai gratuit';
