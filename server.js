@@ -2647,7 +2647,7 @@ async function loadProperties() {
   }
 }
 function getUserProperties(userId) {
-  return PROPERTIES.filter(p => p.userId === userId);
+  return PROPERTIES.filter(p => p.userId === user.id);
 }
 // ============================================
 // CODE COMPLET À AJOUTER DANS server-23.js
@@ -4638,7 +4638,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       console.log('❌ Logement non trouvé:', propertyId);
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -5285,7 +5285,7 @@ app.post('/api/blocks', async (req, res) => {
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -5326,7 +5326,7 @@ app.get('/api/reservations/:propertyId', async (req, res) => {
   }
 
   const { propertyId } = req.params;
-  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
 
   if (!property) {
     return res.status(404).json({ error: 'Logement non trouvé' });
@@ -5739,7 +5739,7 @@ app.post('/api/bookings', async (req, res) => {
     if (!propertyId || !checkIn || !checkOut) {
       return res.status(400).json({ error: 'propertyId, checkIn et checkOut sont requis' });
     }
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -5888,7 +5888,7 @@ app.get('/api/availability/:propertyId', async (req, res) => {
   const { propertyId } = req.params;
   const { startDate, endDate } = req.query;
 
-  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+  const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
   if (!property) {
     return res.status(404).json({ error: 'Logement non trouvé' });
   }
@@ -7275,7 +7275,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     }
 
     // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -7387,7 +7387,7 @@ app.post('/api/cleaning/assignments',
     }
 
     // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -7934,7 +7934,7 @@ app.get('/api/properties/:propertyId',
     }
     
     const { propertyId } = req.params;
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -8238,7 +8238,7 @@ app.put('/api/properties/:propertyId',
       chatPin 
     } = body;
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -8430,7 +8430,7 @@ userId: userId
     
     await loadProperties();
 
-const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     res.json({
       message: 'Logement modifié avec succès',
       property: updated
@@ -8467,7 +8467,7 @@ app.delete('/api/properties/:propertyId',
       }
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -12387,7 +12387,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
     }
 
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
