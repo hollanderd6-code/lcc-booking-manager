@@ -377,15 +377,23 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         console.log('📅 [VERIFY] Dates:', { checkinDateStr, checkoutDateStr, platform });
 
         // Vérifier qu'une réservation existe
+        // Recherche flexible : la source doit CONTENIR la plateforme (ex: "Airbnb" trouve "airbnb.com", "AIRBNB", etc.)
         const reservationResult = await pool.query(
-          `SELECT id FROM reservations 
+          `SELECT id, source, platform FROM reservations 
            WHERE property_id = $1 
            AND DATE(start_date) = $2 
            AND ($3::date IS NULL OR DATE(end_date) = $3)
-           AND LOWER(source) = LOWER($4)
+           AND (
+             LOWER(source) LIKE LOWER($4) || '%'
+             OR LOWER(source) LIKE '%' || LOWER($4) || '%'
+             OR LOWER(platform) LIKE LOWER($4) || '%'
+             OR LOWER(platform) LIKE '%' || LOWER($4) || '%'
+           )
            LIMIT 1`,
           [property_id, checkinDateStr, checkoutDateStr, platform]
         );
+        
+        console.log('🔍 [VERIFY] Résultat recherche réservation:', reservationResult.rows);
 
         if (reservationResult.rows.length === 0) {
           console.log('❌ [VERIFY] Aucune réservation trouvée');
