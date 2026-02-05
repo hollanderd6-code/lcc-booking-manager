@@ -140,7 +140,7 @@
     }
   }
   
-  // Ajouter un badge "Lecture seule"
+  // Ajouter un badge "Partenaire"
   function addReadOnlyBadge() {
     // Vérifier si le badge n'existe pas déjà
     if (document.getElementById('subAccountReadOnlyBadge')) {
@@ -151,8 +151,13 @@
     badge.id = 'subAccountReadOnlyBadge';
     badge.style.cssText = `
       position: fixed;
+<<<<<<< HEAD
       top: 20px;
       right: 10px; top: 12px;
+=======
+      top: 15px;
+      right: 10px;
+>>>>>>> 662927d8465873389cb5492ce7883d7bf4ae97e5
       background: linear-gradient(135deg, #F59E0B, #D97706);
       color: white;
       padding: 8px 16px;
@@ -166,7 +171,11 @@
       gap: 6px;
       animation: slideInFromRight 0.4s ease;
     `;
+<<<<<<< HEAD
     badge.innerHTML = '<i class="fas fa-handshake"></i> Partenaire';
+=======
+    badge.innerHTML = 'Partenaire';
+>>>>>>> 662927d8465873389cb5492ce7883d7bf4ae97e5
     
     // Ajouter l'animation
     const style = document.createElement('style');
@@ -185,7 +194,7 @@
     document.head.appendChild(style);
     
     document.body.appendChild(badge);
-    console.log('📛 Badge "Lecture seule" ajouté');
+    console.log('📛 Badge "Partenaire" ajouté');
   }
   
   // Fonction publique pour masquer un élément spécifique

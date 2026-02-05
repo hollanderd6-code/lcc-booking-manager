@@ -886,13 +886,13 @@
 .booking-block.end {
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
-  right: -10px; /* déborde légèrement sur la cellule suivante */
+  right: -8px; /* ✅ RÉDUIT pour éviter fusion visuelle */
 }
 
 /* Réservation d’une seule nuit (start + end dans la même cellule) */
 .booking-block.single {
   border-radius: 999px;
-  right: -10px; /* petite queue aussi */
+  right: -8px; /* ✅ RÉDUIT pour éviter fusion */
 }
 
     /* Platform Icons */
@@ -3475,6 +3475,25 @@
 </script>
 <!-- Script pour Nouvelle réservation + Notifications + Scroll calendrier -->
 <script>
+    // ✅ FONCTION HELPER
+function cleanGuestName(rawName, platform) {
+  if (!rawName) return platform ? `Voyageur ${platform}` : 'Voyageur';
+  
+  const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+  const invalidNames = ['not available', 'closed', 'reservation', 'reserved', 'blocked', 'unavailable', 'booked'];
+  
+  if (invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
+    const platformLower = (platform || '').toLowerCase();
+    if (platformLower.includes('airbnb')) return 'Voyageur Airbnb';
+    if (platformLower.includes('booking')) return 'Voyageur Booking';
+    return 'Voyageur';
+  }
+  
+  return cleaned;
+}
+
+window.cleanGuestName = cleanGuestName;
+    
     document.addEventListener('DOMContentLoaded', function () {
       /* Nouvelle réservation */
 
@@ -3655,7 +3674,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   (r.property && (r.property.name || r.property.title || r.property.label)) ||
   getPropertyNameById(propertyId, properties);
 
-              const guestName = r.guestName || r.name || '';
+const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source || r.platform);
               html += `
                 <div style="margin-bottom:8px;">
                   <strong>${propName}</strong>${guestName ? ' – ' + guestName : ''}
@@ -3724,90 +3743,6 @@ function populateEditBookingProperties(selectedPropertyId) {
       if (newReservationCancel) {
         newReservationCancel.addEventListener('click', closeNewReservationModal);
       }
-
-      if (newReservationForm) {
-  newReservationForm.addEventListener('submit', async function (e) {
-  e.preventDefault();
-
-  if (!nrPropertySelect || !nrPropertySelect.value) {
-    alert('Merci de sélectionner un logement.');
-    return;
-  }
-
-  // ⚠️ On garde l’ID tel qu’il est (string)
-  const propertyId = nrPropertySelect.value;
-
-  const guestNameInput = document.getElementById('nrGuestName');
-  const startDateInput = document.getElementById('nrStartDate');
-  const endDateInput = document.getElementById('nrEndDate');
-  const notesInput = document.getElementById('nrNotes');
-
-  const guestName = guestNameInput ? guestNameInput.value.trim() : '';
-  const startDate = startDateInput ? startDateInput.value : '';
-  const endDate = endDateInput ? endDateInput.value : '';
-  const notes = notesInput ? notesInput.value.trim() : '';
-
-  if (!startDate || !endDate) {
-    alert("Merci de renseigner les dates d'arrivée et de départ.");
-    return;
-  }
-
-  console.log('Payload nouvelle réservation :', {
-    propertyId,
-    start: startDate,
-    end: endDate,
-    guestName,
-    notes
-  });
-
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = 'Bearer ' + token;
-    }
-
-    const response = await fetch('/api/reservations/manual', {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        propertyId: propertyId,
-        start: startDate,
-        end: endDate,
-        guestName: guestName,
-        notes: notes
-      })
-    });
-
-    const data = await response.json();
-    console.log('Réponse création réservation manuelle :', data);
-
-    if (!response.ok) {
-      const message = data && data.error
-        ? data.error
-        : 'Erreur lors de la création de la réservation (code ' + response.status + ')';
-      throw new Error(message);
-    }
-
-    // Recharger les réservations pour mettre à jour les calendriers
-    if (typeof loadReservations === 'function') {
-      try {
-        await loadReservations();
-      } catch (e) {
-        console.warn('Impossible de recharger les réservations après la création', e);
-      }
-    }
-
-    alert('Réservation enregistrée.');
-    closeNewReservationModal();
-  } catch (err) {
-    console.error('Erreur création réservation manuelle', err);
-    alert(err.message || 'Erreur lors de la création de la réservation.');
-  }
-});
-      } // Fermeture du if (newReservationForm)
-
-
 
       /* Notifications */
       
@@ -4481,7 +4416,7 @@ function populateEditBookingProperties(selectedPropertyId) {
 
         return {
           type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
-          who: r.guestName || r.summary || 'Réservation',
+who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           startStr: formatDateFR(s),
@@ -4573,7 +4508,7 @@ function populateEditBookingProperties(selectedPropertyId) {
           end,
           startStr: formatDateFR(dateOnlyStr(rawStart)),
           endStr: formatDateFR(dateOnlyStr(rawEnd)),
-          who: r.guestName || r.summary || 'Réservation',
+who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           riskLevel: r.riskLevel || 'green',
@@ -4751,7 +4686,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
             const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
             const end = formatDateFR(dateOnlyStr(r.endDate||r.end));
             const prop = r.propertyName || r.propertyId || 'Logement';
-            const name = r.guestName || 'Voyageur';
+const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voyageur';
             const score = Math.round(r.riskScore||0);
             const color = window.riskColor(r.riskLevel);
             const riskLabel = r.riskLabel || r.riskLevel || '';
@@ -5551,7 +5486,13 @@ function riskColor(level) {
 
         var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
 
-        if (lastNight < range.start || startDay > range.end) continue;
+        // ✅ CORRECTION : Ne plus filtrer les réservations passées
+        // On garde toutes les réservations pour l'historique
+        // Ancien code : if (lastNight < range.start || startDay > range.end) continue;
+        
+        // Nouveau : on affiche seulement si la réservation est visible dans la plage
+        if (startDay > range.end) continue; // Trop dans le futur
+        // On garde les réservations passées pour l'historique
 
         var cells = [];
         var cur = new Date(startDay.getTime());
@@ -5621,12 +5562,8 @@ if (j === 0 || cells.length === 1) {
   // Label invité
   var guestLabel = b.guestName || 'Réservation';
 
-  // 🟣 Cas particulier Airbnb : l’iCal met souvent "Reserved"
-  if (platform === 'airbnb') {
-    if (!guestLabel || /^reserved$/i.test(guestLabel.trim())) {
-      guestLabel = 'Voyageur';
-    }
-  }
+ // ✅ Utiliser la fonction helper
+guestLabel = window.cleanGuestName(guestLabel, platform);
 
   // (optionnel) Booking : si pas de nom, on met aussi "Voyageur"
   if (platform === 'booking' && !guestLabel) {
@@ -8339,7 +8276,7 @@ if (document.readyState === 'loading') {
 //   setTimeout(() => {
 //     initFirebasePush();
 //   }, 3000);
-})();
+// })();
 </script>
 <script>
 // ============================================

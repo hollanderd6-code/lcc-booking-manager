@@ -192,24 +192,25 @@
         throw err;
       }
 
-      // Si 401: logout + redirection (SAUF pour sous-comptes sur routes non-critiques)
+      // Si 401: logout + redirection (SAUF pour sous-comptes)
       if (res.status === 401) {
         console.warn('🚨 [AUTH-FETCH] 401 Unauthorized');
         
-        // ✅ SOUS-COMPTES : Ne pas déconnecter sur certaines routes
         const accountType = localStorage.getItem('lcc_account_type');
-        const nonCriticalRoutes = [
-          '/api/cleaning/checklists',
-          '/api/properties',
-          '/api/subscription/status',
-          '/api/auth/login',
-          '/api/sub-accounts/login'
-        ];
-        
-        const isNonCritical = nonCriticalRoutes.some(route => urlStr.includes(route));
-        
-        if (isNonCritical) {
-          console.log('⚠️ [AUTH-FETCH] Route exclue du 401 auto-logout, pas de déconnexion');
+
+        // ✅ SOUS-COMPTES : Ne jamais auto-déconnecter
+        // Les sous-comptes peuvent légitimement recevoir des 401 sur certaines routes
+        // La page gère elle-même l'erreur
+        if (accountType === 'sub') {
+          console.log('⚠️ [AUTH-FETCH] Sous-compte + 401, pas de déconnexion automatique');
+          return res;
+        }
+
+        // ✅ Routes login : ne pas déconnecter (fallback sous-compte en cours)
+        const loginRoutes = ['/api/auth/login', '/api/sub-accounts/login'];
+        const isLoginRoute = loginRoutes.some(route => urlStr.includes(route));
+        if (isLoginRoute) {
+          console.log('⚠️ [AUTH-FETCH] Route login, pas de déconnexion');
           return res;
         }
         

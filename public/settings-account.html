@@ -1765,14 +1765,15 @@ if (logoInput && logoPreview) {
       const p = (planType || 'solo').toLowerCase();
       
       // Nouveaux plans
-      if (p === 'solo') return 14.90;
+      if (p === 'solo') return 15.00;
+      if (p === 'standard') return 29.00;
       if (p === 'pro') return 49.00;
       if (p === 'business') return 99.00;
       
       // Anciens plans (pour compatibilité)
-      if (p === 'basic') return 14.90; // Redirection vers Solo
+      if (p === 'basic') return 15.00; // Redirection vers Solo
       
-      return 14.90; // Par défaut : Solo
+      return 15.00; // Par défaut : Solo
     }
 
     // ✅ NOUVEAU : Retourner le nom lisible du plan
@@ -1780,6 +1781,7 @@ if (logoInput && logoPreview) {
       const p = (planType || 'solo').toLowerCase();
       
       if (p === 'solo') return 'Solo';
+      if (p === 'standard') return 'Standard';
       if (p === 'pro') return 'Pro';
       if (p === 'business') return 'Business';
       if (p === 'basic') return 'Solo'; // Ancien nom
@@ -1886,10 +1888,10 @@ if (logoInput && logoPreview) {
               <i class="fas fa-cog"></i>
               Gérer mon abonnement
             </button>
-            ${data.planType === 'solo' || data.planType === 'basic' ? `
+            ${data.planType === 'solo' || data.planType === 'standard' || data.planType === 'basic' ? `
               <a href="/pricing.html" class="btn btn-primary">
                 <i class="fas fa-arrow-up"></i>
-                Passer à Pro
+                ${data.planType === 'solo' || data.planType === 'basic' ? 'Passer à Standard ou Pro' : 'Passer à Pro'}
               </a>
             ` : ''}
           `;

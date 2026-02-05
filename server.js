@@ -64,9 +64,34 @@ const {
   sendCleaningReminderNotification,
   sendNewInvoiceNotification,
   sendNewReservationNotification,
+  sendCancelledReservationNotification,
   setPool,             
   initializeFirebase    
 } = require('./services/notifications-service');
+/**
+ * Nettoie le nom du voyageur extrait d'iCal
+ */
+function cleanGuestName(rawName, platform) {
+  if (!rawName) {
+    return platform ? `Voyageur ${platform}` : 'Voyageur';
+  }
+  
+  const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+  
+  const invalidNames = ['not available', 'closed', 'reservation', 'blocked', 'unavailable', 'booked'];
+  
+if (invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
+    if (platform && platform.toLowerCase().includes('airbnb')) {
+      return 'Voyageur Airbnb';
+    } else if (platform && platform.toLowerCase().includes('booking')) {
+      return 'Voyageur Booking';
+    } else {
+      return 'Voyageur';
+    }
+  }
+  
+  return cleaned;
+}
 // ============================================
 // ✅ IMPORT DU SERVICE DE MESSAGES D'ARRIVÉE
 // ============================================
@@ -394,6 +419,89 @@ cron.schedule('0 10 * * *', async () => {
 
 console.log('✅ CRON job demandes de caution configuré (tous les jours à 10h, J-2 avant arrivée)');
 
+// ============================================
+// CRON JOB : RAPPEL LIBERATION CAUTION J-1
+// ============================================
+cron.schedule('0 10 * * *', async () => {
+  console.log('CRON: Rappel liberation cautions a 10h00');
+  try {
+    // Recuperer tous les utilisateurs
+    const usersResult = await pool.query(
+      `SELECT DISTINCT u.id 
+       FROM users u 
+       JOIN user_fcm_tokens t ON u.id = t.user_id 
+       WHERE t.fcm_token IS NOT NULL`
+    );
+    
+    for (const user of usersResult.rows) {
+      // Recuperer TOUS les tokens
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      
+      if (tokensResult.rows.length === 0) continue;
+      
+      // Chercher les cautions capturees il y a 6 jours (liberation demain)
+      const sixDaysAgo = new Date();
+      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+      sixDaysAgo.setHours(0, 0, 0, 0);
+      const fiveDaysAgo = new Date(sixDaysAgo);
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() + 1);
+      
+      // ✅ CORRECTION : Requête SQL sans JOIN (conversation_id n'existe pas)
+      const depositsResult = await pool.query(
+        `SELECT * 
+         FROM deposits 
+         WHERE user_id = $1
+         AND status = 'captured'
+         AND captured_at >= $2
+         AND captured_at < $3`,
+        [user.id, sixDaysAgo, fiveDaysAgo]
+      );
+      
+      if (depositsResult.rows.length > 0) {
+        // ✅ Enrichir avec les données du store en mémoire
+        const enrichedDeposits = depositsResult.rows.map(d => {
+          const result = findReservationByUidForUser(d.reservation_uid, user.id);
+          return {
+            ...d,
+            property_name: result?.property?.name || 'Logement',
+            guest_name: result?.reservation?.guestName || 'Voyageur',
+            amount: (d.amount_cents / 100).toFixed(0)
+          };
+        });
+        
+        const depositsList = enrichedDeposits
+          .map(d => `${d.property_name} - ${d.guest_name} (${d.amount}€)`)
+          .join(', ');
+        
+        // Envoyer a TOUS les appareils
+        for (const token of tokensResult.rows) {
+          await sendNotification(
+            token.fcm_token,
+            `Rappel : ${depositsResult.rows.length} caution(s) a liberer demain`,
+            depositsList,
+            { 
+              type: 'deposit_release_reminder', 
+              count: depositsResult.rows.length.toString() 
+            }
+          );
+        }
+        
+        console.log(`Rappel liberation caution envoye a user ${user.id} : ${depositsResult.rows.length} caution(s)`);
+      }
+    }
+    
+    console.log('Rappels liberation cautions envoyes');
+  } catch (error) {
+    console.error('Erreur CRON rappels cautions:', error);
+  }
+}, {
+  timezone: "Europe/Paris"
+});
+
+console.log('CRON rappels liberation cautions configure (tous les jours a 10h)');
 // ============================================
 // CRON JOB : INFOS D'ACCÈS JOUR J À 7H
 // ============================================
@@ -1671,8 +1779,9 @@ const EMAIL_FROM = `"Boostinghost" <${process.env.EMAIL_USER}>`;
 app.locals.pool = pool;
 
 // Augmenter la limite pour les uploads de photos
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+// ⚠️ COMMENTÉ : bodyParser doit être APRÈS le webhook Stripe (voir ligne 2038-2041)
+// app.use(bodyParser.json({ limit: '50mb' }));
+// app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
@@ -1714,10 +1823,9 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         const paymentType = session.metadata?.payment_type;
         const depositId = session.metadata?.deposit_id;
         const paymentId = session.metadata?.payment_id;
-        
         // 💰 PAIEMENT DE LOCATION
         if (paymentType === 'location' || paymentId) {
-          console.log('💰 Paiement de location détecté');
+          console.log('Paiement de location detecte');
           try {
             await pool.query(`
               UPDATE payments 
@@ -1727,42 +1835,59 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
               WHERE id = $2 OR stripe_session_id = $3
             `, [session.payment_intent, paymentId, session.id]);
             
-            console.log(`✅ Paiement confirmé: ${paymentId || session.id}`);
+            console.log(`Paiement confirme: ${paymentId || session.id}`);
           } catch (err) {
-            console.error('Erreur mise à jour payment:', err);
+            console.error('Erreur mise a jour payment:', err);
           }
           break;
         }
         
         // 🛡️ CAUTION
         if (depositId || session.metadata?.deposit_id) {
-          console.log('🛡️ Caution détectée');
+          console.log('Caution detectee');
           try {
-            await pool.query(`
+            // Recuperer le Payment Intent pour verifier s'il est autorise ou capture
+            const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+            
+            // Determiner le statut en fonction de l'etat Stripe
+            let depositStatus = 'authorized';
+            if (paymentIntent.status === 'succeeded' && paymentIntent.charges.data[0]?.captured) {
+              depositStatus = 'captured';
+            }
+            
+            // Mettre à jour la caution - VERSION SIMPLIFIÉE
+            const updateQuery = `
               UPDATE deposits 
-              SET status = 'paid',
-                  stripe_payment_intent_id = $1,
+              SET status = $1,
+                  stripe_payment_intent_id = $2,
                   updated_at = NOW()
-              WHERE id = $2 OR stripe_session_id = $3
-            `, [session.payment_intent, depositId, session.id]);
+              WHERE id = $3 OR stripe_session_id = $4
+            `;
             
-            console.log(`✅ Caution confirmée: ${depositId || session.id}`);
+            await pool.query(updateQuery, [depositStatus, session.payment_intent, depositId, session.id]);
             
-            // 🤖 Envoyer automatiquement les infos si c'est bientôt l'arrivée
+            // Mettre à jour les timestamps séparément pour éviter les conflits de type
+            if (depositStatus === 'authorized') {
+              await pool.query(`UPDATE deposits SET authorized_at = NOW() WHERE id = $1`, [depositId]);
+            } else if (depositStatus === 'captured') {
+              await pool.query(`UPDATE deposits SET captured_at = NOW() WHERE id = $1`, [depositId]);
+            }
+            
+            console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
+            
+            // Envoyer automatiquement les infos si c'est bientot l'arrivee
             if (depositId) {
               await handleDepositPaid(depositId, io);
             }
           } catch (err) {
-            console.error('Erreur mise à jour deposit:', err);
+            console.error('Erreur mise a jour deposit:', err);
           }
           break;
         }
         
         // 📝 ABONNEMENT (logique existante)
         const userId = session.client_reference_id || session.metadata?.userId;
-        const plan = session.metadata?.plan || 'solo_monthly';
-        const basePlan = getBasePlanName(plan);
-
+        
         if (!userId) {
           console.error('userId manquant dans checkout.session.completed');
           break;
@@ -1771,22 +1896,65 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         const subscriptionId = session.subscription;
         const customerId = session.customer;
 
-        await pool.query(
-          `INSERT INTO subscriptions 
-           (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
-           VALUES ($1, $2, $3, $4, 'trial', NOW(), NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
-           ON CONFLICT (user_id) 
-           DO UPDATE SET
-             stripe_subscription_id = $2,
-             stripe_customer_id = $3,
-             plan_type = $4,
-             status = 'trial',
-             trial_start_date = NOW(),
-             trial_end_date = NOW() + INTERVAL '14 days',
-             current_period_end = NOW() + INTERVAL '14 days',
-             updated_at = NOW()`,
-          [userId, subscriptionId, customerId, basePlan]
-        );
+        // Récupérer l'abonnement Stripe pour vérifier s'il y a un essai gratuit
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const isTrialing = stripeSubscription.status === 'trialing';
+        
+        // ✅ AMÉLIORATION : Récupérer le vrai plan depuis le Price ID Stripe
+        let plan = session.metadata?.plan;
+        
+        // Si pas de metadata ou metadata incorrecte, récupérer depuis le Price ID
+        if (!plan || plan === 'solo_monthly') {
+          const priceId = stripeSubscription.items.data[0]?.price?.id;
+          if (priceId) {
+            plan = getPlanFromPriceId(priceId);
+            console.log(`✅ Plan détecté depuis Price ID: ${priceId} -> ${plan}`);
+          } else {
+            plan = 'solo_monthly';
+            console.warn('⚠️ Aucun Price ID trouvé, utilisation du plan Solo par défaut');
+          }
+        }
+        
+        const basePlan = getBasePlanName(plan);
+        const subscriptionStatus = isTrialing ? 'trial' : 'active';
+
+        if (isTrialing) {
+          // Avec période d'essai
+          await pool.query(
+            `INSERT INTO subscriptions 
+             (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
+             VALUES ($1, $2, $3, $4, 'trial', NOW(), to_timestamp($5), to_timestamp($6))
+             ON CONFLICT (user_id) 
+             DO UPDATE SET
+               stripe_subscription_id = $2,
+               stripe_customer_id = $3,
+               plan_type = $4,
+               status = 'trial',
+               trial_start_date = NOW(),
+               trial_end_date = to_timestamp($5),
+               current_period_end = to_timestamp($6),
+               updated_at = NOW()`,
+            [userId, subscriptionId, customerId, basePlan, stripeSubscription.trial_end, stripeSubscription.current_period_end]
+          );
+        } else {
+          // Sans période d'essai - abonnement actif immédiatement
+          await pool.query(
+            `INSERT INTO subscriptions 
+             (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, current_period_end)
+             VALUES ($1, $2, $3, $4, 'active', to_timestamp($5))
+             ON CONFLICT (user_id) 
+             DO UPDATE SET
+               stripe_subscription_id = $2,
+               stripe_customer_id = $3,
+               plan_type = $4,
+               status = 'active',
+               trial_start_date = NULL,
+               trial_end_date = NULL,
+               current_period_end = to_timestamp($5),
+               updated_at = NOW()`,
+            [userId, subscriptionId, customerId, basePlan, stripeSubscription.current_period_end]
+          );
+        }
 
         const userResult = await pool.query(
           'SELECT email, first_name FROM users WHERE id = $1',
@@ -1798,11 +1966,17 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           const userFirstName = userResult.rows[0].first_name || 'cher membre';
           const planAmount = getPlanAmount(plan);
 
-          await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
-          await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
+          if (isTrialing) {
+            await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
+            await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
+            console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
+          } else {
+            await sendSubscriptionConfirmedEmail(userEmail, userFirstName, basePlan, planAmount);
+            await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
+            console.log(`✅ Abonnement actif créé pour user ${userId} (plan: ${basePlan})`);
+          }
         }
 
-        console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
         break;
       }
 
@@ -2548,8 +2722,8 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
-    // Utiliser user_id = 1 (toutes les propriétés appartiennent au même utilisateur)
-    const realUserId = 1;
+    // ✅ Utiliser le userId passé en paramètre
+    const realUserId = userId;
     
     // Vérifier si la réservation existe déjà
     const existingResult = await pool.query(
@@ -2558,7 +2732,13 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     );
     
     const isNewReservation = existingResult.rows.length === 0;
-    
+    // ✅ AJOUTEZ CES LOGS
+console.log(`🔍 DEBUG saveReservationToDB:`);
+console.log(`   → UID: ${reservation.uid}`);
+console.log(`   → Source: ${reservation.source}`);
+console.log(`   → Type: ${reservation.type}`);
+console.log(`   → isNewReservation: ${isNewReservation}`);
+console.log(`   → realUserId: ${realUserId}`);
     // Insérer ou mettre à jour
     const result = await pool.query(`
       INSERT INTO reservations (
@@ -2588,7 +2768,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
       realUserId,
       reservation.start,
       reservation.end,
-      reservation.guestName || null,
+cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
       reservation.guestEmail || null,
       reservation.guestPhone || null,
       reservation.source || 'MANUEL',
@@ -2601,11 +2781,14 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     ]);
 
     const reservationId = result.rows[0].id;
+   // Verifier si la reservation est dans les 12 prochains mois
+   const now = new Date();
+   const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+   const reservationStart = new Date(reservation.start);
+   const isWithinOneYear = reservationStart >= now && reservationStart <= oneYearFromNow;
 
-    // 🔔 NOTIFICATION SEULEMENT SI NOUVELLE RÉSERVATION
-if (isNewReservation) {
+   if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual' && isWithinOneYear) {
   try {
-    // Récupérer le nom de la propriété
     const propResult = await pool.query(
       'SELECT name FROM properties WHERE id = $1',
       [propertyId]
@@ -2613,26 +2796,24 @@ if (isNewReservation) {
     
     if (propResult.rows.length > 0) {
       await sendNewReservationNotification(
-        realUserId,
-        reservationId,
-        propResult.rows[0].name,
-        reservation.guestName || 'Voyageur',
-        reservation.start,
-        reservation.end,
-        reservation.platform || 'direct'
-      );
+  realUserId,
+  cleanGuestName(reservation.guestName, reservation.platform || reservation.source),  
+  propResult.rows[0].name,
+  reservation.start,
+  reservation.end 
+);
       
-      console.log(`✅ Notification réservation envoyée pour ${propResult.rows[0].name}`);
+      console.log(`Notification reservation iCal envoyee pour ${propResult.rows[0].name}`);
     }
-} catch (notifError) {
-    console.error('❌ Erreur notification réservation:', notifError.message);
+  } catch (notifError) {
+    console.error('Erreur notification reservation:', notifError.message);
   }
 
   // ============================================
-  // ✅ CRÉATION AUTOMATIQUE DE CONVERSATION
+  // CREATION AUTOMATIQUE DE CONVERSATION
   // ============================================
   
-  // Vérifier si une conversation existe déjà
+  // Verifier si une conversation existe deja
   const existingConv = await pool.query(
     `SELECT id FROM conversations 
      WHERE property_id = $1 
@@ -2641,7 +2822,7 @@ if (isNewReservation) {
     [propertyId, reservation.start, reservation.platform || 'direct']
   );
 
-  // Si pas de conversation, en créer une
+  // Si pas de conversation, en creer une
   if (existingConv.rows.length === 0) {
     const crypto = require('crypto');
     const uniqueToken = crypto.randomBytes(32).toString('hex');
@@ -2669,14 +2850,16 @@ if (isNewReservation) {
     
     const conversationId = convResult.rows[0].id;
     
-    // ✅ Envoyer le message de bienvenue automatique
+    // Envoyer le message de bienvenue automatique
     if (typeof sendWelcomeMessageForNewReservation === 'function') {
       await sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, realUserId);
     }
     
-    console.log(`✅ Conversation ${conversationId} créée automatiquement pour réservation ${reservation.uid}`);
+    console.log(`Conversation ${conversationId} creee automatiquement pour reservation ${reservation.uid}`);
   }
-}  // ← Ferme le if (isNewReservation)
+}  else if (isNewReservation && !isWithinOneYear) {
+  console.log(`Nouvelle reservation pour ${reservation.start} ignoree (au-dela de 12 mois)`);
+}
 
     return true;
   } catch (error) {
@@ -3126,11 +3309,67 @@ async function syncCalendarAndSaveToPostgres(property) {
     // Sauvegarder en PostgreSQL
     await savePropertyReservations(property.id, reservations, property.userId);
     
-    // Mettre à jour le cache
-    RESERVATIONS_CACHE[property.id] = reservations;
-    reservationsStore.properties[property.id] = reservations;
+    // Marquer les réservations passées comme "completed"
+    const now = new Date();
+    await pool.query(
+      `UPDATE reservations 
+       SET status = 'completed', updated_at = NOW()
+       WHERE property_id = $1 
+       AND end_date < $2 
+       AND status = 'confirmed'`,
+      [property.id, now]
+    );
+
+    // ✅ CORRECTION : Récupérer les réservations 'completed' depuis PostgreSQL
+    const completedResult = await pool.query(
+      `SELECT 
+        id, uid, property_id, user_id,
+        start_date, end_date,
+        guest_name, guest_email, guest_phone,
+        source, platform, reservation_type,
+        price, currency, status,
+        raw_ical_data, notes,
+        created_at, updated_at, synced_at
+       FROM reservations
+       WHERE property_id = $1 
+       AND status = 'completed'
+       AND source != 'MANUEL'
+       AND reservation_type != 'manual'
+       ORDER BY start_date ASC`,
+      [property.id]
+    );
+
+    const completedReservations = completedResult.rows.map(row => ({
+      id: row.id,
+      uid: row.uid,
+      start: row.start_date,
+      end: row.end_date,
+      guestName: row.guest_name,
+      guestEmail: row.guest_email,
+      guestPhone: row.guest_phone,
+      source: row.source,
+      platform: row.platform,
+      type: row.reservation_type,
+      price: parseFloat(row.price) || 0,
+      currency: row.currency,
+      status: row.status,
+      rawData: row.raw_ical_data,
+      notes: row.notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      syncedAt: row.synced_at
+    }));
     
-    return reservations;
+    // ✅ Mettre à jour le cache avec iCal actuel + historique completed
+    const allReservations = [
+      ...reservations,
+      ...completedReservations
+    ];
+    
+    RESERVATIONS_CACHE[property.id] = allReservations;
+    reservationsStore.properties[property.id] = allReservations;
+    
+    return allReservations;
   } catch (error) {
     console.error(`❌ Erreur synchro ${property.name}:`, error);
     return [];
@@ -3551,19 +3790,40 @@ async function releaseDeposit(depositId) {
 
     const depositData = deposit.rows[0];
     
-    if (!depositData.stripe_payment_intent_id) {
-      throw new Error('Pas de Payment Intent associé');
+    // CAS 1 : Caution AVEC Stripe Payment Intent
+    if (depositData.stripe_payment_intent_id) {
+      console.log(`Liberation caution Stripe ${depositId}`);
+      
+      // Si la caution a ete capturee, il faut faire un REFUND
+      if (depositData.status === 'captured' || depositData.status === 'paid') {
+        console.log(`Creation refund pour ${depositData.stripe_payment_intent_id}`);
+        
+        const refund = await stripe.refunds.create({
+          payment_intent: depositData.stripe_payment_intent_id,
+        });
+        
+        console.log(`Refund cree : ${refund.id}`);
+        
+      } else if (depositData.status === 'authorized') {
+        // Si la caution est seulement autorisee, on peut annuler
+        console.log(`Annulation Payment Intent ${depositData.stripe_payment_intent_id}`);
+        await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
+      }
+    } 
+    // CAS 2 : Caution MANUELLE (sans Stripe)
+    else {
+      console.log(`Liberation caution manuelle ${depositId} (pas de Stripe Payment Intent)`);
     }
 
-    // Annuler via Stripe
-    await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
-
-    // Mettre à jour en base
+    // Mettre a jour en base (dans tous les cas)
     await updateDepositStatus(depositId, 'released');
-
+    
+    console.log(`Caution ${depositId} liberee avec succes`);
     return true;
+    
   } catch (error) {
-    console.error('❌ Erreur releaseDeposit:', error);
+    console.error('Erreur releaseDeposit:', error);
+    console.error('Stack:', error.stack);
     return false;
   }
 }
@@ -4003,10 +4263,20 @@ async function syncAllCalendars() {
 
       // ➕ Nouvelles réservations (présentes dans new mais pas dans old)
       const trulyNewReservations = newIcalReservations.filter(r => !oldIds.has(r.uid));
-
-      // ➖ Réservations annulées (présentes dans old mais plus dans new)
-      const cancelledForProperty = oldIcalReservations.filter(r => !newIds.has(r.uid));
-
+      
+      // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
+      const now = new Date();
+      const cancelledForProperty = oldIcalReservations.filter(r => {
+        // Si la réservation n'est plus dans le flux
+        if (!newIds.has(r.uid)) {
+          // Vérifier si c'est une réservation FUTURE
+          const endDate = new Date(r.end);
+          // Seulement considérer comme annulée si la date de fin est dans le futur
+          return endDate >= now;
+        }
+        return false;
+      });
+      
       if (trulyNewReservations.length > 0) {
         newReservations.push(
           ...trulyNewReservations.map(r => ({
@@ -4018,7 +4288,7 @@ async function syncAllCalendars() {
           }))
         );
       }
-
+      
       if (cancelledForProperty.length > 0) {
         cancelledReservations.push(
           ...cancelledForProperty.map(r => ({
@@ -4031,19 +4301,72 @@ async function syncAllCalendars() {
         );
       }
 
-      // Base = iCal
-      reservationsStore.properties[property.id] = newIcalReservations;
+      // SAUVEGARDER DANS POSTGRESQL
+      if (newIcalReservations.length > 0) {
+        await savePropertyReservations(property.id, newIcalReservations, property.userId);
+      }
 
-     // SAUVEGARDER DANS POSTGRESQL
-if (newIcalReservations.length > 0) {
-  await savePropertyReservations(property.id, newIcalReservations, property.userId);
-}
+      // MARQUER LES RESERVATIONS PASSEES COMME "COMPLETED"
+      await pool.query(
+        `UPDATE reservations 
+         SET status = 'completed', updated_at = NOW()
+         WHERE property_id = $1 
+         AND end_date < $2 
+         AND status = 'confirmed'`,
+        [property.id, now]
+      );
 
-console.log(`🔍 Recherche manuelles pour property.id: ${property.id}`);
-console.log(`🔍 Clés dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
-const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
-console.log(`🔍 Trouvé ${manualForProperty.length} réservations manuelles`);
+      // ✅ CORRECTION : Récupérer les réservations 'completed' depuis PostgreSQL
+      const completedResult = await pool.query(
+        `SELECT 
+          id, uid, property_id, user_id,
+          start_date, end_date,
+          guest_name, guest_email, guest_phone,
+          source, platform, reservation_type,
+          price, currency, status,
+          raw_ical_data, notes,
+          created_at, updated_at, synced_at
+         FROM reservations
+         WHERE property_id = $1 
+         AND status = 'completed'
+         AND source != 'MANUEL'
+         AND reservation_type != 'manual'
+         ORDER BY start_date ASC`,
+        [property.id]
+      );
 
+      const completedReservations = completedResult.rows.map(row => ({
+        id: row.id,
+        uid: row.uid,
+        start: row.start_date,
+        end: row.end_date,
+        guestName: row.guest_name,
+        guestEmail: row.guest_email,
+        guestPhone: row.guest_phone,
+        source: row.source,
+        platform: row.platform,
+        type: row.reservation_type,
+        price: parseFloat(row.price) || 0,
+        currency: row.currency,
+        status: row.status,
+        rawData: row.raw_ical_data,
+        notes: row.notes,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        syncedAt: row.synced_at
+      }));
+
+      // ✅ Base = iCal actuel + historique completed
+      reservationsStore.properties[property.id] = [
+        ...newIcalReservations,
+        ...completedReservations
+      ];
+
+      console.log(`Recherche manuelles pour property.id: ${property.id}`);
+      console.log(`Cles dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
+      const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
+      console.log(`Trouve ${manualForProperty.length} reservations manuelles`);
+      
 // Ajouter les réservations manuelles SANS DOUBLON
 if (manualForProperty.length > 0) {
   // Créer un Set des UIDs déjà présents dans reservationsStore
@@ -4077,30 +4400,84 @@ console.log(
   reservationsStore.lastSync = new Date();
   reservationsStore.syncStatus = 'idle';
 
-  // 🔔 Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
+ // Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
   if (!isFirstSync && (newReservations.length > 0 || cancelledReservations.length > 0)) {
     console.log(
-      `📧 Notifications à envoyer – nouvelles: ${newReservations.length}, annulées: ${cancelledReservations.length}`
+      `Notifications a envoyer - nouvelles: ${newReservations.length}, annulees: ${cancelledReservations.length}`
     );
       //     try {
       //       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
       //     } catch (err) {
-      //       console.error('❌ Erreur lors de l’envoi des notifications propriétaires:', err);
+      //       console.error('Erreur lors de l envoi des notifications proprietaires:', err);
       //     }
-      console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
-
+      console.log('Envoi email desactive - notifications push uniquement');
+    
+    // NOTIFICATIONS POUR NOUVELLES RESERVATIONS
     if (newReservations.length > 0) {
       try {
         await notifyCleanersAboutNewBookings(newReservations);
       } catch (err) {
-        console.error('❌ Erreur lors de l’envoi des notifications ménage:', err);
+        console.error('Erreur lors de l envoi des notifications menage:', err);
       }
     }
+
+    // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
+if (cancelledReservations.length > 0) {
+  // Filtrer pour ne garder que les reservations dans les 3 prochains mois
+  const now = new Date();
+  const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  
+  const futureCancelledReservations = cancelledReservations.filter(r => {
+    const startDate = new Date(r.start);
+    return startDate >= now && startDate <= threeMonthsFromNow;
+  });
+  
+  if (futureCancelledReservations.length > 0) {
+    console.log(`${futureCancelledReservations.length} annulation(s) detectee(s) dans les 3 mois, verification en DB...`);
+    
+    for (const reservation of futureCancelledReservations) {
+      try {
+        // Verifier si la reservation est deja marquee comme annulee en DB
+        const dbCheck = await pool.query(
+          'SELECT status FROM reservations WHERE uid = $1',
+          [reservation.uid]
+        );
+        
+        // Si la reservation existe en DB et n'est PAS deja annulee
+        if (dbCheck.rows.length > 0 && dbCheck.rows[0].status !== 'cancelled') {
+          // Marquer comme annulee en DB
+          await pool.query(
+            'UPDATE reservations SET status = $1, updated_at = NOW() WHERE uid = $2',
+            ['cancelled', reservation.uid]
+          );
+          
+          // Envoyer la notification
+          await sendCancelledReservationNotification(
+            reservation.userId || 1,
+            cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
+            reservation.propertyName,
+            reservation.start,
+            reservation.end
+          );
+          
+          console.log(`Notification annulation envoyee pour ${reservation.propertyName} (${reservation.uid})`);
+        } else if (dbCheck.rows.length > 0 && dbCheck.rows[0].status === 'cancelled') {
+          console.log(`Annulation deja traitee pour ${reservation.propertyName} (${reservation.uid}) - pas de notification`);
+        }
+      } catch (err) {
+        console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
+      }
+    }
+  } else {
+    console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 3 mois - pas de notification`);
+  }
+}
+
   } else if (isFirstSync) {
-    console.log('ℹ️ Première synchronisation : aucune notification envoyée pour éviter les doublons.');
+    console.log('Premiere synchronisation : aucune notification envoyee pour eviter les doublons.');
   }
 
-  console.log('✅ Synchronisation terminée');
+  console.log('Synchronisation terminee');
   return reservationsStore;
 }
 // ============================================
@@ -4283,7 +4660,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       propertyId: property.id,
       propertyName: property.name,
       propertyColor: property.color || '#3b82f6',
-      userId: user.id
+      userId: userId
     };
     
     console.log('✅ Réservation créée:', uid);
@@ -4346,11 +4723,11 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         //         }
         console.log('ℹ️ Envoi email désactivé - notifications push uniquement');
         
-        // 2. Notification push Firebase
+        // 2. Notification push Firebase - ENVOYER À TOUS LES APPAREILS
         try {
           const tokenResult = await pool.query(
-            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
-            [userId]
+            'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+            [user.id]
           );
           
           if (tokenResult.rows.length > 0) {
@@ -4363,18 +4740,23 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
               month: 'short'
             });
             
-            await sendNotification(
-              tokenResult.rows[0].fcm_token,
-              '📅 Nouvelle réservation',
-              `${property.name} - ${checkInDate} au ${checkOutDate}`,
-              {
-                type: 'new_reservation',
-                reservation_id: uid,
-                property_name: property.name
-              }
-            );
+            // ✅ ENVOYER À TOUS LES TOKENS
+            for (const tokenRow of tokenResult.rows) {
+              await sendNotification(
+                tokenRow.fcm_token,
+                '📅 Nouvelle réservation',
+                `${property.name} - ${checkInDate} au ${checkOutDate}`,
+                {
+                  type: 'new_reservation',
+                  reservation_id: uid,
+                  property_name: property.name
+                }
+              );
+              
+              console.log(`✅ Notification envoyée au ${tokenRow.device_type}`);
+            }
             
-            console.log(`✅ Notification push réservation envoyée pour ${property.name}`);
+            console.log(`✅ ${tokenResult.rows.length} notification(s) envoyée(s) pour ${property.name}`);
           }
         } catch (pushError) {
           console.error('❌ Erreur notification push:', pushError.message);
@@ -4392,6 +4774,175 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
     }
   }
 });
+// ============================================
+// 🧪 ROUTE DE TEST - FORMAT IDENTIQUE AU CHAT
+// ============================================
+// Cette route envoie EXACTEMENT le même format que les notifications
+// de chat qui fonctionnent (pour isoler le problème)
+
+app.get('/test-push-like-chat', async (req, res) => {
+  console.log('🧪 [TEST CHAT FORMAT] Début du test format chat...');
+  
+  try {
+    const userId = req.query.user_id;
+    
+    if (!userId) {
+      return res.status(400).json({
+        error: '❌ Paramètre manquant',
+        message: 'Utilisez : /test-push-like-chat?user_id=VOTRE_ID'
+      });
+    }
+    
+    // Récupérer l'utilisateur
+    const userResult = await pool.query(
+      'SELECT id, email FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.json({ error: 'User introuvable' });
+    }
+    
+    // Récupérer TOUS les tokens (comme sendNewMessageNotification)
+    const tokensResult = await pool.query(
+      `SELECT fcm_token, device_type
+       FROM user_fcm_tokens 
+       WHERE user_id = $1 
+       AND fcm_token IS NOT NULL`,
+      [userId]
+    );
+    
+    if (tokensResult.rows.length === 0) {
+      return res.json({ error: 'Pas de token FCM' });
+    }
+    
+    console.log(`✅ [TEST CHAT FORMAT] ${tokensResult.rows.length} token(s) trouvé(s)`);
+    
+    // Récupérer une propriété
+    const propResult = await pool.query(
+      'SELECT name FROM properties WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    
+    const propertyName = propResult.rows.length > 0 
+      ? propResult.rows[0].name 
+      : 'Voyageur';
+    
+    // Envoyer aux TOUS les appareils avec le MÊME FORMAT que le chat
+    const results = [];
+    
+    for (const row of tokensResult.rows) {
+      console.log(`📤 [TEST CHAT FORMAT] Envoi au ${row.device_type}...`);
+      
+      // ✅ FORMAT IDENTIQUE À sendNewMessageNotification
+      const result = await sendNotification(
+        row.fcm_token,
+        `📩 Message de ${propertyName}`,  // Même format de titre
+        'Ceci est un test de notification (format chat)',  // Message preview
+        {
+          type: 'new_message',  // ✅ MÊME TYPE QUE LE CHAT
+          conversationId: '99999'  // Fake conversation ID
+        }
+      );
+      
+      results.push({
+        device: row.device_type,
+        success: result.success,
+        token_preview: row.fcm_token.substring(0, 20) + '...'
+      });
+      
+      console.log(`${result.success ? '✅' : '❌'} [TEST CHAT FORMAT] ${row.device_type}: ${result.success ? 'OK' : result.error}`);
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    
+    res.json({
+      success: successCount > 0,
+      message: `✅ ${successCount}/${results.length} envoyé(s) avec FORMAT CHAT`,
+      user: userResult.rows[0].email,
+      results: results,
+      info: 'Cette notification utilise le MÊME format que le chat qui fonctionne'
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST CHAT FORMAT] Erreur:', error);
+    res.json({ error: error.message });
+  }
+});
+
+console.log('✅ Route de test format chat disponible : GET /test-push-like-chat?user_id=X');
+
+// ============================================
+// 🧪 BONUS : ROUTE POUR COMPARER LES 2 FORMATS
+// ============================================
+
+app.get('/test-push-compare', async (req, res) => {
+  try {
+    const userId = req.query.user_id;
+    if (!userId) {
+      return res.json({ error: 'user_id requis' });
+    }
+    
+    const tokensResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    
+    if (tokensResult.rows.length === 0) {
+      return res.json({ error: 'Pas de token' });
+    }
+    
+    const token = tokensResult.rows[0].fcm_token;
+    
+    // Test 1 : Format CHAT (qui marche)
+    console.log('📤 Test 1 : Format CHAT...');
+    const test1 = await sendNotification(
+      token,
+      '📩 Message de Test',
+      'Notification format CHAT',
+      { type: 'new_message', conversationId: '1' }
+    );
+    
+    // Attendre 3 secondes
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Test 2 : Format RÉSERVATION
+    console.log('📤 Test 2 : Format RÉSERVATION...');
+    const test2 = await sendNotification(
+      token,
+      '📅 Nouvelle réservation',
+      'Notification format RÉSERVATION',
+      { type: 'new_reservation', property_name: 'Test' }
+    );
+    
+    // Attendre 3 secondes
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Test 3 : Format SIMPLE
+    console.log('📤 Test 3 : Format SIMPLE...');
+    const test3 = await sendNotification(
+      token,
+      '🧪 Test Simple',
+      'Notification format SIMPLE',
+      { type: 'test' }
+    );
+    
+    res.json({
+      message: '3 notifications envoyées avec des formats différents',
+      results: {
+        'Format CHAT (fonctionne normalement)': test1.success,
+        'Format RÉSERVATION': test2.success,
+        'Format SIMPLE': test3.success
+      },
+      next_step: 'Vérifiez lesquelles vous avez reçues sur votre téléphone'
+    });
+    
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+});
+
+console.log('✅ Route de comparaison disponible : GET /test-push-compare?user_id=X');
 // ============================================
 // ROUTES RÉSERVATIONS - VERSION CORRIGÉE POSTGRESQL
 // Remplace les routes dans server.js
@@ -4510,7 +5061,7 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     // 3. VÉRIFICATION DU LOGEMENT EN POSTGRESQL
     const propertyCheck = await pool.query(
       'SELECT id, name, color FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, user.id]
+      [propertyId, userId]
     );
     
     if (propertyCheck.rows.length === 0) {
@@ -4522,7 +5073,11 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     console.log('✅ Logement trouvé:', property.name);
     
     // 4. CRÉATION DE LA RÉSERVATION
-    const uid = 'manual_' + Date.now();
+    // ✅ CORRECTION : UID unique avec timestamp + random pour éviter les doublons
+    const crypto = require('crypto');
+    const randomStr = crypto.randomBytes(4).toString('hex'); // 8 caractères hex
+    const uid = `manual_${Date.now()}_${randomStr}`;
+    
     const reservation = {
       uid: uid,
       start: checkIn,
@@ -4622,7 +5177,11 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
   }
 });
 
-// DELETE - Supprimer une réservation
+// ============================================
+// 🔧 CORRECTION : Route DELETE /api/bookings/:uid
+// ============================================
+// Remplacez la route ligne ~4797 dans server.js
+
 app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -4632,15 +5191,76 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
 
     const { uid } = req.params;
     
-    console.log('🗑️  Suppression de la réservation:', uid);
+    console.log('🗑️ Suppression de la réservation:', uid);
     
-    // Supprimer en PostgreSQL (pas juste en mémoire)
-    const deleted = await deleteReservationFromDB(uid);
+    // ✅ SUPPRESSION RÉELLE DE LA DB (pas juste UPDATE status)
+    let deleted = false;
+    let deletedReservation = null;
+    let propertyName = 'Logement';
     
-    if (!deleted) {
+    try {
+      const deleteResult = await pool.query(
+        `DELETE FROM reservations 
+         WHERE uid = $1 AND user_id = $2 
+         RETURNING *, (SELECT name FROM properties WHERE id = reservations.property_id) as property_name`,
+        [uid, user.id]
+      );
+      
+      deleted = deleteResult.rowCount > 0;
+      
+      if (deleted) {
+        deletedReservation = deleteResult.rows[0];
+        propertyName = deletedReservation.property_name || 'Logement';
+        console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
+      } else {
+        console.log(`⚠️ Réservation ${uid} non trouvée`);
+        return res.status(404).json({ error: 'Réservation non trouvée' });
+      }
+    } catch (dbError) {
+      console.error('❌ Erreur suppression DB:', dbError);
       return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
-
+    
+    // ✅ ENVOYER NOTIFICATION D'ANNULATION
+    if (deleted && deletedReservation) {
+      try {
+        const tokensResult = await pool.query(
+          'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+          [user.id]
+        );
+        
+        if (tokensResult.rows.length > 0) {
+          const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short'
+          });
+          
+          for (const tokenRow of tokensResult.rows) {
+            await sendNotification(
+              tokenRow.fcm_token,
+              '❌ Réservation annulée',
+              `${propertyName} - ${cancelDate}`,
+              {
+                type: 'reservation_cancelled',
+                reservation_id: uid,
+                property_name: propertyName
+              }
+            );
+            
+            console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
+          }
+          
+          console.log(`✅ ${tokensResult.rows.length} notification(s) d'annulation envoyée(s)`);
+        }
+      } catch (notifError) {
+        console.error('❌ Erreur notification:', notifError.message);
+        // On continue, la suppression a réussi
+      }
+    }
+    
+    // ✅ Forcer la resynchronisation
+    setImmediate(() => syncAllCalendars());
+    
     console.log('✅ Réservation supprimée');
     
     res.json({ 
@@ -4653,20 +5273,6 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
-// ============================================
-// NOTES IMPORTANTES :
-// ============================================
-// 
-// 1. Ces routes utilisent POSTGRESQL au lieu de reservationsStore
-// 2. La fonction saveReservationToDB doit être celle modifiée qui :
-//    - Sauvegarde en base de données
-//    - Crée automatiquement la conversation
-//    - Envoie le message de bienvenue
-// 3. Les property_id seront maintenant correctement renvoyés
-// 4. Les conversations seront créées automatiquement
-//
-// ============================================
 
 // POST - Créer un blocage manuel (dates bloquées)
 app.post('/api/blocks', async (req, res) => {
@@ -4802,7 +5408,7 @@ app.get('/api/user/profile', async (req, res) => {
         created_at
        FROM users 
        WHERE id = $1`,
-      [userId]
+      [user.id]
     );
 
     if (result.rows.length === 0) {
@@ -4980,15 +5586,10 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
       daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // ✅ AJOUTER LE PRIX
-    let planAmount = 0;
-    if (sub.plan_type === 'basic') {
-      planAmount = 599; // 5,99€ en centimes
-    } else if (sub.plan_type === 'pro') {
-      planAmount = 899; // 8,99€ en centimes
-    }
+    // ✅ Calculer le montant avec la fonction getPlanAmount
+    const planAmount = getPlanAmount(sub.plan_type);
 
-    // ✅ AJOUTER LE DISPLAY MESSAGE
+    // ✅ Message d'affichage
     let displayMessage = 'Abonnement';
     if (sub.status === 'trial') {
       displayMessage = 'Essai gratuit';
@@ -5453,7 +6054,7 @@ app.get('/api/reservations/enriched', authenticateAny, checkSubscription, async 
         const chk = ensureChecklistForReservation({
           reservationUid: r.uid,
           propertyId: property.id,
-          userId: user.id
+          userId: userId
         });
 
         // ✅ Deposit (Stripe) via DEPOSITS JSON
@@ -5551,6 +6152,34 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
   chk.updatedAt = new Date().toISOString();
 
   await saveChecklists();
+  
+  // ✅ Envoyer notification push au propriétaire
+  try {
+    const tokensResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+      [user.id]
+    );
+    
+    if (tokensResult.rows.length > 0) {
+      const propertyName = chk.propertyName || chk.title || 'Logement';
+      
+      await sendNotification(
+        tokensResult.rows[0].fcm_token,
+        '✅ Ménage terminé',
+        `${propertyName} - Checklist complétée`,
+        {
+          type: 'cleaning_completed',
+          reservation_uid: reservationUid,
+          property_name: propertyName
+        }
+      );
+      
+      console.log(`✅ Notification ménage complété envoyée pour ${propertyName}`);
+    }
+  } catch (notifError) {
+    console.error('❌ Erreur notification ménage complété:', notifError.message);
+  }
+  
   res.json({ checklist: chk });
 });
 
@@ -6474,10 +7103,13 @@ app.post('/api/welcome', async (req, res) => {
 // ============================================
 
 // GET - Liste des personnes de ménage de l'utilisateur
-app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) => {
+app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(pool, 'can_view_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6499,10 +7131,13 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, async (req, res) =>
 });
 
 // POST - Créer une nouvelle personne de ménage
-app.post('/api/cleaners', async (req, res) => {
+app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6531,7 +7166,7 @@ app.post('/api/cleaners', async (req, res) => {
       `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), NOW())
        RETURNING id, name, phone, email, notes, pin_code, is_active, created_at`,
-      [id, user.id, name, phone || null, email || null, notes || null, pinCode, isActive]
+      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive]
     );
 
     res.status(201).json({
@@ -6545,10 +7180,13 @@ app.post('/api/cleaners', async (req, res) => {
 });
 
 // PUT - Modifier une personne de ménage
-app.put('/api/cleaners/:id', async (req, res) => {
+app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6565,7 +7203,7 @@ app.put('/api/cleaners/:id', async (req, res) => {
          is_active = COALESCE($7, is_active)
        WHERE id = $1 AND user_id = $2
        RETURNING id, name, phone, email, notes, is_active, created_at`,
-      [id, user.id, name, phone, email, notes, isActive]
+      [id, userId, name, phone, email, notes, isActive]
     );
 
     if (result.rows.length === 0) {
@@ -6583,10 +7221,13 @@ app.put('/api/cleaners/:id', async (req, res) => {
 });
 
 // DELETE - Supprimer une personne de ménage
-app.delete('/api/cleaners/:id', async (req, res) => {
+app.delete('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
@@ -6595,7 +7236,7 @@ app.delete('/api/cleaners/:id', async (req, res) => {
     const result = await pool.query(
       `DELETE FROM cleaners
        WHERE id = $1 AND user_id = $2`,
-      [id, user.id]
+      [id, userId]
     );
 
     if (result.rowCount === 0) {
@@ -6746,7 +7387,7 @@ app.post('/api/cleaning/assignments',
     }
 
     // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -7293,7 +7934,7 @@ app.get('/api/properties/:propertyId',
     }
     
     const { propertyId } = req.params;
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -7504,7 +8145,7 @@ app.post('/api/properties',
        )`,
       [
         id,
-        user.id,
+        userId,
         name,
         color,
         JSON.stringify(normalizedIcal),
@@ -7597,7 +8238,7 @@ app.put('/api/properties/:propertyId',
       chatPin 
     } = body;
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -7733,7 +8374,7 @@ app.put('/api/properties/:propertyId',
       newPracticalInfo,
       newAutoResponsesEnabled,
       propertyId,
-      userId: user.id
+userId: userId
     });
     
     const result = await pool.query(
@@ -7781,7 +8422,7 @@ app.put('/api/properties/:propertyId',
         newPracticalInfo,
         newAutoResponsesEnabled,
         propertyId,
-        user.id
+        userId
       ]
     );
     
@@ -7789,8 +8430,7 @@ app.put('/api/properties/:propertyId',
     
     await loadProperties();
 
-    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
-
+const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     res.json({
       message: 'Logement modifié avec succès',
       property: updated
@@ -7827,7 +8467,7 @@ app.delete('/api/properties/:propertyId',
       }
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -7890,20 +8530,27 @@ app.post('/api/properties/test-ical', async (req, res) => {
 // ============================================
 app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res) => {
   try {
-    const user = req.user;
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non autorise' });
+    }
+    
     const { propertyId } = req.params;
-    const { direction } = req.body; // 'up' | 'down'
+    const { direction } = req.body;
 
     if (!['up', 'down'].includes(direction)) {
       return res.status(400).json({ error: 'Direction invalide' });
     }
 
-    // 🔹 Logement courant
+    // Logement courant
     const currentRes = await pool.query(
       `SELECT id, display_order
        FROM properties
        WHERE id = $1 AND user_id = $2`,
-      [propertyId, user.id]
+      [propertyId, userId]
     );
 
     if (currentRes.rows.length === 0) {
@@ -7913,7 +8560,7 @@ app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res)
     const current = currentRes.rows[0];
     const currentOrder = Number(current.display_order);
 
-    // 🔹 Voisin à échanger
+    // Voisin a echanger
     const neighborRes = await pool.query(
       direction === 'up'
         ? `
@@ -7930,7 +8577,7 @@ app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res)
           ORDER BY display_order ASC
           LIMIT 1
         `,
-      [user.id, currentOrder]
+      [userId, currentOrder]
     );
 
     if (neighborRes.rows.length === 0) {
@@ -8416,112 +9063,6 @@ app.get('/api/messages/upcoming', async (req, res) => {
 // 💳 ROUTES API - ABONNEMENTS (Stripe Billing)
 // ============================================
 
-function getPriceIdForPlan(plan) {
-  const priceIds = {
-    // Plans mensuels
-    'solo_monthly': process.env.STRIPE_PRICE_SOLO_MONTHLY,
-    'pro_monthly': process.env.STRIPE_PRICE_PRO_MONTHLY,
-    'business_monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-    
-    // Plans annuels
-    'solo_annual': process.env.STRIPE_PRICE_SOLO_ANNUAL,
-    'pro_annual': process.env.STRIPE_PRICE_PRO_ANNUAL,
-    'business_annual': process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-    
-    // Rétrocompatibilité (anciens plans)
-    'basic': process.env.STRIPE_PRICE_BASIC,
-    'pro': process.env.STRIPE_PRICE_PRO
-  };
-  
-  return priceIds[plan] || null;
-}
-
-function getPlanAmount(plan) {
-  const amounts = {
-    // Mensuels (en centimes)
-    'solo_monthly': 1490,
-    'pro_monthly': 4900,
-    'business_monthly': 9900,
-    
-    // Annuels (en centimes)
-    'solo_annual': 14900,
-    'pro_annual': 49000,
-    'business_annual': 99000,
-    
-    // Anciens (rétrocompatibilité)
-    'basic': 599,
-    'pro': 899
-  };
-  
-  return amounts[plan] || 0;
-}
-
-function getBasePlanName(plan) {
-  // "solo_monthly" → "solo"
-  // "pro_annual" → "pro"
-  return plan.replace('_monthly', '').replace('_annual', '');
-}
-
-app.post('/api/billing/create-checkout-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-    
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
-    }
-    
-    const { plan } = req.body || {};
-    if (!plan) {
-      return res.status(400).json({ error: 'Plan requis' });
-    }
-    
-    const priceId = getPriceIdForPlan(plan);
-    if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configuré' });
-    }
-    
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-    
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{
-        price: priceId,
-        quantity: 1
-      }],
-      metadata: {
-        userId: user.id,
-        plan: plan,
-        basePlan: getBasePlanName(plan)
-      },
-      customer_email: user.email,
-      client_reference_id: user.id.toString(),
-      
-      // 🎁 Essai gratuit de 14 jours
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          userId: user.id,
-          plan: plan
-        }
-      },
-      
-      success_url: `${appUrl}/app.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/pricing.html`,
-    });
-    
-    console.log(`✅ Session Checkout créée pour user ${user.id}, plan: ${plan}`);
-    res.json({ url: session.url });
-    
-  } catch (err) {
-    console.error('Erreur /api/billing/create-checkout-session :', err);
-    res.status(500).json({ error: 'Impossible de créer la session de paiement' });
-  }
-});
-
 // ============================================
 // 💳 ROUTES API - STRIPE CONNECT (compte hôte)
 // ============================================
@@ -8591,7 +9132,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
         type: 'express',
         email: user.email,
         metadata: {
-          userId: user.id,
+          userId: userId,
           company: user.company || ''
         }
       });
@@ -9302,140 +9843,6 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
 // À COPIER-COLLER DANS server.js APRÈS LES AUTRES ROUTES
 // ============================================
 
-// Helper : Récupérer le Price ID selon le plan
-function getPriceIdForPlan(plan) {
-  if (plan === 'pro') {
-    return process.env.STRIPE_PRICE_PRO || null;
-  }
-  // Par défaut : basic
-  return process.env.STRIPE_PRICE_BASIC || null;
-}
-
-// POST - Créer une session de paiement Stripe
-app.post('/api/billing/create-checkout-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorise' });
-    }
-
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configure' });
-    }
-
-    const { plan } = req.body || {};
-    if (!plan) {
-      return res.status(400).json({ error: 'Plan requis (basic ou pro)' });
-    }
-
-    const priceId = getPriceIdForPlan(plan);
-    if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configure' });
-    }
-
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
-    // Créer la session Stripe Checkout
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1
-        }
-      ],
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          userId: user.id,
-          plan: plan
-        }
-      },
-      customer_email: user.email,
-      client_reference_id: user.id,
-      success_url: `${appUrl}/settings-account.html?tab=subscription&success=true`,
-      cancel_url: `${appUrl}/pricing.html?cancelled=true`
-    });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('Erreur create-checkout-session:', err);
-    res.status(500).json({ error: 'Impossible de creer la session de paiement' });
-  }
-});
-
-// GET - Récupérer le statut d'abonnement de l'utilisateur
-app.get('/api/subscription/status', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorise' });
-    }
-
-    const result = await pool.query(
-      `SELECT 
-        id, status, plan_type, plan_amount,
-        trial_start_date, trial_end_date, 
-        current_period_end, stripe_subscription_id
-      FROM subscriptions 
-      WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Aucun abonnement trouve',
-        hasSubscription: false
-      });
-    }
-
-    const subscription = result.rows[0];
-    const now = new Date();
-
-    let daysRemaining = null;
-    let isExpiringSoon = false;
-
-    if (subscription.status === 'trial') {
-      const trialEnd = new Date(subscription.trial_end_date);
-      daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
-      isExpiringSoon = daysRemaining <= 3 && daysRemaining > 0;
-    }
-
-    let displayMessage = '';
-    if (subscription.status === 'trial') {
-      if (daysRemaining > 0) {
-        displayMessage = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} d'essai restant${daysRemaining > 1 ? 's' : ''}`;
-      } else {
-        displayMessage = 'Periode essai expiree';
-      }
-    } else if (subscription.status === 'active') {
-      displayMessage = `Abonnement ${subscription.plan_type === 'pro' ? 'Pro' : 'Basic'} actif`;
-    } else if (subscription.status === 'expired') {
-      displayMessage = 'Abonnement expire';
-    } else if (subscription.status === 'canceled') {
-      displayMessage = 'Abonnement annule';
-    }
-
-    res.json({
-      hasSubscription: true,
-      status: subscription.status,
-      planType: subscription.plan_type,
-      planAmount: subscription.plan_amount,
-      trialEndDate: subscription.trial_end_date,
-      currentPeriodEnd: subscription.current_period_end,
-      daysRemaining: daysRemaining,
-      isExpiringSoon: isExpiringSoon,
-      displayMessage: displayMessage,
-      stripeSubscriptionId: subscription.stripe_subscription_id
-    });
-
-  } catch (err) {
-    console.error('Erreur subscription/status:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 // POST - Créer un lien vers le portail client Stripe
 app.post('/api/billing/create-portal-session', async (req, res) => {
   try {
@@ -9451,7 +9858,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     // Récupérer l'abonnement Stripe
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [userId]
+      [user.id]
     );
 
     if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
@@ -9516,7 +9923,7 @@ app.get('/api/owner-clients', async (req, res) => {
        WHERE user_id = $1 
        ORDER BY 
          CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
-      [userId]
+      [user.id]
     );
 
     res.json({ clients: result.rows });
@@ -11053,10 +11460,17 @@ app.use('/api/welcome-books', welcomeRouter);
 // ============================================
 // 1. FONCTION : Récupérer le Price ID Stripe
 // ============================================
+// ============================================
+// GESTION DES PLANS STRIPE - VERSION FINALE
+// ============================================
+
+// ============================================
+// 1. FONCTION : Obtenir le Price ID Stripe
+// ============================================
 function getPriceIdForPlan(plan) {
   const planLower = (plan || 'solo_monthly').toLowerCase();
   
-  // Plans Solo
+  // ✅ Plan Solo (15€/mois - 149€/an)
   if (planLower === 'solo_monthly' || planLower === 'solo') {
     return process.env.STRIPE_PRICE_SOLO_MONTHLY;
   }
@@ -11064,7 +11478,23 @@ function getPriceIdForPlan(plan) {
     return process.env.STRIPE_PRICE_SOLO_ANNUAL;
   }
   
-  // Plans Pro
+  // ✅ Plan Standard (29€/mois - 289€/an)
+  if (planLower === 'standard_monthly' || planLower === 'standard') {
+    return process.env.STRIPE_PRICE_STANDARD_MONTHLY;
+  }
+  if (planLower === 'standard_annual') {
+    return process.env.STRIPE_PRICE_STANDARD_ANNUAL;
+  }
+  
+  // ✅ Plan Standard Extra (7€/mois - 70€/an par logement supplémentaire)
+  if (planLower === 'standard_extra_monthly') {
+    return process.env.STRIPE_PRICE_STANDARD_EXTRA_MONTHLY;
+  }
+  if (planLower === 'standard_extra_annual') {
+    return process.env.STRIPE_PRICE_STANDARD_EXTRA_ANNUAL;
+  }
+  
+  // ✅ Plan Pro (49€/mois - 489€/an)
   if (planLower === 'pro_monthly' || planLower === 'pro') {
     return process.env.STRIPE_PRICE_PRO_MONTHLY;
   }
@@ -11072,21 +11502,39 @@ function getPriceIdForPlan(plan) {
     return process.env.STRIPE_PRICE_PRO_ANNUAL;
   }
   
-  // Plans Business
-  if (planLower === 'business_monthly' || planLower === 'business') {
-    return process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
+  // ✅ Plan Pro Extra (5€/mois - 50€/an par logement supplémentaire)
+  if (planLower === 'pro_extra_monthly') {
+    return process.env.STRIPE_PRICE_PRO_EXTRA_MONTHLY;
   }
-  if (planLower === 'business_annual') {
-    return process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
-  }
-  
-  // ✅ Compatibilité anciens plans
-  if (planLower === 'basic' || planLower === 'basic_monthly') {
-    return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+  if (planLower === 'pro_extra_annual') {
+    return process.env.STRIPE_PRICE_PRO_EXTRA_ANNUAL;
   }
   
   // Par défaut : Solo mensuel
+  console.warn(`⚠️ Plan inconnu: ${plan}, utilisation du plan Solo mensuel par défaut`);
   return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+}
+
+// ============================================
+// 1b. FONCTION : Récupérer le nom du plan depuis un Price ID
+// ============================================
+function getPlanFromPriceId(priceId) {
+  if (!priceId) return 'solo_monthly';
+  
+  // Solo
+  if (priceId === process.env.STRIPE_PRICE_SOLO_MONTHLY) return 'solo_monthly';
+  if (priceId === process.env.STRIPE_PRICE_SOLO_ANNUAL) return 'solo_annual';
+  
+  // Standard
+  if (priceId === process.env.STRIPE_PRICE_STANDARD_MONTHLY) return 'standard_monthly';
+  if (priceId === process.env.STRIPE_PRICE_STANDARD_ANNUAL) return 'standard_annual';
+  
+  // Pro
+  if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY) return 'pro_monthly';
+  if (priceId === process.env.STRIPE_PRICE_PRO_ANNUAL) return 'pro_annual';
+  
+  console.warn(`⚠️ Price ID inconnu: ${priceId}, utilisation du plan Solo par défaut`);
+  return 'solo_monthly';
 }
 
 // ============================================
@@ -11096,31 +11544,30 @@ function getBasePlanName(plan) {
   const planLower = (plan || 'solo').toLowerCase();
   
   if (planLower.includes('solo')) return 'solo';
+  if (planLower.includes('standard')) return 'standard';
   if (planLower.includes('pro')) return 'pro';
-  if (planLower.includes('business')) return 'business';
-  if (planLower.includes('basic')) return 'solo'; // Redirection
   
   return 'solo';
 }
 
 // ============================================
-// 3. FONCTION : Calculer le montant du plan
+// 3. FONCTION : Calculer le montant du plan (en euros)
 // ============================================
 function getPlanAmount(plan) {
   const basePlan = getBasePlanName(plan);
   const isAnnual = (plan || '').toLowerCase().includes('annual');
   
   if (basePlan === 'solo') {
-    return isAnnual ? 149 : 14.90;
+    return isAnnual ? 149 : 15;
+  }
+  if (basePlan === 'standard') {
+    return isAnnual ? 289 : 29;
   }
   if (basePlan === 'pro') {
-    return isAnnual ? 490 : 49.00;
-  }
-  if (basePlan === 'business') {
-    return isAnnual ? 990 : 99.00;
+    return isAnnual ? 489 : 49;
   }
   
-  return 14.90; // Par défaut
+  return 15; // Par défaut
 }
 
 // ============================================
@@ -11130,10 +11577,56 @@ function getPlanDisplayName(plan) {
   const basePlan = getBasePlanName(plan);
   
   if (basePlan === 'solo') return 'Solo';
+  if (basePlan === 'standard') return 'Standard';
   if (basePlan === 'pro') return 'Pro';
-  if (basePlan === 'business') return 'Business';
   
   return 'Solo';
+}
+
+// ============================================
+// 5. FONCTION : Limites du plan
+// ============================================
+function getPlanLimits(plan) {
+  const basePlan = getBasePlanName(plan);
+  
+  const limits = {
+    solo: {
+      included: 1,
+      extraPrice: null,
+      extraPriceAnnual: null
+    },
+    standard: {
+      included: 3,
+      extraPrice: 7,
+      extraPriceAnnual: 70
+    },
+    pro: {
+      included: 6,
+      extraPrice: 5,
+      extraPriceAnnual: 50
+    }
+  };
+  
+  return limits[basePlan] || limits.solo;
+}
+
+// ============================================
+// 6. FONCTION : Calculer le coût total
+// ============================================
+function calculateTotalCost(plan, propertyCount) {
+  const basePlan = getBasePlanName(plan);
+  const isAnnual = (plan || '').toLowerCase().includes('annual');
+  const limits = getPlanLimits(basePlan);
+  
+  const basePrice = getPlanAmount(plan);
+  const extraCount = Math.max(0, propertyCount - limits.included);
+  
+  let extraPrice = 0;
+  if (extraCount > 0 && limits.extraPrice) {
+    extraPrice = extraCount * (isAnnual ? limits.extraPriceAnnual : limits.extraPrice);
+  }
+  
+  return basePrice + extraPrice;
 }
 
 // ============================================
@@ -11154,22 +11647,48 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     // Validation du plan
     const { plan } = req.body || {};
     if (!plan) {
-      return res.status(400).json({ error: 'Plan requis (solo, pro ou business)' });
+      return res.status(400).json({ 
+        error: 'Plan requis',
+        validPlans: ['solo_monthly', 'solo_annual', 'standard_monthly', 'standard_annual', 'pro_monthly', 'pro_annual']
+      });
     }
 
-    const validPlans = ['solo_monthly', 'solo_annual', 'pro_monthly', 'pro_annual', 'business_monthly', 'business_annual'];
-    if (!validPlans.includes(plan.toLowerCase())) {
-      return res.status(400).json({ error: 'Plan invalide. Plans valides : solo, pro, business (monthly ou annual)' });
+    // ✅ Plans valides (UNIQUEMENT solo, standard, pro)
+    const validPlans = [
+      'solo_monthly', 'solo_annual',
+      'standard_monthly', 'standard_annual',
+      'pro_monthly', 'pro_annual'
+    ];
+    
+    const planLower = plan.toLowerCase();
+    if (!validPlans.includes(planLower)) {
+      return res.status(400).json({ 
+        error: 'Plan invalide',
+        received: plan,
+        validPlans: validPlans
+      });
     }
 
+    // Obtenir le Price ID
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configuré dans les variables d\'environnement' });
+      console.error(`❌ Aucun Price ID trouvé pour le plan: ${plan}`);
+      return res.status(400).json({ 
+        error: 'Plan non configuré dans Stripe',
+        hint: `Vérifiez que STRIPE_PRICE_${plan.toUpperCase()} existe dans votre .env`
+      });
     }
+
+    console.log('✅ Création session Stripe:', {
+      user: user.email,
+      userId: user.id,
+      plan: plan,
+      priceId: priceId
+    });
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // ✅ Créer la session Stripe Checkout SANS trial (l'essai est géré en DB)
+    // ✅ CORRECTION CRITIQUE : Créer la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -11180,332 +11699,47 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
         }
       ],
       subscription_data: {
-        // ❌ PAS de trial_period_days ici car l'essai est déjà géré dans ta DB
         metadata: {
-          userId: user.id,
-          plan: plan
+          userId: user.id.toString(),
+          plan: plan,
+          planDisplay: getPlanDisplayName(plan)
         }
       },
       customer_email: user.email,
-      client_reference_id: user.id,
+      client_reference_id: user.id.toString(),
       success_url: `${appUrl}/settings-account.html?tab=subscription&success=true`,
-      cancel_url: `${appUrl}/pricing.html?cancelled=true`
+      cancel_url: `${appUrl}/pricing.html?cancelled=true`,
+      locale: 'fr'
     });
 
-    res.json({ url: session.url });
+    console.log('✅ Session créée avec succès:', session.id);
+
+    res.json({ 
+      url: session.url,
+      sessionId: session.id
+    });
+
   } catch (err) {
     console.error('❌ Erreur create-checkout-session:', err);
-    res.status(500).json({ error: 'Impossible de créer la session de paiement' });
+    console.error('Stack:', err.stack);
+    
+    res.status(500).json({ 
+      error: 'Impossible de créer la session de paiement',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
+
 
 // ============================================
 // GET /api/subscription/status
 // Récupérer le statut d'abonnement de l'utilisateur
 // ============================================
-app.get('/api/subscription/status', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const result = await pool.query(
-      `SELECT 
-        id, status, plan_type, plan_amount,
-        trial_start_date, trial_end_date, 
-        current_period_end, stripe_subscription_id
-      FROM subscriptions 
-      WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Aucun abonnement trouvé',
-        hasSubscription: false
-      });
-    }
-
-    const subscription = result.rows[0];
-    const now = new Date();
-
-    let daysRemaining = null;
-    let isExpiringSoon = false;
-
-    // Calculer les jours restants pour les essais
-    if (subscription.status === 'trial') {
-      const trialEnd = new Date(subscription.trial_end_date);
-      daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
-      isExpiringSoon = daysRemaining <= 3 && daysRemaining > 0;
-    }
-
-    // ✅ Message d'affichage avec les nouveaux noms de plans
-    let displayMessage = '';
-    if (subscription.status === 'trial') {
-      if (daysRemaining > 0) {
-        displayMessage = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} d'essai restant${daysRemaining > 1 ? 's' : ''}`;
-      } else {
-        displayMessage = 'Période d\'essai expirée';
-      }
-    } else if (subscription.status === 'active') {
-      // ✅ Utiliser la nouvelle fonction pour le nom du plan
-      displayMessage = `Abonnement ${getPlanDisplayName(subscription.plan_type)} actif`;
-    } else if (subscription.status === 'expired') {
-      displayMessage = 'Abonnement expiré';
-    } else if (subscription.status === 'canceled') {
-      displayMessage = 'Abonnement annulé';
-    }
-
-    res.json({
-      hasSubscription: true,
-      status: subscription.status,
-      planType: subscription.plan_type,
-      planAmount: subscription.plan_amount,
-      trialEndDate: subscription.trial_end_date,
-      currentPeriodEnd: subscription.current_period_end,
-      daysRemaining: daysRemaining,
-      isExpiringSoon: isExpiringSoon,
-      displayMessage: displayMessage,
-      stripeSubscriptionId: subscription.stripe_subscription_id
-    });
-
-  } catch (err) {
-    console.error('❌ Erreur subscription/status:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 
 // ============================================
 // POST /api/billing/create-portal-session
 // Créer une session Stripe Customer Portal
 // ============================================
-app.post('/api/billing/create-portal-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configuré' });
-    }
-
-    // Récupérer le customer_id Stripe de l'utilisateur
-    const result = await pool.query(
-      'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [userId]
-    );
-
-    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
-      return res.status(404).json({ 
-        error: 'Aucun abonnement Stripe trouvé',
-        message: 'Le portail est disponible après souscription'
-      });
-    }
-
-    const customerId = result.rows[0].stripe_customer_id;
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
-    // Créer la session du portail client
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${appUrl}/settings-account.html?tab=subscription`
-    });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('❌ Erreur create-portal-session:', err);
-    res.status(500).json({ error: 'Impossible d\'ouvrir le portail' });
-  }
-});
-// ============================================
-// POST /api/billing/create-portal-session
-// Créer un lien vers le portail client Stripe
-// ============================================
-app.post('/api/billing/create-portal-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configuré' });
-    }
-
-    // Récupérer l'abonnement Stripe
-    const result = await pool.query(
-      'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [userId]
-    );
-
-    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
-      return res.status(404).json({ error: 'Aucun client Stripe trouvé' });
-    }
-
-    const customerId = result.rows[0].stripe_customer_id;
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
-    // Créer la session du portail
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${appUrl}/settings-account.html?tab=subscription`
-    });
-
-    res.json({ url: session.url });
-
-  } catch (err) {
-    console.error('Erreur create-portal-session:', err);
-    res.status(500).json({ error: 'Impossible de créer la session portail' });
-  }
-});
-
-// ============================================
-// POST /api/webhooks/stripe
-// Webhook Stripe (événements de paiement)
-// ============================================
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET manquant');
-    return res.status(500).send('Webhook secret not configured');
-  }
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    console.error('Erreur vérification webhook:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  console.log('Webhook Stripe reçu:', event.type);
-
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        const userId = session.client_reference_id || session.metadata?.userId;
-        const plan = session.metadata?.plan || 'basic';
-
-        if (!userId) {
-          console.error('userId manquant dans checkout.session.completed');
-          break;
-        }
-
-        // Récupérer la subscription Stripe
-        const subscriptionId = session.subscription;
-        const customerId = session.customer;
-
-        // Mettre à jour la base de données
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             stripe_subscription_id = $1,
-             stripe_customer_id = $2,
-             plan_type = $3,
-             status = 'trial',
-             updated_at = NOW()
-           WHERE user_id = $4`,
-          [subscriptionId, customerId, plan, userId]
-        );
-
-        console.log(`Abonnement créé pour user ${userId} (plan: ${plan})`);
-        break;
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const subscriptionId = subscription.id;
-
-        // Déterminer le statut
-        let status = 'active';
-        if (subscription.status === 'trialing') status = 'trial';
-        else if (subscription.status === 'canceled') status = 'canceled';
-        else if (subscription.status === 'past_due') status = 'past_due';
-
-        // Mettre à jour en base
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = $1,
-             current_period_end = to_timestamp($2),
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $3`,
-          [status, subscription.current_period_end, subscriptionId]
-        );
-
-        console.log(`Abonnement ${subscriptionId} mis à jour: ${status}`);
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const subscriptionId = subscription.id;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'canceled', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`Abonnement ${subscriptionId} annulé`);
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        // Passer de trial à active si c'était le premier paiement
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = 'active',
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $1 AND status = 'trial'`,
-          [subscriptionId]
-        );
-
-        console.log(`Paiement réussi pour subscription ${subscriptionId}`);
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'past_due', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`Paiement échoué pour subscription ${subscriptionId}`);
-        break;
-      }
-
-      default:
-        console.log(`Événement non géré: ${event.type}`);
-    }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.error('Erreur traitement webhook:', err);
-    res.status(500).json({ error: 'Erreur traitement webhook' });
-  }
-});
 
 // ============================================
 // ROUTES POUR MESSAGE DE RÉSERVATION AVEC CLEANING PHOTOS
@@ -12138,7 +12372,6 @@ case 'checkout.session.completed': {
 // FIN DU SCRIPT CRON
 // ============================================
 
-// Route pour supprimer une réservation manuelle ou un blocage
 app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -12148,95 +12381,111 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     }
 
     const { propertyId, uid } = req.body || {};
-    console.log('🗑 Demande de suppression manuelle reçue :', {
-      userId: user.id,
-      propertyId,
-      uid
-    });
+    console.log('🗑 Demande de suppression reçue :', { userId: userId, propertyId, uid });
 
     if (!propertyId || !uid) {
-      console.log('❌ Requête invalide pour suppression : propertyId ou uid manquant', {
-        propertyId,
-        uid
-      });
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
     }
 
-    const property = PROPERTIES.find(
-      (p) => p.id === propertyId && p.userId === user.id
-    );
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
     if (!property) {
-      console.log('❌ Logement non trouvé pour suppression', {
-        propertyId,
-        userId: user.id
-      });
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
-    if (!MANUAL_RESERVATIONS[propertyId] || MANUAL_RESERVATIONS[propertyId].length === 0) {
-      console.log('❌ Aucune réservation/blocage trouvé pour ce logement', {
-        propertyId,
-        uid
-      });
-      return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
-    }
-
-    const initialLength = MANUAL_RESERVATIONS[propertyId].length;
-    MANUAL_RESERVATIONS[propertyId] =
-      MANUAL_RESERVATIONS[propertyId].filter((r) => r.uid !== uid);
-    const newLength = MANUAL_RESERVATIONS[propertyId].length;
-
-    console.log('📊 Suppression dans MANUAL_RESERVATIONS :', {
-      propertyId,
-      uid,
-      initialLength,
-      newLength
-    });
-
-    if (initialLength === newLength) {
-      console.log(
-        '❌ Aucune entrée supprimée (uid non trouvé dans MANUAL_RESERVATIONS)',
-        { propertyId, uid }
+    // ✅ SUPPRIMER DE LA DB EN PREMIER (source de vérité)
+    let deleted = false;
+    try {
+      const deleteResult = await pool.query(
+        'DELETE FROM reservations WHERE uid = $1 AND user_id = $2 RETURNING *',
+        [uid, user.id]
       );
-      return res.status(404).json({ error: 'Réservation/blocage non trouvé' });
+      
+      deleted = deleteResult.rowCount > 0;
+      
+      if (deleted) {
+        console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
+        
+        // 📩 ENVOYER NOTIFICATION D'ANNULATION
+        try {
+          const deletedReservation = deleteResult.rows[0];
+          
+          const tokensResult = await pool.query(
+            'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+            [user.id]
+          );
+          
+          if (tokensResult.rows.length > 0) {
+            const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'short'
+            });
+            
+            for (const tokenRow of tokensResult.rows) {
+              await sendNotification(
+                tokenRow.fcm_token,
+                '❌ Réservation annulée',
+                `${property.name} - ${cancelDate}`,
+                {
+                  type: 'reservation_cancelled',
+                  reservation_id: uid,
+                  property_name: property.name
+                }
+              );
+              
+              console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
+            }
+          }
+        } catch (notifError) {
+          console.error('❌ Erreur notification annulation:', notifError.message);
+        }
+      } else {
+        console.log(`⚠️ Réservation ${uid} non trouvée dans PostgreSQL`);
+      }
+    } catch (dbError) {
+      console.error('❌ Erreur suppression DB:', dbError.message);
+      return res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
 
-    // 🔥 SUPPRIMER DE POSTGRESQL
-try {
-  const deleteResult = await pool.query(
-    'DELETE FROM reservations WHERE uid = $1',
-    [uid]
-  );
-  console.log(`✅ Réservation supprimée de PostgreSQL: ${uid} (${deleteResult.rowCount} ligne(s))`);
-} catch (dbError) {
-  console.error('❌ Erreur suppression DB:', dbError.message);
-}
+    // ✅ NETTOYER MANUAL_RESERVATIONS (si existe)
+    if (MANUAL_RESERVATIONS[propertyId]) {
+      const beforeLength = MANUAL_RESERVATIONS[propertyId].length;
+      MANUAL_RESERVATIONS[propertyId] = MANUAL_RESERVATIONS[propertyId].filter(r => r.uid !== uid);
+      const afterLength = MANUAL_RESERVATIONS[propertyId].length;
+      
+      if (beforeLength > afterLength) {
+        console.log(`✅ Supprimé de MANUAL_RESERVATIONS (${beforeLength} → ${afterLength})`);
+      }
+    }
 
-    // Mise à jour du reservationsStore (UNE SEULE FOIS)
-    if (reservationsStore.properties[propertyId]) {
-      const initialStoreLength = reservationsStore.properties[propertyId].length;
-      reservationsStore.properties[propertyId] =
-        reservationsStore.properties[propertyId].filter((r) => r.uid !== uid);
-      const newStoreLength = reservationsStore.properties[propertyId].length;
-      console.log('🧮 reservationsStore mis à jour :', {
-        propertyId,
-        uid,
-        initialStoreLength,
-        newStoreLength
+    // ✅ NETTOYER reservationsStore (si existe)
+    if (reservationsStore.properties && reservationsStore.properties[propertyId]) {
+      const beforeLength = reservationsStore.properties[propertyId].length;
+      reservationsStore.properties[propertyId] = 
+        reservationsStore.properties[propertyId].filter(r => r.uid !== uid);
+      const afterLength = reservationsStore.properties[propertyId].length;
+      
+      if (beforeLength > afterLength) {
+        console.log(`✅ Supprimé de reservationsStore (${beforeLength} → ${afterLength})`);
+      }
+    }
+
+    // ✅ Répondre avec succès (même si pas dans les caches)
+    if (deleted) {
+      // Forcer la resynchronisation
+      setImmediate(() => syncAllCalendars());
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Réservation supprimée'
       });
     } else {
-      console.log(
-        'ℹ️ Aucun entry dans reservationsStore pour ce propertyId au moment de la suppression',
-        { propertyId }
-      );
+      return res.status(404).json({
+        error: 'Réservation non trouvée'
+      });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Réservation/blocage supprimé'
-    });
   } catch (err) {
-    console.error('Erreur suppression réservation manuelle:', err);
+    console.error('❌ Erreur suppression réservation:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -13104,22 +13353,29 @@ cron.schedule('0 7 * * *', async () => {
 
 console.log('CRON job messages arrivee configure (tous les jours a 7h)');
 // ============================================
-// 🔔 CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
+// CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
-
 cron.schedule('0 8 * * *', async () => {
-  console.log('🔔 CRON: Envoi des notifications quotidiennes à 8h00');
+  console.log('CRON: Envoi des notifications quotidiennes a 8h00');
   try {
-    // Récupérer tous les utilisateurs avec token FCM
+    // Recuperer tous les utilisateurs avec token FCM
     const usersResult = await pool.query(
-      `SELECT u.id, u.email, t.fcm_token 
+      `SELECT DISTINCT u.id 
        FROM users u 
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
     );
     
     for (const user of usersResult.rows) {
-      // Arrivées du jour
+      // Recuperer TOUS les tokens de l'utilisateur
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      
+      if (tokensResult.rows.length === 0) continue;
+      
+      // Arrivees du jour
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -13129,98 +13385,137 @@ cron.schedule('0 8 * * *', async () => {
         `SELECT r.*, p.name as property_name 
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         WHERE r.check_in >= $1 AND r.check_in < $2`,
-        [today, tomorrow]
+         WHERE p.user_id = $1 
+         AND r.start_date >= $2 
+         AND r.start_date < $3
+         AND r.status != 'cancelled'`,
+        [user.id, today, tomorrow]
       );
       
-      if (arrivalsResult.rows.length > 0) {
-        const arrivals = arrivalsResult.rows;
+      const arrivalsCount = arrivalsResult.rows.length;
+      const arrivalsText = arrivalsCount > 0 
+        ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join(', ')
+        : 'Aucune arrivee prevue';
+      
+      // Envoyer a TOUS les appareils
+      for (const token of tokensResult.rows) {
         await sendNotification(
-          user.fcm_token,
-          `🏠 ${arrivals.length} arrivée(s) aujourd'hui`,
-          arrivals.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join('\n'),
-          { type: 'daily_arrivals' }
+          token.fcm_token,
+          `${arrivalsCount} arrivee(s) aujourd'hui`,
+          arrivalsText,
+          { type: 'daily_arrivals', count: arrivalsCount.toString() }
         );
       }
       
-      // Départs du jour
+      // Departs du jour
       const departuresResult = await pool.query(
         `SELECT r.*, p.name as property_name 
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         WHERE r.check_out >= $1 AND r.check_out < $2`,
-        [today, tomorrow]
+         WHERE p.user_id = $1 
+         AND r.end_date >= $2 
+         AND r.end_date < $3
+         AND r.status != 'cancelled'`,
+        [user.id, today, tomorrow]
       );
       
-      if (departuresResult.rows.length > 0) {
-        const departures = departuresResult.rows;
+      const departuresCount = departuresResult.rows.length;
+      const departuresText = departuresCount > 0
+        ? `Menages a prevoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
+        : 'Aucun depart prevu';
+      
+      // Envoyer a TOUS les appareils
+      for (const token of tokensResult.rows) {
         await sendNotification(
-          user.fcm_token,
-          `🚪 ${departures.length} départ(s) aujourd'hui`,
-          `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`,
-          { type: 'daily_departures' }
+          token.fcm_token,
+          `${departuresCount} depart(s) aujourd'hui`,
+          departuresText,
+          { type: 'daily_departures', count: departuresCount.toString() }
         );
       }
+      
+      console.log(`Notifications quotidiennes envoyees a user ${user.id} (${tokensResult.rows.length} appareil(s))`);
     }
     
-    console.log('✅ Notifications quotidiennes envoyées');
+    console.log('Notifications quotidiennes envoyees');
   } catch (error) {
-    console.error('❌ Erreur CRON notifications:', error);
+    console.error('Erreur CRON notifications:', error);
   }
 }, {
   timezone: "Europe/Paris"
 });
 
-console.log('✅ CRON job notifications configuré (tous les jours à 8h)');
-
+console.log('CRON job notifications configure (tous les jours a 8h)');
 // ============================================
-// ⏰ CRON JOB : RAPPELS J-1 À 18H
+// CRON JOB : RAPPELS J-1 A 18H
 // ============================================
-
 cron.schedule('0 18 * * *', async () => {
-  console.log('⏰ CRON: Rappels J-1 à 18h');
+  console.log('CRON: Rappels J-1 a 18h');
   try {
     const usersResult = await pool.query(
-      `SELECT u.id, t.fcm_token 
+      `SELECT DISTINCT u.id 
        FROM users u 
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
     );
     
     for (const user of usersResult.rows) {
+      // Recuperer TOUS les tokens
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
+        [user.id]
+      );
+      
+      if (tokensResult.rows.length === 0) continue;
+      
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
       const dayAfter = new Date(tomorrow);
       dayAfter.setDate(dayAfter.getDate() + 1);
       
+      // Arrivees de demain
       const arrivalsResult = await pool.query(
-        `SELECT COUNT(*) as count FROM reservations 
-         WHERE checkin_date >= $1 AND checkin_date < $2`,
-        [tomorrow, dayAfter]
+        `SELECT r.*, p.name as property_name 
+         FROM reservations r
+         JOIN properties p ON r.property_id = p.id
+         WHERE p.user_id = $1 
+         AND r.start_date >= $2 
+         AND r.start_date < $3
+         AND r.status != 'cancelled'`,
+        [user.id, tomorrow, dayAfter]
       );
       
-      const count = parseInt(arrivalsResult.rows[0]?.count || 0);
+      const count = arrivalsResult.rows.length;
       
       if (count > 0) {
-        await sendNotification(
-          user.fcm_token,
-          `⏰ Rappel : ${count} arrivée(s) demain`,
-          'Préparez les logements',
-          { type: 'reminder_j1' }
-        );
+        const propertiesList = arrivalsResult.rows
+          .map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`)
+          .join(', ');
+        
+        // Envoyer a TOUS les appareils
+        for (const token of tokensResult.rows) {
+          await sendNotification(
+            token.fcm_token,
+            `Rappel : ${count} arrivee(s) demain`,
+            propertiesList,
+            { type: 'reminder_j1', count: count.toString() }
+          );
+        }
+        
+        console.log(`Rappel J-1 envoye a user ${user.id} : ${count} arrivee(s)`);
       }
     }
     
-    console.log('✅ Rappels J-1 envoyés');
+    console.log('Rappels J-1 envoyes');
   } catch (error) {
-    console.error('❌ Erreur CRON rappels:', error);
+    console.error('Erreur CRON rappels:', error);
   }
 }, {
   timezone: "Europe/Paris"
 });
 
-console.log('✅ CRON rappels J-1 configuré (18h quotidien)');
+console.log('CRON rappels J-1 configure (18h quotidien)');
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
