@@ -3225,11 +3225,40 @@ async function getUserReservations(userId, filters = {}) {
   try {
     let query = `
       SELECT 
-        r.*,
+        r.id, r.uid, r.property_id, r.start_date, r.end_date, 
+        r.platform, r.source, r.status, r.total_amount, r.number_of_guests,
+        r.guest_email, r.notes, r.created_at, r.updated_at, r.user_id,
+        
+        COALESCE(
+          NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+          r.guest_name,
+          'Voyageur ' || COALESCE(r.source, 'direct')
+        ) as guest_name,
+        
+        COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
+        
+        CASE 
+          WHEN c.guest_first_name IS NOT NULL 
+          THEN LEFT(UPPER(c.guest_first_name), 1)
+          WHEN r.guest_name IS NOT NULL AND r.guest_name != ''
+          THEN LEFT(UPPER(r.guest_name), 1)
+          ELSE 'V'
+        END as guest_initial,
+        
+        c.language as guest_language,
+        c.onboarding_completed,
+        c.id as conversation_id,
+        
         p.name as property_name,
+        p.address as property_address,
         p.color as property_color
       FROM reservations r
       JOIN properties p ON r.property_id = p.id
+      LEFT JOIN conversations c ON (
+        c.property_id = r.property_id 
+        AND DATE(c.reservation_start_date) = DATE(r.start_date)
+        AND LOWER(c.platform) = LOWER(r.source)
+      )
       WHERE r.user_id = $1
       AND r.status != 'cancelled'
     `;
@@ -3967,12 +3996,29 @@ async function getUserChecklists(userId, filters = {}) {
       SELECT 
         c.*,
         p.name as property_name,
-        r.guest_name,
         r.start_date,
-        r.end_date
+        r.end_date,
+        
+        COALESCE(
+          NULLIF(TRIM(conv.guest_first_name || ' ' || conv.guest_last_name), ''),
+          r.guest_name,
+          'Voyageur'
+        ) as guest_name,
+        
+        CASE 
+          WHEN conv.guest_first_name IS NOT NULL 
+          THEN LEFT(UPPER(conv.guest_first_name), 1)
+          ELSE 'V'
+        END as guest_initial
+        
       FROM checklists c
       JOIN properties p ON c.property_id = p.id
       LEFT JOIN reservations r ON c.reservation_uid = r.uid
+      LEFT JOIN conversations conv ON (
+        conv.property_id = r.property_id 
+        AND DATE(conv.reservation_start_date) = DATE(r.start_date)
+        AND LOWER(conv.platform) = LOWER(r.source)
+      )
       WHERE c.user_id = $1
     `;
     
@@ -4022,12 +4068,29 @@ async function getChecklistById(checklistId, userId) {
       SELECT 
         c.*,
         p.name as property_name,
-        r.guest_name,
         r.start_date,
-        r.end_date
+        r.end_date,
+        
+        COALESCE(
+          NULLIF(TRIM(conv.guest_first_name || ' ' || conv.guest_last_name), ''),
+          r.guest_name,
+          'Voyageur'
+        ) as guest_name,
+        
+        CASE 
+          WHEN conv.guest_first_name IS NOT NULL 
+          THEN LEFT(UPPER(conv.guest_first_name), 1)
+          ELSE 'V'
+        END as guest_initial
+        
       FROM checklists c
       JOIN properties p ON c.property_id = p.id
       LEFT JOIN reservations r ON c.reservation_uid = r.uid
+      LEFT JOIN conversations conv ON (
+        conv.property_id = r.property_id 
+        AND DATE(conv.reservation_start_date) = DATE(r.start_date)
+        AND LOWER(conv.platform) = LOWER(r.source)
+      )
       WHERE c.id = $1 AND c.user_id = $2
     `, [checklistId, userId]);
 
@@ -13244,11 +13307,39 @@ app.post('/api/notifications/today-arrivals', authenticateAny, async (req, res) 
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     const arrivalsResult = await pool.query(
-      `SELECT r.*, p.name as property_name 
+      `SELECT 
+        r.id, r.uid, r.property_id, r.start_date, r.end_date,
+        r.source, r.platform, r.status, r.total_amount, r.number_of_guests,
+        r.guest_email, r.created_at, r.updated_at,
+        
+        COALESCE(
+          NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+          r.guest_name,
+          'Voyageur ' || COALESCE(r.source, 'direct')
+        ) as guest_name,
+        
+        COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
+        
+        CASE 
+          WHEN c.guest_first_name IS NOT NULL 
+          THEN LEFT(UPPER(c.guest_first_name), 1)
+          ELSE 'V'
+        END as guest_initial,
+        
+        p.id as property_id,
+        p.name as property_name,
+        p.address as property_address,
+        p.color as property_color
+        
        FROM reservations r
        JOIN properties p ON r.property_id = p.id
-       WHERE r.check_in >= $1 AND r.check_in < $2
-       ORDER BY r.check_in`,
+       LEFT JOIN conversations c ON (
+         c.property_id = r.property_id 
+         AND DATE(c.reservation_start_date) = DATE(r.start_date)
+         AND LOWER(c.platform) = LOWER(r.source)
+       )
+       WHERE r.start_date >= $1 AND r.start_date < $2
+       ORDER BY r.start_date`,
       [today, tomorrow]
     );
     
@@ -13299,11 +13390,39 @@ app.post('/api/notifications/today-departures', authenticateAny, async (req, res
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     const departuresResult = await pool.query(
-      `SELECT r.*, p.name as property_name 
+      `SELECT 
+        r.id, r.uid, r.property_id, r.start_date, r.end_date,
+        r.source, r.platform, r.status, r.total_amount, r.number_of_guests,
+        r.guest_email, r.created_at, r.updated_at,
+        
+        COALESCE(
+          NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+          r.guest_name,
+          'Voyageur ' || COALESCE(r.source, 'direct')
+        ) as guest_name,
+        
+        COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
+        
+        CASE 
+          WHEN c.guest_first_name IS NOT NULL 
+          THEN LEFT(UPPER(c.guest_first_name), 1)
+          ELSE 'V'
+        END as guest_initial,
+        
+        p.id as property_id,
+        p.name as property_name,
+        p.address as property_address,
+        p.color as property_color
+        
        FROM reservations r
        JOIN properties p ON r.property_id = p.id
-       WHERE r.check_out >= $1 AND r.check_out < $2
-       ORDER BY r.check_out`,
+       LEFT JOIN conversations c ON (
+         c.property_id = r.property_id 
+         AND DATE(c.reservation_start_date) = DATE(r.start_date)
+         AND LOWER(c.platform) = LOWER(r.source)
+       )
+       WHERE r.end_date >= $1 AND r.end_date < $2
+       ORDER BY r.end_date`,
       [today, tomorrow]
     );
     
@@ -13382,9 +13501,34 @@ cron.schedule('0 8 * * *', async () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       const arrivalsResult = await pool.query(
-        `SELECT r.*, p.name as property_name 
+        `SELECT 
+          r.id, r.uid, r.property_id, r.start_date, r.end_date,
+          r.source, r.platform, r.status, r.total_amount,
+          
+          COALESCE(
+            NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+            r.guest_name,
+            'Voyageur ' || COALESCE(r.source, 'direct')
+          ) as guest_name,
+          
+          COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
+          
+          CASE 
+            WHEN c.guest_first_name IS NOT NULL 
+            THEN LEFT(UPPER(c.guest_first_name), 1)
+            ELSE 'V'
+          END as guest_initial,
+          
+          p.name as property_name,
+          p.color as property_color
+          
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
+         LEFT JOIN conversations c ON (
+           c.property_id = r.property_id 
+           AND DATE(c.reservation_start_date) = DATE(r.start_date)
+           AND LOWER(c.platform) = LOWER(r.source)
+         )
          WHERE p.user_id = $1 
          AND r.start_date >= $2 
          AND r.start_date < $3
@@ -13409,9 +13553,34 @@ cron.schedule('0 8 * * *', async () => {
       
       // Departs du jour
       const departuresResult = await pool.query(
-        `SELECT r.*, p.name as property_name 
+        `SELECT 
+          r.id, r.uid, r.property_id, r.start_date, r.end_date,
+          r.source, r.platform, r.status, r.total_amount,
+          
+          COALESCE(
+            NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+            r.guest_name,
+            'Voyageur ' || COALESCE(r.source, 'direct')
+          ) as guest_name,
+          
+          COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
+          
+          CASE 
+            WHEN c.guest_first_name IS NOT NULL 
+            THEN LEFT(UPPER(c.guest_first_name), 1)
+            ELSE 'V'
+          END as guest_initial,
+          
+          p.name as property_name,
+          p.color as property_color
+          
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
+         LEFT JOIN conversations c ON (
+           c.property_id = r.property_id 
+           AND DATE(c.reservation_start_date) = DATE(r.start_date)
+           AND LOWER(c.platform) = LOWER(r.source)
+         )
          WHERE p.user_id = $1 
          AND r.end_date >= $2 
          AND r.end_date < $3
@@ -13476,9 +13645,34 @@ cron.schedule('0 18 * * *', async () => {
       
       // Arrivees de demain
       const arrivalsResult = await pool.query(
-        `SELECT r.*, p.name as property_name 
+        `SELECT 
+          r.id, r.uid, r.property_id, r.start_date, r.end_date,
+          r.source, r.platform, r.status, r.total_amount,
+          
+          COALESCE(
+            NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+            r.guest_name,
+            'Voyageur ' || COALESCE(r.source, 'direct')
+          ) as guest_name,
+          
+          COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
+          
+          CASE 
+            WHEN c.guest_first_name IS NOT NULL 
+            THEN LEFT(UPPER(c.guest_first_name), 1)
+            ELSE 'V'
+          END as guest_initial,
+          
+          p.name as property_name,
+          p.color as property_color
+          
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
+         LEFT JOIN conversations c ON (
+           c.property_id = r.property_id 
+           AND DATE(c.reservation_start_date) = DATE(r.start_date)
+           AND LOWER(c.platform) = LOWER(r.source)
+         )
          WHERE p.user_id = $1 
          AND r.start_date >= $2 
          AND r.start_date < $3
