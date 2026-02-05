@@ -144,7 +144,18 @@ function generateAutoResponse(property, detectedQuestions) {
  * @param {Object} pool - PostgreSQL pool
  * @param {Object} io - Socket.io instance
  */
-function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
+function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
+  
+  // ✅ Import des fonctions de gestion des permissions depuis le middleware
+  const { 
+    requirePermission, 
+    loadSubAccountData, 
+    filterByAccessibleProperties, 
+    getRealUserId 
+  } = require('../sub-accounts-middleware');
+  
+  // Garder authenticateToken pour compatibilité avec les routes existantes
+  const authenticateToken = authenticateAny;
 
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
@@ -259,9 +270,15 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
   // 2. LISTE DES CONVERSATIONS (PROPRIÉTAIRE)
   // ============================================
   
-  app.get('/api/chat/conversations', authenticateToken, checkSubscription, async (req, res) => {
+  app.get('/api/chat/conversations', 
+    authenticateToken, 
+    checkSubscription, 
+    requirePermission(pool, 'can_view_conversations'),
+    loadSubAccountData(pool),
+    async (req, res) => {
     try {
-      const userId = req.user.id;
+      // ✅ Support des sous-comptes : récupérer l'ID utilisateur réel
+      const userId = await getRealUserId(pool, req);
       const { status, property_id } = req.query;
 
       let query = `
@@ -296,9 +313,12 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
 
       const result = await pool.query(query, params);
 
+      // ✅ Filtrer par propriétés accessibles si sous-compte
+      const filteredConversations = filterByAccessibleProperties(result.rows, req);
+
       res.json({
         success: true,
-        conversations: result.rows
+        conversations: filteredConversations
       });
 
     } catch (error) {
@@ -392,19 +412,55 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       const checkoutDateStr = checkout_date ? new Date(checkout_date).toISOString().split('T')[0] : null;
 
       // Vérifier qu'une réservation existe
+      console.log('🔍 [VERIFY] Recherche réservation avec:', {
+        property_id,
+        checkinDateStr,
+        checkoutDateStr,
+        platform
+      });
+      
+      // Recherche FLEXIBLE : source ou platform doit CONTENIR la plateforme
       const reservationResult = await pool.query(
-        `SELECT id FROM reservations 
+        `SELECT id, source, platform FROM reservations 
          WHERE property_id = $1 
          AND DATE(start_date) = $2 
          AND ($3::date IS NULL OR DATE(end_date) = $3)
-         AND LOWER(source) = LOWER($4)
+         AND (
+           LOWER(source) = LOWER($4)
+           OR LOWER(source) LIKE '%' || LOWER($4) || '%'
+           OR LOWER(platform) = LOWER($4)
+           OR LOWER(platform) LIKE '%' || LOWER($4) || '%'
+         )
          LIMIT 1`,
         [property_id, checkinDateStr, checkoutDateStr, platform]
       );
 
+      console.log('📊 [VERIFY] Résultat recherche:', {
+        found: reservationResult.rows.length > 0,
+        data: reservationResult.rows[0]
+      });
+
       if (reservationResult.rows.length === 0) {
+        // Debug : voir ce qu'il y a vraiment dans la base
+        const debugResult = await pool.query(
+          `SELECT id, source, platform, start_date, end_date 
+           FROM reservations 
+           WHERE property_id = $1 
+           AND DATE(start_date) = $2 
+           LIMIT 3`,
+          [property_id, checkinDateStr]
+        );
+        
+        console.log('❌ [VERIFY] Aucune réservation trouvée. Voici ce qui existe pour cette date:', debugResult.rows);
+        
         return res.status(404).json({ 
-          error: 'Aucune réservation trouvée avec ces informations' 
+          error: 'Aucune réservation trouvée avec ces informations',
+          debug: debugResult.rows.length > 0 ? {
+            available: debugResult.rows.map(r => ({
+              source: r.source,
+              platform: r.platform
+            }))
+          } : 'Aucune réservation pour cette date'
         });
       }
 
@@ -470,7 +526,7 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       const { conversationId } = req.params;
 
       const convCheck = await pool.query(
-        `SELECT id, user_id FROM conversations WHERE id = $1`,
+        `SELECT c.id, c.user_id, c.property_id FROM conversations c WHERE c.id = $1`,
         [conversationId]
       );
 
@@ -480,9 +536,31 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
 
       const conversation = convCheck.rows[0];
 
-      // Vérifier les permissions (propriétaire OU voyageur vérifié)
-      if (req.user && req.user.id !== conversation.user_id) {
-        return res.status(403).json({ error: 'Accès refusé' });
+      // Vérifier les permissions (propriétaire OU sous-compte OU voyageur vérifié)
+      if (req.user) {
+        // ✅ Support des sous-comptes
+        const realUserId = req.user.isSubAccount 
+          ? (await getRealUserId(pool, req))
+          : req.user.id;
+        
+        if (realUserId !== conversation.user_id) {
+          // Vérifier si sous-compte avec accès à cette propriété
+          if (req.user.isSubAccount) {
+            const subAccountData = await pool.query(
+              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
+              [req.user.subAccountId]
+            );
+            
+            if (subAccountData.rows.length > 0) {
+              const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
+              if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
+                return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+              }
+            }
+          } else {
+            return res.status(403).json({ error: 'Accès refusé' });
+          }
+        }
       }
 
       const messages = await pool.query(
@@ -532,8 +610,30 @@ function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
       const conversation = convResult.rows[0];
 
       // Vérifier les permissions
-      if (req.user && sender_type === 'owner' && req.user.id !== conversation.user_id) {
-        return res.status(403).json({ error: 'Accès refusé' });
+      if (req.user && sender_type === 'owner') {
+        // ✅ Support des sous-comptes
+        const realUserId = req.user.isSubAccount 
+          ? (await getRealUserId(pool, req))
+          : req.user.id;
+        
+        if (realUserId !== conversation.user_id) {
+          return res.status(403).json({ error: 'Accès refusé' });
+        }
+        
+        // ✅ Vérifier accès propriété si sous-compte
+        if (req.user.isSubAccount) {
+          const subAccountData = await pool.query(
+            'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
+            [req.user.subAccountId]
+          );
+          
+          if (subAccountData.rows.length > 0) {
+            const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
+            if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
+              return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+            }
+          }
+        }
       }
 
       // Insérer le message
@@ -740,13 +840,21 @@ try {
   // 7. GÉNÉRER LE MESSAGE POUR AIRBNB/BOOKING
   // ============================================
   
-  app.get('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
+  app.get('/api/chat/generate-booking-message/:conversationId', 
+    authenticateToken, 
+    checkSubscription, 
+    requirePermission(pool, 'can_generate_booking_messages'),
+    loadSubAccountData(pool),
+    async (req, res) => {
     try {
       const { conversationId } = req.params;
-      const userId = req.user.id;
+      // ✅ Support des sous-comptes
+      const userId = await getRealUserId(pool, req);
 
       const result = await pool.query(
-        `SELECT unique_token, pin_code, user_id FROM conversations WHERE id = $1`,
+        `SELECT c.unique_token, c.pin_code, c.user_id, c.property_id 
+         FROM conversations c 
+         WHERE c.id = $1`,
         [conversationId]
       );
 
@@ -755,6 +863,14 @@ try {
       }
 
       const conversation = result.rows[0];
+      
+      // ✅ Vérifier accès propriété si sous-compte
+      if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
+        if (!req.subAccountData.accessible_property_ids.includes(conversation.property_id)) {
+          return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+        }
+      }
+
       const message = generateMessageTemplate(conversation.pin_code, conversation.unique_token);
 
       res.json({
