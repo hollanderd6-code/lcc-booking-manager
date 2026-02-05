@@ -419,17 +419,22 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         platform
       });
       
-      // Recherche FLEXIBLE : source ou platform doit CONTENIR la plateforme
+      // Recherche FLEXIBLE bidirectionnelle
       const reservationResult = await pool.query(
         `SELECT id, source, platform FROM reservations 
          WHERE property_id = $1 
          AND DATE(start_date) = $2 
          AND ($3::date IS NULL OR DATE(end_date) = $3)
          AND (
+           -- Match exact
            LOWER(source) = LOWER($4)
-           OR LOWER(source) LIKE '%' || LOWER($4) || '%'
            OR LOWER(platform) = LOWER($4)
+           -- Source/Platform contient ce que l'utilisateur cherche
+           OR LOWER(source) LIKE '%' || LOWER($4) || '%'
            OR LOWER(platform) LIKE '%' || LOWER($4) || '%'
+           -- CE QUE L'UTILISATEUR CHERCHE contient source/platform (inversé)
+           OR LOWER($4) LIKE '%' || LOWER(source) || '%'
+           OR LOWER($4) LIKE '%' || LOWER(platform) || '%'
          )
          LIMIT 1`,
         [property_id, checkinDateStr, checkoutDateStr, platform]
