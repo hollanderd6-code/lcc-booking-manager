@@ -1898,22 +1898,48 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         const subscriptionId = session.subscription;
         const customerId = session.customer;
 
-        await pool.query(
-          `INSERT INTO subscriptions 
-           (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
-           VALUES ($1, $2, $3, $4, 'trial', NOW(), NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days')
-           ON CONFLICT (user_id) 
-           DO UPDATE SET
-             stripe_subscription_id = $2,
-             stripe_customer_id = $3,
-             plan_type = $4,
-             status = 'trial',
-             trial_start_date = NOW(),
-             trial_end_date = NOW() + INTERVAL '14 days',
-             current_period_end = NOW() + INTERVAL '14 days',
-             updated_at = NOW()`,
-          [userId, subscriptionId, customerId, basePlan]
-        );
+        // Récupérer l'abonnement Stripe pour vérifier s'il y a un essai gratuit
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const isTrialing = stripeSubscription.status === 'trialing';
+        const subscriptionStatus = isTrialing ? 'trial' : 'active';
+
+        if (isTrialing) {
+          // Avec période d'essai
+          await pool.query(
+            `INSERT INTO subscriptions 
+             (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, trial_start_date, trial_end_date, current_period_end)
+             VALUES ($1, $2, $3, $4, 'trial', NOW(), to_timestamp($5), to_timestamp($6))
+             ON CONFLICT (user_id) 
+             DO UPDATE SET
+               stripe_subscription_id = $2,
+               stripe_customer_id = $3,
+               plan_type = $4,
+               status = 'trial',
+               trial_start_date = NOW(),
+               trial_end_date = to_timestamp($5),
+               current_period_end = to_timestamp($6),
+               updated_at = NOW()`,
+            [userId, subscriptionId, customerId, basePlan, stripeSubscription.trial_end, stripeSubscription.current_period_end]
+          );
+        } else {
+          // Sans période d'essai - abonnement actif immédiatement
+          await pool.query(
+            `INSERT INTO subscriptions 
+             (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, current_period_end)
+             VALUES ($1, $2, $3, $4, 'active', to_timestamp($5))
+             ON CONFLICT (user_id) 
+             DO UPDATE SET
+               stripe_subscription_id = $2,
+               stripe_customer_id = $3,
+               plan_type = $4,
+               status = 'active',
+               trial_start_date = NULL,
+               trial_end_date = NULL,
+               current_period_end = to_timestamp($5),
+               updated_at = NOW()`,
+            [userId, subscriptionId, customerId, basePlan, stripeSubscription.current_period_end]
+          );
+        }
 
         const userResult = await pool.query(
           'SELECT email, first_name FROM users WHERE id = $1',
@@ -1925,11 +1951,17 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           const userFirstName = userResult.rows[0].first_name || 'cher membre';
           const planAmount = getPlanAmount(plan);
 
-          await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
-          await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
+          if (isTrialing) {
+            await sendTrialStartedEmail(userEmail, userFirstName, basePlan, planAmount);
+            await logEmailSent(userId, 'trial_started', { plan: basePlan, planAmount });
+            console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
+          } else {
+            await sendSubscriptionConfirmedEmail(userEmail, userFirstName, basePlan, planAmount);
+            await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
+            console.log(`✅ Abonnement actif créé pour user ${userId} (plan: ${basePlan})`);
+          }
         }
 
-        console.log(`✅ Essai gratuit démarré pour user ${userId} (plan: ${basePlan})`);
         break;
       }
 
@@ -9797,78 +9829,6 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
 // À COPIER-COLLER DANS server.js APRÈS LES AUTRES ROUTES
 // ============================================
 
-// Helper : Récupérer le Price ID selon le plan
-app.get('/api/subscription/status', authenticateAny, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorise' });
-    }
-
-    const result = await pool.query(
-      `SELECT 
-        id, status, plan_type, plan_amount,
-        trial_start_date, trial_end_date, 
-        current_period_end, stripe_subscription_id
-      FROM subscriptions 
-      WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Aucun abonnement trouve',
-        hasSubscription: false
-      });
-    }
-
-    const subscription = result.rows[0];
-    const now = new Date();
-
-    let daysRemaining = null;
-    let isExpiringSoon = false;
-
-    if (subscription.status === 'trial') {
-      const trialEnd = new Date(subscription.trial_end_date);
-      daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
-      isExpiringSoon = daysRemaining <= 3 && daysRemaining > 0;
-    }
-
-    let displayMessage = '';
-    if (subscription.status === 'trial') {
-      if (daysRemaining > 0) {
-        displayMessage = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} d'essai restant${daysRemaining > 1 ? 's' : ''}`;
-      } else {
-        displayMessage = 'Periode essai expiree';
-      }
-    } else if (subscription.status === 'active') {
-      displayMessage = `Abonnement ${subscription.plan_type === 'pro' ? 'Pro' : 'Basic'} actif`;
-    } else if (subscription.status === 'expired') {
-      displayMessage = 'Abonnement expire';
-    } else if (subscription.status === 'canceled') {
-      displayMessage = 'Abonnement annule';
-    }
-
-    res.json({
-      hasSubscription: true,
-      status: subscription.status,
-      planType: subscription.plan_type,
-      planAmount: subscription.plan_amount,
-      trialEndDate: subscription.trial_end_date,
-      currentPeriodEnd: subscription.current_period_end,
-      daysRemaining: daysRemaining,
-      isExpiringSoon: isExpiringSoon,
-      displayMessage: displayMessage,
-      stripeSubscriptionId: subscription.stripe_subscription_id
-    });
-
-  } catch (err) {
-    console.error('Erreur subscription/status:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 // POST - Créer un lien vers le portail client Stripe
 app.post('/api/billing/create-portal-session', async (req, res) => {
   try {
@@ -11739,78 +11699,6 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 // GET /api/subscription/status
 // Récupérer le statut d'abonnement de l'utilisateur
 // ============================================
-app.get('/api/subscription/status', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    const result = await pool.query(
-      `SELECT 
-        id, status, plan_type, plan_amount,
-        trial_start_date, trial_end_date, 
-        current_period_end, stripe_subscription_id
-      FROM subscriptions 
-      WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Aucun abonnement trouvé',
-        hasSubscription: false
-      });
-    }
-
-    const subscription = result.rows[0];
-    const now = new Date();
-
-    let daysRemaining = null;
-    let isExpiringSoon = false;
-
-    // Calculer les jours restants pour les essais
-    if (subscription.status === 'trial') {
-      const trialEnd = new Date(subscription.trial_end_date);
-      daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
-      isExpiringSoon = daysRemaining <= 3 && daysRemaining > 0;
-    }
-
-    // ✅ Message d'affichage avec les nouveaux noms de plans
-    let displayMessage = '';
-    if (subscription.status === 'trial') {
-      if (daysRemaining > 0) {
-        displayMessage = `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} d'essai restant${daysRemaining > 1 ? 's' : ''}`;
-      } else {
-        displayMessage = 'Période d\'essai expirée';
-      }
-    } else if (subscription.status === 'active') {
-      // ✅ Utiliser la nouvelle fonction pour le nom du plan
-      displayMessage = `Abonnement ${getPlanDisplayName(subscription.plan_type)} actif`;
-    } else if (subscription.status === 'expired') {
-      displayMessage = 'Abonnement expiré';
-    } else if (subscription.status === 'canceled') {
-      displayMessage = 'Abonnement annulé';
-    }
-
-    res.json({
-      hasSubscription: true,
-      status: subscription.status,
-      planType: subscription.plan_type,
-      planAmount: subscription.plan_amount,
-      trialEndDate: subscription.trial_end_date,
-      currentPeriodEnd: subscription.current_period_end,
-      daysRemaining: daysRemaining,
-      isExpiringSoon: isExpiringSoon,
-      displayMessage: displayMessage,
-      stripeSubscriptionId: subscription.stripe_subscription_id
-    });
-
-  } catch (err) {
-    console.error('❌ Erreur subscription/status:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
 
 // ============================================
 // POST /api/billing/create-portal-session
@@ -11894,152 +11782,6 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
   } catch (err) {
     console.error('Erreur create-portal-session:', err);
     res.status(500).json({ error: 'Impossible de créer la session portail' });
-  }
-});
-
-// ============================================
-// POST /api/webhooks/stripe
-// Webhook Stripe (événements de paiement)
-// ============================================
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET manquant');
-    return res.status(500).send('Webhook secret not configured');
-  }
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    console.error('Erreur vérification webhook:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  console.log('Webhook Stripe reçu:', event.type);
-
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        const userId = session.client_reference_id || session.metadata?.userId;
-        const plan = session.metadata?.plan || 'basic';
-
-        if (!userId) {
-          console.error('userId manquant dans checkout.session.completed');
-          break;
-        }
-
-        // Récupérer la subscription Stripe
-        const subscriptionId = session.subscription;
-        const customerId = session.customer;
-
-        // Mettre à jour la base de données
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             stripe_subscription_id = $1,
-             stripe_customer_id = $2,
-             plan_type = $3,
-             status = 'trial',
-             updated_at = NOW()
-           WHERE user_id = $4`,
-          [subscriptionId, customerId, plan, userId]
-        );
-
-        console.log(`Abonnement créé pour user ${userId} (plan: ${plan})`);
-        break;
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const subscriptionId = subscription.id;
-
-        // Déterminer le statut
-        let status = 'active';
-        if (subscription.status === 'trialing') status = 'trial';
-        else if (subscription.status === 'canceled') status = 'canceled';
-        else if (subscription.status === 'past_due') status = 'past_due';
-
-        // Mettre à jour en base
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = $1,
-             current_period_end = to_timestamp($2),
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $3`,
-          [status, subscription.current_period_end, subscriptionId]
-        );
-
-        console.log(`Abonnement ${subscriptionId} mis à jour: ${status}`);
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const subscriptionId = subscription.id;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'canceled', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`Abonnement ${subscriptionId} annulé`);
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        // Passer de trial à active si c'était le premier paiement
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = 'active',
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $1 AND status = 'trial'`,
-          [subscriptionId]
-        );
-
-        console.log(`Paiement réussi pour subscription ${subscriptionId}`);
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-
-        if (!subscriptionId) break;
-
-        await pool.query(
-          `UPDATE subscriptions 
-           SET status = 'past_due', updated_at = NOW()
-           WHERE stripe_subscription_id = $1`,
-          [subscriptionId]
-        );
-
-        console.log(`Paiement échoué pour subscription ${subscriptionId}`);
-        break;
-      }
-
-      default:
-        console.log(`Événement non géré: ${event.type}`);
-    }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.error('Erreur traitement webhook:', err);
-    res.status(500).json({ error: 'Erreur traitement webhook' });
   }
 });
 
