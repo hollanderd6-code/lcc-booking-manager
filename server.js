@@ -9017,112 +9017,6 @@ app.get('/api/messages/upcoming', async (req, res) => {
 // 💳 ROUTES API - ABONNEMENTS (Stripe Billing)
 // ============================================
 
-function getPriceIdForPlan(plan) {
-  const priceIds = {
-    // Plans mensuels
-    'solo_monthly': process.env.STRIPE_PRICE_SOLO_MONTHLY,
-    'pro_monthly': process.env.STRIPE_PRICE_PRO_MONTHLY,
-    'business_monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-    
-    // Plans annuels
-    'solo_annual': process.env.STRIPE_PRICE_SOLO_ANNUAL,
-    'pro_annual': process.env.STRIPE_PRICE_PRO_ANNUAL,
-    'business_annual': process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-    
-    // Rétrocompatibilité (anciens plans)
-    'basic': process.env.STRIPE_PRICE_BASIC,
-    'pro': process.env.STRIPE_PRICE_PRO
-  };
-  
-  return priceIds[plan] || null;
-}
-
-function getPlanAmount(plan) {
-  const amounts = {
-    // Mensuels (en centimes)
-    'solo_monthly': 1490,
-    'pro_monthly': 4900,
-    'business_monthly': 9900,
-    
-    // Annuels (en centimes)
-    'solo_annual': 14900,
-    'pro_annual': 49000,
-    'business_annual': 99000,
-    
-    // Anciens (rétrocompatibilité)
-    'basic': 599,
-    'pro': 899
-  };
-  
-  return amounts[plan] || 0;
-}
-
-function getBasePlanName(plan) {
-  // "solo_monthly" → "solo"
-  // "pro_annual" → "pro"
-  return plan.replace('_monthly', '').replace('_annual', '');
-}
-
-app.post('/api/billing/create-checkout-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-    
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
-    }
-    
-    const { plan } = req.body || {};
-    if (!plan) {
-      return res.status(400).json({ error: 'Plan requis' });
-    }
-    
-    const priceId = getPriceIdForPlan(plan);
-    if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configuré' });
-    }
-    
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-    
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{
-        price: priceId,
-        quantity: 1
-      }],
-      metadata: {
-        userId: userId,
-        plan: plan,
-        basePlan: getBasePlanName(plan)
-      },
-      customer_email: user.email,
-      client_reference_id: user.id.toString(),
-      
-      // 🎁 Essai gratuit de 14 jours
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          userId: userId,
-          plan: plan
-        }
-      },
-      
-      success_url: `${appUrl}/app.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/pricing.html`,
-    });
-    
-    console.log(`✅ Session Checkout créée pour user ${user.id}, plan: ${plan}`);
-    res.json({ url: session.url });
-    
-  } catch (err) {
-    console.error('Erreur /api/billing/create-checkout-session :', err);
-    res.status(500).json({ error: 'Impossible de créer la session de paiement' });
-  }
-});
-
 // ============================================
 // 💳 ROUTES API - STRIPE CONNECT (compte hôte)
 // ============================================
@@ -9904,70 +9798,6 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
 // ============================================
 
 // Helper : Récupérer le Price ID selon le plan
-function getPriceIdForPlan(plan) {
-  if (plan === 'pro') {
-    return process.env.STRIPE_PRICE_PRO || null;
-  }
-  // Par défaut : basic
-  return process.env.STRIPE_PRICE_BASIC || null;
-}
-
-// POST - Créer une session de paiement Stripe
-app.post('/api/billing/create-checkout-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorise' });
-    }
-
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configure' });
-    }
-
-    const { plan } = req.body || {};
-    if (!plan) {
-      return res.status(400).json({ error: 'Plan requis (basic ou pro)' });
-    }
-
-    const priceId = getPriceIdForPlan(plan);
-    if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configure' });
-    }
-
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
-    // Créer la session Stripe Checkout
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1
-        }
-      ],
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          userId: userId,
-          plan: plan
-        }
-      },
-      customer_email: user.email,
-      client_reference_id: user.id,
-      success_url: `${appUrl}/settings-account.html?tab=subscription&success=true`,
-      cancel_url: `${appUrl}/pricing.html?cancelled=true`
-    });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('Erreur create-checkout-session:', err);
-    res.status(500).json({ error: 'Impossible de creer la session de paiement' });
-  }
-});
-
-// GET - Récupérer le statut d'abonnement de l'utilisateur
-app.get('/api/subscription/status', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -11654,10 +11484,17 @@ app.use('/api/welcome-books', welcomeRouter);
 // ============================================
 // 1. FONCTION : Récupérer le Price ID Stripe
 // ============================================
+// ============================================
+// GESTION DES PLANS STRIPE - VERSION FINALE
+// ============================================
+
+// ============================================
+// 1. FONCTION : Obtenir le Price ID Stripe
+// ============================================
 function getPriceIdForPlan(plan) {
   const planLower = (plan || 'solo_monthly').toLowerCase();
   
-  // Plans Solo
+  // ✅ Plan Solo (15€/mois - 149€/an)
   if (planLower === 'solo_monthly' || planLower === 'solo') {
     return process.env.STRIPE_PRICE_SOLO_MONTHLY;
   }
@@ -11665,7 +11502,23 @@ function getPriceIdForPlan(plan) {
     return process.env.STRIPE_PRICE_SOLO_ANNUAL;
   }
   
-  // Plans Pro
+  // ✅ Plan Standard (29€/mois - 289€/an)
+  if (planLower === 'standard_monthly' || planLower === 'standard') {
+    return process.env.STRIPE_PRICE_STANDARD_MONTHLY;
+  }
+  if (planLower === 'standard_annual') {
+    return process.env.STRIPE_PRICE_STANDARD_ANNUAL;
+  }
+  
+  // ✅ Plan Standard Extra (7€/mois - 70€/an par logement supplémentaire)
+  if (planLower === 'standard_extra_monthly') {
+    return process.env.STRIPE_PRICE_STANDARD_EXTRA_MONTHLY;
+  }
+  if (planLower === 'standard_extra_annual') {
+    return process.env.STRIPE_PRICE_STANDARD_EXTRA_ANNUAL;
+  }
+  
+  // ✅ Plan Pro (49€/mois - 489€/an)
   if (planLower === 'pro_monthly' || planLower === 'pro') {
     return process.env.STRIPE_PRICE_PRO_MONTHLY;
   }
@@ -11673,20 +11526,16 @@ function getPriceIdForPlan(plan) {
     return process.env.STRIPE_PRICE_PRO_ANNUAL;
   }
   
-  // Plans Business
-  if (planLower === 'business_monthly' || planLower === 'business') {
-    return process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
+  // ✅ Plan Pro Extra (5€/mois - 50€/an par logement supplémentaire)
+  if (planLower === 'pro_extra_monthly') {
+    return process.env.STRIPE_PRICE_PRO_EXTRA_MONTHLY;
   }
-  if (planLower === 'business_annual') {
-    return process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
-  }
-  
-  // ✅ Compatibilité anciens plans
-  if (planLower === 'basic' || planLower === 'basic_monthly') {
-    return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+  if (planLower === 'pro_extra_annual') {
+    return process.env.STRIPE_PRICE_PRO_EXTRA_ANNUAL;
   }
   
   // Par défaut : Solo mensuel
+  console.warn(`⚠️ Plan inconnu: ${plan}, utilisation du plan Solo mensuel par défaut`);
   return process.env.STRIPE_PRICE_SOLO_MONTHLY;
 }
 
@@ -11697,31 +11546,30 @@ function getBasePlanName(plan) {
   const planLower = (plan || 'solo').toLowerCase();
   
   if (planLower.includes('solo')) return 'solo';
+  if (planLower.includes('standard')) return 'standard';
   if (planLower.includes('pro')) return 'pro';
-  if (planLower.includes('business')) return 'business';
-  if (planLower.includes('basic')) return 'solo'; // Redirection
   
   return 'solo';
 }
 
 // ============================================
-// 3. FONCTION : Calculer le montant du plan
+// 3. FONCTION : Calculer le montant du plan (en euros)
 // ============================================
 function getPlanAmount(plan) {
   const basePlan = getBasePlanName(plan);
   const isAnnual = (plan || '').toLowerCase().includes('annual');
   
   if (basePlan === 'solo') {
-    return isAnnual ? 149 : 14.90;
+    return isAnnual ? 149 : 15;
+  }
+  if (basePlan === 'standard') {
+    return isAnnual ? 289 : 29;
   }
   if (basePlan === 'pro') {
-    return isAnnual ? 490 : 49.00;
-  }
-  if (basePlan === 'business') {
-    return isAnnual ? 990 : 99.00;
+    return isAnnual ? 489 : 49;
   }
   
-  return 14.90; // Par défaut
+  return 15; // Par défaut
 }
 
 // ============================================
@@ -11731,10 +11579,56 @@ function getPlanDisplayName(plan) {
   const basePlan = getBasePlanName(plan);
   
   if (basePlan === 'solo') return 'Solo';
+  if (basePlan === 'standard') return 'Standard';
   if (basePlan === 'pro') return 'Pro';
-  if (basePlan === 'business') return 'Business';
   
   return 'Solo';
+}
+
+// ============================================
+// 5. FONCTION : Limites du plan
+// ============================================
+function getPlanLimits(plan) {
+  const basePlan = getBasePlanName(plan);
+  
+  const limits = {
+    solo: {
+      included: 1,
+      extraPrice: null,
+      extraPriceAnnual: null
+    },
+    standard: {
+      included: 3,
+      extraPrice: 7,
+      extraPriceAnnual: 70
+    },
+    pro: {
+      included: 6,
+      extraPrice: 5,
+      extraPriceAnnual: 50
+    }
+  };
+  
+  return limits[basePlan] || limits.solo;
+}
+
+// ============================================
+// 6. FONCTION : Calculer le coût total
+// ============================================
+function calculateTotalCost(plan, propertyCount) {
+  const basePlan = getBasePlanName(plan);
+  const isAnnual = (plan || '').toLowerCase().includes('annual');
+  const limits = getPlanLimits(basePlan);
+  
+  const basePrice = getPlanAmount(plan);
+  const extraCount = Math.max(0, propertyCount - limits.included);
+  
+  let extraPrice = 0;
+  if (extraCount > 0 && limits.extraPrice) {
+    extraPrice = extraCount * (isAnnual ? limits.extraPriceAnnual : limits.extraPrice);
+  }
+  
+  return basePrice + extraPrice;
 }
 
 // ============================================
@@ -11755,21 +11649,48 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     // Validation du plan
     const { plan } = req.body || {};
     if (!plan) {
-      return res.status(400).json({ error: 'Plan requis (solo, pro ou business)' });
-    }
-const validPlans = ['solo_monthly', 'solo_annual', 'standard_monthly', 'standard_annual', 'pro_monthly', 'pro_annual'];
-    if (!validPlans.includes(plan.toLowerCase())) {
-      return res.status(400).json({ error: 'Plan invalide. Plans valides : solo, pro, business (monthly ou annual)' });
+      return res.status(400).json({ 
+        error: 'Plan requis',
+        validPlans: ['solo_monthly', 'solo_annual', 'standard_monthly', 'standard_annual', 'pro_monthly', 'pro_annual']
+      });
     }
 
+    // ✅ Plans valides (UNIQUEMENT solo, standard, pro)
+    const validPlans = [
+      'solo_monthly', 'solo_annual',
+      'standard_monthly', 'standard_annual',
+      'pro_monthly', 'pro_annual'
+    ];
+    
+    const planLower = plan.toLowerCase();
+    if (!validPlans.includes(planLower)) {
+      return res.status(400).json({ 
+        error: 'Plan invalide',
+        received: plan,
+        validPlans: validPlans
+      });
+    }
+
+    // Obtenir le Price ID
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
-      return res.status(400).json({ error: 'Plan inconnu ou non configuré dans les variables d\'environnement' });
+      console.error(`❌ Aucun Price ID trouvé pour le plan: ${plan}`);
+      return res.status(400).json({ 
+        error: 'Plan non configuré dans Stripe',
+        hint: `Vérifiez que STRIPE_PRICE_${plan.toUpperCase()} existe dans votre .env`
+      });
     }
+
+    console.log('✅ Création session Stripe:', {
+      user: user.email,
+      userId: user.id,
+      plan: plan,
+      priceId: priceId
+    });
 
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
 
-    // ✅ Créer la session Stripe Checkout SANS trial (l'essai est géré en DB)
+    // ✅ CORRECTION CRITIQUE : Créer la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -11780,17 +11701,37 @@ const validPlans = ['solo_monthly', 'solo_annual', 'standard_monthly', 'standard
         }
       ],
       subscription_data: {
-        // ❌ PAS de trial_period_days ici car l'essai est déjà géré dans ta DB
         metadata: {
           userId: user.id.toString(),
-          plan: plan
+          plan: plan,
+          planDisplay: getPlanDisplayName(plan)
         }
       },
       customer_email: user.email,
-      client_reference_id: user.id,
+      client_reference_id: user.id.toString(),
       success_url: `${appUrl}/settings-account.html?tab=subscription&success=true`,
-      cancel_url: `${appUrl}/pricing.html?cancelled=true`
+      cancel_url: `${appUrl}/pricing.html?cancelled=true`,
+      locale: 'fr'
     });
+
+    console.log('✅ Session créée avec succès:', session.id);
+
+    res.json({ 
+      url: session.url,
+      sessionId: session.id
+    });
+
+  } catch (err) {
+    console.error('❌ Erreur create-checkout-session:', err);
+    console.error('Stack:', err.stack);
+    
+    res.status(500).json({ 
+      error: 'Impossible de créer la session de paiement',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
 
     res.json({ url: session.url });
   } catch (err) {
