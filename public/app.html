@@ -886,13 +886,13 @@
 .booking-block.end {
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
-  right: -10px; /* déborde légèrement sur la cellule suivante */
+  right: -8px; /* ✅ RÉDUIT pour éviter fusion visuelle */
 }
 
 /* Réservation d’une seule nuit (start + end dans la même cellule) */
 .booking-block.single {
   border-radius: 999px;
-  right: -10px; /* petite queue aussi */
+  right: -8px; /* ✅ RÉDUIT pour éviter fusion */
 }
 
     /* Platform Icons */
@@ -5486,7 +5486,13 @@ function riskColor(level) {
 
         var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
 
-        if (lastNight < range.start || startDay > range.end) continue;
+        // ✅ CORRECTION : Ne plus filtrer les réservations passées
+        // On garde toutes les réservations pour l'historique
+        // Ancien code : if (lastNight < range.start || startDay > range.end) continue;
+        
+        // Nouveau : on affiche seulement si la réservation est visible dans la plage
+        if (startDay > range.end) continue; // Trop dans le futur
+        // On garde les réservations passées pour l'historique
 
         var cells = [];
         var cur = new Date(startDay.getTime());
