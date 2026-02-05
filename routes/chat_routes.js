@@ -286,6 +286,20 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           c.*,
           p.name as property_name,
           p.color as property_color,
+          -- ✅ CONSTRUIRE LE NOM COMPLET DU VOYAGEUR
+          CASE 
+            WHEN c.guest_first_name IS NOT NULL AND c.guest_last_name IS NOT NULL 
+            THEN TRIM(c.guest_first_name || ' ' || c.guest_last_name)
+            WHEN c.guest_first_name IS NOT NULL 
+            THEN c.guest_first_name
+            ELSE 'Voyageur'
+          END as guest_display_name,
+          -- ✅ PREMIÈRE LETTRE POUR L'AVATAR
+          CASE 
+            WHEN c.guest_first_name IS NOT NULL 
+            THEN LEFT(UPPER(c.guest_first_name), 1)
+            ELSE 'V'
+          END as guest_initial,
           (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
           (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
           (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
