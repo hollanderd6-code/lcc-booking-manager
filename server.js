@@ -9798,7 +9798,9 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
 // ============================================
 
 // Helper : Récupérer le Price ID selon le plan
+app.get('/api/subscription/status', authenticateAny, async (req, res) => {
   try {
+    const userId = req.user.id;
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorise' });
@@ -11732,13 +11734,6 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
   }
 });
 
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('❌ Erreur create-checkout-session:', err);
-    res.status(500).json({ error: 'Impossible de créer la session de paiement' });
-  }
-});
 
 // ============================================
 // GET /api/subscription/status
