@@ -1887,9 +1887,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         
         // 📝 ABONNEMENT (logique existante)
         const userId = session.client_reference_id || session.metadata?.userId;
-        const plan = session.metadata?.plan || 'solo_monthly';
-        const basePlan = getBasePlanName(plan);
-
+        
         if (!userId) {
           console.error('userId manquant dans checkout.session.completed');
           break;
@@ -1901,6 +1899,23 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         // Récupérer l'abonnement Stripe pour vérifier s'il y a un essai gratuit
         const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
         const isTrialing = stripeSubscription.status === 'trialing';
+        
+        // ✅ AMÉLIORATION : Récupérer le vrai plan depuis le Price ID Stripe
+        let plan = session.metadata?.plan;
+        
+        // Si pas de metadata ou metadata incorrecte, récupérer depuis le Price ID
+        if (!plan || plan === 'solo_monthly') {
+          const priceId = stripeSubscription.items.data[0]?.price?.id;
+          if (priceId) {
+            plan = getPlanFromPriceId(priceId);
+            console.log(`✅ Plan détecté depuis Price ID: ${priceId} -> ${plan}`);
+          } else {
+            plan = 'solo_monthly';
+            console.warn('⚠️ Aucun Price ID trouvé, utilisation du plan Solo par défaut');
+          }
+        }
+        
+        const basePlan = getBasePlanName(plan);
         const subscriptionStatus = isTrialing ? 'trial' : 'active';
 
         if (isTrialing) {
@@ -11494,6 +11509,28 @@ function getPriceIdForPlan(plan) {
   // Par défaut : Solo mensuel
   console.warn(`⚠️ Plan inconnu: ${plan}, utilisation du plan Solo mensuel par défaut`);
   return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+}
+
+// ============================================
+// 1b. FONCTION : Récupérer le nom du plan depuis un Price ID
+// ============================================
+function getPlanFromPriceId(priceId) {
+  if (!priceId) return 'solo_monthly';
+  
+  // Solo
+  if (priceId === process.env.STRIPE_PRICE_SOLO_MONTHLY) return 'solo_monthly';
+  if (priceId === process.env.STRIPE_PRICE_SOLO_ANNUAL) return 'solo_annual';
+  
+  // Standard
+  if (priceId === process.env.STRIPE_PRICE_STANDARD_MONTHLY) return 'standard_monthly';
+  if (priceId === process.env.STRIPE_PRICE_STANDARD_ANNUAL) return 'standard_annual';
+  
+  // Pro
+  if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY) return 'pro_monthly';
+  if (priceId === process.env.STRIPE_PRICE_PRO_ANNUAL) return 'pro_annual';
+  
+  console.warn(`⚠️ Price ID inconnu: ${priceId}, utilisation du plan Solo par défaut`);
+  return 'solo_monthly';
 }
 
 // ============================================
