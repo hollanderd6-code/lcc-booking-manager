@@ -5404,7 +5404,7 @@ app.get('/api/user/profile', async (req, res) => {
         created_at
        FROM users 
        WHERE id = $1`,
-      [userId]
+      [user.id]
     );
 
     if (result.rows.length === 0) {
@@ -9854,7 +9854,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     // Récupérer l'abonnement Stripe
     const result = await pool.query(
       'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [userId]
+      [user.id]
     );
 
     if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
@@ -11736,86 +11736,6 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 // POST /api/billing/create-portal-session
 // Créer une session Stripe Customer Portal
 // ============================================
-app.post('/api/billing/create-portal-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configuré' });
-    }
-
-    // Récupérer le customer_id Stripe de l'utilisateur
-    const result = await pool.query(
-      'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [userId]
-    );
-
-    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
-      return res.status(404).json({ 
-        error: 'Aucun abonnement Stripe trouvé',
-        message: 'Le portail est disponible après souscription'
-      });
-    }
-
-    const customerId = result.rows[0].stripe_customer_id;
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
-    // Créer la session du portail client
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${appUrl}/settings-account.html?tab=subscription`
-    });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('❌ Erreur create-portal-session:', err);
-    res.status(500).json({ error: 'Impossible d\'ouvrir le portail' });
-  }
-});
-// ============================================
-// POST /api/billing/create-portal-session
-// Créer un lien vers le portail client Stripe
-// ============================================
-app.post('/api/billing/create-portal-session', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
-    }
-
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe non configuré' });
-    }
-
-    // Récupérer l'abonnement Stripe
-    const result = await pool.query(
-      'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1',
-      [userId]
-    );
-
-    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
-      return res.status(404).json({ error: 'Aucun client Stripe trouvé' });
-    }
-
-    const customerId = result.rows[0].stripe_customer_id;
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
-
-    // Créer la session du portail
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${appUrl}/settings-account.html?tab=subscription`
-    });
-
-    res.json({ url: session.url });
-
-  } catch (err) {
-    console.error('Erreur create-portal-session:', err);
-    res.status(500).json({ error: 'Impossible de créer la session portail' });
-  }
-});
 
 // ============================================
 // ROUTES POUR MESSAGE DE RÉSERVATION AVEC CLEANING PHOTOS
