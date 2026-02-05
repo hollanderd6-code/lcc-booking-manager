@@ -2647,7 +2647,7 @@ async function loadProperties() {
   }
 }
 function getUserProperties(userId) {
-  return PROPERTIES.filter(p => p.userId === user.id);
+  return PROPERTIES.filter(p => p.userId === userId);
 }
 // ============================================
 // CODE COMPLET À AJOUTER DANS server-23.js
