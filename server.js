@@ -11757,8 +11757,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
     if (!plan) {
       return res.status(400).json({ error: 'Plan requis (solo, pro ou business)' });
     }
-
-    const validPlans = ['solo_monthly', 'solo_annual', 'pro_monthly', 'pro_annual', 'business_monthly', 'business_annual'];
+const validPlans = ['solo_monthly', 'solo_annual', 'standard_monthly', 'standard_annual', 'pro_monthly', 'pro_annual'];
     if (!validPlans.includes(plan.toLowerCase())) {
       return res.status(400).json({ error: 'Plan invalide. Plans valides : solo, pro, business (monthly ou annual)' });
     }
@@ -11783,7 +11782,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       subscription_data: {
         // ❌ PAS de trial_period_days ici car l'essai est déjà géré dans ta DB
         metadata: {
-          userId: userId,
+          userId: user.id.toString(),
           plan: plan
         }
       },
