@@ -144,18 +144,7 @@ function generateAutoResponse(property, detectedQuestions) {
  * @param {Object} pool - PostgreSQL pool
  * @param {Object} io - Socket.io instance
  */
-function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
-  
-  // ✅ Import des fonctions de gestion des permissions depuis le middleware
-  const { 
-    requirePermission, 
-    loadSubAccountData, 
-    filterByAccessibleProperties, 
-    getRealUserId 
-  } = require('../sub-accounts-middleware');
-  
-  // Garder authenticateToken pour compatibilité avec les routes existantes
-  const authenticateToken = authenticateAny;
+function setupChatRoutes(app, pool, io, authenticateToken, checkSubscription) {
 
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
@@ -270,15 +259,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
   // 2. LISTE DES CONVERSATIONS (PROPRIÉTAIRE)
   // ============================================
   
-  app.get('/api/chat/conversations', 
-    authenticateToken, 
-    checkSubscription, 
-    requirePermission(pool, 'can_view_conversations'),
-    loadSubAccountData(pool),
-    async (req, res) => {
+  app.get('/api/chat/conversations', authenticateToken, checkSubscription, async (req, res) => {
     try {
-      // ✅ Support des sous-comptes : récupérer l'ID utilisateur réel
-      const userId = await getRealUserId(pool, req);
+      const userId = req.user.id;
       const { status, property_id } = req.query;
 
       let query = `
@@ -313,12 +296,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
 
       const result = await pool.query(query, params);
 
-      // ✅ Filtrer par propriétés accessibles si sous-compte
-      const filteredConversations = filterByAccessibleProperties(result.rows, req);
-
       res.json({
         success: true,
-        conversations: filteredConversations
+        conversations: result.rows
       });
 
     } catch (error) {
@@ -490,7 +470,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       const { conversationId } = req.params;
 
       const convCheck = await pool.query(
-        `SELECT c.id, c.user_id, c.property_id FROM conversations c WHERE c.id = $1`,
+        `SELECT id, user_id FROM conversations WHERE id = $1`,
         [conversationId]
       );
 
@@ -500,31 +480,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
 
       const conversation = convCheck.rows[0];
 
-      // Vérifier les permissions (propriétaire OU sous-compte OU voyageur vérifié)
-      if (req.user) {
-        // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount 
-          ? (await getRealUserId(pool, req))
-          : req.user.id;
-        
-        if (realUserId !== conversation.user_id) {
-          // Vérifier si sous-compte avec accès à cette propriété
-          if (req.user.isSubAccount) {
-            const subAccountData = await pool.query(
-              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-              [req.user.subAccountId]
-            );
-            
-            if (subAccountData.rows.length > 0) {
-              const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-              if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-                return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-              }
-            }
-          } else {
-            return res.status(403).json({ error: 'Accès refusé' });
-          }
-        }
+      // Vérifier les permissions (propriétaire OU voyageur vérifié)
+      if (req.user && req.user.id !== conversation.user_id) {
+        return res.status(403).json({ error: 'Accès refusé' });
       }
 
       const messages = await pool.query(
@@ -574,30 +532,8 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       const conversation = convResult.rows[0];
 
       // Vérifier les permissions
-      if (req.user && sender_type === 'owner') {
-        // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount 
-          ? (await getRealUserId(pool, req))
-          : req.user.id;
-        
-        if (realUserId !== conversation.user_id) {
-          return res.status(403).json({ error: 'Accès refusé' });
-        }
-        
-        // ✅ Vérifier accès propriété si sous-compte
-        if (req.user.isSubAccount) {
-          const subAccountData = await pool.query(
-            'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-            [req.user.subAccountId]
-          );
-          
-          if (subAccountData.rows.length > 0) {
-            const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-            if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-              return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-            }
-          }
-        }
+      if (req.user && sender_type === 'owner' && req.user.id !== conversation.user_id) {
+        return res.status(403).json({ error: 'Accès refusé' });
       }
 
       // Insérer le message
@@ -804,21 +740,13 @@ try {
   // 7. GÉNÉRER LE MESSAGE POUR AIRBNB/BOOKING
   // ============================================
   
-  app.get('/api/chat/generate-booking-message/:conversationId', 
-    authenticateToken, 
-    checkSubscription, 
-    requirePermission(pool, 'can_generate_booking_messages'),
-    loadSubAccountData(pool),
-    async (req, res) => {
+  app.get('/api/chat/generate-booking-message/:conversationId', authenticateToken, checkSubscription, async (req, res) => {
     try {
       const { conversationId } = req.params;
-      // ✅ Support des sous-comptes
-      const userId = await getRealUserId(pool, req);
+      const userId = req.user.id;
 
       const result = await pool.query(
-        `SELECT c.unique_token, c.pin_code, c.user_id, c.property_id 
-         FROM conversations c 
-         WHERE c.id = $1`,
+        `SELECT unique_token, pin_code, user_id FROM conversations WHERE id = $1`,
         [conversationId]
       );
 
@@ -827,14 +755,6 @@ try {
       }
 
       const conversation = result.rows[0];
-      
-      // ✅ Vérifier accès propriété si sous-compte
-      if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
-        if (!req.subAccountData.accessible_property_ids.includes(conversation.property_id)) {
-          return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-        }
-      }
-
       const message = generateMessageTemplate(conversation.pin_code, conversation.unique_token);
 
       res.json({
