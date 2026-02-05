@@ -359,7 +359,7 @@
           <li><i class="fas fa-check"></i> Support standard</li>
         </ul>
 
-        <button class="btn btn-ghost btn-large" onclick="startCheckout('solo')">
+        <button class="btn btn-ghost btn-large" onclick="startCheckout('solo', event)">
           Essayer gratuitement 14 jours
         </button>
       </div>
@@ -398,7 +398,7 @@
           <li><i class="fas fa-check"></i> Support standard</li>
         </ul>
 
-        <button class="btn btn-primary btn-large" onclick="startCheckout('standard')">
+        <button class="btn btn-primary btn-large" onclick="startCheckout('standard', event)">
           Essayer gratuitement 14 jours
         </button>
       </div>
@@ -437,7 +437,7 @@
           <li><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
         </ul>
 
-        <button class="btn btn-ghost btn-large" onclick="startCheckout('pro')">
+        <button class="btn btn-ghost btn-large" onclick="startCheckout('pro', event)">
           Essayer gratuitement 14 jours
         </button>
       </div>
@@ -520,7 +520,7 @@
   }
 
   // Démarrer le checkout
-  async function startCheckout(plan) {
+async function startCheckout(plan, event) {
     const token = localStorage.getItem('lcc_token');
 
     if (!token) {
