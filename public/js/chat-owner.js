@@ -40,24 +40,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Connecter Socket.IO
   connectSocket();
   
-  // Event listeners
-  document.getElementById('filterStatus').addEventListener('change', loadConversations);
-  document.getElementById('filterProperty').addEventListener('change', loadConversations);
+  // Event listeners pour les filtres
+  setupFilters();
   
   // Auto-resize textarea
   const chatInput = document.getElementById('chatInput');
-  chatInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-  });
+  if (chatInput) {
+    chatInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Send on Enter
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessageOwner();
+      }
+    });
+  }
   
-  // Send on Enter
-  chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessageOwner();
-    }
-  });
+  // Fermer le modal en cliquant sur l'overlay
+  const chatModal = document.getElementById('chatModal');
+  if (chatModal) {
+    chatModal.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeChat();
+      }
+    });
+  }
   
   console.log('✅ Chat initialisé');
 });
@@ -75,27 +86,26 @@ async function loadProperties() {
       }
     });
     
- // ⚡ Vérifier content-type
+    // Vérifier content-type
     const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      console.error('❌ Conversations non-JSON');
-      throw new Error('Réponse invalide');
-    }    if (!response.ok) return;
-    
-    // ⚡ Vérifier content-type
     if (!contentType.includes('application/json')) {
       console.warn('⚠️ Properties non-JSON');
       return;
     }
+    
+    if (!response.ok) return;
+    
     const data = await response.json();
     const select = document.getElementById('filterProperty');
     
-    data.properties.forEach(property => {
-      const option = document.createElement('option');
-      option.value = property.id;
-      option.textContent = property.name;
-      select.appendChild(option);
-    });
+    if (select && data.properties) {
+      data.properties.forEach(property => {
+        const option = document.createElement('option');
+        option.value = property.id;
+        option.textContent = property.name;
+        select.appendChild(option);
+      });
+    }
     
   } catch (error) {
     console.error('❌ Erreur chargement propriétés:', error);
@@ -110,8 +120,8 @@ async function loadConversations() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const status = document.getElementById('filterStatus').value;
-    const propertyId = document.getElementById('filterProperty').value;
+    const status = document.getElementById('filterStatus')?.value || '';
+    const propertyId = document.getElementById('filterProperty')?.value || '';
     
     let url = `/api/chat/conversations?`;
     if (status) url += `status=${status}&`;
@@ -126,6 +136,10 @@ async function loadConversations() {
     });
     
     if (!response.ok) {
+      if (response.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
       throw new Error('Erreur chargement conversations');
     }
     
@@ -180,6 +194,7 @@ function updateStats() {
 // ============================================
 function renderConversations() {
   const container = document.getElementById('conversationsList');
+  if (!container) return;
   
   if (allConversations.length === 0) {
     container.innerHTML = `
@@ -195,13 +210,12 @@ function renderConversations() {
   container.innerHTML = allConversations.map(conv => {
     const unreadCount = parseInt(conv.unread_count) || 0;
     const statusClass = conv.status;
-    const statusLabel = {
-      'active': 'Active',
-      'pending': 'En attente',
-      'closed': 'Fermée'
-    }[conv.status] || conv.status;
+    const statusLabel = getStatusLabel(conv.status);
     
-    const guestInitial = (conv.guest_name || 'V').charAt(0).toUpperCase();
+    const guestName = cleanGuestName(conv);
+    const guestInitial = getGuestInitial(conv);
+    const guestPhone = getGuestPhone(conv);
+    
     const checkinDate = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: 'short'
@@ -210,6 +224,9 @@ function renderConversations() {
     const lastMessageTime = conv.last_message_time 
       ? formatTime(conv.last_message_time)
       : formatTime(conv.created_at);
+    
+    const platformIcon = getPlatformIcon(conv.platform);
+    const platformColor = getPlatformColor(conv.platform);
     
     return `
       <div class="conversation-item" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
@@ -220,18 +237,22 @@ function renderConversations() {
         <div class="conversation-content">
           <div class="conversation-header">
             <div class="conversation-info">
-              <h3>${conv.guest_name || 'Voyageur'}</h3>
+              <h3>${guestName}</h3>
+              ${guestPhone ? `<span class="conversation-phone">${guestPhone}</span>` : ''}
               <div class="meta">
                 <span class="property-badge" style="background: ${conv.property_color || '#10B981'}20; color: ${conv.property_color || '#10B981'};">
                   ${conv.property_name || 'Logement'}
                 </span>
                 <span><i class="fas fa-calendar"></i> ${checkinDate}</span>
-                <span><i class="fas fa-tag"></i> ${conv.platform || 'direct'}</span>
+                <span class="platform-badge" style="background-color: ${platformColor}20; color: ${platformColor};">
+                  <i class="fas ${platformIcon}"></i>
+                  ${conv.platform || 'direct'}
+                </span>
               </div>
             </div>
             
             <div class="conversation-status">
-              <!-- ✅ NOUVEAU : Bouton de suppression -->
+              <!-- Bouton de suppression -->
               <div class="conversation-actions">
                 <button class="btn-delete-conversation" 
                         onclick="deleteConversation(${conv.id}, event)" 
@@ -253,24 +274,118 @@ function renderConversations() {
 }
 
 // ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
+function cleanGuestName(conv) {
+  if (!conv) return 'Voyageur';
+  return conv.guest_name || conv.guestName || 'Voyageur';
+}
+
+function getGuestInitial(conv) {
+  const name = cleanGuestName(conv);
+  return name.charAt(0).toUpperCase();
+}
+
+function getGuestPhone(conv) {
+  if (!conv) return '';
+  return conv.guest_phone || conv.guestPhone || '';
+}
+
+function getPlatformIcon(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('airbnb')) return 'fa-airbnb';
+  if (p.includes('booking')) return 'fa-bed';
+  return 'fa-calendar';
+}
+
+function getPlatformColor(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('airbnb')) return '#FF5A5F';
+  if (p.includes('booking')) return '#003580';
+  return '#667eea';
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'active': 'Active',
+    'pending': 'En attente',
+    'closed': 'Fermée',
+    'archived': 'Archivée'
+  };
+  return labels[status] || 'Active';
+}
+
+// ============================================
+// FILTRES
+// ============================================
+function setupFilters() {
+  const statusFilter = document.getElementById('filterStatus');
+  const propertyFilter = document.getElementById('filterProperty');
+  
+  if (statusFilter) {
+    statusFilter.addEventListener('change', loadConversations);
+  }
+  
+  if (propertyFilter) {
+    propertyFilter.addEventListener('change', loadConversations);
+  }
+}
+
+// ============================================
 // OUVRIR UNE CONVERSATION
 // ============================================
 async function openChat(conversationId) {
   currentConversationId = conversationId;
-  const conv = allConversations.find(c => c.id === conversationId);
+  const conv = allConversations.find(c => c.id == conversationId);
   
   if (!conv) return;
   
-  // Mettre à jour le titre
-  document.getElementById('chatModalTitle').textContent = `${conv.guest_name || 'Voyageur'} — ${conv.property_name || 'Logement'}`;
+  // Mettre à jour le titre avec le nom du voyageur
+  const guestName = cleanGuestName(conv);
+  const titleEl = document.getElementById('chatModalTitle');
+  if (titleEl) {
+    titleEl.textContent = guestName;
+  }
   
-  // Afficher le modal
-  document.getElementById('chatModal').classList.add('active');
+  // Remplir les infos dans le header
+  const propertyNameEl = document.getElementById('chatPropertyName');
+  const checkinDateEl = document.getElementById('chatCheckinDate');
+  
+  if (propertyNameEl) propertyNameEl.textContent = conv.property_name || 'Logement';
+  if (checkinDateEl) {
+    const checkin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR');
+    checkinDateEl.textContent = checkin;
+  }
+  
+  // Afficher le bouton de copie du lien
+  const copyLinkBtn = document.getElementById('btnCopyInviteLink');
+  if (copyLinkBtn && conv.chat_token && conv.pin_code) {
+    copyLinkBtn.style.display = 'inline-flex';
+    copyLinkBtn.onclick = () => copyInviteLink(conv.chat_token, conv.pin_code);
+  } else if (copyLinkBtn) {
+    copyLinkBtn.style.display = 'none';
+  }
+  
+  // Afficher le bouton Booking si c'est une réservation Booking
+  const bookingBtn = document.getElementById('btnBookingMessage');
+  if (bookingBtn) {
+    const isBooking = (conv.platform || '').toLowerCase().includes('booking');
+    bookingBtn.style.display = isBooking ? 'inline-flex' : 'none';
+    if (isBooking) {
+      bookingBtn.onclick = () => openBookingMessageModal(conversationId);
+    }
+  }
+  
+  // Afficher la modal
+  const modal = document.getElementById('chatModal');
+  if (modal) {
+    modal.classList.add('active');
+  }
   
   // Charger les messages
   await loadMessages(conversationId);
   
-  // ✅ NOUVEAU : Marquer les messages comme lus
+  // Marquer comme lu
   await markMessagesAsRead(conversationId);
   
   // Rejoindre la room Socket.IO
@@ -279,69 +394,43 @@ async function openChat(conversationId) {
   }
 }
 
-// ============================================
-// MARQUER LES MESSAGES COMME LUS
-// ============================================
 async function markMessagesAsRead(conversationId) {
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`/api/chat/conversations/${conversationId}/mark-read`, {
+    await fetch(`/api/chat/mark-read/${conversationId}`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
+        'Authorization': 'Bearer ' + token
       }
     });
     
-    if (response.ok) {
-      // Mettre à jour localement le compteur de non lus
-      const conv = allConversations.find(c => c.id === conversationId);
-      if (conv) {
-        conv.unread_count = 0;
-      }
-      
-      // Mettre à jour le badge visuel de cette conversation
-      const convElement = document.querySelector(`[data-conversation-id="${conversationId}"]`);
-      if (convElement) {
-        const unreadBadge = convElement.querySelector('.unread-badge');
-        if (unreadBadge) {
-          unreadBadge.remove();
-        }
-      }
-      
-      // Mettre à jour les stats globales
-      updateStats();
-      
-      console.log('✅ Messages marqués comme lus pour conversation', conversationId);
-    }
+    // Recharger les conversations pour mettre à jour le badge
+    await loadConversations();
   } catch (error) {
-    console.error('❌ Erreur marquage messages lus:', error);
-    // Ne pas bloquer l'ouverture du chat si ça échoue
+    console.error('❌ Erreur marquage lu:', error);
   }
 }
 
-// ============================================
-// FERMER LE CHAT
-// ============================================
 function closeChat() {
+  const modal = document.getElementById('chatModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+  
   if (socket && currentConversationId) {
     socket.emit('leave_conversation', currentConversationId);
   }
   
-  document.getElementById('chatModal').classList.remove('active');
   currentConversationId = null;
-  
-  // Recharger les conversations pour mettre à jour les compteurs
-  loadConversations();
 }
 
 // ============================================
-// CHARGEMENT DES MESSAGES
+// MESSAGES
 // ============================================
 async function loadMessages(conversationId) {
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+    const response = await fetch(`/api/chat/messages/${conversationId}`, {
       headers: {
         'Authorization': 'Bearer ' + token
       }
@@ -352,40 +441,96 @@ async function loadMessages(conversationId) {
     }
     
     const data = await response.json();
-    const container = document.getElementById('chatMessages');
-    container.innerHTML = '';
     
-    if (data.messages && data.messages.length > 0) {
-      data.messages.forEach(message => {
-        appendMessage(message);
-      });
-    } else {
-      container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Aucun message</p>';
+    if (data.success && data.messages) {
+      displayMessages(data.messages);
     }
-    
-    scrollToBottom();
-    
   } catch (error) {
     console.error('❌ Erreur chargement messages:', error);
     showToast('Erreur de chargement des messages', 'error');
   }
 }
 
-// ============================================
-// ENVOI DE MESSAGE
-// ============================================
+function displayMessages(messages) {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (!messages || messages.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-comments"></i>
+        <p>Aucun message</p>
+      </div>
+    `;
+    return;
+  }
+  
+  messages.forEach(msg => appendMessage(msg));
+  scrollToBottom();
+}
+
+function appendMessage(message) {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  
+  const isOwner = message.sender_type === 'owner';
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'chat-avatar';
+  avatar.textContent = isOwner ? '🏠' : '👤';
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'chat-content';
+  
+  const sender = document.createElement('div');
+  sender.className = 'chat-sender';
+  sender.textContent = isOwner ? 'Vous' : 'Voyageur';
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+  bubble.textContent = message.message;
+  
+  // Meta : heure + statut
+  const meta = document.createElement('div');
+  meta.className = 'chat-meta';
+  
+  const time = document.createElement('span');
+  time.className = 'chat-time';
+  time.textContent = formatTime(message.created_at);
+  
+  const status = document.createElement('span');
+  status.className = 'chat-status';
+  status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
+  
+  meta.appendChild(time);
+  meta.appendChild(status);
+  
+  contentDiv.appendChild(sender);
+  contentDiv.appendChild(bubble);
+  contentDiv.appendChild(meta);
+  
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(contentDiv);
+  
+  container.appendChild(messageDiv);
+  scrollToBottom();
+}
+
 async function sendMessageOwner() {
   const input = document.getElementById('chatInput');
-  const content = input.value.trim();
+  if (!input || !currentConversationId) return;
   
-  if (!content || !currentConversationId) return;
-  
-  const sendBtn = document.getElementById('sendBtn');
-  sendBtn.disabled = true;
+  const message = input.value.trim();
+  if (!message) return;
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch(`/api/chat/send`, {
+    const response = await fetch('/api/chat/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -393,89 +538,22 @@ async function sendMessageOwner() {
       },
       body: JSON.stringify({
         conversation_id: currentConversationId,
-        message: content,
-        sender_type: 'owner',
-        sender_name: 'Propriétaire'
+        message: message
       })
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Erreur envoi message');
+      throw new Error('Erreur envoi message');
     }
-    
-    // ✅ On ne fait PLUS appendMessage ici
-    // Socket.IO va s'en charger via l'événement 'new_message'
     
     input.value = '';
     input.style.height = 'auto';
+    // Le message sera ajouté via Socket.IO
     
   } catch (error) {
-    console.error('❌ Erreur envoi:', error);
-    showToast('Erreur lors de l\'envoi du message', 'error');
-  } finally {
-    sendBtn.disabled = false;
+    console.error('❌ Erreur envoi message:', error);
+    showToast('Erreur lors de l\'envoi', 'error');
   }
-}
-
-// ============================================
-// AFFICHAGE DES MESSAGES
-// ============================================
-function appendMessage(message) {
-  const container = document.getElementById('chatMessages');
-  
-  // Supprimer le message "Aucun message" si présent
-  if (container.querySelector('p')) {
-    container.innerHTML = '';
-  }
-  
-  const messageDiv = document.createElement('div');
-  messageDiv.className = `chat-message ${message.sender_type}`;
-  
-  const avatar = document.createElement('div');
-  avatar.className = 'chat-avatar';
-  avatar.textContent = message.sender_type === 'guest' ? 'V' : 
-                      message.sender_type === 'bot' ? '🤖' : 'P';
-  
-  const contentDiv = document.createElement('div');
-  contentDiv.style.flex = '1';
-  
-  const sender = document.createElement('div');
-  sender.className = 'chat-sender';
-  sender.textContent = message.sender_name || 
-                      (message.sender_type === 'guest' ? 'Voyageur' : 
-                       message.sender_type === 'bot' ? 'Assistant' : 'Vous');
-  
-  const bubble = document.createElement('div');
-  bubble.className = 'chat-bubble';
-  bubble.textContent = message.message;
-  
-  
-// Meta : heure + statut (même taille que côté guest)
-const meta = document.createElement('div');
-meta.className = 'chat-meta';
-
-const time = document.createElement('span');
-time.className = 'chat-time';
-time.textContent = formatTime(message.created_at);
-
-const status = document.createElement('span');
-status.className = 'chat-status';
-
-// Placeholder : on affiche "Envoyé" uniquement pour les messages du propriétaire (vous)
-// (on rendra Distribué/Lu réel ensuite côté backend)
-status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
-
-meta.appendChild(time);
-meta.appendChild(status);
-
-contentDiv.appendChild(sender);
-contentDiv.appendChild(bubble);
-contentDiv.appendChild(meta);messageDiv.appendChild(avatar);
-  messageDiv.appendChild(contentDiv);
-  
-  container.appendChild(messageDiv);
-  scrollToBottom();
 }
 
 function formatTime(timestamp) {
@@ -500,7 +578,40 @@ function formatTime(timestamp) {
 
 function scrollToBottom() {
   const container = document.getElementById('chatMessages');
-  container.scrollTop = container.scrollHeight;
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+// ============================================
+// GÉNÉRATION MESSAGE BOOKING
+// ============================================
+async function openBookingMessageModal(conversationId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const response = await fetch(`/api/chat/generate-booking-message/${conversationId}`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur génération message');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.message) {
+      // Copier dans le presse-papier
+      await navigator.clipboard.writeText(data.message);
+      
+      // Afficher une notification
+      showToast('✅ Message copié dans le presse-papier !', 'success');
+    }
+  } catch (error) {
+    console.error('❌ Erreur génération message:', error);
+    showToast('❌ Erreur lors de la génération', 'error');
+  }
 }
 
 // ============================================
@@ -533,112 +644,6 @@ Au plaisir de vous accueillir ! 🏠`;
     }
   );
 }
-
-// ============================================
-// SOCKET.IO
-// ============================================
-function connectSocket() {
-  console.log('🔌 [SOCKET] Connexion à:', API_URL);
-  
-  // Options Socket.io optimisées pour mobile natif
-  const socketOptions = {
-    transports: ['websocket', 'polling'], // Websocket en premier
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5,
-    timeout: 20000
-  };
-  
-  socket = io(API_URL, socketOptions);
-  
-  socket.on('connect', () => {
-    console.log('✅ Socket connecté');
-    
-    // Rejoindre la room utilisateur pour les notifications
-    if (userId) {
-      socket.emit('join_user_room', userId);
-    }
-  });
-  
-  socket.on('connect_error', (error) => {
-    console.error('❌ [SOCKET] Erreur de connexion:', error.message);
-  });
-  
-  socket.on('new_message', (message) => {
-    // Si c'est dans la conversation actuelle, afficher le message
-    if (currentConversationId && message.conversation_id === currentConversationId) {
-      appendMessage(message);
-      scrollToBottom(); // ✅ Scroll automatique
-    }
-    
-    // Mettre à jour le compteur de messages non lus
-    loadConversations();
-  });
-  
-  socket.on('new_notification', (notification) => {
-    console.log('🔔 Nouvelle notification:', notification);
-    // Afficher une notification toast
-    showToast('Nouveau message reçu', 'info');
-    // Recharger les conversations
-    loadConversations();
-  });
-  
-  socket.on('disconnect', () => {
-    console.log('❌ Socket déconnecté');
-  });
-}
-
-// ============================================
-// LOADING & TOASTS
-// ============================================
-function showLoading() {
-  const overlay = document.getElementById('loadingOverlay');
-  if (overlay) {
-    overlay.classList.add('active');
-  }
-}
-
-function hideLoading() {
-  const overlay = document.getElementById('loadingOverlay');
-  if (overlay) {
-    overlay.classList.remove('active');
-  }
-}
-
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
-
-  const icons = {
-    success: 'fa-check-circle',
-    error: 'fa-exclamation-circle',
-    info: 'fa-info-circle'
-  };
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `
-    <i class="fas ${icons[type] || icons.info}"></i>
-    <span class="toast-message">${message}</span>
-  `;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add('hide');
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
-  }, 3500);
-}
-
-// Fermer le modal en cliquant sur l'overlay
-document.getElementById('chatModal').addEventListener('click', function(e) {
-  if (e.target === this) {
-    closeChat();
-  }
-});
 
 // ============================================
 // SUPPRESSION DE CONVERSATION
@@ -704,3 +709,161 @@ async function deleteConversation(conversationId, event) {
     showToast('Erreur: ' + error.message, 'error');
   }
 }
+
+// ============================================
+// SOCKET.IO
+// ============================================
+function connectSocket() {
+  console.log('🔌 [SOCKET] Connexion à:', API_URL);
+  
+  // Options Socket.io optimisées pour mobile natif
+  const socketOptions = {
+    transports: ['websocket', 'polling'], // Websocket en premier
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
+    timeout: 20000
+  };
+  
+  socket = io(API_URL, socketOptions);
+  
+  socket.on('connect', () => {
+    console.log('✅ Socket connecté');
+    
+    // Rejoindre la room utilisateur pour les notifications
+    if (userId) {
+      socket.emit('join_user_room', userId);
+    }
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error('❌ [SOCKET] Erreur de connexion:', error.message);
+  });
+  
+  socket.on('new_message', (message) => {
+    console.log('📨 Nouveau message reçu:', message);
+    
+    // Si c'est dans la conversation actuelle, afficher le message
+    if (currentConversationId && message.conversation_id === currentConversationId) {
+      appendMessage(message);
+      scrollToBottom();
+    }
+    
+    // Mettre à jour le compteur de messages non lus
+    loadConversations();
+  });
+  
+  socket.on('new_notification', (notification) => {
+    console.log('🔔 Nouvelle notification:', notification);
+    // Afficher une notification toast
+    showToast('Nouveau message reçu', 'info');
+    // Recharger les conversations
+    loadConversations();
+  });
+  
+  socket.on('messages_read', ({ conversationId }) => {
+    console.log('✅ Messages marqués comme lus:', conversationId);
+    // Recharger les conversations
+    loadConversations();
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('❌ Socket déconnecté');
+  });
+}
+
+// ============================================
+// LOADING & TOASTS
+// ============================================
+function showLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.add('active');
+  }
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  
+  // Fallback si pas de container
+  if (!container) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+    return;
+  }
+
+  const icons = {
+    success: 'fa-check-circle',
+    error: 'fa-exclamation-circle',
+    info: 'fa-info-circle'
+  };
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <i class="fas ${icons[type] || icons.info}"></i>
+    <span class="toast-message">${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('hide');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3500);
+}
+
+// ============================================
+// GESTION CLAVIER
+// ============================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && currentConversationId) {
+    closeChat();
+  }
+});
+
+// ============================================
+// EXPOSER LES FONCTIONS GLOBALEMENT
+// ============================================
+window.openChat = openChat;
+window.closeChat = closeChat;
+window.sendMessageOwner = sendMessageOwner;
+window.openBookingMessageModal = openBookingMessageModal;
+window.copyInviteLink = copyInviteLink;
+window.deleteConversation = deleteConversation;
+window.cleanGuestName = cleanGuestName;
+window.getGuestInitial = getGuestInitial;
+window.getGuestPhone = getGuestPhone;
+window.formatRelativeTime = formatTime; // Alias pour compatibilité
+
+console.log('✅ Chat owner initialized');
