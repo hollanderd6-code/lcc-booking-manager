@@ -16,6 +16,8 @@
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">    
     <!-- CSS Chat moderne -->
 <link href="/css/chat-modern.css" rel="stylesheet">
+<!-- CSS infos voyageur -->
+<link href="/css/guest-info-styles.css" rel="stylesheet">
     
     <style>
     html, body {
@@ -775,6 +777,109 @@
 </div>
 <!-- Socket.IO -->
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<!-- ✅ FONCTIONS HELPERS POUR AFFICHAGE VOYAGEUR -->
+<script>
+// ============================================
+// FONCTIONS HELPERS POUR AFFICHAGE VOYAGEUR
+// ============================================
+
+function cleanGuestName(reservation) {
+  if (!reservation) return 'Voyageur';
+  
+  // Si on a le guest_display_name construit par le serveur
+  if (reservation.guest_display_name && 
+      reservation.guest_display_name !== 'Voyageur' &&
+      reservation.guest_display_name.trim() !== '') {
+    return reservation.guest_display_name;
+  }
+  
+  // Construire à partir de guest_first_name et guest_last_name (onboarding)
+  if (reservation.guest_first_name) {
+    const firstName = reservation.guest_first_name.trim();
+    const lastName = reservation.guest_last_name ? reservation.guest_last_name.trim() : '';
+    return lastName ? `${firstName} ${lastName}` : firstName;
+  }
+  
+  // Fallback sur guest_name
+  const rawName = reservation.guest_name || reservation.guestName;
+  if (rawName && rawName !== 'undefined' && rawName !== 'null' && rawName.trim() !== '') {
+    const cleaned = rawName.trim().replace(/^\(|\)$/g, '');
+    const invalidNames = [
+      'not available', 'closed', 'reservation', 'reserved', 'blocked', 
+      'unavailable', 'booked', 'not provided', 'n/a', 'unknown', 'guest'
+    ];
+    
+    if (!invalidNames.some(invalid => cleaned.toLowerCase().includes(invalid))) {
+      return cleaned;
+    }
+  }
+  
+  // Fallback final avec plateforme
+  const plat = (reservation.source || reservation.platform || '').toLowerCase();
+  if (plat.includes('airbnb')) return 'Voyageur Airbnb';
+  if (plat.includes('booking')) return 'Voyageur Booking';
+  
+  return 'Voyageur';
+}
+
+function getGuestInitial(reservation) {
+  if (!reservation) return 'V';
+  
+  // Si on a l'initiale construite par le serveur
+  if (reservation.guest_initial && reservation.guest_initial !== 'V') {
+    return reservation.guest_initial;
+  }
+  
+  // Extraire du prénom (onboarding)
+  if (reservation.guest_first_name && reservation.guest_first_name.trim() !== '') {
+    return reservation.guest_first_name.charAt(0).toUpperCase();
+  }
+  
+  // Fallback sur guest_name
+  const name = reservation.guest_name || reservation.guestName;
+  if (name && name !== 'undefined' && name !== 'null' && name.trim() !== '') {
+    return name.charAt(0).toUpperCase();
+  }
+  
+  return 'V';
+}
+
+function getGuestPhone(reservation) {
+  if (!reservation) return '';
+  
+  if (reservation.guest_phone && reservation.guest_phone.trim() !== '') {
+    return reservation.guest_phone;
+  }
+  
+  if (reservation.guestPhone && reservation.guestPhone.trim() !== '') {
+    return reservation.guestPhone;
+  }
+  
+  return '';
+}
+
+function formatRelativeTime(date) {
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000);
+  
+  if (diff < 60) return 'À l\'instant';
+  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `Il y a ${Math.floor(diff / 86400)}j`;
+  
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+// Exposer globalement
+window.cleanGuestName = cleanGuestName;
+window.getGuestInitial = getGuestInitial;
+window.getGuestPhone = getGuestPhone;
+window.formatRelativeTime = formatRelativeTime;
+
+console.log('✅ Fonctions helpers messages chargées');
+</script>
+
 <!-- Script -->
 <script src="/js/chat-owner.js"></script>
 <!-- Auth + User -->
