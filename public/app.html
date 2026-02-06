@@ -3897,7 +3897,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-sign-in-alt"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">Check-in : ${r.guestName}</div>
+                    <div class="activity-title">Check-in : ${window.cleanGuestName(r, r.source || r.platform)}</div>
                     <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
                     <div class="activity-time">Aujourd'hui</div>
                   </div>
@@ -3913,7 +3913,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-sign-out-alt"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">Check-out : ${r.guestName}</div>
+                    <div class="activity-title">Check-out : ${window.cleanGuestName(r, r.source || r.platform)}</div>
                     <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
                     <div class="activity-time">Aujourd'hui</div>
                   </div>
@@ -3956,7 +3956,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-broom"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">Ménage après ${r.guestName}</div>
+                    <div class="activity-title">Ménage après ${window.cleanGuestName(r, r.source || r.platform)}</div>
                     <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
                     <div class="activity-time">${timeText} - ${checkoutDate.toLocaleDateString('fr-FR')}</div>
                   </div>
@@ -3996,7 +3996,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-calendar-plus"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">${r.guestName}</div>
+                    <div class="activity-title">${window.cleanGuestName(r, r.source || r.platform)}</div>
                     <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'} • ${new Date(r.startDate).toLocaleDateString('fr-FR')} - ${new Date(r.endDate).toLocaleDateString('fr-FR')}</div>
                     <div class="activity-time">${timeText}</div>
                   </div>
