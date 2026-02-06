@@ -5059,17 +5059,72 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     console.log(`🔍 DEBUG: userProps.length=${userProps.length}, filteredProps.length=${filteredProps.length}`);
 
+    // ⭐ ENRICHISSEMENT : Charger TOUTES les conversations pour cet utilisateur
+    let conversationsMap = new Map();
+    try {
+      const allConversationsResult = await pool.query(
+        `SELECT 
+          property_id,
+          DATE(reservation_start_date) as start_date,
+          platform,
+          guest_first_name, 
+          guest_last_name, 
+          guest_phone,
+          onboarding_completed
+         FROM conversations 
+         WHERE user_id = $1`,
+        [userId]
+      );
+      
+      // Créer un index pour lookup rapide
+      allConversationsResult.rows.forEach(conv => {
+        // Normaliser la plateforme pour le matching
+        const platform = (conv.platform || '').toLowerCase();
+        const key = `${conv.property_id}_${conv.start_date}_${platform}`;
+        conversationsMap.set(key, conv);
+      });
+      
+      console.log(`💬 ${conversationsMap.size} conversations chargées pour enrichissement`);
+    } catch (error) {
+      console.error('❌ Erreur chargement conversations:', error);
+    }
+
+    // Enrichir les réservations avec les données des conversations
     filteredProps.forEach(property => {
       const propertyReservations = reservationsStore.properties[property.id] || [];
+      
       propertyReservations.forEach(reservation => {
-        allReservations.push({
+        // Préparer la clé de recherche
+        const startDate = new Date(reservation.start || reservation.checkIn).toISOString().split('T')[0];
+        const platform = (reservation.source || reservation.platform || '').toLowerCase();
+        const key = `${property.id}_${startDate}_${platform}`;
+        
+        // Chercher la conversation correspondante
+        const conversationData = conversationsMap.get(key) || {};
+        
+        // Enrichir la réservation
+        const enrichedReservation = {
           ...reservation,
           property: {
             id: property.id,
             name: property.name,
             color: property.color
-          }
-        });
+          },
+          // ⭐ Ajouter les infos du voyageur depuis la conversation
+          guest_first_name: conversationData.guest_first_name || null,
+          guest_last_name: conversationData.guest_last_name || null,
+          guest_phone: conversationData.guest_phone || null,
+          onboarding_completed: conversationData.onboarding_completed || false,
+          // Calculer les champs dérivés
+          guest_display_name: conversationData.guest_first_name 
+            ? `${conversationData.guest_first_name} ${conversationData.guest_last_name || ''}`.trim()
+            : null,
+          guest_initial: conversationData.guest_first_name 
+            ? conversationData.guest_first_name.charAt(0).toUpperCase() 
+            : null
+        };
+        
+        allReservations.push(enrichedReservation);
       });
     });
 
