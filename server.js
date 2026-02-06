@@ -5070,7 +5070,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       return p;
     }
 
-    // ⭐ ENRICHISSEMENT : Charger TOUTES les conversations pour cet utilisateur
+   // ⭐ ENRICHISSEMENT : Charger TOUTES les conversations pour cet utilisateur
     let conversationsMap = new Map();
     try {
       const allConversationsResult = await pool.query(
@@ -5093,8 +5093,19 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         const platform = normalizePlatform(conv.platform);
         const baseKey = `${conv.property_id}_${conv.start_date}_${platform}`;
         
+        // Fonction helper pour ajouter une clé sans écraser si elle existe déjà avec des infos
+        const addKey = (key, conversation) => {
+          const existing = conversationsMap.get(key);
+          // Ne pas écraser si la clé existe déjà et a des infos guest
+          if (existing && existing.guest_first_name) {
+            return; // Garder l'existant qui a des infos
+          }
+          // Sinon, ajouter/écraser
+          conversationsMap.set(key, conversation);
+        };
+        
         // Ajouter la clé principale
-        conversationsMap.set(baseKey, conv);
+        addKey(baseKey, conv);
         
         // Ajouter aussi les clés avec ±1 jour pour gérer les décalages
         const date = new Date(conv.start_date);
@@ -5103,13 +5114,13 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         const prevDate = new Date(date);
         prevDate.setDate(prevDate.getDate() - 1);
         const prevKey = `${conv.property_id}_${prevDate.toISOString().split('T')[0]}_${platform}`;
-        conversationsMap.set(prevKey, conv);
+        addKey(prevKey, conv);
         
         // Jour suivant
         const nextDate = new Date(date);
         nextDate.setDate(nextDate.getDate() + 1);
         const nextKey = `${conv.property_id}_${nextDate.toISOString().split('T')[0]}_${platform}`;
-        conversationsMap.set(nextKey, conv);
+        addKey(nextKey, conv);
         
         // ⭐ DEBUG TEMPORAIRE pour Jean
         if (conv.guest_first_name === 'Jean') {
@@ -5121,7 +5132,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             platform_normalized: platform
           });
         }
-      }); 
+      });
       
       console.log(`💬 ${conversationsMap.size} conversations chargées pour enrichissement`);
       
