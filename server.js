@@ -5110,8 +5110,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         nextDate.setDate(nextDate.getDate() + 1);
         const nextKey = `${conv.property_id}_${nextDate.toISOString().split('T')[0]}_${platform}`;
         conversationsMap.set(nextKey, conv);
-      });
-       // ⭐ DEBUG TEMPORAIRE pour Jean
+        
+        // ⭐ DEBUG TEMPORAIRE pour Jean
         if (conv.guest_first_name === 'Jean') {
           console.log('🔍 DEBUG Jean - Clés créées:', {
             baseKey: baseKey,
@@ -5121,7 +5121,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             platform_normalized: platform
           });
         }
-      });
+      }); 
+      
       console.log(`💬 ${conversationsMap.size} conversations chargées pour enrichissement`);
       
       // 🔍 DEBUG: Afficher quelques exemples de clés
