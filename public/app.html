@@ -6391,6 +6391,13 @@ function findReservationForBlock(bookingBlock) {
       booking,
     });
 
+// ✅ AJOUTE CES LIGNES
+console.log('👤 DEBUG GUEST:', {
+  guest_display_name: booking.guest_display_name,
+  guest_first_name: booking.guest_first_name,
+  guest_last_name: booking.guest_last_name,
+  guestName: booking.guestName
+});
     // 3️⃣ Infos de base
     const rawStart = booking.start || booking.startDate;
     const rawEnd   = booking.end   || booking.endDate;
