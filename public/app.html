@@ -5137,7 +5137,14 @@ window.LCC_PROPERTIES = properties;
             source: r2.source || r2.platform || 'direct',
             createdAt: r2.createdAt || r2.created_at || null,
             hasDeposit: r2.hasDeposit || r2.has_deposit || false,
-            depositAmount: r2.depositAmount || r2.deposit_amount || 0
+            depositAmount: r2.depositAmount || r2.deposit_amount || 0,
+            // ✅ Champs enrichis depuis les conversations (onboarding)
+            guest_first_name: r2.guest_first_name || null,
+            guest_last_name: r2.guest_last_name || null,
+            guest_phone: r2.guest_phone || null,
+            guest_display_name: r2.guest_display_name || null,
+            guest_initial: r2.guest_initial || null,
+            onboarding_completed: r2.onboarding_completed || false
           });
         }
         
