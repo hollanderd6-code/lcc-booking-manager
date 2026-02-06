@@ -284,6 +284,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       let query = `
         SELECT 
           c.*,
+          c.guest_first_name,
+          c.guest_last_name,
+          c.guest_phone,
           p.name as property_name,
           p.color as property_color,
           (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
@@ -316,9 +319,20 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       // ✅ Filtrer par propriétés accessibles si sous-compte
       const filteredConversations = filterByAccessibleProperties(result.rows, req);
 
+      // ⭐ Enrichir les conversations avec les infos du voyageur
+      const enrichedConversations = filteredConversations.map(conv => ({
+        ...conv,
+        guest_display_name: conv.guest_first_name 
+          ? `${conv.guest_first_name} ${conv.guest_last_name || ''}`.trim()
+          : `Voyageur ${conv.platform || 'Booking'}`,
+        guest_initial: conv.guest_first_name 
+          ? conv.guest_first_name.charAt(0).toUpperCase() 
+          : 'V'
+      }));
+
       res.json({
         success: true,
-        conversations: filteredConversations
+        conversations: enrichedConversations
       });
 
     } catch (error) {
@@ -345,6 +359,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       const result = await pool.query(
         `SELECT 
           c.*,
+          c.guest_first_name,
+          c.guest_last_name,
+          c.guest_phone,
           p.name as property_name,
           p.address as property_address
          FROM conversations c
@@ -376,7 +393,17 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         property_name: conversation.property_name,
         property_address: conversation.property_address,
         reservation_start: conversation.reservation_start_date,
-        reservation_end: conversation.reservation_end_date
+        reservation_end: conversation.reservation_end_date,
+        // ⭐ Ajouter les infos du voyageur
+        guest_first_name: conversation.guest_first_name,
+        guest_last_name: conversation.guest_last_name,
+        guest_phone: conversation.guest_phone,
+        guest_display_name: conversation.guest_first_name 
+          ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
+          : `Voyageur ${conversation.platform || 'Booking'}`,
+        guest_initial: conversation.guest_first_name 
+          ? conversation.guest_first_name.charAt(0).toUpperCase() 
+          : 'V'
       });
 
     } catch (error) {
@@ -509,11 +536,31 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         await sendWelcomeMessage(pool, io, conversation.id, property_id, property.rows[0].user_id);
       }
 
+      // ⭐ Récupérer les infos du voyageur de la conversation
+      const convDetailsResult = await pool.query(
+        `SELECT guest_first_name, guest_last_name, guest_phone, platform 
+         FROM conversations 
+         WHERE id = $1`,
+        [conversation.id]
+      );
+      
+      const convDetails = convDetailsResult.rows[0] || {};
+
       res.json({
         success: true,
         conversation_id: conversation.id,
         property_id: property_id,
-        property_name: property.rows[0].name
+        property_name: property.rows[0].name,
+        // ⭐ Ajouter les infos du voyageur
+        guest_first_name: convDetails.guest_first_name,
+        guest_last_name: convDetails.guest_last_name,
+        guest_phone: convDetails.guest_phone,
+        guest_display_name: convDetails.guest_first_name 
+          ? `${convDetails.guest_first_name} ${convDetails.guest_last_name || ''}`.trim()
+          : `Voyageur ${convDetails.platform || 'Booking'}`,
+        guest_initial: convDetails.guest_first_name 
+          ? convDetails.guest_first_name.charAt(0).toUpperCase() 
+          : 'V'
       });
 
     } catch (error) {
@@ -531,7 +578,10 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       const { conversationId } = req.params;
 
       const convCheck = await pool.query(
-        `SELECT c.id, c.user_id, c.property_id FROM conversations c WHERE c.id = $1`,
+        `SELECT c.id, c.user_id, c.property_id,
+                c.guest_first_name, c.guest_last_name, c.guest_phone, c.platform 
+         FROM conversations c 
+         WHERE c.id = $1`,
         [conversationId]
       );
 
@@ -581,7 +631,20 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
 
       res.json({
         success: true,
-        messages: messages.rows
+        messages: messages.rows,
+        // ⭐ Ajouter les infos de la conversation
+        conversation: {
+          id: conversation.id,
+          guest_first_name: conversation.guest_first_name,
+          guest_last_name: conversation.guest_last_name,
+          guest_phone: conversation.guest_phone,
+          guest_display_name: conversation.guest_first_name 
+            ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
+            : `Voyageur ${conversation.platform || 'Booking'}`,
+          guest_initial: conversation.guest_first_name 
+            ? conversation.guest_first_name.charAt(0).toUpperCase() 
+            : 'V'
+        }
       });
 
     } catch (error) {
