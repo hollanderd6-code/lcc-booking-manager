@@ -4169,7 +4169,6 @@ async function getUserChecklistTemplates(userId, filters = {}) {
     if (filters.checklistType) {
       paramCount++;
       query += ` AND checklist_type = $${paramCount}`;
-      params.push(filters.checklistType);
     }
 
     query += ` ORDER BY name ASC`;
@@ -4710,6 +4709,7 @@ app.post('/api/reservations/manual', async (req, res) => {
     console.log('✅ Logement trouvé:', property.name);
     
     const uid = 'manual_' + Date.now();
+    const userId = user.id; 
     const reservation = {
       uid: uid,
       start: start,
