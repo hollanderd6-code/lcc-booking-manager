@@ -5154,7 +5154,17 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         if (index < 2) {
           console.log(`🔍 Recherche réservation: ${key}`);
         }
+         // 🔍 DEBUG: Log si c'est la réservation de Jean
+        if (key === 'u_mjcpmi2k-sg-rdc_2026-02-06_booking') {
+          console.log('🔍 DEBUG MATCHING Jean:');
+          console.log('   Clé recherchée:', key);
+          console.log('   Map size:', conversationsMap.size);
+          console.log('   Has key?:', conversationsMap.has(key));
+          console.log('   Get result:', conversationsMap.get(key));
+        }
         
+        // Chercher la conversation correspondante
+        const conversationData = conversationsMap.get(key) || {};
         // Chercher la conversation correspondante
         const conversationData = conversationsMap.get(key) || {};
         
