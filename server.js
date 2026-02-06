@@ -5065,7 +5065,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       const allConversationsResult = await pool.query(
         `SELECT 
           property_id,
-          DATE(reservation_start_date) as start_date,
+          TO_CHAR(reservation_start_date, 'YYYY-MM-DD') as start_date,
           platform,
           guest_first_name, 
           guest_last_name, 
