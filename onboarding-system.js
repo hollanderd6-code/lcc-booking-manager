@@ -1,5 +1,5 @@
 // ============================================
-// 📝 SYSTÈME D'ONBOARDING CLIENT
+// 🎯 SYSTÈME D'ONBOARDING CLIENT
 // ============================================
 
 /**
@@ -189,12 +189,16 @@ async function processOnboardingResponse(message, conversation, pool) {
   let nextMessage = '';
   let currentLanguage = conversation.language || 'fr';
 
+  console.log(`🎯 [ONBOARDING] Conversation ${conversationId}, étape: ${currentStep}, message: "${userMessage}"`);
+
   switch (currentStep) {
     case ONBOARDING_STEPS.FIRST_NAME:
       // Enregistrer le prénom
       updateQuery = 'UPDATE conversations SET guest_first_name = $1, updated_at = NOW() WHERE id = $2';
       updateParams = [userMessage, conversationId];
       await pool.query(updateQuery, updateParams);
+      
+      console.log(`✅ [ONBOARDING] Prénom enregistré: ${userMessage}`);
       
       // Message suivant
       nextMessage = getOnboardingMessage('last_name', currentLanguage, { firstName: userMessage });
@@ -207,6 +211,8 @@ async function processOnboardingResponse(message, conversation, pool) {
       updateParams = [userMessage, conversationId];
       await pool.query(updateQuery, updateParams);
       
+      console.log(`✅ [ONBOARDING] Nom enregistré: ${userMessage}`);
+      
       // Message suivant
       nextMessage = getOnboardingMessage('phone', currentLanguage);
       conversation.guest_last_name = userMessage;
@@ -215,6 +221,7 @@ async function processOnboardingResponse(message, conversation, pool) {
     case ONBOARDING_STEPS.PHONE:
       // Valider et enregistrer le téléphone
       if (!isValidPhone(userMessage)) {
+        console.log(`❌ [ONBOARDING] Format téléphone invalide: ${userMessage}`);
         return {
           shouldRespond: true,
           message: currentLanguage === 'fr' 
@@ -228,6 +235,8 @@ async function processOnboardingResponse(message, conversation, pool) {
       updateParams = [userMessage, conversationId];
       await pool.query(updateQuery, updateParams);
       
+      console.log(`✅ [ONBOARDING] Téléphone enregistré: ${userMessage}`);
+      
       // Message suivant
       nextMessage = getOnboardingMessage('language', currentLanguage);
       conversation.guest_phone = userMessage;
@@ -237,6 +246,7 @@ async function processOnboardingResponse(message, conversation, pool) {
       // Valider et enregistrer la langue
       const langCode = userMessage.toLowerCase().trim();
       if (!isValidLanguage(langCode)) {
+        console.log(`❌ [ONBOARDING] Langue invalide: ${langCode}`);
         return {
           shouldRespond: true,
           message: currentLanguage === 'fr'
@@ -246,9 +256,11 @@ async function processOnboardingResponse(message, conversation, pool) {
         };
       }
       
-      updateQuery = 'UPDATE conversations SET language = $1, onboarding_completed = TRUE, updated_at = NOW() WHERE id = $2';
+      updateQuery = 'UPDATE conversations SET language = $1, onboarding_completed = TRUE, onboarding_completed_at = NOW(), updated_at = NOW() WHERE id = $2';
       updateParams = [langCode, conversationId];
       await pool.query(updateQuery, updateParams);
+      
+      console.log(`✅ [ONBOARDING] Langue enregistrée: ${langCode}, onboarding complété !`);
       
       // 🎯 METTRE À JOUR LA RÉSERVATION avec les infos collectées
       await updateReservationWithGuestInfo(conversation, pool);
@@ -263,6 +275,7 @@ async function processOnboardingResponse(message, conversation, pool) {
 
     case ONBOARDING_STEPS.COMPLETED:
       // Onboarding déjà complété, ne rien faire
+      console.log(`ℹ️ [ONBOARDING] Onboarding déjà complété pour conversation ${conversationId}`);
       return {
         shouldRespond: false,
         message: null,
@@ -283,7 +296,7 @@ async function processOnboardingResponse(message, conversation, pool) {
 async function updateReservationWithGuestInfo(conversation, pool) {
   try {
     if (!conversation.property_id || !conversation.reservation_start_date) {
-      console.log('⚠️ Pas assez d\'infos pour mettre à jour la réservation');
+      console.log('⚠️ [ONBOARDING] Pas assez d\'infos pour mettre à jour la réservation');
       return;
     }
 
@@ -291,9 +304,12 @@ async function updateReservationWithGuestInfo(conversation, pool) {
     const guestPhone = conversation.guest_phone || null;
 
     if (!fullName && !guestPhone) {
-      console.log('⚠️ Aucune info à mettre à jour dans la réservation');
+      console.log('⚠️ [ONBOARDING] Aucune info à mettre à jour dans la réservation');
       return;
     }
+
+    console.log(`📝 [ONBOARDING] Mise à jour réservation: property=${conversation.property_id}, date=${conversation.reservation_start_date}, platform=${conversation.platform}`);
+    console.log(`📝 [ONBOARDING] Données: ${fullName} - ${guestPhone}`);
 
     // Mettre à jour la réservation correspondante
     const updateResult = await pool.query(
@@ -303,20 +319,20 @@ async function updateReservationWithGuestInfo(conversation, pool) {
            updated_at = NOW()
        WHERE property_id = $3 
        AND DATE(start_date) = DATE($4)
-       AND source = $5
+       AND LOWER(source) = LOWER($5)
        RETURNING id, uid, guest_name, guest_phone`,
       [fullName || null, guestPhone, conversation.property_id, conversation.reservation_start_date, conversation.platform]
     );
 
     if (updateResult.rows.length > 0) {
       const updated = updateResult.rows[0];
-      console.log(`✅ Réservation ${updated.uid} mise à jour avec : ${updated.guest_name} - ${updated.guest_phone}`);
+      console.log(`✅ [ONBOARDING] Réservation ${updated.uid} mise à jour avec : ${updated.guest_name} - ${updated.guest_phone}`);
     } else {
-      console.log(`⚠️ Aucune réservation trouvée pour property_id=${conversation.property_id}, date=${conversation.reservation_start_date}, platform=${conversation.platform}`);
+      console.log(`⚠️ [ONBOARDING] Aucune réservation trouvée pour property_id=${conversation.property_id}, date=${conversation.reservation_start_date}, platform=${conversation.platform}`);
     }
 
   } catch (error) {
-    console.error('❌ Erreur updateReservationWithGuestInfo:', error);
+    console.error('❌ [ONBOARDING] Erreur updateReservationWithGuestInfo:', error);
     // Ne pas bloquer l'onboarding même si la mise à jour échoue
   }
 }
@@ -326,12 +342,15 @@ async function updateReservationWithGuestInfo(conversation, pool) {
  */
 async function startOnboarding(conversationId, pool, io, initialLanguage = 'fr') {
   try {
+    console.log(`🚀 [ONBOARDING] Démarrage onboarding pour conversation ${conversationId}`);
+    
     const welcomeMessage = getOnboardingMessage('welcome', initialLanguage);
     
+    // ✅ CORRECTION : Utiliser chat_messages au lieu de messages
     const messageResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
-       VALUES ($1, 'bot', 'Assistant', $2, FALSE, TRUE)
-       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
+      `INSERT INTO chat_messages (conversation_id, sender_type, message, is_read, created_at)
+       VALUES ($1, 'system', $2, FALSE, NOW())
+       RETURNING id, conversation_id, sender_type, message, is_read, created_at`,
       [conversationId, welcomeMessage]
     );
 
@@ -341,10 +360,10 @@ async function startOnboarding(conversationId, pool, io, initialLanguage = 'fr')
       io.to(`conversation_${conversationId}`).emit('new_message', savedMessage);
     }
 
-    console.log(`✅ Onboarding démarré pour conversation ${conversationId}`);
+    console.log(`✅ [ONBOARDING] Onboarding démarré pour conversation ${conversationId}`);
     return true;
   } catch (error) {
-    console.error('❌ Erreur startOnboarding:', error);
+    console.error('❌ [ONBOARDING] Erreur startOnboarding:', error);
     return false;
   }
 }
