@@ -4832,7 +4832,8 @@ console.log('📊 API /api/reservations response:', {
   reservationsCount: baseData.reservations?.length || 0,
   hasProperties: !!baseData.properties,
   propertiesCount: baseData.properties?.length || 0,
-  firstReservation: baseData.reservations?.[11]
+  firstReservation: baseData.reservations?.[11],  // ← CHANGE [0] en [11]
+  reservation11: baseData.reservations?.find(r => r.id === 11)  // ← AJOUTE CETTE LIGNE
 });
         properties = Array.isArray(baseData.properties) ? baseData.properties : [];
         const reservationsBasic = Array.isArray(baseData.reservations) ? baseData.reservations : [];
