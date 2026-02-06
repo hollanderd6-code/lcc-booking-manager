@@ -473,6 +473,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
            -- CE QUE L'UTILISATEUR CHERCHE contient source/platform (inversé)
            OR LOWER($4) LIKE '%' || LOWER(source) || '%'
            OR LOWER($4) LIKE '%' || LOWER(platform) || '%'
+           -- Cas spécial : Direct = MANUEL
+           OR (LOWER($4) = 'direct' AND LOWER(source) = 'manuel')
+           OR (LOWER($4) = 'direct' AND LOWER(platform) = 'manuel')
+           OR (LOWER($4) = 'manuel' AND LOWER(source) = 'direct')
+           OR (LOWER($4) = 'manuel' AND LOWER(platform) = 'direct')
          )
          LIMIT 1`,
         [property_id, checkinDateStr, checkoutDateStr, platform]
