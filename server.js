@@ -5059,6 +5059,17 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     console.log(`🔍 DEBUG: userProps.length=${userProps.length}, filteredProps.length=${filteredProps.length}`);
 
+    // ⭐ Fonction pour normaliser les plateformes
+    function normalizePlatform(platform) {
+      if (!platform) return '';
+      const p = platform.toLowerCase().trim();
+      // Normaliser toutes les variantes de Booking
+      if (p.includes('booking')) return 'booking';
+      // Normaliser toutes les variantes d'Airbnb
+      if (p.includes('airbnb')) return 'airbnb';
+      return p;
+    }
+
     // ⭐ ENRICHISSEMENT : Charger TOUTES les conversations pour cet utilisateur
     let conversationsMap = new Map();
     try {
@@ -5076,12 +5087,29 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         [userId]
       );
       
-      // Créer un index pour lookup rapide
+      // Créer un index pour lookup rapide avec matching flexible
+      // On crée plusieurs clés par conversation pour gérer le décalage de dates
       allConversationsResult.rows.forEach(conv => {
-        // Normaliser la plateforme pour le matching
-        const platform = (conv.platform || '').toLowerCase();
-        const key = `${conv.property_id}_${conv.start_date}_${platform}`;
-        conversationsMap.set(key, conv);
+        const platform = normalizePlatform(conv.platform);
+        const baseKey = `${conv.property_id}_${conv.start_date}_${platform}`;
+        
+        // Ajouter la clé principale
+        conversationsMap.set(baseKey, conv);
+        
+        // Ajouter aussi les clés avec ±1 jour pour gérer les décalages
+        const date = new Date(conv.start_date);
+        
+        // Jour précédent
+        const prevDate = new Date(date);
+        prevDate.setDate(prevDate.getDate() - 1);
+        const prevKey = `${conv.property_id}_${prevDate.toISOString().split('T')[0]}_${platform}`;
+        conversationsMap.set(prevKey, conv);
+        
+        // Jour suivant
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextKey = `${conv.property_id}_${nextDate.toISOString().split('T')[0]}_${platform}`;
+        conversationsMap.set(nextKey, conv);
       });
       
       console.log(`💬 ${conversationsMap.size} conversations chargées pour enrichissement`);
@@ -5106,9 +5134,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       const propertyReservations = reservationsStore.properties[property.id] || [];
       
       propertyReservations.forEach((reservation, index) => {
-        // Préparer la clé de recherche
+        // Préparer la clé de recherche avec normalisation
         const startDate = new Date(reservation.start || reservation.checkIn).toISOString().split('T')[0];
-        const platform = (reservation.source || reservation.platform || '').toLowerCase();
+        const platform = normalizePlatform(reservation.source || reservation.platform);
         const key = `${property.id}_${startDate}_${platform}`;
         
         // 🔍 DEBUG: Log pour les premières réservations
