@@ -425,15 +425,26 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         });
       }
 
-      // Vérifier que la propriété existe
+      // Vérifier que la propriété existe ET récupérer le PIN de la propriété
       const property = await pool.query(
-        `SELECT id, name, user_id FROM properties WHERE id = $1`,
+        `SELECT id, name, user_id, chat_pin FROM properties WHERE id = $1`,
         [property_id]
       );
 
       if (property.rows.length === 0) {
+        console.log('❌ [VERIFY] Propriété introuvable');
         return res.status(404).json({ error: 'Propriété introuvable' });
       }
+
+      console.log('✅ [VERIFY] Propriété trouvée:', property.rows[0].name, 'PIN attendu:', property.rows[0].chat_pin);
+
+      // ✅ VÉRIFIER LE PIN DE LA PROPRIÉTÉ
+      if (property.rows[0].chat_pin && property.rows[0].chat_pin !== chat_pin) {
+        console.log('❌ [VERIFY] PIN incorrect. Attendu:', property.rows[0].chat_pin, 'Reçu:', chat_pin);
+        return res.status(403).json({ error: 'Code PIN incorrect' });
+      }
+
+      console.log('✅ [VERIFY] PIN correct !');
 
       const checkinDateStr = new Date(checkin_date).toISOString().split('T')[0];
       const checkoutDateStr = checkout_date ? new Date(checkout_date).toISOString().split('T')[0] : null;
@@ -496,18 +507,24 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         });
       }
 
-      // Chercher ou créer la conversation
+      // ✅ Chercher ou créer la conversation
+      // IMPORTANT : On ne vérifie PAS le pin_code ici car on utilise le PIN de la PROPRIÉTÉ
       let conversation;
       const existingConv = await pool.query(
         `SELECT * FROM conversations 
          WHERE property_id = $1 
-         AND reservation_start_date = $2 
-         AND platform = $3 
-         AND pin_code = $4`,
-        [property_id, checkinDateStr, platform, chat_pin]
+         AND DATE(reservation_start_date) = $2 
+         AND LOWER(platform) = LOWER($3)`,
+        [property_id, checkinDateStr, platform]
       );
 
+      console.log('🔍 [VERIFY] Recherche conversation existante:', {
+        found: existingConv.rows.length > 0,
+        conversation_id: existingConv.rows[0]?.id
+      });
+
       if (existingConv.rows.length > 0) {
+        console.log('✅ [VERIFY] Conversation existante trouvée');
         conversation = existingConv.rows[0];
         
         if (!conversation.is_verified) {
@@ -519,6 +536,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           );
         }
       } else {
+        console.log('📝 [VERIFY] Création nouvelle conversation avec PIN propriété');
         const uniqueToken = crypto.randomBytes(32).toString('hex');
         const photosToken = crypto.randomBytes(32).toString('hex');
 
@@ -527,10 +545,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           (user_id, property_id, reservation_start_date, reservation_end_date, platform, pin_code, unique_token, photos_token, is_verified, verified_at, status)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW(), 'active')
           RETURNING *`,
-          [property.rows[0].user_id, property_id, checkinDateStr, checkoutDateStr, platform, chat_pin, uniqueToken, photosToken]
+          [property.rows[0].user_id, property_id, checkinDateStr, checkoutDateStr, platform, property.rows[0].chat_pin || chat_pin, uniqueToken, photosToken]
         );
 
         conversation = newConvResult.rows[0];
+        console.log('✅ [VERIFY] Conversation créée:', conversation.id);
         
         // ✅ Envoyer le message de bienvenue pour la nouvelle conversation
         await sendWelcomeMessage(pool, io, conversation.id, property_id, property.rows[0].user_id);
@@ -551,6 +570,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         conversation_id: conversation.id,
         property_id: property_id,
         property_name: property.rows[0].name,
+        unique_token: conversation.unique_token, // ✅ AJOUT
+        reservation_start: conversation.reservation_start_date, // ✅ AJOUT
+        reservation_end: conversation.reservation_end_date, // ✅ AJOUT
         // ⭐ Ajouter les infos du voyageur
         guest_first_name: convDetails.guest_first_name,
         guest_last_name: convDetails.guest_last_name,
