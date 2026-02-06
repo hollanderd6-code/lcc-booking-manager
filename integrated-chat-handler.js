@@ -1,9 +1,11 @@
 // ============================================
-// 🎯 GESTIONNAIRE DE CHAT INTÉGRÉ - VERSION SIMPLIFIÉE
-// Onboarding uniquement (sans Groq AI ni réponses auto complexes)
+// 🎯 GESTIONNAIRE DE CHAT INTÉGRÉ
+// Onboarding + Réponses Auto Multilingues + Groq AI
 // ============================================
 
-const { processOnboardingResponse } = require('./onboarding-system');
+const { getNextOnboardingStep, processOnboardingResponse } = require('./onboarding-system');
+const { detectCategory, getAutoResponse, needsOwnerNotification } = require('./auto-responses-config-multilang');
+const { getGroqResponse, requiresHumanIntervention } = require('./groq-ai');
 
 /**
  * Vérifier si l'onboarding est nécessaire
@@ -18,8 +20,8 @@ function needsOnboarding(conversation) {
  */
 async function handleIncomingMessage(message, conversation, pool, io) {
   try {
-    console.log(`📩 [HANDLER] Message reçu pour conversation ${conversation.id}`);
-    console.log(`📩 [HANDLER] Sender: ${message.sender_type}, Message: "${message.message.substring(0, 50)}"`);
+    console.log(`📩 [HANDLER] Message reçu de ${conversation.guest_name || 'client'}: "${message.message.substring(0, 50)}..."`);
+    console.log(`📩 [HANDLER] Conversation ${conversation.id}, sender_type: ${message.sender_type}`);
     console.log(`📩 [HANDLER] Onboarding complété ? ${conversation.onboarding_completed}`);
 
     // Ne pas traiter les messages du bot ou du propriétaire
@@ -29,11 +31,10 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ========================================
-    // ONBOARDING (si pas complété)
+    // ÉTAPE 1: ONBOARDING (si pas complété)
     // ========================================
     if (needsOnboarding(conversation)) {
-      console.log('🎯 [HANDLER] Traitement onboarding en cours...');
-      
+      console.log('🎯 [HANDLER] Onboarding en cours...');
       const onboardingResult = await processOnboardingResponse(message, conversation, pool);
       
       console.log(`🎯 [HANDLER] Résultat onboarding:`, {
@@ -48,20 +49,106 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         await sendBotMessage(conversation.id, onboardingResult.message, pool, io);
       }
       
-      // Si l'onboarding vient de se terminer
+      // Si l'onboarding vient de se terminer, mettre à jour la conversation
       if (onboardingResult && onboardingResult.completed) {
-        console.log('🎉 [HANDLER] Onboarding terminé pour conversation ' + conversation.id);
+        console.log('🎉 [HANDLER] Onboarding terminé ! Passage aux réponses auto...');
         conversation.onboarding_completed = true;
+        // Continuer pour traiter le message avec les réponses auto
+      } else {
+        // Onboarding pas encore terminé, on s'arrête ici
+        return true;
       }
+    }
+
+    // ========================================
+    // ÉTAPE 2: INTERVENTION URGENTE
+    // ========================================
+    if (requiresHumanIntervention(message.message)) {
+      console.log('🚨 [HANDLER] Intervention humaine urgente !');
       
+      const urgentMessages = {
+        fr: `🚨 Votre message urgent a été transmis au propriétaire qui vous contactera immédiatement.\n\nMerci de patienter, nous faisons le nécessaire ! 🙏`,
+        en: `🚨 Your urgent message has been forwarded to the owner who will contact you immediately.\n\nPlease wait, we're taking care of it! 🙏`,
+        es: `🚨 Su mensaje urgente ha sido transmitido al propietario que le contactará inmediatamente.\n\n¡Gracias por su paciencia! 🙏`,
+        de: `🚨 Ihre dringende Nachricht wurde an den Eigentümer weitergeleitet, der Sie umgehend kontaktieren wird.\n\nBitte warten Sie! 🙏`,
+        it: `🚨 Il tuo messaggio urgente è stato inoltrato al proprietario che ti contatterà immediatamente.\n\nGrazie per la pazienza! 🙏`
+      };
+
+      await sendBotMessage(
+        conversation.id,
+        urgentMessages[conversation.language] || urgentMessages.fr,
+        pool,
+        io
+      );
+
+      // TODO: Notification propriétaire
+      console.log('📧 [HANDLER] Notification propriétaire requise');
       return true;
     }
 
     // ========================================
-    // MESSAGE NORMAL (après onboarding)
+    // ÉTAPE 3: RÉCUPÉRER INFOS PROPRIÉTÉ
     // ========================================
-    console.log(`💬 [HANDLER] Onboarding déjà complété, message normal traité`);
-    // Le message est juste sauvegardé, pas de réponse auto pour l'instant
+    let property = null;
+    if (conversation.property_id) {
+      const propertyResult = await pool.query(
+        'SELECT * FROM properties WHERE id = $1',
+        [conversation.property_id]
+      );
+      property = propertyResult.rows[0] || null;
+    }
+
+    const language = conversation.language || 'fr';
+
+    // ========================================
+    // ÉTAPE 4: RÉPONSE PAR MOTS-CLÉS (GRATUIT)
+    // ========================================
+    const categoryMatch = detectCategory(message.message, language);
+    
+    if (categoryMatch && property) {
+      console.log(`✅ [HANDLER] Match mot-clé: ${categoryMatch.category} (${language})`);
+      
+      const response = getAutoResponse(categoryMatch.category, language, property);
+      
+      if (response) {
+        await sendBotMessage(conversation.id, response, pool, io);
+        
+        // Notifier propriétaire si problème
+        if (needsOwnerNotification(categoryMatch.category)) {
+          console.log('📧 [HANDLER] Notification propriétaire requise');
+        }
+        
+        return true;
+      }
+    }
+
+    // ========================================
+    // ÉTAPE 5: GROQ AI (INTELLIGENT, CHEAP)
+    // ========================================
+    console.log('🚀 [HANDLER] Passage à Groq AI...');
+    
+    const conversationContext = property ? {
+      propertyName: property.name,
+      welcomeBookUrl: property.welcome_book_url,
+      wifiName: property.wifi_name,
+      wifiPassword: property.wifi_password,
+      arrivalTime: property.arrival_time,
+      departureTime: property.departure_time,
+      language: language
+    } : { language };
+
+    const aiResponse = await getGroqResponse(message.message, conversationContext);
+
+    if (aiResponse) {
+      await sendBotMessage(conversation.id, aiResponse, pool, io);
+      return true;
+    }
+
+    // ========================================
+    // ÉTAPE 6: AUCUNE RÉPONSE AUTO POSSIBLE
+    // ========================================
+    console.log('⚠️ [HANDLER] Aucune réponse auto, notification propriétaire');
+    // TODO: Notification propriétaire
     
     return false;
 
