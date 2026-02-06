@@ -4498,7 +4498,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
 
         return {
           type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
-who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
+          who: window.cleanGuestName(r),  // ✅ Passer l'objet complet
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           startStr: formatDateFR(s),
@@ -4590,7 +4590,7 @@ who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source 
           end,
           startStr: formatDateFR(dateOnlyStr(rawStart)),
           endStr: formatDateFR(dateOnlyStr(rawEnd)),
-who: window.cleanGuestName(r.guestName || r.summary || 'Réservation', r.source || r.platform),
+          who: window.cleanGuestName(r),  // ✅ Passer l'objet complet
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           riskLevel: r.riskLevel || 'green',
