@@ -5140,7 +5140,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       console.error('❌ Erreur chargement conversations:', error);
     }
 
-    // Enrichir les réservations avec les données des conversations
+   // Enrichir les réservations avec les données des conversations
     filteredProps.forEach(property => {
       const propertyReservations = reservationsStore.properties[property.id] || [];
       
@@ -5154,7 +5154,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         if (index < 2) {
           console.log(`🔍 Recherche réservation: ${key}`);
         }
-         // 🔍 DEBUG: Log si c'est la réservation de Jean
+        
+        // 🔍 DEBUG: Log si c'est la réservation de Jean
         if (key === 'u_mjcpmi2k-sg-rdc_2026-02-06_booking') {
           console.log('🔍 DEBUG MATCHING Jean:');
           console.log('   Clé recherchée:', key);
@@ -5165,8 +5166,6 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         
         // Chercher la conversation correspondante
         const conversationData = conversationsMap.get(key) || {};
-        // Chercher la conversation correspondante
-        const conversationData = conversationsMap.get(key) || {};
         
         // 🔍 DEBUG: Log si trouvé
         if (conversationData.guest_first_name && index < 2) {
@@ -5174,7 +5173,6 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         } else if (index < 2) {
           console.log(`   ❌ Pas trouvé`);
         }
-        
         // Enrichir la réservation
         const enrichedReservation = {
           ...reservation,
