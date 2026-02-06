@@ -50,7 +50,7 @@ Instructions:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',  // Meilleur modèle gratuit
+        model: 'llama-3.3-70b-versatile',  // Meilleur modèle gratuit (mis à jour)
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
