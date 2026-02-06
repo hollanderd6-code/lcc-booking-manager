@@ -5085,6 +5085,18 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       });
       
       console.log(`💬 ${conversationsMap.size} conversations chargées pour enrichissement`);
+      
+      // 🔍 DEBUG: Afficher quelques exemples de clés
+      if (conversationsMap.size > 0) {
+        console.log('🔍 Exemples de clés de conversations:');
+        let count = 0;
+        for (const [key, conv] of conversationsMap.entries()) {
+          if (count < 3) {
+            console.log(`   ${key} -> ${conv.guest_first_name} ${conv.guest_last_name || ''}`);
+            count++;
+          }
+        }
+      }
     } catch (error) {
       console.error('❌ Erreur chargement conversations:', error);
     }
@@ -5093,14 +5105,26 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     filteredProps.forEach(property => {
       const propertyReservations = reservationsStore.properties[property.id] || [];
       
-      propertyReservations.forEach(reservation => {
+      propertyReservations.forEach((reservation, index) => {
         // Préparer la clé de recherche
         const startDate = new Date(reservation.start || reservation.checkIn).toISOString().split('T')[0];
         const platform = (reservation.source || reservation.platform || '').toLowerCase();
         const key = `${property.id}_${startDate}_${platform}`;
         
+        // 🔍 DEBUG: Log pour les premières réservations
+        if (index < 2) {
+          console.log(`🔍 Recherche réservation: ${key}`);
+        }
+        
         // Chercher la conversation correspondante
         const conversationData = conversationsMap.get(key) || {};
+        
+        // 🔍 DEBUG: Log si trouvé
+        if (conversationData.guest_first_name && index < 2) {
+          console.log(`   ✅ Trouvé: ${conversationData.guest_first_name} ${conversationData.guest_last_name || ''}`);
+        } else if (index < 2) {
+          console.log(`   ❌ Pas trouvé`);
+        }
         
         // Enrichir la réservation
         const enrichedReservation = {
@@ -5129,6 +5153,13 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     });
 
     console.log(`📅 Réservations retournées: ${allReservations.length} (${filteredProps.length} propriétés)`);
+    
+    // 🔍 DEBUG: Compter combien ont des infos guest
+    const withGuestInfo = allReservations.filter(r => r.guest_first_name);
+    console.log(`👤 Réservations avec infos guest: ${withGuestInfo.length}`);
+    if (withGuestInfo.length > 0) {
+      console.log(`   Exemple: ${withGuestInfo[0].guest_display_name} (${withGuestInfo[0].guest_phone || 'pas de tel'})`);
+    }
 
     res.json({
       reservations: allReservations,
