@@ -1215,6 +1215,47 @@
               Détails pour accéder au logement (étage, porte, etc.)
             </small>
 </div>
+
+<!-- ✅ SECTION : MESSAGE D'ARRIVÉE AUTOMATIQUE -->
+<div class="form-group" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); padding: 20px; border-radius: 12px; border: 2px solid #667eea40;">
+<label for="propertyArrivalMessage" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+<i class="fas fa-paper-plane" style="color: #667eea;"></i>
+<span style="font-weight: 600; color: #1e293b;">Message d'arrivée automatique</span>
+<span style="background: #667eea; color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">AUTO</span>
+</label>
+<textarea 
+  id="propertyArrivalMessage" 
+  rows="8" 
+  style="font-family: 'Inter', sans-serif; line-height: 1.6;"
+  placeholder="Bienvenue {guestName} ! 🏠
+
+Voici les informations pour votre arrivée :
+
+📍 Adresse : {address}
+🕐 Heure d'arrivée : {arrivalTime}
+🔑 Code d'accès : {accessCode}
+
+📶 WiFi :
+  • Réseau : {wifiName}
+  • Mot de passe : {wifiPassword}
+
+{accessInstructions}
+
+Bon séjour ! 😊"
+></textarea>
+<small style="display:block;margin-top:8px;font-size:12px;color:#64748b; line-height: 1.5;">
+  <strong style="color: #667eea;">📨 Envoyé automatiquement le jour de l'arrivée à 7h00</strong><br/>
+  Variables disponibles : <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{guestName}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{propertyName}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{address}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{arrivalTime}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{departureTime}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{accessCode}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{wifiName}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{wifiPassword}</code> 
+  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{accessInstructions}</code>
+</small>
+</div>
 <!-- ✅ SECTION : WIFI -->
 <div class="form-grid-2">
 <div class="form-group">
@@ -1776,6 +1817,7 @@
     const welcomeBookUrl = document.getElementById('propertyWelcomeBookUrl').value;
     const accessCode = document.getElementById('propertyAccessCode').value;
     const accessInstructions = document.getElementById('propertyAccessInstructions').value;
+    const arrivalMessage = document.getElementById('propertyArrivalMessage').value;  // ✅ NOUVEAU
     const wifiName = document.getElementById('propertyWifiName').value;
     const wifiPassword = document.getElementById('propertyWifiPassword').value;
 
@@ -1790,6 +1832,7 @@
       welcome_book_url: welcomeBookUrl || null,
       access_code: accessCode || null,
       access_instructions: accessInstructions || null,
+      arrival_message: arrivalMessage || null,  // ✅ NOUVEAU
       wifi_name: wifiName || null,
       wifi_password: wifiPassword || null,
       ownerId: ownerId || null  // 🆕 AJOUT DU OWNER_ID
