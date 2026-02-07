@@ -289,9 +289,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           c.guest_phone,
           p.name as property_name,
           p.color as property_color,
-          (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
-          (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
-          (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
+          (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
+          (SELECT message FROM chat_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+          (SELECT created_at FROM chat_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
         FROM conversations c
         LEFT JOIN properties p ON c.property_id = p.id
         WHERE c.user_id = $1
@@ -650,7 +650,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           id, conversation_id, sender_type, sender_name, message,
           is_read, is_bot_response, is_auto_response,
           created_at, read_at, delivered_at
-         FROM messages
+         FROM chat_messages
          WHERE conversation_id = $1
          ORDER BY created_at ASC`,
         [conversationId]
@@ -733,7 +733,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
 
       // Insérer le message
       const result = await pool.query(
-        `INSERT INTO messages 
+        `INSERT INTO chat_messages 
         (conversation_id, sender_type, sender_name, message, is_read, created_at)
         VALUES ($1, $2, $3, $4, FALSE, NOW())
         RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
@@ -820,7 +820,7 @@ if (sender_type === 'owner') {
           setTimeout(async () => {
             try {
               const autoResult = await pool.query(
-                `INSERT INTO messages 
+                `INSERT INTO chat_messages 
                 (conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at)
                 VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE, TRUE, NOW())
                 RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
@@ -912,7 +912,7 @@ try {
       const { conversationId } = req.params;
 
       await pool.query(
-        `UPDATE messages 
+        `UPDATE chat_messages 
          SET is_read = TRUE, read_at = NOW()
          WHERE conversation_id = $1 AND is_read = FALSE`,
         [conversationId]
