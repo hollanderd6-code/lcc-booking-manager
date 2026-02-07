@@ -22,18 +22,6 @@ const ONBOARDING_MESSAGES = {
 
 Pour mieux vous accompagner, j'ai besoin de quelques informations.
 
-Quel est votre prénom ?`,
-    
-    last_name: `Merci {firstName} ! 😊
-
-Et votre nom de famille ?`,
-    
-    phone: `Parfait !
-
-Pouvez-vous me donner votre numéro de téléphone ? (Pour vous joindre en cas d'urgence)`,
-    
-    language: `Merci !
-
 Dans quelle langue souhaitez-vous communiquer ?
 
 🇫🇷 Français → Tapez "fr"
@@ -41,6 +29,18 @@ Dans quelle langue souhaitez-vous communiquer ?
 🇪🇸 Español → Tapez "es"
 🇩🇪 Deutsch → Tapez "de"
 🇮🇹 Italiano → Tapez "it"`,
+    
+    first_name: `Merci ! 😊
+
+Quel est votre prénom ?`,
+    
+    last_name: `Merci {firstName} !
+
+Et votre nom de famille ?`,
+    
+    phone: `Parfait !
+
+Pouvez-vous me donner votre numéro de téléphone ? (Pour vous joindre en cas d'urgence)`,
     
     completed: `Merci {firstName} ! Votre profil est maintenant configuré. 🎉
 
@@ -59,27 +59,25 @@ Comment puis-je vous aider ? 😊`
 
 To better assist you, I need some information.
 
+In which language would you like to communicate?
+
+🇫🇷 Français → Type "fr"
+🇬🇧 English → Type "en"
+🇪🇸 Español → Type "es"
+🇩🇪 Deutsch → Type "de"
+🇮🇹 Italiano → Type "it"`,
+    
+    first_name: `Thank you! 😊
+
 What is your first name?`,
     
-    last_name: `Thank you {firstName}! 😊
+    last_name: `Thank you {firstName}!
 
 And your last name?`,
     
     phone: `Perfect!
 
 Can you provide your phone number? (To reach you in case of emergency)`,
-    
-    language: `Thank you!
-
-In which language would you like to communicate?
-
-🇫🇷 Français
-🇬🇧 English
-🇪🇸 Español
-🇩🇪 Deutsch
-🇮🇹 Italiano
-
-Reply with the code: fr, en, es, de, or it`,
     
     completed: `Thank you {firstName}! Your profile is now set up. 🎉
 
@@ -98,27 +96,25 @@ How can I help you? 😊`
 
 Para ayudarte mejor, necesito información.
 
+¿En qué idioma te gustaría comunicarte?
+
+🇫🇷 Français → Escribe "fr"
+🇬🇧 English → Escribe "en"
+🇪🇸 Español → Escribe "es"
+🇩🇪 Deutsch → Escribe "de"
+🇮🇹 Italiano → Escribe "it"`,
+    
+    first_name: `¡Gracias! 😊
+
 ¿Cuál es tu nombre?`,
     
-    last_name: `¡Gracias {firstName}! 😊
+    last_name: `¡Gracias {firstName}!
 
 ¿Y tu apellido?`,
     
     phone: `¡Perfecto!
 
 ¿Puedes darme tu número de teléfono? (Para contactarte en caso de emergencia)`,
-    
-    language: `¡Gracias!
-
-¿En qué idioma te gustaría comunicarte?
-
-🇫🇷 Français
-🇬🇧 English
-🇪🇸 Español
-🇩🇪 Deutsch
-🇮🇹 Italiano
-
-Responde con el código: fr, en, es, de, o it`,
     
     completed: `¡Gracias {firstName}! Tu perfil está configurado. 🎉
 
@@ -152,12 +148,13 @@ function isValidLanguage(lang) {
 
 /**
  * Déterminer la prochaine étape d'onboarding
+ * ✅ ORDRE MODIFIÉ : Langue → Prénom → Nom → Téléphone
  */
 function getNextOnboardingStep(conversation) {
+  if (!conversation.language) return ONBOARDING_STEPS.LANGUAGE;        // ✅ LANGUE EN PREMIER !
   if (!conversation.guest_first_name) return ONBOARDING_STEPS.FIRST_NAME;
   if (!conversation.guest_last_name) return ONBOARDING_STEPS.LAST_NAME;
   if (!conversation.guest_phone) return ONBOARDING_STEPS.PHONE;
-  if (!conversation.language) return ONBOARDING_STEPS.LANGUAGE;
   return ONBOARDING_STEPS.COMPLETED;
 }
 
@@ -192,8 +189,34 @@ async function processOnboardingResponse(message, conversation, pool) {
   console.log(`🎯 [ONBOARDING] Conversation ${conversationId}, étape: ${currentStep}, message: "${userMessage}"`);
 
   switch (currentStep) {
+    case ONBOARDING_STEPS.LANGUAGE:
+      // ✅ ÉTAPE 1 : Valider et enregistrer la langue EN PREMIER
+      const langCode = userMessage.toLowerCase().trim();
+      if (!isValidLanguage(langCode)) {
+        console.log(`❌ [ONBOARDING] Langue invalide: ${langCode}`);
+        return {
+          shouldRespond: true,
+          message: `⚠️ Langue non reconnue / Language not recognized / Idioma no reconocido
+
+Répondez avec / Reply with / Responde con: fr, en, es, de, ou/or/o it`,
+          completed: false
+        };
+      }
+      
+      updateQuery = 'UPDATE conversations SET language = $1, updated_at = NOW() WHERE id = $2';
+      updateParams = [langCode, conversationId];
+      await pool.query(updateQuery, updateParams);
+      
+      console.log(`✅ [ONBOARDING] Langue enregistrée: ${langCode}`);
+      
+      // Message suivant dans la langue choisie
+      nextMessage = getOnboardingMessage('first_name', langCode);
+      conversation.language = langCode;
+      currentLanguage = langCode;  // Mettre à jour pour les messages suivants
+      break;
+
     case ONBOARDING_STEPS.FIRST_NAME:
-      // Enregistrer le prénom
+      // ✅ ÉTAPE 2 : Enregistrer le prénom (dans la langue choisie)
       updateQuery = 'UPDATE conversations SET guest_first_name = $1, updated_at = NOW() WHERE id = $2';
       updateParams = [userMessage, conversationId];
       await pool.query(updateQuery, updateParams);
@@ -206,7 +229,7 @@ async function processOnboardingResponse(message, conversation, pool) {
       break;
 
     case ONBOARDING_STEPS.LAST_NAME:
-      // Enregistrer le nom
+      // ✅ ÉTAPE 3 : Enregistrer le nom
       updateQuery = 'UPDATE conversations SET guest_last_name = $1, updated_at = NOW() WHERE id = $2';
       updateParams = [userMessage, conversationId];
       await pool.query(updateQuery, updateParams);
@@ -219,53 +242,39 @@ async function processOnboardingResponse(message, conversation, pool) {
       break;
 
     case ONBOARDING_STEPS.PHONE:
-      // Valider et enregistrer le téléphone
+      // ✅ ÉTAPE 4 : Valider et enregistrer le téléphone (dernière étape)
       if (!isValidPhone(userMessage)) {
         console.log(`❌ [ONBOARDING] Format téléphone invalide: ${userMessage}`);
+        const errorMessages = {
+          fr: `⚠️ Format de téléphone invalide. Merci d'entrer un numéro valide (ex: +33612345678 ou 0612345678)`,
+          en: `⚠️ Invalid phone format. Please enter a valid number (e.g., +33612345678 or 0612345678)`,
+          es: `⚠️ Formato de teléfono inválido. Por favor ingresa un número válido (ej: +33612345678 o 0612345678)`,
+          de: `⚠️ Ungültiges Telefonformat. Bitte geben Sie eine gültige Nummer ein (z.B.: +33612345678 oder 0612345678)`,
+          it: `⚠️ Formato telefono non valido. Per favore inserisci un numero valido (es: +33612345678 o 0612345678)`
+        };
         return {
           shouldRespond: true,
-          message: currentLanguage === 'fr' 
-            ? `⚠️ Format de téléphone invalide. Merci d'entrer un numéro valide (ex: +33612345678 ou 0612345678)`
-            : `⚠️ Invalid phone format. Please enter a valid number (e.g., +33612345678 or 0612345678)`,
+          message: errorMessages[currentLanguage] || errorMessages.fr,
           completed: false
         };
       }
       
-      updateQuery = 'UPDATE conversations SET guest_phone = $1, updated_at = NOW() WHERE id = $2';
+      updateQuery = 'UPDATE conversations SET guest_phone = $1, onboarding_completed = TRUE, onboarding_completed_at = NOW(), updated_at = NOW() WHERE id = $2';
       updateParams = [userMessage, conversationId];
       await pool.query(updateQuery, updateParams);
       
-      console.log(`✅ [ONBOARDING] Téléphone enregistré: ${userMessage}`);
-      
-      // Message suivant
-      nextMessage = getOnboardingMessage('language', currentLanguage);
-      conversation.guest_phone = userMessage;
-      break;
-
-    case ONBOARDING_STEPS.LANGUAGE:
-      // Valider et enregistrer la langue
-      const langCode = userMessage.toLowerCase().trim();
-      if (!isValidLanguage(langCode)) {
-        console.log(`❌ [ONBOARDING] Langue invalide: ${langCode}`);
-        return {
-          shouldRespond: true,
-          message: currentLanguage === 'fr'
-            ? `⚠️ Langue non reconnue. Répondez avec : fr, en, es, de, ou it`
-            : `⚠️ Language not recognized. Reply with: fr, en, es, de, or it`,
-          completed: false
-        };
-      }
-      
-      updateQuery = 'UPDATE conversations SET language = $1, onboarding_completed = TRUE, onboarding_completed_at = NOW(), updated_at = NOW() WHERE id = $2';
-      updateParams = [langCode, conversationId];
-      await pool.query(updateQuery, updateParams);
-      
-      console.log(`✅ [ONBOARDING] Langue enregistrée: ${langCode}, onboarding complété !`);
+      console.log(`✅ [ONBOARDING] Téléphone enregistré: ${userMessage}, onboarding complété !`);
       
       // 🎯 METTRE À JOUR LA RÉSERVATION avec les infos collectées
+      conversation.guest_phone = userMessage;
       await updateReservationWithGuestInfo(conversation, pool);
       
       // Message de complétion dans la langue choisie
+      nextMessage = getOnboardingMessage('completed', currentLanguage, { 
+        firstName: conversation.guest_first_name 
+      });
+      conversation.onboarding_completed = true;
+      break;
       nextMessage = getOnboardingMessage('completed', langCode, { 
         firstName: conversation.guest_first_name 
       });
@@ -286,7 +295,7 @@ async function processOnboardingResponse(message, conversation, pool) {
   return {
     shouldRespond: true,
     message: nextMessage,
-    completed: currentStep === ONBOARDING_STEPS.LANGUAGE
+    completed: currentStep === ONBOARDING_STEPS.PHONE  // ✅ PHONE est maintenant la dernière étape
   };
 }
 
