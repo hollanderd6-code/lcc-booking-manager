@@ -98,7 +98,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       property = propertyResult.rows[0] || null;
     }
 
-    const language = conversation.language || 'fr';
+    // ✅ Ne pas forcer de langue par défaut si onboarding en cours
+    const language = conversation.language || (conversation.onboarding_completed ? 'fr' : null);
 
     // ========================================
     // ÉTAPE 4: RÉPONSE PAR MOTS-CLÉS (GRATUIT)
@@ -165,9 +166,9 @@ async function sendBotMessage(conversationId, message, pool, io) {
   try {
     console.log(`📤 [HANDLER] Envoi message bot pour conversation ${conversationId}`);
     
-    // ✅ CORRECTION : Utiliser chat_messages au lieu de messages
+    // ✅ Utiliser la table messages (cohérence avec chat_routes)
     const messageResult = await pool.query(
-      `INSERT INTO chat_messages (conversation_id, sender_type, message, is_read, created_at)
+      `INSERT INTO messages (conversation_id, sender_type, message, is_read, created_at)
        VALUES ($1, 'system', $2, FALSE, NOW())
        RETURNING id, conversation_id, sender_type, message, is_read, created_at`,
       [conversationId, message]
