@@ -278,7 +278,29 @@ function renderConversations() {
 // ============================================
 function cleanGuestName(conv) {
   if (!conv) return 'Voyageur';
-  return conv.guest_name || conv.guestName || 'Voyageur';
+  
+  // Priorité 1 : guest_display_name (construit par le serveur)
+  if (conv.guest_display_name && 
+      conv.guest_display_name !== 'Voyageur' && 
+      conv.guest_display_name.trim() !== '') {
+    return conv.guest_display_name;
+  }
+  
+  // Priorité 2 : Construire depuis guest_first_name + guest_last_name
+  if (conv.guest_first_name) {
+    const firstName = conv.guest_first_name.trim();
+    const lastName = conv.guest_last_name ? conv.guest_last_name.trim() : '';
+    return lastName ? `${firstName} ${lastName}` : firstName;
+  }
+  
+  // Priorité 3 : Fallback sur guest_name / guestName
+  const rawName = conv.guest_name || conv.guestName;
+  if (rawName && rawName !== 'undefined' && rawName !== 'null' && rawName.trim() !== '') {
+    return rawName.trim();
+  }
+  
+  // Fallback final
+  return 'Voyageur';
 }
 
 function getGuestInitial(conv) {
@@ -293,7 +315,7 @@ function getGuestPhone(conv) {
 
 function getPlatformIcon(platform) {
   const p = (platform || '').toLowerCase();
-  if (p.includes('airbnb')) return 'fa-airbnb';
+  if (p.includes('airbnb')) return 'fa-home';  // ✅ Airbnb (fa-airbnb n'existe pas dans Font Awesome free)
   if (p.includes('booking')) return 'fa-bed';
   return 'fa-calendar';
 }
