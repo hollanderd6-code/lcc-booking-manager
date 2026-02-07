@@ -1223,6 +1223,45 @@
 <span style="font-weight: 600; color: #1e293b;">Message d'arrivée automatique</span>
 <span style="background: #667eea; color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">AUTO</span>
 </label>
+
+<div style="margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
+  <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 600;">
+    📋 Cliquez pour insérer :
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{guestName}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {guestName}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{propertyName}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {propertyName}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{address}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {address}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{arrivalTime}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {arrivalTime}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{departureTime}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {departureTime}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{accessCode}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {accessCode}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{wifiName}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {wifiName}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{wifiPassword}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {wifiPassword}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{accessInstructions}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {accessInstructions}
+    </button>
+    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{welcomeBookUrl}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
+      {welcomeBookUrl}
+    </button>
+  </div>
+</div>
+
 <textarea 
   id="propertyArrivalMessage" 
   rows="8" 
@@ -1239,23 +1278,51 @@ Voici les informations pour votre arrivée :
   • Réseau : {wifiName}
   • Mot de passe : {wifiPassword}
 
+📖 Livret d'accueil : {welcomeBookUrl}
+
 {accessInstructions}
 
 Bon séjour ! 😊"
 ></textarea>
 <small style="display:block;margin-top:8px;font-size:12px;color:#64748b; line-height: 1.5;">
   <strong style="color: #667eea;">📨 Envoyé automatiquement le jour de l'arrivée à 7h00</strong><br/>
-  Variables disponibles : <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{guestName}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{propertyName}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{address}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{arrivalTime}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{departureTime}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{accessCode}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{wifiName}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{wifiPassword}</code> 
-  <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{accessInstructions}</code>
+  (ou immédiatement si réservation le jour même)
 </small>
 </div>
+
+<style>
+.variable-btn:hover {
+  background: #667eea !important;
+  color: white !important;
+  border-color: #667eea !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+</style>
+
+<script>
+// Fonction pour insérer une variable à la position du curseur
+function insertVariable(textareaId, variable) {
+  const textarea = document.getElementById(textareaId);
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = textarea.value;
+  
+  // Insérer la variable à la position du curseur
+  textarea.value = text.substring(0, start) + variable + text.substring(end);
+  
+  // Repositionner le curseur après la variable insérée
+  const newPosition = start + variable.length;
+  textarea.setSelectionRange(newPosition, newPosition);
+  textarea.focus();
+  
+  // Animation du bouton
+  event.target.style.transform = 'scale(0.95)';
+  setTimeout(() => {
+    event.target.style.transform = '';
+  }, 100);
+}
+</script>
 <!-- ✅ SECTION : WIFI -->
 <div class="form-grid-2">
 <div class="form-group">
