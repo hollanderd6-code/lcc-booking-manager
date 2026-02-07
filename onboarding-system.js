@@ -275,12 +275,6 @@ Répondez avec / Reply with / Responde con: fr, en, es, de, ou/or/o it`,
       });
       conversation.onboarding_completed = true;
       break;
-      nextMessage = getOnboardingMessage('completed', langCode, { 
-        firstName: conversation.guest_first_name 
-      });
-      conversation.language = langCode;
-      conversation.onboarding_completed = true;
-      break;
 
     case ONBOARDING_STEPS.COMPLETED:
       // Onboarding déjà complété, ne rien faire
