@@ -349,9 +349,9 @@ async function startOnboarding(conversationId, pool, io, initialLanguage = 'fr')
     
     const welcomeMessage = getOnboardingMessage('welcome', initialLanguage);
     
-    // ✅ CORRECTION : Utiliser chat_messages au lieu de messages
+    // ✅ Utiliser la table messages (pas chat_messages)
     const messageResult = await pool.query(
-      `INSERT INTO chat_messages (conversation_id, sender_type, message, is_read, created_at)
+      `INSERT INTO messages (conversation_id, sender_type, message, is_read, created_at)
        VALUES ($1, 'system', $2, FALSE, NOW())
        RETURNING id, conversation_id, sender_type, message, is_read, created_at`,
       [conversationId, welcomeMessage]
