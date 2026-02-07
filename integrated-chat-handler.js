@@ -53,6 +53,15 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       if (onboardingResult && onboardingResult.completed) {
         console.log('🎉 [HANDLER] Onboarding terminé ! Passage aux réponses auto...');
         conversation.onboarding_completed = true;
+        
+        // 📨 ENVOYER LE MESSAGE D'ARRIVÉE SI ARRIVÉE AUJOURD'HUI
+        try {
+          const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
+          await sendImmediateArrivalMessage(pool, io, conversation.id);
+        } catch (error) {
+          console.error('❌ Erreur envoi message d\'arrivée immédiat:', error);
+        }
+        
         // Continuer pour traiter le message avec les réponses auto
       } else {
         // Onboarding pas encore terminé, on s'arrête ici
