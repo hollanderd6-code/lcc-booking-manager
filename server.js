@@ -42,6 +42,11 @@ const { setupChatRoutes } = require('./routes/chat_routes');
 const smartLocksRoutes = require('./routes/smart-locks-routes');
 
 // ============================================
+// 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
+// ============================================
+const { initArrivalMessagesCron } = require('./arrival-messages-cron');
+
+// ============================================
 // ✅ IMPORT SYSTÈME DE SOUS-COMPTES
 // ============================================
 const { setupSubAccountsRoutes } = require('./sub-accounts-routes');
@@ -8220,6 +8225,7 @@ app.post('/api/properties',
       wifiName,
       wifiPassword,
       accessInstructions,
+      arrivalMessage,  // ✅ NOUVEAU
       chatPin 
     } = body;
 
@@ -8297,8 +8303,8 @@ app.post('/api/properties',
            access_code = $10, wifi_name = $11, wifi_password = $12,
            access_instructions = $13, owner_id = $14, chat_pin = $15,
            amenities = $16, house_rules = $17, practical_info = $18,
-           auto_responses_enabled = $19
-         WHERE id = $20`,
+           auto_responses_enabled = $19, arrival_message = $20
+         WHERE id = $21`,
         [
           name,
           color,
@@ -8319,6 +8325,7 @@ app.post('/api/properties',
           JSON.stringify(houseRules),
           JSON.stringify(practicalInfo),
           autoResponsesEnabled,
+          arrivalMessage || null,  // ✅ NOUVEAU
           id
         ]
       );
@@ -8339,7 +8346,7 @@ app.post('/api/properties',
          address, arrival_time, departure_time, deposit_amount, photo_url,
          welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
          owner_id, chat_pin, display_order, created_at,
-         amenities, house_rules, practical_info, auto_responses_enabled
+         amenities, house_rules, practical_info, auto_responses_enabled, arrival_message
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -8348,7 +8355,7 @@ app.post('/api/properties',
          $16, $17,
          (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
          NOW(),
-         $18, $19, $20, $21
+         $18, $19, $20, $21, $22
        )`,
       [
         id,
@@ -8371,7 +8378,8 @@ app.post('/api/properties',
         JSON.stringify(amenities),
         JSON.stringify(houseRules),
         JSON.stringify(practicalInfo),
-        autoResponsesEnabled
+        autoResponsesEnabled,
+        arrivalMessage || null  // ✅ NOUVEAU
       ]
     );
 
@@ -8437,6 +8445,7 @@ app.put('/api/properties/:propertyId',
       wifiName,
       wifiPassword,
       accessInstructions,
+      arrivalMessage,  // ✅ NOUVEAU
       ownerId,
       amenities,
       houseRules,
@@ -8524,6 +8533,11 @@ app.put('/api/properties/:propertyId',
       autoResponsesEnabled !== undefined 
         ? autoResponsesEnabled 
         : (property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true);
+    
+    const newArrivalMessage = 
+      arrivalMessage !== undefined 
+        ? arrivalMessage 
+        : (property.arrival_message || null);  // ✅ NOUVEAU
         
     let newPhotoUrl =
       existingPhotoUrl !== undefined
@@ -8606,8 +8620,9 @@ userId: userId
          house_rules = $17,
          practical_info = $18,
          auto_responses_enabled = $19,
+         arrival_message = $20,
          updated_at = NOW()
-       WHERE id = $20 AND user_id = $21`,
+       WHERE id = $21 AND user_id = $22`,
       [
         newName,
         newColor,
@@ -8628,6 +8643,7 @@ userId: userId
         newHouseRules,
         newPracticalInfo,
         newAutoResponsesEnabled,
+        newArrivalMessage,  // ✅ NOUVEAU
         propertyId,
         userId
       ]
@@ -13066,6 +13082,12 @@ setupChatRoutes(app, pool, io, authenticateAny, checkSubscription);
 console.log('✅ Routes du chat initialisées');
 
 // ============================================
+// 📨 INITIALISATION DU CRON JOB DES MESSAGES D'ARRIVÉE
+// ============================================
+initArrivalMessagesCron(pool, io);
+console.log('✅ Cron job messages d\'arrivée initialisé');
+
+// ============================================
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
 // ============================================
 setupSubAccountsRoutes(app, pool, authenticateAny);
@@ -13273,20 +13295,23 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
 // ============================================
 // ROUTE DE TEST : Messages d'arrivée manuels
 // ============================================
+// 🧪 ROUTE DE TEST : Envoyer les messages d'arrivée maintenant
 app.post('/api/test/arrival-messages', authenticateAny, async (req, res) => {
   try {
     console.log('🧪 TEST MANUEL : Déclenchement des messages d\'arrivée');
     
-    const result = await processArrivalsForToday(pool, io, smtpTransporter);
+    const { processTodayArrivals } = require('./arrival-messages-scheduler');
+    const result = await processTodayArrivals(pool, io);
     
     console.log('📊 Résultat du test:', result);
     
     res.json({ 
       success: true, 
-      message: 'Test des messages d\'arrivée terminé',
+      message: 'Messages d\'arrivée traités',
       total: result.total,
-      success_count: result.success,
-      results: result.results
+      sent: result.sent,
+      skipped: result.skipped,
+      errors: result.errors
     });
     
   } catch (error) {
