@@ -1517,6 +1517,26 @@ function insertVariable(textareaId, variable, event) {
 
 <!-- ===== SECTION : RÉPONSES AUTOMATIQUES ===== -->
 <div class="form-section-header">
+  <i class="fas fa-broom"></i>
+  <h3>Ménage régulier</h3>
+  <small>Assignez une personne de ménage par défaut pour ce logement. Elle sera automatiquement assignée à chaque nouvelle réservation.</small>
+</div>
+
+<div class="form-group">
+  <label for="defaultCleanerSelect">
+    <i class="fas fa-user-check"></i>
+    <span>Personne de ménage régulière</span>
+  </label>
+  <select id="defaultCleanerSelect" class="form-input" style="width:100%;">
+    <option value="">Aucune — assignation manuelle</option>
+  </select>
+  <div class="info-box" id="defaultCleanerInfo" style="display:none; margin-top:8px;">
+    <i class="fas fa-info-circle"></i>
+    <p id="defaultCleanerInfoText"></p>
+  </div>
+</div>
+
+<div class="form-section-header">
   <i class="fas fa-robot"></i>
   <h3>Réponses automatiques</h3>
   <small>Activez pour que le système réponde automatiquement aux questions fréquentes basées sur les informations ci-dessus</small>
@@ -2115,6 +2135,158 @@ function insertVariable(textareaId, variable, event) {
 
   console.log('✅ Module auto-réponses chargé');
   </script>
+
+<!-- ============================================ -->
+<!-- 🧹 MODULE CLEANER PAR DÉFAUT PAR LOGEMENT    -->
+<!-- ============================================ -->
+<script>
+(function() {
+  const API_URL = window.API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
+  let allCleaners = [];
+  let defaultCleanersMap = {}; // { propertyId: { cleanerId, cleanerName } }
+
+  // Charger la liste des cleaners
+  async function loadCleanersList() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/cleaners`, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        allCleaners = data.cleaners || data || [];
+        console.log('🧹 Cleaners chargés:', allCleaners.length);
+      }
+    } catch (e) { console.error('Erreur chargement cleaners:', e); }
+  }
+
+  // Charger les cleaners par défaut
+  async function loadDefaultCleaners() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/cleaning/default-cleaners`, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        defaultCleanersMap = data.defaults || {};
+        console.log('🧹 Cleaners par défaut chargés:', Object.keys(defaultCleanersMap).length);
+      }
+    } catch (e) { console.error('Erreur chargement defaults:', e); }
+  }
+
+  // Remplir le select du cleaner par défaut dans la modale
+  function populateCleanerSelect(propertyId) {
+    const select = document.getElementById('defaultCleanerSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Aucune — assignation manuelle</option>';
+    allCleaners.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name + (c.phone ? ' (' + c.phone + ')' : '');
+      select.appendChild(opt);
+    });
+
+    // Pré-sélectionner le cleaner par défaut
+    const defaultData = defaultCleanersMap[propertyId];
+    if (defaultData && defaultData.cleanerId) {
+      select.value = defaultData.cleanerId;
+      showCleanerInfo(defaultData.cleanerName);
+    } else {
+      hideCleanerInfo();
+    }
+
+    // Listener pour afficher l'info
+    select.onchange = function() {
+      if (this.value) {
+        const cleaner = allCleaners.find(c => c.id === this.value);
+        showCleanerInfo(cleaner ? cleaner.name : '');
+      } else {
+        hideCleanerInfo();
+      }
+    };
+  }
+
+  function showCleanerInfo(name) {
+    const box = document.getElementById('defaultCleanerInfo');
+    const text = document.getElementById('defaultCleanerInfoText');
+    if (box && text) {
+      text.textContent = `${name} sera automatiquement assigné(e) à chaque nouveau ménage de ce logement. Vous pourrez toujours changer ponctuellement dans la page Ménage.`;
+      box.style.display = 'flex';
+    }
+  }
+
+  function hideCleanerInfo() {
+    const box = document.getElementById('defaultCleanerInfo');
+    if (box) box.style.display = 'none';
+  }
+
+  // Sauvegarder le cleaner par défaut après la sauvegarde du logement
+  async function saveDefaultCleaner(propertyId) {
+    const select = document.getElementById('defaultCleanerSelect');
+    if (!select) return;
+
+    const cleanerId = select.value || null;
+    const currentDefault = defaultCleanersMap[propertyId];
+
+    // Ne rien faire si pas de changement
+    if (!cleanerId && !currentDefault) return;
+    if (cleanerId && currentDefault && currentDefault.cleanerId === cleanerId) return;
+
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch(`${API_URL}/api/cleaning/default-cleaner/${propertyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ cleanerId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (cleanerId) {
+          defaultCleanersMap[propertyId] = data.default || { cleanerId };
+        } else {
+          delete defaultCleanersMap[propertyId];
+        }
+        console.log('✅ Cleaner par défaut sauvegardé pour', propertyId);
+      }
+    } catch (e) { console.error('Erreur sauvegarde cleaner défaut:', e); }
+  }
+
+  // Hook dans editProperty pour charger le cleaner
+  const origEdit = window.editProperty;
+  if (typeof origEdit === 'function') {
+    window.editProperty = function(propertyData) {
+      origEdit(propertyData);
+      // Charger le select après ouverture de la modale
+      setTimeout(() => {
+        populateCleanerSelect(propertyData.id || propertyData.propertyId);
+      }, 100);
+    };
+  }
+
+  // Hook dans saveProperty pour sauvegarder le cleaner après
+  const origSave = window.saveProperty;
+  if (typeof origSave === 'function') {
+    window.saveProperty = async function(event) {
+      const propertyId = document.getElementById('propertyId')?.value;
+      const result = await origSave(event);
+      // Sauvegarder le cleaner par défaut après la sauvegarde du logement
+      if (propertyId) {
+        await saveDefaultCleaner(propertyId);
+      }
+      return result;
+    };
+  }
+
+  // Init : charger au démarrage
+  Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(() => {
+    console.log('✅ Module cleaner par défaut chargé');
+  });
+})();
+</script>
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
