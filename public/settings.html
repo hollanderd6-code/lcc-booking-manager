@@ -2099,6 +2099,12 @@ function insertVariable(textareaId, variable) {
       // Appeler la fonction originale
       originalEditProperty(propertyData);
       
+      // ✅ CHARGER LE MESSAGE D'ARRIVÉE
+      const arrivalMessageField = document.getElementById('propertyArrivalMessage');
+      if (arrivalMessageField && propertyData.arrival_message) {
+        arrivalMessageField.value = propertyData.arrival_message;
+      }
+      
       // Charger les données étendues
       loadPropertyExtendedData(propertyData);
     };
