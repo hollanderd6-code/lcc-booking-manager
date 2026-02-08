@@ -54,23 +54,49 @@ async function sendArrivalMessage(pool, io, conversation, property) {
       return false;
     }
 
-    // ✅ VÉRIFIER LA CAUTION AVANT D'ENVOYER
-    const { hasValidDeposit } = require('./deposit-messages-scheduler');
+    // ✅ VÉRIFIER LA CAUTION AVANT D'ENVOYER (sauf Airbnb)
+    const platform = (conversation.platform || '').toLowerCase();
+    const isAirbnb = platform.includes('airbnb');
     
-    // Récupérer l'UID de la réservation
-    const reservationResult = await pool.query(
-      'SELECT uid FROM reservations WHERE id = $1',
-      [conversation.reservation_id]
-    );
-    
-    if (reservationResult.rows.length > 0) {
-      const reservationUid = reservationResult.rows[0].uid;
-      const depositValid = await hasValidDeposit(pool, reservationUid);
+    if (!isAirbnb) {
+      const { hasValidDeposit } = require('./deposit-messages-scheduler');
       
-      if (!depositValid) {
-        console.log(`⏭️ Caution en attente pour conversation ${conversation.id}, infos d'arrivée bloquées`);
-        return false;
+      // Récupérer l'UID de la réservation (par reservation_id ou par property + date)
+      let reservationUid = null;
+      
+      if (conversation.reservation_id) {
+        const reservationResult = await pool.query(
+          'SELECT uid FROM reservations WHERE id = $1',
+          [conversation.reservation_id]
+        );
+        if (reservationResult.rows.length > 0) {
+          reservationUid = reservationResult.rows[0].uid;
+        }
       }
+      
+      // Fallback : chercher par property_id + date
+      if (!reservationUid && conversation.property_id && conversation.reservation_start_date) {
+        const fallbackResult = await pool.query(
+          `SELECT uid FROM reservations 
+           WHERE property_id = $1 AND DATE(start_date) = DATE($2)
+           ORDER BY created_at DESC LIMIT 1`,
+          [conversation.property_id, conversation.reservation_start_date]
+        );
+        if (fallbackResult.rows.length > 0) {
+          reservationUid = fallbackResult.rows[0].uid;
+        }
+      }
+      
+      if (reservationUid) {
+        const depositValid = await hasValidDeposit(pool, reservationUid);
+        
+        if (!depositValid) {
+          console.log(`⏭️ Caution en attente pour conversation ${conversation.id}, infos d'arrivée bloquées`);
+          return false;
+        }
+      }
+    } else {
+      console.log(`ℹ️ Airbnb détecté → bypass vérification caution`);
     }
 
     // Récupérer le template de message
