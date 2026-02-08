@@ -54,12 +54,135 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         console.log('🎉 [HANDLER] Onboarding terminé !');
         conversation.onboarding_completed = true;
         
-        // 📨 ENVOYER LE MESSAGE D'ARRIVÉE SI ARRIVÉE AUJOURD'HUI
+        // ========================================
+        // 🔒 VÉRIFIER SI UNE CAUTION EST REQUISE
+        // ========================================
         try {
-          const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
-          await sendImmediateArrivalMessage(pool, io, conversation.id);
+          // Récupérer la propriété pour vérifier le deposit_amount
+          let property = null;
+          if (conversation.property_id) {
+            const propResult = await pool.query(
+              'SELECT id, name, deposit_amount FROM properties WHERE id = $1',
+              [conversation.property_id]
+            );
+            property = propResult.rows[0] || null;
+          }
+          
+          // ✅ AIRBNB = PAS DE CAUTION (gérée par Airbnb directement)
+          const platform = (conversation.platform || '').toLowerCase();
+          const isAirbnb = platform.includes('airbnb');
+          
+          if (!isAirbnb) {
+            // Booking / direct / autre → vérifier s'il y a une caution en attente
+            const depositResult = await pool.query(
+              `SELECT d.id, d.amount_cents, d.checkout_url, d.status
+               FROM deposits d
+               JOIN reservations r ON d.reservation_uid = r.uid
+               WHERE r.property_id = $1
+                 AND DATE(r.start_date) = DATE($2)
+                 AND d.status = 'pending'
+               ORDER BY d.created_at DESC
+               LIMIT 1`,
+              [conversation.property_id, conversation.reservation_start_date]
+            );
+            
+            if (depositResult.rows.length > 0) {
+              // ✅ CAUTION EN ATTENTE → Envoyer le message de caution (toujours, peu importe l'heure)
+              const deposit = depositResult.rows[0];
+              const amountEuros = (deposit.amount_cents / 100).toFixed(2);
+              const propertyName = property?.name || 'votre logement';
+              const lang = conversation.language || 'fr';
+              
+              const depositMessages = {
+                fr: `⚠️ Caution obligatoire
+
+Bonjour ${conversation.guest_first_name || ''} !
+
+Une caution de ${amountEuros}€ est requise pour votre séjour à ${propertyName}.
+
+👉 Cliquez ici pour autoriser la caution :
+${deposit.checkout_url}
+
+⚠️ Sans cette autorisation, vous ne pourrez pas recevoir les informations d'arrivée (code d'accès, WiFi, etc.).
+
+L'autorisation ne débite pas votre carte immédiatement. Le montant sera juste bloqué temporairement.
+
+Merci ! 😊`,
+                en: `⚠️ Security deposit required
+
+Hello ${conversation.guest_first_name || ''} !
+
+A security deposit of €${amountEuros} is required for your stay at ${propertyName}.
+
+👉 Click here to authorize the deposit:
+${deposit.checkout_url}
+
+⚠️ Without this authorization, you will not receive the arrival information (access code, WiFi, etc.).
+
+The authorization does not charge your card immediately. The amount will just be temporarily held.
+
+Thank you! 😊`,
+                es: `⚠️ Fianza obligatoria
+
+¡Hola ${conversation.guest_first_name || ''} !
+
+Se requiere una fianza de ${amountEuros}€ para su estancia en ${propertyName}.
+
+👉 Haga clic aquí para autorizar la fianza:
+${deposit.checkout_url}
+
+⚠️ Sin esta autorización, no recibirá la información de llegada (código de acceso, WiFi, etc.).
+
+La autorización no cobra su tarjeta inmediatamente. El importe solo se bloqueará temporalmente.
+
+¡Gracias! 😊`
+              };
+              
+              await sendBotMessage(
+                conversation.id, 
+                depositMessages[lang] || depositMessages.fr, 
+                pool, 
+                io
+              );
+              
+              console.log(`💰 [HANDLER] Message caution envoyé pour conversation ${conversation.id} (${amountEuros}€) - platform: ${platform}`);
+              return true;
+            }
+          } else {
+            console.log(`ℹ️ [HANDLER] Airbnb détecté → pas de caution via notre système`);
+          }
+          
+          // ========================================
+          // ⏰ VÉRIFIER SI C'EST LE BON MOMENT POUR ENVOYER LES INFOS D'ARRIVÉE
+          // ========================================
+          const now = new Date();
+          const nowParis = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+          const currentHour = nowParis.getHours();
+          
+          const todayParis = new Date(nowParis);
+          todayParis.setHours(0, 0, 0, 0);
+          
+          const arrivalDate = new Date(conversation.reservation_start_date);
+          arrivalDate.setHours(0, 0, 0, 0);
+          
+          const isArrivalToday = arrivalDate.getTime() === todayParis.getTime();
+          const isAfter7am = currentHour >= 7;
+          
+          if (isArrivalToday && isAfter7am) {
+            // ✅ Jour J après 7h → envoyer immédiatement
+            console.log('📨 [HANDLER] Jour J après 7h → envoi immédiat du message d\'arrivée');
+            const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
+            await sendImmediateArrivalMessage(pool, io, conversation.id);
+          } else if (isArrivalToday && !isAfter7am) {
+            // ⏰ Jour J mais avant 7h → le cron de 7h s'en chargera
+            console.log(`⏰ [HANDLER] Jour J mais ${currentHour}h < 7h → le cron enverra à 7h`);
+          } else {
+            // 📅 Arrivée dans le futur → le cron du jour J s'en chargera
+            console.log(`📅 [HANDLER] Arrivée le ${arrivalDate.toISOString().split('T')[0]} → le cron enverra le jour J à 7h`);
+          }
+          
         } catch (error) {
-          console.error('❌ Erreur envoi message d\'arrivée immédiat:', error);
+          console.error('❌ Erreur vérification caution / envoi message d\'arrivée:', error);
         }
         
         // ✅ STOP ICI — Ne PAS envoyer le dernier message (ex: numéro de tel) à Groq
