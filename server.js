@@ -1138,6 +1138,16 @@ ON invoice_download_tokens(token);
           ALTER TABLE cleaning_checklists ADD COLUMN is_validated BOOLEAN NOT NULL DEFAULT FALSE;
         END IF;
       END $$;
+
+      -- Table des cleaners par défaut par logement
+      CREATE TABLE IF NOT EXISTS property_default_cleaners (
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT NOT NULL,
+        cleaner_id TEXT NOT NULL REFERENCES cleaners(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, property_id)
+      );
     `);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments, cleaning_checklists & cleaning_templates OK dans Postgres');
@@ -1369,9 +1379,11 @@ async function saveNotificationSettings(userId, settings) {
   return clean;
 }
 // Récupère les assignations de ménage pour un utilisateur sous forme de map { propertyId -> cleaner }
+// Prend en compte : 1) assignation par reservation_key spécifique 2) cleaner par défaut du logement
 async function getCleanerAssignmentsMapForUser(userId) {
   if (!userId) return {};
 
+  // Assignations spécifiques (par reservation_key ou par property_id)
   const result = await pool.query(
     `
     SELECT
@@ -1390,7 +1402,6 @@ async function getCleanerAssignmentsMapForUser(userId) {
 
   const map = {};
   for (const row of result.rows) {
-    // On ignore les cleaners désactivés
     if (row.cleaner_active === false) continue;
     if (!row.property_id || !row.cleaner_id) continue;
 
@@ -1400,6 +1411,33 @@ async function getCleanerAssignmentsMapForUser(userId) {
       email: row.cleaner_email,
       phone: row.cleaner_phone
     };
+  }
+
+  // Compléter avec les cleaners par défaut pour les logements sans assignation
+  try {
+    const defaults = await pool.query(
+      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active
+       FROM property_default_cleaners pdc
+       LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
+       WHERE pdc.user_id = $1`,
+      [userId]
+    );
+
+    for (const row of defaults.rows) {
+      if (row.is_active === false) continue;
+      // Ne pas écraser une assignation spécifique existante
+      if (!map[row.property_id]) {
+        map[row.property_id] = {
+          cleanerId: row.cleaner_id,
+          name: row.name,
+          email: row.email,
+          phone: row.phone
+        };
+      }
+    }
+  } catch (e) {
+    // Table peut ne pas encore exister
+    console.error('Fallback defaults cleaners:', e.message);
   }
 
   return map;
@@ -8763,6 +8801,115 @@ app.get('/api/cleaning/stats',
 
     } catch (err) {
       console.error('Erreur GET /api/cleaning/stats :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// ============================================
+// 🧹 CLEANER PAR DÉFAUT PAR LOGEMENT
+// ============================================
+
+// GET /api/cleaning/default-cleaners — Liste des cleaners par défaut par logement
+app.get('/api/cleaning/default-cleaners',
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const result = await pool.query(
+        `SELECT pdc.property_id, pdc.cleaner_id, c.name as cleaner_name, c.pin_code
+         FROM property_default_cleaners pdc
+         LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
+         WHERE pdc.user_id = $1`,
+        [userId]
+      );
+
+      // Retourner en format map { propertyId: { cleanerId, cleanerName, pinCode } }
+      const defaults = {};
+      result.rows.forEach(row => {
+        defaults[row.property_id] = {
+          cleanerId: row.cleaner_id,
+          cleanerName: row.cleaner_name,
+          pinCode: row.pin_code
+        };
+      });
+
+      res.json({ success: true, defaults });
+    } catch (err) {
+      console.error('Erreur GET /api/cleaning/default-cleaners:', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// PUT /api/cleaning/default-cleaner/:propertyId — Définir ou supprimer le cleaner par défaut
+app.put('/api/cleaning/default-cleaner/:propertyId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const { propertyId } = req.params;
+      const { cleanerId } = req.body;
+
+      // Vérifier que le logement existe
+      const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+      if (!property) {
+        return res.status(404).json({ error: 'Logement non trouvé' });
+      }
+
+      if (!cleanerId) {
+        // Supprimer le cleaner par défaut
+        await pool.query(
+          'DELETE FROM property_default_cleaners WHERE user_id = $1 AND property_id = $2',
+          [userId, propertyId]
+        );
+        console.log(`🧹 Cleaner par défaut supprimé pour ${propertyId}`);
+        return res.json({ success: true, message: 'Cleaner par défaut supprimé' });
+      }
+
+      // Vérifier que le cleaner existe et appartient à l'utilisateur
+      const cleanerResult = await pool.query(
+        'SELECT id, name FROM cleaners WHERE id = $1 AND user_id = $2 AND is_active = TRUE',
+        [cleanerId, userId]
+      );
+      if (cleanerResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Personne de ménage introuvable' });
+      }
+
+      // Upsert
+      await pool.query(
+        `INSERT INTO property_default_cleaners (user_id, property_id, cleaner_id, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (user_id, property_id)
+         DO UPDATE SET cleaner_id = $3, updated_at = NOW()`,
+        [userId, propertyId, cleanerId]
+      );
+
+      console.log(`✅ Cleaner par défaut pour ${propertyId}: ${cleanerResult.rows[0].name}`);
+
+      res.json({
+        success: true,
+        message: 'Cleaner par défaut défini',
+        default: {
+          propertyId,
+          cleanerId,
+          cleanerName: cleanerResult.rows[0].name
+        }
+      });
+    } catch (err) {
+      console.error('Erreur PUT /api/cleaning/default-cleaner:', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }
