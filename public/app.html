@@ -8055,20 +8055,126 @@ function renderCleaningChecklists() {
     return;
   }
   
-  // Afficher les 6 plus récentes
-  const recent = cleaningChecklists.slice(0, 6);
+  // ✅ Prioriser : aujourd'hui, J-1, J-2, puis le reste récent (max 7 jours)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().slice(0, 10);
   
-  container.innerHTML = recent.map(checklist => {
-    const isCompleted = checklist.is_validated || checklist.completed_at;
-    const cardClass = isCompleted ? 'checklist-card-completed' : 'checklist-card-pending';
-    const badgeClass = isCompleted ? 'checklist-badge-completed' : 'checklist-badge-pending';
-    const badgeIcon = isCompleted ? 'fa-check-circle' : 'fa-clock';
-    const badgeText = isCompleted ? 'Validé' : 'En attente';
-    
-    // Extraire infos de la reservation_key
+  const daysAgo = (n) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  };
+  
+  const day1Str = daysAgo(1);
+  const day2Str = daysAgo(2);
+  const day7Str = daysAgo(7);
+  
+  // Extraire la date de checkout de chaque checklist
+  function getCheckoutStr(checklist) {
+    // D'abord checkout_date brut
+    if (checklist.checkout_date) {
+      return String(checklist.checkout_date).slice(0, 10);
+    }
+    // Sinon depuis reservation_key
     const parts = (checklist.reservation_key || '').split('_');
-    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : checklist.checkout_date;
-    const formattedDate = checkoutDate ? formatChecklistDate(checkoutDate) : 'Date inconnue';
+    if (parts.length >= 3) {
+      return parts[parts.length - 1];
+    }
+    // Sinon depuis completed_at
+    if (checklist.completed_at) {
+      return String(checklist.completed_at).slice(0, 10);
+    }
+    return '1970-01-01';
+  }
+  
+  // Séparer en catégories avec priorité
+  const todayChecklists = [];
+  const yesterdayChecklists = [];
+  const day2Checklists = [];
+  const olderChecklists = [];
+  
+  cleaningChecklists.forEach(c => {
+    const dateStr = getCheckoutStr(c);
+    if (dateStr >= todayStr) {
+      todayChecklists.push(c);
+    } else if (dateStr >= day1Str) {
+      yesterdayChecklists.push(c);
+    } else if (dateStr >= day2Str) {
+      day2Checklists.push(c);
+    } else if (dateStr >= day7Str) {
+      olderChecklists.push(c);
+    }
+    // Ignorer > 7 jours
+  });
+  
+  // Construire la liste triée par priorité : en attente d'abord, puis par date
+  const sortByPending = (a, b) => {
+    const aPending = (!a.is_validated && !a.owner_status) || a.owner_status === 'pending' ? 0 : 1;
+    const bPending = (!b.is_validated && !b.owner_status) || b.owner_status === 'pending' ? 0 : 1;
+    return aPending - bPending;
+  };
+  
+  todayChecklists.sort(sortByPending);
+  yesterdayChecklists.sort(sortByPending);
+  day2Checklists.sort(sortByPending);
+  
+  // Fusionner : aujourd'hui d'abord, puis hier, puis J-2, puis le reste — max 8
+  const prioritized = [
+    ...todayChecklists,
+    ...yesterdayChecklists,
+    ...day2Checklists,
+    ...olderChecklists
+  ].slice(0, 8);
+  
+  if (prioritized.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-broom"></i>
+        <p>Aucune checklist récente</p>
+        <small>Les checklists des 7 derniers jours apparaîtront ici</small>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = prioritized.map(checklist => {
+    const isCompleted = checklist.is_validated || (checklist.owner_status === 'validated');
+    const isRejected = checklist.owner_status === 'rejected';
+    const isPending = !isCompleted && !isRejected;
+    
+    let cardClass, badgeClass, badgeIcon, badgeText;
+    if (isRejected) {
+      cardClass = 'checklist-card-pending';
+      badgeClass = 'checklist-badge-pending';
+      badgeIcon = 'fa-exclamation-triangle';
+      badgeText = 'Rejeté';
+    } else if (isCompleted) {
+      cardClass = 'checklist-card-completed';
+      badgeClass = 'checklist-badge-completed';
+      badgeIcon = 'fa-check-circle';
+      badgeText = 'Validé';
+    } else {
+      cardClass = 'checklist-card-pending';
+      badgeClass = 'checklist-badge-pending';
+      badgeIcon = 'fa-clock';
+      badgeText = 'En attente';
+    }
+    
+    // Date
+    const checkoutDateStr = getCheckoutStr(checklist);
+    const formattedDate = checkoutDateStr ? formatChecklistDate(checkoutDateStr) : 'Date inconnue';
+    
+    // Label de fraîcheur
+    let freshLabel = '';
+    if (checkoutDateStr >= todayStr) {
+      freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fee2e2; color:#dc2626; font-weight:700; margin-left:6px;">Aujourd\'hui</span>';
+    } else if (checkoutDateStr >= day1Str) {
+      freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fef3c7; color:#b45309; font-weight:700; margin-left:6px;">Hier</span>';
+    }
+    
+    // Durée
+    const durationMin = checklist.duration_seconds ? Math.round(checklist.duration_seconds / 60) : null;
     
     // Nom du logement
     const propertyName = getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id);
@@ -8076,7 +8182,7 @@ function renderCleaningChecklists() {
     return `
       <div class="checklist-card ${cardClass}" onclick="openChecklistDetails('${checklist.id}')">
         <div class="checklist-card-header">
-          <div class="checklist-property">${propertyName}</div>
+          <div class="checklist-property">${propertyName}${freshLabel}</div>
           <span class="checklist-badge ${badgeClass}">
             <i class="fas ${badgeIcon}"></i>
             ${badgeText}
@@ -8102,13 +8208,13 @@ function renderCleaningChecklists() {
                 color: white;
                 font-size: 11px;
                 font-weight: 600;
-              ">${window.getGuestInitial(checklist)}</span>
-              <span>${window.cleanGuestName(checklist)}</span>
+              ">${window.getGuestInitial ? window.getGuestInitial(checklist) : 'V'}</span>
+              <span>${window.cleanGuestName ? window.cleanGuestName(checklist) : 'Voyageur'}</span>
             </div>
           </div>
           <div class="checklist-info-row">
             <i class="fas fa-user-check"></i>
-            <span>${checklist.cleaner_name || 'Non assigné'}</span>
+            <span>${checklist.cleaner_name || 'Non assigné'}${durationMin ? ' · ' + durationMin + ' min' : ''}</span>
           </div>
         </div>
         
