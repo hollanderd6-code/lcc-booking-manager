@@ -49,16 +49,16 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         await sendBotMessage(conversation.id, onboardingResult.message, pool, io);
       }
       
-      // Si l'onboarding vient de se terminer, mettre à jour la conversation
+      // Si l'onboarding vient de se terminer
       if (onboardingResult && onboardingResult.completed) {
         console.log('🎉 [HANDLER] Onboarding terminé !');
         conversation.onboarding_completed = true;
         
         // ========================================
-        // 🔒 VÉRIFIER SI UNE CAUTION EST REQUISE
+        // 🔒 LOGIQUE POST-ONBOARDING : CAUTION + INFOS D'ARRIVÉE
         // ========================================
         try {
-          // Récupérer la propriété pour vérifier le deposit_amount
+          // Récupérer la propriété
           let property = null;
           if (conversation.property_id) {
             const propResult = await pool.query(
@@ -68,12 +68,35 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             property = propResult.rows[0] || null;
           }
           
-          // ✅ AIRBNB = PAS DE CAUTION (gérée par Airbnb directement)
+          // ⏰ Calcul des dates (timezone Paris)
+          const now = new Date();
+          const nowParis = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+          const currentHour = nowParis.getHours();
+          
+          const todayParis = new Date(nowParis);
+          todayParis.setHours(0, 0, 0, 0);
+          
+          const arrivalDate = new Date(conversation.reservation_start_date);
+          arrivalDate.setHours(0, 0, 0, 0);
+          
+          const diffDays = Math.round((arrivalDate.getTime() - todayParis.getTime()) / (1000 * 60 * 60 * 24));
+          const isArrivalToday = diffDays === 0;
+          const isAfter7am = currentHour >= 7;
+          const isWithin2Days = diffDays <= 2;
+          
           const platform = (conversation.platform || '').toLowerCase();
           const isAirbnb = platform.includes('airbnb');
           
+          console.log(`📅 [HANDLER] Arrivée dans ${diffDays} jour(s), heure Paris: ${currentHour}h, platform: ${platform}`);
+          
+          // ========================================
+          // ÉTAPE A : CAUTION (Booking / Direct uniquement, pas Airbnb)
+          // ========================================
+          // Règle : le message caution est normalement envoyé par le cron J-2 à 9h.
+          // Mais si l'arrivée est dans ≤ 2 jours (cron déjà passé), on l'envoie maintenant.
+          // Si arrivée dans > 2 jours, on ne fait rien ici, le cron J-2 s'en chargera.
+          // ========================================
           if (!isAirbnb) {
-            // Booking / direct / autre → vérifier s'il y a une caution en attente
             const depositResult = await pool.query(
               `SELECT d.id, d.amount_cents, d.checkout_url, d.status
                FROM deposits d
@@ -87,14 +110,16 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             );
             
             if (depositResult.rows.length > 0) {
-              // ✅ CAUTION EN ATTENTE → Envoyer le message de caution (toujours, peu importe l'heure)
               const deposit = depositResult.rows[0];
-              const amountEuros = (deposit.amount_cents / 100).toFixed(2);
-              const propertyName = property?.name || 'votre logement';
-              const lang = conversation.language || 'fr';
               
-              const depositMessages = {
-                fr: `⚠️ Caution obligatoire
+              if (isWithin2Days) {
+                // ✅ Arrivée dans ≤ 2 jours → envoyer le message caution maintenant
+                const amountEuros = (deposit.amount_cents / 100).toFixed(2);
+                const propertyName = property?.name || 'votre logement';
+                const lang = conversation.language || 'fr';
+                
+                const depositMessages = {
+                  fr: `⚠️ Caution obligatoire
 
 Bonjour ${conversation.guest_first_name || ''} !
 
@@ -108,7 +133,7 @@ ${deposit.checkout_url}
 L'autorisation ne débite pas votre carte immédiatement. Le montant sera juste bloqué temporairement.
 
 Merci ! 😊`,
-                en: `⚠️ Security deposit required
+                  en: `⚠️ Security deposit required
 
 Hello ${conversation.guest_first_name || ''} !
 
@@ -122,7 +147,7 @@ ${deposit.checkout_url}
 The authorization does not charge your card immediately. The amount will just be temporarily held.
 
 Thank you! 😊`,
-                es: `⚠️ Fianza obligatoria
+                  es: `⚠️ Fianza obligatoria
 
 ¡Hola ${conversation.guest_first_name || ''} !
 
@@ -136,56 +161,49 @@ ${deposit.checkout_url}
 La autorización no cobra su tarjeta inmediatamente. El importe solo se bloqueará temporalmente.
 
 ¡Gracias! 😊`
-              };
+                };
+                
+                await sendBotMessage(
+                  conversation.id, 
+                  depositMessages[lang] || depositMessages.fr, 
+                  pool, 
+                  io
+                );
+                
+                console.log(`💰 [HANDLER] Message caution envoyé immédiatement (arrivée dans ${diffDays}j)`);
+              } else {
+                // 📅 Arrivée dans > 2 jours → le cron J-2 enverra le message caution à 9h
+                console.log(`📅 [HANDLER] Arrivée dans ${diffDays}j → le cron J-2 enverra la demande de caution`);
+              }
               
-              await sendBotMessage(
-                conversation.id, 
-                depositMessages[lang] || depositMessages.fr, 
-                pool, 
-                io
-              );
-              
-              console.log(`💰 [HANDLER] Message caution envoyé pour conversation ${conversation.id} (${amountEuros}€) - platform: ${platform}`);
+              // STOP dans les 2 cas — infos d'arrivée bloquées tant que caution pas validée
               return true;
             }
+            // Pas de caution pending trouvée → continuer vers envoi infos d'arrivée
           } else {
-            console.log(`ℹ️ [HANDLER] Airbnb détecté → pas de caution via notre système`);
+            console.log(`ℹ️ [HANDLER] Airbnb → pas de caution via notre système`);
           }
           
           // ========================================
-          // ⏰ VÉRIFIER SI C'EST LE BON MOMENT POUR ENVOYER LES INFOS D'ARRIVÉE
+          // ÉTAPE B : INFOS D'ARRIVÉE
+          // Règle : seulement le jour J à partir de 7h (heure Paris)
+          // Si pas encore le moment, le cron du jour J à 7h s'en charge.
           // ========================================
-          const now = new Date();
-          const nowParis = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-          const currentHour = nowParis.getHours();
-          
-          const todayParis = new Date(nowParis);
-          todayParis.setHours(0, 0, 0, 0);
-          
-          const arrivalDate = new Date(conversation.reservation_start_date);
-          arrivalDate.setHours(0, 0, 0, 0);
-          
-          const isArrivalToday = arrivalDate.getTime() === todayParis.getTime();
-          const isAfter7am = currentHour >= 7;
-          
           if (isArrivalToday && isAfter7am) {
-            // ✅ Jour J après 7h → envoyer immédiatement
             console.log('📨 [HANDLER] Jour J après 7h → envoi immédiat du message d\'arrivée');
             const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
             await sendImmediateArrivalMessage(pool, io, conversation.id);
           } else if (isArrivalToday && !isAfter7am) {
-            // ⏰ Jour J mais avant 7h → le cron de 7h s'en chargera
             console.log(`⏰ [HANDLER] Jour J mais ${currentHour}h < 7h → le cron enverra à 7h`);
           } else {
-            // 📅 Arrivée dans le futur → le cron du jour J s'en chargera
-            console.log(`📅 [HANDLER] Arrivée le ${arrivalDate.toISOString().split('T')[0]} → le cron enverra le jour J à 7h`);
+            console.log(`📅 [HANDLER] Arrivée dans ${diffDays}j → le cron enverra le jour J à 7h`);
           }
           
         } catch (error) {
-          console.error('❌ Erreur vérification caution / envoi message d\'arrivée:', error);
+          console.error('❌ Erreur logique post-onboarding:', error);
         }
         
-        // ✅ STOP ICI — Ne PAS envoyer le dernier message (ex: numéro de tel) à Groq
+        // ✅ STOP ICI — Ne PAS envoyer le message d'onboarding (ex: numéro de tel) à Groq
         return true;
       } else {
         // Onboarding pas encore terminé, on s'arrête ici
@@ -214,7 +232,6 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
         io
       );
 
-      // TODO: Notification propriétaire
       console.log('📧 [HANDLER] Notification propriétaire requise');
       return true;
     }
@@ -231,7 +248,6 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
       property = propertyResult.rows[0] || null;
     }
 
-    // ✅ Ne pas forcer de langue par défaut si onboarding en cours
     const language = conversation.language || (conversation.onboarding_completed ? 'fr' : null);
 
     // ========================================
@@ -247,7 +263,6 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
       if (response) {
         await sendBotMessage(conversation.id, response, pool, io);
         
-        // Notifier propriétaire si problème
         if (needsOwnerNotification(categoryMatch.category)) {
           console.log('📧 [HANDLER] Notification propriétaire requise');
         }
@@ -282,7 +297,6 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
     // ÉTAPE 6: AUCUNE RÉPONSE AUTO POSSIBLE
     // ========================================
     console.log('⚠️ [HANDLER] Aucune réponse auto, notification propriétaire');
-    // TODO: Notification propriétaire
     
     return false;
 
@@ -299,7 +313,6 @@ async function sendBotMessage(conversationId, message, pool, io) {
   try {
     console.log(`📤 [HANDLER] Envoi message bot pour conversation ${conversationId}`);
     
-    // ✅ Utiliser la table messages (cohérence avec chat_routes)
     const messageResult = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, message, is_read, created_at)
        VALUES ($1, 'system', $2, FALSE, NOW())
