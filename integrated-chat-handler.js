@@ -51,7 +51,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       
       // Si l'onboarding vient de se terminer, mettre à jour la conversation
       if (onboardingResult && onboardingResult.completed) {
-        console.log('🎉 [HANDLER] Onboarding terminé ! Passage aux réponses auto...');
+        console.log('🎉 [HANDLER] Onboarding terminé !');
         conversation.onboarding_completed = true;
         
         // 📨 ENVOYER LE MESSAGE D'ARRIVÉE SI ARRIVÉE AUJOURD'HUI
@@ -62,7 +62,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
           console.error('❌ Erreur envoi message d\'arrivée immédiat:', error);
         }
         
-        // Continuer pour traiter le message avec les réponses auto
+        // ✅ STOP ICI — Ne PAS envoyer le dernier message (ex: numéro de tel) à Groq
+        return true;
       } else {
         // Onboarding pas encore terminé, on s'arrête ici
         return true;
