@@ -303,7 +303,39 @@
       border-radius: 12px;
       box-shadow: var(--shadow-sm);
       word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
       white-space: pre-wrap;
+    }
+
+    .message-bubble a {
+      color: #2563EB;
+      text-decoration: underline;
+      word-break: break-all;
+      overflow-wrap: break-word;
+    }
+
+    .message-bubble a:hover {
+      color: #1D4ED8;
+    }
+
+    /* Bouton cliquable pour les liens de caution */
+    .message-bubble .deposit-link-btn {
+      display: inline-block;
+      margin: 8px 0;
+      padding: 10px 20px;
+      background: #2563EB;
+      color: white !important;
+      text-decoration: none !important;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
+      word-break: normal;
+    }
+
+    .message-bubble .deposit-link-btn:hover {
+      background: #1D4ED8;
     }
 
     .message.guest .message-bubble {
@@ -1064,6 +1096,39 @@
     // AFFICHAGE DES MESSAGES
     // ============================================
 
+    /**
+     * Convertir les URLs en liens cliquables dans un message
+     * Les liens Stripe de caution deviennent des boutons
+     */
+    function linkifyMessage(text) {
+      if (!text) return '';
+      
+      // Échapper le HTML d'abord pour éviter les injections XSS
+      const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+      
+      // Regex pour détecter les URLs
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      
+      const linked = escaped.replace(urlRegex, function(url) {
+        // Nettoyer les caractères de ponctuation en fin d'URL
+        let cleanUrl = url.replace(/[.,;:!?)]+$/, '');
+        
+        // Si c'est un lien Stripe (caution), afficher un bouton
+        if (cleanUrl.includes('checkout.stripe.com') || cleanUrl.includes('caution')) {
+          return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="deposit-link-btn">💳 Autoriser la caution</a>`;
+        }
+        
+        // Sinon, lien normal
+        return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`;
+      });
+      
+      return linked;
+    }
+
     function appendMessage(message) {
       const container = document.getElementById('messagesContainer');
       
@@ -1104,7 +1169,7 @@
       
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
-      bubble.textContent = message.message;
+      bubble.innerHTML = linkifyMessage(message.message);
       
       // Meta : heure + statut
       const meta = document.createElement('div');
