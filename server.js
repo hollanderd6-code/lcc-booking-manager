@@ -8120,25 +8120,46 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     try {
       const property = PROPERTIES.find(p => p.id === propertyId);
       const propertyName = property?.name || property?.title || propertyId;
+      const durationMin = duration ? Math.round(duration / 60) : null;
 
-      // Notification push Firebase (si configuré)
-      if (typeof sendNewCleaningNotification === 'function') {
-        await sendNewCleaningNotification(cleaner.user_id, {
-          cleanerName: cleaner.name,
-          propertyName,
-          checklistId,
-          duration: duration ? Math.round(duration / 60) : null
-        }).catch(e => console.error('Push notification ménage error:', e));
+      // ✅ Notification push Firebase — envoi direct sur TOUS les appareils du propriétaire
+      try {
+        const tokensResult = await pool.query(
+          'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+          [cleaner.user_id]
+        );
+
+        if (tokensResult.rows.length > 0) {
+          const title = `🧹 Ménage terminé — ${propertyName}`;
+          const body = `${cleaner.name} a terminé le ménage${durationMin ? ' en ' + durationMin + ' min' : ''}. ${photos ? photos.length : 0} photos. À valider !`;
+          const pushData = {
+            type: 'cleaning_completed',
+            checklistId: String(checklistId),
+            propertyId: propertyId,
+            click_action: '/app.html'
+          };
+
+          for (const tokenRow of tokensResult.rows) {
+            try {
+              await sendNotification(tokenRow.fcm_token, title, body, pushData);
+              console.log(`📱 Push ménage envoyé vers ${tokenRow.device_type || 'device'} de ${cleaner.user_id}`);
+            } catch (pushErr) {
+              console.error(`❌ Push ménage échoué (${tokenRow.device_type}):`, pushErr.message);
+            }
+          }
+        } else {
+          console.log(`ℹ️ Pas de token FCM pour user ${cleaner.user_id} — pas de push envoyé`);
+        }
+      } catch (pushErr) {
+        console.error('❌ Erreur push Firebase ménage:', pushErr.message);
       }
 
-      // ❌ Email supprimé (remplacé par notification temps réel)
-
-      // Émettre événement Socket.IO temps réel
+      // ✅ Émettre événement Socket.IO temps réel (toast dans l'app web)
       if (typeof io !== 'undefined' && io) {
         io.to(`user_${cleaner.user_id}`).emit('cleaning:completed', {
           checklistId,
           propertyId,
-          propertyName: property?.name || propertyId,
+          propertyName,
           cleanerName: cleaner.name,
           duration: duration || null
         });
