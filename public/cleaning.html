@@ -1584,6 +1584,37 @@ function formatDateFr(dateStr) {
   }
 }
 
+      // ✅ Cleaners par défaut par logement (chargé depuis settings)
+      let defaultCleanersMap = {};
+
+      async function loadDefaultCleanersMap() {
+        try {
+          const token = localStorage.getItem('lcc_token');
+          if (!token) return;
+          const res = await fetch(`${API_URL}/api/cleaning/default-cleaners`, {
+            headers: { Authorization: 'Bearer ' + token }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            defaultCleanersMap = data.defaults || {};
+            console.log('🧹 Cleaners par défaut chargés:', Object.keys(defaultCleanersMap));
+          }
+        } catch (e) { console.error('Erreur default cleaners:', e); }
+      }
+
+      // Helper : récupérer le cleaner assigné (spécifique > défaut)
+      function getAssignedCleanerId(reservationKey, propertyId) {
+        // 1) Assignation spécifique par reservation_key
+        if (reservationKey && assignments[reservationKey]) {
+          return assignments[reservationKey];
+        }
+        // 2) Cleaner par défaut du logement
+        if (propertyId && defaultCleanersMap[propertyId]) {
+          return defaultCleanersMap[propertyId].cleanerId;
+        }
+        return '';
+      }
+
 
       async function loadRemoteData() {
         try {
@@ -1806,8 +1837,8 @@ function formatDateFr(dateStr) {
 
      upcoming.forEach((r) => {
   const key = getReservationKey(r);
-  const assignedId = key && assignments[key] ? assignments[key] : '';
   const propertyId = getReservationPropertyId(r);
+  const assignedId = getAssignedCleanerId(key, propertyId);
   const propertyName =
     r.propertyName ||
     (r.property && (r.property.name || r.property.title || r.property.label)) ||
@@ -1868,6 +1899,7 @@ function formatDateFr(dateStr) {
             )
             .join('')}
         </select>
+        ${(assignedId && !assignments[key] && defaultCleanersMap[propertyId]) ? '<div style="font-size:10px; color:#059669; margin-top:3px; font-weight:600;"><i class="fas fa-star" style="font-size:8px;"></i> Cleaner régulier</div>' : ''}
       </div>
     </div>
   `;
@@ -2225,7 +2257,10 @@ function formatDateFr(dateStr) {
       (async function initCleaningPage() {
         loadLocalData();
         await loadRemoteData();
-        await loadAssignmentsFromApi();
+        await Promise.all([
+          loadAssignmentsFromApi(),
+          loadDefaultCleanersMap()
+        ]);
         renderCleaners();
         renderAssignments();
         // Charger les checklists en arrière-plan pour le badge
