@@ -8131,48 +8131,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
         }).catch(e => console.error('Push notification ménage error:', e));
       }
 
-      // Notification email au propriétaire
-      const owner = await getUserForNotifications(cleaner.user_id);
-      if (owner?.email) {
-        const durationText = duration ? `${Math.round(duration / 60)} minutes` : 'non mesuré';
-        const photosCount = photos ? photos.length : 0;
-        
-        const subject = `✅ Ménage terminé — ${propertyName}`;
-        const htmlBody = `
-          <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #059669;">✅ Ménage terminé</h2>
-            <p><strong>${cleaner.name}</strong> a terminé le ménage de <strong>${propertyName}</strong>.</p>
-            <table style="width:100%; border-collapse:collapse; margin: 16px 0;">
-              <tr><td style="padding:8px 0; color:#6b7280;">🕐 Durée</td><td style="padding:8px 0; font-weight:600;">${durationText}</td></tr>
-              <tr><td style="padding:8px 0; color:#6b7280;">📸 Photos</td><td style="padding:8px 0; font-weight:600;">${photosCount} photos</td></tr>
-              <tr><td style="padding:8px 0; color:#6b7280;">📋 Tâches</td><td style="padding:8px 0; font-weight:600;">${tasks.length} / ${tasks.length} ✓</td></tr>
-              ${notes ? `<tr><td style="padding:8px 0; color:#6b7280;">📝 Notes</td><td style="padding:8px 0;">${notes}</td></tr>` : ''}
-            </table>
-            <p style="margin-top:16px;">
-              <a href="${process.env.BASE_URL || 'https://app.boostinghost.com'}/app.html" 
-                 style="display:inline-block; padding:12px 24px; background:#059669; color:white; text-decoration:none; border-radius:8px; font-weight:600;">
-                Voir et valider la checklist
-              </a>
-            </p>
-          </div>
-        `;
-
-        const useBrevo = !!process.env.BREVO_API_KEY;
-        if (useBrevo) {
-          await sendEmailViaBrevo({ to: owner.email, subject, text: '', html: htmlBody });
-        } else {
-          const transporter = getEmailTransporter();
-          if (transporter) {
-            await transporter.sendMail({
-              from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>',
-              to: owner.email,
-              subject,
-              html: htmlBody
-            });
-          }
-        }
-        console.log(`📧 Notification ménage terminé envoyée à ${owner.email}`);
-      }
+      // ❌ Email supprimé (remplacé par notification temps réel)
 
       // Émettre événement Socket.IO temps réel
       if (typeof io !== 'undefined' && io) {
@@ -8183,6 +8142,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
           cleanerName: cleaner.name,
           duration: duration || null
         });
+        console.log(`🔌 Socket cleaning:completed émis vers user_${cleaner.user_id}`);
       }
     } catch (notifErr) {
       console.error('Erreur notification ménage terminé:', notifErr);
@@ -14038,10 +13998,29 @@ return res.send(html);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.APP_URL || "http://localhost:3000",
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: false
   }
+});
+
+// ============================================
+// 🔌 SOCKET.IO — Gestion des connexions
+// ============================================
+io.on('connection', (socket) => {
+  console.log('🔌 Socket connecté:', socket.id);
+
+  // Permettre aux clients de rejoindre leur room utilisateur
+  socket.on('join', (room) => {
+    if (room && typeof room === 'string' && room.startsWith('user_')) {
+      socket.join(room);
+      console.log(`🔌 Socket ${socket.id} a rejoint la room ${room}`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔌 Socket déconnecté:', socket.id);
+  });
 });
 
 // ============================================
