@@ -8196,6 +8196,7 @@ app.get('/api/properties',
         wifiName: p.wifi_name || null,
         wifiPassword: p.wifi_password || null,
         accessInstructions: p.access_instructions || null,
+        arrivalMessage: p.arrival_message || null,  // ✅ NOUVEAU
         ownerId: p.owner_id || null,
         chatPin: p.chat_pin || null,
         amenities: p.amenities || '{}',                    // ✅ AJOUTÉ
