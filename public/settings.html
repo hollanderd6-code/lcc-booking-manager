@@ -2141,31 +2141,25 @@ function insertVariable(textareaId, variable, event) {
 <!-- ============================================ -->
 <script>
 (function() {
-  // Résoudre l'API_URL de la même manière que settings.js
   const API_URL = window.API_URL || '';
   let allCleaners = [];
-  let defaultCleanersMap = {}; // { propertyId: { cleanerId, cleanerName } }
+  let defaultCleanersMap = {};
 
-  // Charger la liste des cleaners
   async function loadCleanersList() {
     try {
       const token = localStorage.getItem('lcc_token');
-      if (!token) { console.warn('🧹 Pas de token, skip cleaners'); return; }
+      if (!token) return;
       const res = await fetch(`${API_URL}/api/cleaners`, {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       if (res.ok) {
         const data = await res.json();
-        // L'API retourne { cleaners: [...] }
         allCleaners = data.cleaners || data || [];
         console.log('🧹 Cleaners chargés:', allCleaners.length, allCleaners.map(c => c.name));
-      } else {
-        console.warn('🧹 Erreur API cleaners:', res.status);
       }
     } catch (e) { console.error('Erreur chargement cleaners:', e); }
   }
 
-  // Charger les cleaners par défaut
   async function loadDefaultCleaners() {
     try {
       const token = localStorage.getItem('lcc_token');
@@ -2177,30 +2171,25 @@ function insertVariable(textareaId, variable, event) {
         const data = await res.json();
         defaultCleanersMap = data.defaults || {};
         console.log('🧹 Cleaners par défaut:', Object.keys(defaultCleanersMap).length);
-      } else {
-        console.warn('🧹 Erreur API default-cleaners:', res.status, '(normal si première utilisation)');
       }
-    } catch (e) { console.error('Erreur chargement defaults:', e); }
+    } catch (e) { console.error('Erreur defaults:', e); }
   }
 
-  // Remplir le select du cleaner par défaut dans la modale
   function populateCleanerSelect(propertyId) {
     const select = document.getElementById('defaultCleanerSelect');
-    if (!select) { console.warn('🧹 Select defaultCleanerSelect introuvable'); return; }
+    if (!select) return;
 
-    console.log('🧹 Remplissage select pour', propertyId, '— cleaners dispo:', allCleaners.length);
+    console.log('🧹 Remplissage select pour', propertyId, '— cleaners:', allCleaners.length);
 
     select.innerHTML = '<option value="">Aucune — assignation manuelle</option>';
-    
     allCleaners.forEach(c => {
-      if (!c.is_active && c.is_active !== undefined) return; // Ignorer les inactifs
+      if (c.is_active === false) return;
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = c.name + (c.phone ? ' (' + c.phone + ')' : '');
       select.appendChild(opt);
     });
 
-    // Pré-sélectionner le cleaner par défaut
     const defaultData = defaultCleanersMap[propertyId];
     if (defaultData && defaultData.cleanerId) {
       select.value = defaultData.cleanerId;
@@ -2210,7 +2199,6 @@ function insertVariable(textareaId, variable, event) {
       hideCleanerInfo();
     }
 
-    // Listener pour afficher l'info
     select.onchange = function() {
       if (this.value) {
         const cleaner = allCleaners.find(c => c.id === this.value);
@@ -2235,7 +2223,6 @@ function insertVariable(textareaId, variable, event) {
     if (box) box.style.display = 'none';
   }
 
-  // Sauvegarder le cleaner par défaut
   async function saveDefaultCleaner(propertyId) {
     const select = document.getElementById('defaultCleanerSelect');
     if (!select) return;
@@ -2243,7 +2230,6 @@ function insertVariable(textareaId, variable, event) {
     const cleanerId = select.value || null;
     const currentDefault = defaultCleanersMap[propertyId];
 
-    // Ne rien faire si pas de changement
     if (!cleanerId && !currentDefault) return;
     if (cleanerId && currentDefault && currentDefault.cleanerId === cleanerId) return;
 
@@ -2266,39 +2252,71 @@ function insertVariable(textareaId, variable, event) {
     } catch (e) { console.error('Erreur sauvegarde cleaner défaut:', e); }
   }
 
-  // Hook dans editProperty pour charger le cleaner quand on ouvre la modale
-  function hookEditProperty() {
-    const origEdit = window.editProperty;
-    if (typeof origEdit === 'function') {
-      window.editProperty = function(propertyData) {
-        origEdit(propertyData);
-        const pid = propertyData.id || propertyData.propertyId;
-        console.log('🧹 editProperty hook — propertyId:', pid);
-        // Petit délai pour que la modale soit visible
-        setTimeout(() => populateCleanerSelect(pid), 150);
-      };
-    }
-  }
-
-  // Hook dans saveProperty pour sauvegarder le cleaner après
-  function hookSaveProperty() {
-    const origSave = window.saveProperty;
-    if (typeof origSave === 'function') {
-      window.saveProperty = async function(event) {
-        const propertyId = document.getElementById('propertyId')?.value;
-        const result = await origSave(event);
-        if (propertyId) {
-          await saveDefaultCleaner(propertyId);
+  // ======================================================
+  // STRATÉGIE : Observer l'ouverture de la modale au lieu de hooker editProperty
+  // ======================================================
+  const modal = document.getElementById('editPropertyModal');
+  if (modal) {
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        // Détecter quand la modale devient visible
+        if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')) {
+          const isVisible = modal.classList.contains('active') || 
+                           modal.classList.contains('show') ||
+                           modal.style.display === 'flex' ||
+                           modal.style.display === 'block' ||
+                           getComputedStyle(modal).display !== 'none';
+          
+          if (isVisible) {
+            const propertyId = document.getElementById('propertyId')?.value;
+            if (propertyId) {
+              console.log('🧹 Modale ouverte détectée — propertyId:', propertyId);
+              populateCleanerSelect(propertyId);
+            }
+          }
         }
-        return result;
-      };
-    }
+      });
+    });
+
+    observer.observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
+    console.log('🧹 Observer modale installé');
   }
 
-  // Init : charger au démarrage puis hooker
-  Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(() => {
-    hookEditProperty();
-    hookSaveProperty();
+  // Fallback : vérifier périodiquement si la modale est ouverte et le select est vide
+  setInterval(function() {
+    if (!modal) return;
+    const isVisible = getComputedStyle(modal).display !== 'none';
+    if (!isVisible) return;
+    
+    const select = document.getElementById('defaultCleanerSelect');
+    if (select && select.options.length <= 1 && allCleaners.length > 0) {
+      const propertyId = document.getElementById('propertyId')?.value;
+      if (propertyId) {
+        console.log('🧹 Fallback: remplissage select pour', propertyId);
+        populateCleanerSelect(propertyId);
+      }
+    }
+  }, 500);
+
+  // ======================================================
+  // SAVE : intercepter la soumission du formulaire
+  // ======================================================
+  const form = document.getElementById('propertyForm');
+  if (form) {
+    form.addEventListener('submit', function() {
+      const propertyId = document.getElementById('propertyId')?.value;
+      if (propertyId) {
+        // Sauvegarder le cleaner par défaut après un court délai (pour laisser le save original passer)
+        setTimeout(function() {
+          saveDefaultCleaner(propertyId);
+        }, 500);
+      }
+    });
+    console.log('🧹 Listener submit formulaire installé');
+  }
+
+  // Init
+  Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(function() {
     console.log('✅ Module cleaner par défaut chargé — cleaners:', allCleaners.length);
   });
 })();
