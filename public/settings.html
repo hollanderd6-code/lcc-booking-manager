@@ -2141,7 +2141,8 @@ function insertVariable(textareaId, variable, event) {
 <!-- ============================================ -->
 <script>
 (function() {
-  const API_URL = window.API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
+  // Résoudre l'API_URL de la même manière que settings.js
+  const API_URL = window.API_URL || '';
   let allCleaners = [];
   let defaultCleanersMap = {}; // { propertyId: { cleanerId, cleanerName } }
 
@@ -2149,14 +2150,17 @@ function insertVariable(textareaId, variable, event) {
   async function loadCleanersList() {
     try {
       const token = localStorage.getItem('lcc_token');
-      if (!token) return;
+      if (!token) { console.warn('🧹 Pas de token, skip cleaners'); return; }
       const res = await fetch(`${API_URL}/api/cleaners`, {
-        headers: { Authorization: 'Bearer ' + token }
+        headers: { 'Authorization': 'Bearer ' + token }
       });
       if (res.ok) {
         const data = await res.json();
+        // L'API retourne { cleaners: [...] }
         allCleaners = data.cleaners || data || [];
-        console.log('🧹 Cleaners chargés:', allCleaners.length);
+        console.log('🧹 Cleaners chargés:', allCleaners.length, allCleaners.map(c => c.name));
+      } else {
+        console.warn('🧹 Erreur API cleaners:', res.status);
       }
     } catch (e) { console.error('Erreur chargement cleaners:', e); }
   }
@@ -2167,12 +2171,14 @@ function insertVariable(textareaId, variable, event) {
       const token = localStorage.getItem('lcc_token');
       if (!token) return;
       const res = await fetch(`${API_URL}/api/cleaning/default-cleaners`, {
-        headers: { Authorization: 'Bearer ' + token }
+        headers: { 'Authorization': 'Bearer ' + token }
       });
       if (res.ok) {
         const data = await res.json();
         defaultCleanersMap = data.defaults || {};
-        console.log('🧹 Cleaners par défaut chargés:', Object.keys(defaultCleanersMap).length);
+        console.log('🧹 Cleaners par défaut:', Object.keys(defaultCleanersMap).length);
+      } else {
+        console.warn('🧹 Erreur API default-cleaners:', res.status, '(normal si première utilisation)');
       }
     } catch (e) { console.error('Erreur chargement defaults:', e); }
   }
@@ -2180,10 +2186,14 @@ function insertVariable(textareaId, variable, event) {
   // Remplir le select du cleaner par défaut dans la modale
   function populateCleanerSelect(propertyId) {
     const select = document.getElementById('defaultCleanerSelect');
-    if (!select) return;
+    if (!select) { console.warn('🧹 Select defaultCleanerSelect introuvable'); return; }
+
+    console.log('🧹 Remplissage select pour', propertyId, '— cleaners dispo:', allCleaners.length);
 
     select.innerHTML = '<option value="">Aucune — assignation manuelle</option>';
+    
     allCleaners.forEach(c => {
+      if (!c.is_active && c.is_active !== undefined) return; // Ignorer les inactifs
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = c.name + (c.phone ? ' (' + c.phone + ')' : '');
@@ -2196,6 +2206,7 @@ function insertVariable(textareaId, variable, event) {
       select.value = defaultData.cleanerId;
       showCleanerInfo(defaultData.cleanerName);
     } else {
+      select.value = '';
       hideCleanerInfo();
     }
 
@@ -2214,7 +2225,7 @@ function insertVariable(textareaId, variable, event) {
     const box = document.getElementById('defaultCleanerInfo');
     const text = document.getElementById('defaultCleanerInfoText');
     if (box && text) {
-      text.textContent = `${name} sera automatiquement assigné(e) à chaque nouveau ménage de ce logement. Vous pourrez toujours changer ponctuellement dans la page Ménage.`;
+      text.textContent = (name || 'Cette personne') + ' sera automatiquement assigné(e) à chaque nouveau ménage de ce logement. Vous pourrez toujours changer ponctuellement dans la page Ménage.';
       box.style.display = 'flex';
     }
   }
@@ -2224,7 +2235,7 @@ function insertVariable(textareaId, variable, event) {
     if (box) box.style.display = 'none';
   }
 
-  // Sauvegarder le cleaner par défaut après la sauvegarde du logement
+  // Sauvegarder le cleaner par défaut
   async function saveDefaultCleaner(propertyId) {
     const select = document.getElementById('defaultCleanerSelect');
     if (!select) return;
@@ -2240,7 +2251,7 @@ function insertVariable(textareaId, variable, event) {
       const token = localStorage.getItem('lcc_token');
       const res = await fetch(`${API_URL}/api/cleaning/default-cleaner/${propertyId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ cleanerId })
       });
       if (res.ok) {
@@ -2255,35 +2266,40 @@ function insertVariable(textareaId, variable, event) {
     } catch (e) { console.error('Erreur sauvegarde cleaner défaut:', e); }
   }
 
-  // Hook dans editProperty pour charger le cleaner
-  const origEdit = window.editProperty;
-  if (typeof origEdit === 'function') {
-    window.editProperty = function(propertyData) {
-      origEdit(propertyData);
-      // Charger le select après ouverture de la modale
-      setTimeout(() => {
-        populateCleanerSelect(propertyData.id || propertyData.propertyId);
-      }, 100);
-    };
+  // Hook dans editProperty pour charger le cleaner quand on ouvre la modale
+  function hookEditProperty() {
+    const origEdit = window.editProperty;
+    if (typeof origEdit === 'function') {
+      window.editProperty = function(propertyData) {
+        origEdit(propertyData);
+        const pid = propertyData.id || propertyData.propertyId;
+        console.log('🧹 editProperty hook — propertyId:', pid);
+        // Petit délai pour que la modale soit visible
+        setTimeout(() => populateCleanerSelect(pid), 150);
+      };
+    }
   }
 
   // Hook dans saveProperty pour sauvegarder le cleaner après
-  const origSave = window.saveProperty;
-  if (typeof origSave === 'function') {
-    window.saveProperty = async function(event) {
-      const propertyId = document.getElementById('propertyId')?.value;
-      const result = await origSave(event);
-      // Sauvegarder le cleaner par défaut après la sauvegarde du logement
-      if (propertyId) {
-        await saveDefaultCleaner(propertyId);
-      }
-      return result;
-    };
+  function hookSaveProperty() {
+    const origSave = window.saveProperty;
+    if (typeof origSave === 'function') {
+      window.saveProperty = async function(event) {
+        const propertyId = document.getElementById('propertyId')?.value;
+        const result = await origSave(event);
+        if (propertyId) {
+          await saveDefaultCleaner(propertyId);
+        }
+        return result;
+      };
+    }
   }
 
-  // Init : charger au démarrage
+  // Init : charger au démarrage puis hooker
   Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(() => {
-    console.log('✅ Module cleaner par défaut chargé');
+    hookEditProperty();
+    hookSaveProperty();
+    console.log('✅ Module cleaner par défaut chargé — cleaners:', allCleaners.length);
   });
 })();
 </script>
