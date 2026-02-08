@@ -2179,6 +2179,63 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         }
         break;
       }
+
+      // 💳 SESSION STRIPE EXPIRÉE (le voyageur n'a pas payé dans le délai)
+      case 'checkout.session.expired': {
+        const expiredSession = event.data.object;
+        const expiredDepositId = expiredSession.metadata?.deposit_id;
+        
+        if (expiredDepositId) {
+          console.log(`⏰ Session Stripe expirée pour caution ${expiredDepositId}`);
+          
+          // Récupérer le deposit pour vérifier s'il est toujours pending
+          const depCheck = await pool.query(
+            'SELECT id, status FROM deposits WHERE id = $1',
+            [expiredDepositId]
+          );
+          
+          if (depCheck.rows.length > 0 && depCheck.rows[0].status === 'pending') {
+            await pool.query(
+              `UPDATE deposits SET status = 'expired', updated_at = NOW() WHERE id = $1`,
+              [expiredDepositId]
+            );
+            
+            // 📨 Envoyer message d'échec
+            try {
+              await sendDepositFailedMessage(pool, io, expiredDepositId);
+            } catch (msgError) {
+              console.error('❌ Erreur envoi message session expirée:', msgError);
+            }
+          }
+        }
+        break;
+      }
+
+      // 💳 PAIEMENT ÉCHOUÉ (carte refusée, fonds insuffisants, etc.)
+      case 'payment_intent.payment_failed': {
+        const failedIntent = event.data.object;
+        
+        // Vérifier si c'est une caution
+        const failedDepositResult = await pool.query(
+          'SELECT id, status FROM deposits WHERE stripe_payment_intent_id = $1',
+          [failedIntent.id]
+        );
+        
+        if (failedDepositResult.rows.length > 0) {
+          const failedDepositId = failedDepositResult.rows[0].id;
+          const failReason = failedIntent.last_payment_error?.message || 'Paiement refusé';
+          
+          console.log(`❌ Paiement échoué pour caution ${failedDepositId}: ${failReason}`);
+          
+          // 📨 Envoyer message d'échec
+          try {
+            await sendDepositFailedMessage(pool, io, failedDepositId);
+          } catch (msgError) {
+            console.error('❌ Erreur envoi message paiement échoué:', msgError);
+          }
+        }
+        break;
+      }
     }
 
     res.status(200).json({ received: true });
