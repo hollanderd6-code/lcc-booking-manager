@@ -12604,7 +12604,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     }
 
     const { propertyId, uid } = req.body || {};
-    console.log('🗑 Demande de suppression reçue :', { userId: userId, propertyId, uid });
+    console.log('🗑 Demande de suppression reçue :', { userId: user.id, propertyId, uid });
 
     if (!propertyId || !uid) {
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
