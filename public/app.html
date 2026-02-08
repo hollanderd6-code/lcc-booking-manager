@@ -8027,7 +8027,33 @@ async function loadCleaningChecklists() {
     
     const data = await response.json();
     cleaningChecklists = data.checklists || [];
-    window.cleaningChecklists = cleaningChecklists; // Rendre accessible globalement
+    
+    // ✅ Enrichir les checklists avec les données des réservations (nom voyageur, plateforme)
+    if (window.RESERVATIONS && window.RESERVATIONS.length > 0) {
+      cleaningChecklists.forEach(function(cl) {
+        if (cl.guest_name && cl.guest_name.trim() !== '') return; // Déjà rempli
+        
+        // Chercher la réservation correspondante
+        var match = window.RESERVATIONS.find(function(r) {
+          var rPropertyId = r.propertyId || (r.property && r.property.id) || '';
+          var rEnd = String(r.end || '').slice(0, 10);
+          var clCheckout = cl.checkout_date ? String(cl.checkout_date).slice(0, 10) : '';
+          return rPropertyId === cl.property_id && rEnd === clCheckout;
+        });
+        
+        if (match) {
+          cl.guest_name = match.guestName || match.guest_name || match.name || '';
+          cl.guest_first_name = match.guest_first_name || '';
+          cl.guest_last_name = match.guest_last_name || '';
+          cl.guest_display_name = match.guest_display_name || '';
+          cl.guest_initial = match.guest_initial || '';
+          cl.source = match.source || match.platform || '';
+          cl.platform = match.platform || match.source || '';
+        }
+      });
+    }
+    
+    window.cleaningChecklists = cleaningChecklists;
     
     renderCleaningChecklists();
   } catch (err) {
