@@ -2268,7 +2268,6 @@ function insertVariable(textareaId, variable, event) {
   // ======================================================
   // INJECTION BADGES "Cleaner régulier" dans les cards de logement
   // ======================================================
-  var badgesInjected = false;
 
   function injectCleanerBadges() {
     if (Object.keys(defaultCleanersMap).length === 0) return;
@@ -2280,17 +2279,13 @@ function insertVariable(textareaId, variable, event) {
       // Ne pas re-injecter
       if (card.querySelector('.cleaner-badge-injected')) return;
 
-      // Trouver le propertyId depuis le bouton edit ou data-attribute
-      var editBtn = card.querySelector('[onclick*="editProperty"]');
+      // Trouver le propertyId via le data-id du bouton edit
+      var editBtn = card.querySelector('.btn-edit[data-id]');
       if (!editBtn) return;
 
-      var onclickStr = editBtn.getAttribute('onclick') || '';
-      // Essayer d'extraire l'id de la propriété
-      // Format typique : editProperty({id: 'xxx', ...})
-      var idMatch = onclickStr.match(/id['":\s]+['"]([^'"]+)['"]/);
-      if (!idMatch) return;
+      var propertyId = editBtn.getAttribute('data-id');
+      if (!propertyId) return;
 
-      var propertyId = idMatch[1];
       var defaultData = defaultCleanersMap[propertyId];
       if (!defaultData || !defaultData.cleanerName) return;
 
@@ -2298,17 +2293,13 @@ function insertVariable(textareaId, variable, event) {
       var metaContainer = card.querySelector('.property-meta');
       if (!metaContainer) return;
 
-      // Injecter le badge
+      // Créer le badge vert
       var badge = document.createElement('span');
       badge.className = 'meta-badge cleaner-badge-injected';
-      badge.style.background = '#d1fae5';
-      badge.style.color = '#059669';
-      badge.style.fontWeight = '600';
-      badge.innerHTML = '<i class="fas fa-broom"></i> ' + defaultData.cleanerName;
+      badge.style.cssText = 'display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:600; background:#d1fae5; color:#059669;';
+      badge.innerHTML = '<i class="fas fa-broom" style="font-size:10px;"></i> ' + defaultData.cleanerName;
       metaContainer.appendChild(badge);
     });
-
-    badgesInjected = true;
   }
 
   // Vérifier régulièrement si les cards sont rendues pour injecter les badges
@@ -2316,7 +2307,6 @@ function insertVariable(textareaId, variable, event) {
     if (Object.keys(defaultCleanersMap).length === 0) return;
     var cards = document.querySelectorAll('.property-card');
     if (cards.length === 0) return;
-    // Re-vérifier si de nouvelles cards sans badge
     var needsInjection = false;
     cards.forEach(function(c) {
       if (!c.querySelector('.cleaner-badge-injected')) needsInjection = true;
