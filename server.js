@@ -47,6 +47,16 @@ const smartLocksRoutes = require('./routes/smart-locks-routes');
 const { initArrivalMessagesCron } = require('./arrival-messages-cron');
 
 // ============================================
+// 💰 IMPORT SYSTÈME DE MESSAGES POUR LES CAUTIONS
+// ============================================
+const { initDepositRemindersCron } = require('./deposit-messages-cron');
+const { 
+  sendDepositAuthorizedMessage,
+  sendDepositReleasedMessage,
+  sendDepositFailedMessage
+} = require('./deposit-messages-scheduler');
+
+// ============================================
 // ✅ IMPORT SYSTÈME DE SOUS-COMPTES
 // ============================================
 const { setupSubAccountsRoutes } = require('./sub-accounts-routes');
@@ -1880,6 +1890,15 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
             
+            // 📨 ENVOYER MESSAGE AUTOMATIQUE : CAUTION AUTORISÉE
+            if (depositStatus === 'authorized') {
+              try {
+                await sendDepositAuthorizedMessage(pool, io, depositId);
+              } catch (msgError) {
+                console.error('❌ Erreur envoi message caution autorisée:', msgError);
+              }
+            }
+            
             // Envoyer automatiquement les infos si c'est bientot l'arrivee
             if (depositId) {
               await handleDepositPaid(depositId, io);
@@ -2093,6 +2112,70 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           );
 
           console.log(`⚠️ Paiement échoué pour: ${subscriptionId}`);
+        }
+        break;
+      }
+
+      // 💰 ÉVÉNEMENTS SPÉCIFIQUES AUX CAUTIONS
+      case 'payment_intent.canceled': {
+        const paymentIntent = event.data.object;
+        
+        // Vérifier si c'est une caution
+        const depositResult = await pool.query(
+          'SELECT id FROM deposits WHERE stripe_payment_intent_id = $1',
+          [paymentIntent.id]
+        );
+        
+        if (depositResult.rows.length > 0) {
+          const depositId = depositResult.rows[0].id;
+          
+          await pool.query(
+            `UPDATE deposits 
+             SET status = 'canceled', cancelled_at = NOW(), updated_at = NOW()
+             WHERE id = $1`,
+            [depositId]
+          );
+          
+          console.log(`❌ Caution annulée: ${depositId}`);
+          
+          // 📨 ENVOYER MESSAGE : ÉCHEC
+          try {
+            await sendDepositFailedMessage(pool, io, depositId);
+          } catch (msgError) {
+            console.error('❌ Erreur envoi message caution annulée:', msgError);
+          }
+        }
+        break;
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object;
+        const paymentIntentId = charge.payment_intent;
+        
+        // Vérifier si c'est une caution
+        const depositResult = await pool.query(
+          'SELECT id FROM deposits WHERE stripe_payment_intent_id = $1',
+          [paymentIntentId]
+        );
+        
+        if (depositResult.rows.length > 0) {
+          const depositId = depositResult.rows[0].id;
+          
+          await pool.query(
+            `UPDATE deposits 
+             SET status = 'released', released_at = NOW(), updated_at = NOW()
+             WHERE id = $1`,
+            [depositId]
+          );
+          
+          console.log(`🎉 Caution libérée: ${depositId}`);
+          
+          // 📨 ENVOYER MESSAGE : CAUTION LIBÉRÉE
+          try {
+            await sendDepositReleasedMessage(pool, io, depositId);
+          } catch (msgError) {
+            console.error('❌ Erreur envoi message caution libérée:', msgError);
+          }
         }
         break;
       }
@@ -13088,6 +13171,12 @@ initArrivalMessagesCron(pool, io);
 console.log('✅ Cron job messages d\'arrivée initialisé');
 
 // ============================================
+// 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
+// ============================================
+initDepositRemindersCron(pool, io);
+console.log('✅ Cron job rappels caution initialisé');
+
+// ============================================
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
 // ============================================
 setupSubAccountsRoutes(app, pool, authenticateAny);
@@ -13324,6 +13413,35 @@ app.post('/api/test/arrival-messages', authenticateAny, async (req, res) => {
 });
 
 console.log('✅ Route de test /api/test/arrival-messages ajoutée');
+
+// 🧪 ROUTE DE TEST : Rappels caution J-2
+app.post('/api/test/deposit-reminders', authenticateAny, async (req, res) => {
+  try {
+    console.log('🧪 TEST MANUEL : Déclenchement des rappels caution J-2');
+    
+    const { sendDepositReminderJ2 } = require('./deposit-messages-scheduler');
+    const result = await sendDepositReminderJ2(pool, io);
+    
+    console.log('📊 Résultat du test:', result);
+    
+    res.json({ 
+      success: true, 
+      message: 'Rappels caution traités',
+      total: result.total,
+      sent: result.sent,
+      errors: result.errors
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur test deposit reminders:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors du test',
+      message: error.message 
+    });
+  }
+});
+
+console.log('✅ Route de test /api/test/deposit-reminders ajoutée');
 
 console.log('Route verify-by-property ajoutee');
 // Route pour recuperer les messages d'une conversation
