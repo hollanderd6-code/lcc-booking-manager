@@ -8537,7 +8537,7 @@ app.put('/api/properties/:propertyId',
       chatPin 
     } = body;
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -8736,7 +8736,7 @@ userId: userId
     
     await loadProperties();
 
-const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     res.json({
       message: 'Logement modifié avec succès',
       property: updated
