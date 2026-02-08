@@ -233,6 +233,518 @@
       color: var(--text-secondary);
     }
 
+    /* ===== TABS NAVIGATION MÉNAGE ===== */
+    .cleaning-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: var(--spacing-lg);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .cleaning-tab {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .cleaning-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .cleaning-tab.active {
+      background: var(--bg-primary);
+      color: var(--primary-color);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .cleaning-tab .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .cleaning-tab-panel {
+      display: none;
+    }
+
+    .cleaning-tab-panel.active {
+      display: block;
+    }
+
+    /* ===== STATS CARDS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-card-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+
+    .stat-card-value.green { color: #059669; }
+    .stat-card-value.orange { color: #f59e0b; }
+    .stat-card-value.red { color: #ef4444; }
+    .stat-card-value.blue { color: #3b82f6; }
+
+    .stat-card-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* ===== CHECKLISTS VALIDÉES ===== */
+    .checklists-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .checklist-item {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .checklist-item:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .checklist-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .checklist-item-property {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .checklist-item-status {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .status-validated {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .status-rejected {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .checklist-item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .checklist-item-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .checklist-item-meta-item i {
+      font-size: 12px;
+      width: 14px;
+      text-align: center;
+      color: var(--text-tertiary);
+    }
+
+    .checklist-item-actions {
+      display: flex;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .checklist-item-actions .btn {
+      flex: 1;
+    }
+
+    /* ===== TEMPLATE EDITOR ===== */
+    .template-editor {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .template-room-section {
+      margin-bottom: 16px;
+    }
+
+    .template-room-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 8px;
+    }
+
+    .template-room-header .room-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .template-task-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+    }
+
+    .template-task-row input[type="text"] {
+      flex: 1;
+      padding: 8px 10px !important;
+      font-size: 13px !important;
+    }
+
+    .template-task-row .btn-delete-task {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .template-task-row .btn-delete-task:hover {
+      color: #dc2626;
+      border-color: #dc2626;
+      background: #fee2e2;
+    }
+
+    .btn-add-task {
+      padding: 6px 12px;
+      border: 1px dashed var(--border-color);
+      border-radius: 6px;
+      background: transparent;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary-color);
+      cursor: pointer;
+      margin-top: 4px;
+      transition: all 0.15s;
+    }
+
+    .btn-add-task:hover {
+      background: var(--primary-light);
+      border-color: var(--primary-color);
+    }
+
+    /* ===== QR CODE MODAL ===== */
+    .qr-modal-content {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .qr-modal-content canvas,
+    .qr-modal-content img {
+      max-width: 240px;
+      margin: 16px auto;
+    }
+
+    .qr-modal-url {
+      font-size: 12px;
+      color: var(--text-secondary);
+      word-break: break-all;
+      background: var(--bg-secondary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    /* ===== CHECKLIST DETAIL MODAL ===== */
+    .checklist-detail-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .checklist-detail-modal.active {
+      display: flex;
+    }
+
+    .checklist-detail-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+    }
+
+    .checklist-detail-panel {
+      position: relative;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      max-width: 540px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .checklist-detail-header {
+      padding: 20px 20px 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .checklist-detail-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .checklist-detail-body {
+      padding: 20px;
+    }
+
+    .checklist-detail-section {
+      margin-bottom: 20px;
+    }
+
+    .checklist-detail-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    .checklist-detail-tasks .task-row-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 13px;
+    }
+
+    .task-row-display .task-check-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+
+    .task-check-icon.checked {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .task-check-icon.unchecked {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .checklist-detail-photos {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .checklist-detail-photos img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .checklist-detail-photos img:hover {
+      transform: scale(1.03);
+    }
+
+    .checklist-detail-notes {
+      padding: 12px;
+      background: #fef3c7;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #92400e;
+      border-left: 3px solid #f59e0b;
+    }
+
+    .checklist-detail-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+    }
+
+    .checklist-detail-footer .btn {
+      flex: 1;
+    }
+
+    .btn-validate {
+      background: #059669 !important;
+      color: white !important;
+      border: none !important;
+    }
+
+    .btn-validate:hover {
+      background: #047857 !important;
+    }
+
+    .btn-reject {
+      background: transparent !important;
+      color: #dc2626 !important;
+      border: 1px solid #dc2626 !important;
+    }
+
+    .btn-reject:hover {
+      background: #fee2e2 !important;
+    }
+
+    /* ===== TEMPLATE LIST ===== */
+    .templates-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .template-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .template-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .template-card-name {
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .template-card-property {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .template-card-tasks-count {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .template-default-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      color: var(--primary-color);
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .checklist-detail-photos {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     /* ========== HEADER DASHBOARD MODERNE (comme app.html) ========== */
 
     .main-header {
@@ -563,7 +1075,26 @@
 
 <!-- Contenu -->
 <div class="page-content">
-<!-- Grid équipe + assignation -->
+
+<!-- TABS NAVIGATION -->
+<div class="cleaning-tabs" id="cleaningTabs">
+  <button class="cleaning-tab active" data-tab="team" onclick="switchTab('team')">
+    <i class="fas fa-users"></i> Équipe
+  </button>
+  <button class="cleaning-tab" data-tab="checklists" onclick="switchTab('checklists')">
+    <i class="fas fa-clipboard-check"></i> Checklists
+    <span class="tab-badge" id="checklistsPendingBadge" style="display:none">0</span>
+  </button>
+  <button class="cleaning-tab" data-tab="templates" onclick="switchTab('templates')">
+    <i class="fas fa-list-check"></i> Templates
+  </button>
+  <button class="cleaning-tab" data-tab="stats" onclick="switchTab('stats')">
+    <i class="fas fa-chart-bar"></i> Stats
+  </button>
+</div>
+
+<!-- ===== TAB 1 : ÉQUIPE & ASSIGNATION ===== -->
+<div class="cleaning-tab-panel active" id="panel-team">
 <section class="cleaning-page-grid">
 <!-- Colonne gauche : équipe ménage -->
 <section class="card">
@@ -637,6 +1168,198 @@
 </div>
 </section>
 </section>
+</div>
+
+<!-- ===== TAB 2 : CHECKLISTS SOUMISES ===== -->
+<div class="cleaning-tab-panel" id="panel-checklists">
+<section class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-clipboard-check"></i>
+      Checklists soumises
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <select id="checklistStatusFilter" class="assign-select" style="max-width:180px; font-size:13px;" onchange="renderChecklistsList()">
+        <option value="">Tous les statuts</option>
+        <option value="pending">⏳ En attente</option>
+        <option value="validated">✅ Validées</option>
+        <option value="rejected">⚠️ Rejetées</option>
+      </select>
+    </div>
+  </div>
+  <div class="checklists-list" id="checklistsList">
+    <p class="text-secondary" style="font-size:13px;">Chargement…</p>
+  </div>
+</section>
+</div>
+
+<!-- ===== TAB 3 : TEMPLATES ===== -->
+<div class="cleaning-tab-panel" id="panel-templates">
+<section class="card" style="margin-bottom:16px;">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-list-check"></i>
+      Templates de ménage
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openTemplateEditor()">
+      <i class="fas fa-plus"></i> Nouveau template
+    </button>
+  </div>
+  <p class="assign-hint" style="margin-bottom:12px;">
+    Créez des templates personnalisés par logement. Vos équipes de ménage les verront automatiquement dans leur interface.
+  </p>
+  <div class="templates-list" id="templatesList">
+    <p class="text-secondary" style="font-size:13px;">Chargement…</p>
+  </div>
+</section>
+
+<!-- Template editor (hidden by default) -->
+<section class="card" id="templateEditorSection" style="display:none;">
+  <div class="card-header">
+    <div class="card-title" id="templateEditorTitle">
+      <i class="fas fa-edit"></i> Nouveau template
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeTemplateEditor()">
+      <i class="fas fa-times"></i> Annuler
+    </button>
+  </div>
+  <div class="template-editor">
+    <div class="form-row" style="margin-bottom:12px;">
+      <label>Nom du template</label>
+      <input type="text" id="templateName" value="Template ménage" placeholder="Ex: Ménage studio centre-ville"/>
+    </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <label>Logement associé (optionnel)</label>
+      <select id="templatePropertySelect" class="assign-select">
+        <option value="">Tous les logements (template par défaut)</option>
+      </select>
+    </div>
+    <div class="form-row" style="margin-bottom:16px;">
+      <label style="display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" id="templateIsDefault" style="width:auto !important; height:auto !important;"/>
+        Template par défaut
+      </label>
+    </div>
+
+    <div id="templateTasksEditor">
+      <!-- Rendered by JS -->
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+      <button class="btn btn-primary" onclick="saveTemplate()">
+        <i class="fas fa-save"></i> Enregistrer
+      </button>
+    </div>
+  </div>
+  <input type="hidden" id="editingTemplateId" value=""/>
+</section>
+</div>
+
+<!-- ===== TAB 4 : STATISTIQUES ===== -->
+<div class="cleaning-tab-panel" id="panel-stats">
+<section class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-chart-bar"></i>
+      Statistiques ménage
+    </div>
+    <select id="statsPeriod" class="assign-select" style="max-width:160px; font-size:13px;" onchange="loadStats()">
+      <option value="month">30 derniers jours</option>
+      <option value="week">7 derniers jours</option>
+      <option value="year">Cette année</option>
+    </select>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-card-value" id="statTotal">—</div>
+      <div class="stat-card-label">Total ménages</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value green" id="statValidated">—</div>
+      <div class="stat-card-label">Validés</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value orange" id="statPending">—</div>
+      <div class="stat-card-label">En attente</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value blue" id="statAvgDuration">—</div>
+      <div class="stat-card-label">Durée moyenne</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value green" id="statValidationRate">—</div>
+      <div class="stat-card-label">Taux validation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value red" id="statRejected">—</div>
+      <div class="stat-card-label">Rejetés</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:14px; font-weight:700; margin:16px 0 8px;">Par personne de ménage</h3>
+  <div id="statsCleanerTable"></div>
+
+  <h3 style="font-size:14px; font-weight:700; margin:16px 0 8px;">Par logement</h3>
+  <div id="statsPropertyTable"></div>
+</section>
+</div>
+
+</div>
+
+<!-- ===== CHECKLIST DETAIL MODAL ===== -->
+<div class="checklist-detail-modal" id="checklistDetailModal">
+  <div class="checklist-detail-overlay" onclick="closeChecklistDetail()"></div>
+  <div class="checklist-detail-panel">
+    <div class="checklist-detail-header">
+      <div>
+        <div style="font-size:17px; font-weight:700;" id="detailPropertyName">—</div>
+        <div style="font-size:13px; color:var(--text-secondary);" id="detailSubtitle">—</div>
+      </div>
+      <button class="checklist-detail-close" onclick="closeChecklistDetail()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="checklist-detail-body">
+      <div class="checklist-detail-section">
+        <div class="checklist-detail-section-title">Infos</div>
+        <div id="detailInfos"></div>
+      </div>
+      <div class="checklist-detail-section">
+        <div class="checklist-detail-section-title">Tâches</div>
+        <div class="checklist-detail-tasks" id="detailTasks"></div>
+      </div>
+      <div class="checklist-detail-section">
+        <div class="checklist-detail-section-title">Photos</div>
+        <div class="checklist-detail-photos" id="detailPhotos"></div>
+      </div>
+      <div class="checklist-detail-section" id="detailNotesSection" style="display:none;">
+        <div class="checklist-detail-section-title">Notes du cleaner</div>
+        <div class="checklist-detail-notes" id="detailNotes"></div>
+      </div>
+      <div class="checklist-detail-section" id="detailOwnerNotesSection" style="display:none;">
+        <div class="checklist-detail-section-title">Votre commentaire (rejet)</div>
+        <div class="checklist-detail-notes" id="detailOwnerNotes" style="background:#fee2e2; color:#991b1b; border-color:#ef4444;"></div>
+      </div>
+    </div>
+    <div class="checklist-detail-footer" id="detailFooter">
+      <!-- Boutons valider/rejeter ajoutés dynamiquement -->
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="checklist-detail-modal" id="qrModal">
+  <div class="checklist-detail-overlay" onclick="closeQrModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:380px;">
+    <div class="checklist-detail-header">
+      <div style="font-size:17px; font-weight:700;">QR Code Ménage</div>
+      <button class="checklist-detail-close" onclick="closeQrModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="qr-modal-content" id="qrModalContent">
+      <p class="text-secondary">Chargement…</p>
+    </div>
+  </div>
 </div>
 </main>
 </div>
@@ -1015,6 +1738,9 @@ function formatDateFr(dateStr) {
             </div>
             ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
             ${taskUrl ? `<div style="font-size:12px; margin-top:8px;"><a href="${taskUrl}" target="_blank" style="color: #667eea; text-decoration: none;"><i class="fas fa-external-link-alt"></i> Lien d'accès aux tâches</a></div>` : ''}
+            ${c.pin_code ? `<div style="font-size:12px; margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;">
+              <span style="color:var(--text-secondary);"><i class="fas fa-qrcode"></i> PIN: <strong>${c.pin_code}</strong></span>
+            </div>` : ''}
           `;
           cleanerList.appendChild(div);
         });
@@ -1305,6 +2031,196 @@ function formatDateFr(dateStr) {
         return cleaners.find((c) => c.id === id) || null;
       }
 
+      // ========== ONGLETS ==========
+      function switchTab(tabId) {
+        document.querySelectorAll('.cleaning-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.cleaning-tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector('[data-tab="' + tabId + '"]').classList.add('active');
+        document.getElementById('panel-' + tabId).classList.add('active');
+        if (tabId === 'checklists') loadChecklistsList();
+        if (tabId === 'templates') loadTemplates();
+        if (tabId === 'stats') loadStats();
+      }
+      window.switchTab = switchTab;
+
+      // ========== CHECKLISTS ==========
+      let allChecklists = [];
+      async function loadChecklistsList() {
+        try {
+          const token = localStorage.getItem('lcc_token'); if (!token) return;
+          const res = await fetch(API_URL + '/api/cleaning/checklists', { headers: { Authorization: 'Bearer ' + token } });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json(); allChecklists = data.checklists || [];
+          renderChecklistsList();
+          const pending = allChecklists.filter(c => (c.owner_status || 'pending') === 'pending' && c.completed_at);
+          const badge = document.getElementById('checklistsPendingBadge');
+          if (pending.length > 0) { badge.textContent = pending.length; badge.style.display = 'inline-flex'; } else { badge.style.display = 'none'; }
+        } catch (err) { console.error('Erreur checklists:', err); }
+      }
+      window.loadChecklistsList = loadChecklistsList;
+
+      function renderChecklistsList() {
+        const container = document.getElementById('checklistsList');
+        const sf = document.getElementById('checklistStatusFilter')?.value || '';
+        let filtered = sf ? allChecklists.filter(c => (c.owner_status || 'pending') === sf) : allChecklists;
+        if (!filtered.length) { container.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucune checklist.</p>'; return; }
+        const sL = { pending: '⏳ En attente', validated: '✅ Validé', rejected: '⚠️ Rejeté' };
+        const sC = { pending: 'status-pending', validated: 'status-validated', rejected: 'status-rejected' };
+        container.innerHTML = filtered.map(function(c) {
+          var st = c.owner_status || 'pending', pn = getPropertyNameById(c.property_id) || c.property_id;
+          var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '';
+          var dm = c.duration_seconds ? Math.round(c.duration_seconds / 60) : null;
+          var ph = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+          return '<div class="checklist-item"><div class="checklist-item-header"><div class="checklist-item-property">' + pn + '</div><span class="checklist-item-status ' + sC[st] + '">' + sL[st] + '</span></div>'
+            + '<div class="checklist-item-meta"><div class="checklist-item-meta-item"><i class="fas fa-calendar"></i> ' + cd + '</div>'
+            + '<div class="checklist-item-meta-item"><i class="fas fa-user-check"></i> ' + (c.cleaner_name || 'N/A') + '</div>'
+            + (dm ? '<div class="checklist-item-meta-item"><i class="fas fa-stopwatch"></i> ' + dm + ' min</div>' : '')
+            + '<div class="checklist-item-meta-item"><i class="fas fa-camera"></i> ' + ph.length + ' photos</div></div>'
+            + '<div class="checklist-item-actions"><button class="btn btn-ghost btn-sm" onclick="openChecklistDetail(' + c.id + ')"><i class="fas fa-eye"></i> Détails</button>'
+            + (st === 'pending' ? '<button class="btn btn-sm btn-validate" onclick="validateChecklist(' + c.id + ')"><i class="fas fa-check"></i> Valider</button><button class="btn btn-sm btn-reject" onclick="rejectChecklist(' + c.id + ')"><i class="fas fa-undo"></i> Complément</button>' : '')
+            + '</div></div>';
+        }).join('');
+      }
+      window.renderChecklistsList = renderChecklistsList;
+
+      async function openChecklistDetail(id) {
+        try {
+          var token = localStorage.getItem('lcc_token');
+          var res = await fetch(API_URL + '/api/cleaning/checklists/' + id, { headers: { Authorization: 'Bearer ' + token } });
+          if (!res.ok) throw new Error('err');
+          var data = await res.json(); var c = data.checklist;
+          var pn = getPropertyNameById(c.property_id) || c.property_id, st = c.owner_status || 'pending';
+          var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '', dm = c.duration_seconds ? Math.round(c.duration_seconds/60) : null;
+          document.getElementById('detailPropertyName').textContent = pn;
+          document.getElementById('detailSubtitle').textContent = 'Départ le ' + cd + ' — ' + (c.cleaner_name || 'N/A');
+          document.getElementById('detailInfos').innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;"><span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">🕐 ' + (dm ? dm+' min':'Non mesuré') + '</span><span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">' + (c.cleaner_name||'N/A') + '</span><span class="checklist-item-status ' + (st==='validated'?'status-validated':st==='rejected'?'status-rejected':'status-pending') + '">' + (st==='validated'?'✅ Validé':st==='rejected'?'⚠️ Rejeté':'⏳ En attente') + '</span></div>';
+          var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
+          document.getElementById('detailTasks').innerHTML = tasks.map(function(t){ return '<div class="task-row-display"><div class="task-check-icon ' + (t.checked?'checked':'unchecked') + '"><i class="fas ' + (t.checked?'fa-check':'fa-times') + '"></i></div><span>' + (t.name||t.title||'Tâche') + '</span></div>'; }).join('') || '<p class="text-secondary">Aucune tâche</p>';
+          var photos = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+          document.getElementById('detailPhotos').innerHTML = photos.map(function(p,i){ return '<img src="' + p + '" alt="Photo" onclick="window.open(\'' + p + '\',\'_blank\')"/>'; }).join('') || '<p class="text-secondary">Aucune photo</p>';
+          document.getElementById('detailNotesSection').style.display = (c.notes && c.notes.trim()) ? 'block' : 'none';
+          if (c.notes) document.getElementById('detailNotes').textContent = c.notes;
+          document.getElementById('detailOwnerNotesSection').style.display = (c.owner_notes && c.owner_notes.trim()) ? 'block' : 'none';
+          if (c.owner_notes) document.getElementById('detailOwnerNotes').textContent = c.owner_notes;
+          var footer = document.getElementById('detailFooter');
+          footer.innerHTML = st === 'pending'
+            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="rejectChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-undo"></i> Complément</button>'
+            : '<button class="btn btn-ghost" onclick="closeChecklistDetail()" style="width:100%;">Fermer</button>';
+          document.getElementById('checklistDetailModal').classList.add('active');
+          document.body.style.overflow = 'hidden';
+        } catch (err) { console.error(err); alert('Erreur chargement'); }
+      }
+      window.openChecklistDetail = openChecklistDetail;
+      function closeChecklistDetail() { document.getElementById('checklistDetailModal').classList.remove('active'); document.body.style.overflow = ''; }
+      window.closeChecklistDetail = closeChecklistDetail;
+      async function validateChecklist(id) { if (!confirm('Valider ce ménage ?')) return; try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/checklists/'+id+'/validate', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token} }); if (!res.ok) throw new Error('err'); await loadChecklistsList(); } catch(e){ console.error(e); alert('Erreur'); } }
+      window.validateChecklist = validateChecklist;
+      async function rejectChecklist(id) { var notes = prompt('Message pour la personne de ménage :'); if (notes === null) return; try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/checklists/'+id+'/reject', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}, body:JSON.stringify({notes:notes||'Merci de compléter'}) }); if (!res.ok) throw new Error('err'); await loadChecklistsList(); } catch(e){ console.error(e); alert('Erreur'); } }
+      window.rejectChecklist = rejectChecklist;
+
+      // ========== TEMPLATES ==========
+      let allTemplates = [];
+      var ROOM_DEFAULTS = { kitchen:{name:'Cuisine',color:'#f97316'}, bathroom:{name:'Salle de bain',color:'#06b6d4'}, bedroom:{name:'Chambre',color:'#8b5cf6'}, living:{name:'Salon',color:'#ec4899'}, terrace:{name:'Terrasse',color:'#84cc16'}, general:{name:'Général',color:'#6b7280'} };
+      let editingTemplateTasks = [];
+      async function loadTemplates() { try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/templates', { headers:{ Authorization:'Bearer '+token } }); if (!res.ok) throw new Error('err'); var data = await res.json(); allTemplates = data.templates || []; renderTemplates(); } catch(e){ console.error(e); } }
+      function renderTemplates() {
+        var c = document.getElementById('templatesList');
+        if (!allTemplates.length) { c.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun template. Créez-en un.</p>'; return; }
+        c.innerHTML = allTemplates.map(function(t) { var tasks = typeof t.tasks === 'string' ? JSON.parse(t.tasks) : (t.tasks||[]); var pn = t.property_id ? getPropertyNameById(t.property_id) : 'Tous les logements';
+          return '<div class="template-card"><div class="template-card-header"><div><div class="template-card-name">' + t.name + (t.is_default ? ' <span class="template-default-badge">Par défaut</span>' : '') + '</div><div class="template-card-property">' + pn + '</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-xs" onclick="editTemplate(' + t.id + ')"><i class="fas fa-edit"></i></button><button class="btn btn-ghost btn-xs" style="color:#dc2626;" onclick="deleteTemplate(' + t.id + ')"><i class="fas fa-trash"></i></button></div></div><div class="template-card-tasks-count">' + tasks.length + ' tâches</div></div>';
+        }).join('');
+      }
+      function openTemplateEditor(template) {
+        document.getElementById('templateEditorSection').style.display = 'block';
+        var sel = document.getElementById('templatePropertySelect'); sel.innerHTML = '<option value="">Tous les logements</option>';
+        PROPERTIES.forEach(function(p) { var o = document.createElement('option'); o.value = p.id; o.textContent = p.name || p.id; sel.appendChild(o); });
+        if (template) {
+          document.getElementById('templateEditorTitle').innerHTML = '<i class="fas fa-edit"></i> Modifier';
+          document.getElementById('templateName').value = template.name; document.getElementById('templatePropertySelect').value = template.property_id || '';
+          document.getElementById('templateIsDefault').checked = template.is_default; document.getElementById('editingTemplateId').value = template.id;
+          editingTemplateTasks = typeof template.tasks === 'string' ? JSON.parse(template.tasks) : (template.tasks ? JSON.parse(JSON.stringify(template.tasks)) : []);
+        } else {
+          document.getElementById('templateEditorTitle').innerHTML = '<i class="fas fa-plus"></i> Nouveau template';
+          document.getElementById('templateName').value = 'Template ménage'; document.getElementById('templatePropertySelect').value = '';
+          document.getElementById('templateIsDefault').checked = false; document.getElementById('editingTemplateId').value = '';
+          editingTemplateTasks = [{id:'k1',name:'Nettoyer le plan de travail',room:'kitchen'},{id:'k2',name:'Nettoyer l\'évier',room:'kitchen'},{id:'k3',name:'Vider la poubelle',room:'kitchen'},{id:'k4',name:'Laver le sol',room:'kitchen'},{id:'b1',name:'Nettoyer la douche',room:'bathroom'},{id:'b2',name:'Nettoyer les WC',room:'bathroom'},{id:'b3',name:'Serviettes propres',room:'bathroom'},{id:'c1',name:'Changer les draps',room:'bedroom'},{id:'c2',name:'Faire le lit',room:'bedroom'},{id:'c3',name:'Passer l\'aspirateur',room:'bedroom'},{id:'l1',name:'Passer l\'aspirateur',room:'living'},{id:'g1',name:'Vérifier les lumières',room:'general'},{id:'g2',name:'Fermer les fenêtres',room:'general'}];
+        }
+        renderTemplateTasksEditor(); document.getElementById('templateEditorSection').scrollIntoView({ behavior: 'smooth' });
+      }
+      window.openTemplateEditor = openTemplateEditor;
+      function closeTemplateEditor() { document.getElementById('templateEditorSection').style.display = 'none'; }
+      window.closeTemplateEditor = closeTemplateEditor;
+      function renderTemplateTasksEditor() {
+        var c = document.getElementById('templateTasksEditor'), byRoom = {};
+        editingTemplateTasks.forEach(function(t) { var r = t.room || 'general'; if (!byRoom[r]) byRoom[r] = []; byRoom[r].push(t); });
+        var html = '';
+        ['kitchen','bathroom','bedroom','living','terrace','general'].forEach(function(rk) {
+          var rt = byRoom[rk] || [], cfg = ROOM_DEFAULTS[rk];
+          html += '<div class="template-room-section"><div class="template-room-header"><div class="room-dot" style="background:' + cfg.color + '"></div> ' + cfg.name + ' (' + rt.length + ')</div>';
+          rt.forEach(function(t) { html += '<div class="template-task-row" data-task-id="' + t.id + '"><input type="text" value="' + (t.name||'').replace(/"/g,'&quot;') + '" onchange="updateTemplateTask(\'' + t.id + '\', this.value)"/><button class="btn-delete-task" onclick="deleteTemplateTask(\'' + t.id + '\')"><i class="fas fa-times"></i></button></div>'; });
+          html += '<button class="btn-add-task" onclick="addTemplateTask(\'' + rk + '\')"><i class="fas fa-plus"></i> Ajouter</button></div>';
+        });
+        c.innerHTML = html;
+      }
+      function updateTemplateTask(tid, v) { var t = editingTemplateTasks.find(function(x){return x.id===tid;}); if (t) t.name = v; }
+      window.updateTemplateTask = updateTemplateTask;
+      function deleteTemplateTask(tid) { editingTemplateTasks = editingTemplateTasks.filter(function(t){return t.id!==tid;}); renderTemplateTasksEditor(); }
+      window.deleteTemplateTask = deleteTemplateTask;
+      function addTemplateTask(room) { var id = 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2,5); editingTemplateTasks.push({id:id,name:'',room:room}); renderTemplateTasksEditor(); setTimeout(function(){ var r = document.querySelector('[data-task-id="'+id+'"] input'); if(r) r.focus(); }, 50); }
+      window.addTemplateTask = addTemplateTask;
+      async function saveTemplate() {
+        document.querySelectorAll('.template-task-row').forEach(function(row) { var tid = row.dataset.taskId, inp = row.querySelector('input[type="text"]'); if (tid && inp) { var t = editingTemplateTasks.find(function(x){return x.id===tid;}); if (t) t.name = inp.value; } });
+        var valid = editingTemplateTasks.filter(function(t){return t.name && t.name.trim();}); if (!valid.length) { alert('Ajoutez au moins une tâche'); return; }
+        var tid = document.getElementById('editingTemplateId').value || null;
+        var payload = { name: document.getElementById('templateName').value || 'Template ménage', propertyId: document.getElementById('templatePropertySelect').value || null, isDefault: document.getElementById('templateIsDefault').checked, tasks: valid };
+        if (tid) payload.templateId = parseInt(tid);
+        try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/templates', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}, body:JSON.stringify(payload) }); if (!res.ok) throw new Error('err'); closeTemplateEditor(); await loadTemplates(); } catch(e){ console.error(e); alert('Erreur sauvegarde'); }
+      }
+      window.saveTemplate = saveTemplate;
+      function editTemplate(id) { var t = allTemplates.find(function(x){return x.id===id;}); if (t) openTemplateEditor(t); }
+      window.editTemplate = editTemplate;
+      async function deleteTemplate(id) { if (!confirm('Supprimer ?')) return; try { var token = localStorage.getItem('lcc_token'); await fetch(API_URL+'/api/cleaning/templates/'+id, { method:'DELETE', headers:{Authorization:'Bearer '+token} }); await loadTemplates(); } catch(e){ console.error(e); alert('Erreur'); } }
+      window.deleteTemplate = deleteTemplate;
+
+      // ========== STATISTIQUES ==========
+      async function loadStats() {
+        try { var token = localStorage.getItem('lcc_token'), period = document.getElementById('statsPeriod')?.value || 'month';
+          var res = await fetch(API_URL+'/api/cleaning/stats?period='+period, { headers:{Authorization:'Bearer '+token} }); if (!res.ok) throw new Error('err');
+          var data = await res.json(), s = data.stats;
+          document.getElementById('statTotal').textContent = s.total; document.getElementById('statValidated').textContent = s.validated;
+          document.getElementById('statPending').textContent = s.pending; document.getElementById('statRejected').textContent = s.rejected;
+          document.getElementById('statAvgDuration').textContent = s.avgDurationMin ? s.avgDurationMin + ' min' : '—';
+          document.getElementById('statValidationRate').textContent = s.validationRate + '%';
+          var ct = document.getElementById('statsCleanerTable');
+          ct.innerHTML = (s.byCleaner && s.byCleaner.length) ? '<table class="assign-table"><thead><tr><th>Nom</th><th>Total</th><th>Durée moy.</th><th>Validés</th></tr></thead><tbody>' + s.byCleaner.map(function(c){return '<tr><td>'+(c.cleaner_name||'N/A')+'</td><td>'+c.total+'</td><td>'+(c.avg_duration_min?c.avg_duration_min+' min':'—')+'</td><td>'+(c.validated||0)+'</td></tr>';}).join('') + '</tbody></table>' : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
+          var pt = document.getElementById('statsPropertyTable');
+          pt.innerHTML = (s.byProperty && s.byProperty.length) ? '<table class="assign-table"><thead><tr><th>Logement</th><th>Total</th><th>Durée moy.</th></tr></thead><tbody>' + s.byProperty.map(function(p){return '<tr><td>'+(p.property_name||p.property_id)+'</td><td>'+p.total+'</td><td>'+(p.avg_duration_min?p.avg_duration_min+' min':'—')+'</td></tr>';}).join('') + '</tbody></table>' : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
+        } catch(e){ console.error('Stats error:', e); }
+      }
+      window.loadStats = loadStats;
+
+      // ========== QR CODE ==========
+      async function openQrModal(propertyId) {
+        var modal = document.getElementById('qrModal'), content = document.getElementById('qrModalContent');
+        content.innerHTML = '<p class="text-secondary">Chargement…</p>'; modal.classList.add('active'); document.body.style.overflow = 'hidden';
+        try { var token = localStorage.getItem('lcc_token');
+          var res = await fetch(API_URL+'/api/cleaning/qr/'+propertyId, { headers:{Authorization:'Bearer '+token} }); if (!res.ok) throw new Error('err');
+          var data = await res.json();
+          content.innerHTML = '<div style="margin-bottom:12px;"><strong>' + data.propertyName + '</strong>' + (data.cleanerName ? '<br/><span style="font-size:13px;color:var(--text-secondary);">Assigné à : ' + data.cleanerName + '</span>' : '') + '</div>'
+            + '<div id="qrCanvas" style="margin:16px auto;"></div>'
+            + '<div class="qr-modal-url">' + data.qrUrl + '</div>'
+            + '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;"><button class="btn btn-primary btn-sm" onclick="copyToClipboard(\'' + data.qrUrl.replace(/'/g,"\\'") + '\')"><i class="fas fa-copy"></i> Copier le lien</button></div>'
+            + '<p style="font-size:12px;color:var(--text-secondary);margin-top:12px;">Imprimez ce QR code et collez-le dans le logement.</p>';
+          var qrImg = document.createElement('img'); qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.qrUrl);
+          qrImg.style.cssText = 'max-width:200px;margin:0 auto;display:block;'; document.getElementById('qrCanvas').appendChild(qrImg);
+        } catch(e){ console.error(e); content.innerHTML = '<p style="color:#dc2626;">Erreur</p>'; }
+      }
+      window.openQrModal = openQrModal;
+      function closeQrModal() { document.getElementById('qrModal').classList.remove('active'); document.body.style.overflow = ''; }
+      window.closeQrModal = closeQrModal;
+      function copyToClipboard(text) { navigator.clipboard.writeText(text).then(function(){alert('Lien copié !');}).catch(function(){ var inp = document.createElement('input'); inp.value = text; document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp); alert('Copié !'); }); }
+      window.copyToClipboard = copyToClipboard;
+
       // Init
       (async function initCleaningPage() {
         loadLocalData();
@@ -1312,6 +2228,8 @@ function formatDateFr(dateStr) {
         await loadAssignmentsFromApi();
         renderCleaners();
         renderAssignments();
+        // Charger les checklists en arrière-plan pour le badge
+        loadChecklistsList();
       })();
     });
   </script>
