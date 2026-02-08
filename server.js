@@ -1081,7 +1081,66 @@ CREATE INDEX IF NOT EXISTS idx_invoice_download_tokens_token
 ON invoice_download_tokens(token);
 `);
 
-    console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments & cleaning_checklists OK dans Postgres');
+    // ============================================
+    // 🧹 MIGRATIONS MÉNAGE — Templates + colonnes enrichies
+    // ============================================
+    await pool.query(`
+      -- Table des templates de ménage par logement
+      CREATE TABLE IF NOT EXISTS cleaning_templates (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT,
+        name TEXT NOT NULL DEFAULT 'Template ménage',
+        tasks JSONB NOT NULL DEFAULT '[]'::jsonb,
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_cleaning_templates_user_id ON cleaning_templates(user_id);
+      CREATE INDEX IF NOT EXISTS idx_cleaning_templates_property ON cleaning_templates(user_id, property_id);
+
+      -- Nouvelles colonnes sur cleaning_checklists
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaning_checklists' AND column_name = 'duration_seconds')
+        THEN
+          ALTER TABLE cleaning_checklists ADD COLUMN duration_seconds INTEGER DEFAULT NULL;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaning_checklists' AND column_name = 'started_at')
+        THEN
+          ALTER TABLE cleaning_checklists ADD COLUMN started_at TIMESTAMPTZ DEFAULT NULL;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaning_checklists' AND column_name = 'owner_status')
+        THEN
+          ALTER TABLE cleaning_checklists ADD COLUMN owner_status TEXT NOT NULL DEFAULT 'pending';
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaning_checklists' AND column_name = 'owner_validated_at')
+        THEN
+          ALTER TABLE cleaning_checklists ADD COLUMN owner_validated_at TIMESTAMPTZ DEFAULT NULL;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaning_checklists' AND column_name = 'owner_notes')
+        THEN
+          ALTER TABLE cleaning_checklists ADD COLUMN owner_notes TEXT DEFAULT NULL;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'cleaning_checklists' AND column_name = 'is_validated')
+        THEN
+          ALTER TABLE cleaning_checklists ADD COLUMN is_validated BOOLEAN NOT NULL DEFAULT FALSE;
+        END IF;
+      END $$;
+    `);
+
+    console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments, cleaning_checklists & cleaning_templates OK dans Postgres');
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -7941,10 +8000,10 @@ const propertyName = property?.name || property?.title || property?.label || pro
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-// POST - Soumettre une checklist complétée
+// POST - Soumettre une checklist complétée (avec timer + notification propriétaire)
 app.post('/api/cleaning/checklist', async (req, res) => {
   try {
-    const { pinCode, reservationKey, propertyId, tasks, photos, notes } = req.body;
+    const { pinCode, reservationKey, propertyId, tasks, photos, notes, duration, startedAt, completedAt } = req.body;
     
     if (!pinCode || !reservationKey || !propertyId) {
       return res.status(400).json({ error: 'Données manquantes' });
@@ -7974,38 +8033,125 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     }
     
     // Extraire la date de fin depuis reservation_key (format: propertyId_startDate_endDate)
-const parts = reservationKey.split('_');
-const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
+    const parts = reservationKey.split('_');
+    const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
 
-// Récupérer les infos de la réservation depuis reservationsStore
-let reservation = null;
-const propertyReservations = reservationsStore.properties[propertyId] || [];
-reservation = propertyReservations.find(r => {
-  const rKey = `${propertyId}_${r.start}_${r.end}`;
-  return rKey === reservationKey;
-});
+    // Récupérer les infos de la réservation depuis reservationsStore
+    let reservation = null;
+    const propertyReservations = reservationsStore.properties[propertyId] || [];
+    reservation = propertyReservations.find(r => {
+      const rKey = `${propertyId}_${r.start}_${r.end}`;
+      return rKey === reservationKey;
+    });
 
-const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
+    const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
     
-    // Insérer ou mettre à jour la checklist
+    // Insérer ou mettre à jour la checklist (avec duration + started_at + owner_status)
     const result = await pool.query(
       `INSERT INTO cleaning_checklists 
-       (user_id, property_id, reservation_key, cleaner_id, guest_name, checkout_date, tasks, photos, notes, completed_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), NOW())
+       (user_id, property_id, reservation_key, cleaner_id, guest_name, checkout_date, 
+        tasks, photos, notes, duration_seconds, started_at, completed_at, 
+        owner_status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), 'pending', NOW(), NOW())
        ON CONFLICT (reservation_key) 
        DO UPDATE SET
          tasks = EXCLUDED.tasks,
          photos = EXCLUDED.photos,
          notes = EXCLUDED.notes,
+         duration_seconds = EXCLUDED.duration_seconds,
+         started_at = EXCLUDED.started_at,
          completed_at = NOW(),
+         owner_status = 'pending',
          updated_at = NOW()
        RETURNING id`,
-      [cleaner.user_id, propertyId, reservationKey, cleaner.id, guestName, checkoutDate, JSON.stringify(tasks), JSON.stringify(photos), notes]
+      [
+        cleaner.user_id, propertyId, reservationKey, cleaner.id, 
+        guestName, checkoutDate,
+        JSON.stringify(tasks), JSON.stringify(photos), notes,
+        duration || null,
+        startedAt || null
+      ]
     );
+
+    const checklistId = result.rows[0].id;
+
+    // ============================
+    // 🔔 NOTIFICATION AU PROPRIÉTAIRE
+    // ============================
+    try {
+      const property = PROPERTIES.find(p => p.id === propertyId);
+      const propertyName = property?.name || property?.title || propertyId;
+
+      // Notification push Firebase (si configuré)
+      if (typeof sendNewCleaningNotification === 'function') {
+        await sendNewCleaningNotification(cleaner.user_id, {
+          cleanerName: cleaner.name,
+          propertyName,
+          checklistId,
+          duration: duration ? Math.round(duration / 60) : null
+        }).catch(e => console.error('Push notification ménage error:', e));
+      }
+
+      // Notification email au propriétaire
+      const owner = await getUserForNotifications(cleaner.user_id);
+      if (owner?.email) {
+        const durationText = duration ? `${Math.round(duration / 60)} minutes` : 'non mesuré';
+        const photosCount = photos ? photos.length : 0;
+        
+        const subject = `✅ Ménage terminé — ${propertyName}`;
+        const htmlBody = `
+          <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #059669;">✅ Ménage terminé</h2>
+            <p><strong>${cleaner.name}</strong> a terminé le ménage de <strong>${propertyName}</strong>.</p>
+            <table style="width:100%; border-collapse:collapse; margin: 16px 0;">
+              <tr><td style="padding:8px 0; color:#6b7280;">🕐 Durée</td><td style="padding:8px 0; font-weight:600;">${durationText}</td></tr>
+              <tr><td style="padding:8px 0; color:#6b7280;">📸 Photos</td><td style="padding:8px 0; font-weight:600;">${photosCount} photos</td></tr>
+              <tr><td style="padding:8px 0; color:#6b7280;">📋 Tâches</td><td style="padding:8px 0; font-weight:600;">${tasks.length} / ${tasks.length} ✓</td></tr>
+              ${notes ? `<tr><td style="padding:8px 0; color:#6b7280;">📝 Notes</td><td style="padding:8px 0;">${notes}</td></tr>` : ''}
+            </table>
+            <p style="margin-top:16px;">
+              <a href="${process.env.BASE_URL || 'https://app.boostinghost.com'}/app.html" 
+                 style="display:inline-block; padding:12px 24px; background:#059669; color:white; text-decoration:none; border-radius:8px; font-weight:600;">
+                Voir et valider la checklist
+              </a>
+            </p>
+          </div>
+        `;
+
+        const useBrevo = !!process.env.BREVO_API_KEY;
+        if (useBrevo) {
+          await sendEmailViaBrevo({ to: owner.email, subject, text: '', html: htmlBody });
+        } else {
+          const transporter = getEmailTransporter();
+          if (transporter) {
+            await transporter.sendMail({
+              from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>',
+              to: owner.email,
+              subject,
+              html: htmlBody
+            });
+          }
+        }
+        console.log(`📧 Notification ménage terminé envoyée à ${owner.email}`);
+      }
+
+      // Émettre événement Socket.IO temps réel
+      if (typeof io !== 'undefined' && io) {
+        io.to(`user_${cleaner.user_id}`).emit('cleaning:completed', {
+          checklistId,
+          propertyId,
+          propertyName: property?.name || propertyId,
+          cleanerName: cleaner.name,
+          duration: duration || null
+        });
+      }
+    } catch (notifErr) {
+      console.error('Erreur notification ménage terminé:', notifErr);
+    }
     
     res.json({
       message: 'Checklist enregistrée avec succès',
-      checklistId: result.rows[0].id
+      checklistId
     });
   } catch (err) {
     console.error('Erreur POST /api/cleaning/checklist :', err);
@@ -8168,6 +8314,511 @@ app.get('/api/cleaning/assignments',
     });
   }
 });
+// ============================================
+// 🧹 NOUVELLES ROUTES MÉNAGE — Templates, Validation, Stats, QR
+// ============================================
+
+// GET /api/cleaning/template/:propertyId — Récupérer le template pour un logement (accès cleaner par PIN)
+app.get('/api/cleaning/template/:propertyId', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const { pin } = req.query;
+
+    if (!pin) {
+      return res.status(400).json({ error: 'PIN requis' });
+    }
+
+    const cleanerResult = await pool.query(
+      'SELECT user_id FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
+      [pin]
+    );
+
+    if (cleanerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'PIN invalide' });
+    }
+
+    const userId = cleanerResult.rows[0].user_id;
+
+    // 1) Template spécifique au logement
+    let template = await pool.query(
+      `SELECT * FROM cleaning_templates 
+       WHERE user_id = $1 AND property_id = $2 
+       ORDER BY updated_at DESC LIMIT 1`,
+      [userId, propertyId]
+    );
+
+    // 2) Template par défaut
+    if (template.rows.length === 0) {
+      template = await pool.query(
+        `SELECT * FROM cleaning_templates 
+         WHERE user_id = $1 AND is_default = TRUE 
+         ORDER BY updated_at DESC LIMIT 1`,
+        [userId]
+      );
+    }
+
+    // 3) N'importe quel template global
+    if (template.rows.length === 0) {
+      template = await pool.query(
+        `SELECT * FROM cleaning_templates 
+         WHERE user_id = $1 AND property_id IS NULL 
+         ORDER BY updated_at DESC LIMIT 1`,
+        [userId]
+      );
+    }
+
+    if (template.rows.length === 0) {
+      return res.status(404).json({ error: 'Aucun template trouvé' });
+    }
+
+    const t = template.rows[0];
+    const tasks = typeof t.tasks === 'string' ? JSON.parse(t.tasks) : (t.tasks || []);
+
+    res.json({
+      templateId: t.id,
+      name: t.name,
+      propertyId: t.property_id,
+      tasks
+    });
+
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/template/:propertyId :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/cleaning/templates — Créer ou modifier un template
+app.post('/api/cleaning/templates',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+
+      const { propertyId, name, tasks, isDefault, templateId } = req.body;
+
+      if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        return res.status(400).json({ error: 'La liste de tâches est requise' });
+      }
+
+      const sanitizedTasks = tasks.map((t, i) => ({
+        id: t.id || `task_${i}`,
+        name: t.name || t.title || 'Tâche sans nom',
+        room: t.room || t.category || 'general'
+      }));
+
+      let result;
+
+      if (templateId) {
+        result = await pool.query(
+          `UPDATE cleaning_templates 
+           SET name = $1, tasks = $2, property_id = $3, is_default = $4, updated_at = NOW()
+           WHERE id = $5 AND user_id = $6
+           RETURNING *`,
+          [name || 'Template ménage', JSON.stringify(sanitizedTasks), propertyId || null, isDefault || false, templateId, userId]
+        );
+
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Template non trouvé' });
+        }
+      } else {
+        if (isDefault) {
+          await pool.query(
+            'UPDATE cleaning_templates SET is_default = FALSE WHERE user_id = $1',
+            [userId]
+          );
+        }
+
+        result = await pool.query(
+          `INSERT INTO cleaning_templates (user_id, property_id, name, tasks, is_default)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING *`,
+          [userId, propertyId || null, name || 'Template ménage', JSON.stringify(sanitizedTasks), isDefault || false]
+        );
+      }
+
+      res.status(201).json({ success: true, template: result.rows[0] });
+
+    } catch (err) {
+      console.error('Erreur POST /api/cleaning/templates :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// GET /api/cleaning/templates — Lister les templates
+app.get('/api/cleaning/templates',
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+
+      const { propertyId } = req.query;
+
+      let query = `SELECT * FROM cleaning_templates WHERE user_id = $1`;
+      const params = [userId];
+
+      if (propertyId) {
+        query += ` AND (property_id = $2 OR property_id IS NULL)`;
+        params.push(propertyId);
+      }
+
+      query += ` ORDER BY is_default DESC, updated_at DESC`;
+
+      const result = await pool.query(query, params);
+
+      res.json({ success: true, templates: result.rows });
+
+    } catch (err) {
+      console.error('Erreur GET /api/cleaning/templates :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// DELETE /api/cleaning/templates/:id — Supprimer un template
+app.delete('/api/cleaning/templates/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+
+      const { id } = req.params;
+
+      const result = await pool.query(
+        'DELETE FROM cleaning_templates WHERE id = $1 AND user_id = $2 RETURNING id',
+        [id, userId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Template non trouvé' });
+      }
+
+      res.json({ success: true, deleted: id });
+
+    } catch (err) {
+      console.error('Erreur DELETE /api/cleaning/templates/:id :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// PUT /api/cleaning/checklists/:id/validate — Validation propriétaire
+app.put('/api/cleaning/checklists/:id/validate',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+
+      const { id } = req.params;
+
+      const result = await pool.query(
+        `UPDATE cleaning_checklists 
+         SET owner_status = 'validated', 
+             owner_validated_at = NOW(), 
+             is_validated = TRUE,
+             updated_at = NOW()
+         WHERE id = $1 AND user_id = $2
+         RETURNING *`,
+        [id, userId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Checklist non trouvée' });
+      }
+
+      if (typeof io !== 'undefined' && io) {
+        io.to(`user_${userId}`).emit('cleaning:validated', {
+          checklistId: id,
+          propertyId: result.rows[0].property_id
+        });
+      }
+
+      console.log(`✅ Checklist ${id} validée par propriétaire ${userId}`);
+
+      res.json({ success: true, checklist: result.rows[0] });
+
+    } catch (err) {
+      console.error('Erreur PUT /api/cleaning/checklists/:id/validate :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// PUT /api/cleaning/checklists/:id/reject — Demande de complément
+app.put('/api/cleaning/checklists/:id/reject',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+
+      const { id } = req.params;
+      const { notes } = req.body;
+
+      const result = await pool.query(
+        `UPDATE cleaning_checklists 
+         SET owner_status = 'rejected', 
+             owner_notes = $3,
+             updated_at = NOW()
+         WHERE id = $1 AND user_id = $2
+         RETURNING *`,
+        [id, userId, notes || 'Merci de compléter le ménage']
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Checklist non trouvée' });
+      }
+
+      const checklist = result.rows[0];
+      console.log(`⚠️ Checklist ${id} rejetée — complément demandé pour ${checklist.property_id}`);
+
+      // Notifier le cleaner
+      try {
+        const cleanerResult = await pool.query(
+          'SELECT email, phone, name FROM cleaners WHERE id = $1',
+          [checklist.cleaner_id]
+        );
+        if (cleanerResult.rows.length > 0) {
+          const cleaner = cleanerResult.rows[0];
+          const property = PROPERTIES.find(p => p.id === checklist.property_id);
+          const propertyName = property?.name || checklist.property_id;
+
+          if (cleaner.email) {
+            const subject = `⚠️ Complément demandé — ${propertyName}`;
+            const htmlBody = `
+              <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
+                <h2 style="color: #f59e0b;">⚠️ Complément de ménage demandé</h2>
+                <p>Bonjour <strong>${cleaner.name}</strong>,</p>
+                <p>Le propriétaire demande un complément pour le ménage de <strong>${propertyName}</strong>.</p>
+                ${notes ? `<div style="padding:12px 16px; background:#fef3c7; border-radius:8px; margin:16px 0;"><strong>Message :</strong> ${notes}</div>` : ''}
+                <p>Merci de repasser dès que possible.</p>
+              </div>
+            `;
+
+            const useBrevo = !!process.env.BREVO_API_KEY;
+            if (useBrevo) {
+              await sendEmailViaBrevo({ to: cleaner.email, subject, text: '', html: htmlBody });
+            } else {
+              const transporter = getEmailTransporter();
+              if (transporter) {
+                await transporter.sendMail({
+                  from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>',
+                  to: cleaner.email,
+                  subject,
+                  html: htmlBody
+                });
+              }
+            }
+            console.log(`📧 Notification de rejet envoyée à ${cleaner.email}`);
+          }
+        }
+      } catch (notifErr) {
+        console.error('Erreur notification rejet:', notifErr);
+      }
+
+      res.json({ success: true, checklist: result.rows[0] });
+
+    } catch (err) {
+      console.error('Erreur PUT /api/cleaning/checklists/:id/reject :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// GET /api/cleaning/stats — Statistiques ménage
+app.get('/api/cleaning/stats',
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+
+      const { period } = req.query;
+
+      let dateFilter = '';
+      if (period === 'week') {
+        dateFilter = `AND cc.completed_at >= NOW() - INTERVAL '7 days'`;
+      } else if (period === 'month') {
+        dateFilter = `AND cc.completed_at >= NOW() - INTERVAL '30 days'`;
+      } else {
+        dateFilter = `AND cc.completed_at >= NOW() - INTERVAL '365 days'`;
+      }
+
+      const globalStats = await pool.query(`
+        SELECT 
+          COUNT(*) as total_checklists,
+          COUNT(CASE WHEN owner_status = 'validated' THEN 1 END) as validated,
+          COUNT(CASE WHEN owner_status = 'pending' THEN 1 END) as pending,
+          COUNT(CASE WHEN owner_status = 'rejected' THEN 1 END) as rejected,
+          AVG(duration_seconds) as avg_duration,
+          MIN(duration_seconds) as min_duration,
+          MAX(duration_seconds) as max_duration
+        FROM cleaning_checklists cc
+        WHERE cc.user_id = $1 ${dateFilter}
+      `, [userId]);
+
+      const cleanerStats = await pool.query(`
+        SELECT 
+          c.id as cleaner_id,
+          c.name as cleaner_name,
+          COUNT(cc.id) as total,
+          AVG(cc.duration_seconds) as avg_duration,
+          COUNT(CASE WHEN cc.owner_status = 'validated' THEN 1 END) as validated,
+          COUNT(CASE WHEN cc.owner_status = 'rejected' THEN 1 END) as rejected
+        FROM cleaning_checklists cc
+        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
+        WHERE cc.user_id = $1 ${dateFilter}
+        GROUP BY c.id, c.name
+        ORDER BY total DESC
+      `, [userId]);
+
+      const propertyStats = await pool.query(`
+        SELECT 
+          cc.property_id,
+          COUNT(cc.id) as total,
+          AVG(cc.duration_seconds) as avg_duration
+        FROM cleaning_checklists cc
+        WHERE cc.user_id = $1 ${dateFilter}
+        GROUP BY cc.property_id
+        ORDER BY total DESC
+      `, [userId]);
+
+      const enrichedPropertyStats = propertyStats.rows.map(row => {
+        const property = PROPERTIES.find(p => p.id === row.property_id);
+        return {
+          ...row,
+          property_name: property?.name || property?.title || row.property_id,
+          avg_duration_min: row.avg_duration ? Math.round(row.avg_duration / 60) : null
+        };
+      });
+
+      const global = globalStats.rows[0] || {};
+
+      res.json({
+        success: true,
+        stats: {
+          total: parseInt(global.total_checklists) || 0,
+          validated: parseInt(global.validated) || 0,
+          pending: parseInt(global.pending) || 0,
+          rejected: parseInt(global.rejected) || 0,
+          avgDurationMin: global.avg_duration ? Math.round(global.avg_duration / 60) : null,
+          minDurationMin: global.min_duration ? Math.round(global.min_duration / 60) : null,
+          maxDurationMin: global.max_duration ? Math.round(global.max_duration / 60) : null,
+          validationRate: global.total_checklists > 0
+            ? Math.round((global.validated / global.total_checklists) * 100) : 0,
+          byCleaner: cleanerStats.rows.map(r => ({
+            ...r,
+            avg_duration_min: r.avg_duration ? Math.round(r.avg_duration / 60) : null
+          })),
+          byProperty: enrichedPropertyStats
+        }
+      });
+
+    } catch (err) {
+      console.error('Erreur GET /api/cleaning/stats :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// GET /api/cleaning/qr/:propertyId — Données QR code
+app.get('/api/cleaning/qr/:propertyId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  async (req, res) => {
+    try {
+      const user = await getUserFromRequest(req);
+      if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+      const { propertyId } = req.params;
+
+      const property = PROPERTIES.find(
+        p => p.id === propertyId && p.userId === user.id
+      );
+
+      if (!property) {
+        return res.status(404).json({ error: 'Logement non trouvé' });
+      }
+
+      // Trouver le cleaner assigné pour le PIN
+      const assignment = await pool.query(
+        `SELECT ca.cleaner_id, c.pin_code, c.name
+         FROM cleaning_assignments ca
+         LEFT JOIN cleaners c ON c.id = ca.cleaner_id
+         WHERE ca.user_id = $1 AND ca.property_id = $2
+         LIMIT 1`,
+        [user.id, propertyId]
+      );
+
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      let qrUrl = `${baseUrl}/cleaning-tasks.html`;
+      
+      if (assignment.rows.length > 0 && assignment.rows[0].pin_code) {
+        qrUrl += `?pin=${assignment.rows[0].pin_code}`;
+      }
+
+      res.json({
+        success: true,
+        propertyId,
+        propertyName: property.name || property.title || propertyId,
+        qrUrl,
+        cleanerName: assignment.rows[0]?.name || null,
+        pinCode: assignment.rows[0]?.pin_code || null
+      });
+
+    } catch (err) {
+      console.error('Erreur GET /api/cleaning/qr/:propertyId :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
 // ============================================
 // ROUTES API - GESTION DES LOGEMENTS (par user)
 
