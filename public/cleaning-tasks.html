@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Boostinghost – Mes tâches ménage</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<style>
+/* ==========================================
+   CLEANING TASKS — MOBILE-FIRST INTERFACE
+   Pour les personnes de ménage
+   ========================================== */
+
+:root {
+  --bg: #f8faf9;
+  --bg-card: #ffffff;
+  --text: #1a2e2a;
+  --text-secondary: #6b8078;
+  --text-tertiary: #9bb0a8;
+  --accent: #10b981;
+  --accent-light: #d1fae5;
+  --accent-dark: #059669;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --border: #e2ece8;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --shadow-sm: 0 1px 3px rgba(26,46,42,0.06);
+  --shadow-md: 0 4px 16px rgba(26,46,42,0.08);
+  --shadow-lg: 0 8px 32px rgba(26,46,42,0.12);
+  --font: 'DM Sans', -apple-system, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ===== LOGIN SCREEN ===== */
+.login-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: calc(24px + var(--safe-top));
+  background: linear-gradient(160deg, #ecfdf5 0%, #f0fdf4 40%, #f8faf9 100%);
+}
+
+.login-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(16,185,129,0.3);
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.pin-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.pin-input-group input {
+  width: 52px;
+  height: 60px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  transition: all 0.2s;
+  -webkit-appearance: none;
+}
+
+.pin-input-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.12);
+}
+
+.login-btn {
+  width: 100%;
+  max-width: 280px;
+  padding: 16px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+}
+
+.login-btn:active {
+  transform: scale(0.97);
+}
+
+.login-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 12px;
+  display: none;
+}
+
+/* ===== MAIN APP ===== */
+.app-screen {
+  display: none;
+  min-height: 100dvh;
+  padding-bottom: calc(80px + var(--safe-bottom));
+}
+
+.app-screen.active { display: block; }
+.login-screen.hidden { display: none; }
+
+/* Top bar */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(248,250,249,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 16px;
+  padding-top: calc(12px + var(--safe-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-bar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.top-bar-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.top-bar-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.top-bar-right {
+  display: flex;
+  gap: 8px;
+}
+
+.top-bar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.15s;
+}
+
+.top-bar-btn:active { transform: scale(0.92); }
+.top-bar-btn .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Section headers */
+.section-label {
+  padding: 16px 16px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+/* ===== TASK CARDS ===== */
+.tasks-list {
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.task-card:active { transform: scale(0.985); }
+
+.task-card.urgent {
+  border-color: var(--warning);
+  border-left: 4px solid var(--warning);
+}
+
+.task-card.completed {
+  opacity: 0.6;
+  border-color: var(--accent);
+  border-left: 4px solid var(--accent);
+}
+
+.task-card.in-progress {
+  border-color: #3b82f6;
+  border-left: 4px solid #3b82f6;
+  box-shadow: 0 4px 20px rgba(59,130,246,0.12);
+}
+
+.task-card-top {
+  padding: 14px 16px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.task-card-property {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.task-card-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-todo {
+  background: var(--warning-light);
+  color: #b45309;
+}
+
+.badge-today {
+  background: var(--danger-light);
+  color: var(--danger);
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.badge-upcoming {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.badge-done {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+}
+
+.badge-in-progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+.task-card-info {
+  padding: 0 16px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.task-card-info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-card-info-item i {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  width: 14px;
+  text-align: center;
+}
+
+.task-card-action {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+
+.task-card-btn {
+  flex: 1;
+  padding: 13px;
+  border: none;
+  background: none;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+  color: var(--accent-dark);
+}
+
+.task-card-btn:active {
+  background: var(--accent-light);
+}
+
+.task-card-btn.btn-start {
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+}
+
+.task-card-btn.btn-continue {
+  color: white;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+/* ===== CHECKLIST MODAL (FULLSCREEN) ===== */
+.checklist-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.checklist-screen.active { display: block; }
+
+.checklist-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(248,250,249,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 16px;
+  padding-top: calc(12px + var(--safe-top));
+  border-bottom: 1px solid var(--border);
+}
+
+.checklist-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.checklist-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  padding: 6px 0;
+}
+
+.checklist-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.checklist-timer.active {
+  background: #fef3c7;
+  color: #b45309;
+  animation: timer-pulse 1s ease-in-out infinite;
+}
+
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.checklist-property-name {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.checklist-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Progress bar */
+.progress-container {
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.progress-text span:last-child {
+  color: var(--text-secondary);
+}
+
+.progress-bar-bg {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+
+/* Task sections (by room) */
+.checklist-body {
+  padding: 12px;
+  padding-bottom: calc(100px + var(--safe-bottom));
+}
+
+.room-section {
+  margin-bottom: 16px;
+}
+
+.room-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.room-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.room-icon.kitchen { background: #f97316; }
+.room-icon.bathroom { background: #06b6d4; }
+.room-icon.bedroom { background: #8b5cf6; }
+.room-icon.living { background: #ec4899; }
+.room-icon.general { background: #6b7280; }
+.room-icon.terrace { background: #84cc16; }
+
+.room-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.room-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.room-tasks {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.task-row:last-child { border-bottom: none; }
+.task-row:active { background: #f0fdf4; }
+
+.task-checkbox {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  color: white;
+  font-size: 13px;
+}
+
+.task-row.checked .task-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+  animation: check-pop 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+@keyframes check-pop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.task-row.checked .task-label {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.task-label {
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.3;
+}
+
+/* ===== PHOTOS SECTION ===== */
+.photos-section {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.photos-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.photos-section-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.photo-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.photo-counter.enough {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+}
+
+.photo-counter.not-enough {
+  background: var(--warning-light);
+  color: #b45309;
+}
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.photo-thumb {
+  aspect-ratio: 1;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  position: relative;
+  background: var(--border);
+}
+
+.photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-thumb-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  border: none;
+}
+
+.photo-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.photo-add-btn:active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+/* ===== NOTES SECTION ===== */
+.notes-section {
+  margin: 0 0 16px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.notes-section textarea {
+  width: 100%;
+  min-height: 80px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-family: var(--font);
+  font-size: 14px;
+  resize: vertical;
+  color: var(--text);
+  background: var(--bg);
+  transition: all 0.15s;
+}
+
+.notes-section textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+}
+
+/* ===== SUBMIT BUTTON (FIXED BOTTOM) ===== */
+.checklist-submit-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  background: rgba(248,250,249,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  z-index: 10;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.submit-btn.ready {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
+  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+}
+
+.submit-btn.not-ready {
+  background: var(--border);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.submit-btn:active:not(.not-ready) {
+  transform: scale(0.97);
+}
+
+/* ===== SUCCESS SCREEN ===== */
+.success-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(248,250,249,0.97);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.success-overlay.active {
+  display: flex;
+  animation: fade-in 0.3s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.success-check {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  animation: success-pop 0.5s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 8px 32px rgba(16,185,129,0.3);
+}
+
+@keyframes success-pop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.success-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.success-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.success-btn {
+  padding: 14px 32px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 16px;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ===== LOADING ===== */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ===== NOTIFICATION TOAST ===== */
+.toast {
+  position: fixed;
+  top: calc(20px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%) translateY(-120%);
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font);
+  z-index: 3000;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  max-width: 90vw;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.success {
+  background: var(--accent-dark);
+  color: white;
+}
+
+.toast.error {
+  background: var(--danger);
+  color: white;
+}
+
+.toast.info {
+  background: var(--text);
+  color: white;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (min-width: 600px) {
+  .tasks-list { max-width: 540px; margin: 0 auto; }
+  .checklist-body { max-width: 540px; margin: 0 auto; }
+  .photos-grid { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== LOGIN SCREEN ========== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">
+    <i class="fas fa-broom"></i>
+  </div>
+  <div class="login-title">Espace ménage</div>
+  <div class="login-subtitle">Entrez votre code PIN à 4 chiffres</div>
+  
+  <div class="pin-input-group" id="pinGroup">
+    <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off"/>
+    <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off"/>
+    <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off"/>
+    <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off"/>
+  </div>
+  
+  <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+    <i class="fas fa-arrow-right"></i> Accéder à mes tâches
+  </button>
+  
+  <div class="login-error" id="loginError">Code PIN incorrect</div>
+</div>
+
+<!-- ========== APP SCREEN ========== -->
+<div class="app-screen" id="appScreen">
+  
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-avatar" id="cleanerAvatar">M</div>
+      <div>
+        <div class="top-bar-name" id="cleanerName">Marie</div>
+        <div class="top-bar-status" id="cleanerStatus">Connecté(e)</div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <button class="top-bar-btn" onclick="refreshTasks()" title="Actualiser">
+        <i class="fas fa-sync-alt"></i>
+      </button>
+      <button class="top-bar-btn" onclick="logout()" title="Déconnexion">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Tasks list -->
+  <div id="tasksContainer">
+    <div class="loading-screen">
+      <div class="spinner"></div>
+      <span>Chargement de vos tâches…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CHECKLIST SCREEN (FULLSCREEN) ========== -->
+<div class="checklist-screen" id="checklistScreen">
+  
+  <div class="checklist-header">
+    <div class="checklist-header-top">
+      <button class="checklist-back" onclick="closeChecklist()">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <div class="checklist-timer" id="checklistTimer">
+        <i class="fas fa-stopwatch"></i>
+        <span id="timerDisplay">00:00</span>
+      </div>
+    </div>
+    <div class="checklist-property-name" id="checklistPropertyName">—</div>
+    <div class="checklist-subtitle" id="checklistSubtitle">—</div>
+  </div>
+  
+  <!-- Progress -->
+  <div class="progress-container">
+    <div class="progress-text">
+      <span id="progressLabel">0 / 0 tâches</span>
+      <span id="progressPercent">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+  </div>
+  
+  <!-- Checklist body -->
+  <div class="checklist-body" id="checklistBody">
+    <!-- Dynamically rendered rooms & tasks -->
+  </div>
+  
+  <!-- Fixed submit bar -->
+  <div class="checklist-submit-bar">
+    <button class="submit-btn not-ready" id="submitBtn" onclick="handleSubmit()">
+      <i class="fas fa-paper-plane"></i>
+      <span id="submitLabel">Compléter toutes les tâches</span>
+    </button>
+  </div>
+</div>
+
+<!-- ========== SUCCESS OVERLAY ========== -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-check">
+    <i class="fas fa-check"></i>
+  </div>
+  <div class="success-title">Ménage terminé !</div>
+  <div class="success-subtitle" id="successSubtitle">Durée : 0 min — Le propriétaire sera notifié.</div>
+  <button class="success-btn" onclick="closeSuccess()">
+    <i class="fas fa-arrow-left"></i> Retour aux tâches
+  </button>
+</div>
+
+<!-- ========== TOAST ========== -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden file input for photos -->
+<input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display:none"/>
+
+<script>
+// ==========================================
+// CLEANING TASKS APP — LOGIC
+// ==========================================
+
+const API_URL = window.location.origin.includes('localhost')
+  ? 'http://localhost:3001'
+  : 'https://lcc-booking-manager.onrender.com';
+
+let currentPin = null;
+let cleanerData = null;
+let tasks = [];
+let currentTask = null;
+let checklistTasks = [];
+let checklistPhotos = []; // base64 strings
+let timerInterval = null;
+let timerSeconds = 0;
+let startedAt = null;
+
+// ===== PIN LOGIN =====
+(function initPinInputs() {
+  const inputs = document.querySelectorAll('#pinGroup input');
+  
+  inputs.forEach((input, idx) => {
+    input.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val;
+      if (val && idx < inputs.length - 1) {
+        inputs[idx + 1].focus();
+      }
+      // Auto-login when 4 digits entered
+      const pin = Array.from(inputs).map(i => i.value).join('');
+      if (pin.length === 4) {
+        setTimeout(() => handleLogin(), 150);
+      }
+    });
+    
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+        inputs[idx - 1].focus();
+      }
+    });
+    
+    input.addEventListener('focus', () => {
+      e.target.select && e.target.select();
+    });
+  });
+  
+  // Check if PIN in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const pinParam = urlParams.get('pin');
+  if (pinParam && pinParam.length === 4) {
+    const digits = pinParam.split('');
+    inputs.forEach((inp, i) => { inp.value = digits[i] || ''; });
+    setTimeout(() => handleLogin(), 300);
+  }
+  
+  // Check saved PIN
+  const savedPin = sessionStorage.getItem('cleaning_pin');
+  if (savedPin) {
+    currentPin = savedPin;
+    loadTasks(savedPin);
+  }
+})();
+
+async function handleLogin() {
+  const inputs = document.querySelectorAll('#pinGroup input');
+  const pin = Array.from(inputs).map(i => i.value).join('');
+  
+  if (pin.length !== 4) {
+    showLoginError('Entrez 4 chiffres');
+    return;
+  }
+  
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-top-color:white"></div>';
+  
+  try {
+    const res = await fetch(`${API_URL}/api/cleaning/tasks/${pin}`);
+    
+    if (!res.ok) {
+      if (res.status === 404) {
+        showLoginError('Code PIN invalide');
+      } else {
+        showLoginError('Erreur de connexion');
+      }
+      return;
+    }
+    
+    const data = await res.json();
+    currentPin = pin;
+    cleanerData = data.cleaner;
+    tasks = data.tasks || [];
+    
+    sessionStorage.setItem('cleaning_pin', pin);
+    
+    // Switch to app
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.add('active');
+    
+    // Update UI
+    document.getElementById('cleanerAvatar').textContent = (cleanerData.name || 'M')[0].toUpperCase();
+    document.getElementById('cleanerName').textContent = cleanerData.name || 'Mon espace';
+    
+    renderTasks();
+    
+  } catch (err) {
+    console.error('Login error:', err);
+    showLoginError('Erreur réseau');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-arrow-right"></i> Accéder à mes tâches';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+  
+  // Shake animation
+  const group = document.getElementById('pinGroup');
+  group.style.animation = 'none';
+  group.offsetHeight;
+  group.style.animation = 'shake 0.4s ease';
+  
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ===== TASKS LIST =====
+function renderTasks() {
+  const container = document.getElementById('tasksContainer');
+  
+  if (!tasks.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-sparkles"></i></div>
+        <h3>Aucune tâche</h3>
+        <p>Vous n'avez pas de ménage prévu pour le moment. Revenez plus tard !</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  
+  // Séparer : aujourd'hui, demain, à venir, terminé
+  const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed);
+  const tomorrowTasks = tasks.filter(t => t.checkoutDate === tomorrow && !t.completed);
+  const upcomingTasks = tasks.filter(t => t.checkoutDate > tomorrow && !t.completed);
+  const doneTasks = tasks.filter(t => t.completed);
+  
+  let html = '';
+  
+  if (todayTasks.length) {
+    html += `<div class="section-label">🔴 Aujourd'hui — ${todayTasks.length} ménage${todayTasks.length > 1 ? 's' : ''}</div>`;
+    html += '<div class="tasks-list">';
+    todayTasks.forEach(t => { html += renderTaskCard(t, 'today'); });
+    html += '</div>';
+  }
+  
+  if (tomorrowTasks.length) {
+    html += `<div class="section-label">🟠 Demain — ${tomorrowTasks.length} ménage${tomorrowTasks.length > 1 ? 's' : ''}</div>`;
+    html += '<div class="tasks-list">';
+    tomorrowTasks.forEach(t => { html += renderTaskCard(t, 'tomorrow'); });
+    html += '</div>';
+  }
+  
+  if (upcomingTasks.length) {
+    html += `<div class="section-label">📅 À venir — ${upcomingTasks.length}</div>`;
+    html += '<div class="tasks-list">';
+    upcomingTasks.forEach(t => { html += renderTaskCard(t, 'upcoming'); });
+    html += '</div>';
+  }
+  
+  if (doneTasks.length) {
+    html += `<div class="section-label">✅ Terminés — ${doneTasks.length}</div>`;
+    html += '<div class="tasks-list">';
+    doneTasks.forEach(t => { html += renderTaskCard(t, 'done'); });
+    html += '</div>';
+  }
+  
+  container.innerHTML = html;
+  
+  // Update status
+  const pendingCount = tasks.filter(t => !t.completed).length;
+  document.getElementById('cleanerStatus').textContent = 
+    pendingCount > 0 ? `${pendingCount} ménage${pendingCount > 1 ? 's' : ''} à faire` : 'Tout est fait ✨';
+}
+
+function renderTaskCard(task, type) {
+  const dateFormatted = formatDateFr(task.checkoutDate);
+  let badgeClass, badgeText, cardClass = '', actionBtn;
+  
+  switch(type) {
+    case 'today':
+      badgeClass = 'badge-today';
+      badgeText = "Aujourd'hui";
+      actionBtn = `<button class="task-card-btn btn-start" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-play"></i> Commencer</button>`;
+      break;
+    case 'tomorrow':
+      badgeClass = 'badge-todo';
+      badgeText = 'Demain';
+      actionBtn = `<button class="task-card-btn" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-eye"></i> Voir les tâches</button>`;
+      break;
+    case 'upcoming':
+      badgeClass = 'badge-upcoming';
+      badgeText = dateFormatted;
+      actionBtn = `<button class="task-card-btn" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-eye"></i> Voir les tâches</button>`;
+      break;
+    case 'done':
+      badgeClass = 'badge-done';
+      badgeText = 'Terminé ✓';
+      cardClass = 'completed';
+      actionBtn = `<button class="task-card-btn" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-eye"></i> Revoir</button>`;
+      break;
+  }
+  
+  return `
+    <div class="task-card ${cardClass}">
+      <div class="task-card-top">
+        <div class="task-card-property">${task.propertyName || 'Logement'}</div>
+        <span class="task-card-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="task-card-info">
+        <div class="task-card-info-item">
+          <i class="fas fa-calendar-check"></i>
+          <span>Départ le ${dateFormatted}</span>
+        </div>
+        ${task.guestName ? `
+        <div class="task-card-info-item">
+          <i class="fas fa-user"></i>
+          <span>${task.guestName}</span>
+        </div>` : ''}
+      </div>
+      <div class="task-card-action">
+        ${actionBtn}
+      </div>
+    </div>
+  `;
+}
+
+// ===== CHECKLIST =====
+async function openChecklist(reservationKey) {
+  currentTask = tasks.find(t => t.reservationKey === reservationKey);
+  if (!currentTask) return;
+  
+  // Reset state
+  checklistPhotos = [];
+  timerSeconds = 0;
+  startedAt = new Date();
+  
+  // Load template tasks (or default)
+  checklistTasks = await loadChecklistTemplate(currentTask);
+  
+  // Update header
+  document.getElementById('checklistPropertyName').textContent = currentTask.propertyName || 'Logement';
+  document.getElementById('checklistSubtitle').textContent = 
+    `Départ le ${formatDateFr(currentTask.checkoutDate)}${currentTask.guestName ? ' — ' + currentTask.guestName : ''}`;
+  
+  // Render
+  renderChecklistBody();
+  updateProgress();
+  
+  // Start timer
+  startTimer();
+  
+  // Show screen
+  document.getElementById('checklistScreen').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+async function loadChecklistTemplate(task) {
+  // Try to load template from API
+  try {
+    const res = await fetch(`${API_URL}/api/cleaning/template/${task.propertyId}?pin=${currentPin}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.tasks && data.tasks.length > 0) {
+        return data.tasks.map((t, i) => ({
+          id: t.id || `task_${i}`,
+          name: t.name || t.title,
+          room: t.room || t.category || 'general',
+          checked: false
+        }));
+      }
+    }
+  } catch (e) {
+    console.log('No template found, using defaults');
+  }
+  
+  // Default tasks by room
+  return getDefaultTasks();
+}
+
+function getDefaultTasks() {
+  return [
+    // Cuisine
+    { id: 'k1', name: 'Nettoyer le plan de travail', room: 'kitchen', checked: false },
+    { id: 'k2', name: 'Nettoyer l\'évier', room: 'kitchen', checked: false },
+    { id: 'k3', name: 'Nettoyer les plaques de cuisson', room: 'kitchen', checked: false },
+    { id: 'k4', name: 'Nettoyer le réfrigérateur (intérieur)', room: 'kitchen', checked: false },
+    { id: 'k5', name: 'Vider et nettoyer la poubelle', room: 'kitchen', checked: false },
+    { id: 'k6', name: 'Vérifier la vaisselle et les ustensiles', room: 'kitchen', checked: false },
+    { id: 'k7', name: 'Nettoyer le micro-ondes', room: 'kitchen', checked: false },
+    { id: 'k8', name: 'Laver le sol', room: 'kitchen', checked: false },
+    // Salle de bain
+    { id: 'b1', name: 'Nettoyer la douche / baignoire', room: 'bathroom', checked: false },
+    { id: 'b2', name: 'Nettoyer les WC (intérieur + extérieur)', room: 'bathroom', checked: false },
+    { id: 'b3', name: 'Nettoyer le lavabo et le miroir', room: 'bathroom', checked: false },
+    { id: 'b4', name: 'Mettre des serviettes propres', room: 'bathroom', checked: false },
+    { id: 'b5', name: 'Vérifier savon / gel douche / shampoing', room: 'bathroom', checked: false },
+    { id: 'b6', name: 'Vérifier le papier toilette', room: 'bathroom', checked: false },
+    { id: 'b7', name: 'Laver le sol', room: 'bathroom', checked: false },
+    // Chambre
+    { id: 'c1', name: 'Changer les draps et taies d\'oreiller', room: 'bedroom', checked: false },
+    { id: 'c2', name: 'Faire le lit soigneusement', room: 'bedroom', checked: false },
+    { id: 'c3', name: 'Passer l\'aspirateur / balai', room: 'bedroom', checked: false },
+    { id: 'c4', name: 'Dépoussiérer les meubles', room: 'bedroom', checked: false },
+    { id: 'c5', name: 'Vider les poubelles', room: 'bedroom', checked: false },
+    // Salon
+    { id: 'l1', name: 'Passer l\'aspirateur / balai', room: 'living', checked: false },
+    { id: 'l2', name: 'Nettoyer la table basse et surfaces', room: 'living', checked: false },
+    { id: 'l3', name: 'Remettre les coussins en ordre', room: 'living', checked: false },
+    { id: 'l4', name: 'Nettoyer la télé (écran + télécommande)', room: 'living', checked: false },
+    { id: 'l5', name: 'Vider les poubelles', room: 'living', checked: false },
+    // Général
+    { id: 'g1', name: 'Vérifier toutes les lumières', room: 'general', checked: false },
+    { id: 'g2', name: 'Vérifier le thermostat / climatisation', room: 'general', checked: false },
+    { id: 'g3', name: 'Fermer les fenêtres', room: 'general', checked: false },
+    { id: 'g4', name: 'Vérifier le WiFi fonctionne', room: 'general', checked: false },
+    { id: 'g5', name: 'Déposer le kit de bienvenue', room: 'general', checked: false },
+  ];
+}
+
+const ROOM_CONFIG = {
+  kitchen: { name: 'Cuisine', icon: 'fa-utensils', class: 'kitchen' },
+  bathroom: { name: 'Salle de bain', icon: 'fa-shower', class: 'bathroom' },
+  bedroom: { name: 'Chambre', icon: 'fa-bed', class: 'bedroom' },
+  living: { name: 'Salon', icon: 'fa-couch', class: 'living' },
+  terrace: { name: 'Terrasse / Extérieur', icon: 'fa-sun', class: 'terrace' },
+  general: { name: 'Vérifications générales', icon: 'fa-clipboard-check', class: 'general' },
+};
+
+function renderChecklistBody() {
+  const body = document.getElementById('checklistBody');
+  
+  // Group tasks by room
+  const byRoom = {};
+  checklistTasks.forEach(t => {
+    const room = t.room || 'general';
+    if (!byRoom[room]) byRoom[room] = [];
+    byRoom[room].push(t);
+  });
+  
+  let html = '';
+  
+  // Rooms
+  const roomOrder = ['kitchen', 'bathroom', 'bedroom', 'living', 'terrace', 'general'];
+  roomOrder.forEach(roomKey => {
+    const roomTasks = byRoom[roomKey];
+    if (!roomTasks || !roomTasks.length) return;
+    
+    const config = ROOM_CONFIG[roomKey] || ROOM_CONFIG.general;
+    const doneCount = roomTasks.filter(t => t.checked).length;
+    
+    html += `
+      <div class="room-section">
+        <div class="room-header">
+          <div class="room-icon ${config.class}">
+            <i class="fas ${config.icon}"></i>
+          </div>
+          <div class="room-name">${config.name}</div>
+          <div class="room-count" id="roomCount_${roomKey}">${doneCount}/${roomTasks.length}</div>
+        </div>
+        <div class="room-tasks">
+    `;
+    
+    roomTasks.forEach(task => {
+      html += `
+        <div class="task-row ${task.checked ? 'checked' : ''}" data-task-id="${task.id}" onclick="toggleTask('${task.id}')">
+          <div class="task-checkbox">
+            ${task.checked ? '<i class="fas fa-check"></i>' : ''}
+          </div>
+          <div class="task-label">${task.name}</div>
+        </div>
+      `;
+    });
+    
+    html += '</div></div>';
+  });
+  
+  // Photos section
+  html += `
+    <div class="photos-section">
+      <div class="photos-section-title">
+        📸 Photos du ménage
+        <span class="photo-counter ${checklistPhotos.length >= 5 ? 'enough' : 'not-enough'}" id="photoCounter">
+          ${checklistPhotos.length}/5 min.
+        </span>
+      </div>
+      <div class="photos-section-subtitle">Prenez au moins 5 photos des pièces nettoyées</div>
+      <div class="photos-grid" id="photosGrid"></div>
+      <button class="photo-add-btn" onclick="document.getElementById('photoInput').click()">
+        <i class="fas fa-camera"></i> Prendre une photo
+      </button>
+    </div>
+  `;
+  
+  // Notes section
+  html += `
+    <div class="notes-section">
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px;">
+        <i class="fas fa-comment-alt"></i> Notes (optionnel)
+      </div>
+      <textarea id="cleaningNotes" placeholder="Signaler un problème, un objet oublié, un dégât…"></textarea>
+    </div>
+  `;
+  
+  body.innerHTML = html;
+  renderPhotosGrid();
+}
+
+function toggleTask(taskId) {
+  const task = checklistTasks.find(t => t.id === taskId);
+  if (!task) return;
+  
+  task.checked = !task.checked;
+  
+  // Update DOM
+  const row = document.querySelector(`[data-task-id="${taskId}"]`);
+  if (row) {
+    row.classList.toggle('checked', task.checked);
+    const checkbox = row.querySelector('.task-checkbox');
+    checkbox.innerHTML = task.checked ? '<i class="fas fa-check"></i>' : '';
+  }
+  
+  // Update room count
+  const room = task.room || 'general';
+  const roomTasks = checklistTasks.filter(t => (t.room || 'general') === room);
+  const doneCount = roomTasks.filter(t => t.checked).length;
+  const countEl = document.getElementById(`roomCount_${room}`);
+  if (countEl) countEl.textContent = `${doneCount}/${roomTasks.length}`;
+  
+  updateProgress();
+  
+  // Haptic feedback
+  if (navigator.vibrate) navigator.vibrate(10);
+}
+
+function updateProgress() {
+  const total = checklistTasks.length;
+  const done = checklistTasks.filter(t => t.checked).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  
+  document.getElementById('progressLabel').textContent = `${done} / ${total} tâches`;
+  document.getElementById('progressPercent').textContent = `${pct}%`;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+  
+  // Update submit button
+  const allChecked = done === total;
+  const hasEnoughPhotos = checklistPhotos.length >= 5;
+  const canSubmit = allChecked && hasEnoughPhotos;
+  
+  const btn = document.getElementById('submitBtn');
+  const label = document.getElementById('submitLabel');
+  
+  if (canSubmit) {
+    btn.className = 'submit-btn ready';
+    label.textContent = 'Valider le ménage ✓';
+  } else if (!allChecked) {
+    btn.className = 'submit-btn not-ready';
+    label.textContent = `Encore ${total - done} tâche${total - done > 1 ? 's' : ''} à cocher`;
+  } else {
+    btn.className = 'submit-btn not-ready';
+    label.textContent = `Encore ${5 - checklistPhotos.length} photo${5 - checklistPhotos.length > 1 ? 's' : ''} requise${5 - checklistPhotos.length > 1 ? 's' : ''}`;
+  }
+}
+
+// ===== PHOTOS =====
+document.getElementById('photoInput').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      // Compress image
+      compressImage(ev.target.result, 1200, 0.75, (compressed) => {
+        checklistPhotos.push(compressed);
+        renderPhotosGrid();
+        updateProgress();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  
+  // Reset input
+  e.target.value = '';
+});
+
+function compressImage(dataUrl, maxWidth, quality, callback) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    let { width, height } = img;
+    
+    if (width > maxWidth) {
+      height = Math.round(height * maxWidth / width);
+      width = maxWidth;
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
+function renderPhotosGrid() {
+  const grid = document.getElementById('photosGrid');
+  if (!grid) return;
+  
+  grid.innerHTML = checklistPhotos.map((photo, idx) => `
+    <div class="photo-thumb">
+      <img src="${photo}" alt="Photo ${idx + 1}"/>
+      <button class="photo-thumb-delete" onclick="event.stopPropagation(); removePhoto(${idx})">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `).join('');
+  
+  // Update counter
+  const counter = document.getElementById('photoCounter');
+  if (counter) {
+    counter.textContent = `${checklistPhotos.length}/5 min.`;
+    counter.className = `photo-counter ${checklistPhotos.length >= 5 ? 'enough' : 'not-enough'}`;
+  }
+}
+
+function removePhoto(idx) {
+  checklistPhotos.splice(idx, 1);
+  renderPhotosGrid();
+  updateProgress();
+}
+
+// ===== TIMER =====
+function startTimer() {
+  stopTimer();
+  timerSeconds = 0;
+  updateTimerDisplay();
+  
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    updateTimerDisplay();
+  }, 1000);
+  
+  document.getElementById('checklistTimer').classList.add('active');
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  document.getElementById('checklistTimer').classList.remove('active');
+}
+
+function updateTimerDisplay() {
+  const mins = Math.floor(timerSeconds / 60);
+  const secs = timerSeconds % 60;
+  document.getElementById('timerDisplay').textContent = 
+    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// ===== SUBMIT =====
+async function handleSubmit() {
+  const allChecked = checklistTasks.every(t => t.checked);
+  const hasEnoughPhotos = checklistPhotos.length >= 5;
+  
+  if (!allChecked) {
+    showToast('Veuillez cocher toutes les tâches', 'error');
+    return;
+  }
+  
+  if (!hasEnoughPhotos) {
+    showToast(`Ajoutez encore ${5 - checklistPhotos.length} photo(s)`, 'error');
+    return;
+  }
+  
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-top-color:white;width:18px;height:18px"></div> Envoi en cours…';
+  
+  try {
+    const notes = document.getElementById('cleaningNotes')?.value || '';
+    
+    const payload = {
+      pinCode: currentPin,
+      reservationKey: currentTask.reservationKey,
+      propertyId: currentTask.propertyId,
+      tasks: checklistTasks.map(t => ({
+        id: t.id,
+        name: t.name,
+        room: t.room,
+        checked: t.checked
+      })),
+      photos: checklistPhotos,
+      notes: notes,
+      duration: timerSeconds,
+      startedAt: startedAt?.toISOString(),
+      completedAt: new Date().toISOString()
+    };
+    
+    const res = await fetch(`${API_URL}/api/cleaning/checklist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Erreur serveur');
+    }
+    
+    // Mark task as completed locally
+    if (currentTask) {
+      currentTask.completed = true;
+    }
+    
+    stopTimer();
+    
+    // Show success
+    const durationMin = Math.floor(timerSeconds / 60);
+    document.getElementById('successSubtitle').textContent = 
+      `Durée : ${durationMin} min — Le propriétaire sera notifié.`;
+    document.getElementById('successOverlay').classList.add('active');
+    
+  } catch (err) {
+    console.error('Submit error:', err);
+    showToast('Erreur : ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    updateProgress();
+  }
+}
+
+function closeChecklist() {
+  stopTimer();
+  document.getElementById('checklistScreen').classList.remove('active');
+  document.body.style.overflow = '';
+  renderTasks();
+}
+
+function closeSuccess() {
+  document.getElementById('successOverlay').classList.remove('active');
+  document.getElementById('checklistScreen').classList.remove('active');
+  document.body.style.overflow = '';
+  renderTasks();
+}
+
+// ===== REFRESH & LOGOUT =====
+async function refreshTasks() {
+  if (!currentPin) return;
+  
+  showToast('Actualisation…', 'info');
+  
+  try {
+    const res = await fetch(`${API_URL}/api/cleaning/tasks/${currentPin}`);
+    if (res.ok) {
+      const data = await res.json();
+      tasks = data.tasks || [];
+      renderTasks();
+      showToast('Tâches actualisées', 'success');
+    }
+  } catch (err) {
+    showToast('Erreur de connexion', 'error');
+  }
+}
+
+async function loadTasks(pin) {
+  try {
+    const res = await fetch(`${API_URL}/api/cleaning/tasks/${pin}`);
+    if (res.ok) {
+      const data = await res.json();
+      cleanerData = data.cleaner;
+      tasks = data.tasks || [];
+      
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appScreen').classList.add('active');
+      document.getElementById('cleanerAvatar').textContent = (cleanerData.name || 'M')[0].toUpperCase();
+      document.getElementById('cleanerName').textContent = cleanerData.name || 'Mon espace';
+      
+      renderTasks();
+    } else {
+      sessionStorage.removeItem('cleaning_pin');
+    }
+  } catch (err) {
+    console.error(err);
+    sessionStorage.removeItem('cleaning_pin');
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('cleaning_pin');
+  currentPin = null;
+  cleanerData = null;
+  tasks = [];
+  
+  document.getElementById('appScreen').classList.remove('active');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  
+  // Reset PIN inputs
+  document.querySelectorAll('#pinGroup input').forEach(i => { i.value = ''; });
+  document.querySelectorAll('#pinGroup input')[0].focus();
+}
+
+// ===== UTILS =====
+function formatDateFr(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  
+  const date = new Date(dateStr);
+  const days = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
+  const months = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
+}
+
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = `toast ${type} show`;
+  
+  setTimeout(() => { toast.classList.remove('show'); }, 2500);
+}
+
+// Shake animation
+const style = document.createElement('style');
+style.textContent = `@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }`;
+document.head.appendChild(style);
+</script>
+
+</body>
+</html>
