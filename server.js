@@ -3155,17 +3155,19 @@ async function sendArrivalInfoMessages(io) {
 
     for (const conv of conversations) {
       const platform = (conv.platform || '').toLowerCase();
-      const needsDeposit = platform === 'booking' && conv.deposit_amount && parseFloat(conv.deposit_amount) > 0;
+      const isAirbnb = platform.includes('airbnb');
+      const needsDeposit = !isAirbnb && conv.deposit_amount && parseFloat(conv.deposit_amount) > 0;
 
-      // Si Booking + caution obligatoire, vérifier si payée
+      // Si pas Airbnb + caution obligatoire, vérifier si autorisée
       if (needsDeposit) {
         const depositResult = await pool.query(
           'SELECT status FROM deposits WHERE reservation_uid = $1 AND user_id = $2',
           [conv.reservation_uid || '', conv.user_id]
         );
 
-        if (depositResult.rows.length === 0 || depositResult.rows[0].status !== 'paid') {
-          console.log(`⏸️ Caution non payée pour ${conv.guest_name}, pas d'envoi infos`);
+        const depositStatus = depositResult.rows[0]?.status;
+        if (!depositStatus || !['authorized', 'captured', 'paid'].includes(depositStatus)) {
+          console.log(`⏸️ Caution non autorisée pour ${conv.guest_name} (status: ${depositStatus || 'aucune'}), pas d'envoi infos`);
           
           // Envoyer un rappel
           const depositCheck = await pool.query(
@@ -3218,7 +3220,7 @@ Bienvenue ! Vous pouvez dès à présent consulter votre livret d'accueil qui co
  */
 async function handleDepositPaid(depositId, io) {
   try {
-    console.log(`💰 Caution payée : ${depositId}, vérification envoi infos...`);
+    console.log(`💰 Caution payée : ${depositId}, vérification envoi infos d'arrivée...`);
 
     // Récupérer le deposit
     const depositResult = await pool.query(
@@ -3230,45 +3232,70 @@ async function handleDepositPaid(depositId, io) {
 
     const deposit = depositResult.rows[0];
 
-    // Récupérer la conversation liée
-    const convResult = await pool.query(`
-      SELECT c.*, p.name as property_name, p.welcome_book_url
-      FROM conversations c
-      LEFT JOIN properties p ON p.id = c.property_id
-      WHERE c.reservation_uid = $1 AND c.user_id = $2
-    `, [deposit.reservation_uid, deposit.user_id]);
+    // Récupérer la conversation liée (avec fallback par property_id + date)
+    let conv = null;
+    
+    // Méthode 1 : par reservation_uid
+    if (deposit.reservation_uid) {
+      const convResult = await pool.query(`
+        SELECT c.*, p.name as property_name
+        FROM conversations c
+        LEFT JOIN properties p ON p.id = c.property_id
+        WHERE c.reservation_uid = $1 AND c.user_id = $2
+      `, [deposit.reservation_uid, deposit.user_id]);
+      conv = convResult.rows[0] || null;
+    }
+    
+    // Méthode 2 (fallback) : par property_id + date
+    if (!conv && deposit.property_id) {
+      const resResult = await pool.query(
+        'SELECT start_date FROM reservations WHERE uid = $1',
+        [deposit.reservation_uid]
+      );
+      if (resResult.rows.length > 0) {
+        const convResult = await pool.query(`
+          SELECT c.*, p.name as property_name
+          FROM conversations c
+          LEFT JOIN properties p ON p.id = c.property_id
+          WHERE c.property_id = $1 AND DATE(c.reservation_start_date) = DATE($2)
+          ORDER BY c.created_at DESC LIMIT 1
+        `, [deposit.property_id, resResult.rows[0].start_date]);
+        conv = convResult.rows[0] || null;
+      }
+    }
 
-    if (convResult.rows.length === 0) {
+    if (!conv) {
       console.log(`⚠️ Conversation introuvable pour caution ${depositId}`);
       return;
     }
 
-    const conv = convResult.rows[0];
-
-    // Vérifier si c'est dans moins de 2 jours
+    // Vérifier si c'est le jour J et après 7h (heure Paris)
+    const now = new Date();
+    const nowParis = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const currentHour = nowParis.getHours();
+    
+    const todayParis = new Date(nowParis);
+    todayParis.setHours(0, 0, 0, 0);
+    
     const arrivalDate = new Date(conv.reservation_start_date);
-    const today = new Date();
-    const daysUntilArrival = Math.ceil((arrivalDate - today) / (1000 * 60 * 60 * 24));
+    arrivalDate.setHours(0, 0, 0, 0);
+    
+    const isArrivalToday = arrivalDate.getTime() === todayParis.getTime();
+    const isAfter7am = currentHour >= 7;
 
-    if (daysUntilArrival <= 2) {
-      // Envoyer les infos immédiatement
-      console.log(`📤 Envoi immédiat des infos (arrivée dans ${daysUntilArrival} jours)`);
-
-      let message = `Merci ! Votre caution a bien été enregistrée. 🎉
-
-Vous pouvez dès à présent consulter votre livret d'accueil avec toutes les informations pratiques :`;
-
-      if (conv.welcome_book_url) {
-        message += `\n\n${conv.welcome_book_url}`;
-      } else {
-        message += `\n\n(Le livret d'accueil sera bientôt disponible)`;
+    if (isArrivalToday && isAfter7am) {
+      // ✅ Jour J après 7h → envoyer les infos d'arrivée immédiatement
+      console.log(`📨 Jour J après 7h → envoi immédiat des infos d'arrivée pour conversation ${conv.id}`);
+      try {
+        const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
+        await sendImmediateArrivalMessage(pool, io, conv.id);
+      } catch (arrErr) {
+        console.error('⚠️ Erreur sendImmediateArrivalMessage:', arrErr);
       }
-
-      message += `\n\nTrès bon séjour ! ✨`;
-
-      await sendAutomatedMessage(conv.id, message, io);
+    } else if (isArrivalToday && !isAfter7am) {
+      console.log(`⏰ Jour J mais ${currentHour}h < 7h → le cron enverra les infos à 7h`);
     } else {
-      console.log(`⏰ Infos seront envoyées le jour J (dans ${daysUntilArrival} jours)`);
+      console.log(`📅 Arrivée pas aujourd'hui → le cron enverra le jour J à 7h`);
     }
 
   } catch (error) {
