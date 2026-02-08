@@ -25,7 +25,7 @@ async function getConversationFromReservation(pool, reservationUid) {
   try {
     // D'abord, trouver la réservation par UID
     const reservationResult = await pool.query(
-      'SELECT id FROM reservations WHERE uid = $1',
+      'SELECT id, property_id, start_date, source FROM reservations WHERE uid = $1',
       [reservationUid]
     );
 
@@ -33,15 +33,34 @@ async function getConversationFromReservation(pool, reservationUid) {
       return null;
     }
 
-    const reservationId = reservationResult.rows[0].id;
+    const reservation = reservationResult.rows[0];
 
-    // Ensuite, trouver la conversation
+    // Méthode 1 : Chercher par reservation_id
     const conversationResult = await pool.query(
       'SELECT id FROM conversations WHERE reservation_id = $1',
-      [reservationId]
+      [reservation.id]
     );
 
-    return conversationResult.rows[0]?.id || null;
+    if (conversationResult.rows[0]?.id) {
+      return conversationResult.rows[0].id;
+    }
+
+    // Méthode 2 (fallback) : Chercher par property_id + date d'arrivée
+    const fallbackResult = await pool.query(
+      `SELECT id FROM conversations 
+       WHERE property_id = $1 
+       AND DATE(reservation_start_date) = DATE($2)
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [reservation.property_id, reservation.start_date]
+    );
+
+    if (fallbackResult.rows[0]?.id) {
+      console.log(`🔄 Conversation trouvée par fallback (property + date) pour réservation ${reservationUid}`);
+      return fallbackResult.rows[0].id;
+    }
+
+    return null;
   } catch (error) {
     console.error('❌ Erreur récupération conversation:', error);
     return null;
@@ -233,18 +252,72 @@ async function sendDepositAuthorizedMessage(pool, io, depositId) {
     const property = await getPropertyInfo(pool, deposit.property_id);
     const propertyName = property?.name || 'votre logement';
 
-    // Construire le message
+    // Récupérer la date d'arrivée
+    const reservationInfo = await pool.query(
+      'SELECT start_date FROM reservations WHERE uid = $1',
+      [deposit.reservation_uid]
+    );
+    const arrivalDate = reservationInfo.rows[0]?.start_date ? new Date(reservationInfo.rows[0].start_date) : null;
+
+    // Vérifier si c'est le jour J et après 7h
+    const now = new Date();
+    const nowParis = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const currentHour = nowParis.getHours();
+    
+    const todayParis = new Date(nowParis);
+    todayParis.setHours(0, 0, 0, 0);
+    
+    let isArrivalToday = false;
+    if (arrivalDate) {
+      const arrivalDay = new Date(arrivalDate);
+      arrivalDay.setHours(0, 0, 0, 0);
+      isArrivalToday = arrivalDay.getTime() === todayParis.getTime();
+    }
+    
+    const isAfter7am = currentHour >= 7;
+    const shouldSendNow = isArrivalToday && isAfter7am;
+
+    // Construire le message de confirmation
     const amountEuros = (deposit.amount_cents / 100).toFixed(2);
-    const message = `✅ Caution autorisée
+    
+    let confirmMessage;
+    if (shouldSendNow) {
+      confirmMessage = `✅ Caution autorisée
 
 Parfait ! Votre caution de ${amountEuros}€ a bien été autorisée.
 
-Vous recevrez les informations d'arrivée pour ${propertyName} le jour de votre arrivée à 7h00.
+Vous allez recevoir les informations d'arrivée pour ${propertyName} dans quelques instants. 😊`;
+    } else if (isArrivalToday && !isAfter7am) {
+      confirmMessage = `✅ Caution autorisée
 
-À très bientôt ! 😊`;
+Parfait ! Votre caution de ${amountEuros}€ a bien été autorisée.
 
-    // Envoyer le message
-    return await sendDepositMessage(pool, io, conversationId, message);
+Vous recevrez les informations d'arrivée pour ${propertyName} à 7h00 ce matin. 😊`;
+    } else {
+      confirmMessage = `✅ Caution autorisée
+
+Parfait ! Votre caution de ${amountEuros}€ a bien été autorisée.
+
+Vous recevrez les informations d'arrivée pour ${propertyName} le jour de votre arrivée à 7h00. 😊`;
+    }
+
+    // Envoyer le message de confirmation
+    await sendDepositMessage(pool, io, conversationId, confirmMessage);
+
+    // ✅ ENVOYER LE MESSAGE D'ARRIVÉE SI JOUR J APRÈS 7H
+    if (shouldSendNow) {
+      try {
+        const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
+        console.log(`📨 [DEPOSIT] Jour J après 7h → envoi immédiat du message d'arrivée`);
+        await sendImmediateArrivalMessage(pool, io, conversationId);
+      } catch (arrivalError) {
+        console.error('⚠️ Erreur envoi message d\'arrivée après caution:', arrivalError);
+      }
+    } else {
+      console.log(`⏰ [DEPOSIT] Pas encore le moment → le cron enverra le jour J à 7h`);
+    }
+
+    return true;
 
   } catch (error) {
     console.error(`❌ Erreur sendDepositAuthorizedMessage:`, error);
