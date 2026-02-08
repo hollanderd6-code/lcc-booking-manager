@@ -54,6 +54,25 @@ async function sendArrivalMessage(pool, io, conversation, property) {
       return false;
     }
 
+    // ✅ VÉRIFIER LA CAUTION AVANT D'ENVOYER
+    const { hasValidDeposit } = require('./deposit-messages-scheduler');
+    
+    // Récupérer l'UID de la réservation
+    const reservationResult = await pool.query(
+      'SELECT uid FROM reservations WHERE id = $1',
+      [conversation.reservation_id]
+    );
+    
+    if (reservationResult.rows.length > 0) {
+      const reservationUid = reservationResult.rows[0].uid;
+      const depositValid = await hasValidDeposit(pool, reservationUid);
+      
+      if (!depositValid) {
+        console.log(`⏭️ Caution en attente pour conversation ${conversation.id}, infos d'arrivée bloquées`);
+        return false;
+      }
+    }
+
     // Récupérer le template de message
     const messageTemplate = property.arrival_message;
     if (!messageTemplate) {
