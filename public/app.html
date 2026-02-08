@@ -8598,154 +8598,149 @@ if (window.Capacitor) {
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-<!-- 🧹 NOTIFICATIONS TEMPS RÉEL MÉNAGE -->
+<!-- 🧹 NOTIFICATIONS MÉNAGE (Socket.IO + Polling fallback) -->
 <script>
 (function() {
-  // Fonction toast (réutilisable)
   function showCleaningToast(message, type, duration) {
     var container = document.getElementById('toastContainer');
     if (!container) return;
-    
     var toast = document.createElement('div');
     toast.className = 'toast ' + (type || 'success');
-    toast.style.cssText = 'cursor:pointer; max-width:380px;';
-    
+    toast.style.cssText = 'cursor:pointer; max-width:400px;';
     var icons = { success: 'fa-check-circle', info: 'fa-info-circle', error: 'fa-exclamation-circle' };
     var colors = { success: '#059669', info: '#3b82f6', error: '#ef4444' };
-    
-    toast.innerHTML = '<i class="fas ' + (icons[type] || icons.success) + '" style="font-size:18px; color:' + (colors[type] || colors.success) + ';"></i>' +
-      '<div style="flex:1;"><div style="font-weight:600; font-size:13px;">' + message + '</div></div>' +
-      '<button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer; color:var(--text-tertiary); font-size:16px;">&times;</button>';
-    
+    toast.innerHTML = '<i class="fas ' + (icons[type]||icons.success) + '" style="font-size:20px; color:' + (colors[type]||colors.success) + ';"></i>' +
+      '<div style="flex:1;"><div style="font-weight:600; font-size:14px;">' + message + '</div></div>' +
+      '<button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer; color:#999; font-size:18px;">&times;</button>';
     container.appendChild(toast);
-    
-    // Auto-remove après X secondes
     setTimeout(function() {
       if (toast.parentElement) {
-        toast.style.animation = 'slideInRight 0.3s ease reverse';
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
         setTimeout(function() { toast.remove(); }, 300);
       }
-    }, duration || 8000);
+    }, duration || 10000);
   }
 
-  // Jouer un petit son de notification
   function playNotifSound() {
     try {
       var ctx = new (window.AudioContext || window.webkitAudioContext)();
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.value = 0.1;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = 'sine'; gain.gain.value = 0.1;
       osc.start();
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
       osc.stop(ctx.currentTime + 0.3);
-    } catch (e) { /* pas de son si pas de contexte audio */ }
+    } catch(e) {}
   }
 
-  // Connexion Socket.IO
-  function initCleaningSocket() {
-    if (typeof io === 'undefined') {
-      console.log('🧹 Socket.IO pas encore chargé, retry...');
-      setTimeout(initCleaningSocket, 1000);
-      return;
+  function handleCleaningCompleted(data) {
+    console.log('🧹 🔔 Ménage terminé!', data);
+    var msg = '🧹 Ménage terminé — ' + (data.propertyName || data.property_name || 'Logement');
+    if (data.cleanerName || data.cleaner_name) msg += ' par ' + (data.cleanerName || data.cleaner_name);
+    if (data.duration_seconds || data.duration) {
+      var dur = data.duration_seconds || data.duration;
+      msg += ' (' + Math.round(dur / 60) + ' min)';
     }
+    showCleaningToast(msg, 'success', 15000);
+    playNotifSound();
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('🧹 Ménage terminé', {
+        body: (data.cleanerName || data.cleaner_name || 'Cleaner') + ' — ' + (data.propertyName || data.property_name || ''),
+        icon: '/img/icon-192.png'
+      });
+    }
+    if (typeof loadCleaningChecklists === 'function') loadCleaningChecklists();
+  }
 
+  // ==========================================
+  // Socket.IO
+  // ==========================================
+  var socketOK = false;
+
+  function initSocket() {
+    if (typeof io === 'undefined') return;
     var token = localStorage.getItem('lcc_token');
     if (!token) return;
-
-    // Décoder le user ID du token (payload base64)
-    var userId = null;
-    try {
-      var payload = JSON.parse(atob(token.split('.')[1]));
-      userId = payload.id || payload.userId || payload.sub;
-    } catch (e) { console.error('Erreur décodage token:', e); return; }
-
+    var userId;
+    try { userId = JSON.parse(atob(token.split('.')[1])).id; } catch(e) { return; }
     if (!userId) return;
 
-    var API_URL = window.API_URL || '';
-    var socketUrl = API_URL || window.location.origin;
-    
-    console.log('🧹 Connexion Socket.IO vers:', socketUrl, '— userId:', userId);
-    
-    var socket = io(socketUrl, {
-      transports: ['polling', 'websocket'],
-      withCredentials: false,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000
+    var url = (window.API_URL || '') || window.location.origin;
+    console.log('🧹 Socket.IO →', url, 'userId:', userId);
+
+    var s = io(url, { transports: ['polling','websocket'], withCredentials: false, reconnection: true, reconnectionAttempts: 5, timeout: 10000 });
+
+    s.on('connect', function() {
+      socketOK = true;
+      console.log('🧹 ✅ Socket OK, id:', s.id);
+      s.emit('join', 'user_' + userId);
     });
-
-    socket.on('connect', function() {
-      console.log('🧹 ✅ Socket connecté! id:', socket.id);
-      // Rejoindre la room utilisateur
-      socket.emit('join', 'user_' + userId);
-      console.log('🧹 Join room: user_' + userId);
+    s.on('cleaning:completed', handleCleaningCompleted);
+    s.on('cleaning:validated', function(d) {
+      showCleaningToast('✅ Checklist validée', 'success', 5000);
+      if (typeof loadCleaningChecklists === 'function') loadCleaningChecklists();
     });
-
-    // ✅ MÉNAGE TERMINÉ — notification quand un cleaner soumet une checklist
-    socket.on('cleaning:completed', function(data) {
-      console.log('🧹 Notification: ménage terminé!', data);
-      
-      var msg = '✅ Ménage terminé — ' + (data.propertyName || 'Logement');
-      if (data.cleanerName) msg += ' par ' + data.cleanerName;
-      if (data.duration) msg += ' (' + Math.round(data.duration / 60) + ' min)';
-      
-      showCleaningToast(msg, 'success', 12000);
-      playNotifSound();
-
-      // Notification navigateur si l'onglet n'est pas actif
-      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('🧹 Ménage terminé', {
-          body: (data.cleanerName || 'Votre cleaner') + ' a terminé le ménage de ' + (data.propertyName || 'votre logement'),
-          icon: '/img/icon-192.png'
-        });
-      }
-
-      // Recharger les checklists dans le dashboard
-      if (typeof loadCleaningChecklists === 'function') {
-        loadCleaningChecklists();
-      }
-    });
-
-    // ✅ MÉNAGE VALIDÉ — confirmation après validation propriétaire
-    socket.on('cleaning:validated', function(data) {
-      console.log('🧹 Checklist validée:', data);
-      showCleaningToast('✅ Checklist validée avec succès', 'success', 5000);
-      
-      if (typeof loadCleaningChecklists === 'function') {
-        loadCleaningChecklists();
-      }
-    });
-
-    socket.on('disconnect', function() {
-      console.log('🧹 Socket déconnecté');
-    });
-
-    socket.on('connect_error', function(err) {
-      console.log('🧹 Socket erreur connexion:', err.message);
-    });
+    s.on('disconnect', function() { socketOK = false; });
+    s.on('connect_error', function(e) { console.log('🧹 Socket err:', e.message); });
   }
 
-  // Demander la permission pour les notifications navigateur
+  // ==========================================
+  // Polling HTTP fallback (toutes les 20s)
+  // ==========================================
+  var knownIds = {};
+  var pollingReady = false;
+
+  function initPolling() {
+    var token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    var url = (window.API_URL || '') + '/api/cleaning/checklists';
+
+    // Chargement initial : mémoriser les IDs existants
+    fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        (d.checklists || []).forEach(function(c) { knownIds[c.id] = true; });
+        pollingReady = true;
+        console.log('🧹 Polling prêt,', Object.keys(knownIds).length, 'checklists connues');
+      }).catch(function() {});
+
+    // Vérifier périodiquement
+    setInterval(function() {
+      if (!pollingReady) return;
+      if (socketOK) return; // Socket marche, pas besoin
+
+      var t = localStorage.getItem('lcc_token');
+      if (!t) return;
+
+      fetch(url, { headers: { 'Authorization': 'Bearer ' + t } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          (d.checklists || []).forEach(function(c) {
+            if (!knownIds[c.id]) {
+              knownIds[c.id] = true;
+              handleCleaningCompleted({
+                checklistId: c.id,
+                propertyName: c.property_name || c.property_id,
+                cleanerName: c.cleaner_name,
+                duration_seconds: c.duration_seconds
+              });
+            }
+          });
+        }).catch(function() {});
+    }, 20000);
+  }
+
+  // Notifications navigateur
   if ('Notification' in window && Notification.permission === 'default') {
-    // Attendre une interaction utilisateur pour demander
-    document.addEventListener('click', function askNotifPerm() {
-      Notification.requestPermission();
-      document.removeEventListener('click', askNotifPerm);
-    }, { once: true });
+    document.addEventListener('click', function f() { Notification.requestPermission(); document.removeEventListener('click', f); }, { once: true });
   }
 
-  // Lancer après chargement complet
-  if (document.readyState === 'complete') {
-    setTimeout(initCleaningSocket, 500);
-  } else {
-    window.addEventListener('load', function() {
-      setTimeout(initCleaningSocket, 500);
-    });
-  }
+  // Démarrage
+  window.addEventListener('load', function() {
+    setTimeout(function() { initSocket(); initPolling(); }, 800);
+  });
 })();
 </script>
 
