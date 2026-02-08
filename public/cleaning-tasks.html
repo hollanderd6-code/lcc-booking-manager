@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>Boostinghost – Mes tâches ménage</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -1135,8 +1135,8 @@ let startedAt = null;
       }
     });
     
-    input.addEventListener('focus', () => {
-      e.target.select && e.target.select();
+    input.addEventListener('focus', (ev) => {
+      ev.target.select && ev.target.select();
     });
   });
   
@@ -1549,17 +1549,21 @@ function updateProgress() {
   const done = checklistTasks.filter(t => t.checked).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   
-  document.getElementById('progressLabel').textContent = `${done} / ${total} tâches`;
-  document.getElementById('progressPercent').textContent = `${pct}%`;
-  document.getElementById('progressFill').style.width = `${pct}%`;
+  const progressLabel = document.getElementById('progressLabel');
+  const progressPercent = document.getElementById('progressPercent');
+  const progressFill = document.getElementById('progressFill');
+  if (progressLabel) progressLabel.textContent = `${done} / ${total} tâches`;
+  if (progressPercent) progressPercent.textContent = `${pct}%`;
+  if (progressFill) progressFill.style.width = `${pct}%`;
   
   // Update submit button
-  const allChecked = done === total;
+  const allChecked = done === total && total > 0;
   const hasEnoughPhotos = checklistPhotos.length >= 5;
   const canSubmit = allChecked && hasEnoughPhotos;
   
   const btn = document.getElementById('submitBtn');
   const label = document.getElementById('submitLabel');
+  if (!btn || !label) return;
   
   if (canSubmit) {
     btn.className = 'submit-btn ready';
@@ -1582,7 +1586,7 @@ document.getElementById('photoInput').addEventListener('change', (e) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       // Compress image
-      compressImage(ev.target.result, 1200, 0.75, (compressed) => {
+      compressImage(ev.target.result, 800, 0.6, (compressed) => {
         checklistPhotos.push(compressed);
         renderPhotosGrid();
         updateProgress();
