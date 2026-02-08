@@ -1894,17 +1894,17 @@ function insertVariable(textareaId, variable, event) {
       name,
       color,
       address: address || null,
-      arrival_time: arrivalTime || null,
-      departure_time: departureTime || null,
-      deposit_amount: deposit ? parseFloat(deposit) : null,
-      photo_url: photoUrl || null,
-      welcome_book_url: welcomeBookUrl || null,
-      access_code: accessCode || null,
-      access_instructions: accessInstructions || null,
-      arrival_message: arrivalMessage || null,  // ✅ NOUVEAU
-      wifi_name: wifiName || null,
-      wifi_password: wifiPassword || null,
-      ownerId: ownerId || null  // 🆕 AJOUT DU OWNER_ID
+      arrivalTime: arrivalTime || null,
+      departureTime: departureTime || null,
+      depositAmount: deposit ? parseFloat(deposit) : null,
+      photoUrl: photoUrl || null,
+      welcomeBookUrl: welcomeBookUrl || null,
+      accessCode: accessCode || null,
+      accessInstructions: accessInstructions || null,
+      arrivalMessage: arrivalMessage || null,  // ✅ CORRIGÉ : camelCase comme le serveur l'attend
+      wifiName: wifiName || null,
+      wifiPassword: wifiPassword || null,
+      ownerId: ownerId || null
     };
 
     console.log('📦 Payload envoyé:', payload);
