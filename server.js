@@ -8071,19 +8071,40 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       return res.status(400).json({ error: 'Toutes les tâches doivent être complétées' });
     }
     
-    // Extraire la date de fin depuis reservation_key (format: propertyId_startDate_endDate)
+    // Extraire la date de fin depuis reservation_key
     const parts = reservationKey.split('_');
     const checkoutDate = parts.length >= 2 ? parts[parts.length - 1] : null;
 
     // Récupérer les infos de la réservation depuis reservationsStore
     let reservation = null;
     const propertyReservations = reservationsStore.properties[propertyId] || [];
+    
+    // Stratégie 1 : match exact par clé
     reservation = propertyReservations.find(r => {
       const rKey = `${propertyId}_${r.start}_${r.end}`;
       return rKey === reservationKey;
     });
+    
+    // Stratégie 2 : match par date de checkout
+    if (!reservation && checkoutDate) {
+      reservation = propertyReservations.find(r => {
+        const rEnd = String(r.end || '').slice(0, 10);
+        return rEnd === checkoutDate;
+      });
+    }
+    
+    // Stratégie 3 : match par reservation_key partiel
+    if (!reservation) {
+      reservation = propertyReservations.find(r => {
+        const rKey1 = `${propertyId}_${String(r.start).slice(0,10)}_${String(r.end).slice(0,10)}`;
+        const rKey2 = `${propertyId}_${r.start}_${r.end}`;
+        return rKey1 === reservationKey || rKey2 === reservationKey || 
+               reservationKey.includes(String(r.end).slice(0,10));
+      });
+    }
 
-    const guestName = reservation ? (reservation.guestName || reservation.name || '') : '';
+    const guestName = reservation ? (reservation.guestName || reservation.name || reservation.guest_name || '') : '';
+    console.log(`🧹 Checklist POST — propertyId: ${propertyId}, checkout: ${checkoutDate}, guestName: "${guestName}", match: ${!!reservation}`);
     
     // Insérer ou mettre à jour la checklist (avec duration + started_at + owner_status)
     const result = await pool.query(
@@ -8256,9 +8277,40 @@ app.get('/api/cleaning/checklists',
       `SELECT 
         cc.*,
         c.name as cleaner_name,
-        c.email as cleaner_email
+        c.email as cleaner_email,
+        
+        -- Enrichissement guest depuis conversations (onboarding)
+        COALESCE(
+          NULLIF(TRIM(COALESCE(conv.guest_first_name, '') || ' ' || COALESCE(conv.guest_last_name, '')), ''),
+          NULLIF(cc.guest_name, ''),
+          r.guest_name,
+          'Voyageur'
+        ) as guest_display_name,
+        
+        conv.guest_first_name,
+        conv.guest_last_name,
+        conv.guest_phone,
+        
+        CASE 
+          WHEN conv.guest_first_name IS NOT NULL AND conv.guest_first_name != ''
+          THEN LEFT(UPPER(conv.guest_first_name), 1)
+          WHEN cc.guest_name IS NOT NULL AND cc.guest_name != ''
+          THEN LEFT(UPPER(cc.guest_name), 1)
+          WHEN r.guest_name IS NOT NULL AND r.guest_name != ''
+          THEN LEFT(UPPER(r.guest_name), 1)
+          ELSE 'V'
+        END as guest_initial,
+        
+        r.source as platform
+
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
+       LEFT JOIN reservations r ON r.property_id = cc.property_id 
+         AND r.end_date::date = cc.checkout_date::date
+         AND r.user_id = cc.user_id
+       LEFT JOIN conversations conv ON conv.property_id = cc.property_id
+         AND conv.start_date::date = r.start_date::date
+         AND conv.user_id = cc.user_id
        WHERE cc.user_id = $1
        ORDER BY cc.completed_at DESC
        LIMIT 50`,
@@ -8270,8 +8322,33 @@ app.get('/api/cleaning/checklists',
       ? result.rows.filter(c => req.subAccountData.accessible_property_ids.includes(c.property_id))
       : result.rows;
 
+    // ✅ Enrichir avec les noms de voyageurs depuis reservationsStore
+    const enrichedChecklists = filteredChecklists.map(cl => {
+      // Si guest_name déjà rempli, on garde
+      if (cl.guest_name && cl.guest_name.trim() !== '') return cl;
+
+      // Chercher la réservation correspondante dans le store
+      const propertyReservations = reservationsStore.properties[cl.property_id] || [];
+      const checkoutStr = cl.checkout_date ? String(cl.checkout_date).slice(0, 10) : '';
+      
+      const match = propertyReservations.find(r => {
+        const rEnd = String(r.end || '').slice(0, 10);
+        return rEnd === checkoutStr;
+      });
+
+      if (match) {
+        cl.guest_name = match.guestName || match.name || '';
+        cl.guest_first_name = match.guest_first_name || '';
+        cl.guest_last_name = match.guest_last_name || '';
+        cl.source = match.source || match.platform || '';
+        cl.platform = match.platform || match.source || '';
+      }
+
+      return cl;
+    });
+
     res.json({
-      checklists: filteredChecklists
+      checklists: enrichedChecklists
     });
   } catch (err) {
     console.error('Erreur GET /api/cleaning/checklists :', err);
