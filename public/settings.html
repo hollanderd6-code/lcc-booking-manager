@@ -2141,56 +2141,57 @@ function insertVariable(textareaId, variable, event) {
 <!-- ============================================ -->
 <script>
 (function() {
-  const API_URL = window.API_URL || '';
-  let allCleaners = [];
-  let defaultCleanersMap = {};
+  var API_URL = window.API_URL || '';
+  var allCleaners = [];
+  var defaultCleanersMap = {};
+  var lastPopulatedForProperty = null;
 
-  async function loadCleanersList() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) return;
-      const res = await fetch(`${API_URL}/api/cleaners`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        allCleaners = data.cleaners || data || [];
-        console.log('🧹 Cleaners chargés:', allCleaners.length, allCleaners.map(c => c.name));
-      }
-    } catch (e) { console.error('Erreur chargement cleaners:', e); }
+  function loadCleanersList() {
+    var token = localStorage.getItem('lcc_token');
+    if (!token) return Promise.resolve();
+    return fetch(API_URL + '/api/cleaners', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(res) {
+      if (res.ok) return res.json();
+      throw new Error('status ' + res.status);
+    }).then(function(data) {
+      allCleaners = data.cleaners || data || [];
+      console.log('🧹 Cleaners chargés:', allCleaners.length, allCleaners.map(function(c){return c.name;}));
+    }).catch(function(e) { console.error('Erreur cleaners:', e); });
   }
 
-  async function loadDefaultCleaners() {
-    try {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) return;
-      const res = await fetch(`${API_URL}/api/cleaning/default-cleaners`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        defaultCleanersMap = data.defaults || {};
-        console.log('🧹 Cleaners par défaut:', Object.keys(defaultCleanersMap).length);
-      }
-    } catch (e) { console.error('Erreur defaults:', e); }
+  function loadDefaultCleaners() {
+    var token = localStorage.getItem('lcc_token');
+    if (!token) return Promise.resolve();
+    return fetch(API_URL + '/api/cleaning/default-cleaners', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(res) {
+      if (res.ok) return res.json();
+      throw new Error('status ' + res.status);
+    }).then(function(data) {
+      defaultCleanersMap = data.defaults || {};
+      console.log('🧹 Cleaners par défaut:', Object.keys(defaultCleanersMap).length);
+    }).catch(function() { /* normal si table pas encore créée */ });
   }
 
   function populateCleanerSelect(propertyId) {
-    const select = document.getElementById('defaultCleanerSelect');
+    var select = document.getElementById('defaultCleanerSelect');
     if (!select) return;
+    if (allCleaners.length === 0) return;
 
-    console.log('🧹 Remplissage select pour', propertyId, '— cleaners:', allCleaners.length);
+    console.log('🧹 ▶ Remplissage select pour', propertyId, '— cleaners:', allCleaners.length);
 
     select.innerHTML = '<option value="">Aucune — assignation manuelle</option>';
-    allCleaners.forEach(c => {
-      if (c.is_active === false) return;
-      const opt = document.createElement('option');
+    for (var i = 0; i < allCleaners.length; i++) {
+      var c = allCleaners[i];
+      if (c.is_active === false) continue;
+      var opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = c.name + (c.phone ? ' (' + c.phone + ')' : '');
       select.appendChild(opt);
-    });
+    }
 
-    const defaultData = defaultCleanersMap[propertyId];
+    var defaultData = defaultCleanersMap[propertyId];
     if (defaultData && defaultData.cleanerId) {
       select.value = defaultData.cleanerId;
       showCleanerInfo(defaultData.cleanerName);
@@ -2201,126 +2202,151 @@ function insertVariable(textareaId, variable, event) {
 
     select.onchange = function() {
       if (this.value) {
-        const cleaner = allCleaners.find(c => c.id === this.value);
-        showCleanerInfo(cleaner ? cleaner.name : '');
+        var found = null;
+        for (var j = 0; j < allCleaners.length; j++) {
+          if (allCleaners[j].id === this.value) { found = allCleaners[j]; break; }
+        }
+        showCleanerInfo(found ? found.name : '');
       } else {
         hideCleanerInfo();
       }
     };
+
+    lastPopulatedForProperty = propertyId;
+    console.log('🧹 ✅ Select rempli avec', select.options.length - 1, 'cleaners');
   }
 
   function showCleanerInfo(name) {
-    const box = document.getElementById('defaultCleanerInfo');
-    const text = document.getElementById('defaultCleanerInfoText');
+    var box = document.getElementById('defaultCleanerInfo');
+    var text = document.getElementById('defaultCleanerInfoText');
     if (box && text) {
-      text.textContent = (name || 'Cette personne') + ' sera automatiquement assigné(e) à chaque nouveau ménage de ce logement. Vous pourrez toujours changer ponctuellement dans la page Ménage.';
+      text.textContent = (name || 'Cette personne') + ' sera automatiquement assigné(e) à chaque nouveau ménage. Changement ponctuel possible dans la page Ménage.';
       box.style.display = 'flex';
     }
   }
 
   function hideCleanerInfo() {
-    const box = document.getElementById('defaultCleanerInfo');
+    var box = document.getElementById('defaultCleanerInfo');
     if (box) box.style.display = 'none';
   }
 
-  async function saveDefaultCleaner(propertyId) {
-    const select = document.getElementById('defaultCleanerSelect');
+  function saveDefaultCleaner(propertyId) {
+    var select = document.getElementById('defaultCleanerSelect');
     if (!select) return;
-
-    const cleanerId = select.value || null;
-    const currentDefault = defaultCleanersMap[propertyId];
-
+    var cleanerId = select.value || null;
+    var currentDefault = defaultCleanersMap[propertyId];
     if (!cleanerId && !currentDefault) return;
     if (cleanerId && currentDefault && currentDefault.cleanerId === cleanerId) return;
-
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch(`${API_URL}/api/cleaning/default-cleaner/${propertyId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ cleanerId })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (cleanerId) {
-          defaultCleanersMap[propertyId] = data.default || { cleanerId };
-        } else {
-          delete defaultCleanersMap[propertyId];
-        }
+    var token = localStorage.getItem('lcc_token');
+    fetch(API_URL + '/api/cleaning/default-cleaner/' + propertyId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ cleanerId: cleanerId })
+    }).then(function(res) { if (res.ok) return res.json(); }).then(function(data) {
+      if (data) {
+        if (cleanerId) { defaultCleanersMap[propertyId] = data.default || { cleanerId: cleanerId }; }
+        else { delete defaultCleanersMap[propertyId]; }
         console.log('✅ Cleaner par défaut sauvegardé pour', propertyId);
       }
-    } catch (e) { console.error('Erreur sauvegarde cleaner défaut:', e); }
+    }).catch(function(e) { console.error('Erreur save:', e); });
   }
 
-  // ======================================================
-  // STRATÉGIE : Observer l'ouverture de la modale au lieu de hooker editProperty
-  // ======================================================
-  const modal = document.getElementById('editPropertyModal');
-  if (modal) {
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
-        // Détecter quand la modale devient visible
-        if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')) {
-          const isVisible = modal.classList.contains('active') || 
-                           modal.classList.contains('show') ||
-                           modal.style.display === 'flex' ||
-                           modal.style.display === 'block' ||
-                           getComputedStyle(modal).display !== 'none';
-          
-          if (isVisible) {
-            const propertyId = document.getElementById('propertyId')?.value;
-            if (propertyId) {
-              console.log('🧹 Modale ouverte détectée — propertyId:', propertyId);
-              populateCleanerSelect(propertyId);
-            }
-          }
-        }
-      });
-    });
-
-    observer.observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
-    console.log('🧹 Observer modale installé');
-  }
-
-  // Fallback : vérifier périodiquement si la modale est ouverte et le select est vide
+  // DÉTECTION MODALE : interval simple toutes les 300ms
   setInterval(function() {
+    var modal = document.getElementById('editPropertyModal');
     if (!modal) return;
-    const isVisible = getComputedStyle(modal).display !== 'none';
-    if (!isVisible) return;
-    
-    const select = document.getElementById('defaultCleanerSelect');
-    if (select && select.options.length <= 1 && allCleaners.length > 0) {
-      const propertyId = document.getElementById('propertyId')?.value;
-      if (propertyId) {
-        console.log('🧹 Fallback: remplissage select pour', propertyId);
-        populateCleanerSelect(propertyId);
-      }
-    }
-  }, 500);
+    var isVisible = modal.classList.contains('active');
+    if (!isVisible) { lastPopulatedForProperty = null; return; }
+    var pidInput = document.getElementById('propertyId');
+    var propertyId = pidInput ? pidInput.value : null;
+    if (!propertyId) return;
+    if (lastPopulatedForProperty === propertyId) return;
+    if (allCleaners.length === 0) return;
+    populateCleanerSelect(propertyId);
+  }, 300);
 
   // ======================================================
-  // SAVE : intercepter la soumission du formulaire
+  // INJECTION BADGES "Cleaner régulier" dans les cards de logement
   // ======================================================
-  const form = document.getElementById('propertyForm');
-  if (form) {
-    form.addEventListener('submit', function() {
-      const propertyId = document.getElementById('propertyId')?.value;
-      if (propertyId) {
-        // Sauvegarder le cleaner par défaut après un court délai (pour laisser le save original passer)
-        setTimeout(function() {
-          saveDefaultCleaner(propertyId);
-        }, 500);
-      }
+  var badgesInjected = false;
+
+  function injectCleanerBadges() {
+    if (Object.keys(defaultCleanersMap).length === 0) return;
+
+    var cards = document.querySelectorAll('.property-card');
+    if (cards.length === 0) return;
+
+    cards.forEach(function(card) {
+      // Ne pas re-injecter
+      if (card.querySelector('.cleaner-badge-injected')) return;
+
+      // Trouver le propertyId depuis le bouton edit ou data-attribute
+      var editBtn = card.querySelector('[onclick*="editProperty"]');
+      if (!editBtn) return;
+
+      var onclickStr = editBtn.getAttribute('onclick') || '';
+      // Essayer d'extraire l'id de la propriété
+      // Format typique : editProperty({id: 'xxx', ...})
+      var idMatch = onclickStr.match(/id['":\s]+['"]([^'"]+)['"]/);
+      if (!idMatch) return;
+
+      var propertyId = idMatch[1];
+      var defaultData = defaultCleanersMap[propertyId];
+      if (!defaultData || !defaultData.cleanerName) return;
+
+      // Trouver le container .property-meta
+      var metaContainer = card.querySelector('.property-meta');
+      if (!metaContainer) return;
+
+      // Injecter le badge
+      var badge = document.createElement('span');
+      badge.className = 'meta-badge cleaner-badge-injected';
+      badge.style.background = '#d1fae5';
+      badge.style.color = '#059669';
+      badge.style.fontWeight = '600';
+      badge.innerHTML = '<i class="fas fa-broom"></i> ' + defaultData.cleanerName;
+      metaContainer.appendChild(badge);
     });
-    console.log('🧹 Listener submit formulaire installé');
+
+    badgesInjected = true;
   }
+
+  // Vérifier régulièrement si les cards sont rendues pour injecter les badges
+  setInterval(function() {
+    if (Object.keys(defaultCleanersMap).length === 0) return;
+    var cards = document.querySelectorAll('.property-card');
+    if (cards.length === 0) return;
+    // Re-vérifier si de nouvelles cards sans badge
+    var needsInjection = false;
+    cards.forEach(function(c) {
+      if (!c.querySelector('.cleaner-badge-injected')) needsInjection = true;
+    });
+    if (needsInjection) injectCleanerBadges();
+  }, 1000);
+
+  // SAVE : écouter le submit
+  function setupFormListener() {
+    var form = document.getElementById('propertyForm');
+    if (form) {
+      form.addEventListener('submit', function() {
+        var pid = document.getElementById('propertyId');
+        var propertyId = pid ? pid.value : null;
+        if (propertyId) { setTimeout(function() { saveDefaultCleaner(propertyId); }, 800); }
+      });
+      console.log('🧹 Listener submit installé');
+    } else { setTimeout(setupFormListener, 500); }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFormListener);
+  } else { setupFormListener(); }
 
   // Init
   Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(function() {
-    console.log('✅ Module cleaner par défaut chargé — cleaners:', allCleaners.length);
+    console.log('✅ Module cleaner par défaut prêt — cleaners:', allCleaners.length);
   });
 })();
 </script>
+
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
