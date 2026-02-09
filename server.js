@@ -69,6 +69,11 @@ const {
 } = require('./sub-accounts-middleware');
 
 // ============================================
+// 💬 IMPORT SUPPORT CHAT
+// ============================================
+const { setupSupportRoutes, initSupportTables } = require('./support-chat-routes');
+
+// ============================================
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
 // ============================================
 const { 
@@ -14116,6 +14121,20 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Room support (utilisateur)
+  socket.on('join_support', (conversationId) => {
+    if (conversationId && typeof conversationId === 'string') {
+      socket.join(`support_${conversationId}`);
+      console.log(`💬 Socket ${socket.id} a rejoint support_${conversationId}`);
+    }
+  });
+
+  // Room support admin (pour recevoir tous les messages)
+  socket.on('join_support_admin', () => {
+    socket.join('support_admin');
+    console.log(`💬 Socket ${socket.id} a rejoint support_admin`);
+  });
+
   socket.on('disconnect', () => {
     console.log('🔌 Socket déconnecté:', socket.id);
   });
@@ -14144,6 +14163,13 @@ console.log('✅ Cron job rappels caution initialisé');
 // ============================================
 setupSubAccountsRoutes(app, pool, authenticateAny);
 console.log('✅ Routes sous-comptes initialisées');
+
+// ============================================
+// 💬 INITIALISATION DU SUPPORT CHAT
+// ============================================
+initSupportTables(pool);
+setupSupportRoutes(app, pool, io, authenticateToken);
+console.log('✅ Routes support chat initialisées');
 // ============================================
 // 🔐 ROUTE DE VÉRIFICATION D'AUTHENTIFICATION
 // ============================================
