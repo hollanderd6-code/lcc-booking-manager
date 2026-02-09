@@ -1156,6 +1156,19 @@ ON invoice_download_tokens(token);
     `);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments, cleaning_checklists & cleaning_templates OK dans Postgres');
+
+    // Ajouter colonnes escalade sur conversations (si pas déjà existantes)
+    try {
+      await pool.query(`
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pending_escalation BOOLEAN DEFAULT FALSE;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
+      `);
+      console.log('✅ Colonnes escalated ajoutées à conversations');
+    } catch (e) {
+      // Colonnes déjà existantes ou table pas encore créée
+      console.log('ℹ️ Colonnes escalated: ', e.message);
+    }
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
