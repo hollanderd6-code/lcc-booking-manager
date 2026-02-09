@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Accès limité - Boostinghost</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   <style>
     * {
       margin: 0;
@@ -27,162 +29,180 @@
       background: white;
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 600px;
+      max-width: 680px;
       width: 100%;
-      padding: 60px 40px;
+      padding: 56px 40px;
       text-align: center;
     }
 
-    .icon{
-      width:88px;
-      height:88px;
-      margin:0 auto 26px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:transparent;
-      box-shadow:none;
+    /* Logo (comme pricing-2.html) */
+    .pricing-logo {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0 auto 18px;
     }
 
+    .bh-logo {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      image-rendering: auto;
+      -ms-interpolation-mode: bicubic;
+    }
+
+    .brand-boosting { color: #10B981; font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
+    .brand-host { color: #111827; font-weight: 700; font-size: 26px; letter-spacing: -0.02em; }
+
     h1 {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 16px;
+      font-size: 40px;
+      font-weight: 800;
       color: #111827;
+      margin-bottom: 14px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
     }
 
     p {
-      font-size: 18px;
+      font-size: 16px;
       color: #6b7280;
-      line-height: 1.6;
-      margin-bottom: 32px;
+      line-height: 1.65;
+      margin-bottom: 28px;
     }
 
     .features {
-      text-align: left;
       background: #f9fafb;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 32px;
+      border-radius: 16px;
+      padding: 22px;
+      text-align: left;
+      margin-bottom: 28px;
+      border: 1px solid #e5e7eb;
     }
 
     .features h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 16px;
+      font-size: 18px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 14px;
       text-align: center;
     }
 
     .features ul {
       list-style: none;
+      display: grid;
+      gap: 12px;
       padding: 0;
+      margin: 0;
     }
 
     .features li {
-      padding: 8px 0;
-      color: #6b7280;
-      font-size: 15px;
       display: flex;
-      align-items: center;
+      gap: 12px;
+      align-items: flex-start;
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.5;
     }
 
-    .features li i {
-      color: #10b981;
-      margin-right: 12px;
+    .features i {
+      color: #10B981;
+      margin-top: 2px;
       font-size: 16px;
+      flex-shrink: 0;
     }
 
     .actions {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
+      margin-bottom: 14px;
     }
 
     .btn {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 16px;
-      text-decoration: none;
-      transition: all 0.2s ease;
+      gap: 10px;
       border: none;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-weight: 800;
       cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      font-size: 15px;
     }
 
     .btn-primary {
       background: linear-gradient(135deg, #10b981, #059669);
       color: white;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 10px 24px rgba(16, 185, 129, 0.25);
     }
 
     .btn-secondary {
       background: #f3f4f6;
-      color: #374151;
+      color: #111827;
+      border: 1px solid #e5e7eb;
     }
 
-    .btn-secondary:hover {
-      background: #e5e7eb;
+    .btn:hover {
+      transform: translateY(-2px);
+      opacity: 0.98;
     }
 
     .support-link {
-      margin-top: 24px;
       font-size: 14px;
       color: #6b7280;
     }
 
     .support-link a {
-      color: #10b981;
+      color: #10B981;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .support-link a:hover {
       text-decoration: underline;
     }
-    .bh-logo{
-      display:block;
-      width:80px;
-      height:80px;
-      max-width:80px;
-      max-height:80px;
-      object-fit:contain;
-      /* Limite l'effet "pixelisé" en évitant d'agrandir l'image au-delà de sa taille utile */
-      image-rendering:auto;
-      -ms-interpolation-mode:bicubic;
+
+    @media (max-width: 520px) {
+      .container {
+        padding: 46px 18px;
+      }
+      h1 {
+        font-size: 32px;
+      }
+      .brand-boosting, .brand-host {
+        font-size: 22px;
+      }
+      .bh-logo {
+        width: 46px;
+        height: 46px;
+      }
     }
   </style>
-
-<script src="/js/auth-fetch.js"></script>
 </head>
+
 <body>
   <div class="container">
-    <div class="pricing-logo">
-        <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" class="bh-logo">
-        <div>
-          <span class="brand-boosting">Boosting</span><span class="brand-host">host</span>
-        </div>
+
+    <div class="pricing-logo" aria-label="Boostinghost">
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" class="bh-logo">
+      <div>
+        <span class="brand-boosting">Boosting</span><span class="brand-host">host</span>
       </div>
+    </div>
 
     <h1>Activez votre abonnement pour continuer</h1>
-    
     <p>
-      Votre accès est actuellement limité. En choisissant un plan, vous récupérez immédiatement l’ensemble des outils
-      pour gérer vos locations sans prise de tête : calendrier, automatisations, paiements et suivi opérationnel.
+      Votre période d’essai est terminée. En choisissant un plan, vous récupérez immédiatement l’accès à vos outils :
+      calendrier, automatisations, paiements, cautions et suivi opérationnel.
     </p>
 
     <div class="features">
-      <h3>✨ Ce que vous continuez à utiliser avec un plan :</h3>
+      <h3>✨ Ce que vous continuez à utiliser avec un plan</h3>
       <ul>
         <li><i class="fas fa-check-circle"></i> Synchronisation des plateformes (Airbnb, Booking…)</li>
         <li><i class="fas fa-check-circle"></i> Calendrier unifié + gestion de votre propre calendrier</li>
@@ -197,8 +217,8 @@
         <li><i class="fas fa-check-circle"></i> Factures clients + factures conciergerie</li>
         <li><i class="fas fa-check-circle"></i> Données hébergées en France</li>
       </ul>
-      <p style="margin:16px 0 0; font-size:14px; color:#6b7280; text-align:center;">
-        Vous débloquez aussi l’accès multi-logements, la facturation et les automatisations avancées.
+      <p style="margin:14px 0 0; font-size:14px; color:#6b7280; text-align:center;">
+        Aucun changement de votre côté : vous reprenez exactement là où vous vous êtes arrêté.
       </p>
     </div>
 
@@ -214,15 +234,26 @@
     </div>
 
     <div class="support-link">
-      Des questions ? <a href="/cdn-cgi/l/email-protection#52212722223d202612303d3d21263b3c353a3d21267c313d3f">Contactez-nous</a>
+      Des questions ? <a href="/support.html">Contactez-nous</a>
     </div>
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     function logout() {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
       window.location.href = '/login.html';
     }
 
-    // Empêcher le retou
+    // Optionnel : évite un retour "bizarre" vers une page protégée
+    (function preventBackNavigation(){
+      try {
+        window.history.pushState(null, "", window.location.href);
+        window.addEventListener("popstate", function () {
+          window.history.pushState(null, "", window.location.href);
+        });
+      } catch(e) {}
+    })();
+  </script>
+</body>
+</html>
