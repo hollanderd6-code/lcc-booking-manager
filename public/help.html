@@ -1,162 +1,182 @@
 <!DOCTYPE html>
-
 <html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Boostinghost – Aide</title>
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<!-- Font Awesome -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<!-- CSS plateforme -->
-<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/> 
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/menu-plus-fixes.css" rel="stylesheet"/>
+<link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
-<link rel="stylesheet" href="/css/messages-badge-desktop.css">    
-    <style>
-    html, body {
-      margin: 0 !important;
-      }
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">
+<style>
+  html, body { margin: 0 !important; }
+  .app-container { margin-top: 0 !important; }
+  .page-content { margin-top: 0 !important; max-width: 960px; }
+  html { scroll-behavior: smooth; }
 
-    .app-container {
-      margin-top: 0 !important;
-    }
+  /* ====== HEADER ====== */
+  .main-header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    padding: 18px 20px; margin-bottom: 20px; border-radius: 20px;
+    background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.92));
+    border: 1px solid rgba(148,163,184,0.45);
+    box-shadow: 0 24px 60px rgba(15,23,42,0.7);
+  }
+  [data-theme="light"] .main-header {
+    background: linear-gradient(135deg, #f9fafb, #eff6ff);
+    border-color: rgba(148,163,184,0.4);
+    box-shadow: 0 18px 40px rgba(15,23,42,0.06);
+  }
+  .header-left { max-width: 70%; }
+  .page-kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: #9ca3af; margin-bottom: 4px; font-weight: 600; }
+  .page-title { margin: 0; font-size: 24px; font-weight: 700; }
+  .page-subtitle { margin-top: 6px; font-size: 13px; color: #9ca3af; }
+  [data-theme="light"] .page-subtitle { color: #6b7280; }
+  @media (max-width: 768px) {
+    .main-header { flex-direction: column; align-items: flex-start; }
+    .header-left { max-width: 100%; }
+  }
 
-    /* (patched) removed inline .main-content padding override for iOS safe-area */
+  /* ====== FAQ ====== */
+  .faq-item { border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 10px; overflow: hidden; background: var(--bg-secondary); }
+  .faq-question { width: 100%; text-align: left; padding: 10px 12px; font-weight: 600; background: transparent; border: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 14px; color: var(--text-primary); }
+  .faq-answer { max-height: 0; overflow: hidden; padding: 0 12px; transition: max-height 0.2s ease, padding 0.2s ease; font-size: 14px; }
+  .faq-item.open .faq-answer { max-height: 500px; padding: 8px 12px 12px; }
+  .faq-toggle-icon { font-size: 12px; color: var(--text-secondary); margin-left: 8px; }
+  #faqSearch { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; box-sizing: border-box; background: var(--bg-primary); color: var(--text-primary); }
+  .card.mb-lg { margin-bottom: 20px; }
 
-    .page-content {
-      margin-top: 0 !important;
-      max-width: 960px;
-    }
+  /* ====== SUPPORT CHAT ====== */
+  .support-status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 999px; background: rgba(16,185,129,0.1); color: #059669;
+  }
+  .support-status-badge i { font-size: 7px; }
 
-    html {
-      scroll-behavior: smooth;
-    }
+  .support-chat-container {
+    display: flex; flex-direction: column; height: 460px;
+    border-top: 1px solid var(--border-color);
+  }
 
-    /* ====== HEADER MODERNE ====== */
+  .support-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    background: var(--bg-secondary);
+  }
 
-    .main-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 18px 20px;
-      margin-bottom: 20px;
-      border-radius: 20px;
-      background: linear-gradient(
-        135deg,
-        rgba(15, 23, 42, 0.98),
-        rgba(15, 23, 42, 0.92)
-      );
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.7);
-    }
+  .support-loading {
+    text-align: center; padding: 40px; color: var(--text-secondary); font-size: 14px;
+  }
 
-    [data-theme="light"] .main-header {
-      background: linear-gradient(135deg, #f9fafb, #eff6ff);
-      border-color: rgba(148, 163, 184, 0.4);
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
-    }
+  /* Bulles de messages */
+  .support-msg { display: flex; gap: 10px; max-width: 85%; animation: supportFadeIn 0.2s ease; }
+  .support-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .support-msg.admin { align-self: flex-start; }
 
-    .header-left {
-      max-width: 70%;
-    }
+  @keyframes supportFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
-    .page-kicker {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: #9ca3af;
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
+  .support-msg-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: white;
+  }
+  .support-msg.admin .support-msg-avatar { background: linear-gradient(135deg, #059669, #10b981); }
+  .support-msg.user .support-msg-avatar { background: linear-gradient(135deg, #3b82f6, #6366f1); }
 
-    .page-title {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-    }
+  .support-msg-content { display: flex; flex-direction: column; gap: 4px; }
+  .support-msg-sender { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+  .support-msg.user .support-msg-sender { text-align: right; }
 
-    .page-subtitle {
-      margin-top: 6px;
-      font-size: 13px;
-      color: #9ca3af;
-    }
+  .support-msg-bubble {
+    padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5;
+    word-wrap: break-word; white-space: pre-wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .support-msg.admin .support-msg-bubble {
+    background: var(--bg-primary); border: 1px solid var(--border-color);
+    border-bottom-left-radius: 4px; color: var(--text-primary);
+  }
+  .support-msg.user .support-msg-bubble {
+    background: #3b82f6; color: white; border-bottom-right-radius: 4px;
+  }
 
-    [data-theme="light"] .page-subtitle {
-      color: #6b7280;
-    }
+  .support-msg-bubble img {
+    max-width: 240px; max-height: 200px; border-radius: 8px; cursor: pointer;
+    display: block; margin-top: 6px;
+  }
 
-    @media (max-width: 768px) {
-      .main-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .header-left {
-        max-width: 100%;
-      }
-    }
+  .support-msg-time { font-size: 10px; color: var(--text-secondary); }
+  .support-msg.user .support-msg-time { text-align: right; }
 
-    /* ====== FAQ ====== */
+  /* Zone date */
+  .support-date-separator {
+    text-align: center; font-size: 11px; color: var(--text-secondary);
+    padding: 4px 12px; margin: 4px 0;
+  }
 
-    .faq-item {
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 10px;
-      overflow: hidden;
-      background: var(--bg-secondary);
-    }
+  /* Zone de saisie */
+  .support-input-area {
+    border-top: 1px solid var(--border-color); background: var(--bg-primary); padding: 12px;
+  }
 
-    .faq-question {
-      width: 100%;
-      text-align: left;
-      padding: 10px 12px;
-      font-weight: 600;
-      background: transparent;
-      border: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-size: 14px;
-    }
+  .support-input-row {
+    display: flex; align-items: center; gap: 8px;
+  }
 
-    .faq-answer {
-      max-height: 0;
-      overflow: hidden;
-      padding: 0 12px;
-      transition: max-height 0.2s ease, padding 0.2s ease;
-      font-size: 14px;
-    }
+  .support-input {
+    flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid var(--border-color);
+    font-size: 14px; outline: none; background: var(--bg-secondary); color: var(--text-primary);
+    transition: border-color 0.2s;
+  }
+  .support-input:focus { border-color: #3b82f6; }
 
-    .faq-item.open .faq-answer {
-      max-height: 500px;
-      padding: 8px 12px 12px;
-    }
+  .support-btn-attach, .support-btn-send {
+    width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    transition: all 0.2s;
+  }
+  .support-btn-attach { background: var(--bg-secondary); color: var(--text-secondary); }
+  .support-btn-attach:hover { background: var(--border-color); color: var(--text-primary); }
+  .support-btn-send { background: #3b82f6; color: white; }
+  .support-btn-send:hover { background: #2563eb; transform: scale(1.05); }
 
-    .faq-toggle-icon {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-left: 8px;
-    }
+  .support-image-preview {
+    position: relative; padding: 8px 0; margin-bottom: 8px;
+  }
+  .support-image-preview img {
+    max-height: 120px; border-radius: 8px; border: 1px solid var(--border-color);
+  }
+  .support-image-remove {
+    position: absolute; top: 4px; left: 76px; width: 22px; height: 22px;
+    border-radius: 50%; background: #ef4444; color: white; border: none;
+    cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;
+  }
 
-    #faqSearch {
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      font-size: 14px;
-    }
+  /* Fullscreen image modal */
+  .support-img-modal {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.85); align-items: center; justify-content: center; cursor: pointer;
+  }
+  .support-img-modal.active { display: flex; }
+  .support-img-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
 
-    .card.mb-lg {
-      margin-bottom: 20px;
-    }
-  </style>
+  @media (max-width: 768px) {
+    .support-chat-container { height: 380px; }
+    .support-msg { max-width: 92%; }
+  }
+</style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Support" data-page="help" data-subtitle="Retrouvez les réponses aux questions fréquentes et comment contacter le support." data-title="Centre d’aide">
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Support" data-page="help" data-subtitle="FAQ et chat avec le support." data-title="Centre d'aide">
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
@@ -169,14 +189,10 @@
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
-<!-- Sidebar -->
 <div id="bhSidebar"></div>
-<!-- Main Content -->
 <main class="main-content"><div id="bhHeader"></div>
-<!-- Header -->
-
-<!-- Page Content -->
 <div class="page-content">
+
 <!-- Bloc FAQ -->
 <section class="card mb-lg">
 <div class="card-header">
@@ -195,11 +211,7 @@
 <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
 </button>
 <div class="faq-answer">
-<p>
-                  Allez dans <strong>Mes logements &gt; Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal
-                  fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de
-                  <strong>synchronisation</strong> dans le Dashboard.
-                </p>
+<p>Allez dans <strong>Mes logements > Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de <strong>synchronisation</strong> dans le Dashboard.</p>
 </div>
 </div>
 <div class="faq-item">
@@ -208,10 +220,7 @@
 <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
 </button>
 <div class="faq-answer">
-<p>
-                  Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations
-                  du séjour (logement, dates, nom du client) puis enregistrez. La réservation apparaîtra dans le calendrier.
-                </p>
+<p>Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations du séjour (logement, dates, nom du client) puis enregistrez.</p>
 </div>
 </div>
 <div class="faq-item">
@@ -220,10 +229,7 @@
 <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
 </button>
 <div class="faq-answer">
-<p>
-                  Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez accéder au détail
-                  depuis le panneau Notifications et ajuster vos préférences dans la page <strong>Paramètres</strong>.
-                </p>
+<p>Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez ajuster vos préférences dans la page <strong>Paramètres</strong>.</p>
 </div>
 </div>
 <div class="faq-item">
@@ -232,112 +238,378 @@
 <span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
 </button>
 <div class="faq-answer">
-<p>
-                  Rendez-vous dans la page <strong>Paramètres</strong>, puis mettez à jour votre nom, email ou
-                  nom de conciergerie. Les informations seront prises en compte sur l’ensemble de la plateforme.
-                </p>
+<p>Rendez-vous dans la page <strong>Paramètres</strong>, puis mettez à jour votre nom, email ou nom de conciergerie.</p>
 </div>
 </div>
 </div>
 </section>
-<!-- Bloc Contact -->
-<section class="card mb-lg">
-<div class="card-header">
+
+<!-- Bloc Chat Support -->
+<section class="card mb-lg" id="supportSection">
+<div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
 <div class="card-title">
-<i class="fas fa-envelope"></i>
+<i class="fas fa-comments"></i>
               Contacter le support
             </div>
+<span id="supportStatus" class="support-status-badge">
+<i class="fas fa-circle"></i> En ligne
+</span>
 </div>
-<div class="card-body">
-<p>
-              Vous ne trouvez pas la réponse à votre question ou vous avez détecté un bug ?
-            </p>
-<p>
-              Vous pouvez envoyer un email à :
-              <a href="/cdn-cgi/l/email-protection#b5c6c0c5c5dac7c1f5d9d6d698d7dadadedcdbd29bd3c7"><span class="__cf_email__" data-cfemail="8efdfbfefee1fcfacee2ededa3ece1e1e5e7e0e9a0e8fc">[email protected]</span></a>
-</p>
-<p style="margin-top: 12px;">
-              Pensez à préciser :
-            </p>
-<ul>
-<li>l’adresse email de votre compte,</li>
-<li>le logement ou la réservation concernée,</li>
-<li>une capture d’écran si possible.</li>
-</ul>
+<div class="card-body" style="padding: 0;">
+<div class="support-chat-container" id="supportChatContainer">
+<div class="support-messages" id="supportMessages">
+<div class="support-loading"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+</div>
+<div class="support-input-area">
+<div class="support-image-preview" id="imagePreview" style="display: none;">
+<img id="imagePreviewImg" src="" alt="Aperçu"/>
+<button class="support-image-remove" onclick="removeImagePreview()"><i class="fas fa-times"></i></button>
+</div>
+<div class="support-input-row">
+<button class="support-btn-attach" onclick="document.getElementById('supportImageInput').click()" title="Envoyer une image">
+<i class="fas fa-image"></i>
+</button>
+<input type="file" id="supportImageInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)"/>
+<input type="text" id="supportInput" class="support-input" placeholder="Écrivez votre message..." autocomplete="off"/>
+<button class="support-btn-send" id="supportSendBtn" onclick="sendSupportMessage()">
+<i class="fas fa-paper-plane"></i>
+</button>
+</div>
+</div>
+</div>
 </div>
 </section>
+
 <!-- Bloc Ressources -->
 <section class="card">
 <div class="card-header">
 <div class="card-title">
 <i class="fas fa-book-open"></i>
-              Ressources &amp; guide
+              Ressources & guide
             </div>
 </div>
 <div class="card-body">
-<p>
-              Prochainement : un guide utilisateur détaillé et des vidéos tutoriels pour tirer le maximum
-              de Bookingmanage.
-            </p>
+<p>Prochainement : un guide utilisateur détaillé et des vidéos tutoriels pour tirer le maximum de Boostinghost.</p>
 </div>
 </section>
+
 </div>
 </main>
 </div>
-<!-- Script auth + user + logout -->
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-    (function () {
-      const token = localStorage.getItem('lcc_token');
-      if (!token) {
-        window.location.href = '/login.html';
-        return;
+
+<!-- Modal image fullscreen -->
+<div class="support-img-modal" id="supportImgModal" onclick="this.classList.remove('active')">
+<img id="supportImgModalImg" src="" alt=""/>
+</div>
+
+<!-- Auth check -->
+<script>
+(function () {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) { window.location.href = '/login.html'; return; }
+  const rawUser = localStorage.getItem('lcc_user');
+  let user = null;
+  try { user = rawUser ? JSON.parse(rawUser) : null; } catch (e) {}
+  if (user) {
+    const nameEl = document.getElementById('sidebarUserName');
+    const companyEl = document.getElementById('sidebarUserCompany');
+    const avatarEl = document.getElementById('sidebarUserAvatar');
+    if (nameEl) nameEl.textContent = user.firstName ? user.firstName + (user.lastName ? ' ' + user.lastName : '') : (user.email || 'Mon compte');
+    if (companyEl) companyEl.textContent = user.company || 'Mon espace';
+    if (avatarEl) avatarEl.textContent = ((user.firstName || user.email || '?').trim()[0] || 'U').toUpperCase();
+  }
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.addEventListener('click', function () {
+    localStorage.removeItem('lcc_token'); localStorage.removeItem('lcc_user');
+    window.location.href = '/login.html';
+  });
+})();
+</script>
+
+<!-- FAQ toggle -->
+<script>
+document.querySelectorAll('.faq-question').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.closest('.faq-item');
+    item.classList.toggle('open');
+  });
+});
+
+const faqSearch = document.getElementById('faqSearch');
+if (faqSearch) {
+  faqSearch.addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    document.querySelectorAll('.faq-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(query) ? '' : 'none';
+    });
+  });
+}
+</script>
+
+<!-- Socket.io -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<!-- Support Chat Logic -->
+<script>
+const API_URL = window.location.origin;
+let supportConversationId = null;
+let supportSocket = null;
+let selectedImageFile = null;
+
+// ============================================
+// INITIALISATION
+// ============================================
+async function initSupportChat() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) return;
+
+  try {
+    // Récupérer ou créer la conversation
+    const res = await fetch(`${API_URL}/api/support/conversation`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Erreur API');
+    const data = await res.json();
+    supportConversationId = data.conversation.id;
+
+    // Charger les messages
+    await loadSupportMessages();
+
+    // Connecter Socket.io
+    supportSocket = io(API_URL, { transports: ['websocket', 'polling'] });
+    supportSocket.on('connect', () => {
+      supportSocket.emit('join_support', supportConversationId);
+    });
+    supportSocket.on('support_message', (msg) => {
+      appendSupportMessage(msg);
+      scrollToBottom();
+      // Marquer comme lu si c'est un message admin
+      if (msg.sender_type === 'admin') {
+        markMessagesAsRead();
       }
+    });
 
-      const rawUser = localStorage.getItem('lcc_user');
-      let user = null;
+  } catch (err) {
+    console.error('Erreur init support:', err);
+    document.getElementById('supportMessages').innerHTML = 
+      '<div class="support-loading">Erreur de chargement. <a href="javascript:initSupportChat()">Réessayer</a></div>';
+  }
+}
 
-      try {
-        user = rawUser ? JSON.parse(rawUser) : null;
-      } catch (e) {
-        console.error('Impossible de lire lcc_user', e);
-      }
+// ============================================
+// CHARGER LES MESSAGES
+// ============================================
+async function loadSupportMessages() {
+  const token = localStorage.getItem('lcc_token');
+  const container = document.getElementById('supportMessages');
 
-      if (user) {
-        const nameEl = document.getElementById('sidebarUserName');
-        const companyEl = document.getElementById('sidebarUserCompany');
-        const avatarEl = document.getElementById('sidebarUserAvatar');
+  const res = await fetch(`${API_URL}/api/support/messages/${supportConversationId}`, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if (!res.ok) throw new Error('Erreur chargement messages');
 
-        if (nameEl) {
-          nameEl.textContent = user.firstName
-            ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-            : (user.email || 'Mon compte');
-        }
+  const data = await res.json();
+  container.innerHTML = '';
 
-        if (companyEl) {
-          companyEl.textContent = user.company || 'Mon espace';
-        }
+  if (data.messages.length === 0) {
+    container.innerHTML = '<div class="support-loading">Aucun message. Commencez la conversation !</div>';
+    return;
+  }
 
-        if (avatarEl) {
-          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-          avatarEl.textContent = initial.toUpperCase();
-        }
-      }
+  let lastDate = '';
+  data.messages.forEach(msg => {
+    const msgDate = new Date(msg.created_at).toLocaleDateString('fr-FR');
+    if (msgDate !== lastDate) {
+      lastDate = msgDate;
+      const sep = document.createElement('div');
+      sep.className = 'support-date-separator';
+      sep.textContent = msgDate === new Date().toLocaleDateString('fr-FR') ? "Aujourd'hui" : msgDate;
+      container.appendChild(sep);
+    }
+    appendSupportMessage(msg, false);
+  });
 
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', function () {
-          localStorage.removeItem('lcc_token');
-          localStorage.removeItem('lcc_user');
-          window.location.href = '/login.html';
-        });
-      }
-    })();
-  </script>
+  scrollToBottom();
+}
+
+// ============================================
+// AJOUTER UN MESSAGE AU DOM
+// ============================================
+function appendSupportMessage(msg, animate = true) {
+  const container = document.getElementById('supportMessages');
+  // Supprimer le placeholder
+  const loading = container.querySelector('.support-loading');
+  if (loading) loading.remove();
+
+  const isUser = msg.sender_type === 'user';
+  const div = document.createElement('div');
+  div.className = `support-msg ${isUser ? 'user' : 'admin'}`;
+  if (!animate) div.style.animation = 'none';
+
+  const initial = isUser ? 'V' : '🛟';
+  const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  let bubbleContent = escapeHtml(msg.message || '');
+  // Rendre les URLs cliquables
+  bubbleContent = bubbleContent.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline; word-break: break-all;">$1</a>');
+
+  if (msg.image_url) {
+    bubbleContent += `<img src="${msg.image_url}" alt="Image" onclick="openImageModal('${msg.image_url}')" loading="lazy"/>`;
+  }
+
+  div.innerHTML = `
+    <div class="support-msg-avatar">${initial}</div>
+    <div class="support-msg-content">
+      <div class="support-msg-sender">${isUser ? 'Vous' : (msg.sender_name || 'Support')}</div>
+      <div class="support-msg-bubble">${bubbleContent}</div>
+      <div class="support-msg-time">${time}</div>
+    </div>
+  `;
+
+  container.appendChild(div);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ============================================
+// ENVOYER UN MESSAGE
+// ============================================
+async function sendSupportMessage() {
+  const input = document.getElementById('supportInput');
+  const message = input.value.trim();
+
+  // Si une image est sélectionnée, envoyer l'image
+  if (selectedImageFile) {
+    await uploadSupportImage();
+    return;
+  }
+
+  if (!message || !supportConversationId) return;
+
+  input.value = '';
+  input.focus();
+
+  // Afficher immédiatement (optimistic)
+  appendSupportMessage({
+    sender_type: 'user',
+    message: message,
+    created_at: new Date().toISOString()
+  });
+  scrollToBottom();
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/support/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ conversationId: supportConversationId, message })
+    });
+    if (!res.ok) throw new Error('Erreur envoi');
+  } catch (err) {
+    console.error('Erreur envoi message:', err);
+  }
+}
+
+// ============================================
+// UPLOAD IMAGE
+// ============================================
+function handleImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedImageFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('imagePreviewImg').src = e.target.result;
+    document.getElementById('imagePreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImagePreview() {
+  selectedImageFile = null;
+  document.getElementById('imagePreview').style.display = 'none';
+  document.getElementById('imagePreviewImg').src = '';
+  document.getElementById('supportImageInput').value = '';
+}
+
+async function uploadSupportImage() {
+  if (!selectedImageFile || !supportConversationId) return;
+
+  const formData = new FormData();
+  formData.append('image', selectedImageFile);
+  formData.append('conversationId', supportConversationId);
+
+  // Afficher optimistic
+  const tempUrl = document.getElementById('imagePreviewImg').src;
+  appendSupportMessage({
+    sender_type: 'user',
+    message: '📷 Image',
+    image_url: tempUrl,
+    created_at: new Date().toISOString()
+  });
+  scrollToBottom();
+
+  removeImagePreview();
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`${API_URL}/api/support/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: formData
+    });
+  } catch (err) {
+    console.error('Erreur upload image:', err);
+  }
+}
+
+// ============================================
+// UTILS
+// ============================================
+function scrollToBottom() {
+  const container = document.getElementById('supportMessages');
+  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+}
+
+function openImageModal(url) {
+  document.getElementById('supportImgModalImg').src = url;
+  document.getElementById('supportImgModal').classList.add('active');
+}
+
+async function markMessagesAsRead() {
+  // Le GET messages marque déjà comme lu côté serveur
+  // On refait un appel silencieux
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`${API_URL}/api/support/messages/${supportConversationId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  } catch (e) {}
+}
+
+// Envoyer avec Enter
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('supportInput');
+  if (input) {
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendSupportMessage(); }
+    });
+  }
+  initSupportChat();
+});
+</script>
+
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
-<!-- Socket.io pour le temps réel -->
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>    
 </body>
 </html>
