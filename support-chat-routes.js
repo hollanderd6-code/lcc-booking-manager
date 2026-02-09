@@ -1,0 +1,458 @@
+// ============================================
+// 💬 ROUTES API - SUPPORT CHAT
+// ============================================
+
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+
+// Multer pour upload images support
+const supportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowed.includes(file.mimetype.toLowerCase())) {
+      return cb(null, true);
+    }
+    cb(new Error('Format non supporté. Formats acceptés: JPG, PNG, WEBP, GIF'), false);
+  }
+});
+
+/**
+ * Initialiser les tables support en DB
+ */
+async function initSupportTables(pool) {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS support_conversations (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        subject TEXT DEFAULT 'Support général',
+        status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed', 'waiting')),
+        last_message_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS support_messages (
+        id SERIAL PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES support_conversations(id) ON DELETE CASCADE,
+        sender_type TEXT NOT NULL CHECK (sender_type IN ('user', 'admin')),
+        sender_id TEXT,
+        sender_name TEXT,
+        message TEXT,
+        image_url TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_support_messages_conv 
+        ON support_messages(conversation_id, created_at);
+      CREATE INDEX IF NOT EXISTS idx_support_conversations_user 
+        ON support_conversations(user_id);
+      CREATE INDEX IF NOT EXISTS idx_support_conversations_status 
+        ON support_conversations(status);
+    `);
+    console.log('✅ Tables support_conversations & support_messages OK');
+  } catch (err) {
+    console.error('❌ Erreur création tables support:', err);
+  }
+}
+
+/**
+ * Setup des routes support
+ */
+function setupSupportRoutes(app, pool, io, authenticateToken) {
+
+  // ============================================
+  // GET /api/support/conversation — Récupérer ou créer la conversation de l'utilisateur
+  // ============================================
+  app.get('/api/support/conversation', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+
+      // Chercher une conversation existante (ouverte ou en attente)
+      let result = await pool.query(
+        `SELECT * FROM support_conversations 
+         WHERE user_id = $1 AND status != 'closed'
+         ORDER BY updated_at DESC LIMIT 1`,
+        [userId]
+      );
+
+      let conversation;
+
+      if (result.rows.length === 0) {
+        // Créer une nouvelle conversation
+        const convId = 'sup_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        const user = req.user;
+        const subject = `Support - ${user.firstName || user.email || 'Utilisateur'}`;
+
+        const insertResult = await pool.query(
+          `INSERT INTO support_conversations (id, user_id, subject, status, created_at, updated_at, last_message_at)
+           VALUES ($1, $2, $3, 'open', NOW(), NOW(), NOW())
+           RETURNING *`,
+          [convId, userId, subject]
+        );
+        conversation = insertResult.rows[0];
+
+        // Envoyer un message de bienvenue
+        await pool.query(
+          `INSERT INTO support_messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+           VALUES ($1, 'admin', 'Support Boostinghost', $2, FALSE, NOW())`,
+          [convId, `👋 Bonjour ! Comment pouvons-nous vous aider ?\n\nN'hésitez pas à nous décrire votre problème ou votre question. Vous pouvez aussi envoyer des captures d'écran si nécessaire.\n\nNous vous répondrons dès que possible.`]
+        );
+      } else {
+        conversation = result.rows[0];
+      }
+
+      res.json({ conversation });
+    } catch (error) {
+      console.error('❌ Erreur GET /api/support/conversation:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // GET /api/support/messages/:conversationId — Récupérer les messages
+  // ============================================
+  app.get('/api/support/messages/:conversationId', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+      const { conversationId } = req.params;
+
+      // Vérifier que la conversation appartient à l'utilisateur
+      const convCheck = await pool.query(
+        'SELECT id FROM support_conversations WHERE id = $1 AND user_id = $2',
+        [conversationId, userId]
+      );
+      if (convCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+
+      const result = await pool.query(
+        `SELECT * FROM support_messages 
+         WHERE conversation_id = $1 
+         ORDER BY created_at ASC`,
+        [conversationId]
+      );
+
+      // Marquer les messages admin comme lus
+      await pool.query(
+        `UPDATE support_messages 
+         SET is_read = TRUE 
+         WHERE conversation_id = $1 AND sender_type = 'admin' AND is_read = FALSE`,
+        [conversationId]
+      );
+
+      res.json({ messages: result.rows });
+    } catch (error) {
+      console.error('❌ Erreur GET /api/support/messages:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // POST /api/support/messages — Envoyer un message
+  // ============================================
+  app.post('/api/support/messages', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+      const { conversationId, message } = req.body;
+
+      if (!conversationId || !message?.trim()) {
+        return res.status(400).json({ error: 'Message requis' });
+      }
+
+      // Vérifier que la conversation appartient à l'utilisateur
+      const convCheck = await pool.query(
+        'SELECT id FROM support_conversations WHERE id = $1 AND user_id = $2',
+        [conversationId, userId]
+      );
+      if (convCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+
+      const userName = req.user.firstName 
+        ? `${req.user.firstName} ${req.user.lastName || ''}`.trim()
+        : (req.user.email || 'Utilisateur');
+
+      // Insérer le message
+      const result = await pool.query(
+        `INSERT INTO support_messages (conversation_id, sender_type, sender_id, sender_name, message, is_read, created_at)
+         VALUES ($1, 'user', $2, $3, $4, FALSE, NOW())
+         RETURNING *`,
+        [conversationId, userId, userName, message.trim()]
+      );
+
+      const savedMessage = result.rows[0];
+
+      // Mettre à jour la conversation
+      await pool.query(
+        `UPDATE support_conversations 
+         SET last_message_at = NOW(), updated_at = NOW(), status = 'waiting'
+         WHERE id = $1`,
+        [conversationId]
+      );
+
+      // Émettre via Socket.io
+      if (io) {
+        // Notifier les admins
+        io.to('support_admin').emit('support_new_message', {
+          ...savedMessage,
+          conversationId
+        });
+        // Émettre dans la room de la conversation
+        io.to(`support_${conversationId}`).emit('support_message', savedMessage);
+      }
+
+      // 🔔 Notification push aux admins
+      try {
+        // Récupérer les tokens FCM des admins (users avec un flag admin ou email spécifique)
+        const adminTokens = await pool.query(
+          `SELECT t.fcm_token FROM user_fcm_tokens t
+           JOIN users u ON u.id = t.user_id
+           WHERE u.email IN ('contact@boostinghost.com', 'admin@boostinghost.com')
+           OR u.is_admin = TRUE`
+        );
+        
+        const { sendNotification } = require('./services/notifications-service');
+        for (const token of adminTokens.rows) {
+          try {
+            await sendNotification(
+              token.fcm_token,
+              `💬 Nouveau message support`,
+              `${userName}: ${message.substring(0, 100)}`,
+              { type: 'support_message', conversationId }
+            );
+          } catch (e) { /* ignore token errors */ }
+        }
+      } catch (e) {
+        console.error('⚠️ Erreur notification support:', e.message);
+      }
+
+      res.json({ message: savedMessage });
+    } catch (error) {
+      console.error('❌ Erreur POST /api/support/messages:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // POST /api/support/upload — Upload image
+  // ============================================
+  app.post('/api/support/upload', authenticateToken, supportUpload.single('image'), async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+      const { conversationId } = req.body;
+
+      if (!req.file || !conversationId) {
+        return res.status(400).json({ error: 'Image et conversationId requis' });
+      }
+
+      // Vérifier la conversation
+      const convCheck = await pool.query(
+        'SELECT id FROM support_conversations WHERE id = $1 AND user_id = $2',
+        [conversationId, userId]
+      );
+      if (convCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+
+      // Upload vers Cloudinary
+      const imageUrl = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'support-images',
+            resource_type: 'image',
+            transformation: [{ width: 1200, crop: 'limit' }, { quality: 'auto' }]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        );
+        uploadStream.end(req.file.buffer);
+      });
+
+      const userName = req.user.firstName 
+        ? `${req.user.firstName} ${req.user.lastName || ''}`.trim()
+        : (req.user.email || 'Utilisateur');
+
+      // Sauvegarder le message avec l'image
+      const result = await pool.query(
+        `INSERT INTO support_messages (conversation_id, sender_type, sender_id, sender_name, message, image_url, is_read, created_at)
+         VALUES ($1, 'user', $2, $3, $4, $5, FALSE, NOW())
+         RETURNING *`,
+        [conversationId, userId, userName, '📷 Image', imageUrl]
+      );
+
+      const savedMessage = result.rows[0];
+
+      // Mettre à jour la conversation
+      await pool.query(
+        `UPDATE support_conversations SET last_message_at = NOW(), updated_at = NOW(), status = 'waiting' WHERE id = $1`,
+        [conversationId]
+      );
+
+      // Socket.io
+      if (io) {
+        io.to('support_admin').emit('support_new_message', { ...savedMessage, conversationId });
+        io.to(`support_${conversationId}`).emit('support_message', savedMessage);
+      }
+
+      res.json({ message: savedMessage });
+    } catch (error) {
+      console.error('❌ Erreur POST /api/support/upload:', error);
+      res.status(500).json({ error: 'Erreur upload' });
+    }
+  });
+
+  // ============================================
+  // GET /api/support/unread-count — Nombre de messages non lus
+  // ============================================
+  app.get('/api/support/unread-count', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+      
+      const result = await pool.query(
+        `SELECT COUNT(*) as count 
+         FROM support_messages sm
+         JOIN support_conversations sc ON sm.conversation_id = sc.id
+         WHERE sc.user_id = $1 AND sm.sender_type = 'admin' AND sm.is_read = FALSE`,
+        [userId]
+      );
+
+      res.json({ unreadCount: parseInt(result.rows[0].count) || 0 });
+    } catch (error) {
+      console.error('❌ Erreur GET /api/support/unread-count:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // ===== ROUTES ADMIN =====
+  // ============================================
+
+  // GET /api/support/admin/conversations — Lister toutes les conversations (admin)
+  app.get('/api/support/admin/conversations', authenticateToken, async (req, res) => {
+    try {
+      // TODO: vérifier que l'utilisateur est admin
+      const result = await pool.query(
+        `SELECT sc.*, 
+          u.email as user_email, 
+          u.first_name as user_first_name,
+          u.last_name as user_last_name,
+          u.company as user_company,
+          (SELECT COUNT(*) FROM support_messages sm WHERE sm.conversation_id = sc.id AND sm.sender_type = 'user' AND sm.is_read = FALSE) as unread_count,
+          (SELECT message FROM support_messages sm WHERE sm.conversation_id = sc.id ORDER BY sm.created_at DESC LIMIT 1) as last_message
+         FROM support_conversations sc
+         JOIN users u ON u.id = sc.user_id
+         ORDER BY sc.last_message_at DESC`
+      );
+
+      res.json({ conversations: result.rows });
+    } catch (error) {
+      console.error('❌ Erreur GET /api/support/admin/conversations:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // GET /api/support/admin/messages/:conversationId — Messages d'une conversation (admin)
+  app.get('/api/support/admin/messages/:conversationId', authenticateToken, async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+
+      const result = await pool.query(
+        `SELECT * FROM support_messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
+        [conversationId]
+      );
+
+      // Marquer les messages utilisateur comme lus
+      await pool.query(
+        `UPDATE support_messages SET is_read = TRUE WHERE conversation_id = $1 AND sender_type = 'user' AND is_read = FALSE`,
+        [conversationId]
+      );
+
+      res.json({ messages: result.rows });
+    } catch (error) {
+      console.error('❌ Erreur GET /api/support/admin/messages:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // POST /api/support/admin/reply — Répondre à une conversation (admin)
+  app.post('/api/support/admin/reply', authenticateToken, async (req, res) => {
+    try {
+      const { conversationId, message } = req.body;
+      const adminId = req.user.id || req.user.userId;
+      const adminName = req.user.firstName 
+        ? `${req.user.firstName} (Support)`
+        : 'Support Boostinghost';
+
+      if (!conversationId || !message?.trim()) {
+        return res.status(400).json({ error: 'Message requis' });
+      }
+
+      const result = await pool.query(
+        `INSERT INTO support_messages (conversation_id, sender_type, sender_id, sender_name, message, is_read, created_at)
+         VALUES ($1, 'admin', $2, $3, $4, FALSE, NOW())
+         RETURNING *`,
+        [conversationId, adminId, adminName, message.trim()]
+      );
+
+      const savedMessage = result.rows[0];
+
+      // Mettre à jour le statut
+      await pool.query(
+        `UPDATE support_conversations SET last_message_at = NOW(), updated_at = NOW(), status = 'open' WHERE id = $1`,
+        [conversationId]
+      );
+
+      // Socket.io
+      if (io) {
+        io.to(`support_${conversationId}`).emit('support_message', savedMessage);
+      }
+
+      // 🔔 Notification push à l'utilisateur
+      try {
+        const convResult = await pool.query(
+          'SELECT user_id FROM support_conversations WHERE id = $1',
+          [conversationId]
+        );
+        if (convResult.rows.length > 0) {
+          const targetUserId = convResult.rows[0].user_id;
+          const userTokens = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+            [targetUserId]
+          );
+          
+          const { sendNotification } = require('./services/notifications-service');
+          for (const token of userTokens.rows) {
+            try {
+              await sendNotification(
+                token.fcm_token,
+                `💬 Réponse du support`,
+                message.substring(0, 100),
+                { type: 'support_reply', conversationId }
+              );
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) {
+        console.error('⚠️ Erreur notification support reply:', e.message);
+      }
+
+      res.json({ message: savedMessage });
+    } catch (error) {
+      console.error('❌ Erreur POST /api/support/admin/reply:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  console.log('✅ Routes support chat configurées');
+}
+
+module.exports = { setupSupportRoutes, initSupportTables };
+support-chat-routes
