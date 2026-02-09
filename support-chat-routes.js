@@ -451,8 +451,29 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
     }
   });
 
+  // PUT /api/support/admin/conversations/:id/status — Changer le statut
+  app.put('/api/support/admin/conversations/:id/status', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!['open', 'closed', 'waiting'].includes(status)) {
+        return res.status(400).json({ error: 'Statut invalide' });
+      }
+
+      await pool.query(
+        'UPDATE support_conversations SET status = $1, updated_at = NOW() WHERE id = $2',
+        [status, id]
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur PUT status:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   console.log('✅ Routes support chat configurées');
 }
 
 module.exports = { setupSupportRoutes, initSupportTables };
-support-chat-routes
