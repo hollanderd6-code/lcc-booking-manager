@@ -3503,7 +3503,7 @@ async function getUserReservations(userId, filters = {}) {
     let query = `
       SELECT 
         r.id, r.uid, r.property_id, r.start_date, r.end_date, 
-        r.platform, r.source, r.status, r.total_amount, r.number_of_guests,
+        r.platform, r.source, r.status, r.number_of_guests,
         r.guest_email, r.notes, r.created_at, r.updated_at, r.user_id,
         
         COALESCE(
@@ -3698,7 +3698,7 @@ async function loadDepositsFromDB() {
       SELECT 
         id, user_id, reservation_uid, property_id,
         amount_cents, currency,
-        stripe_session_id, stripe_payment_intent_id, stripe_charge_id,
+        stripe_session_id, stripe_payment_intent_id,
         checkout_url, status,
         authorized_at, captured_at, released_at, cancelled_at,
         notes, metadata,
@@ -3716,7 +3716,6 @@ async function loadDepositsFromDB() {
       status: row.status,
       stripeSessionId: row.stripe_session_id,
       stripePaymentIntentId: row.stripe_payment_intent_id,
-      stripeChargeId: row.stripe_charge_id,
       checkoutUrl: row.checkout_url,
       authorizedAt: row.authorized_at,
       capturedAt: row.captured_at,
@@ -3931,12 +3930,6 @@ async function updateDepositStatus(depositId, status, additionalData = {}) {
       paramCount++;
       updates.push(`stripe_payment_intent_id = $${paramCount}`);
       params.push(additionalData.stripePaymentIntentId);
-    }
-
-    if (additionalData.stripeChargeId) {
-      paramCount++;
-      updates.push(`stripe_charge_id = $${paramCount}`);
-      params.push(additionalData.stripeChargeId);
     }
 
     const query = `UPDATE deposits SET ${updates.join(', ')} WHERE id = $1`;
@@ -14585,7 +14578,7 @@ app.post('/api/notifications/today-arrivals', authenticateAny, async (req, res) 
     const arrivalsResult = await pool.query(
       `SELECT 
         r.id, r.uid, r.property_id, r.start_date, r.end_date,
-        r.source, r.platform, r.status, r.total_amount, r.number_of_guests,
+        r.source, r.platform, r.status, r.number_of_guests,
         r.guest_email, r.created_at, r.updated_at,
         
         COALESCE(
@@ -14668,7 +14661,7 @@ app.post('/api/notifications/today-departures', authenticateAny, async (req, res
     const departuresResult = await pool.query(
       `SELECT 
         r.id, r.uid, r.property_id, r.start_date, r.end_date,
-        r.source, r.platform, r.status, r.total_amount, r.number_of_guests,
+        r.source, r.platform, r.status, r.number_of_guests,
         r.guest_email, r.created_at, r.updated_at,
         
         COALESCE(
@@ -14784,7 +14777,7 @@ cron.schedule('0 8 * * *', async () => {
       const arrivalsResult = await pool.query(
         `SELECT 
           r.id, r.uid, r.property_id, r.start_date, r.end_date,
-          r.source, r.platform, r.status, r.total_amount,
+          r.source, r.platform, r.status,
           
           COALESCE(
             NULLIF(TRIM(COALESCE(c.guest_first_name, '') || ' ' || COALESCE(c.guest_last_name, '')), ''),
@@ -14840,7 +14833,7 @@ cron.schedule('0 8 * * *', async () => {
       const departuresResult = await pool.query(
         `SELECT 
           r.id, r.uid, r.property_id, r.start_date, r.end_date,
-          r.source, r.platform, r.status, r.total_amount,
+          r.source, r.platform, r.status,
           
           COALESCE(
             NULLIF(TRIM(COALESCE(c.guest_first_name, '') || ' ' || COALESCE(c.guest_last_name, '')), ''),
@@ -14936,7 +14929,7 @@ cron.schedule('0 18 * * *', async () => {
       const arrivalsResult = await pool.query(
         `SELECT 
           r.id, r.uid, r.property_id, r.start_date, r.end_date,
-          r.source, r.platform, r.status, r.total_amount,
+          r.source, r.platform, r.status,
           
           COALESCE(
             NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
