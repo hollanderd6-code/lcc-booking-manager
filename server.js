@@ -14725,7 +14725,11 @@ console.log('CRON job messages arrivee configure (tous les jours a 7h)');
 // CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
 cron.schedule('0 8 * * *', async () => {
-  console.log('CRON: Envoi des notifications quotidiennes a 8h00');
+  console.log('========================================');
+  console.log('🔔 CRON 8H: Envoi des notifications quotidiennes');
+  console.log(`🕐 Heure serveur: ${new Date().toISOString()}`);
+  console.log(`🕐 Heure Paris: ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`);
+  console.log('========================================');
   try {
     // Recuperer tous les utilisateurs avec token FCM
     const usersResult = await pool.query(
@@ -14734,6 +14738,8 @@ cron.schedule('0 8 * * *', async () => {
        JOIN user_fcm_tokens t ON u.id = t.user_id 
        WHERE t.fcm_token IS NOT NULL`
     );
+    
+    console.log(`🔔 ${usersResult.rows.length} utilisateur(s) avec token FCM`);
     
     for (const user of usersResult.rows) {
       // Recuperer TOUS les tokens de l'utilisateur
@@ -14744,19 +14750,18 @@ cron.schedule('0 8 * * *', async () => {
       
       if (tokensResult.rows.length === 0) continue;
       
-      // Arrivees du jour
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // ✅ Utiliser la date Paris pour éviter les décalages timezone
+      const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+      const todayStr = nowParis.toISOString().split('T')[0]; // ex: "2026-02-08"
       
+      // Arrivees du jour
       const arrivalsResult = await pool.query(
         `SELECT 
           r.id, r.uid, r.property_id, r.start_date, r.end_date,
           r.source, r.platform, r.status, r.total_amount,
           
           COALESCE(
-            NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+            NULLIF(TRIM(COALESCE(c.guest_first_name, '') || ' ' || COALESCE(c.guest_last_name, '')), ''),
             r.guest_name,
             'Voyageur ' || COALESCE(r.source, 'direct')
           ) as guest_name,
@@ -14764,7 +14769,7 @@ cron.schedule('0 8 * * *', async () => {
           COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
           
           CASE 
-            WHEN c.guest_first_name IS NOT NULL 
+            WHEN c.guest_first_name IS NOT NULL AND c.guest_first_name != ''
             THEN LEFT(UPPER(c.guest_first_name), 1)
             ELSE 'V'
           END as guest_initial,
@@ -14777,28 +14782,32 @@ cron.schedule('0 8 * * *', async () => {
          LEFT JOIN conversations c ON (
            c.property_id = r.property_id 
            AND DATE(c.reservation_start_date) = DATE(r.start_date)
-           AND LOWER(c.platform) = LOWER(r.source)
          )
          WHERE p.user_id = $1 
-         AND r.start_date >= $2 
-         AND r.start_date < $3
+         AND DATE(r.start_date) = $2
          AND r.status != 'cancelled'`,
-        [user.id, today, tomorrow]
+        [user.id, todayStr]
       );
       
       const arrivalsCount = arrivalsResult.rows.length;
       const arrivalsText = arrivalsCount > 0 
         ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join(', ')
-        : 'Aucune arrivee prevue';
+        : 'Aucune arrivée prévue';
+      
+      console.log(`🔔 User ${user.id}: ${arrivalsCount} arrivée(s) - ${arrivalsText}`);
       
       // Envoyer a TOUS les appareils
       for (const token of tokensResult.rows) {
-        await sendNotification(
-          token.fcm_token,
-          `${arrivalsCount} arrivee(s) aujourd'hui`,
-          arrivalsText,
-          { type: 'daily_arrivals', count: arrivalsCount.toString() }
-        );
+        try {
+          await sendNotification(
+            token.fcm_token,
+            `📥 ${arrivalsCount} arrivée(s) aujourd'hui`,
+            arrivalsText,
+            { type: 'daily_arrivals', count: arrivalsCount.toString() }
+          );
+        } catch (notifErr) {
+          console.error(`❌ Erreur envoi notif arrivées (token ${token.fcm_token.substring(0, 20)}...):`, notifErr.message);
+        }
       }
       
       // Departs du jour
@@ -14808,7 +14817,7 @@ cron.schedule('0 8 * * *', async () => {
           r.source, r.platform, r.status, r.total_amount,
           
           COALESCE(
-            NULLIF(TRIM(c.guest_first_name || ' ' || c.guest_last_name), ''),
+            NULLIF(TRIM(COALESCE(c.guest_first_name, '') || ' ' || COALESCE(c.guest_last_name, '')), ''),
             r.guest_name,
             'Voyageur ' || COALESCE(r.source, 'direct')
           ) as guest_name,
@@ -14816,7 +14825,7 @@ cron.schedule('0 8 * * *', async () => {
           COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
           
           CASE 
-            WHEN c.guest_first_name IS NOT NULL 
+            WHEN c.guest_first_name IS NOT NULL AND c.guest_first_name != ''
             THEN LEFT(UPPER(c.guest_first_name), 1)
             ELSE 'V'
           END as guest_initial,
@@ -14829,36 +14838,40 @@ cron.schedule('0 8 * * *', async () => {
          LEFT JOIN conversations c ON (
            c.property_id = r.property_id 
            AND DATE(c.reservation_start_date) = DATE(r.start_date)
-           AND LOWER(c.platform) = LOWER(r.source)
          )
          WHERE p.user_id = $1 
-         AND r.end_date >= $2 
-         AND r.end_date < $3
+         AND DATE(r.end_date) = $2
          AND r.status != 'cancelled'`,
-        [user.id, today, tomorrow]
+        [user.id, todayStr]
       );
       
       const departuresCount = departuresResult.rows.length;
       const departuresText = departuresCount > 0
-        ? `Menages a prevoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
-        : 'Aucun depart prevu';
+        ? `Ménages à prévoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
+        : 'Aucun départ prévu';
+      
+      console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) - ${departuresText}`);
       
       // Envoyer a TOUS les appareils
       for (const token of tokensResult.rows) {
-        await sendNotification(
-          token.fcm_token,
-          `${departuresCount} depart(s) aujourd'hui`,
-          departuresText,
-          { type: 'daily_departures', count: departuresCount.toString() }
-        );
+        try {
+          await sendNotification(
+            token.fcm_token,
+            `📤 ${departuresCount} départ(s) aujourd'hui`,
+            departuresText,
+            { type: 'daily_departures', count: departuresCount.toString() }
+          );
+        } catch (notifErr) {
+          console.error(`❌ Erreur envoi notif départs (token ${token.fcm_token.substring(0, 20)}...):`, notifErr.message);
+        }
       }
       
-      console.log(`Notifications quotidiennes envoyees a user ${user.id} (${tokensResult.rows.length} appareil(s))`);
+      console.log(`✅ Notifications quotidiennes envoyées à user ${user.id} (${tokensResult.rows.length} appareil(s))`);
     }
     
-    console.log('Notifications quotidiennes envoyees');
+    console.log('✅ CRON 8H terminé: Notifications quotidiennes envoyées');
   } catch (error) {
-    console.error('Erreur CRON notifications:', error);
+    console.error('❌ ERREUR CRON 8H notifications:', error);
   }
 }, {
   timezone: "Europe/Paris"
