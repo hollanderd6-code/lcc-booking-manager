@@ -3193,9 +3193,12 @@ async function sendDepositRequestMessages(io) {
 
     // Récupérer toutes les conversations arrivant dans 2 jours (Booking uniquement)
     const conversationsResult = await pool.query(`
-      SELECT c.*, p.name as property_name, p.deposit_amount
+      SELECT c.*, p.name as property_name, p.deposit_amount, u.stripe_account_id,
+             r.uid as reservation_uid
       FROM conversations c
       LEFT JOIN properties p ON p.id = c.property_id
+      LEFT JOIN users u ON u.id = c.user_id
+      LEFT JOIN reservations r ON r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date)
       WHERE DATE(c.reservation_start_date) = $1
       AND LOWER(c.platform) = 'booking'
       AND c.status != 'cancelled'
@@ -3316,9 +3319,11 @@ async function sendArrivalInfoMessages(io) {
 
     // Récupérer toutes les conversations arrivant aujourd'hui
     const conversationsResult = await pool.query(`
-      SELECT c.*, p.name as property_name, p.deposit_amount, p.welcome_book_url
+      SELECT c.*, p.name as property_name, p.deposit_amount, p.welcome_book_url,
+             r.uid as reservation_uid
       FROM conversations c
       LEFT JOIN properties p ON p.id = c.property_id
+      LEFT JOIN reservations r ON r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date)
       WHERE DATE(c.reservation_start_date) = $1
       AND c.status != 'cancelled'
     `, [today]);
@@ -3405,36 +3410,40 @@ async function handleDepositPaid(depositId, io) {
 
     const deposit = depositResult.rows[0];
 
-    // Récupérer la conversation liée (avec fallback par property_id + date)
+    // Récupérer la conversation liée (par property_id + date de réservation)
     let conv = null;
     
-    // Méthode 1 : par reservation_uid
+    // Récupérer la date de début depuis la réservation
     if (deposit.reservation_uid) {
-      const convResult = await pool.query(`
-        SELECT c.*, p.name as property_name
-        FROM conversations c
-        LEFT JOIN properties p ON p.id = c.property_id
-        WHERE c.reservation_uid = $1 AND c.user_id = $2
-      `, [deposit.reservation_uid, deposit.user_id]);
-      conv = convResult.rows[0] || null;
-    }
-    
-    // Méthode 2 (fallback) : par property_id + date
-    if (!conv && deposit.property_id) {
       const resResult = await pool.query(
-        'SELECT start_date FROM reservations WHERE uid = $1',
+        'SELECT start_date, end_date FROM reservations WHERE uid = $1',
         [deposit.reservation_uid]
       );
+      
       if (resResult.rows.length > 0) {
+        const startDate = resResult.rows[0].start_date;
+        
         const convResult = await pool.query(`
           SELECT c.*, p.name as property_name
           FROM conversations c
           LEFT JOIN properties p ON p.id = c.property_id
-          WHERE c.property_id = $1 AND DATE(c.reservation_start_date) = DATE($2)
+          WHERE c.property_id = $1 AND DATE(c.reservation_start_date) = DATE($2) AND c.user_id = $3
           ORDER BY c.created_at DESC LIMIT 1
-        `, [deposit.property_id, resResult.rows[0].start_date]);
+        `, [deposit.property_id, startDate, deposit.user_id]);
         conv = convResult.rows[0] || null;
       }
+    }
+    
+    // Fallback : par property_id seul (dernier en date)
+    if (!conv && deposit.property_id) {
+      const convResult = await pool.query(`
+        SELECT c.*, p.name as property_name
+        FROM conversations c
+        LEFT JOIN properties p ON p.id = c.property_id
+        WHERE c.property_id = $1 AND c.user_id = $2
+        ORDER BY c.created_at DESC LIMIT 1
+      `, [deposit.property_id, deposit.user_id]);
+      conv = convResult.rows[0] || null;
     }
 
     if (!conv) {
