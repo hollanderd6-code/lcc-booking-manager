@@ -382,12 +382,12 @@ async function initSupportChat() {
       supportSocket.emit('join_support', supportConversationId);
     });
     supportSocket.on('support_message', (msg) => {
+      // Ignorer nos propres messages (déjà affichés en optimistic)
+      if (msg.sender_type === 'user') return;
+      
       appendSupportMessage(msg);
       scrollToBottom();
-      // Marquer comme lu si c'est un message admin
-      if (msg.sender_type === 'admin') {
-        markMessagesAsRead();
-      }
+      markMessagesAsRead();
     });
 
   } catch (err) {
