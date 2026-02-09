@@ -816,7 +816,6 @@ if (sender_type === 'owner') {
         const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
         
         if (autoResponse) {
-          // Attendre un peu pour simuler un délai naturel
           setTimeout(async () => {
             try {
               const autoResult = await pool.query(
@@ -826,13 +825,10 @@ if (sender_type === 'owner') {
                 RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
                 [conversation_id, autoResponse]
               );
-
               const autoMsg = autoResult.rows[0];
-              
               if (io) {
                 io.to(`conversation_${conversation_id}`).emit('new_message', autoMsg);
               }
-
               console.log(`🤖 Réponse automatique envoyée pour conversation ${conversation_id}`);
             } catch (error) {
               console.error('❌ Erreur envoi réponse auto:', error);
@@ -840,41 +836,10 @@ if (sender_type === 'owner') {
           }, 1500);
         }
 
-        // Créer une notification pour le propriétaire
-        await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
-        
         // ============================================
-// 🔔 NOTIFICATION PUSH FIREBASE - VOYAGEUR → PROPRIÉTAIRE
-// ============================================
-
-// Envoyer une notification push au propriétaire quand un voyageur écrit
-try {
-  const { sendNewMessageNotification } = require('../services/notifications-service');
-  
-  const messagePreview = message.length > 100 
-    ? message.substring(0, 97) + '...' 
-    : message;
-  
-  await sendNewMessageNotification(
-    conversation.user_id,      // userId (propriétaire)
-    'Voyageur',                // senderName
-    messagePreview,            // messagePreview
-    conversation_id            // conversationId
-  );
-  
-  console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
-  
-} catch (notifError) {
-  console.error('❌ Erreur notification push:', notifError.message);
-}
-} 
-
-      // ============================================
-      // 🤖 TRAITEMENT AUTOMATIQUE (Onboarding + Réponses auto)
-      // ============================================
-      if (sender_type === 'guest') {
+        // 🤖 TRAITEMENT AUTOMATIQUE (Onboarding + Groq + Escalade)
+        // ============================================
         try {
-          // Récupérer la conversation complète avec tous les champs nécessaires
           const fullConvResult = await pool.query(
             'SELECT * FROM conversations WHERE id = $1',
             [conversation_id]
@@ -883,14 +848,45 @@ try {
           if (fullConvResult.rows.length > 0) {
             const fullConversation = fullConvResult.rows[0];
             
-            // Traiter le message (onboarding + réponses auto)
-            await handleIncomingMessage(newMessage, fullConversation, pool, io);
+            // Traiter le message (onboarding + réponses auto + Groq)
+            const handled = await handleIncomingMessage(newMessage, fullConversation, pool, io);
             
-            console.log(`✅ Message traité automatiquement pour conversation ${conversation_id}`);
+            console.log(`✅ Message traité (handled: ${handled}) pour conversation ${conversation_id}`);
+            
+            // ============================================
+            // 🔔 NOTIFICATIONS PROPRIÉTAIRE
+            // Seulement si la conversation est escaladée
+            // ============================================
+            const updatedConvResult = await pool.query(
+              'SELECT escalated, onboarding_completed FROM conversations WHERE id = $1',
+              [conversation_id]
+            );
+            const updatedConv = updatedConvResult.rows[0];
+            
+            if (updatedConv && updatedConv.escalated === true) {
+              // Notification in-app
+              await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
+              
+              // Notification push Firebase
+              try {
+                const { sendNewMessageNotification } = require('../services/notifications-service');
+                const messagePreview = message.length > 100 ? message.substring(0, 97) + '...' : message;
+                await sendNewMessageNotification(
+                  conversation.user_id,
+                  'Voyageur',
+                  messagePreview,
+                  conversation_id
+                );
+                console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
+              } catch (notifError) {
+                console.error('❌ Erreur notification push:', notifError.message);
+              }
+            } else {
+              console.log(`ℹ️ Pas de notification propriétaire (escalated: ${updatedConv?.escalated})`);
+            }
           }
         } catch (autoError) {
           console.error('❌ Erreur traitement auto:', autoError);
-          // Ne pas bloquer l'envoi du message même si l'auto-traitement échoue
         }
       }
       
