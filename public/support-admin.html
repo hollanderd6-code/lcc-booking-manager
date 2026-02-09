@@ -12,8 +12,6 @@
 <meta name="theme-color" content="#0f172a"/>
 <link rel="apple-touch-icon" href="/icons/support-icon-192.png"/>
 <link rel="manifest" href="/support-manifest.json"/>
-<!-- Firebase pour push notifications -->
-<script src="/js/push-notifications-handler.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <style>
@@ -336,8 +334,28 @@
   <!-- SIDEBAR: Conversations -->
   <div class="conversations-panel" id="convPanel">
     <div class="panel-header">
-      <h1><i class="fas fa-headset"></i> Support</h1>
-      <p id="convCount">Chargement...</p>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h1><i class="fas fa-headset"></i> Support</h1>
+          <p id="convCount">Chargement...</p>
+        </div>
+        <button onclick="toggleTeamPanel()" style="width:36px; height:36px; border-radius:10px; border:1px solid var(--border); background:white; cursor:pointer; font-size:14px; color:var(--text-secondary);" title="Gérer l'équipe">
+          <i class="fas fa-users-cog"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Team panel (hidden by default) -->
+    <div id="teamPanel" style="display:none; border-bottom:1px solid var(--border); padding:16px 20px; background:#f8fafc;">
+      <div style="font-size:13px; font-weight:700; margin-bottom:10px;">👥 Équipe support</div>
+      <div id="teamList" style="margin-bottom:12px; font-size:13px;">Chargement...</div>
+      <div style="display:flex; gap:6px;">
+        <input type="email" id="teamEmailInput" placeholder="email@exemple.com" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none;"/>
+        <button onclick="addTeamMember()" style="padding:7px 12px; border-radius:8px; border:none; background:var(--accent); color:white; font-size:12px; font-weight:600; cursor:pointer;">
+          <i class="fas fa-plus"></i> Ajouter
+        </button>
+      </div>
+      <div id="teamError" style="color:var(--red); font-size:11px; margin-top:6px; min-height:16px;"></div>
     </div>
     <div class="panel-search">
       <input type="text" id="searchInput" placeholder="Rechercher un utilisateur..." oninput="filterConversations()"/>
@@ -403,7 +421,7 @@
 // 🔐 PIN PROTECTION
 // ============================================
 // ⚠️ CHANGE CE CODE PIN ICI :
-const SUPPORT_PIN = '10122905';
+const SUPPORT_PIN = '12345678';
 
 (function initPinLock() {
   const overlay = document.getElementById('pinOverlay');
@@ -419,7 +437,7 @@ const SUPPORT_PIN = '10122905';
     // Déjà authentifié
     overlay.classList.add('hidden');
     layout.style.display = 'flex';
-    registerSupportPush();
+
     return;
   }
 
@@ -483,7 +501,7 @@ const SUPPORT_PIN = '10122905';
         overlay.classList.add('hidden');
         layout.style.display = 'flex';
         // Enregistrer les notifications push
-        registerSupportPush();
+    
       }, 300);
     } else {
       // Échec
@@ -497,80 +515,6 @@ const SUPPORT_PIN = '10122905';
     }
   }
 })();
-
-// ============================================
-// 🔔 PUSH NOTIFICATIONS SUPPORT ADMIN
-// ============================================
-async function registerSupportPush() {
-  try {
-    // Vérifier le support
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-      console.log('⚠️ Push notifications non supportées');
-      return;
-    }
-
-    // Demander la permission
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('⚠️ Notifications refusées');
-      return;
-    }
-
-    // Attendre le service worker
-    const registration = await navigator.serviceWorker.ready;
-
-    // Récupérer le token FCM via le service worker existant
-    // On utilise le même firebase-messaging-sw.js que l'app principale
-    if (typeof firebase !== 'undefined' && firebase.messaging) {
-      const messaging = firebase.messaging();
-      const fcmToken = await messaging.getToken({
-        vapidKey: window.FIREBASE_VAPID_KEY,
-        serviceWorkerRegistration: registration
-      });
-
-      if (fcmToken) {
-        // Enregistrer le token admin
-        const deviceName = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone Support' 
-          : /Android/.test(navigator.userAgent) ? 'Android Support' 
-          : 'Desktop Support';
-
-        await fetch(`${API_URL}/api/support/admin/register-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fcmToken, deviceName })
-        });
-
-        console.log(`✅ Token FCM support admin enregistré (${deviceName})`);
-      }
-    } else {
-      // Fallback : utiliser le push-notifications-handler existant
-      // Si le service worker gère déjà Firebase, on peut récupérer le token autrement
-      console.log('ℹ️ Firebase messaging non disponible directement, utilisation du handler existant');
-      
-      // Essayer via le service worker message
-      if (registration.active) {
-        registration.active.postMessage({ type: 'GET_FCM_TOKEN' });
-        
-        navigator.serviceWorker.addEventListener('message', async (event) => {
-          if (event.data && event.data.type === 'FCM_TOKEN' && event.data.token) {
-            const deviceName = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone Support' 
-              : /Android/.test(navigator.userAgent) ? 'Android Support' 
-              : 'Desktop Support';
-
-            await fetch(`${API_URL}/api/support/admin/register-token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fcmToken: event.data.token, deviceName })
-            });
-            console.log(`✅ Token FCM support admin enregistré via SW (${deviceName})`);
-          }
-        }, { once: true });
-      }
-    }
-  } catch (err) {
-    console.error('⚠️ Erreur enregistrement push support:', err);
-  }
-}
 </script>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -929,6 +873,82 @@ async function markAdminRead(convId) {
 
 function showConvPanel() {
   document.getElementById('convPanel').classList.remove('hidden');
+}
+
+// ============================================
+// 👥 GESTION ÉQUIPE SUPPORT
+// ============================================
+function toggleTeamPanel() {
+  const panel = document.getElementById('teamPanel');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    loadTeam();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function loadTeam() {
+  try {
+    const res = await fetch(`${API_URL}/api/support/admin/team`);
+    if (!res.ok) throw new Error('Erreur');
+    const data = await res.json();
+    
+    const list = document.getElementById('teamList');
+    list.innerHTML = (data.admins || []).map(a => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;">${(a.email || '?')[0].toUpperCase()}</span>
+          <span>${escapeHtml(a.email)}</span>
+          ${a.hardcoded ? '<span style="font-size:10px; background:#e2e8f0; padding:1px 6px; border-radius:4px; color:#64748b;">Principal</span>' : ''}
+        </div>
+        ${!a.hardcoded ? `<button onclick="removeTeamMember(${a.id})" style="border:none; background:none; cursor:pointer; color:var(--red); font-size:12px;" title="Retirer"><i class="fas fa-trash"></i></button>` : ''}
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Erreur loadTeam:', err);
+  }
+}
+
+async function addTeamMember() {
+  const input = document.getElementById('teamEmailInput');
+  const email = input.value.trim();
+  const errorEl = document.getElementById('teamError');
+  errorEl.textContent = '';
+
+  if (!email || !email.includes('@')) {
+    errorEl.textContent = 'Email invalide';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/support/admin/team`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Erreur';
+      return;
+    }
+
+    input.value = '';
+    loadTeam();
+  } catch (err) {
+    errorEl.textContent = 'Erreur réseau';
+  }
+}
+
+async function removeTeamMember(id) {
+  if (!confirm('Retirer cet admin du support ?')) return;
+  try {
+    await fetch(`${API_URL}/api/support/admin/team/${id}`, { method: 'DELETE' });
+    loadTeam();
+  } catch (err) {
+    console.error('Erreur remove:', err);
+  }
 }
 
 // ============================================
