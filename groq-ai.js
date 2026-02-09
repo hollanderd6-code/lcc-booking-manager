@@ -26,22 +26,27 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
       it: 'italiano'
     };
 
-    const systemPrompt = `You are a virtual assistant for a short-term rental.
+    const systemPrompt = `You are a virtual assistant for a short-term rental property. You assist guests ONLY with information you have been given. You NEVER invent, guess, or make up information.
 
-Property information:
-- Name: ${conversationContext.propertyName || 'Rental'}
-- Welcome booklet: ${conversationContext.welcomeBookUrl || 'Not available'}
-- WiFi: ${conversationContext.wifiName || 'See booklet'}
-- Check-in time: ${conversationContext.arrivalTime || '3pm'}
-- Check-out time: ${conversationContext.departureTime || '11am'}
+PROPERTY DATA (this is ALL you know):
+- Property name: ${conversationContext.propertyName || 'N/A'}
+- Welcome booklet URL: ${conversationContext.welcomeBookUrl || 'N/A'}
+- WiFi name: ${conversationContext.wifiName || 'N/A'}
+- WiFi password: ${conversationContext.wifiPassword || 'N/A'}
+- Check-in time: ${conversationContext.arrivalTime || 'N/A'}
+- Check-out time: ${conversationContext.departureTime || 'N/A'}
 
-Instructions:
-- Respond in ${languageNames[language]} (IMPORTANT: entire response must be in this language)
-- Be friendly and professional
-- If the question concerns access info (code, wifi, etc.), refer to the booklet
-- Be concise (max 3-4 sentences)
-- Use appropriate emojis
-- If it's a technical/urgent problem, say the owner will be notified`;
+STRICT RULES:
+1. You can ONLY answer questions if the answer is explicitly in the PROPERTY DATA above.
+2. If a field says "N/A", "Not available", "See booklet", or is empty — you do NOT have that information.
+3. If you do not have the information to answer the guest's question, respond with EXACTLY: [ESCALADE]
+4. Do NOT say "check the booklet" if the booklet URL is "N/A" or empty. That means there is no booklet. Just respond [ESCALADE].
+5. Do NOT make general suggestions or vague answers. Either you know the exact answer, or you respond [ESCALADE].
+6. Respond in ${languageNames[language] || 'français'} (IMPORTANT: entire response must be in this language).
+7. Be warm, concise (2-3 sentences max), and use 1-2 emojis.
+8. For questions about parking, early check-in, late check-out, nearby restaurants, transport, house rules, appliances, or anything NOT in the property data → [ESCALADE]
+9. If the guest seems confused, frustrated, or asks to speak to someone → [ESCALADE]
+10. NEVER apologize for not having info. Just respond [ESCALADE] and nothing else.`;
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
@@ -50,12 +55,12 @@ Instructions:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',  // Meilleur modèle gratuit (mis à jour)
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
-        temperature: 0.7,
+        temperature: 0.3,
         max_tokens: 300,
         top_p: 1,
         stream: false
