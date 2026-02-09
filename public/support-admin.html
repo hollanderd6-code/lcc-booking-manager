@@ -286,7 +286,7 @@
       <p>Sélectionnez une conversation</p>
     </div>
 
-    <div id="chatContent" style="display: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
+    <div id="chatContent" style="display: none; flex-direction: column; height: 100%;">
       <div class="chat-header" id="chatHeader">
         <div class="chat-header-left">
           <button class="mobile-back" onclick="showConvPanel()" style="border:none; background:none; cursor:pointer; font-size:18px; color: var(--text-secondary);">
@@ -465,7 +465,8 @@ async function openConversation(convId) {
 
   // Afficher le chat
   document.getElementById('chatEmpty').style.display = 'none';
-  document.getElementById('chatContent').style.display = 'flex';
+  const chatContent = document.getElementById('chatContent');
+  chatContent.style.display = 'flex';
 
   // Charger les messages
   const container = document.getElementById('chatMessages');
