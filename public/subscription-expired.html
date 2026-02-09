@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Abonnement expiré - Boostinghost</title>
+  <title>Accès limité - Boostinghost</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
@@ -33,15 +33,15 @@
       text-align: center;
     }
 
-    .icon {
-      width: 100px;
-      height: 100px;
-      margin: 0 auto 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;   /* fond orange supprimé */
-      box-shadow: none;          /* ombre supprimée */
+    .icon{
+      width:88px;
+      height:88px;
+      margin:0 auto 26px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:transparent;
+      box-shadow:none;
     }
 
     h1 {
@@ -150,11 +150,16 @@
     .support-link a:hover {
       text-decoration: underline;
     }
-    .bh-logo { 
-      display: block; 
-      width: 100px; 
-      height: 100px; 
-      object-fit: contain; 
+    .bh-logo{
+      display:block;
+      width:80px;
+      height:80px;
+      max-width:80px;
+      max-height:80px;
+      object-fit:contain;
+      /* Limite l'effet "pixelisé" en évitant d'agrandir l'image au-delà de sa taille utile */
+      image-rendering:auto;
+      -ms-interpolation-mode:bicubic;
     }
   </style>
 
@@ -166,23 +171,32 @@
       <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" class="bh-logo">
     </div>
 
-    <h1>Votre essai gratuit est terminé</h1>
+    <h1>Activez votre abonnement pour continuer</h1>
     
     <p>
-      Merci d'avoir essayé Boostinghost ! Pour continuer à profiter de toutes les fonctionnalités, 
-      choisissez le plan qui vous convient.
+      Votre accès est actuellement limité. En choisissant un plan, vous récupérez immédiatement l’ensemble des outils
+      pour gérer vos locations sans prise de tête : calendrier, automatisations, paiements et suivi opérationnel.
     </p>
 
     <div class="features">
-      <h3>✨ Ce que vous gardez :</h3>
+      <h3>✨ Ce que vous continuez à utiliser avec un plan :</h3>
       <ul>
-        <li><i class="fas fa-check-circle"></i> Calendrier unifié</li>
-        <li><i class="fas fa-check-circle"></i> Synchronisation iCal (Airbnb, Booking)</li>
-        <li><i class="fas fa-check-circle"></i> Gestion des messages</li>
-        <li><i class="fas fa-check-circle"></i> Livret d'accueil personnalisé</li>
-        <li><i class="fas fa-check-circle"></i> Gestion du ménage</li>
-        <li><i class="fas fa-check-circle"></i> Statistiques & rapports</li>
+        <li><i class="fas fa-check-circle"></i> Synchronisation des plateformes (Airbnb, Booking…)</li>
+        <li><i class="fas fa-check-circle"></i> Calendrier unifié + gestion de votre propre calendrier</li>
+        <li><i class="fas fa-check-circle"></i> Réservations en direct + paiements en ligne</li>
+        <li><i class="fas fa-check-circle"></i> Cautions : prise et gestion directement sur le site</li>
+        <li><i class="fas fa-check-circle"></i> Gestion du ménage avancée (checklists, suivi)</li>
+        <li><i class="fas fa-check-circle"></i> Chat + automatisations pour limiter les échanges et gagner du temps</li>
+        <li><i class="fas fa-check-circle"></i> Gestion d’équipe : sous-comptes et droits</li>
+        <li><i class="fas fa-check-circle"></i> Support réactif par chat</li>
+        <li><i class="fas fa-check-circle"></i> Accès sécurisé</li>
+        <li><i class="fas fa-check-circle"></i> Livret d’accueil automatique</li>
+        <li><i class="fas fa-check-circle"></i> Factures clients + factures conciergerie</li>
+        <li><i class="fas fa-check-circle"></i> Données hébergées en France</li>
       </ul>
+      <p style="margin:16px 0 0; font-size:14px; color:#6b7280; text-align:center;">
+        Vous débloquez aussi l’accès multi-logements, la facturation et les automatisations avancées.
+      </p>
     </div>
 
     <div class="actions">
