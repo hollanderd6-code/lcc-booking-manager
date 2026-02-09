@@ -344,17 +344,40 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
     }
 
     // ========================================
+    // ÉTAPE 1.5: VÉRIFIER SI ESCALADE EN ATTENTE
+    // ========================================
+    if (conversation.pending_escalation && isEscalationConfirmation(message.message)) {
+      console.log('✅ [HANDLER] Confirmation d\'escalade reçue');
+      const language = conversation.language || 'fr';
+      await escalateToOwner(conversation, pool, io, language);
+      return true;
+    }
+    
+    // Si la conversation est déjà escaladée → ne pas traiter automatiquement
+    // Laisser le propriétaire répondre (les notifications sont actives)
+    if (conversation.escalated) {
+      console.log('ℹ️ [HANDLER] Conversation déjà escaladée → pas de traitement auto');
+      return false; // false = le propriétaire doit recevoir la notification
+    }
+
+    // Si pending_escalation mais pas confirmation → reset et continuer normalement
+    if (conversation.pending_escalation) {
+      await pool.query(
+        'UPDATE conversations SET pending_escalation = FALSE WHERE id = $1',
+        [conversation.id]
+      );
+    }
+
+    // ========================================
     // ÉTAPE 2: INTERVENTION URGENTE
     // ========================================
     if (requiresHumanIntervention(message.message)) {
-      console.log('🚨 [HANDLER] Intervention humaine urgente !');
+      console.log('🚨 [HANDLER] Intervention humaine urgente → escalade directe !');
       
       const urgentMessages = {
         fr: `🚨 Votre message urgent a été transmis au propriétaire qui vous contactera immédiatement.\n\nMerci de patienter, nous faisons le nécessaire ! 🙏`,
         en: `🚨 Your urgent message has been forwarded to the owner who will contact you immediately.\n\nPlease wait, we're taking care of it! 🙏`,
-        es: `🚨 Su mensaje urgente ha sido transmitido al propietario que le contactará inmediatamente.\n\n¡Gracias por su paciencia! 🙏`,
-        de: `🚨 Ihre dringende Nachricht wurde an den Eigentümer weitergeleitet, der Sie umgehend kontaktieren wird.\n\nBitte warten Sie! 🙏`,
-        it: `🚨 Il tuo messaggio urgente è stato inoltrato al proprietario che ti contatterà immediatamente.\n\nGrazie per la pazienza! 🙏`
+        es: `🚨 Su mensaje urgente ha sido transmitido al propietario que le contactará inmediatamente.\n\n¡Gracias por su paciencia! 🙏`
       };
 
       await sendBotMessage(
@@ -364,8 +387,14 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
         io
       );
 
-      console.log('📧 [HANDLER] Notification propriétaire requise');
-      return true;
+      // Escalader immédiatement
+      await pool.query(
+        `UPDATE conversations SET escalated = TRUE, pending_escalation = FALSE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
+        [conversation.id]
+      );
+
+      console.log('🔔 [HANDLER] Conversation escaladée (urgence)');
+      return false; // false → déclencher la notification au propriétaire
     }
 
     // ========================================
@@ -421,20 +450,107 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
     const aiResponse = await getGroqResponse(message.message, conversationContext);
 
     if (aiResponse) {
+      // Vérifier si Groq suggère une escalade (réponse contient des marqueurs d'incertitude)
+      const escaladeMarkers = [
+        'je ne suis pas en mesure', 'je ne peux pas', 'contactez le propriétaire',
+        'contact the owner', 'je vous recommande de contacter', 'i cannot',
+        'i don\'t have this information', 'je n\'ai pas cette information',
+        'no tengo esta información', 'contacte al propietario'
+      ];
+      
+      const shouldEscalade = escaladeMarkers.some(marker => 
+        aiResponse.toLowerCase().includes(marker.toLowerCase())
+      );
+      
+      if (shouldEscalade) {
+        console.log('🔄 [HANDLER] Groq suggère une escalade → passage au propriétaire');
+        
+        // Envoyer la réponse Groq + proposition de mise en relation
+        const escaladeMessages = {
+          fr: `${aiResponse}\n\n💬 Si vous souhaitez, je peux vous mettre directement en relation avec le propriétaire. Répondez simplement "oui" pour cela.`,
+          en: `${aiResponse}\n\n💬 If you'd like, I can put you in direct contact with the owner. Simply reply "yes" for that.`,
+          es: `${aiResponse}\n\n💬 Si lo desea, puedo ponerle en contacto directo con el propietario. Simplemente responda "sí" para ello.`
+        };
+        
+        await sendBotMessage(
+          conversation.id,
+          escaladeMessages[language] || escaladeMessages.fr,
+          pool, io
+        );
+        
+        // Marquer en attente d'escalade
+        await pool.query(
+          `UPDATE conversations SET pending_escalation = TRUE, updated_at = NOW() WHERE id = $1`,
+          [conversation.id]
+        );
+        
+        return true;
+      }
+      
       await sendBotMessage(conversation.id, aiResponse, pool, io);
       return true;
     }
 
     // ========================================
-    // ÉTAPE 6: AUCUNE RÉPONSE AUTO POSSIBLE
+    // ÉTAPE 6: AUCUNE RÉPONSE AUTO POSSIBLE → ESCALADE DIRECTE
     // ========================================
-    console.log('⚠️ [HANDLER] Aucune réponse auto, notification propriétaire');
+    console.log('⚠️ [HANDLER] Aucune réponse auto → escalade directe vers propriétaire');
     
-    return false;
+    await escalateToOwner(conversation, pool, io, language);
+    return true;
 
   } catch (error) {
     console.error('❌ [HANDLER] Erreur handleIncomingMessage:', error);
     return false;
+  }
+}
+
+/**
+ * Vérifier si le message est une confirmation d'escalade ("oui", "yes", "sí")
+ */
+function isEscalationConfirmation(messageText) {
+  const confirmWords = ['oui', 'yes', 'sí', 'si', 'ok', 'okay', 'd\'accord', 'daccord', 'absolument', 'svp', 'please', 'por favor'];
+  const cleaned = messageText.toLowerCase().trim().replace(/[!.,?]/g, '');
+  return confirmWords.includes(cleaned) || cleaned.length <= 5 && confirmWords.some(w => cleaned.includes(w));
+}
+
+/**
+ * Escalader la conversation vers le propriétaire
+ */
+async function escalateToOwner(conversation, pool, io, language) {
+  try {
+    const lang = language || conversation.language || 'fr';
+    
+    const escaladeMessages = {
+      fr: `👋 Je vous mets en relation avec le propriétaire qui pourra mieux vous aider.\n\nVotre message lui a été transmis, il vous répondra dès que possible. Merci de votre patience ! 🙏`,
+      en: `👋 I'm putting you in touch with the owner who can better assist you.\n\nYour message has been forwarded, they'll reply as soon as possible. Thank you for your patience! 🙏`,
+      es: `👋 Le pongo en contacto con el propietario que podrá ayudarle mejor.\n\nSu mensaje ha sido transmitido, le responderá lo antes posible. ¡Gracias por su paciencia! 🙏`
+    };
+    
+    await sendBotMessage(
+      conversation.id,
+      escaladeMessages[lang] || escaladeMessages.fr,
+      pool, io
+    );
+    
+    // Marquer la conversation comme escaladée
+    await pool.query(
+      `UPDATE conversations SET escalated = TRUE, pending_escalation = FALSE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [conversation.id]
+    );
+    
+    console.log(`🔔 [HANDLER] Conversation ${conversation.id} escaladée vers propriétaire`);
+    
+    // Émettre un événement spécial pour notifier le propriétaire
+    if (io) {
+      io.to(`user_${conversation.user_id}`).emit('conversation_escalated', {
+        conversationId: conversation.id,
+        guestName: conversation.guest_first_name || conversation.guest_name || 'Voyageur'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ [HANDLER] Erreur escalateToOwner:', error);
   }
 }
 
