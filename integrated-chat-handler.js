@@ -344,28 +344,11 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
     }
 
     // ========================================
-    // ÉTAPE 1.5: VÉRIFIER SI ESCALADE EN ATTENTE
+    // ÉTAPE 1.5: SI DÉJÀ ESCALADÉ → NE PAS TRAITER
     // ========================================
-    if (conversation.pending_escalation && isEscalationConfirmation(message.message)) {
-      console.log('✅ [HANDLER] Confirmation d\'escalade reçue');
-      const language = conversation.language || 'fr';
-      await escalateToOwner(conversation, pool, io, language);
-      return true;
-    }
-    
-    // Si la conversation est déjà escaladée → ne pas traiter automatiquement
-    // Laisser le propriétaire répondre (les notifications sont actives)
     if (conversation.escalated) {
       console.log('ℹ️ [HANDLER] Conversation déjà escaladée → pas de traitement auto');
       return false; // false = le propriétaire doit recevoir la notification
-    }
-
-    // Si pending_escalation mais pas confirmation → reset et continuer normalement
-    if (conversation.pending_escalation) {
-      await pool.query(
-        'UPDATE conversations SET pending_escalation = FALSE WHERE id = $1',
-        [conversation.id]
-      );
     }
 
     // ========================================
@@ -450,41 +433,13 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
     const aiResponse = await getGroqResponse(message.message, conversationContext);
 
     if (aiResponse) {
-      // Vérifier si Groq suggère une escalade (réponse contient des marqueurs d'incertitude)
-      const escaladeMarkers = [
-        'je ne suis pas en mesure', 'je ne peux pas', 'contactez le propriétaire',
-        'contact the owner', 'je vous recommande de contacter', 'i cannot',
-        'i don\'t have this information', 'je n\'ai pas cette information',
-        'no tengo esta información', 'contacte al propietario'
-      ];
+      // Vérifier si Groq demande une escalade
+      const cleanResponse = aiResponse.trim();
       
-      const shouldEscalade = escaladeMarkers.some(marker => 
-        aiResponse.toLowerCase().includes(marker.toLowerCase())
-      );
-      
-      if (shouldEscalade) {
-        console.log('🔄 [HANDLER] Groq suggère une escalade → passage au propriétaire');
-        
-        // Envoyer la réponse Groq + proposition de mise en relation
-        const escaladeMessages = {
-          fr: `${aiResponse}\n\n💬 Si vous souhaitez, je peux vous mettre directement en relation avec le propriétaire. Répondez simplement "oui" pour cela.`,
-          en: `${aiResponse}\n\n💬 If you'd like, I can put you in direct contact with the owner. Simply reply "yes" for that.`,
-          es: `${aiResponse}\n\n💬 Si lo desea, puedo ponerle en contacto directo con el propietario. Simplemente responda "sí" para ello.`
-        };
-        
-        await sendBotMessage(
-          conversation.id,
-          escaladeMessages[language] || escaladeMessages.fr,
-          pool, io
-        );
-        
-        // Marquer en attente d'escalade
-        await pool.query(
-          `UPDATE conversations SET pending_escalation = TRUE, updated_at = NOW() WHERE id = $1`,
-          [conversation.id]
-        );
-        
-        return true;
+      if (cleanResponse === '[ESCALADE]' || cleanResponse.includes('[ESCALADE]')) {
+        console.log('🔄 [HANDLER] Groq demande une escalade → passage au propriétaire');
+        await escalateToOwner(conversation, pool, io, language);
+        return false; // false → déclencher notification propriétaire
       }
       
       await sendBotMessage(conversation.id, aiResponse, pool, io);
@@ -503,15 +458,6 @@ La autorización no cobra su tarjeta inmediatamente. El importe solo se bloquear
     console.error('❌ [HANDLER] Erreur handleIncomingMessage:', error);
     return false;
   }
-}
-
-/**
- * Vérifier si le message est une confirmation d'escalade ("oui", "yes", "sí")
- */
-function isEscalationConfirmation(messageText) {
-  const confirmWords = ['oui', 'yes', 'sí', 'si', 'ok', 'okay', 'd\'accord', 'daccord', 'absolument', 'svp', 'please', 'por favor'];
-  const cleaned = messageText.toLowerCase().trim().replace(/[!.,?]/g, '');
-  return confirmWords.includes(cleaned) || cleaned.length <= 5 && confirmWords.some(w => cleaned.includes(w));
 }
 
 /**
