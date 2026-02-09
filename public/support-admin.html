@@ -2,8 +2,16 @@
 <html lang="fr" data-theme="light">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Support Admin — Boostinghost</title>
+
+<!-- PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Support BH"/>
+<meta name="theme-color" content="#0f172a"/>
+<link rel="apple-touch-icon" href="/icons/support-icon-192.png"/>
+<link rel="manifest" href="/support-manifest.json"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <style>
@@ -26,6 +34,50 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', sans-serif; background: var(--bg-app); color: var(--text-primary); height: 100vh; overflow: hidden; }
+
+  /* ====== PIN LOCK ====== */
+  .pin-overlay {
+    position: fixed; inset: 0; z-index: 99999;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 24px; padding: 20px;
+  }
+  .pin-overlay.hidden { display: none; }
+  .pin-logo { font-size: 48px; }
+  .pin-title { color: white; font-size: 20px; font-weight: 700; }
+  .pin-subtitle { color: #94a3b8; font-size: 13px; text-align: center; }
+  .pin-input-container { display: flex; gap: 8px; margin-top: 8px; }
+  .pin-dot {
+    width: 44px; height: 52px; border-radius: 12px;
+    background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15);
+    color: white; font-size: 22px; font-weight: 700;
+    text-align: center; outline: none; caret-color: #3b82f6;
+    font-family: 'Inter', monospace;
+    transition: border-color 0.2s;
+  }
+  .pin-dot:focus { border-color: #3b82f6; background: rgba(59,130,246,0.1); }
+  .pin-dot.filled { border-color: #3b82f6; }
+  .pin-error {
+    color: #ef4444; font-size: 13px; font-weight: 600;
+    min-height: 20px; transition: opacity 0.2s;
+  }
+  .pin-shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+  }
+  .pin-remember {
+    display: flex; align-items: center; gap: 8px;
+    color: #94a3b8; font-size: 12px; margin-top: 4px;
+  }
+  .pin-remember input { accent-color: #3b82f6; }
+
+  /* iOS safe area */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .panel-header { padding-top: calc(20px + env(safe-area-inset-top)); }
+    .chat-input-area { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  }
 
   /* ====== LAYOUT ====== */
   .admin-layout {
@@ -256,7 +308,29 @@
 </head>
 <body>
 
-<div class="admin-layout">
+<!-- PIN LOCK SCREEN -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-logo">🔐</div>
+  <div class="pin-title">Support Admin</div>
+  <div class="pin-subtitle">Entrez votre code d'accès à 8 chiffres</div>
+  <div class="pin-input-container" id="pinContainer">
+    <input type="tel" maxlength="1" class="pin-dot" autofocus/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+    <input type="tel" maxlength="1" class="pin-dot"/>
+  </div>
+  <div class="pin-error" id="pinError"></div>
+  <label class="pin-remember">
+    <input type="checkbox" id="pinRemember" checked/>
+    Se souvenir pendant 7 jours
+  </label>
+</div>
+
+<div class="admin-layout" id="adminLayout" style="display: none;">
   <!-- SIDEBAR: Conversations -->
   <div class="conversations-panel" id="convPanel">
     <div class="panel-header">
@@ -322,7 +396,104 @@
   <img id="imgModalSrc" src="" alt=""/>
 </div>
 
-<!-- Socket.io -->
+<script>
+// ============================================
+// 🔐 PIN PROTECTION
+// ============================================
+// ⚠️ CHANGE CE CODE PIN ICI :
+const SUPPORT_PIN = '10122905';
+
+(function initPinLock() {
+  const overlay = document.getElementById('pinOverlay');
+  const layout = document.getElementById('adminLayout');
+  const inputs = document.querySelectorAll('#pinContainer .pin-dot');
+  const errorEl = document.getElementById('pinError');
+
+  // Vérifier si déjà authentifié (cookie de session)
+  const savedPin = localStorage.getItem('support_pin_session');
+  const savedExpiry = localStorage.getItem('support_pin_expiry');
+  
+  if (savedPin === SUPPORT_PIN && savedExpiry && Date.now() < parseInt(savedExpiry)) {
+    // Déjà authentifié
+    overlay.classList.add('hidden');
+    layout.style.display = 'flex';
+    return;
+  }
+
+  // Gestion des inputs PIN
+  inputs.forEach((input, i) => {
+    input.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val;
+      
+      if (val && i < inputs.length - 1) {
+        inputs[i + 1].focus();
+      }
+      
+      e.target.classList.toggle('filled', !!val);
+
+      // Vérifier si tous les champs sont remplis
+      const code = Array.from(inputs).map(inp => inp.value).join('');
+      if (code.length === 8) {
+        validatePin(code);
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) {
+        inputs[i - 1].focus();
+        inputs[i - 1].value = '';
+        inputs[i - 1].classList.remove('filled');
+      }
+    });
+
+    // Coller un code complet
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 8);
+      pasted.split('').forEach((char, idx) => {
+        if (inputs[idx]) {
+          inputs[idx].value = char;
+          inputs[idx].classList.add('filled');
+        }
+      });
+      if (pasted.length === 8) validatePin(pasted);
+      else if (pasted.length > 0) inputs[Math.min(pasted.length, 7)].focus();
+    });
+  });
+
+  function validatePin(code) {
+    if (code === SUPPORT_PIN) {
+      // Succès
+      errorEl.textContent = '';
+      
+      // Sauvegarder si "se souvenir" coché
+      if (document.getElementById('pinRemember').checked) {
+        const expiry = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 jours
+        localStorage.setItem('support_pin_session', SUPPORT_PIN);
+        localStorage.setItem('support_pin_expiry', expiry.toString());
+      }
+
+      overlay.style.transition = 'opacity 0.3s';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+        layout.style.display = 'flex';
+      }, 300);
+    } else {
+      // Échec
+      errorEl.textContent = 'Code incorrect';
+      document.getElementById('pinContainer').classList.add('pin-shake');
+      setTimeout(() => {
+        document.getElementById('pinContainer').classList.remove('pin-shake');
+        inputs.forEach(inp => { inp.value = ''; inp.classList.remove('filled'); });
+        inputs[0].focus();
+      }, 400);
+    }
+  }
+})();
+</script>
+
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <script>
