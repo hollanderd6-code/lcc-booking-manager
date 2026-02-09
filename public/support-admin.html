@@ -12,6 +12,8 @@
 <meta name="theme-color" content="#0f172a"/>
 <link rel="apple-touch-icon" href="/icons/support-icon-192.png"/>
 <link rel="manifest" href="/support-manifest.json"/>
+<!-- Firebase pour push notifications -->
+<script src="/js/push-notifications-handler.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <style>
@@ -401,7 +403,7 @@
 // 🔐 PIN PROTECTION
 // ============================================
 // ⚠️ CHANGE CE CODE PIN ICI :
-const SUPPORT_PIN = '10122905';
+const SUPPORT_PIN = '12345678';
 
 (function initPinLock() {
   const overlay = document.getElementById('pinOverlay');
@@ -417,6 +419,7 @@ const SUPPORT_PIN = '10122905';
     // Déjà authentifié
     overlay.classList.add('hidden');
     layout.style.display = 'flex';
+    registerSupportPush();
     return;
   }
 
@@ -479,6 +482,8 @@ const SUPPORT_PIN = '10122905';
       setTimeout(() => {
         overlay.classList.add('hidden');
         layout.style.display = 'flex';
+        // Enregistrer les notifications push
+        registerSupportPush();
       }, 300);
     } else {
       // Échec
@@ -492,6 +497,80 @@ const SUPPORT_PIN = '10122905';
     }
   }
 })();
+
+// ============================================
+// 🔔 PUSH NOTIFICATIONS SUPPORT ADMIN
+// ============================================
+async function registerSupportPush() {
+  try {
+    // Vérifier le support
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      console.log('⚠️ Push notifications non supportées');
+      return;
+    }
+
+    // Demander la permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('⚠️ Notifications refusées');
+      return;
+    }
+
+    // Attendre le service worker
+    const registration = await navigator.serviceWorker.ready;
+
+    // Récupérer le token FCM via le service worker existant
+    // On utilise le même firebase-messaging-sw.js que l'app principale
+    if (typeof firebase !== 'undefined' && firebase.messaging) {
+      const messaging = firebase.messaging();
+      const fcmToken = await messaging.getToken({
+        vapidKey: window.FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: registration
+      });
+
+      if (fcmToken) {
+        // Enregistrer le token admin
+        const deviceName = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone Support' 
+          : /Android/.test(navigator.userAgent) ? 'Android Support' 
+          : 'Desktop Support';
+
+        await fetch(`${API_URL}/api/support/admin/register-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fcmToken, deviceName })
+        });
+
+        console.log(`✅ Token FCM support admin enregistré (${deviceName})`);
+      }
+    } else {
+      // Fallback : utiliser le push-notifications-handler existant
+      // Si le service worker gère déjà Firebase, on peut récupérer le token autrement
+      console.log('ℹ️ Firebase messaging non disponible directement, utilisation du handler existant');
+      
+      // Essayer via le service worker message
+      if (registration.active) {
+        registration.active.postMessage({ type: 'GET_FCM_TOKEN' });
+        
+        navigator.serviceWorker.addEventListener('message', async (event) => {
+          if (event.data && event.data.type === 'FCM_TOKEN' && event.data.token) {
+            const deviceName = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone Support' 
+              : /Android/.test(navigator.userAgent) ? 'Android Support' 
+              : 'Desktop Support';
+
+            await fetch(`${API_URL}/api/support/admin/register-token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fcmToken: event.data.token, deviceName })
+            });
+            console.log(`✅ Token FCM support admin enregistré via SW (${deviceName})`);
+          }
+        }, { once: true });
+      }
+    }
+  } catch (err) {
+    console.error('⚠️ Erreur enregistrement push support:', err);
+  }
+}
 </script>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
