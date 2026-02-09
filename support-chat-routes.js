@@ -61,6 +61,13 @@ async function initSupportTables(pool) {
         fcm_token TEXT NOT NULL UNIQUE,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS support_admin_emails (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        added_by TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
     console.log('✅ Tables support_conversations, support_messages & support_admin_tokens OK');
   } catch (err) {
@@ -214,29 +221,60 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         io.to(`support_${conversationId}`).emit('support_message', savedMessage);
       }
 
-      // 🔔 Notification push aux admins support (tokens dédiés)
+      // 🔔 Notification push aux admins support
       try {
-        const adminTokens = await pool.query(
+        const { sendNotification } = require('./services/notifications-service');
+        
+        // Source 1 : tokens dédiés (table support_admin_tokens)
+        const dedicatedTokens = await pool.query(
           'SELECT fcm_token, device_name FROM support_admin_tokens'
         );
         
-        if (adminTokens.rows.length > 0) {
-          const { sendNotification } = require('./services/notifications-service');
-          for (const token of adminTokens.rows) {
-            try {
-              await sendNotification(
-                token.fcm_token,
-                `💬 Nouveau message support`,
-                `${userName}: ${message.substring(0, 100)}`,
-                { type: 'support_message', conversationId }
-              );
-            } catch (e) {
-              // Token invalide → le supprimer
-              if (e.code === 'messaging/registration-token-not-registered' || 
-                  e.code === 'messaging/invalid-registration-token') {
-                await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [token.fcm_token]);
-                console.log(`🗑️ Token admin support expiré supprimé (${token.device_name})`);
-              }
+        // Source 2 : tokens Capacitor des admins via email
+        // ⚠️ CHANGE L'EMAIL ICI :
+        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com'];
+        
+        let registeredEmails = [];
+        try {
+          const regResult = await pool.query('SELECT email FROM support_admin_emails');
+          registeredEmails = regResult.rows.map(r => r.email);
+        } catch (e) { /* table pas encore créée */ }
+        
+        const uniqueEmails = [...new Set([
+          ...HARDCODED_ADMIN_EMAILS,
+          ...registeredEmails
+        ].map(e => e.toLowerCase()))];
+        
+        let capacitorTokens = { rows: [] };
+        if (uniqueEmails.length > 0) {
+          capacitorTokens = await pool.query(
+            `SELECT t.fcm_token, t.device_type as device_name 
+             FROM user_fcm_tokens t
+             JOIN users u ON u.id = t.user_id
+             WHERE LOWER(u.email) = ANY($1)`,
+            [uniqueEmails]
+          );
+        }
+        
+        // Fusionner et dédupliquer
+        const allTokens = new Map();
+        for (const t of dedicatedTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'Admin');
+        for (const t of capacitorTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'App');
+        
+        console.log(`🔔 Notif support → ${allTokens.size} appareil(s) (${uniqueEmails.join(', ')})`);
+        
+        for (const [fcmToken, deviceName] of allTokens) {
+          try {
+            await sendNotification(
+              fcmToken,
+              `💬 Nouveau message support`,
+              `${userName}: ${message.substring(0, 100)}`,
+              { type: 'support_message', conversationId }
+            );
+          } catch (e) {
+            if (e.code === 'messaging/registration-token-not-registered' || 
+                e.code === 'messaging/invalid-registration-token') {
+              await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
             }
           }
         }
@@ -525,6 +563,68 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
       res.json({ success: true });
     } catch (error) {
       console.error('❌ Erreur unregister token admin:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // GESTION DES ADMINS SUPPORT (emails)
+  // ============================================
+
+  // GET /api/support/admin/team — Lister les admins
+  app.get('/api/support/admin/team', async (req, res) => {
+    try {
+      const result = await pool.query(
+        'SELECT id, email, created_at FROM support_admin_emails ORDER BY created_at ASC'
+      );
+      // Ajouter le hardcodé
+      const hardcoded = [{ id: 0, email: 'contact@boostinghost.com', hardcoded: true, created_at: null }];
+      res.json({ admins: [...hardcoded, ...result.rows] });
+    } catch (error) {
+      console.error('❌ Erreur GET team:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // POST /api/support/admin/team — Ajouter un admin
+  app.post('/api/support/admin/team', async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Email invalide' });
+      }
+
+      // Vérifier que l'utilisateur existe
+      const userCheck = await pool.query(
+        'SELECT id, email, first_name FROM users WHERE LOWER(email) = LOWER($1)',
+        [email.trim()]
+      );
+      if (userCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Aucun utilisateur avec cet email' });
+      }
+
+      await pool.query(
+        `INSERT INTO support_admin_emails (email, created_at)
+         VALUES (LOWER($1), NOW())
+         ON CONFLICT (email) DO NOTHING`,
+        [email.trim()]
+      );
+
+      res.json({ success: true, user: userCheck.rows[0] });
+    } catch (error) {
+      console.error('❌ Erreur POST team:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // DELETE /api/support/admin/team/:id — Retirer un admin
+  app.delete('/api/support/admin/team/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await pool.query('DELETE FROM support_admin_emails WHERE id = $1', [id]);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur DELETE team:', error);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
