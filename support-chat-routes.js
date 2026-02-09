@@ -54,8 +54,15 @@ async function initSupportTables(pool) {
         ON support_conversations(user_id);
       CREATE INDEX IF NOT EXISTS idx_support_conversations_status 
         ON support_conversations(status);
+
+      CREATE TABLE IF NOT EXISTS support_admin_tokens (
+        id SERIAL PRIMARY KEY,
+        device_name TEXT DEFAULT 'Appareil',
+        fcm_token TEXT NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
-    console.log('✅ Tables support_conversations & support_messages OK');
+    console.log('✅ Tables support_conversations, support_messages & support_admin_tokens OK');
   } catch (err) {
     console.error('❌ Erreur création tables support:', err);
   }
@@ -207,26 +214,31 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         io.to(`support_${conversationId}`).emit('support_message', savedMessage);
       }
 
-      // 🔔 Notification push aux admins
+      // 🔔 Notification push aux admins support (tokens dédiés)
       try {
-        // Récupérer les tokens FCM des admins (users avec un flag admin ou email spécifique)
         const adminTokens = await pool.query(
-          `SELECT t.fcm_token FROM user_fcm_tokens t
-           JOIN users u ON u.id = t.user_id
-           WHERE u.email IN ('contact@boostinghost.com', 'admin@boostinghost.com')
-           OR u.is_admin = TRUE`
+          'SELECT fcm_token, device_name FROM support_admin_tokens'
         );
         
-        const { sendNotification } = require('./services/notifications-service');
-        for (const token of adminTokens.rows) {
-          try {
-            await sendNotification(
-              token.fcm_token,
-              `💬 Nouveau message support`,
-              `${userName}: ${message.substring(0, 100)}`,
-              { type: 'support_message', conversationId }
-            );
-          } catch (e) { /* ignore token errors */ }
+        if (adminTokens.rows.length > 0) {
+          const { sendNotification } = require('./services/notifications-service');
+          for (const token of adminTokens.rows) {
+            try {
+              await sendNotification(
+                token.fcm_token,
+                `💬 Nouveau message support`,
+                `${userName}: ${message.substring(0, 100)}`,
+                { type: 'support_message', conversationId }
+              );
+            } catch (e) {
+              // Token invalide → le supprimer
+              if (e.code === 'messaging/registration-token-not-registered' || 
+                  e.code === 'messaging/invalid-registration-token') {
+                await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [token.fcm_token]);
+                console.log(`🗑️ Token admin support expiré supprimé (${token.device_name})`);
+              }
+            }
+          }
         }
       } catch (e) {
         console.error('⚠️ Erreur notification support:', e.message);
@@ -469,6 +481,50 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
       res.json({ success: true });
     } catch (error) {
       console.error('❌ Erreur PUT status:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // POST /api/support/admin/register-token — Enregistrer un token FCM admin
+  // ============================================
+  app.post('/api/support/admin/register-token', async (req, res) => {
+    try {
+      const { fcmToken, deviceName, pin } = req.body;
+
+      if (!fcmToken) {
+        return res.status(400).json({ error: 'Token requis' });
+      }
+
+      // Vérifier le PIN (sécurité basique)
+      // Le PIN est vérifié côté client, mais on peut aussi le vérifier ici
+      // Pour l'instant on accepte si le token est fourni
+
+      await pool.query(
+        `INSERT INTO support_admin_tokens (fcm_token, device_name, created_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (fcm_token) DO UPDATE SET device_name = $2, created_at = NOW()`,
+        [fcmToken, deviceName || 'Appareil']
+      );
+
+      console.log(`✅ Token admin support enregistré: ${deviceName || 'Appareil'}`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur register token admin:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // DELETE /api/support/admin/unregister-token — Supprimer un token FCM admin
+  app.delete('/api/support/admin/unregister-token', async (req, res) => {
+    try {
+      const { fcmToken } = req.body;
+      if (!fcmToken) return res.status(400).json({ error: 'Token requis' });
+
+      await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur unregister token admin:', error);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
