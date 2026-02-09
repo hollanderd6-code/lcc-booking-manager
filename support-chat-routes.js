@@ -232,7 +232,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         
         // Source 2 : tokens Capacitor des admins via email
         // ⚠️ CHANGE L'EMAIL ICI :
-        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com'];
+        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
         
         let registeredEmails = [];
         try {
@@ -350,6 +350,47 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
       if (io) {
         io.to('support_admin').emit('support_new_message', { ...savedMessage, conversationId });
         io.to(`support_${conversationId}`).emit('support_message', savedMessage);
+      }
+
+      // 🔔 Notification push aux admins support (image)
+      try {
+        const { sendNotification } = require('./services/notifications-service');
+        
+        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
+        let registeredEmails = [];
+        try {
+          const regResult = await pool.query('SELECT email FROM support_admin_emails');
+          registeredEmails = regResult.rows.map(r => r.email);
+        } catch (e) {}
+        
+        const uniqueEmails = [...new Set([...HARDCODED_ADMIN_EMAILS, ...registeredEmails].map(e => e.toLowerCase()))];
+        
+        let capacitorTokens = { rows: [] };
+        if (uniqueEmails.length > 0) {
+          capacitorTokens = await pool.query(
+            `SELECT t.fcm_token, t.device_type as device_name 
+             FROM user_fcm_tokens t JOIN users u ON u.id = t.user_id
+             WHERE LOWER(u.email) = ANY($1)`,
+            [uniqueEmails]
+          );
+        }
+        
+        const dedicatedTokens = await pool.query('SELECT fcm_token, device_name FROM support_admin_tokens');
+        const allTokens = new Map();
+        for (const t of dedicatedTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'Admin');
+        for (const t of capacitorTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'App');
+        
+        for (const [fcmToken] of allTokens) {
+          try {
+            await sendNotification(fcmToken, '📷 Image support', `${userName} a envoyé une image`, { type: 'support_message', conversationId });
+          } catch (e) {
+            if (e.code === 'messaging/registration-token-not-registered') {
+              await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('⚠️ Erreur notification support image:', e.message);
       }
 
       res.json({ message: savedMessage });
