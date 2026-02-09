@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Support Admin — Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<style>
+  :root {
+    --bg-app: #f1f5f9;
+    --bg-sidebar: #ffffff;
+    --bg-chat: #f8fafc;
+    --bg-bubble-admin: #3b82f6;
+    --bg-bubble-user: #ffffff;
+    --border: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg-app); color: var(--text-primary); height: 100vh; overflow: hidden; }
+
+  /* ====== LAYOUT ====== */
+  .admin-layout {
+    display: flex; height: 100vh;
+  }
+
+  /* ====== SIDEBAR — LISTE DES CONVERSATIONS ====== */
+  .conversations-panel {
+    width: 360px; min-width: 360px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 20px; border-bottom: 1px solid var(--border);
+  }
+  .panel-header h1 {
+    font-size: 20px; font-weight: 800; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-header h1 i { color: var(--accent); }
+  .panel-header p { font-size: 12px; color: var(--text-secondary); }
+
+  .panel-search {
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+  }
+  .panel-search input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border); font-size: 13px;
+    background: var(--bg-app); color: var(--text-primary); outline: none;
+  }
+  .panel-search input:focus { border-color: var(--accent); }
+
+  .conversations-list {
+    flex: 1; overflow-y: auto;
+  }
+
+  .conv-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    position: relative;
+  }
+  .conv-item:hover { background: #f8fafc; }
+  .conv-item.active { background: #eff6ff; border-left: 3px solid var(--accent); }
+
+  .conv-avatar {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 15px;
+  }
+
+  .conv-info { flex: 1; min-width: 0; }
+  .conv-name {
+    font-size: 14px; font-weight: 600; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .conv-preview {
+    font-size: 12px; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .conv-meta {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;
+  }
+  .conv-time { font-size: 11px; color: var(--text-muted); }
+  .conv-badge {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--red);
+    color: white; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .conv-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; position: absolute;
+    top: 16px; left: 50px;
+  }
+  .conv-status-dot.waiting { background: var(--orange); }
+  .conv-status-dot.open { background: var(--green); }
+  .conv-status-dot.closed { background: var(--text-muted); }
+
+  /* ====== CHAT PANEL ====== */
+  .chat-panel {
+    flex: 1; display: flex; flex-direction: column;
+    background: var(--bg-chat);
+  }
+
+  .chat-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    color: var(--text-muted);
+  }
+  .chat-empty i { font-size: 48px; opacity: 0.3; }
+  .chat-empty p { font-size: 15px; }
+
+  /* Chat header */
+  .chat-header {
+    padding: 16px 24px; background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 12px; }
+  .chat-header-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 13px;
+  }
+  .chat-header-name { font-size: 15px; font-weight: 700; }
+  .chat-header-sub { font-size: 12px; color: var(--text-secondary); }
+  .chat-header-actions { display: flex; gap: 8px; }
+  .chat-header-actions button {
+    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: white; font-size: 12px; cursor: pointer; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .chat-header-actions button:hover { background: var(--bg-app); }
+  .chat-header-actions button.btn-close-conv { color: var(--red); border-color: var(--red); }
+
+  /* Messages */
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 24px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .chat-msg { display: flex; gap: 10px; max-width: 70%; animation: fadeUp 0.2s ease; }
+  .chat-msg.admin { align-self: flex-end; flex-direction: row-reverse; }
+  .chat-msg.user { align-self: flex-start; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .chat-msg-avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: white;
+  }
+  .chat-msg.user .chat-msg-avatar { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+  .chat-msg.admin .chat-msg-avatar { background: linear-gradient(135deg, #059669, #10b981); }
+
+  .chat-msg-content { display: flex; flex-direction: column; gap: 3px; }
+  .chat-msg-sender { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+  .chat-msg.admin .chat-msg-sender { text-align: right; }
+
+  .chat-msg-bubble {
+    padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5;
+    word-wrap: break-word; white-space: pre-wrap;
+  }
+  .chat-msg.user .chat-msg-bubble {
+    background: var(--bg-bubble-user); border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg.admin .chat-msg-bubble {
+    background: var(--bg-bubble-admin); color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg-bubble img {
+    max-width: 280px; max-height: 200px; border-radius: 8px;
+    cursor: pointer; display: block; margin-top: 6px;
+  }
+  .chat-msg-time { font-size: 10px; color: var(--text-muted); }
+  .chat-msg.admin .chat-msg-time { text-align: right; }
+
+  .chat-date-sep {
+    text-align: center; font-size: 11px; color: var(--text-muted);
+    padding: 8px; margin: 4px 0;
+  }
+
+  /* Input area */
+  .chat-input-area {
+    padding: 16px 24px; background: var(--bg-sidebar);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .chat-input {
+    flex: 1; padding: 12px 16px; border-radius: 12px;
+    border: 1px solid var(--border); font-size: 14px; outline: none;
+    background: var(--bg-app); color: var(--text-primary);
+    resize: none; font-family: inherit; min-height: 44px; max-height: 120px;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-send-btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none;
+    background: var(--accent); color: white; font-size: 16px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chat-send-btn:hover { background: var(--accent-hover); transform: scale(1.05); }
+
+  /* Image modal */
+  .img-modal {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.85); align-items: center; justify-content: center; cursor: pointer;
+  }
+  .img-modal.active { display: flex; }
+  .img-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .conversations-panel { width: 100%; min-width: unset; position: absolute; z-index: 10; }
+    .conversations-panel.hidden { display: none; }
+    .chat-panel .mobile-back { display: inline-flex; }
+  }
+  @media (min-width: 769px) {
+    .chat-panel .mobile-back { display: none; }
+  }
+
+  /* Notification sonore badge */
+  .notif-sound { display: none; }
+
+  /* Filters */
+  .filter-tabs {
+    display: flex; gap: 4px; padding: 8px 20px; border-bottom: 1px solid var(--border);
+  }
+  .filter-tab {
+    padding: 4px 10px; border-radius: 6px; border: none; background: transparent;
+    font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary);
+    transition: all 0.15s;
+  }
+  .filter-tab:hover { background: var(--bg-app); }
+  .filter-tab.active { background: var(--accent); color: white; }
+</style>
+</head>
+<body>
+
+<div class="admin-layout">
+  <!-- SIDEBAR: Conversations -->
+  <div class="conversations-panel" id="convPanel">
+    <div class="panel-header">
+      <h1><i class="fas fa-headset"></i> Support</h1>
+      <p id="convCount">Chargement...</p>
+    </div>
+    <div class="panel-search">
+      <input type="text" id="searchInput" placeholder="Rechercher un utilisateur..." oninput="filterConversations()"/>
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">Tous</button>
+      <button class="filter-tab" data-filter="waiting" onclick="setFilter('waiting', this)">En attente</button>
+      <button class="filter-tab" data-filter="open" onclick="setFilter('open', this)">Ouverts</button>
+      <button class="filter-tab" data-filter="closed" onclick="setFilter('closed', this)">Fermés</button>
+    </div>
+    <div class="conversations-list" id="convList">
+      <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+        <i class="fas fa-spinner fa-spin"></i> Chargement...
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT: Messages -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-empty" id="chatEmpty">
+      <i class="fas fa-comments"></i>
+      <p>Sélectionnez une conversation</p>
+    </div>
+
+    <div id="chatContent" style="display: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
+      <div class="chat-header" id="chatHeader">
+        <div class="chat-header-left">
+          <button class="mobile-back" onclick="showConvPanel()" style="border:none; background:none; cursor:pointer; font-size:18px; color: var(--text-secondary);">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="chat-header-avatar" id="chatAvatar">?</div>
+          <div>
+            <div class="chat-header-name" id="chatName">—</div>
+            <div class="chat-header-sub" id="chatSub">—</div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button onclick="closeConversation()" class="btn-close-conv" title="Fermer la conversation">
+            <i class="fas fa-check-circle"></i> Clore
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages"></div>
+
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="adminInput" placeholder="Écrivez votre réponse..." rows="1"></textarea>
+        <button class="chat-send-btn" onclick="sendAdminReply()">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal image -->
+<div class="img-modal" id="imgModal" onclick="this.classList.remove('active')">
+  <img id="imgModalSrc" src="" alt=""/>
+</div>
+
+<!-- Socket.io -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+const API_URL = window.location.origin;
+const token = localStorage.getItem('lcc_token');
+if (!token) window.location.href = '/login.html';
+
+let allConversations = [];
+let activeConvId = null;
+let currentFilter = 'all';
+let socket = null;
+
+// ============================================
+// INIT
+// ============================================
+async function init() {
+  await loadConversations();
+
+  // Socket.io
+  socket = io(API_URL, { transports: ['websocket', 'polling'] });
+  socket.on('connect', () => {
+    socket.emit('join_support_admin');
+  });
+  socket.on('support_new_message', (msg) => {
+    // Rafraîchir la liste
+    loadConversations();
+    // Si c'est la conversation active, ajouter le message
+    if (msg.conversation_id === activeConvId || msg.conversationId === activeConvId) {
+      appendChatMessage(msg);
+      scrollChat();
+      // Marquer comme lu
+      markAdminRead(activeConvId);
+    }
+  });
+
+  // Auto-resize textarea
+  const input = document.getElementById('adminInput');
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendAdminReply();
+    }
+  });
+}
+
+// ============================================
+// CHARGER CONVERSATIONS
+// ============================================
+async function loadConversations() {
+  try {
+    const res = await fetch(`${API_URL}/api/support/admin/conversations`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Erreur API');
+    const data = await res.json();
+    allConversations = data.conversations || [];
+    renderConversations();
+  } catch (err) {
+    console.error('Erreur chargement conversations:', err);
+    document.getElementById('convList').innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Erreur de chargement</div>';
+  }
+}
+
+function renderConversations() {
+  const container = document.getElementById('convList');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+
+  let filtered = allConversations;
+
+  // Filtre statut
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(c => c.status === currentFilter);
+  }
+
+  // Filtre recherche
+  if (search) {
+    filtered = filtered.filter(c => {
+      const name = `${c.user_first_name || ''} ${c.user_last_name || ''} ${c.user_email || ''} ${c.user_company || ''}`.toLowerCase();
+      return name.includes(search);
+    });
+  }
+
+  // Compteur
+  const waitingCount = allConversations.filter(c => c.status === 'waiting').length;
+  document.getElementById('convCount').textContent = `${allConversations.length} conversation(s) · ${waitingCount} en attente`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="padding:30px; text-align:center; color:var(--text-muted);">Aucune conversation</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(conv => {
+    const name = conv.user_first_name
+      ? `${conv.user_first_name} ${conv.user_last_name || ''}`.trim()
+      : (conv.user_email || 'Utilisateur');
+    const initial = (conv.user_first_name || conv.user_email || '?')[0].toUpperCase();
+    const preview = conv.last_message ? conv.last_message.substring(0, 50) : 'Pas de message';
+    const time = conv.last_message_at ? formatTime(conv.last_message_at) : '';
+    const unread = parseInt(conv.unread_count) || 0;
+    const isActive = conv.id === activeConvId;
+
+    return `
+      <div class="conv-item ${isActive ? 'active' : ''}" onclick="openConversation('${conv.id}')">
+        <div class="conv-status-dot ${conv.status}"></div>
+        <div class="conv-avatar">${initial}</div>
+        <div class="conv-info">
+          <div class="conv-name">${escapeHtml(name)}</div>
+          <div class="conv-preview">${escapeHtml(preview)}</div>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">${time}</span>
+          ${unread > 0 ? `<span class="conv-badge">${unread}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================
+// OUVRIR UNE CONVERSATION
+// ============================================
+async function openConversation(convId) {
+  activeConvId = convId;
+  const conv = allConversations.find(c => c.id === convId);
+  if (!conv) return;
+
+  // Header
+  const name = conv.user_first_name
+    ? `${conv.user_first_name} ${conv.user_last_name || ''}`.trim()
+    : (conv.user_email || 'Utilisateur');
+  const initial = (conv.user_first_name || conv.user_email || '?')[0].toUpperCase();
+
+  document.getElementById('chatAvatar').textContent = initial;
+  document.getElementById('chatName').textContent = name;
+  document.getElementById('chatSub').textContent = `${conv.user_email || ''} · ${conv.user_company || 'Sans entreprise'}`;
+
+  // Afficher le chat
+  document.getElementById('chatEmpty').style.display = 'none';
+  document.getElementById('chatContent').style.display = 'flex';
+
+  // Charger les messages
+  const container = document.getElementById('chatMessages');
+  container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  try {
+    const res = await fetch(`${API_URL}/api/support/admin/messages/${convId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Erreur API');
+    const data = await res.json();
+
+    container.innerHTML = '';
+    let lastDate = '';
+    (data.messages || []).forEach(msg => {
+      const d = new Date(msg.created_at).toLocaleDateString('fr-FR');
+      if (d !== lastDate) {
+        lastDate = d;
+        const sep = document.createElement('div');
+        sep.className = 'chat-date-sep';
+        sep.textContent = d === new Date().toLocaleDateString('fr-FR') ? "Aujourd'hui" : d;
+        container.appendChild(sep);
+      }
+      appendChatMessage(msg, false);
+    });
+
+    scrollChat();
+
+    // Rejoindre la room socket
+    if (socket) socket.emit('join_support', convId);
+
+    // Marquer comme lu
+    await markAdminRead(convId);
+  } catch (err) {
+    console.error('Erreur chargement messages:', err);
+    container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--red);">Erreur de chargement</div>';
+  }
+
+  // Mettre à jour la liste
+  renderConversations();
+
+  // Focus input
+  document.getElementById('adminInput').focus();
+}
+
+// ============================================
+// AFFICHER UN MESSAGE
+// ============================================
+function appendChatMessage(msg, animate = true) {
+  const container = document.getElementById('chatMessages');
+  const isAdmin = msg.sender_type === 'admin';
+
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isAdmin ? 'admin' : 'user'}`;
+  if (!animate) div.style.animation = 'none';
+
+  const initial = isAdmin ? '🛟' : (msg.sender_name || '?')[0].toUpperCase();
+  const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  let bubbleHTML = escapeHtml(msg.message || '');
+  bubbleHTML = bubbleHTML.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:inherit; text-decoration:underline; word-break:break-all;">$1</a>');
+
+  if (msg.image_url) {
+    bubbleHTML += `<img src="${msg.image_url}" alt="Image" onclick="event.stopPropagation(); openImg('${msg.image_url}')" loading="lazy"/>`;
+  }
+
+  div.innerHTML = `
+    <div class="chat-msg-avatar">${initial}</div>
+    <div class="chat-msg-content">
+      <div class="chat-msg-sender">${isAdmin ? (msg.sender_name || 'Support') : (msg.sender_name || 'Utilisateur')}</div>
+      <div class="chat-msg-bubble">${bubbleHTML}</div>
+      <div class="chat-msg-time">${time}</div>
+    </div>
+  `;
+
+  container.appendChild(div);
+}
+
+// ============================================
+// ENVOYER UNE RÉPONSE
+// ============================================
+async function sendAdminReply() {
+  const input = document.getElementById('adminInput');
+  const message = input.value.trim();
+  if (!message || !activeConvId) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Optimistic
+  appendChatMessage({
+    sender_type: 'admin',
+    sender_name: 'Support',
+    message: message,
+    created_at: new Date().toISOString()
+  });
+  scrollChat();
+
+  try {
+    await fetch(`${API_URL}/api/support/admin/reply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ conversationId: activeConvId, message })
+    });
+    // Rafraîchir la liste pour mettre à jour le preview
+    loadConversations();
+  } catch (err) {
+    console.error('Erreur envoi réponse:', err);
+  }
+}
+
+// ============================================
+// FERMER UNE CONVERSATION
+// ============================================
+async function closeConversation() {
+  if (!activeConvId) return;
+  if (!confirm('Clore cette conversation ?')) return;
+
+  try {
+    // Envoyer un message de clôture
+    await fetch(`${API_URL}/api/support/admin/reply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        conversationId: activeConvId,
+        message: '✅ Cette conversation a été clôturée par le support. N\'hésitez pas à nous recontacter si besoin.'
+      })
+    });
+
+    // Changer le statut à closed
+    await fetch(`${API_URL}/api/support/admin/conversations/${activeConvId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ status: 'closed' })
+    });
+
+    appendChatMessage({
+      sender_type: 'admin',
+      sender_name: 'Support',
+      message: '✅ Cette conversation a été clôturée par le support. N\'hésitez pas à nous recontacter si besoin.',
+      created_at: new Date().toISOString()
+    });
+    scrollChat();
+
+    await loadConversations();
+  } catch (err) {
+    console.error('Erreur clôture:', err);
+  }
+}
+
+// ============================================
+// UTILS
+// ============================================
+function scrollChat() {
+  const c = document.getElementById('chatMessages');
+  setTimeout(() => { c.scrollTop = c.scrollHeight; }, 50);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatTime(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMs / 3600000);
+
+  if (diffMin < 1) return 'à l\'instant';
+  if (diffMin < 60) return `${diffMin} min`;
+  if (diffH < 24) return `${diffH}h`;
+
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function openImg(url) {
+  document.getElementById('imgModalSrc').src = url;
+  document.getElementById('imgModal').classList.add('active');
+}
+
+function filterConversations() {
+  renderConversations();
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderConversations();
+}
+
+async function markAdminRead(convId) {
+  try {
+    await fetch(`${API_URL}/api/support/admin/messages/${convId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  } catch (e) {}
+}
+
+function showConvPanel() {
+  document.getElementById('convPanel').classList.remove('hidden');
+}
+
+// ============================================
+// START
+// ============================================
+init();
+
+// Rafraîchir les conversations toutes les 30s
+setInterval(loadConversations, 30000);
+</script>
+</body>
+</html>
