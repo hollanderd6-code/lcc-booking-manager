@@ -8082,19 +8082,26 @@ function renderCleaningChecklists() {
   }
   
   // ✅ Prioriser : aujourd'hui, J-1, J-2, puis le reste récent (max 7 jours)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().slice(0, 10);
-  
-  const daysAgo = (n) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
-  };
+  function localDateStr(d){
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = localDateStr(today);
+
+    const daysAgo = (n) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - n);
+      return localDateStr(d);
+    };
   
   const day1Str = daysAgo(1);
   const day2Str = daysAgo(2);
-  const day7Str = daysAgo(7);
+  const day7Str = daysAgo(2); // limite: aujourd'hui, hier, avant-hier
   
   // Extraire la date de checkout de chaque checklist
   function getCheckoutStr(checklist) {
