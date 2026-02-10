@@ -8082,25 +8082,23 @@ function renderCleaningChecklists() {
   }
   
   // ✅ Prioriser : aujourd'hui, J-1, J-2, puis le reste récent (max 7 jours)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = getTodayString(); // ✅ Timezone local, pas UTC
   
-  const daysAgo = (n) => {
-    const d = new Date(today);
+  const daysAgoStr = (n) => {
+    const d = new Date();
     d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
+    return toLocalDateString(d); // ✅ Timezone local
   };
   
-  const day1Str = daysAgo(1);
-  const day2Str = daysAgo(2);
-  const day7Str = daysAgo(7);
+  const day1Str = daysAgoStr(1);
+  const day2Str = daysAgoStr(2);
+  const day7Str = daysAgoStr(7);
   
   // Extraire la date de checkout de chaque checklist
   function getCheckoutStr(checklist) {
-    // D'abord checkout_date brut
+    // D'abord checkout_date brut — convertir en local
     if (checklist.checkout_date) {
-      return String(checklist.checkout_date).slice(0, 10);
+      return toLocalDateString(new Date(checklist.checkout_date)); // ✅ Timezone local
     }
     // Sinon depuis reservation_key
     const parts = (checklist.reservation_key || '').split('_');
@@ -8109,7 +8107,7 @@ function renderCleaningChecklists() {
     }
     // Sinon depuis completed_at
     if (checklist.completed_at) {
-      return String(checklist.completed_at).slice(0, 10);
+      return toLocalDateString(new Date(checklist.completed_at)); // ✅ Timezone local
     }
     return '1970-01-01';
   }
