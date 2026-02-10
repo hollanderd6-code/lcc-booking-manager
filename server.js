@@ -8297,40 +8297,9 @@ app.get('/api/cleaning/checklists',
       `SELECT 
         cc.*,
         c.name as cleaner_name,
-        c.email as cleaner_email,
-        
-        -- Enrichissement guest depuis conversations (onboarding)
-        COALESCE(
-          NULLIF(TRIM(COALESCE(conv.guest_first_name, '') || ' ' || COALESCE(conv.guest_last_name, '')), ''),
-          NULLIF(cc.guest_name, ''),
-          r.guest_name,
-          'Voyageur'
-        ) as guest_display_name,
-        
-        conv.guest_first_name,
-        conv.guest_last_name,
-        conv.guest_phone,
-        
-        CASE 
-          WHEN conv.guest_first_name IS NOT NULL AND conv.guest_first_name != ''
-          THEN LEFT(UPPER(conv.guest_first_name), 1)
-          WHEN cc.guest_name IS NOT NULL AND cc.guest_name != ''
-          THEN LEFT(UPPER(cc.guest_name), 1)
-          WHEN r.guest_name IS NOT NULL AND r.guest_name != ''
-          THEN LEFT(UPPER(r.guest_name), 1)
-          ELSE 'V'
-        END as guest_initial,
-        
-        r.source as platform
-
+        c.email as cleaner_email
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
-       LEFT JOIN reservations r ON r.property_id = cc.property_id 
-         AND r.end_date::date = cc.checkout_date::date
-         AND r.user_id = cc.user_id
-       LEFT JOIN conversations conv ON conv.property_id = cc.property_id
-         AND conv.reservation_start_date::date = r.start_date::date
-         AND conv.user_id = cc.user_id
        WHERE cc.user_id = $1
        ORDER BY cc.completed_at DESC
        LIMIT 50`,
@@ -8342,15 +8311,19 @@ app.get('/api/cleaning/checklists',
       ? result.rows.filter(c => req.subAccountData.accessible_property_ids.includes(c.property_id))
       : result.rows;
 
-    // ✅ Enrichir avec les noms de voyageurs depuis reservationsStore
-    const enrichedChecklists = filteredChecklists.map(cl => {
-      // Si guest_name déjà rempli, on garde
-      if (cl.guest_name && cl.guest_name.trim() !== '') return cl;
+    // ✅ Enrichir avec les noms de voyageurs (reservationsStore + DB conversations)
+    const enrichedChecklists = [];
+    for (const cl of filteredChecklists) {
+      // Priorité 1 : guest_name déjà rempli
+      if (cl.guest_name && cl.guest_name.trim() !== '') {
+        enrichedChecklists.push(cl);
+        continue;
+      }
 
-      // Chercher la réservation correspondante dans le store
-      const propertyReservations = reservationsStore.properties[cl.property_id] || [];
       const checkoutStr = cl.checkout_date ? String(cl.checkout_date).slice(0, 10) : '';
-      
+
+      // Priorité 2 : reservationsStore (mémoire)
+      const propertyReservations = reservationsStore.properties[cl.property_id] || [];
       const match = propertyReservations.find(r => {
         const rEnd = String(r.end || '').slice(0, 10);
         return rEnd === checkoutStr;
@@ -8358,14 +8331,44 @@ app.get('/api/cleaning/checklists',
 
       if (match) {
         cl.guest_name = match.guestName || match.name || '';
-        cl.guest_first_name = match.guest_first_name || '';
-        cl.guest_last_name = match.guest_last_name || '';
         cl.source = match.source || match.platform || '';
         cl.platform = match.platform || match.source || '';
       }
 
-      return cl;
-    });
+      // Priorité 3 : DB conversations (onboarding)
+      if ((!cl.guest_name || cl.guest_name.trim() === '') && checkoutStr) {
+        try {
+          const convResult = await pool.query(
+            `SELECT conv.guest_first_name, conv.guest_last_name, conv.guest_phone, r.guest_name, r.source
+             FROM reservations r
+             LEFT JOIN conversations conv ON conv.property_id = r.property_id 
+               AND conv.reservation_start_date = r.start_date AND conv.user_id = r.user_id
+             WHERE r.property_id = $1 AND r.end_date::date = $2::date AND r.user_id = $3
+             LIMIT 1`,
+            [cl.property_id, checkoutStr, userId]
+          );
+          if (convResult.rows.length > 0) {
+            const row = convResult.rows[0];
+            if (row.guest_first_name) {
+              cl.guest_display_name = (row.guest_first_name + ' ' + (row.guest_last_name || '')).trim();
+              cl.guest_first_name = row.guest_first_name;
+              cl.guest_last_name = row.guest_last_name || '';
+              cl.guest_initial = row.guest_first_name.charAt(0).toUpperCase();
+              cl.guest_phone = row.guest_phone || '';
+            } else if (row.guest_name) {
+              cl.guest_name = row.guest_name;
+              cl.guest_initial = row.guest_name.charAt(0).toUpperCase();
+            }
+            cl.source = row.source || cl.source || '';
+            cl.platform = row.source || cl.platform || '';
+          }
+        } catch (e) {
+          // Pas grave si la sous-requête échoue
+        }
+      }
+
+      enrichedChecklists.push(cl);
+    }
 
     res.json({
       checklists: enrichedChecklists
