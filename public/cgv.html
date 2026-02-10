@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CGV – Boostinghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #f0f4f8; --bg-card: #ffffff; --bg-secondary: #f8fafc; --text-primary: #0f172a; --text-secondary: #64748b; --border: rgba(148,163,184,0.35); --green: #16a34a; --blue: #3b82f6; --radius: 18px; --shadow: 0 4px 24px rgba(15,23,42,0.08); }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+    .top-header { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .header-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text-primary); }
+    .header-logo img { width: 32px; height: 32px; border-radius: 50%; }
+    .logo-wordmark { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+    .brand-boosting { color: var(--green); }
+    .btn-back { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; text-decoration: none; transition: all 0.15s; }
+    .btn-back:hover { background: #fff; color: var(--text-primary); box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
+    .btn-back i { font-size: 11px; }
+    .page-wrapper { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; width: 100%; flex: 1; }
+    .page-hero { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); border-radius: var(--radius); padding: 28px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 12px 40px rgba(15,23,42,0.12); position: relative; overflow: hidden; }
+    .page-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(34,197,94,0.08); }
+    .page-hero-text { position: relative; z-index: 1; }
+    .page-kicker { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+    .page-title { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-subtitle { font-size: 13px; color: rgba(255,255,255,0.5); }
+    .page-hero-icon { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .card { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+    .card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); display: flex; align-items: center; gap: 10px; }
+    .card-title-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(16,185,129,0.1); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .card-title { font-size: 14px; font-weight: 700; }
+    .card-body { padding: 20px 24px; }
+    .legal-section { margin-bottom: 24px; }
+    .legal-section:last-child { margin-bottom: 0; }
+    .legal-section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .legal-section p { font-size: 14px; line-height: 1.7; color: #374151; margin-bottom: 6px; }
+    .legal-section ul { padding-left: 18px; margin-top: 6px; }
+    .legal-section li { font-size: 14px; line-height: 1.7; color: #374151; margin-bottom: 4px; }
+    .legal-section a { color: var(--blue); text-decoration: none; }
+    .legal-section a:hover { text-decoration: underline; }
+    .updated { font-size: 12px; color: var(--text-secondary); margin-bottom: 24px; display: flex; align-items: center; gap: 6px; }
+    .updated i { color: #059669; }
+    .highlight-box { background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 10px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #374151; line-height: 1.6; }
+    @media (max-width: 640px) { .page-wrapper { padding: 20px 14px 50px; } .page-title { font-size: 22px; } }
+  </style>
+</head>
+<body>
+  <header class="top-header">
+    <a href="/" class="header-logo">
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost"/>
+      <span class="logo-wordmark"><span class="brand-boosting">Boosting</span>host</span>
+    </a>
+    <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Retour</a>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-hero">
+      <div class="page-hero-text">
+        <p class="page-kicker">Légal</p>
+        <h1 class="page-title">Conditions Générales de Vente</h1>
+        <p class="page-subtitle">Conditions applicables aux abonnements et paiements.</p>
+      </div>
+      <div class="page-hero-icon">💳</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title-icon"><i class="fas fa-receipt"></i></div>
+        <span class="card-title">CGV — Conditions Générales de Vente</span>
+      </div>
+      <div class="card-body">
+        <p class="updated"><i class="fas fa-clock"></i> Dernière mise à jour : février 2026</p>
+
+        <div class="legal-section">
+          <h2>1. Objet</h2>
+          <p>Les présentes CGV s'appliquent à toutes les souscriptions et transactions réalisées sur la plateforme Boostinghost, éditée par SAS Boostinghost.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>2. Offres et tarifs</h2>
+          <p>Les offres disponibles, leurs fonctionnalités et leurs tarifs sont présentés sur la page de tarification du site. SAS Boostinghost se réserve le droit de modifier ses tarifs à tout moment, sous réserve d'en informer les abonnés existants avec un préavis de 30 jours. Tous les prix sont indiqués en euros (€) hors taxes (HT).</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>3. Souscription et paiement</h2>
+          <p>La souscription à un abonnement Boostinghost est réalisée en ligne. Le paiement est effectué via notre prestataire de paiement sécurisé <strong>Stripe</strong>. SAS Boostinghost ne stocke à aucun moment les coordonnées bancaires de l'utilisateur. L'abonnement est activé dès réception du paiement.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>4. Abonnement et renouvellement</h2>
+          <p>Les abonnements sont souscrits pour la période choisie (mensuelle ou annuelle) et se renouvellent automatiquement à échéance, sauf résiliation préalable. L'utilisateur sera notifié par email avant chaque renouvellement.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>5. Droit de rétractation</h2>
+          <div class="highlight-box">
+            Conformément à l'article L221-28 du Code de la consommation, le droit de rétractation ne s'applique pas aux contenus numériques dont l'exécution a commencé avec l'accord exprès de l'utilisateur. Toutefois, si vous n'avez pas encore utilisé les fonctionnalités premium, vous disposez d'un délai de <strong>14 jours</strong> à compter de la souscription pour demander un remboursement via <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a>.
+          </div>
+        </div>
+
+        <div class="legal-section">
+          <h2>6. Cautions (fonctionnalité de la plateforme)</h2>
+          <p>La fonctionnalité de gestion des cautions permet aux utilisateurs de demander des dépôts de garantie auprès de leurs clients via Stripe. À ce titre :</p>
+          <ul>
+            <li>Le montant et les conditions de la caution sont fixés par l'utilisateur</li>
+            <li>Boostinghost agit en tant qu'intermédiaire technique uniquement</li>
+            <li>L'utilisateur est seul responsable de la légalité des cautions dans son activité</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>7. Résiliation de l'abonnement</h2>
+          <p>L'utilisateur peut résilier son abonnement à tout moment depuis son espace personnel ou en contactant <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a>. La résiliation prend effet à la fin de la période en cours, sans remboursement au prorata sauf disposition contraire.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>8. Facturation</h2>
+          <p>Une facture est automatiquement générée pour chaque paiement et accessible depuis l'espace personnel de l'utilisateur.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>9. Responsabilité</h2>
+          <p>SAS Boostinghost ne saurait être tenu responsable des pertes financières, manques à gagner ou préjudices indirects résultant de l'utilisation ou de l'indisponibilité du service.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>10. Litiges et médiation</h2>
+          <p>En cas de litige non résolu amiablement, vous pouvez recourir à la médiation de la consommation conformément à l'article L612-1 du Code de la consommation. Le droit français est applicable et les tribunaux compétents sont ceux du siège social de SAS Boostinghost.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>11. Contact</h2>
+          <p><a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
