@@ -8101,7 +8101,7 @@ function renderCleaningChecklists() {
   
   const day1Str = daysAgo(1);
   const day2Str = daysAgo(2);
-  const day7Str = daysAgo(2); // limite: aujourd'hui, hier, avant-hier
+  const day7Str = daysAgo(2); // limite: aujourd'hui, hier, avant-hierr
   
   // Extraire la date de checkout de chaque checklist
   function getCheckoutStr(checklist) {
@@ -8204,6 +8204,8 @@ function renderCleaningChecklists() {
       freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fee2e2; color:#dc2626; font-weight:700; margin-left:6px;">Aujourd\'hui</span>';
     } else if (checkoutDateStr >= day1Str) {
       freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fef3c7; color:#b45309; font-weight:700; margin-left:6px;">Hier</span>';
+    } else if (checkoutDateStr >= day2Str) {
+      freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#e0f2fe; color:#0369a1; font-weight:700; margin-left:6px;">Avant-hier</span>';
     }
     
     // Durée
