@@ -8084,12 +8084,15 @@ function renderCleaningChecklists() {
   // ✅ Prioriser : aujourd'hui, J-1, J-2, puis le reste récent (max 7 jours)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = getTodayString();
   
   const daysAgo = (n) => {
-    const d = new Date(today);
+    const d = new Date();
     d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
+    const yy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
   };
   
   const day1Str = daysAgo(1);
