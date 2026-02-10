@@ -1,89 +1,168 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Politique de confidentialité – Boostinghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; line-height: 1.7; }
-    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-    h2 { font-size: 1.2rem; margin-top: 2rem; color: #111; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-    p, li { margin: 0.6rem 0; }
-    ul { padding-left: 1.4rem; }
-    .updated { color: #888; font-size: 0.9rem; margin-bottom: 2rem; }
-    a { color: #2563eb; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f4f8; --bg-card: #ffffff; --bg-secondary: #f8fafc;
+      --text-primary: #0f172a; --text-secondary: #64748b;
+      --border: rgba(148,163,184,0.35); --green: #16a34a; --blue: #3b82f6;
+      --radius: 18px; --shadow: 0 4px 24px rgba(15,23,42,0.08);
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+    .top-header { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .header-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text-primary); }
+    .header-logo img { width: 32px; height: 32px; border-radius: 50%; }
+    .logo-wordmark { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+    .brand-boosting { color: var(--green); }
+    .btn-back { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; text-decoration: none; transition: all 0.15s; }
+    .btn-back:hover { background: #fff; color: var(--text-primary); box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
+    .btn-back i { font-size: 11px; }
+    .page-wrapper { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; width: 100%; flex: 1; }
+    .page-hero { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); border-radius: var(--radius); padding: 28px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 12px 40px rgba(15,23,42,0.12); position: relative; overflow: hidden; }
+    .page-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(34,197,94,0.08); }
+    .page-hero-text { position: relative; z-index: 1; }
+    .page-kicker { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+    .page-title { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-subtitle { font-size: 13px; color: rgba(255,255,255,0.5); }
+    .page-hero-icon { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .card { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+    .card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); display: flex; align-items: center; gap: 10px; }
+    .card-title-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(59,130,246,0.1); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .card-title { font-size: 14px; font-weight: 700; }
+    .card-body { padding: 20px 24px; }
+    .legal-section { margin-bottom: 24px; }
+    .legal-section:last-child { margin-bottom: 0; }
+    .legal-section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .legal-section p { font-size: 14px; line-height: 1.7; color: #374151; margin-bottom: 6px; }
+    .legal-section ul { padding-left: 18px; margin-top: 6px; }
+    .legal-section li { font-size: 14px; line-height: 1.7; color: #374151; margin-bottom: 4px; }
+    .legal-section a { color: var(--blue); text-decoration: none; }
+    .legal-section a:hover { text-decoration: underline; }
+    .updated { font-size: 12px; color: var(--text-secondary); margin-bottom: 24px; display: flex; align-items: center; gap: 6px; }
+    .updated i { color: var(--blue); }
+    .highlight-box { background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #374151; line-height: 1.6; }
+    @media (max-width: 640px) { .page-wrapper { padding: 20px 14px 50px; } .page-title { font-size: 22px; } }
   </style>
 </head>
 <body>
+  <header class="top-header">
+    <a href="/" class="header-logo">
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost"/>
+      <span class="logo-wordmark"><span class="brand-boosting">Boosting</span>host</span>
+    </a>
+    <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Retour</a>
+  </header>
 
-  <h1>Politique de confidentialité</h1>
-  <p class="updated">Dernière mise à jour : février 2026</p>
+  <div class="page-wrapper">
+    <div class="page-hero">
+      <div class="page-hero-text">
+        <p class="page-kicker">Légal</p>
+        <h1 class="page-title">Politique de confidentialité</h1>
+        <p class="page-subtitle">Comment nous collectons et protégeons vos données.</p>
+      </div>
+      <div class="page-hero-icon">🔒</div>
+    </div>
 
-  <p>SAS Boostinghost (ci-après « Boostinghost », « nous ») s'engage à protéger votre vie privée conformément au Règlement Général sur la Protection des Données (RGPD – UE 2016/679) et à la loi Informatique et Libertés.</p>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title-icon"><i class="fas fa-shield-halved"></i></div>
+        <span class="card-title">Protection de vos données (RGPD)</span>
+      </div>
+      <div class="card-body">
+        <p class="updated"><i class="fas fa-clock"></i> Dernière mise à jour : février 2026</p>
 
-  <h2>1. Responsable du traitement</h2>
-  <p>SAS Boostinghost – [ADRESSE À COMPLÉTER] – <a href="/cdn-cgi/l/email-protection#8cefe3e2f8edeff8cceee3e3fff8e5e2ebe4e3fff8a2eafe"><span class="__cf_email__" data-cfemail="ef8c80819b8e8c9baf8d80809c9b86818887809c9bc1899d">[email&#160;protected]</span></a></p>
+        <div class="legal-section">
+          <h2>1. Responsable du traitement</h2>
+          <p>SAS Boostinghost — [ADRESSE À COMPLÉTER] — <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+        </div>
 
-  <h2>2. Données collectées</h2>
-  <p>Nous collectons les données suivantes dans le cadre de l'utilisation de notre service :</p>
-  <ul>
-    <li><strong>Données de compte :</strong> nom, prénom, adresse email, mot de passe (chiffré)</li>
-    <li><strong>Données de facturation :</strong> coordonnées bancaires gérées exclusivement par Stripe (nous ne stockons jamais vos numéros de carte)</li>
-    <li><strong>Données liées à vos logements :</strong> adresses, calendriers, réservations, informations sur vos voyageurs</li>
-    <li><strong>Données de connexion :</strong> adresse IP, logs d'activité, type de navigateur/appareil</li>
-  </ul>
+        <div class="legal-section">
+          <h2>2. Données collectées</h2>
+          <ul>
+            <li><strong>Données de compte :</strong> nom, prénom, adresse email, mot de passe (chiffré)</li>
+            <li><strong>Données de facturation :</strong> coordonnées bancaires gérées exclusivement par Stripe (nous ne stockons jamais vos numéros de carte)</li>
+            <li><strong>Données liées à vos logements :</strong> adresses, calendriers, réservations, informations sur vos voyageurs</li>
+            <li><strong>Données de connexion :</strong> adresse IP, logs d'activité, type de navigateur/appareil</li>
+          </ul>
+        </div>
 
-  <h2>3. Finalités du traitement</h2>
-  <p>Vos données sont utilisées pour :</p>
-  <ul>
-    <li>Créer et gérer votre compte utilisateur</li>
-    <li>Fournir les fonctionnalités du service (calendrier, réservations, ménage, facturation, chat)</li>
-    <li>Traiter les paiements et cautions via Stripe</li>
-    <li>Vous envoyer les notifications et emails relatifs à votre activité</li>
-    <li>Assurer la sécurité et la fiabilité de la plateforme</li>
-    <li>Respecter nos obligations légales</li>
-  </ul>
+        <div class="legal-section">
+          <h2>3. Finalités du traitement</h2>
+          <ul>
+            <li>Créer et gérer votre compte utilisateur</li>
+            <li>Fournir les fonctionnalités du service (calendrier, réservations, ménage, facturation, chat)</li>
+            <li>Traiter les paiements et cautions via Stripe</li>
+            <li>Vous envoyer les notifications et emails relatifs à votre activité</li>
+            <li>Assurer la sécurité et la fiabilité de la plateforme</li>
+            <li>Respecter nos obligations légales</li>
+          </ul>
+        </div>
 
-  <h2>4. Base légale</h2>
-  <p>Les traitements reposent sur :</p>
-  <ul>
-    <li>L'<strong>exécution du contrat</strong> (fourniture du service souscrit)</li>
-    <li>Notre <strong>intérêt légitime</strong> (sécurité, amélioration du service)</li>
-    <li>Le <strong>respect d'obligations légales</strong> (facturation, comptabilité)</li>
-    <li>Votre <strong>consentement</strong> lorsqu'il est explicitement recueilli</li>
-  </ul>
+        <div class="legal-section">
+          <h2>4. Base légale</h2>
+          <ul>
+            <li><strong>Exécution du contrat</strong> — fourniture du service souscrit</li>
+            <li><strong>Intérêt légitime</strong> — sécurité, amélioration du service</li>
+            <li><strong>Obligations légales</strong> — facturation, comptabilité</li>
+            <li><strong>Consentement</strong> — lorsqu'il est explicitement recueilli</li>
+          </ul>
+        </div>
 
-  <h2>5. Sous-traitants et tiers</h2>
-  <p>Nous faisons appel aux prestataires suivants, soumis à leurs propres politiques de confidentialité :</p>
-  <ul>
-    <li><strong>Stripe</strong> (paiements) – <a href="https://stripe.com/fr/privacy" target="_blank">politique de confidentialité Stripe</a></li>
-    <li><strong>Render</strong> (hébergement applicatif) – <a href="https://render.com/privacy" target="_blank">politique de confidentialité Render</a></li>
-    <li><strong>Supabase</strong> (base de données, hébergée sur AWS en Irlande – Union Européenne) – <a href="https://supabase.com/privacy" target="_blank">politique de confidentialité Supabase</a></li>
-  </ul>
-  <p>L'ensemble des données est hébergé au sein de l'Union Européenne. Aucun transfert de vos données à des fins commerciales n'est effectué.</p>
+        <div class="legal-section">
+          <h2>5. Sous-traitants et tiers</h2>
+          <p>Nous faisons appel aux prestataires suivants :</p>
+          <ul>
+            <li><strong>Stripe</strong> (paiements) — <a href="https://stripe.com/fr/privacy" target="_blank">politique de confidentialité Stripe</a></li>
+            <li><strong>Render</strong> (hébergement applicatif) — <a href="https://render.com/privacy" target="_blank">politique de confidentialité Render</a></li>
+            <li><strong>Supabase</strong> (base de données, AWS Irlande – UE) — <a href="https://supabase.com/privacy" target="_blank">politique de confidentialité Supabase</a></li>
+          </ul>
+          <div class="highlight-box">L'ensemble des données est hébergé au sein de l'Union Européenne. Aucun transfert de vos données à des fins commerciales n'est effectué.</div>
+        </div>
 
-  <h2>6. Durée de conservation</h2>
-  <ul>
-    <li><strong>Données de compte :</strong> durée de la relation contractuelle + 3 ans après clôture</li>
-    <li><strong>Données de paiement :</strong> 10 ans (obligation légale comptable)</li>
-    <li><strong>Logs de connexion :</strong> 12 mois</li>
-  </ul>
+        <div class="legal-section">
+          <h2>6. Durée de conservation</h2>
+          <ul>
+            <li><strong>Données de compte :</strong> durée de la relation contractuelle + 3 ans après clôture</li>
+            <li><strong>Données de paiement :</strong> 10 ans (obligation légale comptable)</li>
+            <li><strong>Logs de connexion :</strong> 12 mois</li>
+          </ul>
+        </div>
 
-  <h2>7. Vos droits</h2>
-  <p>Conformément au RGPD, vous disposez des droits suivants :</p>
-  <ul>
-    <li><strong>Droit d'accès :</strong> obtenir une copie de vos données</li>
-    <li><strong>Droit de rectification :</strong> corriger des données inexactes</li>
-    <li><strong>Droit à l'effacement :</strong> demander la suppression de vos données</li>
-    <li><strong>Droit à la portabilité :</strong> recevoir vos données dans un format lisible</li>
-    <li><strong>Droit d'opposition :</strong> vous opposer à certains traitements</li>
-    <li><strong>Droit à la limitation :</strong> limiter temporairement un traitement</li>
-  </ul>
-  <p>Pour exercer ces droits, contactez-nous à : <a href="/cdn-cgi/l/email-protection#24474b4a5045475064464b4b57504d4a434c4b57500a4256"><span class="__cf_email__" data-cfemail="4d2e2223392c2e390d2f22223e3924232a25223e39632b3f">[email&#160;protected]</span></a></p>
-  <p>Vous disposez également du droit d'introduire une réclamation auprès de la <strong>CNIL</strong> : <a href="https://www.cnil.fr" target="_blank">www.cnil.fr</a></p>
+        <div class="legal-section">
+          <h2>7. Vos droits</h2>
+          <ul>
+            <li><strong>Droit d'accès :</strong> obtenir une copie de vos données</li>
+            <li><strong>Droit de rectification :</strong> corriger des données inexactes</li>
+            <li><strong>Droit à l'effacement :</strong> demander la suppression de vos données</li>
+            <li><strong>Droit à la portabilité :</strong> recevoir vos données dans un format lisible</li>
+            <li><strong>Droit d'opposition :</strong> vous opposer à certains traitements</li>
+            <li><strong>Droit à la limitation :</strong> limiter temporairement un traitement</li>
+          </ul>
+          <p style="margin-top:10px;">Pour exercer ces droits : <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a> — Réclamation possible auprès de la <a href="https://www.cnil.fr" target="_blank">CNIL</a>.</p>
+        </div>
 
-  <h2>8. Cookies</h2>
-  <p>Notre application utilise des cookies strictement nécessaires au fonctionnement du service (session, authentification). Aucun cookie publicitaire ou de tracking tiers n'est utilisé à ce jour.</p>
+        <div class="legal-section">
+          <h2>8. Cookies</h2>
+          <p>Notre application utilise uniquement des cookies strictement nécessaires au fonctionnement du service (session, authentification). Aucun cookie publicitaire ou de tracking tiers n'est utilisé.</p>
+        </div>
 
-  <h2>9. Sécurité</h2>
-  <p>Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos donn
+        <div class="legal-section">
+          <h2>9. Sécurité</h2>
+          <p>Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données : chiffrement des communications (HTTPS/TLS), chiffrement des mots de passe, accès restreint aux données. L'ensemble des données est hébergé au sein de l'Union Européenne.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>10. Contact</h2>
+          <p><a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
