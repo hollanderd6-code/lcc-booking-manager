@@ -1,50 +1,190 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mentions légales – Boostinghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; line-height: 1.7; }
-    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-    h2 { font-size: 1.2rem; margin-top: 2rem; color: #111; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-    p { margin: 0.6rem 0; }
-    .updated { color: #888; font-size: 0.9rem; margin-bottom: 2rem; }
-    a { color: #2563eb; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f4f8;
+      --bg-card: #ffffff;
+      --bg-secondary: #f8fafc;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --border: rgba(148,163,184,0.35);
+      --green: #16a34a;
+      --blue: #3b82f6;
+      --radius: 18px;
+      --shadow: 0 4px 24px rgba(15,23,42,0.08);
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    /* HEADER */
+    .top-header {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--text-primary);
+    }
+    .header-logo img { width: 32px; height: 32px; border-radius: 50%; }
+    .logo-wordmark { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+    .brand-boosting { color: var(--green); }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 999px; padding: 7px 14px; text-decoration: none;
+      transition: all 0.15s;
+    }
+    .btn-back:hover { background: #fff; color: var(--text-primary); box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
+    .btn-back i { font-size: 11px; }
+    /* PAGE */
+    .page-wrapper { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; width: 100%; flex: 1; }
+    .page-hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      border-radius: var(--radius); padding: 28px;
+      margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      box-shadow: 0 12px 40px rgba(15,23,42,0.12);
+      position: relative; overflow: hidden;
+    }
+    .page-hero::before {
+      content: ''; position: absolute; top: -40px; right: -40px;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: rgba(34,197,94,0.08);
+    }
+    .page-hero-text { position: relative; z-index: 1; }
+    .page-kicker { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+    .page-title { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-subtitle { font-size: 13px; color: rgba(255,255,255,0.5); }
+    .page-hero-icon {
+      position: relative; z-index: 1;
+      width: 56px; height: 56px; border-radius: 16px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    /* CARD */
+    .card {
+      background: var(--bg-card); border-radius: var(--radius);
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      margin-bottom: 20px; overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-title-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(34,197,94,0.1); color: var(--green);
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+    }
+    .card-title { font-size: 14px; font-weight: 700; }
+    .card-body { padding: 20px 24px; }
+    /* CONTENT */
+    .legal-section { margin-bottom: 24px; }
+    .legal-section:last-child { margin-bottom: 0; }
+    .legal-section h2 {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-secondary);
+      margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .legal-section p { font-size: 14px; line-height: 1.7; color: #374151; margin-bottom: 6px; }
+    .legal-section a { color: var(--blue); text-decoration: none; }
+    .legal-section a:hover { text-decoration: underline; }
+    .updated { font-size: 12px; color: var(--text-secondary); margin-bottom: 24px; display: flex; align-items: center; gap: 6px; }
+    .updated i { color: var(--green); }
+    @media (max-width: 640px) {
+      .page-wrapper { padding: 20px 14px 50px; }
+      .page-title { font-size: 22px; }
+    }
   </style>
 </head>
 <body>
+  <header class="top-header">
+    <a href="/" class="header-logo">
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost"/>
+      <span class="logo-wordmark"><span class="brand-boosting">Boosting</span>host</span>
+    </a>
+    <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Retour</a>
+  </header>
 
-  <h1>Mentions légales</h1>
-  <p class="updated">Dernière mise à jour : février 2026</p>
+  <div class="page-wrapper">
+    <div class="page-hero">
+      <div class="page-hero-text">
+        <p class="page-kicker">Légal</p>
+        <h1 class="page-title">Mentions légales</h1>
+        <p class="page-subtitle">Informations légales relatives à l'éditeur du site.</p>
+      </div>
+      <div class="page-hero-icon">⚖️</div>
+    </div>
 
-  <h2>Éditeur du site</h2>
-  <p><strong>Raison sociale :</strong> SAS Boostinghost</p>
-  <p><strong>Forme juridique :</strong> Société par Actions Simplifiée (SAS)</p>
-  <p><strong>Siège social :</strong> [ADRESSE À COMPLÉTER]</p>
-  <p><strong>SIRET :</strong> [À COMPLÉTER DÈS RÉCEPTION]</p>
-  <p><strong>Capital social :</strong> [À COMPLÉTER]</p>
-  <p><strong>Email de contact :</strong> <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title-icon"><i class="fas fa-file-lines"></i></div>
+        <span class="card-title">Informations légales</span>
+      </div>
+      <div class="card-body">
+        <p class="updated"><i class="fas fa-clock"></i> Dernière mise à jour : février 2026</p>
 
-  <h2>Directeur de la publication</h2>
-  <p>[NOM DU DIRIGEANT À COMPLÉTER]</p>
+        <div class="legal-section">
+          <h2>Éditeur du site</h2>
+          <p><strong>Raison sociale :</strong> SAS Boostinghost</p>
+          <p><strong>Forme juridique :</strong> Société par Actions Simplifiée (SAS)</p>
+          <p><strong>Siège social :</strong> [ADRESSE À COMPLÉTER]</p>
+          <p><strong>SIRET :</strong> [À COMPLÉTER DÈS RÉCEPTION]</p>
+          <p><strong>Capital social :</strong> [À COMPLÉTER]</p>
+          <p><strong>Email de contact :</strong> <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+        </div>
 
-  <h2>Hébergement</h2>
-  <p><strong>Hébergeur :</strong> Render Services, Inc.</p>
-  <p><strong>Adresse :</strong> 525 Brannan Street, Suite 300, San Francisco, CA 94107, États-Unis</p>
-  <p><strong>Site web :</strong> <a href="https://render.com" target="_blank">render.com</a></p>
+        <div class="legal-section">
+          <h2>Directeur de la publication</h2>
+          <p>[NOM DU DIRIGEANT À COMPLÉTER]</p>
+        </div>
 
-  <h2>Propriété intellectuelle</h2>
-  <p>L'ensemble du contenu de ce site (textes, images, logotype, interface) est la propriété exclusive de SAS Boostinghost et est protégé par les lois françaises et internationales relatives à la propriété intellectuelle. Toute reproduction, même partielle, est strictement interdite sans autorisation préalable écrite.</p>
+        <div class="legal-section">
+          <h2>Hébergement</h2>
+          <p><strong>Hébergeur applicatif :</strong> Render Services, Inc. — 525 Brannan Street, Suite 300, San Francisco, CA 94107, États-Unis — <a href="https://render.com" target="_blank">render.com</a></p>
+          <p><strong>Base de données :</strong> Supabase (AWS, West EU – Irlande, Union Européenne) — <a href="https://supabase.com" target="_blank">supabase.com</a></p>
+        </div>
 
-  <h2>Données personnelles</h2>
-  <p>Pour toute information relative au traitement de vos données personnelles, veuillez consulter notre <a href="/politique-confidentialite.html">Politique de confidentialité</a>.</p>
+        <div class="legal-section">
+          <h2>Propriété intellectuelle</h2>
+          <p>L'ensemble du contenu de ce site (textes, images, logotype, interface) est la propriété exclusive de SAS Boostinghost et est protégé par les lois françaises et internationales relatives à la propriété intellectuelle. Toute reproduction, même partielle, est strictement interdite sans autorisation préalable écrite.</p>
+        </div>
 
-  <h2>Responsabilité</h2>
-  <p>SAS Boostinghost s'efforce de maintenir les informations publiées sur ce site à jour et exactes. Toutefois, elle ne saurait être tenue responsable des erreurs ou omissions, ni de l'utilisation qui pourrait en être faite par des tiers.</p>
+        <div class="legal-section">
+          <h2>Données personnelles</h2>
+          <p>Pour toute information relative au traitement de vos données personnelles, veuillez consulter notre <a href="/politique-confidentialite.html">Politique de confidentialité</a>.</p>
+        </div>
 
-  <h2>Droit applicable</h2>
-  <p>Le présent site est soumis au droit français. Tout litige relatif à son utilisation relève de la compétence exclusive des tribunaux français.</p>
+        <div class="legal-section">
+          <h2>Responsabilité</h2>
+          <p>SAS Boostinghost s'efforce de maintenir les informations publiées sur ce site à jour et exactes. Toutefois, elle ne saurait être tenue responsable des erreurs ou omissions, ni de l'utilisation qui pourrait en être faite par des tiers.</p>
+        </div>
 
+        <div class="legal-section">
+          <h2>Droit applicable</h2>
+          <p>Le présent site est soumis au droit français. Tout litige relatif à son utilisation relève de la compétence exclusive des tribunaux français.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
