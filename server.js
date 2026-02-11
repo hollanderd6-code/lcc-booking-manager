@@ -9287,6 +9287,101 @@ app.post('/api/properties',
       return res.status(400).json({ error: 'Nom et couleur requis' });
     }
 
+    // ============================================
+    // CHECK QUOTA LOGEMENTS PAR PLAN
+    // ============================================
+    {
+      // Récupérer le plan actif de l'utilisateur
+      const subResult = await pool.query(
+        `SELECT plan_type, stripe_subscription_id FROM subscriptions
+         WHERE user_id = $1 AND status IN ('active', 'trialing')
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+      const planType = subResult.rows[0]?.plan_type || 'solo';
+      const stripeSubId = subResult.rows[0]?.stripe_subscription_id;
+      const limits = getPlanLimits(planType);
+      const isAnnualPlan = (planType || '').toLowerCase().includes('annual');
+
+      // Compter les logements existants de cet utilisateur
+      const propCountRes = await pool.query(
+        'SELECT COUNT(*) AS count FROM properties WHERE user_id = $1',
+        [userId]
+      );
+      const currentCount = parseInt(propCountRes.rows[0].count, 10);
+
+      // Calculer le slug de la propriété qu'on essaie de créer
+      const nameSlugCheck = name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const tentativeId = `${userId}-${nameSlugCheck}`;
+
+      // Vérifier si c'est une mise à jour (propriété existante) ou un ajout
+      const existCheck = await pool.query(
+        'SELECT id FROM properties WHERE id = $1',
+        [tentativeId]
+      );
+      const isExistingProperty = existCheck.rows.length > 0;
+
+      if (!isExistingProperty) {
+        const basePlanName = getBasePlanName(planType);
+
+        // Plan Solo : 1 logement max, pas de supplément possible
+        if (basePlanName === 'solo' && currentCount >= 1) {
+          return res.status(403).json({
+            error: 'Limite atteinte',
+            code: 'PLAN_LIMIT_SOLO',
+            message: 'Le plan Solo est limité à 1 logement. Passez au plan Standard pour gérer jusqu\'à 3 logements.',
+            currentCount,
+            limit: 1,
+            upgradeUrl: '/pricing.html'
+          });
+        }
+
+        // Standard/Pro : au-delà du quota inclus → facturer automatiquement le supplément
+        if (currentCount >= limits.included && limits.extraPrice !== null) {
+          const extraEnvKey = `STRIPE_PRICE_${basePlanName.toUpperCase()}_EXTRA_${isAnnualPlan ? 'ANNUAL' : 'MONTHLY'}`;
+          const extraPriceId = process.env[extraEnvKey];
+
+          if (!extraPriceId) {
+            return res.status(500).json({
+              error: 'Configuration manquante',
+              code: 'NO_EXTRA_PRICE',
+              message: `Le prix pour logement supplémentaire (${extraEnvKey}) n'est pas configuré. Contactez le support.`
+            });
+          }
+
+          if (!stripeSubId || !stripeSubscriptions) {
+            return res.status(400).json({
+              error: 'Abonnement introuvable',
+              code: 'NO_SUBSCRIPTION',
+              message: 'Impossible d\'ajouter un logement supplémentaire : aucun abonnement Stripe actif trouvé.'
+            });
+          }
+
+          try {
+            await stripeSubscriptions.subscriptionItems.create({
+              subscription: stripeSubId,
+              price: extraPriceId,
+              quantity: 1,
+              proration_behavior: 'create_prorations'
+            });
+            const extraPrice = isAnnualPlan ? limits.extraPriceAnnual : limits.extraPrice;
+            console.log(`✅ Logement supplémentaire facturé: user=${userId} plan=${planType} +${extraPrice}€`);
+          } catch (stripeErr) {
+            console.error('❌ Erreur Stripe ajout logement extra:', stripeErr.message);
+            return res.status(402).json({
+              error: 'Erreur de facturation',
+              code: 'STRIPE_ERROR',
+              message: `Impossible de facturer le logement supplémentaire : ${stripeErr.message}`
+            });
+          }
+        }
+      }
+    }
+    // ============================================
+
     const baseId = name.toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
