@@ -14797,7 +14797,7 @@ cron.schedule('0 8 * * *', async () => {
       
       // Arrivees du jour
       const arrivalsResult = await pool.query(
-        `SELECT 
+        `SELECT DISTINCT ON (r.id) 
           r.id, r.uid, r.property_id, r.start_date, r.end_date,
           r.source, r.platform, r.status,
           
@@ -14826,7 +14826,8 @@ cron.schedule('0 8 * * *', async () => {
          )
          WHERE p.user_id = $1 
          AND DATE(r.start_date) = $2
-         AND r.status != 'cancelled'`,
+         AND r.status != 'cancelled'
+         ORDER BY r.id`,
         [user.id, todayStr]
       );
       
@@ -14853,7 +14854,7 @@ cron.schedule('0 8 * * *', async () => {
       
       // Departs du jour
       const departuresResult = await pool.query(
-        `SELECT 
+        `SELECT DISTINCT ON (r.id) 
           r.id, r.uid, r.property_id, r.start_date, r.end_date,
           r.source, r.platform, r.status,
           
@@ -14882,7 +14883,8 @@ cron.schedule('0 8 * * *', async () => {
          )
          WHERE p.user_id = $1 
          AND DATE(r.end_date) = $2
-         AND r.status != 'cancelled'`,
+         AND r.status != 'cancelled'
+         ORDER BY r.id`,
         [user.id, todayStr]
       );
       
