@@ -758,6 +758,31 @@ let token = localStorage.getItem('lcc_token');
     return amount.toFixed(2).replace('.', ',') + ' €';
   }
 
+  // ✅ FIX iOS Safari : parser les dates YYYY-MM-DD correctement
+  // Safari iOS ne parse pas 'YYYY-MM-DD' en local time, il faut ajouter T00:00:00
+  function parseLocalDate(dateStr) {
+    if (!dateStr) return null;
+    // Si déjà un objet Date
+    if (dateStr instanceof Date) return dateStr;
+    // Convertir YYYY-MM-DD en YYYY-MM-DDT00:00:00 pour éviter le décalage UTC iOS
+    const str = String(dateStr).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return new Date(str + 'T00:00:00');
+    }
+    return new Date(str);
+  }
+
+  function formatDate(dateStr, locale) {
+    if (!dateStr) return '';
+    try {
+      const d = parseLocalDate(dateStr);
+      if (!d || isNaN(d.getTime())) return '';
+      return d.toLocaleDateString(locale || 'fr-FR');
+    } catch(e) {
+      return '';
+    }
+  }
+
   // --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[INIT] Initialisation de la page factures...');
@@ -767,10 +792,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   currentUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
   
   // Dates defaut
-  const d = new Date(); 
-  document.getElementById('invoiceIssueDate').valueAsDate = d;
+  // ✅ FIX iOS : utiliser .value = 'YYYY-MM-DD' plutôt que .valueAsDate
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const toYMD = dt => `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+  document.getElementById('invoiceIssueDate').value = toYMD(d);
   const d2 = new Date(); d2.setDate(d2.getDate()+30);
-  document.getElementById('invoiceDueDate').valueAsDate = d2;
+  document.getElementById('invoiceDueDate').value = toYMD(d2);
   
   // Charger les données une par une pour éviter le blocage
   try {
@@ -982,7 +1010,7 @@ window.openStatsModal = function(type) {
         '<th style="text-align:right; padding:6px 4px;">Montant</th>' +
         '</tr></thead><tbody>';
       filtered.forEach(function(inv) {
-        const dateStr = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
+        const dateStr = formatDate(inv.issue_date);
         const num = inv.invoice_number || ('#' + inv.id);
         const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
         htmlContent += '<tr>' +
@@ -1152,7 +1180,7 @@ async function loadInvoices() {
           '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
       }
 
-      const issueDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : '';
+      const issueDate = formatDate(inv.issue_date);
 
       const cardHtml =
         '<div class="invoice-card">' +
@@ -1342,8 +1370,8 @@ window.deleteOwnerInvoice = async function (id) {
         <h1 style="margin:0 0 8px 0;font-size:28px;font-weight:800;">FACTURE</h1>
         <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">
           N° ${inv.invoice_number || 'BROUILLON'}<br>
-          Date : ${new Date(inv.issue_date).toLocaleDateString('fr-FR')}<br>
-          Échéance : ${new Date(inv.due_date).toLocaleDateString('fr-FR')}
+          Date : ${formatDate(inv.issue_date, 'fr-FR')}<br>
+          Échéance : ${formatDate(inv.due_date, 'fr-FR')}
         </p>
       </div>
     </div>
@@ -1711,12 +1739,16 @@ if (window.userProfile && window.userProfile.logoUrl) {
     }
 
     // Dates
-    const dIss = document.getElementById('invoiceIssueDate').valueAsDate;
-    const dStart = document.getElementById('invoicePeriodStart').valueAsDate;
-    const dEnd = document.getElementById('invoicePeriodEnd').valueAsDate;
-    
-    if(dIss) document.getElementById('previewDate').textContent = dIss.toLocaleDateString();
-    if(dStart && dEnd) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString()} au ${dEnd.toLocaleDateString()}`;
+    // ✅ FIX iOS : lire .value et parser manuellement
+    const issVal = document.getElementById('invoiceIssueDate').value;
+    const startVal = document.getElementById('invoicePeriodStart').value;
+    const endVal = document.getElementById('invoicePeriodEnd').value;
+    const dIss = issVal ? parseLocalDate(issVal) : null;
+    const dStart = startVal ? parseLocalDate(startVal) : null;
+    const dEnd = endVal ? parseLocalDate(endVal) : null;
+
+    if(dIss && !isNaN(dIss)) document.getElementById('previewDate').textContent = dIss.toLocaleDateString('fr-FR');
+    if(dStart && dEnd && !isNaN(dStart) && !isNaN(dEnd)) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString('fr-FR')} au ${dEnd.toLocaleDateString('fr-FR')}`;
 
     // Afficher le logo si présent
     if (window.userProfile && window.userProfile.logoUrl) {
@@ -1924,10 +1956,13 @@ function getSelectedProperties() {
     prestationCounter = 0;
     
     document.getElementById('invoiceClientId').value = '';
-    const d = new Date(); 
-    document.getElementById('invoiceIssueDate').valueAsDate = d;
+    // ✅ FIX iOS
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const toYMD = dt => `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+    document.getElementById('invoiceIssueDate').value = toYMD(d);
     const d2 = new Date(); d2.setDate(d2.getDate()+30);
-    document.getElementById('invoiceDueDate').valueAsDate = d2;
+    document.getElementById('invoiceDueDate').value = toYMD(d2);
     document.getElementById('invoiceVatApplicable').checked = false;
     document.getElementById('invoiceVatRate').value = 20;
     
