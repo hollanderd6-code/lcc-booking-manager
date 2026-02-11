@@ -737,6 +737,7 @@ input[type="number"] {
 <script>
 console.log('[INIT] Script principal charge');
 let token = localStorage.getItem('lcc_token');
+  const API_BASE = 'https://lcc-booking-manager.onrender.com';
   let clients = [];
   let prestations = [];
   let prestationCounter = 0;
@@ -848,7 +849,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- CLIENTS ---
   async function loadClients() {
   try {
-    const res = await fetch('/api/owner-clients', { headers: { Authorization: 'Bearer '+token }});
+    const res = await fetch(API_BASE + '/api/owner-clients', { headers: { Authorization: 'Bearer '+token }});
     const data = await res.json();
     clients = data.clients || [];
     document.getElementById('statsClients').textContent = clients.length;
@@ -872,7 +873,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Charger les infos du profil utilisateur
 async function loadUserProfile() {
   try {
-    const res = await fetch('/api/user/profile', {
+    const res = await fetch(API_BASE + '/api/user/profile', {
       headers: { Authorization: 'Bearer ' + token }
     });
     
@@ -927,7 +928,7 @@ async function loadUserProfile() {
 // Nouvelle fonction pour charger les propriétés
 async function loadPropertiesForInvoice() {
   try {
-    const res = await fetch('/api/properties', { 
+    const res = await fetch(API_BASE + '/api/properties', { 
       headers: { Authorization: 'Bearer ' + token }
     });
     const data = await res.json();
@@ -1086,7 +1087,7 @@ async function loadInvoices() {
   console.log('🔍 loadInvoices() - Début...');
   try {
     console.log('📡 Appel API /api/owner-invoices...');
-    const res = await fetch('/api/owner-invoices', {
+    const res = await fetch(API_BASE + '/api/owner-invoices', {
       headers: { Authorization: 'Bearer ' + token }
     });
     console.log('📡 Réponse reçue, status:', res.status);
@@ -1270,7 +1271,7 @@ window.sendOwnerInvoice = async function (id) {
   if (!confirm('Envoyer cette facture au client ?')) return;
 
   try {
-    const res = await fetch('/api/owner-invoices/' + id + '/send', {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/send', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -1293,7 +1294,7 @@ window.deleteOwnerInvoice = async function (id) {
   if (!confirm('Supprimer cette facture ?')) return;
 
   try {
-    const res = await fetch('/api/owner-invoices/' + id, {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -1311,7 +1312,7 @@ window.deleteOwnerInvoice = async function (id) {
   window.downloadOwnerInvoice = async function (id) {
   try {
     // Récupérer les données de la facture
-    const res = await fetch('/api/owner-invoices/' + id, {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     
@@ -1479,7 +1480,7 @@ window.finalizeOwnerInvoice = async function (id) {
   if (!confirm('Passer cette facture en “Facturée” ?')) return;
 
   try {
-    const res = await fetch('/api/owner-invoices/' + id + '/finalize', {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/finalize', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -1501,7 +1502,7 @@ window.markOwnerInvoicePaid = async function (id) {
   if (!confirm('Marquer cette facture comme encaissée ?')) return;
 
   try {
-    const res = await fetch('/api/owner-invoices/' + id + '/mark-paid', {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/mark-paid', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -1990,7 +1991,7 @@ function getSelectedProperties() {
   };
 window.viewOwnerInvoiceReadOnly = async function(id) {
   try {
-    const res = await fetch('/api/owner-invoices/' + id, {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const json = await res.json();
