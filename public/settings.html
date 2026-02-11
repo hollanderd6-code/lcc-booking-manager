@@ -1091,10 +1091,32 @@
 <p>Commencez par ajouter votre premier logement.</p>
 </div>
 <div style="margin-top:10px;">
-<button class="btn-add-property" onclick="openAddPropertyModal()">
+<button class="btn-add-property" id="btnAddProperty" onclick="handleAddPropertyClick()">
 <i class="fas fa-plus"></i>
-              Ajouter un logement
-            </button>
+  Ajouter un logement
+</button>
+<span id="propertyQuotaBadge" style="display:none; margin-left:10px; font-size:13px; color:#6b7280;"></span>
+</div>
+
+<!-- MODAL CONFIRMATION logement supplémentaire payant -->
+<div id="extraPropertyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:32px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="text-align:center; margin-bottom:20px;">
+      <div style="width:56px;height:56px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <i class="fas fa-home" style="color:#f59e0b;font-size:22px;"></i>
+      </div>
+      <h3 style="font-size:18px;font-weight:700;color:#111827;margin:0 0 8px;">Logement supplémentaire</h3>
+      <p id="extraPropertyModalText" style="color:#6b7280;font-size:14px;margin:0;line-height:1.5;"></p>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:20px;text-align:center;">
+      <p id="extraPropertyPriceText" style="font-weight:700;color:#059669;font-size:16px;margin:0;"></p>
+      <p style="color:#6b7280;font-size:12px;margin:4px 0 0;">Ajouté automatiquement à votre abonnement</p>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button onclick="closeExtraPropertyModal()" style="flex:1;padding:12px;border:2px solid #e5e7eb;background:#fff;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Annuler</button>
+      <button onclick="confirmAddExtraProperty()" id="btnConfirmExtra" style="flex:1;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Confirmer</button>
+    </div>
+  </div>
 </div>
 </section>
 </div>
@@ -1949,6 +1971,19 @@ function insertVariable(textareaId, variable, event) {
       const data = await res.json();
 
       if (!res.ok) {
+        // Gestion spécifique des erreurs de quota
+        if (res.status === 403 && data.code === 'PLAN_LIMIT_SOLO') {
+          showPlanLimitModal('solo');
+          return;
+        }
+        if (res.status === 402 && data.code === 'STRIPE_ERROR') {
+          alert('❌ Erreur de facturation Stripe : ' + (data.message || 'Contactez le support.'));
+          return;
+        }
+        if (res.status === 400 && data.code === 'NO_SUBSCRIPTION') {
+          alert('❌ Aucun abonnement actif trouvé. Vérifiez votre abonnement dans les paramètres.');
+          return;
+        }
         throw new Error(data.error || data.message || 'Erreur serveur');
       }
 
@@ -1960,6 +1995,9 @@ function insertVariable(textareaId, variable, event) {
         closeEditModal();
       }
       
+      // Déclencher l'événement pour mettre à jour le badge quota
+      document.dispatchEvent(new CustomEvent('propertySaved'));
+
       // Recharger la page
       location.reload();
 
@@ -2006,6 +2044,149 @@ function insertVariable(textareaId, variable, event) {
   console.log('✅ Patch owner_id V2 installé avec succès');
   console.log('💡 Debug disponible via window.debugOwnerPatch');
 
+})();
+
+// ============================================
+// GESTION QUOTA LOGEMENTS
+// ============================================
+(function() {
+  const API = 'https://lcc-booking-manager.onrender.com';
+
+  // Config des plans
+  const PLAN_LIMITS = {
+    solo:     { included: 1,  extraPrice: null, extraPriceAnnual: null },
+    standard: { included: 3,  extraPrice: 7,    extraPriceAnnual: 70 },
+    pro:      { included: 6,  extraPrice: 5,    extraPriceAnnual: 50 }
+  };
+
+  function getBasePlan(planType) {
+    const p = (planType || '').toLowerCase();
+    if (p.includes('solo')) return 'solo';
+    if (p.includes('standard')) return 'standard';
+    if (p.includes('pro')) return 'pro';
+    return 'solo';
+  }
+
+  // Données chargées au démarrage
+  let userPlanType = 'solo';
+  let propertyCount = 0;
+
+  async function loadQuotaInfo() {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+
+    try {
+      // Récupérer le plan
+      const subRes = await fetch(`${API}/api/subscription/status`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        userPlanType = subData.planType || 'solo';
+      }
+
+      // Récupérer le nombre de logements
+      const propRes = await fetch(`${API}/api/properties`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (propRes.ok) {
+        const propData = await propRes.json();
+        propertyCount = (propData.properties || []).length;
+      }
+
+      updateQuotaBadge();
+    } catch (err) {
+      console.warn('Impossible de charger le quota:', err);
+    }
+  }
+
+  function updateQuotaBadge() {
+    const badge = document.getElementById('propertyQuotaBadge');
+    if (!badge) return;
+
+    const basePlan = getBasePlan(userPlanType);
+    const limits = PLAN_LIMITS[basePlan];
+
+    if (basePlan === 'solo') {
+      if (propertyCount >= 1) {
+        badge.textContent = '⚠️ Limite atteinte (plan Solo : 1 logement max)';
+        badge.style.color = '#dc2626';
+      } else {
+        badge.textContent = `${propertyCount}/1 logement inclus`;
+        badge.style.color = '#6b7280';
+      }
+    } else {
+      const remaining = Math.max(0, limits.included - propertyCount);
+      if (remaining > 0) {
+        badge.textContent = `${propertyCount}/${limits.included} logements inclus`;
+        badge.style.color = '#6b7280';
+      } else {
+        const extraCount = propertyCount - limits.included;
+        badge.textContent = `${propertyCount} logements (${extraCount} supplémentaire${extraCount > 1 ? 's' : ''} facturé${extraCount > 1 ? 's' : ''})`;
+        badge.style.color = '#f59e0b';
+      }
+    }
+    badge.style.display = 'inline';
+  }
+
+  // Clic sur "Ajouter un logement"
+  window.handleAddPropertyClick = function() {
+    const basePlan = getBasePlan(userPlanType);
+    const limits = PLAN_LIMITS[basePlan];
+    const isAnnual = (userPlanType || '').toLowerCase().includes('annual');
+
+    // Plan Solo : bloquer si déjà 1 logement
+    if (basePlan === 'solo' && propertyCount >= 1) {
+      showPlanLimitModal('solo');
+      return;
+    }
+
+    // Standard/Pro : avertir si au-delà du quota inclus
+    if (limits.extraPrice !== null && propertyCount >= limits.included) {
+      const price = isAnnual ? limits.extraPriceAnnual : limits.extraPrice;
+      const period = isAnnual ? 'an' : 'mois';
+      const planName = basePlan.charAt(0).toUpperCase() + basePlan.slice(1);
+      document.getElementById('extraPropertyModalText').textContent =
+        `Vous avez atteint les ${limits.included} logements inclus dans votre plan ${planName}. Un logement supplémentaire peut être ajouté.`;
+      document.getElementById('extraPropertyPriceText').textContent =
+        `+${price}€/${period} par logement supplémentaire`;
+      document.getElementById('extraPropertyModal').style.display = 'flex';
+      return;
+    }
+
+    // Dans le quota : ouvrir directement le modal
+    if (typeof openAddPropertyModal === 'function') openAddPropertyModal();
+  };
+
+  window.closeExtraPropertyModal = function() {
+    document.getElementById('extraPropertyModal').style.display = 'none';
+  };
+
+  window.confirmAddExtraProperty = function() {
+    document.getElementById('extraPropertyModal').style.display = 'none';
+    if (typeof openAddPropertyModal === 'function') openAddPropertyModal();
+  };
+
+  // Modal upgrade Solo
+  window.showPlanLimitModal = function(plan) {
+    const msg = plan === 'solo'
+      ? 'Le plan Solo est limité à 1 logement.\n\nPour gérer plusieurs logements, passez au plan Standard (29€/mois, 3 logements inclus) ou Pro (49€/mois, 6 logements inclus).'
+      : 'Vous avez atteint la limite de votre plan.';
+    if (confirm(msg + '\n\nVoulez-vous voir les plans disponibles ?')) {
+      window.location.href = '/pricing.html';
+    }
+  };
+
+  // Mettre à jour le quota après ajout réussi d'une propriété
+  const origReload = window.location.reload.bind(window.location);
+  // Écouter les sauvegardes réussies pour incrémenter le compteur local
+  document.addEventListener('propertySaved', function() {
+    propertyCount++;
+    updateQuotaBadge();
+  });
+
+  // Init au chargement
+  document.addEventListener('DOMContentLoaded', loadQuotaInfo);
 })();
     </script>
 
