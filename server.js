@@ -6415,8 +6415,9 @@ app.get('/api/availability/:propertyId', async (req, res) => {
 
 // ============================================
 // ROUTE CORRIGÉE : /api/reservations-with-deposits
-// À remplacer dans server.js ligne ~5291
+// AVEC INFOS VOYAGEUR (guest_first_name, guest_last_name)
 // ============================================
+// Remplacer la route existante dans server.js (vers ligne 6421)
 
 app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(pool), async (req, res) => {
   try {
@@ -6467,6 +6468,34 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       });
     });
 
+    // ✅ NOUVEAU : Récupérer les conversations avec infos voyageur
+    const conversationsResult = await pool.query(`
+      SELECT 
+        property_id,
+        reservation_start_date,
+        platform,
+        guest_first_name,
+        guest_last_name,
+        guest_phone,
+        guest_name
+      FROM conversations
+      WHERE user_id = $1
+    `, [userId]);
+    
+    // Créer un Map pour matcher conversations avec réservations
+    // Clé: propertyId + startDate + platform (lowercased)
+    const conversationsMap = new Map();
+    conversationsResult.rows.forEach(c => {
+      const startDate = c.reservation_start_date ? new Date(c.reservation_start_date).toISOString().split('T')[0] : '';
+      const key = `${c.property_id}_${startDate}_${(c.platform || '').toLowerCase()}`;
+      conversationsMap.set(key, {
+        guestFirstName: c.guest_first_name,
+        guestLastName: c.guest_last_name,
+        guestPhone: c.guest_phone,
+        guestNameFromConv: c.guest_name
+      });
+    });
+
     const result = [];
     let userProps = getUserProperties(userId);
 
@@ -6484,6 +6513,37 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       reservations.forEach(r => {
         // ✅ Chercher le deposit dans la Map
         const deposit = depositsMap.get(r.uid) || null;
+        
+        // ✅ NOUVEAU : Chercher les infos voyageur dans les conversations
+        const startDate = r.start ? new Date(r.start).toISOString().split('T')[0] : '';
+        const platform = (r.platform || r.source || '').toLowerCase();
+        const convKey = `${property.id}_${startDate}_${platform}`;
+        const convData = conversationsMap.get(convKey);
+        
+        // Construire le nom complet du voyageur
+        let guestDisplayName = '';
+        let guestFirstName = '';
+        let guestLastName = '';
+        let guestPhone = '';
+        
+        if (convData) {
+          guestFirstName = convData.guestFirstName || '';
+          guestLastName = convData.guestLastName || '';
+          guestPhone = convData.guestPhone || '';
+          
+          if (guestFirstName) {
+            guestDisplayName = guestLastName 
+              ? `${guestFirstName} ${guestLastName}`
+              : guestFirstName;
+          } else if (convData.guestNameFromConv) {
+            guestDisplayName = convData.guestNameFromConv;
+          }
+        }
+        
+        // Fallback sur guestName de la réservation si pas d'info conversation
+        if (!guestDisplayName && r.guestName) {
+          guestDisplayName = r.guestName;
+        }
 
         result.push({
           reservationUid: r.uid,
@@ -6492,6 +6552,11 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
           startDate: r.start,
           endDate: r.end,
           guestName: r.guestName || '',
+          // ✅ NOUVEAUX CHAMPS
+          guestFirstName: guestFirstName,
+          guestLastName: guestLastName,
+          guestDisplayName: guestDisplayName,
+          guestPhone: guestPhone,
           source: r.source || '',
           deposit: deposit
             ? {
@@ -6514,6 +6579,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 // ============================================
 // ✅ GET - Réservations enrichies (risque + checklist + sous-scores)
 // ============================================
