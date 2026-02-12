@@ -1341,6 +1341,40 @@ function copyDepositLinkByUid(uid) {
     }
 
     // ============================================
+    // FONCTION POUR AFFICHER LE NOM DU VOYAGEUR
+    // ============================================
+    function getGuestDisplayName(r) {
+      // Priorité 1: guestDisplayName construit par le serveur (onboarding)
+      if (r.guestDisplayName && r.guestDisplayName.trim() !== '') {
+        const name = r.guestDisplayName.trim();
+        // Vérifier que ce n'est pas un nom générique
+        const invalidNames = ['voyageur', 'voyageur airbnb', 'voyageur booking', 'reserved', 'not available', 'blocked'];
+        if (!invalidNames.some(inv => name.toLowerCase() === inv)) {
+          return name;
+        }
+      }
+      
+      // Priorité 2: guestFirstName + guestLastName
+      if (r.guestFirstName && r.guestFirstName.trim() !== '') {
+        const firstName = r.guestFirstName.trim();
+        const lastName = r.guestLastName ? r.guestLastName.trim() : '';
+        return lastName ? `${firstName} ${lastName}` : firstName;
+      }
+      
+      // Priorité 3: guestName de la réservation
+      if (r.guestName && r.guestName.trim() !== '') {
+        const name = r.guestName.trim();
+        const invalidNames = ['voyageur', 'voyageur airbnb', 'voyageur booking', 'reserved', 'not available', 'blocked', 'closed'];
+        if (!invalidNames.some(inv => name.toLowerCase().includes(inv))) {
+          return name;
+        }
+      }
+      
+      // Pas de nom disponible
+      return null;
+    }
+
+    // ============================================
     // FONCTION COMMUNE POUR RENDER LES CARTES
     // ============================================
     function renderDepositCards(data, isHistory = false) {
@@ -1350,6 +1384,9 @@ function copyDepositLinkByUid(uid) {
         const d = r.deposit || null;
         let amountBadge = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
+        
+        // ✅ Récupérer le nom du voyageur
+        const guestName = getGuestDisplayName(r);
         
         if (d) {
           if (d.amountCents) {
@@ -1498,6 +1535,12 @@ function copyDepositLinkByUid(uid) {
             </div>
             
             <div class="deposit-card-body">
+              ${guestName ? `
+              <div class="deposit-info-row" style="margin-bottom: 8px;">
+                <i class="fas fa-user"></i>
+                <span style="font-weight: 600; color: var(--text-primary);">${guestName}</span>
+              </div>
+              ` : ''}
               <div class="deposit-info-row">
                 <i class="fas fa-calendar"></i>
                 <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
