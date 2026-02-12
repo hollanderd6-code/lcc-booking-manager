@@ -10563,7 +10563,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
         type: 'express',
         email: user.email,
         metadata: {
-          userId: userId,
+          userId: user.id,
           company: user.company || ''
         }
       });
