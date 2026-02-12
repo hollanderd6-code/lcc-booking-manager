@@ -544,6 +544,49 @@
         display: none;
       }
     }
+
+    /* ========== STYLE HISTORIQUE ========== */
+    .history-card {
+      opacity: 0.75;
+      background: var(--bg-secondary);
+    }
+    
+    .history-card:hover {
+      opacity: 1;
+    }
+    
+    .history-notice {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #92400e;
+    }
+    
+    .history-notice i {
+      font-size: 18px;
+    }
+
+    /* Badge compteur dans onglet */
+    .tab-badge {
+      background: var(--primary-color, #059669);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      min-width: 18px;
+      text-align: center;
+    }
+    
+    .tab-badge.history {
+      background: #6b7280;
+    }
   </style>
 <!-- Script auth + user + logout -->
 <script>
@@ -598,56 +641,13 @@
       try {
         user = rawUser ? JSON.parse(rawUser) : null;
       } catch (e) {
-        console.error('Impossible de lire lcc_user', e);
+        console.error('Erreur parsing user:', e);
       }
-
-      window.addEventListener('DOMContentLoaded', () => {
-        if (user) {
-          const nameEl = document.getElementById('sidebarUserName');
-          const companyEl = document.getElementById('sidebarUserCompany');
-          const avatarEl = document.getElementById('sidebarUserAvatar');
-
-          if (nameEl) {
-            nameEl.textContent = user.firstName
-              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
-              : (user.email || 'Mon compte');
-          }
-
-          if (companyEl) {
-            companyEl.textContent = user.company || 'Mon espace';
-          }
-
-          if (avatarEl) {
-            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-            avatarEl.textContent = initial.toUpperCase();
-          }
-        }
-
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', function () {
-            localStorage.removeItem('lcc_token');
-            localStorage.removeItem('lcc_user');
-            window.location.href = '/login.html';
-          });
-        }
-      });
     })();
   </script>
-<script src="/js/auth-fetch.js"></script>
-<link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="deposits" data-subtitle="Gérez les cautions et les paiements de vos réservations." data-title="Cautions & Paiements">
-<!-- MOBILE HEADER -->
-<div class="mobile-header">
-<a class="mobile-logo" href="/app.html">
-<i class="fas fa-calendar-check"></i>
-<span class="mobile-logo-text">Bookingmanage</span>
-</a>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
-</div>
+<body data-page="deposits">
+<div id="bhMobileHeader"></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
 <!-- Sidebar -->
@@ -661,6 +661,12 @@
 <button class="tab-button active" data-tab="deposits">
 <i class="fas fa-shield-halved"></i>
 <span>Cautions</span>
+<span class="tab-badge" id="depositsCount" style="display:none;">0</span>
+</button>
+<button class="tab-button" data-tab="history">
+<i class="fas fa-history"></i>
+<span>Historique</span>
+<span class="tab-badge history" id="historyCount" style="display:none;">0</span>
 </button>
 <button class="tab-button" data-tab="payments">
 <i class="fas fa-euro-sign"></i>
@@ -668,7 +674,7 @@
 </button>
 </div>
 
-<!-- ONGLET : CAUTIONS -->
+<!-- ONGLET : CAUTIONS ACTIVES -->
 <div class="tab-pane active" id="tab-deposits">
 <section class="card">
 <div class="card-header">
@@ -698,6 +704,40 @@
 </section>
 </div>
 <!-- FIN ONGLET CAUTIONS -->
+
+<!-- ONGLET : HISTORIQUE -->
+<div class="tab-pane" id="tab-history">
+<section class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-history"></i>
+<span>Historique des cautions</span>
+</div>
+<button class="btn btn-ghost btn-xs" id="refreshHistoryBtn">
+<i class="fas fa-sync-alt"></i>
+              Actualiser
+            </button>
+</div>
+
+<div class="history-notice">
+  <i class="fas fa-info-circle"></i>
+  <span>L'historique affiche les cautions des séjours terminés depuis moins d'un mois. Les cautions plus anciennes sont consultables directement sur Stripe.</span>
+</div>
+
+<div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
+<label for="propertyFilterHistory" style="font-size:13px; font-weight:500;">Logement :</label>
+<select id="propertyFilterHistory">
+<option value="">Tous les logements</option>
+</select>
+</div>
+<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+<div id="historyContainer">
+<p class="empty-state">Chargement de l'historique…</p>
+</div>
+</div>
+</section>
+</div>
+<!-- FIN ONGLET HISTORIQUE -->
 
 <!-- ONGLET : PAIEMENTS DE LOCATIONS -->
 <div class="tab-pane" id="tab-payments">
@@ -791,12 +831,12 @@ Les paiements de locations sont versés directement sur votre compte Stripe Conn
 
     let currentReservationForDeposit = null;
     let allReservationsWithDeposits = [];
-    let allProperties = []; // ✅ Stocker les propriétés avec leur deposit_amount
+    let allProperties = [];
+
 function formatDateFr(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) {
-    // si jamais ce n'est pas une date valide, on renvoie la valeur brute
     return dateStr;
   }
   return d.toLocaleDateString('fr-FR', {
@@ -811,7 +851,6 @@ function getExpirationDate(createdAt) {
   const created = new Date(createdAt);
   if (Number.isNaN(created.getTime())) return null;
   
-  // Ajouter 7 jours
   const expiration = new Date(created);
   expiration.setDate(expiration.getDate() + 7);
   
@@ -832,13 +871,11 @@ function formatExpirationDate(createdAt) {
     function getDefaultDepositAmount(propertyId) {
       if (!propertyId) return null;
       
-      // ✅ Chercher le montant de caution dans les propriétés chargées
       const property = allProperties.find(p => p.id === propertyId);
       if (property && property.depositAmount) {
         return parseFloat(property.depositAmount);
       }
       
-      // Fallback sur localStorage si jamais (pour compatibilité)
       try {
         const raw = localStorage.getItem('lcc_deposit_defaults') || '{}';
         const parsed = JSON.parse(raw);
@@ -859,7 +896,6 @@ function formatExpirationDate(createdAt) {
       const details = document.getElementById(`details-${reservationUid}`);
       if (!details) return;
       
-      // Trouver la carte parente
       const card = details.closest('.deposit-card');
       
       if (details.style.display === 'none' || details.style.display === '') {
@@ -956,7 +992,7 @@ function formatExpirationDate(createdAt) {
     }
 
     async function releaseDeposit(depositId) {
-      if (!confirm('Libérer cette caution ?\n\nL\'autorisation sera annulée et aucun montant ne sera débité.')) {
+      if (!confirm("Libérer la caution ?\n\nLa pré-autorisation sera annulée et le client ne sera pas débité.")) {
         return;
       }
 
@@ -985,22 +1021,25 @@ function formatExpirationDate(createdAt) {
 
     function openDepositModal(reservation) {
       currentReservationForDeposit = reservation;
-
+      
+      const label = document.getElementById('depositModalReservationLabel');
+      label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
+      
       const amountInput = document.getElementById('depositAmount');
-      const errorEl = document.getElementById('depositError');
-
-      if (amountInput) {
-        const defaultAmount = getDefaultDepositAmount(reservation.propertyId);
-        amountInput.value = defaultAmount && !isNaN(defaultAmount) ? defaultAmount : '';
-      }
-
-      if (errorEl) {
-        errorEl.textContent = '';
-      }
-
-      document.getElementById('depositModalReservationLabel').textContent =
-  `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
+      const defaultAmount = getDefaultDepositAmount(reservation.propertyId);
+      amountInput.value = defaultAmount !== null ? defaultAmount : '';
+      
+      document.getElementById('depositError').textContent = '';
       document.getElementById('depositModal').classList.add('active');
+    }
+
+    function openDepositModalByUid(uid) {
+      const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
+      if (reservation) {
+        openDepositModal(reservation);
+      } else {
+        alert('Réservation introuvable');
+      }
     }
 
     function closeDepositModal() {
@@ -1008,51 +1047,12 @@ function formatExpirationDate(createdAt) {
       currentReservationForDeposit = null;
     }
 
-    function copyText(encoded) {
-      const text = decodeURIComponent(encoded);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-          .then(() => alert('Lien copié dans le presse-papiers.'))
-          .catch(() => alert('Impossible de copier automatiquement, copiez-le manuellement.'));
-      } else {
-        alert('Votre navigateur ne supporte pas la copie automatique, copiez le lien manuellement.');
-      }
-    }
-    function openDepositModalByUid(uid) {
-  const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
-  if (!reservation) {
-    alert('Réservation introuvable');
-    console.error('UID cherché:', uid);
-    console.log('Réservations disponibles:', allReservationsWithDeposits);
-    return;
-  }
-  openDepositModal(reservation);
-}
-    
-function buildDepositMessage(reservation, checkoutUrl) {
-  const startFr = formatDateFr(reservation.startDate);
-  const endFr = formatDateFr(reservation.endDate);
-
-  return `
-Bonjour ${reservation.guestName || ''},
-
-Votre séjour au logement "${reservation.propertyName || 'le logement'}"
-du ${startFr} au ${endFr} nécessite une caution.
-Voici le lien sécurisé pour procéder au paiement :
-
-${checkoutUrl}
-
-Merci, et à très bientôt !
-  `.trim();
-}
-
 async function copyExistingDepositMessage(reservation) {
   if (!reservation || !reservation.deposit || !reservation.deposit.checkoutUrl) {
     alert('Aucun lien de caution disponible pour ce séjour.');
     return;
   }
 
-  // ✅ Copier uniquement le lien, pas le message complet
   const checkoutUrl = reservation.deposit.checkoutUrl;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1066,18 +1066,16 @@ async function copyExistingDepositMessage(reservation) {
     alert("Votre navigateur ne supporte pas la copie automatique. Voici le lien :\n\n" + checkoutUrl);
   }
 }
+
 function copyDepositMessageByUid(uid) {
-  // Retrouver la réservation dans le tableau
   const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
   if (!reservation) {
     alert('Réservation introuvable');
     return;
   }
-  // Appeler la fonction existante
   copyExistingDepositMessage(reservation);
 }
 
-// ✅ NOUVELLE FONCTION pour copier le lien depuis les cartes
 function copyDepositLinkByUid(uid) {
   const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
   if (!reservation) {
@@ -1086,8 +1084,10 @@ function copyDepositLinkByUid(uid) {
   }
   copyExistingDepositMessage(reservation);
 }
+
     async function loadPropertiesForFilter() {
       const select = document.getElementById('propertyFilter');
+      const selectHistory = document.getElementById('propertyFilterHistory');
       if (!select) return;
 
       try {
@@ -1097,9 +1097,8 @@ function copyDepositLinkByUid(uid) {
           }
         });
         if (!res.ok) throw new Error('Erreur API propriétés');
-        const data = await res.json(); // { properties: [...] }
+        const data = await res.json();
 
-        // ✅ Stocker les propriétés globalement pour accéder à deposit_amount
         allProperties = data.properties || [];
 
         allProperties.forEach(p => {
@@ -1107,9 +1106,20 @@ function copyDepositLinkByUid(uid) {
           opt.value = p.id;
           opt.textContent = p.name;
           select.appendChild(opt);
+          
+          // Aussi pour le filtre historique
+          if (selectHistory) {
+            const opt2 = document.createElement('option');
+            opt2.value = p.id;
+            opt2.textContent = p.name;
+            selectHistory.appendChild(opt2);
+          }
         });
 
         select.addEventListener('change', renderDepositsTable);
+        if (selectHistory) {
+          selectHistory.addEventListener('change', renderHistoryTable);
+        }
       } catch (e) {
         console.error('Erreur chargement propriétés:', e);
       }
@@ -1129,8 +1139,9 @@ function copyDepositLinkByUid(uid) {
         const data = await res.json();
         allReservationsWithDeposits = Array.isArray(data) ? data : [];
         console.log('✅ Réservations chargées:', allReservationsWithDeposits.length);
-        console.log('📊 Première réservation:', allReservationsWithDeposits[0]);
         renderDepositsTable();
+        renderHistoryTable();
+        updateTabCounts();
       } catch (e) {
         console.error(e);
         container.innerHTML = '<p class="empty-state">Impossible de charger les réservations.</p>';
@@ -1148,17 +1159,81 @@ function copyDepositLinkByUid(uid) {
       return 'direct';
     }
 
+    // ============================================
+    // FILTRAGE ACTIVES vs HISTORIQUE
+    // ============================================
+    function filterActiveReservations(reservations) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      return reservations.filter(r => {
+        if (!r.endDate) return true;
+        const endDate = new Date(r.endDate);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate >= today;
+      });
+    }
+    
+    function filterHistoryReservations(reservations) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // 1 mois en arrière
+      const oneMonthAgo = new Date(today);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      
+      return reservations.filter(r => {
+        if (!r.endDate) return false;
+        const endDate = new Date(r.endDate);
+        endDate.setHours(0, 0, 0, 0);
+        // Terminé (endDate < today) ET pas plus vieux que 1 mois
+        return endDate < today && endDate >= oneMonthAgo;
+      });
+    }
+    
+    function updateTabCounts() {
+      const activeData = filterActiveReservations(allReservationsWithDeposits);
+      const historyData = filterHistoryReservations(allReservationsWithDeposits);
+      
+      const depositsCountEl = document.getElementById('depositsCount');
+      const historyCountEl = document.getElementById('historyCount');
+      
+      if (depositsCountEl) {
+        if (activeData.length > 0) {
+          depositsCountEl.textContent = activeData.length;
+          depositsCountEl.style.display = 'inline-block';
+        } else {
+          depositsCountEl.style.display = 'none';
+        }
+      }
+      
+      if (historyCountEl) {
+        if (historyData.length > 0) {
+          historyCountEl.textContent = historyData.length;
+          historyCountEl.style.display = 'inline-block';
+        } else {
+          historyCountEl.style.display = 'none';
+        }
+      }
+    }
+
+    // ============================================
+    // RENDER CAUTIONS ACTIVES
+    // ============================================
     function renderDepositsTable() {
       const container = document.getElementById('depositsContainer');
       const select = document.getElementById('propertyFilter');
       const selectedPropertyId = select ? select.value : '';
 
       // Filtrer par logement
-      const filtered = allReservationsWithDeposits.filter((r) =>
+      let filtered = allReservationsWithDeposits.filter((r) =>
         !selectedPropertyId || r.propertyId === selectedPropertyId
       );
+      
+      // ✅ Filtrer uniquement les réservations ACTIVES (date de fin >= aujourd'hui)
+      filtered = filterActiveReservations(filtered);
 
-      // Regrouper par séjour (1 ligne par réservation, pas par nuit)
+      // Regrouper par séjour
       const byReservation = new Map();
 
       filtered.forEach((r) => {
@@ -1167,12 +1242,10 @@ function copyDepositLinkByUid(uid) {
           (r.propertyId || '') + '|' + (r.startDate || '') + '|' + (r.endDate || '') + '|' + (r.guestName || '');
 
         if (!byReservation.has(key)) {
-          // On clone l'objet pour pouvoir l'enrichir
           byReservation.set(key, { ...r });
         } else {
           const existing = byReservation.get(key);
 
-          // On agrège les dates au cas où
           if (r.startDate && (!existing.startDate || r.startDate < existing.startDate)) {
             existing.startDate = r.startDate;
           }
@@ -1180,7 +1253,6 @@ function copyDepositLinkByUid(uid) {
             existing.endDate = r.endDate;
           }
 
-          // Si une des lignes a déjà une caution, on la garde
           if (!existing.deposit && r.deposit) {
             existing.deposit = r.deposit;
           }
@@ -1195,26 +1267,86 @@ function copyDepositLinkByUid(uid) {
       });
 
       if (!data.length) {
-        container.innerHTML = '<p class="empty-state">Aucune réservation pour ce filtre.</p>';
+        container.innerHTML = '<p class="empty-state">Aucune réservation active pour ce filtre.</p>';
         return;
       }
 
-      // ============================================
-      // 🎴 MODE CARTES (remplace le tableau)
-      // ============================================
+      let html = '<div class="deposits-cards-grid">';
+      html += renderDepositCards(data, false);
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    // ============================================
+    // RENDER HISTORIQUE
+    // ============================================
+    function renderHistoryTable() {
+      const container = document.getElementById('historyContainer');
+      if (!container) return;
+      
+      const select = document.getElementById('propertyFilterHistory');
+      const selectedPropertyId = select ? select.value : '';
+
+      // Filtrer par logement
+      let filtered = allReservationsWithDeposits.filter((r) =>
+        !selectedPropertyId || r.propertyId === selectedPropertyId
+      );
+      
+      // ✅ Filtrer uniquement les réservations PASSÉES (< 1 mois)
+      filtered = filterHistoryReservations(filtered);
+
+      // Regrouper par séjour
+      const byReservation = new Map();
+
+      filtered.forEach((r) => {
+        const key =
+          r.reservationUid ||
+          (r.propertyId || '') + '|' + (r.startDate || '') + '|' + (r.endDate || '') + '|' + (r.guestName || '');
+
+        if (!byReservation.has(key)) {
+          byReservation.set(key, { ...r });
+        } else {
+          const existing = byReservation.get(key);
+
+          if (r.startDate && (!existing.startDate || r.startDate < existing.startDate)) {
+            existing.startDate = r.startDate;
+          }
+          if (r.endDate && (!existing.endDate || r.endDate > existing.endDate)) {
+            existing.endDate = r.endDate;
+          }
+
+          if (!existing.deposit && r.deposit) {
+            existing.deposit = r.deposit;
+          }
+        }
+      });
+
+      // Trier par date de fin décroissante (plus récent en premier)
+      const data = Array.from(byReservation.values()).sort((a, b) => {
+        if (!a.endDate || !b.endDate) return 0;
+        if (a.endDate > b.endDate) return -1;
+        if (a.endDate < b.endDate) return 1;
+        return 0;
+      });
+
+      if (!data.length) {
+        container.innerHTML = '<p class="empty-state">Aucune caution dans l\'historique (séjours terminés depuis moins d\'un mois).</p>';
+        return;
+      }
 
       let html = '<div class="deposits-cards-grid">';
+      html += renderDepositCards(data, true);
+      html += '</div>';
+      container.innerHTML = html;
+    }
 
+    // ============================================
+    // FONCTION COMMUNE POUR RENDER LES CARTES
+    // ============================================
+    function renderDepositCards(data, isHistory = false) {
+      let html = '';
+      
       data.forEach((r) => {
-        // 🔍 DEBUG: Voir la structure des données
-        console.log('🎴 Carte pour ' + r.propertyName + ':', {
-          reservationUid: r.reservationUid,
-          hasDeposit: !!r.deposit,
-          depositStatus: r.deposit?.status,
-          hasCheckoutUrl: !!r.deposit?.checkoutUrl,
-          checkoutUrl: r.deposit?.checkoutUrl,
-          fullDeposit: r.deposit
-        });
         const d = r.deposit || null;
         let amountBadge = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
@@ -1238,7 +1370,6 @@ function copyDepositLinkByUid(uid) {
           }
         }
 
-        // Détection de la plateforme (Airbnb / Booking / etc.)
         const rawSource = r.source || r.sourceRaw || r.channel || '';
         const sourceKey = normalizeSourceToKey(rawSource);
         const isAirbnb = sourceKey === 'airbnb';
@@ -1246,7 +1377,18 @@ function copyDepositLinkByUid(uid) {
         // Actions principales
         let actionsHtml = '';
         
-        if (isAirbnb) {
+        if (isHistory) {
+          // En historique : juste un lien vers Stripe
+          if (d) {
+            actionsHtml = `
+              <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost btn-card">
+                <i class="fas fa-external-link-alt"></i> Voir sur Stripe
+              </a>
+            `;
+          } else {
+            actionsHtml = '<div class="card-hint">Pas de caution créée</div>';
+          }
+        } else if (isAirbnb) {
           actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
         } else if (d && d.checkoutUrl) {
           actionsHtml = `
@@ -1264,9 +1406,9 @@ function copyDepositLinkByUid(uid) {
           actionsHtml = '<div class="card-hint">Caution déjà gérée</div>';
         }
 
-        // Actions avancées (capture/release)
+        // Actions avancées (capture/release) - seulement si pas historique
         let advancedActionsHtml = '';
-        if (d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) {
+        if (!isHistory && d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) {
           const maxAmount = (d.amountCents / 100).toFixed(2);
           advancedActionsHtml = `
             <div class="deposit-details" id="details-${r.reservationUid}" style="display: none;">
@@ -1322,12 +1464,12 @@ function copyDepositLinkByUid(uid) {
           `;
         }
 
-        // Icône d'expansion si détails disponibles
-        const expandIcon = (d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
+        // Icône d'expansion si détails disponibles (pas en historique)
+        const expandIcon = (!isHistory && d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
-        // Date d'expiration (seulement si caution PAYÉE)
+        // Date d'expiration (seulement si caution PAYÉE et pas historique)
         let expirationBadge = '';
-        if (d && (d.status === 'paid' || d.status === 'authorized') && d.createdAt) {
+        if (!isHistory && d && (d.status === 'paid' || d.status === 'authorized') && d.createdAt) {
           const expirationDate = formatExpirationDate(d.createdAt);
           if (expirationDate) {
             expirationBadge = `
@@ -1340,8 +1482,9 @@ function copyDepositLinkByUid(uid) {
         }
 
         // Générer la carte
-        const hasDetails = d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released');
-        const cardClass = hasDetails ? 'deposit-card expandable' : 'deposit-card';
+        const hasDetails = !isHistory && d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released');
+        let cardClass = hasDetails ? 'deposit-card expandable' : 'deposit-card';
+        if (isHistory) cardClass += ' history-card';
         const cardClick = hasDetails ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
         
         html += `
@@ -1381,16 +1524,13 @@ function copyDepositLinkByUid(uid) {
           </div>
         `;
       });
-
-      html += '</div>';
-      container.innerHTML = html;
+      
+      return html;
     }
 
     // ============================================
-// CORRECTION FINALE : fonction createDeposit
-// Remplacer TOUTE la fonction (lignes 779-842)
-// ============================================
-
+    // CRÉATION CAUTION
+    // ============================================
 async function createDeposit() {
   const errorEl = document.getElementById('depositError');
   errorEl.textContent = '';
@@ -1403,10 +1543,8 @@ async function createDeposit() {
     return;
   }
 
-  // ✅ SAUVEGARDER la réservation dans une variable locale
   const reservation = currentReservationForDeposit;
 
-  // On mémorise ce montant comme valeur par défaut pour ce logement
   try {
     const defaultsRaw = localStorage.getItem('lcc_deposit_defaults') || '{}';
     const defaults = JSON.parse(defaultsRaw);
@@ -1436,19 +1574,14 @@ async function createDeposit() {
       throw new Error(data.error || 'Erreur lors de la création de la caution');
     }
 
-    // 🔍 DEBUG: Voir ce que le serveur retourne
     console.log('✅ Caution créée, réponse serveur:', data);
 
-    // ✅ Fermer la modale AVANT de recharger
     closeDepositModal();
     
-    // ✅ Petit délai pour laisser le serveur enregistrer
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // ✅ Recharger ET réafficher les données
     await loadReservationsWithDeposits();
 
-    // ✅ Message simple de succès
     alert("Lien créé avec succès !");
   } catch (e) {
     console.error(e);
@@ -1461,6 +1594,11 @@ async function createDeposit() {
       const refreshBtn = document.getElementById('refreshBtn');
       if (refreshBtn) {
         refreshBtn.addEventListener('click', loadReservationsWithDeposits);
+      }
+      
+      const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+      if (refreshHistoryBtn) {
+        refreshHistoryBtn.addEventListener('click', loadReservationsWithDeposits);
       }
 
       document.getElementById('depositModalClose').addEventListener('click', closeDepositModal);
@@ -1570,10 +1708,12 @@ async function createDeposit() {
       button.classList.add('active');
       document.getElementById('tab-' + targetTab).classList.add('active');
       
-      // Si on affiche l'onglet paiements, vérifier Stripe et charger les données
+      // Actions spécifiques selon l'onglet
       if (targetTab === 'payments') {
         checkStripeConnectStatus();
         loadPayments();
+      } else if (targetTab === 'history') {
+        renderHistoryTable();
       }
     });
   });
@@ -1607,7 +1747,6 @@ async function checkStripeConnectStatus() {
     const data = await res.json();
     
     if (data.connected && data.charges_enabled) {
-      // Stripe connecté et fonctionnel
       if (notice) notice.style.display = 'none';
       if (badge) {
         badge.style.display = 'inline-flex';
@@ -1616,7 +1755,6 @@ async function checkStripeConnectStatus() {
       }
       return true;
     } else {
-      // Stripe non connecté ou incomplet
       if (notice) notice.style.display = 'flex';
       if (badge) {
         badge.style.display = 'inline-flex';
@@ -1635,7 +1773,7 @@ async function checkStripeConnectStatus() {
 }
 
 // ============================================
-// CHARGEMENT DES PAIEMENTS (SIMILAIRE AUX CAUTIONS)
+// CHARGEMENT DES PAIEMENTS
 // ============================================
 let allPayments = [];
 
@@ -1643,7 +1781,6 @@ async function loadPayments() {
   const container = document.getElementById('paymentsContainer');
   if (!container) return;
   
-  // Vérifier d'abord si Stripe est connecté
   const isStripeConnected = await checkStripeConnectStatus();
   if (!isStripeConnected) return;
   
@@ -1676,7 +1813,6 @@ function renderPaymentsTable() {
   const select = document.getElementById('propertyFilterPayments');
   const selectedPropertyId = select ? select.value : '';
   
-  // Filtrer par logement
   const filtered = allPayments.filter((r) =>
     !selectedPropertyId || r.propertyId === selectedPropertyId
   );
@@ -1686,8 +1822,6 @@ function renderPaymentsTable() {
     return;
   }
   
-  // TODO: Afficher les réservations pour créer des paiements
-  // Pour l'instant, on affiche juste un message
   let html = '<div class="deposits-cards-grid">';
   
   filtered.forEach((r) => {
@@ -1737,12 +1871,10 @@ function renderPaymentsTable() {
   container.innerHTML = html;
 }
 
-// Fonction temporaire pour créer un paiement
 function createPayment(reservationUid) {
   alert('Fonctionnalité de création de paiement à venir !\n\nRéservation UID: ' + reservationUid);
 }
 
-// Charger les propriétés pour le filtre
 async function loadPropertiesForPaymentsFilter() {
   const select = document.getElementById('propertyFilterPayments');
   if (!select) return;
@@ -1770,7 +1902,6 @@ async function loadPropertiesForPaymentsFilter() {
   }
 }
 
-// Bouton refresh paiements
 document.addEventListener('DOMContentLoaded', () => {
   const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
   if (refreshPaymentsBtn) {
@@ -1791,7 +1922,6 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('🔧 Forçage du scroll horizontal...');
   
   function applyScrollFix() {
-    // Supprimer overflow-x: hidden de PARTOUT
     const elementsToFix = [
       document.documentElement,
       document.body,
@@ -1808,7 +1938,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Wrapper scrollable
     const wrapper = document.querySelector('#depositsContainer')?.parentElement;
     if (wrapper) {
       wrapper.style.overflowX = 'auto';
@@ -1818,7 +1947,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('✅ Wrapper scrollable configuré');
     }
     
-    // Table
     const table = document.querySelector('#depositsContainer table');
     if (table) {
       table.style.minWidth = '900px';
@@ -1830,14 +1958,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Appliquer immédiatement
   applyScrollFix();
   
-  // Réappliquer après chargement
   setTimeout(applyScrollFix, 500);
   setTimeout(applyScrollFix, 1500);
   
-  // Observer les changements du DOM
   const observer = new MutationObserver(() => {
     applyScrollFix();
   });
