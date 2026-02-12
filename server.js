@@ -3044,13 +3044,13 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     ]);
 
     const reservationId = result.rows[0].id;
-   // Verifier si la reservation est dans les 12 prochains mois
-   const now = new Date();
-   const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-   const reservationStart = new Date(reservation.start);
-   const isWithinOneYear = reservationStart >= now && reservationStart <= oneYearFromNow;
+   // Verifier si la reservation est dans les 6 prochains mois
+const now = new Date();
+const sixMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
+const reservationStart = new Date(reservation.start);
+const isWithinSixMonths = reservationStart >= now && reservationStart <= sixMonthsFromNow;
 
-   if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual' && isWithinOneYear) {
+if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual' && isWithinSixMonths) {
   try {
     const propResult = await pool.query(
       'SELECT name FROM properties WHERE id = $1',
@@ -3120,8 +3120,8 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     
     console.log(`Conversation ${conversationId} creee automatiquement pour reservation ${reservation.uid}`);
   }
-}  else if (isNewReservation && !isWithinOneYear) {
-  console.log(`Nouvelle reservation pour ${reservation.start} ignoree (au-dela de 12 mois)`);
+} else if (isNewReservation && !isWithinSixMonths) {
+  console.log(`Nouvelle reservation pour ${reservation.start} ignoree (au-dela de 6 mois)`);
 }
 
     return true;
