@@ -721,7 +721,10 @@
 
 <div class="history-notice">
   <i class="fas fa-info-circle"></i>
-  <span>L'historique affiche les cautions des séjours terminés depuis moins d'un mois. Les cautions plus anciennes sont consultables directement sur Stripe.</span>
+  <span>L'historique affiche les cautions des séjours terminés depuis moins d'un mois.</span>
+  <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost btn-sm" style="margin-left: auto; white-space: nowrap;">
+    <i class="fas fa-external-link-alt"></i> Voir sur Stripe
+  </a>
 </div>
 
 <div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
@@ -1348,8 +1351,12 @@ function copyDepositLinkByUid(uid) {
       if (r.guestDisplayName && r.guestDisplayName.trim() !== '') {
         const name = r.guestDisplayName.trim();
         // Vérifier que ce n'est pas un nom générique
-        const invalidNames = ['voyageur', 'voyageur airbnb', 'voyageur booking', 'reserved', 'not available', 'blocked'];
-        if (!invalidNames.some(inv => name.toLowerCase() === inv)) {
+        const invalidNames = [
+          'voyageur', 'voyageur airbnb', 'voyageur booking', 'reserved', 
+          'not available', 'blocked', 'closed', 'closed - not available',
+          'airbnb (not available)', 'not available - airbnb'
+        ];
+        if (!invalidNames.some(inv => name.toLowerCase() === inv || name.toLowerCase().includes('not available') || name.toLowerCase().includes('closed'))) {
           return name;
         }
       }
@@ -1364,7 +1371,11 @@ function copyDepositLinkByUid(uid) {
       // Priorité 3: guestName de la réservation
       if (r.guestName && r.guestName.trim() !== '') {
         const name = r.guestName.trim();
-        const invalidNames = ['voyageur', 'voyageur airbnb', 'voyageur booking', 'reserved', 'not available', 'blocked', 'closed'];
+        const invalidNames = [
+          'voyageur', 'voyageur airbnb', 'voyageur booking', 'reserved', 
+          'not available', 'blocked', 'closed', 'closed - not available',
+          'airbnb (not available)'
+        ];
         if (!invalidNames.some(inv => name.toLowerCase().includes(inv))) {
           return name;
         }
@@ -1385,7 +1396,7 @@ function copyDepositLinkByUid(uid) {
         let amountBadge = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
         
-        // ✅ Récupérer le nom du voyageur
+        // ✅ Récupérer le nom du voyageur (null si pas de nom valide)
         const guestName = getGuestDisplayName(r);
         
         if (d) {
