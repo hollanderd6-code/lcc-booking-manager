@@ -97,10 +97,107 @@ function handleDeepLink(url) {
 }
 
 function updatePropertyIdStatus() {
-  // Optionnel : afficher un indicateur que le property_id est bien reçu
   const storedPropertyId = localStorage.getItem('property_id');
   if (storedPropertyId) {
     console.log('✅ Property ID disponible:', storedPropertyId);
+  }
+}
+
+// ============================================
+// NOTIFICATIONS PUSH (Firebase)
+// ============================================
+
+async function setupPushNotifications() {
+  if (!IS_NATIVE) {
+    console.log('⚠️ Push notifications uniquement en mode natif');
+    return;
+  }
+
+  try {
+    const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
+    
+    if (!PushNotifications) {
+      console.log('⚠️ PushNotifications plugin non disponible');
+      return;
+    }
+
+    // Demander la permission
+    const permResult = await PushNotifications.requestPermissions();
+    
+    if (permResult.receive === 'granted') {
+      // S'enregistrer pour les notifications
+      await PushNotifications.register();
+      console.log('✅ Push notifications enregistrées');
+    } else {
+      console.log('⚠️ Permission notifications refusée');
+    }
+
+    // Écouter le token FCM
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('🔔 FCM Token:', token.value);
+      
+      // Sauvegarder le token localement
+      localStorage.setItem('guest_fcm_token', token.value);
+      
+      // Envoyer le token au serveur si on a une conversation
+      if (conversationId) {
+        await registerFcmToken(token.value);
+      }
+    });
+
+    // Écouter les erreurs d'enregistrement
+    PushNotifications.addListener('registrationError', (error) => {
+      console.error('❌ Erreur enregistrement push:', error);
+    });
+
+    // Écouter les notifications reçues (app ouverte)
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('📩 Notification reçue:', notification);
+      
+      // Optionnel : afficher une alerte ou mettre à jour l'UI
+      if (notification.data?.type === 'new_message') {
+        // Recharger les messages si on est sur le chat
+        if (document.getElementById('chatScreen').classList.contains('active')) {
+          loadMessages();
+        }
+      }
+    });
+
+    // Écouter les actions sur les notifications (app fermée ou en arrière-plan)
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('👆 Action notification:', action);
+      
+      // Ouvrir le chat si on clique sur une notification de message
+      if (action.notification?.data?.type === 'new_message') {
+        const convId = action.notification.data.conversation_id;
+        if (convId && convId === conversationId) {
+          showChatScreen();
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur setup push notifications:', error);
+  }
+}
+
+async function registerFcmToken(token) {
+  try {
+    const response = await fetch(`${API_URL}/api/chat/register-guest-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id: conversationId,
+        fcm_token: token,
+        device_type: 'ios' // ou 'android' selon la plateforme
+      })
+    });
+    
+    if (response.ok) {
+      console.log('✅ Token FCM enregistré sur le serveur');
+    }
+  } catch (error) {
+    console.error('❌ Erreur enregistrement token:', error);
   }
 }
 
@@ -113,6 +210,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Setup deep links FIRST
   await setupDeepLinks();
+  
+  // Setup push notifications
+  await setupPushNotifications();
   
   // Setup PIN inputs
   setupPinInputs();
@@ -132,8 +232,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   
+  // Setup emoji button
+  document.getElementById('emojiBtn')?.addEventListener('click', toggleEmojiPicker);
+  
+  // Setup photo button
+  document.getElementById('photoBtn')?.addEventListener('click', openPhotoPicker);
+  
   // Back button
   document.getElementById('btnBack').addEventListener('click', logout);
+  
+  // Fermer emoji picker en cliquant ailleurs
+  document.addEventListener('click', (e) => {
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiBtn = document.getElementById('emojiBtn');
+    if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+      emojiPicker.classList.remove('active');
+    }
+  });
 });
 
 function setupPinInputs() {
@@ -167,6 +282,146 @@ function setupPinInputs() {
   
   // Auto-focus first input
   document.getElementById('pin1').focus();
+}
+
+// ============================================
+// EMOJI PICKER
+// ============================================
+
+const EMOJI_LIST = [
+  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', 
+  '😇', '🙂', '😉', '😍', '🥰', '😘', '😋', '😎',
+  '🤔', '🤗', '🤩', '🥳', '😏', '😌', '😴', '🤤',
+  '👍', '👎', '👌', '✌️', '🤞', '👋', '🙏', '💪',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💯',
+  '🏠', '🏡', '🛏️', '🛋️', '🚿', '🔑', '📍', '✈️',
+  '☀️', '🌙', '⭐', '🌈', '🎉', '🎊', '✅', '❌'
+];
+
+function toggleEmojiPicker() {
+  const picker = document.getElementById('emojiPicker');
+  picker.classList.toggle('active');
+  
+  // Remplir le picker si pas encore fait
+  if (!picker.hasChildNodes() || picker.children.length === 0) {
+    EMOJI_LIST.forEach(emoji => {
+      const span = document.createElement('span');
+      span.className = 'emoji-item';
+      span.textContent = emoji;
+      span.addEventListener('click', () => insertEmoji(emoji));
+      picker.appendChild(span);
+    });
+  }
+}
+
+function insertEmoji(emoji) {
+  const input = document.getElementById('messageInput');
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  const text = input.value;
+  
+  input.value = text.substring(0, start) + emoji + text.substring(end);
+  input.focus();
+  input.selectionStart = input.selectionEnd = start + emoji.length;
+  
+  // Fermer le picker
+  document.getElementById('emojiPicker').classList.remove('active');
+  
+  // Haptic feedback
+  if (window.Capacitor?.Plugins?.Haptics) {
+    window.Capacitor.Plugins.Haptics.impact({ style: 'light' });
+  }
+}
+
+// ============================================
+// PHOTO PICKER
+// ============================================
+
+function openPhotoPicker() {
+  // Créer un input file invisible
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.style.display = 'none';
+  
+  input.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      await uploadPhotos(files);
+    }
+    input.remove();
+  });
+  
+  document.body.appendChild(input);
+  input.click();
+}
+
+async function uploadPhotos(files) {
+  const sendBtn = document.getElementById('sendBtn');
+  const photoBtn = document.getElementById('photoBtn');
+  
+  sendBtn.disabled = true;
+  photoBtn.disabled = true;
+  
+  try {
+    for (const file of files) {
+      // Afficher un message temporaire
+      const tempId = Date.now();
+      appendTempMessage(tempId, '📷 Envoi de la photo...');
+      
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('conversation_id', conversationId);
+      formData.append('sender_type', 'guest');
+      
+      const response = await fetch(`${API_URL}/api/chat/send-photo`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      // Supprimer le message temporaire
+      removeTempMessage(tempId);
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Erreur envoi photo');
+      }
+      
+      // Haptic feedback
+      if (window.Capacitor?.Plugins?.Haptics) {
+        window.Capacitor.Plugins.Haptics.notification({ type: 'success' });
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur upload photo:', error);
+    alert('Erreur lors de l\'envoi de la photo');
+  } finally {
+    sendBtn.disabled = false;
+    photoBtn.disabled = false;
+  }
+}
+
+function appendTempMessage(id, text) {
+  const container = document.getElementById('messagesContainer');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message guest temp-message';
+  messageDiv.id = `temp-${id}`;
+  messageDiv.innerHTML = `
+    <div class="message-content">
+      <div class="message-bubble" style="opacity: 0.7;">
+        <i class="fas fa-spinner fa-spin"></i> ${text}
+      </div>
+    </div>
+  `;
+  container.appendChild(messageDiv);
+  scrollToBottom();
+}
+
+function removeTempMessage(id) {
+  const temp = document.getElementById(`temp-${id}`);
+  if (temp) temp.remove();
 }
 
 // ============================================
@@ -248,6 +503,12 @@ async function handleVerification(e) {
     localStorage.setItem('guest_property_id', propertyId);
     localStorage.setItem('guest_property_name', propertyName);
     localStorage.setItem('guest_verified', 'true');
+    
+    // Enregistrer le token FCM si disponible
+    const fcmToken = localStorage.getItem('guest_fcm_token');
+    if (fcmToken) {
+      await registerFcmToken(fcmToken);
+    }
     
     // Show chat
     showChatScreen();
@@ -371,6 +632,11 @@ function connectSocket() {
     console.log('📩 Nouveau message:', message);
     appendMessage(message);
     scrollToBottom();
+    
+    // Vibration si message du propriétaire
+    if (message.sender_type !== 'guest' && window.Capacitor?.Plugins?.Haptics) {
+      window.Capacitor.Plugins.Haptics.notification({ type: 'success' });
+    }
   });
   
   socket.on('disconnect', () => {
@@ -429,14 +695,34 @@ function appendMessage(message) {
     minute: '2-digit'
   });
   
+  // Vérifier si c'est une image
+  let content = '';
+  if (message.photo_url) {
+    content = `<img src="${message.photo_url}" class="message-photo" onclick="openFullImage('${message.photo_url}')" alt="Photo">`;
+  } else {
+    content = escapeHtml(message.message);
+  }
+  
   messageDiv.innerHTML = `
     <div class="message-content">
-      <div class="message-bubble">${escapeHtml(message.message)}</div>
+      <div class="message-bubble">${content}</div>
       <div class="message-time">${time}</div>
     </div>
   `;
   
   container.appendChild(messageDiv);
+}
+
+function openFullImage(url) {
+  // Ouvrir l'image en plein écran
+  const overlay = document.createElement('div');
+  overlay.className = 'image-overlay';
+  overlay.innerHTML = `
+    <img src="${url}" alt="Photo">
+    <button class="close-overlay"><i class="fas fa-times"></i></button>
+  `;
+  overlay.addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
 }
 
 async function sendMessage() {
@@ -496,10 +782,3 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
-
-// ============================================
-// NOTIFICATIONS (pour plus tard)
-// ============================================
-
-// TODO: Setup Firebase notifications
-// Cette partie sera ajoutée après les tests de base
