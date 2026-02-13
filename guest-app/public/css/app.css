@@ -377,7 +377,69 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Input */
+/* ============================================
+   PHOTOS DANS LES MESSAGES
+   ============================================ */
+
+.message-photo {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.message-photo:hover {
+  transform: scale(1.02);
+}
+
+.message.guest .message-photo {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Image Overlay (plein écran) */
+.image-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.image-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.close-overlay {
+  position: absolute;
+  top: env(safe-area-inset-top, 20px);
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   INPUT CONTAINER (avec emoji & photo)
+   ============================================ */
+
 .chat-input-container {
   padding: 12px 16px env(safe-area-inset-bottom);
   background: white;
@@ -385,6 +447,7 @@ body {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  position: relative;
 }
 
 #messageInput {
@@ -404,11 +467,45 @@ body {
   border-color: var(--primary);
 }
 
+/* Boutons emoji et photo */
+.input-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-emoji,
+.btn-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: none;
+  color: var(--text-light);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-emoji:hover,
+.btn-photo:hover {
+  background: var(--border);
+  color: var(--primary);
+}
+
+.btn-emoji:active,
+.btn-photo:active {
+  transform: scale(0.95);
+}
+
 .btn-send {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  background: var(--primary);
+  border-radius: 12px;
+  background: var(--success);
   border: none;
   color: white;
   font-size: 18px;
@@ -430,6 +527,52 @@ body {
 }
 
 /* ============================================
+   EMOJI PICKER
+   ============================================ */
+
+.emoji-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 16px;
+  right: 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  display: none;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.emoji-picker.active {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.emoji-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.emoji-item:hover {
+  background: var(--bg);
+  transform: scale(1.2);
+}
+
+.emoji-item:active {
+  transform: scale(0.9);
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 
@@ -446,5 +589,15 @@ body {
   
   .card h1 {
     font-size: 24px;
+  }
+  
+  .emoji-picker.active {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  .emoji-item {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
   }
 }
