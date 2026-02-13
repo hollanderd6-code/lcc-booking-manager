@@ -1007,6 +1007,35 @@ if (sender_type === 'owner') {
       console.log('🔌 Client déconnecté:', socket.id);
     });
   });
+
+  // ============================================
+  // 📱 ROUTE: Enregistrer token FCM voyageur  
+  // ============================================
+  app.post('/api/chat/register-guest-token', async (req, res) => {
+    try {
+      const { conversation_id, token, device_type } = req.body;
+      if (!conversation_id || !token) {
+        return res.status(400).json({ error: 'conversation_id et token requis' });
+      }
+      const conv = await pool.query('SELECT id FROM conversations WHERE id = $1', [conversation_id]);
+      if (conv.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation introuvable' });
+      }
+      await pool.query(
+        `INSERT INTO guest_fcm_tokens (conversation_id, fcm_token, device_type, created_at, last_used_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         ON CONFLICT (conversation_id, fcm_token) 
+         DO UPDATE SET last_used_at = NOW(), device_type = $3`,
+        [conversation_id, token, device_type || 'unknown']
+      );
+      console.log('✅ Token FCM voyageur enregistré:', conversation_id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur register token:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
 }
 
 // ============================================
@@ -1126,250 +1155,5 @@ async function createNotification(pool, io, userId, conversationId, messageId, t
     console.error('❌ Erreur création notification:', error);
   }
 }
-
-module.exports = { setupChatRoutes };
-
-// ============================================
-// 📱 ROUTES POUR L'APP GUEST
-// ============================================
-
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Configuration multer pour upload photos
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../public/uploads/chat');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + '-' + Math.random().toString(36).substring(7) + path.extname(file.originalname);
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Seules les images sont autorisées (JPEG, PNG, GIF, WEBP)'));
-    }
-  }
-});
-
-// ============================================
-// ENREGISTRER TOKEN FCM VOYAGEUR
-// ============================================
-
-app.post('/api/chat/register-guest-token', async (req, res) => {
-  try {
-    const { conversation_id, token, device_type } = req.body;
-
-    if (!conversation_id || !token) {
-      return res.status(400).json({ error: 'conversation_id et token requis' });
-    }
-
-    // Vérifier que la conversation existe
-    const conv = await pool.query(
-      'SELECT id, user_id, property_id FROM conversations WHERE id = $1',
-      [conversation_id]
-    );
-
-    if (conv.rows.length === 0) {
-      return res.status(404).json({ error: 'Conversation introuvable' });
-    }
-
-    // Enregistrer ou mettre à jour le token pour cette conversation
-    await pool.query(
-      `INSERT INTO guest_fcm_tokens (conversation_id, fcm_token, device_type, created_at, last_used_at)
-       VALUES ($1, $2, $3, NOW(), NOW())
-       ON CONFLICT (conversation_id, fcm_token) 
-       DO UPDATE SET last_used_at = NOW(), device_type = $3`,
-      [conversation_id, token, device_type || 'unknown']
-    );
-
-    console.log('✅ Token FCM voyageur enregistré pour conversation:', conversation_id);
-    
-    res.json({ success: true, message: 'Token enregistré' });
-
-  } catch (error) {
-    console.error('❌ Erreur register guest token:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================
-// ENVOYER UNE PHOTO DANS LE CHAT
-// ============================================
-
-app.post('/api/chat/send-photo', upload.single('photo'), async (req, res) => {
-  try {
-    const { conversation_id, sender_type } = req.body;
-
-    if (!conversation_id || !sender_type) {
-      return res.status(400).json({ error: 'conversation_id et sender_type requis' });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'Aucune photo fournie' });
-    }
-
-    // Vérifier que la conversation existe
-    const conv = await pool.query(
-      'SELECT id, user_id, property_id FROM conversations WHERE id = $1',
-      [conversation_id]
-    );
-
-    if (conv.rows.length === 0) {
-      return res.status(404).json({ error: 'Conversation introuvable' });
-    }
-
-    // URL de la photo
-    const photoUrl = `/uploads/chat/${req.file.filename}`;
-
-    // Insérer le message avec la photo
-    const result = await pool.query(
-      `INSERT INTO messages 
-       (conversation_id, sender_type, sender_name, message, photo_url, is_read, created_at)
-       VALUES ($1, $2, $3, $4, $5, FALSE, NOW())
-       RETURNING id, conversation_id, sender_type, sender_name, message, photo_url, is_read, created_at`,
-      [conversation_id, sender_type, sender_type === 'guest' ? 'Voyageur' : 'Propriétaire', '[Photo]', photoUrl]
-    );
-
-    const newMessage = result.rows[0];
-
-    // Marquer conversation comme active
-    await pool.query(
-      'UPDATE conversations SET status = \'active\', last_message_at = NOW() WHERE id = $1',
-      [conversation_id]
-    );
-
-    // Émettre via Socket.IO
-    io.to(`conv_${conversation_id}`).emit('new_message', newMessage);
-
-    console.log('📸 Photo envoyée dans conversation:', conversation_id);
-
-    // Envoyer notification push selon qui envoie
-    if (sender_type === 'owner') {
-      // Propriétaire envoie → notifier voyageur
-      await sendPushToGuest(conversation_id, newMessage, pool);
-    } else if (sender_type === 'guest') {
-      // Voyageur envoie → notifier propriétaire
-      const property = await pool.query(
-        'SELECT user_id, name FROM properties WHERE id = $1',
-        [conv.rows[0].property_id]
-      );
-      
-      if (property.rows.length > 0) {
-        const notifPayload = {
-          title: `📸 Photo de ${property.rows[0].name || 'votre logement'}`,
-          body: 'Nouveau message avec photo',
-          data: {
-            conversation_id: conversation_id,
-            type: 'new_message'
-          }
-        };
-
-        await sendPushNotification(property.rows[0].user_id, notifPayload, pool, io);
-      }
-    }
-
-    res.json({ success: true, message: newMessage });
-
-  } catch (error) {
-    console.error('❌ Erreur send photo:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================
-// HELPER - ENVOYER PUSH AU VOYAGEUR
-// ============================================
-
-async function sendPushToGuest(conversationId, message, pool) {
-  try {
-    // Récupérer les tokens FCM du voyageur pour cette conversation
-    const tokensResult = await pool.query(
-      `SELECT fcm_token FROM guest_fcm_tokens 
-       WHERE conversation_id = $1 
-       AND last_used_at > NOW() - INTERVAL '30 days'`,
-      [conversationId]
-    );
-
-    if (tokensResult.rows.length === 0) {
-      console.log('⚠️  Aucun token FCM pour le voyageur de la conversation', conversationId);
-      return;
-    }
-
-    // Récupérer le nom de la propriété
-    const convInfo = await pool.query(
-      `SELECT p.name 
-       FROM conversations c
-       JOIN properties p ON c.property_id = p.id
-       WHERE c.id = $1`,
-      [conversationId]
-    );
-
-    const propertyName = convInfo.rows[0]?.name || 'Votre logement';
-
-    const title = message.photo_url 
-      ? `📸 ${propertyName}`
-      : `💬 ${propertyName}`;
-    
-    const body = message.photo_url 
-      ? 'Nouvelle photo de votre hôte'
-      : message.message.substring(0, 100);
-
-    // Envoyer à tous les tokens (normalement admin est global)
-    for (const row of tokensResult.rows) {
-      const token = row.fcm_token;
-
-      try {
-        const payload = {
-          notification: {
-            title: title,
-            body: body
-          },
-          data: {
-            conversation_id: String(conversationId),
-            type: 'new_message'
-          },
-          token: token
-        };
-
-        await admin.messaging().send(payload);
-        console.log('✅ Notification push envoyée au voyageur:', token.substring(0, 20) + '...');
-
-      } catch (err) {
-        console.error('❌ Erreur envoi notification voyageur:', err);
-        
-        // Si token invalide, le supprimer
-        if (err.code === 'messaging/invalid-registration-token' || 
-            err.code === 'messaging/registration-token-not-registered') {
-          await pool.query(
-            'DELETE FROM guest_fcm_tokens WHERE fcm_token = $1',
-            [token]
-          );
-          console.log('🗑️  Token invalide supprimé');
-        }
-      }
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur sendPushToGuest:', error);
-  }
-}
-
 
 module.exports = { setupChatRoutes };
