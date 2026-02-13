@@ -1,0 +1,152 @@
+/* ============================================
+   📱 TABLETTE FIX - Bottom bar visible jusqu'à 1024px
+   
+   Ce fichier étend l'affichage de la navigation mobile
+   (bottom bar) aux tablettes (768px - 1024px)
+   
+   À ajouter APRÈS bottom-bar-enhanced.css
+   ============================================ */
+
+/* Afficher la bottom bar sur TABLETTE */
+@media (min-width: 769px) and (max-width: 1024px) {
+  
+  /* Afficher la bottom bar */
+  .mobile-tabs {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    align-items: center;
+    justify-content: space-around;
+    padding: 8px 0;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Dark mode */
+  [data-theme="dark"] .mobile-tabs {
+    background: rgba(31, 41, 55, 0.95);
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Cacher la sidebar desktop */
+  .sidebar {
+    display: none !important;
+  }
+  
+  /* Ajuster le contenu principal (pas de marge pour sidebar) */
+  .main-content {
+    margin-left: 0 !important;
+    padding-bottom: 100px !important; /* Espace pour la bottom bar */
+  }
+  
+  /* Afficher le header mobile */
+  .mobile-header {
+    display: flex !important;
+    justify-content: center !important; /* Centrer le logo */
+  }
+  
+  /* Cacher le bouton hamburger (on utilise la bottom bar) */
+  .mobile-menu-btn,
+  #mobileMenuBtn {
+    display: none !important;
+  }
+  
+  /* Style des boutons de la bottom bar */
+  .mobile-tabs .tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: transparent;
+    border: none;
+    color: #9CA3AF;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .mobile-tabs .tab-btn i {
+    font-size: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .mobile-tabs .tab-btn span {
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+  }
+  
+  /* État actif */
+  .mobile-tabs .tab-btn.active {
+    color: #10B981;
+  }
+  
+  .mobile-tabs .tab-btn.active i {
+    transform: translateY(-3px) scale(1.15);
+  }
+  
+  .mobile-tabs .tab-btn.active span {
+    font-weight: 600;
+    opacity: 1;
+  }
+  
+  /* Indicateur visuel sous l'icône active */
+  .mobile-tabs .tab-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: #10B981;
+    border-radius: 50%;
+  }
+  
+  /* Badge de notification */
+  .mobile-tabs .tab-btn .badge {
+    position: absolute;
+    top: 4px;
+    right: 50%;
+    transform: translateX(16px);
+    min-width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 6px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    border: 2px solid white;
+  }
+}
+
+/* ============================================
+   IMPORTANT: Forcer l'affichage même si d'autres
+   CSS tentent de cacher la bottom bar
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .mobile-tabs {
+    display: flex !important;
+  }
+}
