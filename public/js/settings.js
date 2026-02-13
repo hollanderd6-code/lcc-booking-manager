@@ -2,7 +2,18 @@
 // CONFIGURATION & STATE
 // ========================================
 const API_URL = "https://lcc-booking-manager.onrender.com";
-const BOOSTINGHOST_ICAL_BASE = window.location.origin;
+
+// ✅ FIX : Utiliser le bon domaine en natif (iOS/Android) au lieu de capacitor://localhost
+function getBaseUrl() {
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+    if (window.Capacitor.isNativePlatform()) {
+      return 'https://boostinghost.fr';
+    }
+  }
+  return window.location.origin;
+}
+
+const BOOSTINGHOST_ICAL_BASE = getBaseUrl();
 let properties = [];
 let currentEditingProperty = null;
 let ownerClients = [];
@@ -697,7 +708,7 @@ function renderProperties() {
       const welcomeBookUrl = p.welcomeBookUrl || "";
       const photoUrl = p.photoUrl || p.photo || null;
 const chatPin = p.chatPin || p.chat_pin || 'Non défini';
-const chatLink = `${window.location.origin}/chat-guest.html?property=${id}`;
+const chatLink = `${getBaseUrl()}/chat-guest.html?property=${id}`;
       
       let urls = p.icalUrls || [];
       if (!Array.isArray(urls)) urls = [];
