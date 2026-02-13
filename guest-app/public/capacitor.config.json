@@ -1,0 +1,26 @@
+{
+  "appId": "com.boostinghost.guest",
+  "appName": "Boostinghost Guest",
+  "webDir": "public",
+  "plugins": {
+    "FirebaseMessaging": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "StatusBar": {
+      "style": "light",
+      "backgroundColor": "#7c3aed",
+      "overlaysWebView": false
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "light"
+    }
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
