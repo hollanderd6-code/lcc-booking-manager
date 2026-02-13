@@ -17,10 +17,16 @@
     }
   },
   "ios": {
-    "contentInset": "automatic"
+    "contentInset": "automatic",
+    "scheme": "boostinghost-guest"
   },
   "android": {
     "allowMixedContent": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": true,
+    "scheme": "boostinghost-guest"
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
   }
 }
