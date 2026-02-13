@@ -1013,22 +1013,28 @@ if (sender_type === 'owner') {
   // ============================================
   app.post('/api/chat/register-guest-token', async (req, res) => {
     try {
-      const { conversation_id, token, device_type } = req.body;
-      if (!conversation_id || !token) {
-        return res.status(400).json({ error: 'conversation_id et token requis' });
+      // Accepter les deux formats: token ou fcm_token
+      const { conversation_id, token, fcm_token, device_type } = req.body;
+      const finalToken = fcm_token || token;
+      
+      if (!conversation_id || !finalToken) {
+        return res.status(400).json({ error: 'conversation_id et token/fcm_token requis' });
       }
+      
       const conv = await pool.query('SELECT id FROM conversations WHERE id = $1', [conversation_id]);
       if (conv.rows.length === 0) {
         return res.status(404).json({ error: 'Conversation introuvable' });
       }
+      
       await pool.query(
         `INSERT INTO guest_fcm_tokens (conversation_id, fcm_token, device_type, created_at, last_used_at)
          VALUES ($1, $2, $3, NOW(), NOW())
          ON CONFLICT (conversation_id, fcm_token) 
          DO UPDATE SET last_used_at = NOW(), device_type = $3`,
-        [conversation_id, token, device_type || 'unknown']
+        [conversation_id, finalToken, device_type || 'unknown']
       );
-      console.log('✅ Token FCM voyageur enregistré:', conversation_id);
+      
+      console.log('✅ Token FCM voyageur enregistré:', conversation_id, '- Type:', device_type);
       res.json({ success: true });
     } catch (error) {
       console.error('❌ Erreur register token:', error);
