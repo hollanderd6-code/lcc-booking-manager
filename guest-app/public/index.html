@@ -124,13 +124,26 @@
         </div>
       </div>
 
-      <!-- Input -->
+      <!-- Emoji Picker (caché par défaut) -->
+      <div id="emojiPicker" class="emoji-picker"></div>
+
+      <!-- Input avec boutons emoji et photo -->
       <div class="chat-input-container">
         <textarea 
           id="messageInput" 
           placeholder="Écrivez votre message..."
           rows="1"></textarea>
-        <button id="sendBtn" class="btn-send">
+        
+        <div class="input-actions">
+          <button type="button" id="emojiBtn" class="btn-emoji" title="Emojis">
+            <i class="fas fa-smile"></i>
+          </button>
+          <button type="button" id="photoBtn" class="btn-photo" title="Envoyer une photo">
+            <i class="fas fa-image"></i>
+          </button>
+        </div>
+        
+        <button id="sendBtn" class="btn-send" title="Envoyer">
           <i class="fas fa-paper-plane"></i>
         </button>
       </div>
