@@ -2367,6 +2367,58 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(express.static('public'));
 
+// ============================================
+// 📱 ROUTES GUEST APP - DEEP LINKS iOS/Android
+// ============================================
+
+// Apple App Site Association pour Universal Links iOS
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  const association = {
+    "applinks": {
+      "apps": [],
+      "details": [
+        {
+          "appID": "H5H2Y3S26J.com.boostinghost.guest",
+          "paths": ["/guest", "/guest/*"]
+        }
+      ]
+    }
+  };
+  res.setHeader('Content-Type', 'application/json');
+  res.json(association);
+});
+
+// Android App Links - assetlinks.json
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const assetlinks = [
+    {
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.boostinghost.guest",
+        "sha256_cert_fingerprints": []
+      }
+    }
+  ];
+  res.setHeader('Content-Type', 'application/json');
+  res.json(assetlinks);
+});
+
+// Route pour les deep links guest - redirige vers l'app web
+app.get('/guest', (req, res) => {
+  const propertyId = req.query.property;
+  
+  if (propertyId) {
+    // Redirige vers la page guest-app avec le property_id
+    res.redirect(`/guest-app/public/index.html?property=${propertyId}`);
+  } else {
+    res.status(400).send('Property ID manquant. Veuillez utiliser le lien fourni par votre hôte.');
+  }
+});
+
+// Servir les fichiers statiques de la guest-app
+app.use('/guest-app', express.static(path.join(__dirname, 'guest-app')));
+
 // Store for reservations (en mémoire)
 let reservationsStore = {
   properties: {},
