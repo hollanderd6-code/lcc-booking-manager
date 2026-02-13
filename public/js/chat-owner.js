@@ -560,12 +560,15 @@ async function sendMessageOwner() {
       },
       body: JSON.stringify({
         conversation_id: currentConversationId,
-        message: message
+        message: message,
+        sender_type: 'owner'
       })
     });
     
     if (!response.ok) {
-      throw new Error('Erreur envoi message');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Erreur serveur:', errorData);
+      throw new Error(errorData.error || 'Erreur envoi message');
     }
     
     input.value = '';
