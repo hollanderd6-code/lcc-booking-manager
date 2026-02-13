@@ -708,7 +708,8 @@ function renderProperties() {
       const welcomeBookUrl = p.welcomeBookUrl || "";
       const photoUrl = p.photoUrl || p.photo || null;
 const chatPin = p.chatPin || p.chat_pin || 'Non défini';
-const chatLink = `${getBaseUrl()}/chat-guest.html?property=${id}`;
+// ✅ Nouveau format de lien compatible avec les deep links iOS/Android
+const chatLink = `https://boostinghost.fr/guest?property=${id}`;
       
       let urls = p.icalUrls || [];
       if (!Array.isArray(urls)) urls = [];
