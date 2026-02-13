@@ -16,11 +16,103 @@ let propertyId = null;
 let propertyName = null;
 
 // ============================================
+// DEEP LINKS HANDLING
+// ============================================
+
+async function setupDeepLinks() {
+  if (!IS_NATIVE) {
+    // Mode web : récupérer depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlPropertyId = urlParams.get('property');
+    if (urlPropertyId) {
+      console.log('🔗 Property ID from URL:', urlPropertyId);
+      localStorage.setItem('property_id', urlPropertyId);
+      propertyId = urlPropertyId;
+    }
+    return;
+  }
+
+  // Mode natif : utiliser Capacitor App plugin
+  const CapApp = window.Capacitor?.Plugins?.App;
+  
+  if (!CapApp) {
+    console.log('⚠️ Capacitor App plugin non disponible');
+    return;
+  }
+
+  // Écouter les deep links quand l'app est ouverte
+  CapApp.addListener('appUrlOpen', (event) => {
+    console.log('🔗 Deep link reçu:', event.url);
+    handleDeepLink(event.url);
+  });
+
+  // Vérifier si l'app a été lancée via un deep link
+  try {
+    const launchUrl = await CapApp.getLaunchUrl();
+    if (launchUrl?.url) {
+      console.log('🚀 App lancée via deep link:', launchUrl.url);
+      handleDeepLink(launchUrl.url);
+    }
+  } catch (error) {
+    console.log('⚠️ Erreur getLaunchUrl:', error);
+  }
+  
+  console.log('✅ Deep links configurés');
+}
+
+function handleDeepLink(url) {
+  try {
+    const urlObj = new URL(url);
+    const urlPropertyId = urlObj.searchParams.get('property');
+    
+    if (urlPropertyId) {
+      console.log('✅ Property ID extrait du deep link:', urlPropertyId);
+      
+      // Sauvegarder le property_id
+      localStorage.setItem('property_id', urlPropertyId);
+      propertyId = urlPropertyId;
+      
+      // Si on est déjà vérifié pour une AUTRE propriété, déconnecter
+      const savedPropertyId = localStorage.getItem('guest_property_id');
+      if (savedPropertyId && savedPropertyId !== urlPropertyId) {
+        console.log('🔄 Nouvelle propriété détectée, reset session');
+        localStorage.removeItem('guest_conversation_id');
+        localStorage.removeItem('guest_property_id');
+        localStorage.removeItem('guest_property_name');
+        localStorage.removeItem('guest_verified');
+      }
+      
+      // Cacher l'erreur "ID manquant" si elle était affichée
+      const errorBox = document.getElementById('errorMessage');
+      if (errorBox) {
+        errorBox.style.display = 'none';
+      }
+      
+      // Mettre à jour l'affichage si on est sur l'écran PIN
+      updatePropertyIdStatus();
+    }
+  } catch (error) {
+    console.error('❌ Erreur parsing deep link:', error);
+  }
+}
+
+function updatePropertyIdStatus() {
+  // Optionnel : afficher un indicateur que le property_id est bien reçu
+  const storedPropertyId = localStorage.getItem('property_id');
+  if (storedPropertyId) {
+    console.log('✅ Property ID disponible:', storedPropertyId);
+  }
+}
+
+// ============================================
 // PIN SCREEN - AUTO-FOCUS & NAVIGATION
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('✅ DOM Ready');
+  
+  // Setup deep links FIRST
+  await setupDeepLinks();
   
   // Setup PIN inputs
   setupPinInputs();
@@ -105,12 +197,17 @@ async function handleVerification(e) {
     return;
   }
   
-  // Get property ID from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  propertyId = urlParams.get('property');
+  // Get property ID - d'abord localStorage (deep link), sinon URL
+  propertyId = localStorage.getItem('property_id');
   
   if (!propertyId) {
-    showError('Lien invalide - ID de propriété manquant');
+    // Fallback sur l'URL (mode web)
+    const urlParams = new URLSearchParams(window.location.search);
+    propertyId = urlParams.get('property');
+  }
+  
+  if (!propertyId) {
+    showError('Lien invalide - ID de propriété manquant. Veuillez utiliser le lien fourni par votre hôte.');
     return;
   }
   
@@ -204,6 +301,7 @@ function logout() {
     localStorage.removeItem('guest_property_id');
     localStorage.removeItem('guest_property_name');
     localStorage.removeItem('guest_verified');
+    localStorage.removeItem('property_id');
     
     if (socket) {
       socket.disconnect();
