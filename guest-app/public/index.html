@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Boostinghost Guest</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  
+  <!-- 🔐 ÉCRAN VÉRIFICATION PIN -->
+  <div id="pinScreen" class="screen active">
+    <div class="container">
+      
+      <!-- Header -->
+      <div class="header">
+        <div class="logo">
+          <div class="logo-icon">B</div>
+          <div class="logo-text">Boostinghost</div>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div class="card">
+        <div class="card-icon">
+          <i class="fas fa-lock"></i>
+        </div>
+        <h1>Accès au Chat</h1>
+        <p class="subtitle">Contactez votre hôte facilement</p>
+
+        <form id="pinForm">
+          <!-- Code PIN -->
+          <div class="form-group">
+            <label>
+              <i class="fas fa-key"></i>
+              Code PIN à 4 chiffres
+            </label>
+            <div class="pin-input">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin1" autocomplete="off">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin2" autocomplete="off">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin3" autocomplete="off">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin4" autocomplete="off">
+            </div>
+            <small>Le code PIN vous a été fourni par le propriétaire</small>
+          </div>
+
+          <!-- Date d'arrivée -->
+          <div class="form-group">
+            <label>
+              <i class="fas fa-calendar-check"></i>
+              Date d'arrivée
+            </label>
+            <input type="date" id="checkinDate" required>
+          </div>
+
+          <!-- Date de départ (optionnel) -->
+          <div class="form-group">
+            <label>
+              <i class="fas fa-calendar-xmark"></i>
+              Date de départ <span class="optional">(optionnel)</span>
+            </label>
+            <input type="date" id="checkoutDate">
+            <small>Peut aider à identifier votre réservation plus précisément</small>
+          </div>
+
+          <!-- Plateforme -->
+          <div class="form-group">
+            <label>
+              <i class="fas fa-hotel"></i>
+              Plateforme de réservation
+            </label>
+            <select id="platform" required>
+              <option value="">Sélectionnez votre plateforme</option>
+              <option value="Airbnb">Airbnb</option>
+              <option value="Booking.com">Booking.com</option>
+              <option value="Direct">Direct</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+
+          <!-- Error message -->
+          <div id="errorMessage" class="error-box" style="display: none;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorText"></span>
+          </div>
+
+          <!-- Submit button -->
+          <button type="submit" class="btn-verify" id="verifyBtn">
+            <i class="fas fa-check"></i>
+            Vérifier et accéder au chat
+          </button>
+        </form>
+
+        <div class="security-note">
+          <i class="fas fa-shield-halved"></i>
+          Vos informations sont vérifiées de manière sécurisée
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 💬 ÉCRAN CHAT -->
+  <div id="chatScreen" class="screen">
+    <div class="chat-container">
+      
+      <!-- Header Chat -->
+      <div class="chat-header">
+        <button class="btn-back" id="btnBack">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="chat-header-info">
+          <div class="property-name" id="propertyName">Chargement...</div>
+          <div class="property-dates" id="propertyDates"></div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages-container" id="messagesContainer">
+        <div class="loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          Chargement des messages...
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="chat-input-container">
+        <textarea 
+          id="messageInput" 
+          placeholder="Écrivez votre message..."
+          rows="1"></textarea>
+        <button id="sendBtn" class="btn-send">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
