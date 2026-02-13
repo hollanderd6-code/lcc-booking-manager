@@ -614,13 +614,22 @@ function connectSocket() {
     return;
   }
   
-  console.log('🔌 Connexion socket...');
+  // Déconnecter l'ancien socket si existant
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  
+  console.log('🔌 Connexion socket...', API_URL);
   
   socket = io(API_URL, {
     transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000
+    reconnectionAttempts: Infinity, // Réessayer indéfiniment
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    forceNew: true
   });
   
   socket.on('connect', () => {
@@ -629,9 +638,15 @@ function connectSocket() {
   });
   
   socket.on('new_message', (message) => {
-    console.log('📩 Nouveau message:', message);
-    appendMessage(message);
-    scrollToBottom();
+    console.log('📩 Nouveau message reçu via socket:', message);
+    
+    // Vérifier si le message n'est pas déjà affiché
+    const container = document.getElementById('messagesContainer');
+    const existingMsg = container.querySelector(`[data-message-id="${message.id}"]`);
+    if (!existingMsg) {
+      appendMessage(message);
+      scrollToBottom();
+    }
     
     // Vibration si message du propriétaire
     if (message.sender_type !== 'guest' && window.Capacitor?.Plugins?.Haptics) {
@@ -639,8 +654,23 @@ function connectSocket() {
     }
   });
   
-  socket.on('disconnect', () => {
-    console.log('🔌 Socket déconnecté');
+  socket.on('disconnect', (reason) => {
+    console.log('🔌 Socket déconnecté, raison:', reason);
+    
+    // Reconnecter automatiquement si déconnexion non voulue
+    if (reason === 'io server disconnect') {
+      // Le serveur a forcé la déconnexion, reconnecter
+      socket.connect();
+    }
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error('❌ Erreur connexion socket:', error.message);
+  });
+  
+  socket.on('reconnect', (attemptNumber) => {
+    console.log('🔄 Reconnecté après', attemptNumber, 'tentatives');
+    socket.emit('join_conversation', conversationId);
   });
   
   socket.on('error', (error) => {
@@ -683,12 +713,21 @@ async function loadMessages() {
 function appendMessage(message) {
   const container = document.getElementById('messagesContainer');
   
+  // Éviter les doublons
+  if (message.id && container.querySelector(`[data-message-id="${message.id}"]`)) {
+    console.log('⚠️ Message déjà affiché:', message.id);
+    return;
+  }
+  
   // Remove loading if present
   const loading = container.querySelector('.loading');
   if (loading) loading.remove();
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${message.sender_type}`;
+  if (message.id) {
+    messageDiv.setAttribute('data-message-id', message.id);
+  }
   
   const time = new Date(message.created_at).toLocaleTimeString('fr-FR', {
     hour: '2-digit',
