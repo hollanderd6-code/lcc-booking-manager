@@ -1,0 +1,39 @@
+/* ============================================
+   🎨 FORCE LIGHT MODE - Bloque le dark mode système
+   
+   Ce fichier empêche le navigateur/système d'appliquer
+   son propre dark mode sur le site.
+   
+   À inclure EN PREMIER dans le <head>, avant les autres CSS
+   ============================================ */
+
+/* Forcer le schéma de couleurs en mode clair uniquement */
+:root {
+  color-scheme: light only !important;
+}
+
+html {
+  color-scheme: light only !important;
+}
+
+/* Empêcher les styles automatiques du navigateur en dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light only !important;
+  }
+  
+  html, body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+}
+
+/* S'assurer que le data-theme reste light */
+html[data-theme="dark"] {
+  color-scheme: light only !important;
+}
+
+/* Supprimer toute inversion de couleurs automatique */
+img, video, iframe, svg {
+  filter: none !important;
+}
