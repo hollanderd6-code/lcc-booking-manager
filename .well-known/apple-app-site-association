@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "H5H2Y3S26J.com.boostinghost.guest",
+        "paths": ["/guest", "/guest/*", "/guest-app/*"]
+      }
+    ]
+  }
+}
