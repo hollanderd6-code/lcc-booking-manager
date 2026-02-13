@@ -552,7 +552,7 @@ async function sendMessageOwner() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const response = await fetch('/api/chat/send', {
+    const response = await fetch(API_URL + '/api/chat/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
