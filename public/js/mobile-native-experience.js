@@ -98,34 +98,26 @@
     // ============================================
     // DARK MODE AUTOMATIQUE
     // ============================================
+    // ⚠️ DÉSACTIVÉ - Force toujours le mode clair
+    // ============================================
 
     setupDarkMode() {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      // Ne plus détecter le thème système - forcer le mode clair
+      this.isDarkMode = false;
       
-      const updateTheme = async (isDark) => {
-        this.isDarkMode = isDark;
-        
-        if (isDark) {
-          document.body.classList.add('dark-mode');
-          if (isNative && StatusBar) {
-            try {
-              await StatusBar.setStyle({ style: 'dark' });
-              await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-            } catch (e) {}
-          }
-        } else {
-          document.body.classList.remove('dark-mode');
-          if (isNative && StatusBar) {
-            try {
-              await StatusBar.setStyle({ style: 'light' });
-              await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-            } catch (e) {}
-          }
-        }
-      };
-
-      prefersDark.addEventListener('change', (e) => updateTheme(e.matches));
-      updateTheme(prefersDark.matches);
+      // Supprimer toute classe dark-mode existante
+      document.body.classList.remove('dark-mode');
+      document.documentElement.setAttribute('data-theme', 'light');
+      
+      // Configurer la status bar en mode clair
+      if (isNative && StatusBar) {
+        try {
+          StatusBar.setStyle({ style: 'light' });
+          StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+        } catch (e) {}
+      }
+      
+      console.log('🎨 [THEME] Mode clair forcé (dark mode auto désactivé)');
     }
 
     // ============================================
