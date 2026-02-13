@@ -108,10 +108,17 @@ function updatePropertyIdStatus() {
 // ============================================
 
 async function setupPushNotifications() {
+  console.log('🔔 [DEBUG] setupPushNotifications appelé, IS_NATIVE:', IS_NATIVE);
+  
   if (!IS_NATIVE) {
     console.log('⚠️ Push notifications uniquement en mode natif');
     return;
   }
+  
+  console.log('🔔 [DEBUG] Mode natif détecté, vérification plugin...');
+  console.log('🔔 [DEBUG] Capacitor:', window.Capacitor);
+  console.log('🔔 [DEBUG] Plugins:', window.Capacitor?.Plugins);
+  console.log('🔔 [DEBUG] PushNotifications:', window.Capacitor?.Plugins?.PushNotifications);
 
   try {
     const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
