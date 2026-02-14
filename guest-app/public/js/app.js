@@ -106,80 +106,65 @@ function updatePropertyIdStatus() {
 // ============================================
 // NOTIFICATIONS PUSH (Firebase)
 // ============================================
-
 async function setupPushNotifications() {
-  console.log('🔔 [DEBUG] setupPushNotifications appelé, IS_NATIVE:', IS_NATIVE);
+  console.log('🔔 [DEBUG] setupPushNotifications appelé');
   
   if (!IS_NATIVE) {
     console.log('⚠️ Push notifications uniquement en mode natif');
     return;
   }
-  
-  console.log('🔔 [DEBUG] Mode natif détecté, vérification plugin...');
-  console.log('🔔 [DEBUG] Capacitor:', window.Capacitor);
-  console.log('🔔 [DEBUG] Plugins:', window.Capacitor?.Plugins);
-  console.log('🔔 [DEBUG] PushNotifications:', window.Capacitor?.Plugins?.PushNotifications);
 
   try {
-    const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
+    const { FirebaseMessaging } = window.Capacitor.Plugins;
     
-    if (!PushNotifications) {
-      console.log('⚠️ PushNotifications plugin non disponible');
+    if (!FirebaseMessaging) {
+      console.log('⚠️ FirebaseMessaging plugin non disponible');
       return;
     }
 
     // Demander la permission
-    const permResult = await PushNotifications.requestPermissions();
-    
-    if (permResult.receive === 'granted') {
-      // S'enregistrer pour les notifications
-      await PushNotifications.register();
-      console.log('✅ Push notifications enregistrées');
-    } else {
-      console.log('⚠️ Permission notifications refusée');
+    await FirebaseMessaging.requestPermissions();
+    console.log('✅ Permission notifications accordée');
+
+    // Obtenir le token
+    const result = await FirebaseMessaging.getToken();
+    if (result?.token) {
+      console.log('🔥🔥🔥 FCM TOKEN:', result.token);
+      
+      // Sauvegarder le token
+      localStorage.setItem('guest_fcm_token', result.token);
+      
+      // Envoyer au serveur si on a une conversation
+      if (conversationId) {
+        await registerFcmToken(result.token);
+      }
     }
 
-    // Écouter le token FCM
-    PushNotifications.addListener('registration', async (token) => {
-      console.log('🔥🔥🔥 FCM TOKEN REÇU:', token.value);
+    // Écouter les nouveaux tokens
+    FirebaseMessaging.addListener('tokenReceived', async (event) => {
+      console.log('🔥🔥🔥 NOUVEAU TOKEN FCM:', event.token);
+      localStorage.setItem('guest_fcm_token', event.token);
       
-      // Sauvegarder le token localement
-      localStorage.setItem('guest_fcm_token', token.value);
-      
-      // Envoyer le token au serveur si on a une conversation
       if (conversationId) {
-        await registerFcmToken(token.value);
+        await registerFcmToken(event.token);
       }
     });
 
-    // Écouter les erreurs d'enregistrement
-    PushNotifications.addListener('registrationError', (error) => {
-      console.error('❌ Erreur enregistrement push:', error);
-    });
-
-    // Écouter les notifications reçues (app ouverte)
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('📩 Notification reçue:', notification);
+    // Écouter les notifications
+    FirebaseMessaging.addListener('notificationReceived', (event) => {
+      console.log('📩 Notification reçue:', event);
       
-      // Optionnel : afficher une alerte ou mettre à jour l'UI
-      if (notification.data?.type === 'new_message') {
-        // Recharger les messages si on est sur le chat
-        if (document.getElementById('chatScreen').classList.contains('active')) {
-          loadMessages();
-        }
+      if (document.getElementById('chatScreen').classList.contains('active')) {
+        loadMessages();
       }
     });
 
-    // Écouter les actions sur les notifications (app fermée ou en arrière-plan)
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('👆 Action notification:', action);
+    FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
+      console.log('👆 Action notification:', event);
       
-      // Ouvrir le chat si on clique sur une notification de message
-      if (action.notification?.data?.type === 'new_message') {
-        const convId = action.notification.data.conversation_id;
-        if (convId && convId === conversationId) {
-          showChatScreen();
-        }
+      if (event.notification?.data?.conversation_id === conversationId) {
+        showChatScreen();
+        loadMessages();
       }
     });
 
