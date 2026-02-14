@@ -299,13 +299,22 @@ const EMOJI_LIST = [
 ];
 
 function toggleEmojiPicker(e) {
-  e.stopPropagation(); // Empêcher la fermeture immédiate
+  console.log('🎭 toggleEmojiPicker appelé');
+  if (e) e.stopPropagation();
   
   const picker = document.getElementById('emojiPicker');
+  if (!picker) {
+    console.error('❌ emojiPicker element not found');
+    return;
+  }
+  
+  const wasActive = picker.classList.contains('active');
   picker.classList.toggle('active');
+  console.log('🎭 Picker toggled, now active:', !wasActive);
   
   // Remplir le picker si pas encore fait
   if (!picker.hasChildNodes() || picker.children.length === 0) {
+    console.log('🎭 Remplissage du picker avec', EMOJI_LIST.length, 'emojis');
     EMOJI_LIST.forEach(emoji => {
       const span = document.createElement('span');
       span.className = 'emoji-item';
@@ -316,11 +325,18 @@ function toggleEmojiPicker(e) {
       });
       picker.appendChild(span);
     });
+    console.log('✅ Picker rempli');
   }
 }
 
 function insertEmoji(emoji) {
+  console.log('😀 Insert emoji:', emoji);
   const input = document.getElementById('messageInput');
+  if (!input) {
+    console.error('❌ messageInput not found');
+    return;
+  }
+  
   const start = input.selectionStart;
   const end = input.selectionEnd;
   const text = input.value;
@@ -390,6 +406,8 @@ async function uploadPhotos(files) {
         body: JSON.stringify({
           conversation_id: conversationId,
           sender_type: 'guest',
+          sender_name: 'Guest',
+          message: '', // Message vide pour les photos
           photo_data: base64Data
         })
       });
