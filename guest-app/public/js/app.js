@@ -240,17 +240,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Back button
   document.getElementById('btnBack').addEventListener('click', logout);
   
-  // Fermer emoji picker en cliquant ailleurs
-  document.addEventListener('click', (e) => {
-    const emojiPicker = document.getElementById('emojiPicker');
-    const emojiBtn = document.getElementById('emojiBtn');
-    
-    // Vérifier si le clic est dans le picker OU dans le bouton emoji
-    if (emojiPicker && !emojiPicker.contains(e.target) && !emojiBtn.contains(e.target)) {
-      emojiPicker.classList.remove('active');
-    }
-  });
-  
   // Recharger les messages quand l'app revient au premier plan
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && conversationId) {
@@ -317,11 +306,18 @@ function toggleEmojiPicker() {
   }
   
   const wasActive = picker.classList.contains('active');
-  picker.classList.toggle('active');
-  console.log('🎭 Picker toggled, now active:', !wasActive);
+  
+  // Toggle le picker
+  if (wasActive) {
+    picker.classList.remove('active');
+    console.log('🎭 Picker fermé');
+  } else {
+    picker.classList.add('active');
+    console.log('🎭 Picker ouvert');
+  }
   
   // Remplir le picker si pas encore fait
-  if (!picker.hasChildNodes() || picker.children.length === 0) {
+  if (!wasActive && (!picker.hasChildNodes() || picker.children.length === 0)) {
     console.log('🎭 Remplissage du picker avec', EMOJI_LIST.length, 'emojis');
     EMOJI_LIST.forEach(emoji => {
       const span = document.createElement('span');
@@ -431,7 +427,7 @@ async function uploadPhotos(files) {
           conversation_id: conversationId,
           sender_type: 'guest',
           sender_name: 'Guest',
-          message: '', // Message vide pour les photos
+          message: '📷 Photo', // Message par défaut pour les photos
           photo_data: base64Data
         })
       });
