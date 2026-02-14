@@ -280,8 +280,8 @@ function setupPinInputs() {
     });
   });
   
-  // Auto-focus first input
-  document.getElementById('pin1').focus();
+  // Auto-focus désactivé pour ne pas cacher le header avec le clavier
+  // L'utilisateur peut taper manuellement sur le premier champ
 }
 
 // ============================================
