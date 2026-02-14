@@ -686,10 +686,15 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
   
   app.post('/api/chat/send', optionalAuth, async (req, res) => {
     try {
-      const { conversation_id, message, sender_type, sender_name } = req.body;
+      const { conversation_id, message, sender_type, sender_name, photo_data } = req.body;
 
-      if (!conversation_id || !message || !sender_type) {
+      if (!conversation_id || !sender_type) {
         return res.status(400).json({ error: 'Données manquantes' });
+      }
+      
+      // Si c'est une photo, le message peut être vide
+      if (!message && !photo_data) {
+        return res.status(400).json({ error: 'Message ou photo requis' });
       }
 
       // Vérifier que la conversation existe
@@ -731,13 +736,50 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         }
       }
 
+      // ============================================
+      // 📷 GESTION DES PHOTOS
+      // ============================================
+      let photoUrl = null;
+      if (photo_data) {
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const crypto = require('crypto');
+          
+          // Créer le dossier uploads/chat-photos s'il n'existe pas
+          const uploadsDir = path.join(__dirname, '../uploads/chat-photos');
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          
+          // Extraire le base64 (enlever le préfixe data:image/...)
+          const base64Data = photo_data.replace(/^data:image\/\w+;base64,/, '');
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          // Générer un nom de fichier unique
+          const filename = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}.jpg`;
+          const filepath = path.join(uploadsDir, filename);
+          
+          // Sauvegarder le fichier
+          fs.writeFileSync(filepath, buffer);
+          
+          // URL publique de la photo
+          photoUrl = `/uploads/chat-photos/${filename}`;
+          
+          console.log('✅ Photo sauvegardée:', photoUrl);
+        } catch (error) {
+          console.error('❌ Erreur sauvegarde photo:', error);
+          // On continue sans la photo en cas d'erreur
+        }
+      }
+
       // Insérer le message
       const result = await pool.query(
         `INSERT INTO messages 
-        (conversation_id, sender_type, sender_name, message, is_read, created_at)
-        VALUES ($1, $2, $3, $4, FALSE, NOW())
-        RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
-        [conversation_id, sender_type, sender_name || 'Anonyme', message]
+        (conversation_id, sender_type, sender_name, message, photo_url, is_read, created_at)
+        VALUES ($1, $2, $3, $4, $5, FALSE, NOW())
+        RETURNING id, conversation_id, sender_type, sender_name, message, photo_url, is_read, is_bot_response, is_auto_response, created_at`,
+        [conversation_id, sender_type, sender_name || 'Anonyme', message || '', photoUrl]
       );
 
       const newMessage = result.rows[0];
