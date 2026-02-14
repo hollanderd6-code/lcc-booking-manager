@@ -226,17 +226,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Setup emoji button - SANS event listener global qui cause des problèmes
   const emojiBtn = document.getElementById('emojiBtn');
+  console.log('🔍 Emoji button trouvé:', emojiBtn);
+  
   if (emojiBtn) {
+    // Vérifier que le picker existe
+    const picker = document.getElementById('emojiPicker');
+    console.log('🔍 Emoji picker trouvé:', picker);
+    console.log('🔍 Picker classes:', picker?.className);
+    console.log('🔍 Picker style display:', picker?.style.display);
+    console.log('🔍 Picker computed style:', window.getComputedStyle(picker)?.display);
+    
     // Utiliser mousedown au lieu de click pour éviter les conflits
     emojiBtn.addEventListener('mousedown', (e) => {
+      console.log('🖱️ MOUSEDOWN sur emoji button');
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
       
       setTimeout(() => {
+        console.log('⏱️ Appel de toggleEmojiPicker dans le timeout');
         toggleEmojiPicker();
       }, 10);
     });
+    
+    console.log('✅ Event listener ajouté sur emoji button');
+  } else {
+    console.error('❌ Emoji button NOT FOUND');
   }
   
   // Setup photo button
@@ -304,6 +319,8 @@ const EMOJI_LIST = [
 let isTogglingEmoji = false;
 
 function toggleEmojiPicker() {
+  console.log('🎭 ===== toggleEmojiPicker APPELÉ =====');
+  
   // Éviter les appels multiples rapprochés
   if (isTogglingEmoji) {
     console.log('🎭 Toggle déjà en cours, ignoré');
@@ -311,24 +328,30 @@ function toggleEmojiPicker() {
   }
   
   isTogglingEmoji = true;
-  console.log('🎭 toggleEmojiPicker appelé');
   
   const picker = document.getElementById('emojiPicker');
+  console.log('🎭 Picker element:', picker);
+  
   if (!picker) {
     console.error('❌ emojiPicker element not found');
     isTogglingEmoji = false;
     return;
   }
   
+  console.log('🎭 Picker classes AVANT:', picker.className);
+  console.log('🎭 Picker display AVANT:', window.getComputedStyle(picker).display);
+  
   const wasActive = picker.classList.contains('active');
+  console.log('🎭 Was active:', wasActive);
   
   // Toggle le picker
   if (wasActive) {
     picker.classList.remove('active');
-    console.log('🎭 Picker fermé');
+    console.log('🎭 Picker fermé - classes APRÈS:', picker.className);
   } else {
     picker.classList.add('active');
-    console.log('🎭 Picker ouvert');
+    console.log('🎭 Picker ouvert - classes APRÈS:', picker.className);
+    console.log('🎭 Picker display APRÈS:', window.getComputedStyle(picker).display);
   }
   
   // Remplir le picker si pas encore fait
@@ -344,13 +367,16 @@ function toggleEmojiPicker() {
       });
       picker.appendChild(span);
     });
-    console.log('✅ Picker rempli');
+    console.log('✅ Picker rempli - nombre d\'enfants:', picker.children.length);
   }
   
   // Débloquer après un court délai
   setTimeout(() => {
     isTogglingEmoji = false;
+    console.log('🎭 Toggle débloqué');
   }, 100);
+  
+  console.log('🎭 ===== FIN toggleEmojiPicker =====');
 }
 
 function insertEmoji(emoji) {
