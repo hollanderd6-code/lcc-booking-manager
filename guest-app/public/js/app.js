@@ -224,13 +224,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   
-  // Setup emoji button - AVEC PREVENTDEFAULT pour éviter double appel
+  // Setup emoji button - SANS event listener global qui cause des problèmes
   const emojiBtn = document.getElementById('emojiBtn');
   if (emojiBtn) {
-    emojiBtn.addEventListener('click', (e) => {
+    // Utiliser mousedown au lieu de click pour éviter les conflits
+    emojiBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      toggleEmojiPicker();
+      e.stopImmediatePropagation();
+      
+      setTimeout(() => {
+        toggleEmojiPicker();
+      }, 10);
     });
   }
   
@@ -296,12 +301,22 @@ const EMOJI_LIST = [
   '☀️', '🌙', '⭐', '🌈', '🎉', '🎊', '✅', '❌'
 ];
 
+let isTogglingEmoji = false;
+
 function toggleEmojiPicker() {
+  // Éviter les appels multiples rapprochés
+  if (isTogglingEmoji) {
+    console.log('🎭 Toggle déjà en cours, ignoré');
+    return;
+  }
+  
+  isTogglingEmoji = true;
   console.log('🎭 toggleEmojiPicker appelé');
   
   const picker = document.getElementById('emojiPicker');
   if (!picker) {
     console.error('❌ emojiPicker element not found');
+    isTogglingEmoji = false;
     return;
   }
   
@@ -331,6 +346,11 @@ function toggleEmojiPicker() {
     });
     console.log('✅ Picker rempli');
   }
+  
+  // Débloquer après un court délai
+  setTimeout(() => {
+    isTogglingEmoji = false;
+  }, 100);
 }
 
 function insertEmoji(emoji) {
