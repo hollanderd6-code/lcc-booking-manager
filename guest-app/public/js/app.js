@@ -224,8 +224,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   
-  // Setup emoji button
-  document.getElementById('emojiBtn')?.addEventListener('click', toggleEmojiPicker);
+  // Setup emoji button - AVEC PREVENTDEFAULT pour éviter double appel
+  const emojiBtn = document.getElementById('emojiBtn');
+  if (emojiBtn) {
+    emojiBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleEmojiPicker();
+    });
+  }
   
   // Setup photo button
   document.getElementById('photoBtn')?.addEventListener('click', openPhotoPicker);
@@ -300,9 +307,8 @@ const EMOJI_LIST = [
   '☀️', '🌙', '⭐', '🌈', '🎉', '🎊', '✅', '❌'
 ];
 
-function toggleEmojiPicker(e) {
+function toggleEmojiPicker() {
   console.log('🎭 toggleEmojiPicker appelé');
-  if (e) e.stopPropagation();
   
   const picker = document.getElementById('emojiPicker');
   if (!picker) {
@@ -381,6 +387,8 @@ function openPhotoPicker() {
 }
 
 async function uploadPhotos(files) {
+  console.log('📷 uploadPhotos appelé avec', files.length, 'fichiers');
+  
   const sendBtn = document.getElementById('sendBtn');
   const photoBtn = document.getElementById('photoBtn');
   
@@ -389,18 +397,32 @@ async function uploadPhotos(files) {
   
   try {
     for (const file of files) {
-      // Convertir en base64
-      const reader = new FileReader();
+      console.log('📷 Traitement fichier:', file.name, 'Type:', file.type, 'Taille:', file.size);
       
-      const base64Data = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // Vérifier que c'est une image
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Le fichier doit être une image');
+      }
       
       // Afficher un message temporaire
       const tempId = Date.now();
       appendTempMessage(tempId, '📷 Envoi de la photo...');
+      
+      // Convertir en base64
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          console.log('✅ Fichier lu, taille base64:', reader.result.length);
+          resolve(reader.result);
+        };
+        reader.onerror = (error) => {
+          console.error('❌ Erreur lecture fichier:', error);
+          reject(error);
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      console.log('📤 Envoi de la photo au serveur...');
       
       const response = await fetch(`${API_URL}/api/chat/send`, {
         method: 'POST',
@@ -419,8 +441,11 @@ async function uploadPhotos(files) {
       
       if (!response.ok) {
         const data = await response.json();
+        console.error('❌ Réponse serveur erreur:', data);
         throw new Error(data.error || 'Erreur envoi photo');
       }
+      
+      console.log('✅ Photo envoyée avec succès');
       
       // Haptic feedback
       if (window.Capacitor?.Plugins?.Haptics) {
