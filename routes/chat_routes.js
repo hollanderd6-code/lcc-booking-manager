@@ -811,6 +811,119 @@ if (sender_type === 'owner') {
     console.error('❌ Erreur notification push voyageur:', notifError.message);
   }
 }
+
+// ============================================
+// 🔔 NOTIFICATION PUSH VOYAGEUR → PROPRIÉTAIRE (APP GUEST)
+// ============================================
+
+// Si c'est le voyageur qui écrit, notifier le propriétaire
+if (sender_type === 'guest') {
+  try {
+    const { sendNewMessageNotification } = require('../services/notifications-service');
+    
+    const propertyResult = await pool.query(
+      'SELECT name FROM properties WHERE id = $1',
+      [conversation.property_id]
+    );
+    
+    const propertyName = propertyResult.rows.length > 0 
+      ? propertyResult.rows[0].name 
+      : 'Votre logement';
+    
+    const messagePreview = message.length > 100 
+      ? message.substring(0, 97) + '...' 
+      : message;
+    
+    await sendNewMessageNotification(
+      conversation.user_id,
+      conversation_id,
+      messagePreview,
+      propertyName
+    );
+    
+    console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
+    
+  } catch (notifError) {
+    console.error('❌ Erreur notification push propriétaire:', notifError.message);
+  }
+}
+
+// ============================================
+// 🔔 NOTIFICATION PUSH PROPRIÉTAIRE → VOYAGEUR (APP GUEST)
+// ============================================
+
+// Si c'est le propriétaire qui répond, notifier le voyageur via son token guest
+if (sender_type === 'owner') {
+  try {
+    // Récupérer le(s) token(s) FCM du guest pour cette conversation
+    const guestTokensResult = await pool.query(
+      `SELECT fcm_token FROM guest_fcm_tokens 
+       WHERE conversation_id = $1 AND fcm_token IS NOT NULL
+       ORDER BY last_used_at DESC`,
+      [conversation_id]
+    );
+    
+    if (guestTokensResult.rows.length > 0) {
+      const admin = require('firebase-admin');
+      
+      // Récupérer le nom de la propriété
+      const propertyResult = await pool.query(
+        'SELECT name FROM properties WHERE id = $1',
+        [conversation.property_id]
+      );
+      
+      const propertyName = propertyResult.rows.length > 0 
+        ? propertyResult.rows[0].name 
+        : 'Votre hôte';
+      
+      const messagePreview = message.length > 100 
+        ? message.substring(0, 97) + '...' 
+        : message;
+      
+      // Envoyer la notification à tous les tokens du guest
+      const tokens = guestTokensResult.rows.map(row => row.fcm_token);
+      
+      const notificationPayload = {
+        notification: {
+          title: propertyName,
+          body: messagePreview
+        },
+        data: {
+          conversation_id: conversation_id.toString(),
+          type: 'new_message',
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      };
+      
+      for (const token of tokens) {
+        try {
+          await admin.messaging().send({
+            ...notificationPayload,
+            token: token
+          });
+          console.log(`✅ Notification guest envoyée via token:`, token.substring(0, 20) + '...');
+        } catch (tokenError) {
+          console.error(`❌ Erreur envoi notification au token:`, tokenError.message);
+          
+          // Si le token est invalide, le supprimer
+          if (tokenError.code === 'messaging/invalid-registration-token' || 
+              tokenError.code === 'messaging/registration-token-not-registered') {
+            await pool.query(
+              'DELETE FROM guest_fcm_tokens WHERE fcm_token = $1',
+              [token]
+            );
+            console.log(`🗑️ Token guest invalide supprimé`);
+          }
+        }
+      }
+    } else {
+      console.log(`ℹ️ Aucun token guest trouvé pour conversation ${conversation_id}`);
+    }
+  } catch (notifError) {
+    console.error('❌ Erreur notification push guest:', notifError.message);
+  }
+}
+
       // ✅ Si c'est un message du voyageur, chercher une réponse automatique
       if (sender_type === 'guest') {
         const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
