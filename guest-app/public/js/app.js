@@ -400,25 +400,38 @@ async function uploadPhotos(files) {
         throw new Error('Le fichier doit être une image');
       }
       
+      // Vérifier la taille (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('Image trop volumineuse (max 5MB)');
+      }
+      
       // Afficher un message temporaire
       const tempId = Date.now();
-      appendTempMessage(tempId, '📷 Envoi de la photo...');
+      appendTempMessage(tempId, '📷 Upload de la photo...');
       
-      // Convertir en base64
-      const base64Data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          console.log('✅ Fichier lu, taille base64:', reader.result.length);
-          resolve(reader.result);
-        };
-        reader.onerror = (error) => {
-          console.error('❌ Erreur lecture fichier:', error);
-          reject(error);
-        };
-        reader.readAsDataURL(file);
+      console.log('📤 Upload vers Cloudinary...');
+      
+      // Upload vers Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'chat-photos');
+      
+      const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
+        method: 'POST',
+        body: formData
       });
       
-      console.log('📤 Envoi de la photo au serveur...');
+      if (!cloudinaryResponse.ok) {
+        throw new Error('Erreur upload Cloudinary');
+      }
+      
+      const cloudinaryData = await cloudinaryResponse.json();
+      const imageUrl = cloudinaryData.secure_url;
+      
+      console.log('✅ Photo uploadée sur Cloudinary:', imageUrl);
+      
+      // Envoyer le message avec le tag [IMAGE:url]
+      const messageWithImage = `[IMAGE:${imageUrl}]`;
       
       const response = await fetch(`${API_URL}/api/chat/send`, {
         method: 'POST',
@@ -427,8 +440,7 @@ async function uploadPhotos(files) {
           conversation_id: conversationId,
           sender_type: 'guest',
           sender_name: 'Guest',
-          message: '📷 Photo', // Message par défaut pour les photos
-          photo_data: base64Data
+          message: messageWithImage
         })
       });
       
@@ -791,12 +803,35 @@ function appendMessage(message) {
     minute: '2-digit'
   });
   
-  // Vérifier si c'est une image
+  // Parser le message pour extraire les images
+  const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g;
+  let messageText = message.message || '';
+  const images = [];
+  
+  let match;
+  while ((match = imageRegex.exec(messageText)) !== null) {
+    images.push(match[1]);
+  }
+  
+  // Enlever les tags [IMAGE:...] du texte
+  messageText = messageText.replace(imageRegex, '').trim();
+  
+  // Construire le contenu
   let content = '';
-  if (message.photo_url) {
-    content = `<img src="${message.photo_url}" class="message-photo" onclick="openFullImage('${message.photo_url}')" alt="Photo">`;
-  } else {
-    content = escapeHtml(message.message);
+  
+  // Ajouter le texte s'il y en a
+  if (messageText) {
+    content += escapeHtml(messageText);
+  }
+  
+  // Ajouter les images
+  images.forEach(imageUrl => {
+    content += `<img src="${imageUrl}" class="message-photo" onclick="openFullImage('${imageUrl}')" alt="Photo">`;
+  });
+  
+  // Si toujours vide, ne rien afficher
+  if (!content) {
+    content = '<i>Photo</i>';
   }
   
   messageDiv.innerHTML = `
