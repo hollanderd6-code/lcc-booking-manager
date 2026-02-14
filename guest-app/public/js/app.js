@@ -141,7 +141,7 @@ async function setupPushNotifications() {
 
     // Écouter le token FCM
     PushNotifications.addListener('registration', async (token) => {
-      console.log('🔔 FCM Token:', token.value);
+      console.log('🔥🔥🔥 FCM TOKEN REÇU:', token.value);
       
       // Sauvegarder le token localement
       localStorage.setItem('guest_fcm_token', token.value);
@@ -254,6 +254,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const emojiBtn = document.getElementById('emojiBtn');
     if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
       emojiPicker.classList.remove('active');
+    }
+  });
+  
+  // Recharger les messages quand l'app revient au premier plan
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && conversationId) {
+      console.log('📱 App au premier plan, rechargement messages...');
+      loadMessages();
     }
   });
 });
@@ -678,6 +686,8 @@ function connectSocket() {
   socket.on('reconnect', (attemptNumber) => {
     console.log('🔄 Reconnecté après', attemptNumber, 'tentatives');
     socket.emit('join_conversation', conversationId);
+    // Recharger les messages après reconnexion
+    loadMessages();
   });
   
   socket.on('error', (error) => {
