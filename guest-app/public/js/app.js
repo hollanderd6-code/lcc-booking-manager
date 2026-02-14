@@ -237,7 +237,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('click', (e) => {
     const emojiPicker = document.getElementById('emojiPicker');
     const emojiBtn = document.getElementById('emojiBtn');
-    if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+    
+    // Vérifier si le clic est dans le picker OU dans le bouton emoji
+    if (emojiPicker && !emojiPicker.contains(e.target) && !emojiBtn.contains(e.target)) {
       emojiPicker.classList.remove('active');
     }
   });
