@@ -298,7 +298,9 @@ const EMOJI_LIST = [
   '☀️', '🌙', '⭐', '🌈', '🎉', '🎊', '✅', '❌'
 ];
 
-function toggleEmojiPicker() {
+function toggleEmojiPicker(e) {
+  e.stopPropagation(); // Empêcher la fermeture immédiate
+  
   const picker = document.getElementById('emojiPicker');
   picker.classList.toggle('active');
   
@@ -308,7 +310,10 @@ function toggleEmojiPicker() {
       const span = document.createElement('span');
       span.className = 'emoji-item';
       span.textContent = emoji;
-      span.addEventListener('click', () => insertEmoji(emoji));
+      span.addEventListener('click', (e) => {
+        e.stopPropagation();
+        insertEmoji(emoji);
+      });
       picker.appendChild(span);
     });
   }
@@ -366,18 +371,27 @@ async function uploadPhotos(files) {
   
   try {
     for (const file of files) {
+      // Convertir en base64
+      const reader = new FileReader();
+      
+      const base64Data = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
       // Afficher un message temporaire
       const tempId = Date.now();
       appendTempMessage(tempId, '📷 Envoi de la photo...');
       
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('conversation_id', conversationId);
-      formData.append('sender_type', 'guest');
-      
-      const response = await fetch(`${API_URL}/api/chat/send-photo`, {
+      const response = await fetch(`${API_URL}/api/chat/send`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          sender_type: 'guest',
+          photo_data: base64Data
+        })
       });
       
       // Supprimer le message temporaire
@@ -396,7 +410,7 @@ async function uploadPhotos(files) {
     
   } catch (error) {
     console.error('❌ Erreur upload photo:', error);
-    alert('Erreur lors de l\'envoi de la photo');
+    alert('Erreur lors de l\'envoi de la photo: ' + error.message);
   } finally {
     sendBtn.disabled = false;
     photoBtn.disabled = false;
