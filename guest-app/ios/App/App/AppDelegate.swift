@@ -76,6 +76,49 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         return true
     }
+    
+    // ============================================
+    // 🔗 UNIVERSAL LINKS & URL SCHEMES
+    // ============================================
+    
+    // Gérer les Universal Links (https://boostinghost.fr/guest?property=...)
+    func application(_ application: UIApplication,
+                     continue userActivity: NSUserActivity,
+                     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
+        
+        print("🔗 Universal Link reçu:", url.absoluteString)
+        
+        // Passer l'URL à Capacitor
+        NotificationCenter.default.post(
+            name: Notification.Name.capacitorOpenURL,
+            object: nil,
+            userInfo: ["url": url]
+        )
+        
+        return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+    
+    // Gérer les URL Schemes (boostinghostguest://...)
+    func application(_ app: UIApplication,
+                     open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        
+        print("🔗 URL Scheme reçu:", url.absoluteString)
+        
+        // Passer l'URL à Capacitor
+        NotificationCenter.default.post(
+            name: Notification.Name.capacitorOpenURL,
+            object: nil,
+            userInfo: ["url": url]
+        )
+        
+        return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
+    }
 
     // ✅ BADGE : Remettre à 0 quand l'app passe au premier plan
     func applicationWillEnterForeground(_ application: UIApplication) {
