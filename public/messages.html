@@ -914,7 +914,7 @@ function cleanGuestName(reservation) {
   if (plat.includes('booking')) return 'Voyageur Booking';
   
   return 'Voyageur';
-}
+}  // ✅ ACCOLADE FERMANTE MANQUANTE !
 
 function getGuestInitial(reservation) {
   if (!reservation) return 'V';
