@@ -2379,7 +2379,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
       "details": [
         {
           "appID": "H5H2Y3S26J.com.boostinghost.guest",
-          "paths": ["/guest", "/guest/*""/guest-app/*","/guest-app/public/*" ]
+         "paths": ["/guest", "/guest/*", "/guest-app/*", "/guest-app/public/*"]
         }
       ]
     }
