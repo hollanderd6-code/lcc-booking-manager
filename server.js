@@ -14930,15 +14930,18 @@ app.post('/api/notifications/today-departures', authenticateAny, async (req, res
       [today, tomorrow]
     );
     
-    const departures = departuresResult.rows;
-    
-    if (departures.length === 0) {
-      return res.json({ message: 'Aucun départ aujourd\'hui' });
-    }
-    
-    const title = `🚪 ${departures.length} départ(s) aujourd'hui`;
-    const body = `Ménages à prévoir : ${departures.map(d => d.property_name).join(', ')}`;
-    
+   const departures = departuresResult.rows;
+
+if (departures.length === 0) {
+  return res.json({ message: 'Aucun départ aujourd\'hui' });
+}
+
+// ✅ DÉDUPLIQUER les logements
+const uniqueProperties = [...new Set(departures.map(d => d.property_name))];
+const uniqueCount = uniqueProperties.length;
+
+const title = `🚪 ${uniqueCount} départ(s) aujourd'hui`;
+const body = `Ménages à prévoir : ${uniqueProperties.join(', ')}`;
     const result = await sendNotificationToMultiple(fcmTokens, title, body, {
       type: 'departures',
       count: departures.length.toString()
