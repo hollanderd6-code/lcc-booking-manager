@@ -404,6 +404,14 @@ async function openChat(conversationId) {
     modal.classList.add('active');
   }
   
+  // ✅ BLOQUER LE SCROLL DU BODY (FIX iOS)
+  document.body.classList.add('modal-open');
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+  document.body.style.height = '100%';
+  document.documentElement.style.overflow = 'hidden';
+  
   // Charger les messages
   await loadMessages(conversationId);
   
@@ -438,6 +446,14 @@ function closeChat() {
   if (modal) {
     modal.classList.remove('active');
   }
+  
+  // ✅ DÉBLOQUER LE SCROLL DU BODY (FIX iOS)
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.height = '';
+  document.documentElement.style.overflow = '';
   
   if (socket && currentConversationId) {
     socket.emit('leave_conversation', currentConversationId);
