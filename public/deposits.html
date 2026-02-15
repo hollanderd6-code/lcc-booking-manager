@@ -842,7 +842,14 @@ Les paiements de locations sont versés directement sur votre compte Stripe Conn
 </div>
 </div>
 <script>
-    const API_BASE = '/api';
+    // ✅ FIX iOS: Détecter Capacitor et utiliser l'URL complète
+    const IS_NATIVE = window.Capacitor?.isNativePlatform() || false;
+    const API_BASE = IS_NATIVE 
+      ? 'https://lcc-booking-manager.onrender.com/api'
+      : '/api';
+    
+    console.log('📱 [DEPOSITS] Mode:', IS_NATIVE ? 'NATIF' : 'WEB');
+    console.log('📱 [DEPOSITS] API_BASE:', API_BASE);
 
     let currentReservationForDeposit = null;
     let allReservationsWithDeposits = [];
