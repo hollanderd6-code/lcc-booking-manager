@@ -61,9 +61,16 @@ async function setupDeepLinks() {
 }
 
 function handleDeepLink(url) {
+  console.log('🔗 ===== HANDLE DEEP LINK =====');
+  console.log('🔗 URL reçue:', url);
+  
   try {
     const urlObj = new URL(url);
+    console.log('🔗 URL parsée:', urlObj.href);
+    console.log('🔗 Search params:', urlObj.search);
+    
     const urlPropertyId = urlObj.searchParams.get('property');
+    console.log('🔗 Property ID extrait:', urlPropertyId);
     
     if (urlPropertyId) {
       console.log('✅ Property ID extrait du deep link:', urlPropertyId);
@@ -71,6 +78,9 @@ function handleDeepLink(url) {
       // Sauvegarder le property_id
       localStorage.setItem('property_id', urlPropertyId);
       propertyId = urlPropertyId;
+      
+      console.log('✅ Property ID sauvegardé dans localStorage');
+      console.log('✅ localStorage.getItem("property_id"):', localStorage.getItem('property_id'));
       
       // Si on est déjà vérifié pour une AUTRE propriété, déconnecter
       const savedPropertyId = localStorage.getItem('guest_property_id');
@@ -90,10 +100,14 @@ function handleDeepLink(url) {
       
       // Mettre à jour l'affichage si on est sur l'écran PIN
       updatePropertyIdStatus();
+    } else {
+      console.log('❌ Aucun property ID trouvé dans l\'URL');
     }
   } catch (error) {
     console.error('❌ Erreur parsing deep link:', error);
   }
+  
+  console.log('🔗 ===== FIN HANDLE DEEP LINK =====');
 }
 
 function updatePropertyIdStatus() {
@@ -202,6 +216,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Setup deep links FIRST
   await setupDeepLinks();
+  
+  // 🔍 DEBUG : Afficher le property_id détecté
+  const storedPropertyId = localStorage.getItem('property_id');
+  console.log('🔍 Property ID au démarrage:', storedPropertyId);
+  
+  if (storedPropertyId) {
+    console.log('✅ Property ID disponible:', storedPropertyId);
+  } else {
+    console.log('❌ Aucun Property ID trouvé');
+  }
   
   // Setup push notifications
   await setupPushNotifications();
