@@ -372,7 +372,13 @@ async function openChat(conversationId) {
     sessionStorage.setItem('current_conversation_id', conversationId);
     
     // Rediriger vers la page de chat mobile
-    window.location.href = `/chat-mobile.html?id=${conversationId}`;
+    // Pour Capacitor, utiliser le chemin complet
+    const chatUrl = IS_NATIVE 
+      ? `${window.location.origin}/chat-mobile.html?id=${conversationId}`
+      : `/chat-mobile.html?id=${conversationId}`;
+    
+    console.log('🔄 Redirection vers:', chatUrl);
+    window.location.href = chatUrl;
     return;
   }
   
