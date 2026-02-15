@@ -256,7 +256,6 @@
       z-index: 100;
     }
     
-    .emoji-button,
     .photo-button {
       width: 40px;
       height: 40px;
@@ -272,9 +271,13 @@
       flex-shrink: 0;
     }
     
-    .emoji-button:active,
     .photo-button:active {
       background: var(--border-color);
+    }
+    
+    .photo-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     
     .chat-input {
@@ -366,10 +369,6 @@
     
     <!-- Input -->
     <div class="chat-input-container">
-      <button class="emoji-button" onclick="toggleEmojiPicker()">
-        <i class="fas fa-smile"></i>
-      </button>
-      
       <textarea 
         class="chat-input" 
         id="messageInput" 
@@ -377,15 +376,7 @@
         rows="1"
       ></textarea>
       
-      <input 
-        type="file" 
-        id="photoInput" 
-        accept="image/*" 
-        style="display: none;" 
-        onchange="handlePhotoSelect(event)"
-      />
-      
-      <button class="photo-button" onclick="document.getElementById('photoInput').click()">
+      <button class="photo-button" id="photoBtn" onclick="openPhotoPicker()">
         <i class="fas fa-image"></i>
       </button>
       
@@ -650,53 +641,78 @@
     }
     
     // ============================================
-    // EMOJI PICKER
+    // GESTION PHOTOS (Cloudinary comme app guest)
     // ============================================
-    function toggleEmojiPicker() {
-      // Pour l'instant, afficher quelques emojis courants
-      const emojis = ['😊', '👍', '❤️', '😂', '🎉', '✅', '🏠', '🔑', '📍', '⏰'];
-      const emojiText = emojis.join(' ');
+    function openPhotoPicker() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+      input.style.display = 'none';
       
-      const input = document.getElementById('messageInput');
-      const currentPos = input.selectionStart;
+      input.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+          await uploadPhotos(files);
+        }
+        input.remove();
+      });
       
-      // Créer un simple selector d'emoji
-      const emoji = prompt('Emojis disponibles:\n' + emojiText + '\n\nCollez un emoji ou tapez-le :');
-      if (emoji) {
-        const currentValue = input.value;
-        input.value = currentValue.substring(0, currentPos) + emoji + currentValue.substring(currentPos);
-        input.focus();
-      }
+      document.body.appendChild(input);
+      input.click();
     }
     
-    // ============================================
-    // GESTION PHOTOS
-    // ============================================
-    async function handlePhotoSelect(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    async function uploadPhotos(files) {
+      console.log('📷 Upload de', files.length, 'photo(s)');
       
-      // Vérifier que c'est une image
-      if (!file.type.startsWith('image/')) {
-        alert('Veuillez sélectionner une image');
-        return;
-      }
+      const sendButton = document.getElementById('sendButton');
+      const photoBtn = document.getElementById('photoBtn');
       
-      // Limiter la taille à 5MB
-      if (file.size > 5 * 1024 * 1024) {
-        alert('L\'image est trop grande (max 5MB)');
-        return;
-      }
+      sendButton.disabled = true;
+      photoBtn.disabled = true;
       
       try {
-        // Convertir en base64
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-          const base64Image = e.target.result;
+        for (const file of files) {
+          console.log('📷 Fichier:', file.name, 'Taille:', file.size);
           
-          // Envoyer l'image
+          // Vérifier que c'est une image
+          if (!file.type.startsWith('image/')) {
+            throw new Error('Le fichier doit être une image');
+          }
+          
+          // Vérifier la taille (max 5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            throw new Error('Image trop volumineuse (max 5MB)');
+          }
+          
+          // Afficher message temporaire
+          const tempId = Date.now();
+          appendTempMessage(tempId, '📷 Upload de la photo...');
+          
+          // Upload vers Cloudinary
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', 'chat-photos');
+          
+          const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!cloudinaryResponse.ok) {
+            throw new Error('Erreur upload Cloudinary');
+          }
+          
+          const cloudinaryData = await cloudinaryResponse.json();
+          const imageUrl = cloudinaryData.secure_url;
+          
+          console.log('✅ Photo uploadée:', imageUrl);
+          
+          // Envoyer le message avec le tag [IMAGE:url]
+          const messageWithImage = `[IMAGE:${imageUrl}]`;
+          
           const token = localStorage.getItem('lcc_token');
-          const response = await fetch(`${API_URL}/api/chat/send-image`, {
+          const response = await fetch(`${API_URL}/api/chat/send`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -704,22 +720,49 @@
             },
             body: JSON.stringify({
               conversation_id: conversationId,
-              image: base64Image,
-              sender_type: 'owner'
+              sender_type: 'owner',
+              message: messageWithImage
             })
           });
           
-          if (!response.ok) throw new Error('Erreur envoi image');
+          // Supprimer message temporaire
+          removeTempMessage(tempId);
           
-          // Réinitialiser l'input file
-          event.target.value = '';
-        };
+          if (!response.ok) {
+            throw new Error('Erreur envoi photo');
+          }
+          
+          console.log('✅ Photo envoyée avec succès');
+        }
         
-        reader.readAsDataURL(file);
       } catch (error) {
-        console.error('Erreur envoi image:', error);
-        alert('Erreur lors de l\'envoi de l\'image');
+        console.error('❌ Erreur upload photo:', error);
+        alert('Erreur lors de l\'envoi: ' + error.message);
+      } finally {
+        sendButton.disabled = false;
+        photoBtn.disabled = false;
       }
+    }
+    
+    function appendTempMessage(id, text) {
+      const container = document.getElementById('messagesContainer');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message owner';
+      messageDiv.id = `temp-${id}`;
+      messageDiv.innerHTML = `
+        <div class="message-bubble" style="opacity: 0.7;">
+          <div class="message-text">
+            <i class="fas fa-spinner fa-spin"></i> ${escapeHtml(text)}
+          </div>
+        </div>
+      `;
+      container.appendChild(messageDiv);
+      scrollToBottom();
+    }
+    
+    function removeTempMessage(id) {
+      const temp = document.getElementById(`temp-${id}`);
+      if (temp) temp.remove();
     }
   </script>
 </body>
