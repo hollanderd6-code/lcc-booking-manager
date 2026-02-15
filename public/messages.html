@@ -1406,54 +1406,12 @@ function closeBookingMessageModal() {
 }
   </script>
 
-<!-- ✅ ULTIMATE FIX iOS - Bloquer le body quand modal ouvert -->
+<!-- ✅ ULTIMATE FIX iOS - Version simple -->
 <script>
-(function() {
-  // Observer pour détecter l'ouverture/fermeture du modal
-  const chatModal = document.getElementById('chatModal');
-  
-  if (!chatModal) return;
-  
-  // Observer les changements de classe
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        const isActive = chatModal.classList.contains('active');
-        
-        if (isActive) {
-          // Modal ouvert : bloquer TOUT
-          console.log('🔒 Blocage scroll iOS');
-          document.body.classList.add('modal-open');
-          document.documentElement.classList.add('modal-open');
-          
-          // Sauvegarder la position actuelle
-          const scrollY = window.scrollY;
-          document.body.style.top = `-${scrollY}px`;
-        } else {
-          // Modal fermé : débloquer
-          console.log('🔓 Déblocage scroll iOS');
-          const scrollY = document.body.style.top;
-          document.body.classList.remove('modal-open');
-          document.documentElement.classList.remove('modal-open');
-          document.body.style.top = '';
-          
-          // Restaurer la position
-          if (scrollY) {
-            window.scrollTo(0, parseInt(scrollY || '0') * -1);
-          }
-        }
-      }
-    });
-  });
-  
-  // Démarrer l'observation
-  observer.observe(chatModal, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  console.log('✅ Ultimate iOS fix initialisé');
-})();
+// Attendre que le DOM soit prêt
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('✅ Ultimate iOS fix - Version simple chargée');
+});
 </script>
 
 <script src="/js/bh-layout.js"></script>
