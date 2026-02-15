@@ -219,6 +219,20 @@
       white-space: pre-wrap;
     }
     
+    .message-image {
+      margin: 0;
+      padding: 0;
+    }
+    
+    .message-image img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 12px;
+      display: block;
+      cursor: pointer;
+      object-fit: cover;
+    }
+    
     .message-meta {
       display: flex;
       gap: 6px;
@@ -535,9 +549,27 @@
         minute: '2-digit'
       });
       
+      // Vérifier si c'est une image
+      const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g;
+      const imageMatch = imageRegex.exec(message.message);
+      
+      let content;
+      if (imageMatch) {
+        // C'est une image
+        const imageUrl = imageMatch[1];
+        content = `
+          <div class="message-image">
+            <img src="${imageUrl}" alt="Photo" onclick="window.open('${imageUrl}', '_blank')" />
+          </div>
+        `;
+      } else {
+        // C'est un message texte normal
+        content = `<div class="message-text">${escapeHtml(message.message)}</div>`;
+      }
+      
       messageDiv.innerHTML = `
         <div class="message-bubble">
-          <div class="message-text">${escapeHtml(message.message)}</div>
+          ${content}
           <div class="message-meta">
             <span>${time}</span>
             ${isOwner ? '<span>Envoyé</span>' : ''}
