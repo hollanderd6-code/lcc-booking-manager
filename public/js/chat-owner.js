@@ -15,6 +15,13 @@ let currentConversationId = null;
 let userId = null;
 
 // ============================================
+// DÉTECTION MOBILE (pour redirection)
+// ============================================
+function isMobileDevice() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+}
+
+// ============================================
 // INIT
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -357,6 +364,19 @@ function setupFilters() {
 // OUVRIR UNE CONVERSATION
 // ============================================
 async function openChat(conversationId) {
+  console.log('💬 Ouverture conversation:', conversationId);
+  
+  // 🔥 SUR MOBILE : Rediriger vers une page dédiée
+  if (isMobileDevice()) {
+    // Sauvegarder l'ID de conversation
+    sessionStorage.setItem('current_conversation_id', conversationId);
+    
+    // Rediriger vers la page de chat mobile
+    window.location.href = `/chat-mobile.html?id=${conversationId}`;
+    return;
+  }
+  
+  // 💻 SUR DESKTOP : Garder le modal (comportement actuel)
   currentConversationId = conversationId;
   const conv = allConversations.find(c => c.id == conversationId);
   
