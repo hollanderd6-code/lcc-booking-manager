@@ -1,0 +1,161 @@
+/* ============================================
+   FIX MODAL CLAVIER iOS - Solution complète
+   ============================================ */
+
+/* 1. EMPÊCHER LE SCROLL DU BODY QUAND MODAL OUVERT */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 2. MODAL OVERLAY - Utiliser la hauteur dynamique du viewport */
+@media (max-width: 768px) {
+  .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    /* Utiliser la hauteur visuelle du viewport (exclut le clavier) */
+    height: 100dvh !important; /* dvh = dynamic viewport height */
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .modal-overlay.active {
+    padding: 0 !important;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+  }
+
+  /* 3. CHAT MODAL - S'adapter à la hauteur disponible */
+  .chat-modal {
+    position: relative !important;
+    /* Utiliser 100% de la hauteur du viewport dynamique */
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* 4. HEADER - Fixé en haut avec safe-area */
+  .chat-modal-header {
+    flex-shrink: 0 !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    padding: 16px !important;
+    padding-top: max(16px, env(safe-area-inset-top)) !important;
+    background: white !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  /* Réduire la taille du header pour gagner de l'espace */
+  .chat-modal-header h2 {
+    font-size: 16px !important;
+  }
+
+  .chat-modal-header .btn-action {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .close-modal {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+
+  /* 5. MESSAGES - Zone scrollable qui s'adapte */
+  .chat-modal-messages {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    /* Padding pour que le dernier message ne soit pas caché */
+    padding: 20px 16px 20px 16px !important;
+  }
+
+  /* 6. INPUT ZONE - Fixée en bas */
+  .chat-modal-input {
+    flex-shrink: 0 !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    padding: 12px 16px !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    border-top: 1px solid var(--border-color) !important;
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  /* 7. INPUT - Taille adaptée */
+  .chat-input {
+    flex: 1 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 10px 14px !important;
+    font-size: 15px !important;
+    border-radius: 20px !important;
+    /* Limiter la hauteur max pour éviter de cacher le bouton */
+    max-height: 80px !important;
+  }
+
+  /* 8. BOUTON SEND - Toujours visible */
+  .send-btn {
+    flex-shrink: 0 !important;
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 18px !important;
+  }
+}
+
+/* ============================================
+   FIX SUPPLÉMENTAIRE POUR iOS
+   ============================================ */
+@supports (-webkit-touch-callout: none) {
+  /* Cibler spécifiquement iOS */
+  @media (max-width: 768px) {
+    /* Forcer le viewport à ne pas bouger */
+    .modal-overlay.active {
+      position: fixed !important;
+      height: 100% !important;
+      max-height: 100% !important;
+    }
+
+    .chat-modal {
+      /* Alternative si dvh n'est pas supporté */
+      height: 100% !important;
+      max-height: 100% !important;
+    }
+  }
+}
+
+/* ============================================
+   VARIANTE POUR ANCIENS NAVIGATEURS
+   ============================================ */
+@supports not (height: 100dvh) {
+  /* Fallback pour les navigateurs qui ne supportent pas dvh */
+  @media (max-width: 768px) {
+    .modal-overlay {
+      height: 100vh !important;
+      max-height: 100vh !important;
+    }
+
+    .chat-modal {
+      height: 100vh !important;
+      max-height: 100vh !important;
+    }
+  }
+}
