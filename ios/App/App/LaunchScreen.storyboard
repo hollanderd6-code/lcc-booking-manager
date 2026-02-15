@@ -8,7 +8,6 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!--View Controller-->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
@@ -18,53 +17,58 @@
                         <subviews>
                             <!-- Logo B -->
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="B" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="logo-B">
-                                <rect key="frame" x="146.66666666666666" y="296" width="100" height="120"/>
+                                <rect key="frame" x="146.5" y="306" width="100" height="100"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="120" id="logo-B-height"/>
+                                    <constraint firstAttribute="width" constant="100" id="logo-B-width"/>
+                                    <constraint firstAttribute="height" constant="100" id="logo-B-height"/>
                                 </constraints>
-                                <fontDescription key="fontDescription" type="system" weight="heavy" pointSize="100"/>
+                                <fontDescription key="fontDescription" type="system" weight="heavy" pointSize="72"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            
+
                             <!-- BOOSTINGHOST -->
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="BOOSTINGHOST" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="brand-name">
-                                <rect key="frame" x="40" y="456" width="313" height="32"/>
+                                <rect key="frame" x="40" y="430" width="313" height="32"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="32" id="brand-name-height"/>
                                 </constraints>
-                                <fontDescription key="fontDescription" type="system" weight="bold" pointSize="26"/>
+                                <fontDescription key="fontDescription" type="system" weight="bold" pointSize="24"/>
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            
+
                             <!-- SMART PROPERTY MANAGER -->
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="SMART PROPERTY MANAGER" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tagline">
-                                <rect key="frame" x="40" y="498" width="313" height="20"/>
+                                <rect key="frame" x="40" y="470" width="313" height="20"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="20" id="tagline-height"/>
                                 </constraints>
-                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="14"/>
-                                <color key="textColor" red="1" green="1" blue="1" alpha="0.90000000000000002" colorSpace="custom" customColorSpace="sRGB"/>
+                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="13"/>
+                                <color key="textColor" white="1" alpha="0.70" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
                         </subviews>
+
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
+
+                        <!-- Fond vert Boostinghost -->
                         <color key="backgroundColor" red="0.49803921568627450980" green="0.82745098039215686274" blue="0.65098039215686274509" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+
                         <constraints>
-                            <!-- Logo B centré horizontalement et verticalement (un peu plus haut) -->
+                            <!-- B centré légèrement au-dessus du centre -->
                             <constraint firstItem="logo-B" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="logo-B-centerX"/>
-                            <constraint firstItem="logo-B" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-70" id="logo-B-centerY"/>
-                            
-                            <!-- BOOSTINGHOST centré et en dessous du B -->
+                            <constraint firstItem="logo-B" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-80" id="logo-B-centerY"/>
+
+                            <!-- BOOSTINGHOST sous le B -->
                             <constraint firstItem="brand-name" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="brand-name-centerX"/>
-                            <constraint firstItem="brand-name" firstAttribute="top" secondItem="logo-B" secondAttribute="bottom" constant="40" id="brand-name-top"/>
+                            <constraint firstItem="brand-name" firstAttribute="top" secondItem="logo-B" secondAttribute="bottom" constant="28" id="brand-name-top"/>
                             <constraint firstItem="brand-name" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="40" id="brand-name-leading"/>
                             <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="brand-name" secondAttribute="trailing" constant="40" id="brand-name-trailing"/>
-                            
-                            <!-- SMART PROPERTY MANAGER juste en dessous -->
+
+                            <!-- Tagline sous brand-name -->
                             <constraint firstItem="tagline" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="tagline-centerX"/>
-                            <constraint firstItem="tagline" firstAttribute="top" secondItem="brand-name" secondAttribute="bottom" constant="10" id="tagline-top"/>
+                            <constraint firstItem="tagline" firstAttribute="top" secondItem="brand-name" secondAttribute="bottom" constant="8" id="tagline-top"/>
                             <constraint firstItem="tagline" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="40" id="tagline-leading"/>
                             <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="tagline" secondAttribute="trailing" constant="40" id="tagline-trailing"/>
                         </constraints>

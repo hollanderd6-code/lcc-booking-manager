@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Boostinghost Guest</string>
+    <string name="title_activity_main">Boostinghost Guest</string>
+    <string name="package_name">com.boostinghost.guest</string>
+    <string name="custom_url_scheme">com.boostinghost.guest</string>
+</resources>
