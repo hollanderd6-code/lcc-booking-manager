@@ -1419,6 +1419,38 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/chat-emoji-photo.js"></script>
-<script src="/js/messages-badge-desktop-mobile.js"></script>    
+<script src="/js/messages-badge-desktop-mobile.js"></script> 
+<script>
+// Fix scroll iOS Capacitor
+if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+  console.log('🔒 iOS Modal Fix activé');
+  
+  // Observer quand le modal s'ouvre
+  const observer = new MutationObserver(() => {
+    const modal = document.querySelector('.modal-overlay.active');
+    if (modal) {
+      console.log('🔒 Modal ouvert - Blocage scroll');
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100vh';
+    } else {
+      console.log('🔓 Modal fermé - Déblocage scroll');
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    }
+  });
+  
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class']
+  });
+}
+</script>
+</body>
 </body>
 </html>
