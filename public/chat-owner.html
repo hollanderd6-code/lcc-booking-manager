@@ -570,15 +570,67 @@
       transform: none;
     }
 
+    /* ============================================
+       FIX SCROLL HORIZONTAL + BOUTON QUI BOUGE
+       ============================================ */
+    
+    html {
+      overflow-x: hidden !important;
+      width: 100vw;
+      max-width: 100vw;
+    }
+
+    body {
+      overflow-x: hidden !important;
+      width: 100vw;
+      max-width: 100vw;
+      position: relative;
+    }
+
+    .modal-overlay {
+      overflow-x: hidden !important;
+      width: 100vw;
+      max-width: 100vw;
+    }
+
+    .chat-modal {
+      overflow-x: hidden !important;
+      max-width: 100% !important;
+    }
+
+    .chat-modal-input {
+      overflow-x: hidden !important;
+      box-sizing: border-box;
+    }
+
+    .chat-input {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .send-btn {
+      flex-shrink: 0; /* ✅ IMPORTANT: empêche le bouton de rétrécir */
+    }
+
     @media (max-width: 768px) {
+      html, body {
+        overflow-x: hidden !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+      }
+      
       .modal-overlay.active {
         padding: 0 !important;
+        overflow-x: hidden !important;
       }
 
       .chat-modal {
         height: 100vh;
         max-height: 100vh;
         border-radius: 0;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
       }
 
       .chat-modal-header {
@@ -590,6 +642,14 @@
       .chat-modal-input {
         padding: 16px !important;
         padding-bottom: 34px !important; /* Espace pour l'indicateur d'accueil iOS */
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+      }
+      
+      .chat-input {
+        min-width: 0; /* ✅ CRUCIAL pour flex */
+        max-width: 100%;
       }
       /* Meta (heure + statut) = même taille que côté guest */
 .chat-meta{
