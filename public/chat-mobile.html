@@ -256,6 +256,27 @@
       z-index: 100;
     }
     
+    .emoji-button,
+    .photo-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    
+    .emoji-button:active,
+    .photo-button:active {
+      background: var(--border-color);
+    }
+    
     .chat-input {
       flex: 1;
       min-height: 40px;
@@ -345,12 +366,29 @@
     
     <!-- Input -->
     <div class="chat-input-container">
+      <button class="emoji-button" onclick="toggleEmojiPicker()">
+        <i class="fas fa-smile"></i>
+      </button>
+      
       <textarea 
         class="chat-input" 
         id="messageInput" 
         placeholder="Écrivez votre message..."
         rows="1"
       ></textarea>
+      
+      <input 
+        type="file" 
+        id="photoInput" 
+        accept="image/*" 
+        style="display: none;" 
+        onchange="handlePhotoSelect(event)"
+      />
+      
+      <button class="photo-button" onclick="document.getElementById('photoInput').click()">
+        <i class="fas fa-image"></i>
+      </button>
+      
       <button class="send-button" id="sendButton" onclick="sendMessage()">
         <i class="fas fa-paper-plane"></i>
       </button>
@@ -608,6 +646,79 @@
       } catch (error) {
         console.error('Erreur:', error);
         alert('Erreur lors de la génération');
+      }
+    }
+    
+    // ============================================
+    // EMOJI PICKER
+    // ============================================
+    function toggleEmojiPicker() {
+      // Pour l'instant, afficher quelques emojis courants
+      const emojis = ['😊', '👍', '❤️', '😂', '🎉', '✅', '🏠', '🔑', '📍', '⏰'];
+      const emojiText = emojis.join(' ');
+      
+      const input = document.getElementById('messageInput');
+      const currentPos = input.selectionStart;
+      
+      // Créer un simple selector d'emoji
+      const emoji = prompt('Emojis disponibles:\n' + emojiText + '\n\nCollez un emoji ou tapez-le :');
+      if (emoji) {
+        const currentValue = input.value;
+        input.value = currentValue.substring(0, currentPos) + emoji + currentValue.substring(currentPos);
+        input.focus();
+      }
+    }
+    
+    // ============================================
+    // GESTION PHOTOS
+    // ============================================
+    async function handlePhotoSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Vérifier que c'est une image
+      if (!file.type.startsWith('image/')) {
+        alert('Veuillez sélectionner une image');
+        return;
+      }
+      
+      // Limiter la taille à 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        alert('L\'image est trop grande (max 5MB)');
+        return;
+      }
+      
+      try {
+        // Convertir en base64
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          const base64Image = e.target.result;
+          
+          // Envoyer l'image
+          const token = localStorage.getItem('lcc_token');
+          const response = await fetch(`${API_URL}/api/chat/send-image`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+              conversation_id: conversationId,
+              image: base64Image,
+              sender_type: 'owner'
+            })
+          });
+          
+          if (!response.ok) throw new Error('Erreur envoi image');
+          
+          // Réinitialiser l'input file
+          event.target.value = '';
+        };
+        
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Erreur envoi image:', error);
+        alert('Erreur lors de l\'envoi de l\'image');
       }
     }
   </script>
