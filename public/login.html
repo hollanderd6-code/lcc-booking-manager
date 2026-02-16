@@ -54,9 +54,12 @@
 
         <div class="form-group">
           <label for="password">Mot de passe</label>
-          <div class="input-with-icon">
+          <div class="input-with-icon" style="position: relative;">
             <i class="fas fa-lock"></i>
             <input type="password" id="password" name="password" placeholder="••••••••" required>
+            <button type="button" id="togglePassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6b7280; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-eye" id="togglePasswordIcon"></i>
+            </button>
           </div>
         </div>
 
@@ -65,7 +68,7 @@
             <input type="checkbox" name="remember">
             <span>Se souvenir de moi</span>
           </label>
-          <a href="#" class="auth-link">Mot de passe oublié ?</a>
+          <a href="#" class="auth-link" id="forgotPasswordLink">Mot de passe oublié ?</a>
         </div>
 
         <div id="loginError" class="auth-error" style="display:none;"></div>
@@ -96,6 +99,47 @@
         <i class="fas fa-shield-alt"></i>
         Accès sécurisé • Données hébergées en Europe
       </div>
+    </div>
+  </div>
+  
+  <!-- ============================================ -->
+  <!-- MODAL MOT DE PASSE OUBLIÉ -->
+  <!-- ============================================ -->
+  <div id="forgotPasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #111827;">
+          <i class="fas fa-key" style="color: #10b981; margin-right: 8px;"></i>
+          Mot de passe oublié
+        </h2>
+        <button id="closeForgotModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.2s;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <p style="color: #6b7280; margin-bottom: 24px; line-height: 1.6;">
+        Entrez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+      </p>
+      
+      <form id="forgotPasswordForm">
+        <div class="form-group">
+          <label for="forgotEmail">Adresse e-mail</label>
+          <div class="input-with-icon">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="forgotEmail" name="email" placeholder="vous@exemple.com" required>
+          </div>
+        </div>
+        
+        <div id="forgotError" class="auth-error" style="display:none; margin-bottom: 16px;"></div>
+        <div id="forgotSuccess" style="display:none; background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
+          <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+          <span id="forgotSuccessText"></span>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" id="forgotSubmit" style="width: 100%;">
+          Envoyer le lien
+        </button>
+      </form>
     </div>
   </div>
   
@@ -565,6 +609,129 @@
       .auth-title { font-size: 22px; }
     }
   </style>
+  
+  <script>
+    // ============================================
+    // TOGGLE PASSWORD VISIBILITY
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggleBtn = document.getElementById('togglePassword');
+      const passwordInput = document.getElementById('password');
+      const toggleIcon = document.getElementById('togglePasswordIcon');
+      
+      if (toggleBtn && passwordInput && toggleIcon) {
+        toggleBtn.addEventListener('click', () => {
+          const type = passwordInput.type === 'password' ? 'text' : 'password';
+          passwordInput.type = type;
+          
+          if (type === 'text') {
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+          } else {
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+          }
+        });
+      }
+      
+      // ============================================
+      // MODAL MOT DE PASSE OUBLIÉ
+      // ============================================
+      const forgotLink = document.getElementById('forgotPasswordLink');
+      const forgotModal = document.getElementById('forgotPasswordModal');
+      const closeModal = document.getElementById('closeForgotModal');
+      const forgotForm = document.getElementById('forgotPasswordForm');
+      const forgotEmailInput = document.getElementById('forgotEmail');
+      const forgotError = document.getElementById('forgotError');
+      const forgotSuccess = document.getElementById('forgotSuccess');
+      const forgotSuccessText = document.getElementById('forgotSuccessText');
+      const forgotSubmit = document.getElementById('forgotSubmit');
+      
+      // Ouvrir le modal
+      if (forgotLink) {
+        forgotLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          forgotModal.style.display = 'flex';
+          forgotError.style.display = 'none';
+          forgotSuccess.style.display = 'none';
+          forgotEmailInput.value = '';
+        });
+      }
+      
+      // Fermer le modal
+      if (closeModal) {
+        closeModal.addEventListener('click', () => {
+          forgotModal.style.display = 'none';
+        });
+      }
+      
+      // Fermer en cliquant sur le fond
+      if (forgotModal) {
+        forgotModal.addEventListener('click', (e) => {
+          if (e.target === forgotModal) {
+            forgotModal.style.display = 'none';
+          }
+        });
+      }
+      
+      // Soumettre le formulaire
+      if (forgotForm) {
+        forgotForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const email = forgotEmailInput.value.trim().toLowerCase();
+          
+          if (!email) {
+            forgotError.style.display = 'block';
+            forgotError.textContent = 'Veuillez entrer votre adresse e-mail';
+            return;
+          }
+          
+          forgotError.style.display = 'none';
+          forgotSuccess.style.display = 'none';
+          forgotSubmit.disabled = true;
+          forgotSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+          
+          try {
+            const response = await fetch(API_BASE + '/api/auth/forgot-password', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+              forgotError.style.display = 'block';
+              forgotError.textContent = data.error || 'Une erreur est survenue';
+              forgotSubmit.disabled = false;
+              forgotSubmit.textContent = 'Envoyer le lien';
+              return;
+            }
+            
+            // Succès
+            forgotSuccess.style.display = 'block';
+            forgotSuccessText.textContent = data.message || 'Un e-mail de réinitialisation a été envoyé !';
+            forgotEmailInput.value = '';
+            forgotSubmit.textContent = 'Envoyer le lien';
+            forgotSubmit.disabled = false;
+            
+            // Fermer automatiquement après 3 secondes
+            setTimeout(() => {
+              forgotModal.style.display = 'none';
+            }, 3000);
+            
+          } catch (err) {
+            console.error('Erreur forgot password:', err);
+            forgotError.style.display = 'block';
+            forgotError.textContent = 'Erreur de connexion au serveur';
+            forgotSubmit.disabled = false;
+            forgotSubmit.textContent = 'Envoyer le lien';
+          }
+        });
+      }
+    });
+  </script>
   
   <script type="module" src="/js/push-notifications-handler.js"></script>
 </body>

@@ -264,16 +264,25 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         console.log(`🔔 Notif support → ${allTokens.size} appareil(s) (${uniqueEmails.join(', ')})`);
         
         for (const [fcmToken, deviceName] of allTokens) {
-          try {
-            await sendNotification(
-              fcmToken,
-              `💬 Nouveau message support`,
-              `${userName}: ${message.substring(0, 100)}`,
-              { type: 'support_message', conversationId }
-            );
-          } catch (e) {
-            if (e.code === 'messaging/registration-token-not-registered' || 
-                e.code === 'messaging/invalid-registration-token') {
+          const result = await sendNotification(
+            fcmToken,
+            `💬 Nouveau message support`,
+            `${userName}: ${message.substring(0, 100)}`,
+            { type: 'support_message', conversationId }
+          );
+          
+          if (result && result.success) {
+            console.log(`✅ Notif support OK: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
+          } else {
+            const errorMsg = result?.error || 'Erreur inconnue';
+            console.error(`❌ Notif support FAIL: ${deviceName} (${fcmToken.substring(0, 20)}...): ${errorMsg}`);
+            
+            // Nettoyer uniquement les tokens dédiés support (pas user_fcm_tokens)
+            if (errorMsg.includes('authentication credential') ||
+                errorMsg.includes('not-registered') ||
+                errorMsg.includes('invalid-registration-token') ||
+                errorMsg.includes('UNREGISTERED') ||
+                errorMsg.includes('INVALID_ARGUMENT')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
             }
           }
@@ -380,11 +389,11 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         for (const t of dedicatedTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'Admin');
         for (const t of capacitorTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'App');
         
-        for (const [fcmToken] of allTokens) {
-          try {
-            await sendNotification(fcmToken, '📷 Image support', `${userName} a envoyé une image`, { type: 'support_message', conversationId });
-          } catch (e) {
-            if (e.code === 'messaging/registration-token-not-registered') {
+        for (const [fcmToken, deviceName] of allTokens) {
+          const result = await sendNotification(fcmToken, '📷 Image support', `${userName} a envoyé une image`, { type: 'support_message', conversationId });
+          if (!result || !result.success) {
+            const errorMsg = result?.error || '';
+            if (errorMsg.includes('authentication credential') || errorMsg.includes('not-registered') || errorMsg.includes('UNREGISTERED')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
             }
           }
