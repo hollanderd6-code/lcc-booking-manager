@@ -231,8 +231,10 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         );
         
         // Source 2 : tokens Capacitor des admins via email
-        // ⚠️ CHANGE L'EMAIL ICI :
-        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com'];
+        const HARDCODED_ADMIN_EMAILS = [
+          'charles.induni@gmail.com',
+          'arnaud.gestionpro@gmail.com'  // ✅ ARNAUD AJOUTÉ
+        ];
         
         let registeredEmails = [];
         try {
@@ -265,16 +267,31 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         
         for (const [fcmToken, deviceName] of allTokens) {
           try {
-            await sendNotification(
+            const result = await sendNotification(
               fcmToken,
               `💬 Nouveau message support`,
               `${userName}: ${message.substring(0, 100)}`,
               { type: 'support_message', conversationId }
             );
+            
+            if (result.success) {
+              console.log(`✅ Notification envoyée: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
+            }
           } catch (e) {
+            console.error(`❌ Erreur envoi notification (${deviceName}):`, e.message);
+            console.error(`   Token: ${fcmToken.substring(0, 30)}...`);
+            
+            // Supprimer les tokens invalides
             if (e.code === 'messaging/registration-token-not-registered' || 
-                e.code === 'messaging/invalid-registration-token') {
+                e.code === 'messaging/invalid-registration-token' ||
+                e.message?.includes('authentication credential')) {
+              console.log(`🗑️ Suppression token invalide (${deviceName})`);
+              
+              // Supprimer de support_admin_tokens
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
+              
+              // Supprimer de user_fcm_tokens aussi
+              await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
             }
           }
         }
