@@ -13748,7 +13748,8 @@ cron.schedule('0 * * * *', async () => {
             const renewalSent = await hasEmailBeenSent(user.user_id, renewalKey);
             
             if (!renewalSent) {
-              const planAmount = user.plan_type === 'pro' ? 899 : 599;
+              const subscription = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+planAmount = subscription.items.data[0].price.unit_amount;
               await sendRenewalReminderEmail(
                 user.email, 
                 user.first_name || 'cher membre',
