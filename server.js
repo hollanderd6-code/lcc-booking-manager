@@ -9972,12 +9972,16 @@ app.delete('/api/properties/:propertyId',
       await pool.query('DELETE FROM chat_messages WHERE property_id = $1', [propertyId]);
       console.log('  ✅ Messages supprimés');
     } catch (e) {
-      console.log('  ⚠️ Pas de table chat_messages');
+      console.log('  ⚠️ Pas de messages liés');
     }
     
-    // 4. Supprimer les factures liées
-    await pool.query('DELETE FROM invoices WHERE property_id = $1', [propertyId]);
-    console.log('  ✅ Factures supprimées');
+    // 4. Supprimer les factures liées (si la colonne existe)
+    try {
+      await pool.query('DELETE FROM invoices WHERE property_id = $1', [propertyId]);
+      console.log('  ✅ Factures supprimées');
+    } catch (e) {
+      console.log('  ⚠️ Factures non liées à property_id:', e.message);
+    }
     
     // 5. Supprimer le logement
     await pool.query(
