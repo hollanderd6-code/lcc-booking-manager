@@ -15104,12 +15104,14 @@ cron.schedule('0 8 * * *', async () => {
         [user.id, todayStr]
       );
       
-      const departuresCount = departuresResult.rows.length;
+      // ✅ DÉDUPLIQUER les logements pour éviter les doublons
+      const uniqueProperties = [...new Set(departuresResult.rows.map(d => d.property_name))];
+      const departuresCount = uniqueProperties.length; // Nombre de LOGEMENTS uniques
       const departuresText = departuresCount > 0
-        ? `Ménages à prévoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
+        ? `Ménages à prévoir : ${uniqueProperties.join(', ')}`
         : 'Aucun départ prévu';
       
-      console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) - ${departuresText}`);
+      console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) unique(s) - ${departuresText}`);
       
       // Envoyer a TOUS les appareils
       for (const token of tokensResult.rows) {
