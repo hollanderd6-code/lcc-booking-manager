@@ -9967,9 +9967,13 @@ app.delete('/api/properties/:propertyId',
     await pool.query('DELETE FROM conversations WHERE property_id = $1', [propertyId]);
     console.log('  ✅ Conversations supprimées');
     
-    // 3. Supprimer les tâches de ménage
-    await pool.query('DELETE FROM cleaning_tasks WHERE property_id = $1', [propertyId]);
-    console.log('  ✅ Tâches de ménage supprimées');
+    // 3. Supprimer les messages de chat liés
+    try {
+      await pool.query('DELETE FROM chat_messages WHERE property_id = $1', [propertyId]);
+      console.log('  ✅ Messages supprimés');
+    } catch (e) {
+      console.log('  ⚠️ Pas de table chat_messages');
+    }
     
     // 4. Supprimer les factures liées
     await pool.query('DELETE FROM invoices WHERE property_id = $1', [propertyId]);
