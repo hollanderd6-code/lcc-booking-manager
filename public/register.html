@@ -125,13 +125,50 @@
   </div>
 
   <script>
-    // Si déjà connecté, inutile de revenir ici
-    (function () {
+    // ✅ VÉRIFICATION COMPLÈTE DE L'AUTHENTIFICATION
+    const IS_NATIVE = !!(
+      window.Capacitor?.isNativePlatform?.() ||
+      window.location.protocol === 'capacitor:' ||
+      window.location.protocol === 'ionic:'
+    );
+    
+    const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
+    
+    async function checkAuthentication() {
       const token = localStorage.getItem('lcc_token');
-      if (token) {
-        window.location.href = '/app.html';
+      
+      if (!token) {
+        console.log('ℹ️ Pas de token - afficher page register');
+        return false;
       }
-    })();
+      
+      console.log('🔍 Token trouvé, vérification validité...');
+      
+      try {
+        // Vérifier que le token est valide côté serveur
+        const response = await fetch(API_BASE + '/api/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          console.log('✅ Token valide, redirection vers app...');
+          window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+          return true;
+        } else {
+          console.log('❌ Token invalide ou expiré, suppression...');
+          localStorage.removeItem('lcc_token');
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ Erreur vérification token:', error);
+        return false;
+      }
+    }
+    
+    // Vérifier automatiquement au chargement
+    checkAuthentication();
 
     document.getElementById('registerForm').addEventListener('submit', async function (e) {
       e.preventDefault();
