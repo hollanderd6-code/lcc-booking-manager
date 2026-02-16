@@ -9950,18 +9950,50 @@ app.delete('/api/properties/:propertyId',
       }
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    // ✅ FIX : Utiliser userId au lieu de user.id
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
+    // ✅ SUPPRESSION EN CASCADE (évite les erreurs de contraintes)
+    console.log(`🗑️ Suppression du logement ${propertyId} et toutes ses dépendances...`);
+    
+    // 1. Supprimer les réservations
+    await pool.query('DELETE FROM reservations WHERE property_id = $1', [propertyId]);
+    console.log('  ✅ Réservations supprimées');
+    
+    // 2. Supprimer les conversations
+    await pool.query('DELETE FROM conversations WHERE property_id = $1', [propertyId]);
+    console.log('  ✅ Conversations supprimées');
+    
+    // 3. Supprimer les messages de chat liés
+    try {
+      await pool.query('DELETE FROM chat_messages WHERE property_id = $1', [propertyId]);
+      console.log('  ✅ Messages supprimés');
+    } catch (e) {
+      console.log('  ⚠️ Pas de messages liés');
+    }
+    
+    // 4. Supprimer les factures liées (si la colonne existe)
+    try {
+      await pool.query('DELETE FROM invoices WHERE property_id = $1', [propertyId]);
+      console.log('  ✅ Factures supprimées');
+    } catch (e) {
+      console.log('  ⚠️ Factures non liées à property_id:', e.message);
+    }
+    
+    // 5. Supprimer le logement
     await pool.query(
       'DELETE FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, userId]
     );
+    console.log('  ✅ Logement supprimé');
 
+    // Nettoyer le cache mémoire
     delete reservationsStore.properties[propertyId];
 
+    // Recharger les propriétés
     await loadProperties();
 
     res.json({
@@ -9969,8 +10001,8 @@ app.delete('/api/properties/:propertyId',
       property
     });
   } catch (err) {
-    console.error('Erreur suppression logement:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('❌ Erreur suppression logement:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
 
@@ -15104,12 +15136,14 @@ cron.schedule('0 8 * * *', async () => {
         [user.id, todayStr]
       );
       
-      const departuresCount = departuresResult.rows.length;
+      // ✅ DÉDUPLIQUER les logements pour éviter les doublons
+      const uniqueProperties = [...new Set(departuresResult.rows.map(d => d.property_name))];
+      const departuresCount = uniqueProperties.length; // Nombre de LOGEMENTS uniques
       const departuresText = departuresCount > 0
-        ? `Ménages à prévoir : ${departuresResult.rows.map(d => d.property_name).join(', ')}`
+        ? `Ménages à prévoir : ${uniqueProperties.join(', ')}`
         : 'Aucun départ prévu';
       
-      console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) - ${departuresText}`);
+      console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) unique(s) - ${departuresText}`);
       
       // Envoyer a TOUS les appareils
       for (const token of tokensResult.rows) {
