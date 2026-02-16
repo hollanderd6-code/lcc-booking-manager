@@ -231,10 +231,8 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         );
         
         // Source 2 : tokens Capacitor des admins via email
-        const HARDCODED_ADMIN_EMAILS = [
-          'charles.induni@gmail.com',
-          'arnaud.gestionpro@gmail.com'  // ✅ ARNAUD AJOUTÉ
-        ];
+        // ⚠️ CHANGE L'EMAIL ICI :
+        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
         
         let registeredEmails = [];
         try {
@@ -273,25 +271,22 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
               `${userName}: ${message.substring(0, 100)}`,
               { type: 'support_message', conversationId }
             );
-            
-            if (result.success) {
-              console.log(`✅ Notification envoyée: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
-            }
+            console.log(`✅ Notification envoyée: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
           } catch (e) {
-            console.error(`❌ Erreur envoi notification (${deviceName}):`, e.message);
-            console.error(`   Token: ${fcmToken.substring(0, 30)}...`);
+            console.error(`❌ Erreur notif support ${deviceName} (${fcmToken.substring(0, 20)}...):`, e.message || e.code || e);
             
-            // Supprimer les tokens invalides
-            if (e.code === 'messaging/registration-token-not-registered' || 
-                e.code === 'messaging/invalid-registration-token' ||
-                e.message?.includes('authentication credential')) {
-              console.log(`🗑️ Suppression token invalide (${deviceName})`);
-              
+            // Nettoyer les tokens invalides (toutes les erreurs d'authentification/token)
+            const errorStr = (e.code || '') + ' ' + (e.message || '');
+            if (errorStr.includes('registration-token-not-registered') || 
+                errorStr.includes('invalid-registration-token') ||
+                errorStr.includes('authentication credential') ||
+                errorStr.includes('UNREGISTERED') ||
+                errorStr.includes('INVALID_ARGUMENT')) {
               // Supprimer de support_admin_tokens
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
-              
-              // Supprimer de user_fcm_tokens aussi
+              // Supprimer aussi de user_fcm_tokens si c'est un token Capacitor invalide
               await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
+              console.log(`🗑️ Token invalide supprimé: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
             }
           }
         }
@@ -373,7 +368,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
       try {
         const { sendNotification } = require('./services/notifications-service');
         
-        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com'];
+        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
         let registeredEmails = [];
         try {
           const regResult = await pool.query('SELECT email FROM support_admin_emails');
@@ -397,12 +392,18 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         for (const t of dedicatedTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'Admin');
         for (const t of capacitorTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'App');
         
-        for (const [fcmToken] of allTokens) {
+        for (const [fcmToken, deviceName] of allTokens) {
           try {
             await sendNotification(fcmToken, '📷 Image support', `${userName} a envoyé une image`, { type: 'support_message', conversationId });
           } catch (e) {
-            if (e.code === 'messaging/registration-token-not-registered') {
+            const errorStr = (e.code || '') + ' ' + (e.message || '');
+            if (errorStr.includes('registration-token-not-registered') || 
+                errorStr.includes('invalid-registration-token') ||
+                errorStr.includes('authentication credential') ||
+                errorStr.includes('UNREGISTERED') ||
+                errorStr.includes('INVALID_ARGUMENT')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
+              await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
             }
           }
         }
@@ -636,7 +637,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         'SELECT id, email, created_at FROM support_admin_emails ORDER BY created_at ASC'
       );
       // Ajouter le hardcodé
-      const hardcoded = [{ id: 0, email: 'charles.induni@gmail.com', hardcoded: true, created_at: null }];
+      const hardcoded = [{ id: 0, email: 'contact@boostinghost.com', hardcoded: true, created_at: null }];
       res.json({ admins: [...hardcoded, ...result.rows] });
     } catch (error) {
       console.error('❌ Erreur GET team:', error);
