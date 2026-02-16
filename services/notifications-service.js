@@ -146,53 +146,35 @@ async function sendNotificationToMultiple(fcmTokens, title, body, data = {}) {
     return { success: false, error: 'Aucun token FCM fourni' };
   }
 
-  // Firebase limite à 500 tokens par requête
-  const batchSize = 500;
   const results = [];
+  let successCount = 0;
+  let failureCount = 0;
 
-  for (let i = 0; i < fcmTokens.length; i += batchSize) {
-    const batch = fcmTokens.slice(i, i + batchSize);
-    
-    const message = {
-      tokens: batch,
-      notification: { title, body },
-      data: Object.entries(data).reduce((acc, [key, value]) => {
-        acc[key] = String(value);
-        return acc;
-      }, {}),
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          channelId: 'default',
-          color: '#10B981'
-        }
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1
-          }
+  for (const token of fcmTokens) {
+    const result = await sendNotification(token, title, body, data);
+    results.push(result);
+    if (result.success) {
+      successCount++;
+    } else {
+      failureCount++;
+      // Nettoyer les tokens invalides
+      const errorMsg = result.error || '';
+      if (errorMsg.includes('not-registered') || 
+          errorMsg.includes('invalid-registration-token') ||
+          errorMsg.includes('authentication credential') ||
+          errorMsg.includes('UNREGISTERED')) {
+        if (pool) {
+          try {
+            await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [token]);
+            console.log(`🗑️ Token invalide supprimé: ${token.substring(0, 20)}...`);
+          } catch (e) {}
         }
       }
-    };
-
-    try {
-      const response = await admin.messaging().sendMulticast(message);
-      console.log(`✅ ${response.successCount}/${batch.length} notifications envoyées`);
-      
-      if (response.failureCount > 0) {
-        console.warn(`⚠️  ${response.failureCount} échecs`);
-      }
-      
-      results.push(response);
-    } catch (error) {
-      console.error('❌ Erreur envoi batch:', error);
     }
   }
 
-  return results;
+  console.log(`✅ ${successCount}/${fcmTokens.length} notifications envoyées${failureCount > 0 ? ` (${failureCount} échecs)` : ''}`);
+  return { success: successCount > 0, successCount, failureCount, results };
 }
 
 /**
