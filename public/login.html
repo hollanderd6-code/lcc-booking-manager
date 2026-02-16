@@ -164,14 +164,42 @@
     const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
     console.log('🔍 [V3] API_BASE:', API_BASE);
 
-    // Check token
-    const token = localStorage.getItem('lcc_token');
-    if (token) {
-      console.log('✅ [V3] Token trouvé, redirection...');
-      window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
-    } else {
-      console.log('ℹ️ [V3] Pas de token');
+    // ✅ VÉRIFICATION COMPLÈTE DU TOKEN
+    async function checkAuthentication() {
+      const token = localStorage.getItem('lcc_token');
+      
+      if (!token) {
+        console.log('ℹ️ [V3] Pas de token');
+        return false;
+      }
+      
+      console.log('🔍 [V3] Token trouvé, vérification validité...');
+      
+      try {
+        // Vérifier que le token est valide côté serveur
+        const response = await fetch(API_BASE + '/api/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          console.log('✅ [V3] Token valide, redirection...');
+          window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
+          return true;
+        } else {
+          console.log('❌ [V3] Token invalide ou expiré, suppression...');
+          localStorage.removeItem('lcc_token');
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ [V3] Erreur vérification token:', error);
+        return false;
+      }
     }
+    
+    // Vérifier au chargement
+    checkAuthentication();
 
     // Setup
     function setup() {
