@@ -7622,6 +7622,197 @@ async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalD
 // ============================================
 
 // ============================================
+// ROUTES - MOT DE PASSE OUBLIÉ
+// ============================================
+
+// Route : Demander un lien de réinitialisation
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
+    
+    const emailLower = email.toLowerCase().trim();
+    
+    // Vérifier si l'utilisateur existe
+    const userResult = await pool.query(
+      'SELECT id, first_name, email FROM users WHERE LOWER(email) = $1',
+      [emailLower]
+    );
+    
+    if (userResult.rows.length === 0) {
+      // Pour des raisons de sécurité, on renvoie toujours le même message
+      return res.json({ 
+        message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' 
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Générer un token de réinitialisation
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 3600000); // 1 heure
+    
+    // Créer la table si elle n'existe pas
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    
+    // Stocker le token en DB
+    await pool.query(
+      `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) 
+       DO UPDATE SET token = $2, expires_at = $3, created_at = NOW()`,
+      [user.id, resetToken, resetExpires]
+    );
+    
+    // Construire le lien de réinitialisation
+    const resetUrl = `${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/reset-password.html?token=${resetToken}`;
+    
+    // Envoyer l'email
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: user.email,
+      subject: '🔑 Réinitialisation de votre mot de passe',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+            .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+            .warning { background: #fef3c7; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 28px;">🔑 Réinitialisation de mot de passe</h1>
+            </div>
+            <div class="content">
+              <p>Bonjour ${user.first_name || 'cher utilisateur'},</p>
+              
+              <p>Vous avez demandé à réinitialiser votre mot de passe Boostinghost.</p>
+              
+              <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}" class="button">
+                  Réinitialiser mon mot de passe
+                </a>
+              </div>
+              
+              <div class="warning">
+                <strong>⚠️ Important :</strong>
+                <ul style="margin: 8px 0; padding-left: 20px;">
+                  <li>Ce lien expire dans <strong>1 heure</strong></li>
+                  <li>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email</li>
+                  <li>Ne partagez jamais ce lien avec qui que ce soit</li>
+                </ul>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
+                Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
+                <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
+              </p>
+            </div>
+            <div class="footer">
+              <p>Questions ? Contactez-nous : support@boostinghost.com</p>
+              <p>© ${new Date().getFullYear()} Boostinghost</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+    
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Email de réinitialisation envoyé à:', user.email);
+    
+    res.json({ 
+      message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' 
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur forgot password:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Route : Réinitialiser le mot de passe avec le token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+    }
+    
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 8 caractères' });
+    }
+    
+    // Vérifier le token
+    const tokenResult = await pool.query(
+      `SELECT user_id, expires_at 
+       FROM password_reset_tokens 
+       WHERE token = $1`,
+      [token]
+    );
+    
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Token invalide ou expiré' });
+    }
+    
+    const resetData = tokenResult.rows[0];
+    
+    // Vérifier si le token a expiré
+    if (new Date() > new Date(resetData.expires_at)) {
+      return res.status(400).json({ error: 'Token expiré. Veuillez refaire une demande.' });
+    }
+    
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Mettre à jour le mot de passe
+    await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [hashedPassword, resetData.user_id]
+    );
+    
+    // Supprimer le token utilisé
+    await pool.query(
+      'DELETE FROM password_reset_tokens WHERE token = $1',
+      [token]
+    );
+    
+    console.log('✅ Mot de passe réinitialisé pour user:', resetData.user_id);
+    
+    res.json({ message: 'Mot de passe réinitialisé avec succès' });
+    
+  } catch (error) {
+    console.error('❌ Erreur reset password:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+console.log('✅ Routes mot de passe oublié ajoutées');
+
+// ============================================
 // ROUTES API - LIVRET D'ACCUEIL (par user)
 // ============================================
 
