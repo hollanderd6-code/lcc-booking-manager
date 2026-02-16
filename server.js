@@ -5147,23 +5147,21 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
               month: 'short'
             });
             
-            // ✅ ENVOYER À TOUS LES TOKENS
-            for (const tokenRow of tokenResult.rows) {
-              await sendNotification(
-                tokenRow.fcm_token,
-                '📅 Nouvelle réservation',
-                `${property.name} - ${checkInDate} au ${checkOutDate}`,
-                {
-                  type: 'new_reservation',
-                  reservation_id: uid,
-                  property_name: property.name
-                }
-              );
-              
-              console.log(`✅ Notification envoyée au ${tokenRow.device_type}`);
-            }
+            // ✅ GROUPER TOUS LES TOKENS ET ENVOYER UNE SEULE NOTIFICATION
+            const fcmTokens = tokenResult.rows.map(row => row.fcm_token);
             
-            console.log(`✅ ${tokenResult.rows.length} notification(s) envoyée(s) pour ${property.name}`);
+            await sendNotificationToMultiple(
+              fcmTokens,
+              '📅 Nouvelle réservation',
+              `${property.name} - ${checkInDate} au ${checkOutDate}`,
+              {
+                type: 'new_reservation',
+                reservation_id: uid,
+                property_name: property.name
+              }
+            );
+            
+            console.log(`✅ Notification groupée envoyée à ${fcmTokens.length} appareil(s) pour ${property.name}`);
           }
         } catch (pushError) {
           console.error('❌ Erreur notification push:', pushError.message);
@@ -5786,22 +5784,21 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
             month: 'short'
           });
           
-          for (const tokenRow of tokensResult.rows) {
-            await sendNotification(
-              tokenRow.fcm_token,
-              '❌ Réservation annulée',
-              `${propertyName} - ${cancelDate}`,
-              {
-                type: 'reservation_cancelled',
-                reservation_id: uid,
-                property_name: propertyName
-              }
-            );
-            
-            console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
-          }
+          // ✅ GROUPER TOUS LES TOKENS
+          const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
           
-          console.log(`✅ ${tokensResult.rows.length} notification(s) d'annulation envoyée(s)`);
+          await sendNotificationToMultiple(
+            fcmTokens,
+            '❌ Réservation annulée',
+            `${propertyName} - ${cancelDate}`,
+            {
+              type: 'reservation_cancelled',
+              reservation_id: uid,
+              property_name: propertyName
+            }
+          );
+          
+          console.log(`✅ Notification annulation groupée envoyée à ${fcmTokens.length} appareil(s)`);
         }
       } catch (notifError) {
         console.error('❌ Erreur notification:', notifError.message);
@@ -8298,13 +8295,14 @@ app.post('/api/cleaning/checklist', async (req, res) => {
             click_action: '/app.html'
           };
 
-          for (const tokenRow of tokensResult.rows) {
-            try {
-              await sendNotification(tokenRow.fcm_token, title, body, pushData);
-              console.log(`📱 Push ménage envoyé vers ${tokenRow.device_type || 'device'} de ${cleaner.user_id}`);
-            } catch (pushErr) {
-              console.error(`❌ Push ménage échoué (${tokenRow.device_type}):`, pushErr.message);
-            }
+          // ✅ GROUPER TOUS LES TOKENS
+          const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
+          
+          try {
+            await sendNotificationToMultiple(fcmTokens, title, body, pushData);
+            console.log(`📱 Push ménage groupé envoyé à ${fcmTokens.length} appareil(s) de ${cleaner.user_id}`);
+          } catch (pushErr) {
+            console.error(`❌ Push ménage échoué:`, pushErr.message);
           }
         } else {
           console.log(`ℹ️ Pas de token FCM pour user ${cleaner.user_id} — pas de push envoyé`);
