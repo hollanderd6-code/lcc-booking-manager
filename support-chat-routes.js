@@ -264,27 +264,26 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         console.log(`🔔 Notif support → ${allTokens.size} appareil(s) (${uniqueEmails.join(', ')})`);
         
         for (const [fcmToken, deviceName] of allTokens) {
-          try {
-            const result = await sendNotification(
-              fcmToken,
-              `💬 Nouveau message support`,
-              `${userName}: ${message.substring(0, 100)}`,
-              { type: 'support_message', conversationId }
-            );
-            console.log(`✅ Notification envoyée: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
-          } catch (e) {
-            console.error(`❌ Erreur notif support ${deviceName} (${fcmToken.substring(0, 20)}...):`, e.message || e.code || e);
+          const result = await sendNotification(
+            fcmToken,
+            `💬 Nouveau message support`,
+            `${userName}: ${message.substring(0, 100)}`,
+            { type: 'support_message', conversationId }
+          );
+          
+          if (result && result.success) {
+            console.log(`✅ Notif support OK: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
+          } else {
+            const errorMsg = result?.error || 'Erreur inconnue';
+            console.error(`❌ Notif support FAIL: ${deviceName} (${fcmToken.substring(0, 20)}...): ${errorMsg}`);
             
-            // Nettoyer les tokens invalides (toutes les erreurs d'authentification/token)
-            const errorStr = (e.code || '') + ' ' + (e.message || '');
-            if (errorStr.includes('registration-token-not-registered') || 
-                errorStr.includes('invalid-registration-token') ||
-                errorStr.includes('authentication credential') ||
-                errorStr.includes('UNREGISTERED') ||
-                errorStr.includes('INVALID_ARGUMENT')) {
-              // Supprimer de support_admin_tokens
+            // Nettoyer les tokens invalides
+            if (errorMsg.includes('authentication credential') ||
+                errorMsg.includes('not-registered') ||
+                errorMsg.includes('invalid-registration-token') ||
+                errorMsg.includes('UNREGISTERED') ||
+                errorMsg.includes('INVALID_ARGUMENT')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
-              // Supprimer aussi de user_fcm_tokens si c'est un token Capacitor invalide
               await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
               console.log(`🗑️ Token invalide supprimé: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
             }
@@ -393,15 +392,10 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         for (const t of capacitorTokens.rows) allTokens.set(t.fcm_token, t.device_name || 'App');
         
         for (const [fcmToken, deviceName] of allTokens) {
-          try {
-            await sendNotification(fcmToken, '📷 Image support', `${userName} a envoyé une image`, { type: 'support_message', conversationId });
-          } catch (e) {
-            const errorStr = (e.code || '') + ' ' + (e.message || '');
-            if (errorStr.includes('registration-token-not-registered') || 
-                errorStr.includes('invalid-registration-token') ||
-                errorStr.includes('authentication credential') ||
-                errorStr.includes('UNREGISTERED') ||
-                errorStr.includes('INVALID_ARGUMENT')) {
+          const result = await sendNotification(fcmToken, '📷 Image support', `${userName} a envoyé une image`, { type: 'support_message', conversationId });
+          if (!result || !result.success) {
+            const errorMsg = result?.error || '';
+            if (errorMsg.includes('authentication credential') || errorMsg.includes('not-registered') || errorMsg.includes('UNREGISTERED')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
               await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
             }
