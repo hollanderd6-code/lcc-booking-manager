@@ -232,7 +232,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         
         // Source 2 : tokens Capacitor des admins via email
         // ⚠️ CHANGE L'EMAIL ICI :
-        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
+        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com'];
         
         let registeredEmails = [];
         try {
