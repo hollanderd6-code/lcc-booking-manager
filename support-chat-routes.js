@@ -356,7 +356,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
       try {
         const { sendNotification } = require('./services/notifications-service');
         
-        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
+        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com'];
         let registeredEmails = [];
         try {
           const regResult = await pool.query('SELECT email FROM support_admin_emails');
@@ -619,7 +619,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         'SELECT id, email, created_at FROM support_admin_emails ORDER BY created_at ASC'
       );
       // Ajouter le hardcodé
-      const hardcoded = [{ id: 0, email: 'contact@boostinghost.com', hardcoded: true, created_at: null }];
+      const hardcoded = [{ id: 0, email: 'charles.induni@gmail.com', hardcoded: true, created_at: null }];
       res.json({ admins: [...hardcoded, ...result.rows] });
     } catch (error) {
       console.error('❌ Erreur GET team:', error);
