@@ -277,15 +277,13 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
             const errorMsg = result?.error || 'Erreur inconnue';
             console.error(`❌ Notif support FAIL: ${deviceName} (${fcmToken.substring(0, 20)}...): ${errorMsg}`);
             
-            // Nettoyer les tokens invalides
+            // Nettoyer uniquement les tokens dédiés support (pas user_fcm_tokens)
             if (errorMsg.includes('authentication credential') ||
                 errorMsg.includes('not-registered') ||
                 errorMsg.includes('invalid-registration-token') ||
                 errorMsg.includes('UNREGISTERED') ||
                 errorMsg.includes('INVALID_ARGUMENT')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
-              await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
-              console.log(`🗑️ Token invalide supprimé: ${deviceName} (${fcmToken.substring(0, 20)}...)`);
             }
           }
         }
@@ -397,7 +395,6 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
             const errorMsg = result?.error || '';
             if (errorMsg.includes('authentication credential') || errorMsg.includes('not-registered') || errorMsg.includes('UNREGISTERED')) {
               await pool.query('DELETE FROM support_admin_tokens WHERE fcm_token = $1', [fcmToken]);
-              await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
             }
           }
         }
