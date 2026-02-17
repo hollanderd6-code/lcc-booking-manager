@@ -8,6 +8,12 @@
    1. SOUS-MENU NOIR EN HAUT (comme screenshot voulu)
    ============================================================ */
 
+/* Empêcher le scroll horizontal sur toute la page */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 .sub-navigation {
   background: var(--obsidian);
   border-bottom: 1px solid rgba(255,255,255,.08);
@@ -19,6 +25,7 @@
   right: 0;
   z-index: 1000;
   height: 60px;
+  overflow: hidden;
 }
 
 [data-theme="dark"] .sub-navigation {
@@ -30,9 +37,10 @@
   height: 60px;
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 24px 0 calc(var(--sidebar-width, 270px) + 24px);
   gap: 24px;
-  margin-left: var(--sidebar-width, 270px);
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 .sub-nav-logo {
@@ -155,6 +163,9 @@ main.main-content {
   margin-top: 60px; /* Espace pour le sous-menu */
   min-height: calc(100vh - 60px);
   background: var(--bg-primary);
+  max-width: calc(100vw - var(--sidebar-width, 270px));
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Mobile header caché sur desktop */
@@ -207,10 +218,15 @@ main.main-content {
 header.main-header {
   margin-bottom: 24px;
   padding: 20px 24px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 div.page-content {
   padding: 0 24px 60px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* ============================================================
@@ -278,6 +294,8 @@ div.page-content {
   grid-template-columns: 1fr 400px;
   gap: 20px;
   margin-bottom: 24px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .reservations-section {
@@ -286,6 +304,7 @@ div.page-content {
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-card);
+  min-width: 0; /* Important pour le grid */
 }
 
 [data-theme="dark"] .reservations-section {
@@ -498,6 +517,8 @@ div.page-content {
   padding: 24px;
   box-shadow: var(--shadow-card);
   height: fit-content;
+  min-width: 0;
+  max-width: 400px;
 }
 
 [data-theme="dark"] .quick-actions-section {
@@ -624,5 +645,9 @@ div.page-content {
 @media (max-width: 1200px) {
   .dashboard-dual-section {
     grid-template-columns: 1fr;
+  }
+  
+  .quick-actions-section {
+    max-width: 100%;
   }
 }
