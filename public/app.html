@@ -19,7 +19,7 @@
 <link href="/css/bh-design-system-v3.css" rel="stylesheet"/>
 <link href="/css/app-dashboard.css" rel="stylesheet"/>
 <link href="/css/app-dashboard-fixes.css" rel="stylesheet"/>
-<link href="/css/app-dashboard-complete.css" rel="stylesheet"/>
+<link href="/css/app-dashboard-hybrid.css" rel="stylesheet"/>
 <!-- Simplification mobile : KPI + calendrier uniquement -->
 <script src="/js/auth-fetch.js"></script>
     <!-- 📱 Styles Mobile Natifs -->
@@ -29,7 +29,7 @@
  <!-- Protection sous-comptes -->
 <script src="/js/sub-account-guard.js"></script>   
 </head>
-<body data-page="app" class="with-subnav">
+<body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
 <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px 24px; text-align: center; font-size: 15px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 9999;">
 <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
@@ -51,7 +51,7 @@
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-<!-- SOUS-MENU DE NAVIGATION (screenshot 2) -->
+<!-- SOUS-MENU NOIR EN HAUT -->
 <nav class="sub-navigation">
   <div class="sub-nav-container">
     <a href="/app.html" class="sub-nav-logo">
@@ -91,572 +91,16 @@
     </div>
     
     <div class="sub-nav-actions">
-      <button class="sub-nav-btn" title="Notifications">
+      <button class="sub-nav-btn" id="notificationsBtn" title="Notifications">
         <i class="fas fa-bell"></i>
       </button>
-      <button class="sub-nav-btn" title="Rafraîchir">
+      <button class="sub-nav-btn" id="refreshBtn" title="Rafraîchir">
         <i class="fas fa-sync-alt"></i>
       </button>
-      <div class="mode-toggle">
-        <button class="active" title="Mode clair">
-          <i class="fas fa-sun"></i>
-        </button>
-        <button title="Mode sombre">
-          <i class="fas fa-moon"></i>
-        </button>
-      </div>
     </div>
   </div>
 </nav>
 
-<div class="app-container">
-<!-- Main Content -->
-<main class="main-content">
-
-<!-- Header principal -->
-<div id="bhHeader">
-  <header class="main-header">
-    <div class="header-left">
-      <div class="page-kicker">Vue d'ensemble</div>
-      <h1 class="page-title">Tableau de bord</h1>
-      <p class="page-subtitle">
-        Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
-      </p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Nouvelle réservation
-      </button>
-    </div>
-  </header>
-</div>
-
-<div class="page-content">
-
-<!-- ÉTAT DES CONNEXIONS -->
-<section class="status-grid">
-  <!-- Airbnb -->
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-airbnb">
-        <i class="fa-brands fa-airbnb"></i>
-      </div>
-      <span class="status-label status-ok">Connecté</span>
-    </div>
-    <h3>Airbnb</h3>
-    <p>Synchronisation iCal active.</p>
-    <button class="btn btn-ghost btn-xs" onclick="window.location.href='/settings.html'">
-      Gérer les connexions
-    </button>
-  </article>
-
-  <!-- Booking.com -->
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-booking">
-        <span style="font-weight: 700; font-size: 18px;">B.</span>
-      </div>
-      <span class="status-label status-ok">Connecté</span>
-    </div>
-    <h3>Booking.com</h3>
-    <p>Synchronisation iCal active.</p>
-    <button class="btn btn-ghost btn-xs" onclick="window.location.href='/settings.html'">
-      Gérer les connexions
-    </button>
-  </article>
-
-  <!-- Stripe -->
-  <article class="status-card">
-    <div class="status-card-header">
-      <div class="status-icon status-icon-stripe">
-        <i class="fa-brands fa-stripe-s"></i>
-      </div>
-      <span class="status-label status-ok">Connecté</span>
-    </div>
-    <h3>Stripe</h3>
-    <p>Cautions et paiements sécurisés.</p>
-    <button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">
-      Voir les cautions
-    </button>
-  </article>
-</section>
-
-<!-- KPI PRINCIPAUX -->
-<section class="kpi-grid">
-  <!-- KPI 1 -->
-  <article class="kpi-card">
-    <div class="kpi-header">
-      <span class="kpi-label">Logements actifs</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-home"></i> Synchronisés
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value">12</span>
-      <span class="kpi-sub">connectés à au moins un OTA</span>
-    </div>
-  </article>
-
-  <!-- KPI 2 -->
-  <article class="kpi-card">
-    <div class="kpi-header">
-      <span class="kpi-label">Ménages à prévoir (48h)</span>
-      <span class="kpi-pill kpi-pill-warning">
-        <i class="fas fa-broom"></i> Planning
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value">5</span>
-      <span class="kpi-sub">départs à nettoyer sous 48h</span>
-    </div>
-  </article>
-
-  <!-- KPI 3 -->
-  <article class="kpi-card">
-    <div class="kpi-header">
-      <span class="kpi-label">Risques à venir</span>
-      <span class="kpi-pill kpi-pill-danger">
-        <i class="fas fa-shield-alt"></i> IA Risk
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value">5</span>
-      <span class="kpi-sub">3 critiques • 2 oranges</span>
-    </div>
-  </article>
-
-  <!-- KPI 4 -->
-  <article class="kpi-card">
-    <div class="kpi-header">
-      <span class="kpi-label">Taux d'occupation</span>
-      <span class="kpi-pill kpi-pill-success">
-        <i class="fas fa-calendar"></i> Mois
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value">31%</span>
-      <span class="kpi-sub">sur le mois en cours</span>
-    </div>
-  </article>
-
-  <!-- KPI 5 -->
-  <article class="kpi-card">
-    <div class="kpi-header">
-      <span class="kpi-label">Cautions prises</span>
-      <span class="kpi-pill kpi-pill-neutral">
-        <i class="fas fa-shield-halved"></i> Actives
-      </span>
-    </div>
-    <div class="kpi-main">
-      <span class="kpi-value">0</span>
-      <span class="kpi-sub">aucune caution active</span>
-    </div>
-  </article>
-</section>
-
-<!-- RÉSERVATIONS ACTIVES + ACTIONS RAPIDES (screenshot 3) -->
-<div class="dashboard-dual-section">
-  <!-- Réservations actives -->
-  <section class="reservations-section">
-    <div class="reservations-header">
-      <div class="reservations-title-wrapper">
-        <div class="reservations-icon">
-          <i class="fas fa-calendar-check"></i>
-        </div>
-        <h2 class="reservations-title">Réservations actives</h2>
-      </div>
-      <a href="/calendar.html" class="reservations-view-all">
-        Voir tout
-      </a>
-    </div>
-    
-    <div class="reservations-table-wrapper">
-      <table class="reservations-table">
-        <thead>
-          <tr>
-            <th>Voyageur</th>
-            <th>Logement</th>
-            <th>Dates</th>
-            <th>Plateforme</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <div class="traveler-cell">
-                <div class="traveler-avatar">SA</div>
-                <div class="traveler-info">
-                  <span class="traveler-name">Sophie A.</span>
-                  <span class="traveler-guests">2 voyageurs</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="property-name">Apt. Saint-Martin</span>
-            </td>
-            <td>
-              <span class="dates-cell">17 — 22 juin</span>
-            </td>
-            <td>
-              <span class="platform-badge platform-airbnb">
-                <i class="fa-brands fa-airbnb"></i> Airbnb
-              </span>
-            </td>
-            <td>
-              <span class="status-badge status-in-stay">
-                <i class="fas fa-home"></i> En séjour
-              </span>
-            </td>
-          </tr>
-          
-          <tr>
-            <td>
-              <div class="traveler-cell">
-                <div class="traveler-avatar">TM</div>
-                <div class="traveler-info">
-                  <span class="traveler-name">Thomas M.</span>
-                  <span class="traveler-guests">4 voyageurs</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="property-name">Villa Les Pins</span>
-            </td>
-            <td>
-              <span class="dates-cell">18 — 25 juin</span>
-            </td>
-            <td>
-              <span class="platform-badge platform-booking">
-                <span style="font-weight: 700;">B.</span> Booking
-              </span>
-            </td>
-            <td>
-              <span class="status-badge status-arriving-today">
-                <i class="fas fa-arrow-right"></i> Arrivée auj.
-              </span>
-            </td>
-          </tr>
-          
-          <tr>
-            <td>
-              <div class="traveler-cell">
-                <div class="traveler-avatar">CL</div>
-                <div class="traveler-info">
-                  <span class="traveler-name">Claire L.</span>
-                  <span class="traveler-guests">1 voyageur</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="property-name">Studio Montmartre</span>
-            </td>
-            <td>
-              <span class="dates-cell">15 — 18 juin</span>
-            </td>
-            <td>
-              <span class="platform-badge platform-direct">
-                <i class="fas fa-globe"></i> Direct
-              </span>
-            </td>
-            <td>
-              <span class="status-badge status-departing-today">
-                <i class="fas fa-arrow-left"></i> Départ auj.
-              </span>
-            </td>
-          </tr>
-          
-          <tr>
-            <td>
-              <div class="traveler-cell">
-                <div class="traveler-avatar">JR</div>
-                <div class="traveler-info">
-                  <span class="traveler-name">Jean R.</span>
-                  <span class="traveler-guests">3 voyageurs</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="property-name">Apt. Bastille</span>
-            </td>
-            <td>
-              <span class="dates-cell">20 — 27 juin</span>
-            </td>
-            <td>
-              <span class="platform-badge platform-airbnb">
-                <i class="fa-brands fa-airbnb"></i> Airbnb
-              </span>
-            </td>
-            <td>
-              <span class="status-badge status-upcoming">
-                <i class="fas fa-clock"></i> À venir
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Actions rapides -->
-  <aside class="quick-actions-section">
-    <div class="quick-actions-header">
-      <div class="quick-actions-icon">
-        <i class="fas fa-bolt"></i>
-      </div>
-      <h2 class="quick-actions-title">Actions rapides</h2>
-    </div>
-    
-    <div class="quick-actions-list">
-      <a href="/welcome-book.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-green">
-          <i class="fas fa-book"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Créer un livret</span>
-          <span class="quick-action-desc">Nouveau livret d'accueil</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-      
-      <a href="/deposits.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-blue">
-          <i class="fas fa-shield-halved"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Demander une caution</span>
-          <span class="quick-action-desc">Lien de paiement rapide</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-      
-      <a href="/cleaning.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-orange">
-          <i class="fas fa-broom"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Planifier ménage</span>
-          <span class="quick-action-desc">Assigner au prestataire</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-      
-      <a href="/invoices.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-purple">
-          <i class="fas fa-file-invoice"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Créer une facture</span>
-          <span class="quick-action-desc">Pour un propriétaire</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-    </div>
-  </aside>
-</div>
-
-<div>
-<div class="widget-kicker">Suivi du ménage</div>
-<div class="widget-title">Checklists validées</div>
-</div>
-<button class="btn btn-ghost btn-sm" onclick="window.location.href='/cleaning.html'">
-<i class="fas fa-cog"></i> Gérer
-    </button>
-</div>
-<div class="checklists-grid" id="checklistsContainer">
-<!-- Les checklists seront chargées ici -->
-<div class="loading-state">
-<i class="fas fa-spinner fa-spin"></i>
-<span>Chargement...</span>
-</div>
-</div>
-</section>
-<!-- Property Filters -->
-<section class="card mb-lg" id="calendarFiltersSection">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-filter"></i>
-              Filtrer par logement
-            </div>
-<button class="btn btn-ghost" onclick="clearFilters()">
-<i class="fas fa-times"></i>
-              Réinitialiser
-            </button>
-</div>
-<div class="property-filters" id="propertyFilters">
-<!-- Généré dynamiquement par app.js -->
-</div>
-</section>
-<!-- Calendar Card -->
-<section class="card" id="calendarSection">
-<div class="section-header">
-<h2 class="section-title">
-</h2>
-</div>
-<!-- NOUVEAU CALENDRIER MODERNE -->
-<div class="calendar-wrapper">
-<!-- Calendar Header -->
-<div class="calendar-modern-header">
-<div class="calendar-header-top">
-<h3 class="calendar-title-modern">
-<i class="fas fa-calendar"></i>
-<span>Calendrier</span>
-</h3>
-<div class="calendar-actions-top">
-<button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
-<i class="fas fa-search"></i>
-</button>
-<button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
-<i class="fas fa-filter"></i>
-</button>
-<button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
-<i class="fas fa-cog"></i>
-</button>
-</div>
-</div>
-<!-- View Selector -->
-<div class="view-selector">
-<div class="view-tabs">
-<button class="view-tab" data-view="day">
-<i class="fas fa-calendar-day"></i>
-<span>Jour</span>
-</button>
-<button class="view-tab" data-view="week">
-<i class="fas fa-calendar-week"></i>
-<span>Semaine</span>
-</button>
-<button class="view-tab active" data-view="month">
-<i class="fas fa-calendar-alt"></i>
-<span>Mois</span>
-</button>
-<button class="view-tab" data-view="year">
-<i class="fas fa-calendar"></i>
-<span>Année</span>
-</button>
-</div>
-</div>
-</div>
-<!-- Period Navigation -->
-<div class="period-navigation">
-<button class="period-nav-btn" id="prevPeriod">
-<i class="fas fa-chevron-left"></i>
-</button>
-<div class="period-display">
-<span class="month-name" id="currentMonth">Novembre</span>
-<span class="year" id="currentYear">2025</span>
-</div>
-<button class="period-nav-btn" id="nextPeriod">
-<i class="fas fa-chevron-right"></i>
-</button>
-</div>
-<!-- Calendar Container -->
-<div class="calendar-container">
-<!-- Property List Column -->
-<div class="property-list-column">
-<div class="property-list-header">
-<span>Logements</span>
-</div>
-<div class="property-list-items" id="propertyList">
-<!-- Les logements seront ajoutés dynamiquement -->
-</div>
-</div>
-<!-- Calendar Grid Wrapper -->
-<div class="calendar-grid-wrapper">
-<!-- Days Header -->
-<div class="days-header" id="daysHeader">
-<!-- Les jours seront ajoutés dynamiquement -->
-</div>
-<!-- Calendar Grid -->
-<div class="calendar-grid" id="calendarGrid">
-<!-- Les cellules seront ajoutées dynamiquement -->
-</div>
-</div>
-</div>
-</div>
-</section>
-</div>
-<!-- Notifications Panel -->
-<aside class="notifications-panel" id="notificationsPanel">
-<div class="notifications-header">
-<h2><i class="fas fa-bell"></i> Activité</h2>
-<button class="btn-icon" id="notificationsCloseBtn">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="notifications-body" id="notificationsList">
-<!-- Section : Aujourd'hui -->
-<div class="activity-section">
-<div class="activity-section-header">
-<i class="fas fa-calendar-day"></i>
-<h3>Aujourd'hui</h3>
-</div>
-<div class="activity-list" id="activityToday">
-<div class="activity-loading">
-<i class="fas fa-spinner fa-spin"></i> Chargement...
-        </div>
-</div>
-</div>
-<!-- Section : Cette semaine -->
-<div class="activity-section">
-<div class="activity-section-header">
-<i class="fas fa-broom"></i>
-<h3>Ménages cette semaine</h3>
-</div>
-<div class="activity-list" id="activityThisWeek">
-<div class="activity-loading">
-<i class="fas fa-spinner fa-spin"></i> Chargement...
-        </div>
-</div>
-</div>
-<!-- Section : Nouvelles réservations -->
-<div class="activity-section">
-<div class="activity-section-header">
-<i class="fas fa-star"></i>
-<h3>Nouvelles réservations (7 derniers jours)</h3>
-</div>
-<div class="activity-list" id="activityNewReservations">
-<div class="activity-loading">
-<i class="fas fa-spinner fa-spin"></i> Chargement...
-        </div>
-</div>
-</div>
-</div>
-</aside>
-</main>
-</div>
-<!-- Reservation Modal -->
-<div class="modal" id="reservationModal">
-<div class="modal-content">
-<div class="modal-header">
-<h2 id="modalTitle">Détails de la réservation</h2>
-<button class="modal-close" id="modalClose">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="modal-body" id="modalBody">
-<!-- Contenu généré dynamiquement -->
-</div>
-</div>
-</div>
-<!-- New Manual Reservation Modal -->
-<div class="modal" id="newReservationModal">
-<div class="modal-content">
-<div class="modal-header">
-<h2>Nouvelle réservation</h2>
-<button class="modal-close" id="newReservationClose">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="modal-body">
-<form class="form-grid" id="newReservationForm">
-<div class="form-row">
-<label for="nrProperty">Logement</label>
-<select id="nrProperty" name="propertyId" required="">
-<!-- On remplira en JS suivant PROPERTIES -->
-</select>
-</div>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
 <!-- Sidebar -->
 <!-- Sidebar injectée dynamiquement par bh-layout.js -->
@@ -802,6 +246,102 @@
 </div>
 </article>
 </section>
+
+<!-- RÉSERVATIONS ACTIVES + ACTIONS RAPIDES -->
+<div class="dashboard-dual-section">
+  <!-- Réservations actives -->
+  <section class="reservations-section">
+    <div class="reservations-header">
+      <div class="reservations-title-wrapper">
+        <div class="reservations-icon">
+          <i class="fas fa-calendar-check"></i>
+        </div>
+        <h2 class="reservations-title">Réservations actives</h2>
+      </div>
+      <a href="/calendar.html" class="reservations-view-all">
+        Voir tout
+      </a>
+    </div>
+    
+    <div class="reservations-table-wrapper">
+      <table class="reservations-table">
+        <thead>
+          <tr>
+            <th>Voyageur</th>
+            <th>Logement</th>
+            <th>Dates</th>
+            <th>Plateforme</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody id="activeReservationsTable">
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+              <i class="fas fa-spinner fa-spin"></i> Chargement des réservations...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Actions rapides -->
+  <aside class="quick-actions-section">
+    <div class="quick-actions-header">
+      <div class="quick-actions-icon">
+        <i class="fas fa-bolt"></i>
+      </div>
+      <h2 class="quick-actions-title">Actions rapides</h2>
+    </div>
+    
+    <div class="quick-actions-list">
+      <a href="/welcome-book.html" class="quick-action-item">
+        <div class="quick-action-icon quick-action-icon-green">
+          <i class="fas fa-book"></i>
+        </div>
+        <div class="quick-action-content">
+          <span class="quick-action-label">Créer un livret</span>
+          <span class="quick-action-desc">Nouveau livret d'accueil</span>
+        </div>
+        <i class="fas fa-arrow-right quick-action-arrow"></i>
+      </a>
+      
+      <a href="/deposits.html" class="quick-action-item">
+        <div class="quick-action-icon quick-action-icon-blue">
+          <i class="fas fa-shield-halved"></i>
+        </div>
+        <div class="quick-action-content">
+          <span class="quick-action-label">Demander une caution</span>
+          <span class="quick-action-desc">Lien de paiement rapide</span>
+        </div>
+        <i class="fas fa-arrow-right quick-action-arrow"></i>
+      </a>
+      
+      <a href="/cleaning.html" class="quick-action-item">
+        <div class="quick-action-icon quick-action-icon-orange">
+          <i class="fas fa-broom"></i>
+        </div>
+        <div class="quick-action-content">
+          <span class="quick-action-label">Planifier ménage</span>
+          <span class="quick-action-desc">Assigner au prestataire</span>
+        </div>
+        <i class="fas fa-arrow-right quick-action-arrow"></i>
+      </a>
+      
+      <a href="/invoices.html" class="quick-action-item">
+        <div class="quick-action-icon quick-action-icon-purple">
+          <i class="fas fa-file-invoice"></i>
+        </div>
+        <div class="quick-action-content">
+          <span class="quick-action-label">Créer une facture</span>
+          <span class="quick-action-desc">Pour un propriétaire</span>
+        </div>
+        <i class="fas fa-arrow-right quick-action-arrow"></i>
+      </a>
+    </div>
+  </aside>
+</div>
+
 <!-- CHECKLISTS DE MÉNAGE -->
 <section class="cleaning-checklists-widget">
 <div class="widget-header">
