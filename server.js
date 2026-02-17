@@ -7688,7 +7688,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     );
     
     // Construire le lien de réinitialisation
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, ''); // ✅ Supprimer le slash final
     const resetUrl = `${appUrl}/reset-password.html?token=${resetToken}`;
     
     console.log('📧 Tentative envoi email reset à:', user.email);
@@ -7698,7 +7698,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     
     // Envoyer l'email via sendEmail (même fonction que les autres emails)
     await sendEmail({
-      from: `"Boostinghost" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      from: `"Boostinghost" <${(process.env.EMAIL_FROM || process.env.EMAIL_USER || '').replace(/[<>"]/g, '').trim()}>`,
       to: user.email,
       subject: '🔑 Réinitialisation de votre mot de passe - Boostinghost',
       html: `
