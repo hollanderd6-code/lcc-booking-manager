@@ -19,7 +19,7 @@
 <link href="/css/bh-design-system-v3.css" rel="stylesheet"/>
 <link href="/css/app-dashboard.css" rel="stylesheet"/>
 <link href="/css/app-dashboard-fixes.css" rel="stylesheet"/>
-<link href="/css/app-dashboard-final-v2.css" rel="stylesheet"/>
+<link href="/css/app-dashboard-minimal.css" rel="stylesheet"/>
 <!-- Simplification mobile : KPI + calendrier uniquement -->
 <script src="/js/auth-fetch.js"></script>
     <!-- 📱 Styles Mobile Natifs -->
@@ -51,49 +51,45 @@
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-<!-- HEADER DARK AVEC STATUS + ACTIONS UNIQUEMENT -->
-<nav class="main-navigation">
-  <div class="main-nav-container">
-    <!-- Status des plateformes -->
-    <div class="platforms-status">
-      <div class="platform-status-item">
-        <span class="platform-status-dot connected"></span>
-        <span>Airbnb</span>
-      </div>
-      <div class="platform-status-item">
-        <span class="platform-status-dot connected"></span>
-        <span>Booking</span>
-      </div>
-      <div class="platform-status-item">
-        <span class="platform-status-dot connected"></span>
-        <span>Stripe</span>
-      </div>
+<!-- HEADER DARK SIMPLE -->
+<div class="top-dark-header">
+  <!-- Status plateformes -->
+  <div class="header-platforms">
+    <div class="header-platform">
+      <span class="platform-dot connected"></span>
+      <span>Airbnb</span>
     </div>
-    
-    <!-- Actions -->
-    <div class="main-nav-actions">
-      <button class="main-nav-btn" id="refreshBtn" title="Rafraîchir">
-        <i class="fas fa-sync-alt"></i>
-      </button>
-      
-      <!-- Toggle mode -->
-      <div class="theme-toggle">
-        <button class="theme-toggle-btn active" id="lightModeBtn" title="Mode clair">
-          <i class="fas fa-sun"></i>
-        </button>
-        <button class="theme-toggle-btn" id="darkModeBtn" title="Mode sombre">
-          <i class="fas fa-moon"></i>
-        </button>
-      </div>
-      
-      <!-- Bouton nouvelle réservation -->
-      <button class="btn-new-reservation" onclick="window.location.href='/calendar.html'">
-        <i class="fas fa-plus"></i>
-        Nouvelle réservation
-      </button>
+    <div class="header-platform">
+      <span class="platform-dot connected"></span>
+      <span>Booking</span>
+    </div>
+    <div class="header-platform">
+      <span class="platform-dot connected"></span>
+      <span>Stripe</span>
     </div>
   </div>
-</nav>
+  
+  <!-- Actions -->
+  <div class="header-actions">
+    <button class="header-btn" id="refreshBtn" title="Rafraîchir">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+    
+    <div class="header-theme-toggle">
+      <button class="theme-btn active" id="lightBtn">
+        <i class="fas fa-sun"></i>
+      </button>
+      <button class="theme-btn" id="darkBtn">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+    
+    <button class="header-new-btn" onclick="window.location.href='/calendar.html'">
+      <i class="fas fa-plus"></i>
+      Nouvelle réservation
+    </button>
+  </div>
+</div>
 
 <div class="app-container">
 <!-- Sidebar -->
@@ -116,14 +112,7 @@
 </button>
 </div>
 </header>
-
 <div class="page-content">
-<!-- TITRE DE PAGE STICKY -->
-<div class="page-title-sticky">
-  <div class="page-title-kicker">VUE D'ENSEMBLE</div>
-  <h1 class="page-title-main">Tableau de bord</h1>
-</div>
-
 <!-- Page Content -->
 <!-- ÉTAT DES CONNEXIONS -->
 <section class="status-grid">
@@ -247,102 +236,6 @@
 </div>
 </article>
 </section>
-
-<!-- RÉSERVATIONS ACTIVES + ACTIONS RAPIDES -->
-<div class="dashboard-dual-section">
-  <!-- Réservations actives -->
-  <section class="reservations-section">
-    <div class="reservations-header">
-      <div class="reservations-title-wrapper">
-        <div class="reservations-icon">
-          <i class="fas fa-calendar-check"></i>
-        </div>
-        <h2 class="reservations-title">Réservations actives</h2>
-      </div>
-      <a href="/calendar.html" class="reservations-view-all">
-        Voir tout
-      </a>
-    </div>
-    
-    <div class="reservations-table-wrapper">
-      <table class="reservations-table">
-        <thead>
-          <tr>
-            <th>Voyageur</th>
-            <th>Logement</th>
-            <th>Dates</th>
-            <th>Plateforme</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody id="activeReservationsTable">
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
-              <i class="fas fa-spinner fa-spin"></i> Chargement des réservations...
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Actions rapides -->
-  <aside class="quick-actions-section">
-    <div class="quick-actions-header">
-      <div class="quick-actions-icon">
-        <i class="fas fa-bolt"></i>
-      </div>
-      <h2 class="quick-actions-title">Actions rapides</h2>
-    </div>
-    
-    <div class="quick-actions-list">
-      <a href="/welcome-book.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-green">
-          <i class="fas fa-book"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Créer un livret</span>
-          <span class="quick-action-desc">Nouveau livret d'accueil</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-      
-      <a href="/deposits.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-blue">
-          <i class="fas fa-shield-halved"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Demander une caution</span>
-          <span class="quick-action-desc">Lien de paiement rapide</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-      
-      <a href="/cleaning.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-orange">
-          <i class="fas fa-broom"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Planifier ménage</span>
-          <span class="quick-action-desc">Assigner au prestataire</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-      
-      <a href="/invoices.html" class="quick-action-item">
-        <div class="quick-action-icon quick-action-icon-purple">
-          <i class="fas fa-file-invoice"></i>
-        </div>
-        <div class="quick-action-content">
-          <span class="quick-action-label">Créer une facture</span>
-          <span class="quick-action-desc">Pour un propriétaire</span>
-        </div>
-        <i class="fas fa-arrow-right quick-action-arrow"></i>
-      </a>
-    </div>
-  </aside>
-</div>
-
 <!-- CHECKLISTS DE MÉNAGE -->
 <section class="cleaning-checklists-widget">
 <div class="widget-header">
