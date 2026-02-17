@@ -15,13 +15,29 @@
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
  
+
+ 
+
+ 
+  
+
+
+
 <!-- Simplification mobile : KPI + calendrier uniquement -->
+
+
+
 <script src="/js/auth-fetch.js"></script>
 
     <!-- 📱 Styles Mobile Natifs -->
 
+    
+
 <script>
 </script>
+
+
+
  <!-- Protection sous-comptes -->
 <script src="/js/sub-account-guard.js"></script>   
 
@@ -422,8 +438,9 @@ body { padding-top: 40px; }
    PAGE CONTENT
    ============================================= */
 .page-content {
-  padding: 32px;
-  flex: 1;
+  padding: 40px;
+  max-width: 1680px;
+  margin: 0 auto;
 }
 .page { display: none; animation: fadeUp .35s var(--ease-out); }
 .page.active { display: block; }
@@ -1854,7 +1871,11 @@ body { padding-top: 40px; }
 
 /* Ajuster le main-content pour faire de la place à la topbar */
 .main-content {
+  margin-left: var(--sidebar-w);
   margin-top: 72px;
+  flex: 1;
+  min-height: 100vh;
+  background: var(--cream);
 }
 
 /* Responsive */
