@@ -19,7 +19,7 @@
 <link href="/css/bh-design-system-v3.css" rel="stylesheet"/>
 <link href="/css/app-dashboard.css" rel="stylesheet"/>
 <link href="/css/app-dashboard-fixes.css" rel="stylesheet"/>
-<link href="/css/app-dashboard-hybrid.css" rel="stylesheet"/>
+<link href="/css/app-dashboard-final-v2.css" rel="stylesheet"/>
 <!-- Simplification mobile : KPI + calendrier uniquement -->
 <script src="/js/auth-fetch.js"></script>
     <!-- 📱 Styles Mobile Natifs -->
@@ -51,51 +51,76 @@
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-<!-- SOUS-MENU NOIR EN HAUT -->
-<nav class="sub-navigation">
-  <div class="sub-nav-container">
-    <a href="/app.html" class="sub-nav-logo">
-      <div class="sub-nav-logo-icon">
-        <i class="fas fa-home"></i>
-      </div>
-      <span class="sub-nav-logo-text">Boostinghost</span>
-    </a>
-    
-    <span class="sub-nav-section-label">VUE</span>
-    
-    <div class="sub-nav-links">
-      <a href="/app.html" class="sub-nav-link active">
+<!-- HEADER DARK AVEC NAVIGATION + STATUS + ACTIONS -->
+<nav class="main-navigation">
+  <div class="main-nav-container">
+    <!-- Navigation principale -->
+    <div class="main-nav-links">
+      <a href="/app.html" class="main-nav-link active">
         <i class="fas fa-chart-line"></i>
         <span>Dashboard</span>
       </a>
-      <a href="/messages.html" class="sub-nav-link">
+      <a href="/messages.html" class="main-nav-link">
         <i class="fas fa-comment"></i>
         <span>Messages</span>
       </a>
-      <a href="/properties.html" class="sub-nav-link">
+      <a href="/properties.html" class="main-nav-link">
         <i class="fas fa-building"></i>
         <span>Logements</span>
       </a>
-      <a href="/deposits.html" class="sub-nav-link">
+      <a href="/deposits.html" class="main-nav-link">
         <i class="fas fa-shield-halved"></i>
         <span>Cautions</span>
       </a>
-      <a href="/invoices.html" class="sub-nav-link">
+      <a href="/invoices.html" class="main-nav-link">
         <i class="fas fa-file-invoice"></i>
         <span>Factures</span>
       </a>
-      <a href="/welcome-book.html" class="sub-nav-link">
+      <a href="/welcome-book.html" class="main-nav-link">
         <i class="fas fa-book"></i>
         <span>Livret</span>
       </a>
     </div>
     
-    <div class="sub-nav-actions">
-      <button class="sub-nav-btn" id="notificationsBtn" title="Notifications">
+    <!-- Status des plateformes -->
+    <div class="platforms-status">
+      <div class="platform-status-item">
+        <span class="platform-status-dot connected"></span>
+        <span>Airbnb</span>
+      </div>
+      <div class="platform-status-item">
+        <span class="platform-status-dot connected"></span>
+        <span>Booking</span>
+      </div>
+      <div class="platform-status-item">
+        <span class="platform-status-dot connected"></span>
+        <span>Stripe</span>
+      </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="main-nav-actions">
+      <button class="main-nav-btn" id="notificationsBtn" title="Notifications">
         <i class="fas fa-bell"></i>
       </button>
-      <button class="sub-nav-btn" id="refreshBtn" title="Rafraîchir">
+      <button class="main-nav-btn" id="refreshBtn" title="Rafraîchir">
         <i class="fas fa-sync-alt"></i>
+      </button>
+      
+      <!-- Toggle mode -->
+      <div class="theme-toggle">
+        <button class="theme-toggle-btn active" id="lightModeBtn" title="Mode clair">
+          <i class="fas fa-sun"></i>
+        </button>
+        <button class="theme-toggle-btn" id="darkModeBtn" title="Mode sombre">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+      
+      <!-- Bouton nouvelle réservation -->
+      <button class="btn-new-reservation" onclick="window.location.href='/calendar.html'">
+        <i class="fas fa-plus"></i>
+        Nouvelle réservation
       </button>
     </div>
   </div>
@@ -122,6 +147,13 @@
 </button>
 </div>
 </header>
+
+<!-- TITRE DE PAGE STICKY -->
+<div class="page-title-sticky">
+  <div class="page-title-kicker">VUE D'ENSEMBLE</div>
+  <h1 class="page-title-main">Tableau de bord</h1>
+</div>
+
 <div class="page-content">
 <!-- Page Content -->
 <!-- ÉTAT DES CONNEXIONS -->
