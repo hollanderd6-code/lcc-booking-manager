@@ -10663,7 +10663,7 @@ app.get('/api/verify-email', async (req, res) => {
            verification_token_expires = NULL,
            updated_at = NOW()
        WHERE id = $1`,
-      [userId]
+      [user.id]  // ✅ FIX: user.id au lieu de userId
     );
 
     console.log('✅ Email vérifié pour:', user.email);
