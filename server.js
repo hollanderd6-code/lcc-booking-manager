@@ -7688,69 +7688,17 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     );
     
     // Construire le lien de réinitialisation
-    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, ''); // ✅ Supprimer le slash final
     const resetUrl = `${appUrl}/reset-password.html?token=${resetToken}`;
     
     console.log('📧 Tentative envoi email reset à:', user.email);
     console.log('🔗 Reset URL:', resetUrl);
+    console.log('📤 EMAIL_FROM:', process.env.EMAIL_FROM || process.env.EMAIL_USER);
     console.log('🔑 BREVO_API_KEY défini:', !!process.env.BREVO_API_KEY);
     
-    // ✅ Utiliser transporter.sendMail + EMAIL_FROM comme les autres emails
-    await transporter.sendMail({
-      from: EMAIL_FROM,
-      to: user.email,
-      subject: '🔑 Réinitialisation de votre mot de passe - Boostinghost',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
-            .button { display: inline-block; background: #10b981; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; margin: 20px 0; }
-            .warning { background: #fef3c7; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 20px 0; }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 26px;">🔑 Réinitialisation de mot de passe</h1>
-            </div>
-            <div class="content">
-              <p>Bonjour <strong>${user.first_name || 'cher utilisateur'}</strong>,</p>
-              <p>Vous avez demandé à réinitialiser votre mot de passe Boostinghost.</p>
-              <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" class="button">Réinitialiser mon mot de passe</a>
-              </div>
-              <div class="warning">
-                <strong>⚠️ Important :</strong>
-                <ul style="margin: 8px 0; padding-left: 20px;">
-                  <li>Ce lien expire dans <strong>1 heure</strong></li>
-                  <li>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email</li>
-                  <li>Ne partagez jamais ce lien avec qui que ce soit</li>
-                </ul>
-              </div>
-              <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-                Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
-                <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
-              </p>
-            </div>
-            <div class="footer">
-              <p>Questions ? <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a></p>
-              <p>© ${new Date().getFullYear()} Boostinghost</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `
-    });
-    
-    console.log('✅ Email reset password envoyé à:', user.email);
+    // Envoyer l'email via sendEmail (même fonction que les autres emails)
+    await sendEmail({
+      from: `"Boostinghost" <${(process.env.EMAIL_FROM || process.env.EMAIL_USER || '').replace(/[<>"]/g, '').trim()}>`,
       to: user.email,
       subject: '🔑 Réinitialisation de votre mot de passe - Boostinghost',
       html: `
