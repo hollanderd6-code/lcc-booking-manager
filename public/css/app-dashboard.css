@@ -11,7 +11,8 @@
    1. KPI CARDS — structure interne réelle
    ============================================================ */
 
-/* Grille des KPI */
+/* Grille des KPI — fonctionne sur <section> aussi */
+section.kpi-grid,
 .kpi-grid-section,
 .kpi-cards-row {
   display: grid;
@@ -107,7 +108,8 @@ article.kpi-card.kpi-card--clickable:hover {
    2. STATUS CARDS (intégrations Airbnb/Booking/Stripe)
    ============================================================ */
 
-/* Grid des status cards */
+/* Grid des status cards — fonctionne sur <section> aussi */
+section.status-grid,
 .status-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -301,6 +303,15 @@ article.status-card p {
    5. CALENDAR HEADER — correction fond noir + view tabs
    ============================================================ */
 
+/* Wrapper global du calendrier */
+.calendar-wrapper {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--border-warm);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+}
+
 /* Le header principal du calendrier (fond obsidian) */
 .calendar-modern-header {
   background: var(--obsidian);
@@ -308,23 +319,23 @@ article.status-card p {
 }
 [data-theme="dark"] .calendar-modern-header { background: #060D16; }
 
-/* Header top : titre + actions */
+/* Header top : titre + actions — hauteur fixe, pas de débordement */
 .calendar-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 22px;
+  padding: 14px 20px;
   border-bottom: 1px solid rgba(255,255,255,.1);
+  min-height: 0;
 }
 
-/* Zone view selector (sous le header top) */
+/* Zone view selector — compact, bien délimité */
 .view-selector {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 8px 14px;
   gap: 8px;
   background: var(--obsidian);
-  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 [data-theme="dark"] .view-selector { background: #060D16; }
 
@@ -335,19 +346,20 @@ article.status-card p {
   background: rgba(255,255,255,.08);
   border-radius: var(--radius-sm);
   padding: 4px;
+  margin-left: auto;
 }
 
 .view-tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: var(--radius-xs);
   border: none;
   background: transparent;
   color: rgba(255,255,255,.55);
   font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all .15s;
@@ -376,14 +388,14 @@ article.status-card p {
 
 /* Boutons d'action dans le header calendrier */
 .calendar-action-btn {
-  width: 34px; height: 34px;
+  width: 32px; height: 32px;
   background: rgba(255,255,255,.1);
   border: 1px solid rgba(255,255,255,.15);
   border-radius: var(--radius-sm);
   color: rgba(255,255,255,.75);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
+  font-size: 12px;
   transition: background .15s;
 }
 .calendar-action-btn:hover {
@@ -391,23 +403,79 @@ article.status-card p {
   color: white;
 }
 
+/* Navigation de période — fond cream, visible */
+.period-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--cream-deep);
+  border-bottom: 2px solid var(--border-color);
+}
+[data-theme="dark"] .period-navigation {
+  background: #0D1117;
+  border-color: rgba(255,255,255,.07);
+}
+
+.period-nav-btn {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  background: var(--cream-warm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  transition: all .15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.period-nav-btn:hover {
+  border-color: var(--jade);
+  color: var(--jade);
+  background: var(--jade-subtle);
+}
+
+.period-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.period-display .month-name {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  letter-spacing: -.02em;
+  color: var(--text-primary);
+}
+.period-display .year {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
 
 /* ============================================================
-   6. MAIN HEADER / TOPBAR — version réelle du HTML
+   6. MAIN HEADER — injecté par bh-layout.js dans #bhHeader
    ============================================================ */
 
+/* bh-layout.js injecte <header class="main-header"> dans #bhHeader */
+#bhHeader {
+  padding: 20px 24px 0;
+}
+
+#bhHeader header.main-header,
 header.main-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 28px;
+  padding: 20px 24px;
   background: var(--cream-warm);
   border: 1px solid var(--border-warm);
   border-radius: var(--radius-lg);
-  margin: 20px 20px 24px;
+  margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
   gap: 16px;
 }
+[data-theme="dark"] #bhHeader header.main-header,
 [data-theme="dark"] header.main-header {
   background: #111827;
   border-color: rgba(255,255,255,.07);
@@ -435,7 +503,6 @@ h1.page-title {
   color: var(--text-tertiary);
   margin: 0;
   line-height: 1.5;
-  max-width: 480px;
 }
 
 .header-left { flex: 1; }
@@ -445,6 +512,20 @@ h1.page-title {
   gap: 8px;
   flex-shrink: 0;
   padding-top: 4px;
+}
+
+@media (max-width: 1024px) {
+  #bhHeader { padding: 12px 12px 0; }
+  #bhHeader header.main-header,
+  header.main-header {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+  }
+  h1.page-title { font-size: 22px; }
+  .page-subtitle { display: none; }
+  .header-actions { width: 100%; }
 }
 
 
@@ -461,22 +542,13 @@ main.main-content {
 [data-theme="dark"] main.main-content { background: var(--bg-primary); }
 
 div.page-content {
-  padding: 0 20px 40px;
+  padding: 20px 24px 60px;
 }
 
 /* Sur mobile */
 @media (max-width: 1024px) {
   main.main-content { margin-left: 0; }
-  div.page-content  { padding: 0 12px 100px; }
-  header.main-header {
-    margin: 12px 12px 16px;
-    padding: 14px 16px;
-    flex-direction: column;
-    gap: 12px;
-  }
-  h1.page-title { font-size: 22px; }
-  .page-subtitle { display: none; }
-  .header-actions { width: 100%; }
+  div.page-content  { padding: 12px 12px 100px; }
   .form-grid { grid-template-columns: 1fr; }
   .status-cards-grid { grid-template-columns: 1fr 1fr; }
 }
