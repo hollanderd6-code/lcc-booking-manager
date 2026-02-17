@@ -259,13 +259,18 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* --- Contenu principal --- */
-.main-content,
-.page-content {
+.main-content {
   margin-left: var(--sidebar-width);
   flex: 1;
   min-height: 100dvh;
   background: var(--bg-primary);
-  /* aucun padding ici : géré par .page-content-inner */
+}
+
+/* .page-content est à l'intérieur de .main-content — pas de margin-left ici */
+.page-content {
+  flex: 1;
+  min-height: 100dvh;
+  background: var(--bg-primary);
 }
 
 .page-content-inner {
@@ -2085,10 +2090,10 @@ textarea { resize: vertical; min-height: 90px; }
    ============================================================ */
 @media (min-width: 769px) and (max-width: 1024px) {
   .sidebar { display: none; }
-  .main-content, .page-content { margin-left: 0; }
+  .main-content { margin-left: 0; }
   .mobile-header { display: flex; }
   body { padding-top: var(--mobile-header-h); }
-  .main-content, .page-content {
+  .main-content {
     padding-bottom: calc(80px + var(--sab));
   }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2102,7 +2107,7 @@ textarea { resize: vertical; min-height: 90px; }
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-110%); }
   .sidebar.active { transform: translateX(0); }
-  .main-content, .page-content { margin-left: 0; padding-bottom: calc(80px + var(--sab)); }
+  .main-content { margin-left: 0; padding-bottom: calc(80px + var(--sab)); }
   .mobile-header { display: flex; }
   body { padding-top: var(--mobile-header-h); }
 
@@ -2154,7 +2159,7 @@ textarea { resize: vertical; min-height: 90px; }
   .booking-modal .modal-content { width: 95%; max-height: 85vh; }
 
   /* Pull-to-refresh zone */
-  .main-content, .page-content { overflow-x: hidden; }
+  .main-content { overflow-x: hidden; }
 
   /* Réduction des actions rapides */
   .header-actions .btn-ghost { display: none; }
