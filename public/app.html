@@ -10,22 +10,40 @@
 <title>Boostinghost Manager – Dashboard</title>
 <!-- Fonts & Icons -->
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+
 
 <!-- FullCalendar (garder) -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
+
 
 <!-- Design System BH v3 -->
-<link href="/css/bh-design-system-v3.css" rel="stylesheet"/>
-<link href="/css/app-dashboard.css" rel="stylesheet"/>
+
+
+
+
+
 <!-- Simplification mobile : KPI + calendrier uniquement -->
+
+
+
 <script src="/js/auth-fetch.js"></script>
+
     <!-- 📱 Styles Mobile Natifs -->
+
+    
 
 <script>
 </script>
+
+
+
  <!-- Protection sous-comptes -->
 <script src="/js/sub-account-guard.js"></script>   
+
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
+<link href="/css/bh-design-final.css" rel="stylesheet"/>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
@@ -48,47 +66,6 @@
 </button>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<!-- HEADER DARK SIMPLE -->
-<div class="top-dark-header">
-  <!-- Status plateformes -->
-  <div class="header-platforms">
-    <div class="header-platform">
-      <span class="platform-dot connected"></span>
-      <span>Airbnb</span>
-    </div>
-    <div class="header-platform">
-      <span class="platform-dot connected"></span>
-      <span>Booking</span>
-    </div>
-    <div class="header-platform">
-      <span class="platform-dot connected"></span>
-      <span>Stripe</span>
-    </div>
-  </div>
-  
-  <!-- Actions -->
-  <div class="header-actions">
-    <button class="header-btn" id="refreshBtn" title="Rafraîchir">
-      <i class="fas fa-sync-alt"></i>
-    </button>
-    
-    <div class="header-theme-toggle">
-      <button class="theme-btn active" id="lightBtn">
-        <i class="fas fa-sun"></i>
-      </button>
-      <button class="theme-btn" id="darkBtn">
-        <i class="fas fa-moon"></i>
-      </button>
-    </div>
-    
-    <button class="header-new-btn" onclick="window.location.href='/calendar.html'">
-      <i class="fas fa-plus"></i>
-      Nouvelle réservation
-    </button>
-  </div>
-</div>
-
 <div class="app-container">
 <!-- Sidebar -->
 <!-- Sidebar injectée dynamiquement par bh-layout.js -->
@@ -96,20 +73,42 @@
 <!-- Main Content -->
 <main class="main-content">
 <!-- Header -->
-<header class="main-header">
-<div class="header-left">
-<div class="page-kicker">Vue d’ensemble</div>
-<h1 class="page-title">Dashboard</h1>
-<p class="page-subtitle">
-            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
-          </p>
+<!-- TOPBAR INTÉGRATIONS (remplace l'ancien header) -->
+<div class="bh-topbar">
+<div class="bh-topbar-left">
+<div class="bh-topbar-title">
+Tableau de <em>bord</em>
+<span class="sub">Vue d'ensemble</span>
 </div>
-<div class="header-actions">
-<button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
+</div>
+
+<div class="bh-status-badges">
+<div class="bh-status-badge" data-platform="airbnb">
+<span class="bh-status-dot connected" id="statusAirbnb"></span>
+<span class="bh-status-label">Airbnb</span>
+</div>
+<div class="bh-status-badge" data-platform="booking">
+<span class="bh-status-dot connected" id="statusBooking"></span>
+<span class="bh-status-label">Booking.com</span>
+</div>
+<div class="bh-status-badge" data-platform="stripe">
+<span class="bh-status-dot connected" id="statusStripe"></span>
+<span class="bh-status-label">Stripe</span>
+</div>
+</div>
+
+<div class="bh-topbar-actions">
+<button class="bh-topbar-btn" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
+<button class="bh-topbar-btn" id="notificationsBtn" title="Notifications">
+<i class="fas fa-bell"></i>
+</button>
+<button class="btn-primary" id="newReservationBtn">
+<i class="fas fa-plus"></i> Nouvelle réservation
+</button>
 </div>
-</header>
+</div>
 <div class="page-content">
 <!-- Page Content -->
 <!-- ÉTAT DES CONNEXIONS -->
@@ -270,7 +269,7 @@
 </div>
 </section>
 <!-- Calendar Card -->
-<section class="card" id="calendarSection">
+<section class="card" id="calendarSection" style="display:block !important;">
 <div class="section-header">
 <h2 class="section-title">
 </h2>
@@ -478,6 +477,7 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
 <script src="/js/app.js?v=3"></script>
+
 <!-- Script auth + user + logout -->
 <script>
   // Vérifier l'abonnement au chargement de la page
@@ -4825,6 +4825,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
   // Appeler au chargement de la page
   document.addEventListener('DOMContentLoaded', checkSubscriptionStatus);
 </script>
+
 <!-- ========================== -->
 <!--  SCRIPTS DE RÉPARATION    -->
 <!-- ========================== -->
@@ -5886,5 +5887,32 @@ if (window.Capacitor) {
 
 <!-- Badge Messages -->
 <script src="/js/messages-badge-desktop-mobile.js"></script>    
+
+<!-- Script pour mettre à jour les status badges dynamiquement -->
+<script>
+function updateConnectionStatus() {
+  // Récupérez les vrais status depuis votre logique/API
+  const connections = {
+    airbnb: true,
+    booking: true,
+    stripe: false
+  };
+  
+  const airbnbDot = document.getElementById('statusAirbnb');
+  const bookingDot = document.getElementById('statusBooking');
+  const stripeDot = document.getElementById('statusStripe');
+  
+  if (airbnbDot) airbnbDot.className = 'bh-status-dot ' + (connections.airbnb ? 'connected' : 'disconnected');
+  if (bookingDot) bookingDot.className = 'bh-status-dot ' + (connections.booking ? 'connected' : 'disconnected');
+  if (stripeDot) stripeDot.className = 'bh-status-dot ' + (connections.stripe ? 'connected' : 'disconnected');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', updateConnectionStatus);
+} else {
+  updateConnectionStatus();
+}
+</script>
+
 </body>
 </html>
