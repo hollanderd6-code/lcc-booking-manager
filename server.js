@@ -1166,6 +1166,18 @@ ON invoice_download_tokens(token);
       `);
       console.log('✅ Colonnes escalated ajoutées à conversations');
     } catch (e) {
+      console.log('ℹ️ Colonnes escalated: ', e.message);
+    }
+
+    // Ajouter colonnes escalade sur conversations (si pas déjà existantes)
+    try {
+      await pool.query(`
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pending_escalation BOOLEAN DEFAULT FALSE;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
+      `);
+      console.log('✅ Colonnes escalated ajoutées à conversations');
+    } catch (e) {
       // Colonnes déjà existantes ou table pas encore créée
       console.log('ℹ️ Colonnes escalated: ', e.message);
     }
@@ -9831,6 +9843,9 @@ app.post('/api/properties',
         arrivalMessage || null  // ✅ NOUVEAU
       ]
     );
+
+    // Rafraîchir le cache mémoire
+    await loadProperties();
 
     res.json({
       success: true,
