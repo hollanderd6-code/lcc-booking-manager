@@ -112,7 +112,7 @@
   --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
 
   /* — Layout — */
-  --sidebar-width:     248px;
+  --sidebar-width:     260px;
   --header-height:     64px;
   --mobile-header-h:   60px;
 
@@ -359,6 +359,10 @@ a { text-decoration: none; color: inherit; }
 /* Navigation */
 .sidebar-nav { flex: 1; padding: 10px 12px; overflow-y: auto; }
 
+/* Sections nav */
+.nav-section { margin-bottom: 6px; }
+
+.nav-section-title,
 .sidebar-nav-label,
 .nav-section-label {
   font-size: 10px;
@@ -367,6 +371,7 @@ a { text-decoration: none; color: inherit; }
   text-transform: uppercase;
   color: var(--text-tertiary);
   padding: 12px 10px 6px;
+  display: block;
 }
 
 .nav-item {
@@ -470,7 +475,9 @@ a { text-decoration: none; color: inherit; }
 }
 [data-theme="dark"] .sidebar-footer { border-color: rgba(255,255,255,.06); }
 
-.user-card {
+/* bh-layout.js utilise .user-profile (pas .user-card) */
+.user-card,
+.user-profile {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -479,8 +486,10 @@ a { text-decoration: none; color: inherit; }
   cursor: pointer;
   transition: background .15s;
 }
-.user-card:hover { background: var(--cream-deep); }
-[data-theme="dark"] .user-card:hover { background: rgba(255,255,255,.06); }
+.user-card:hover,
+.user-profile:hover { background: var(--cream-deep); }
+[data-theme="dark"] .user-card:hover,
+[data-theme="dark"] .user-profile:hover { background: rgba(255,255,255,.06); }
 
 .user-avatar {
   width: 34px; height: 34px;
@@ -494,7 +503,9 @@ a { text-decoration: none; color: inherit; }
 }
 
 .user-info .user-name  { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.user-info .user-role  { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+/* bh-layout.js utilise .user-email (pas .user-role) */
+.user-info .user-role,
+.user-info .user-email { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
 
 
 /* ============================================================
