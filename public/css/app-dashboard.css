@@ -1,921 +1,498 @@
 /* ============================================================
-   APP-DASHBOARD.CSS
-   Styles spécifiques à app-13.html (dashboard + calendrier)
+   APP-DASHBOARD-FIXES.CSS
+   Correctifs ciblés pour les composants non stylés dans app-14
    
-   Ce fichier complète bh-design-system-v3.css.
-   Il ne redéfinit JAMAIS les variables ni les composants 
-   de base (boutons, cards, sidebar) — tout ça est dans v3.
-   
+   À inclure APRÈS bh-design-system-v3.css et app-dashboard.css
    0 × !important
    ============================================================ */
 
 
 /* ============================================================
-   1. LAYOUT DASHBOARD
+   1. KPI CARDS — structure interne réelle
    ============================================================ */
 
-/* Section onboarding / intégrations */
-.onboarding-section {
-  padding: 0 0 24px;
+/* Grille des KPI */
+.kpi-grid-section,
+.kpi-cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-/* Grille statuts (Airbnb, Booking, Stripe...) */
-.status-grid {
+/* La card elle-même (article.kpi-card) */
+article.kpi-card {
+  background: var(--cream-warm);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  transition: transform .2s var(--ease-out), box-shadow .2s, border-color .15s;
+}
+[data-theme="dark"] article.kpi-card {
+  background: #111827;
+  border-color: rgba(255,255,255,.07);
+}
+article.kpi-card.kpi-card--clickable {
+  cursor: pointer;
+}
+article.kpi-card.kpi-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-float);
+  border-color: var(--sand);
+}
+
+/* Header de la KPI card (label + pill) */
+.kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+/* Label de la KPI */
+.kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--text-tertiary);
+  line-height: 1.3;
+}
+
+/* Pill dans le header KPI */
+.kpi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.kpi-pill-neutral  { background: var(--cream-deep); color: var(--text-tertiary); }
+.kpi-pill-success  { background: var(--jade-subtle); color: var(--jade); }
+.kpi-pill-warning  { background: var(--warning-bg); color: var(--warning); }
+.kpi-pill-danger   { background: var(--error-bg); color: var(--error); }
+.kpi-pill-info     { background: rgba(37,99,235,.1); color: #2563EB; }
+[data-theme="dark"] .kpi-pill-neutral { background: rgba(255,255,255,.08); }
+
+/* Zone valeur principale */
+.kpi-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* La valeur chiffrée */
+.kpi-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 36px;
+  letter-spacing: -.03em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+/* Sous-texte de la valeur */
+.kpi-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+
+/* ============================================================
+   2. STATUS CARDS (intégrations Airbnb/Booking/Stripe)
+   ============================================================ */
+
+/* Grid des status cards */
+.status-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
 
-.overview-card {
+article.status-card {
   background: var(--cream-warm);
   border: 1px solid var(--border-warm);
   border-radius: var(--radius-lg);
   padding: 18px 20px;
   transition: transform .2s var(--ease-out), box-shadow .2s;
 }
-.overview-card:hover {
+article.status-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-float);
 }
-[data-theme="dark"] .overview-card {
+[data-theme="dark"] article.status-card {
   background: #111827;
   border-color: rgba(255,255,255,.07);
 }
 
-.overview-kicker {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--text-tertiary);
-  margin-bottom: 8px;
-}
-.overview-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-.overview-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.overview-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.overview-dot.green  { background: var(--jade); }
-.overview-dot.red    { background: var(--error); }
-.overview-dot.gray   { background: var(--text-tertiary); }
-.overview-dot.blue   { background: #2563EB; }
-
-.overview-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 600;
-  margin-top: 8px;
-}
-.overview-chip.connected    { background: var(--jade-subtle); color: var(--jade); }
-.overview-chip.disconnected { background: var(--error-bg); color: var(--error); }
-
-.overview-line-main { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-.overview-line-time { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
-
-.overview-metrics {
-  display: flex;
-  gap: 16px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
-}
-.overview-metric-value {
-  font-family: 'Instrument Serif', serif;
-  font-size: 22px;
-  color: var(--text-primary);
-  letter-spacing: -.02em;
-}
-.overview-metric-label {
-  font-size: 10.5px;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  font-weight: 600;
-}
-
-/* Timeline overview */
-.overview-timeline { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.overview-timeline-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  font-size: 13px;
-}
-[data-theme="dark"] .overview-timeline-item { background: rgba(255,255,255,.04); }
-.overview-timeline-item.arrival  { border-left: 3px solid var(--jade); }
-.overview-timeline-item.departure{ border-left: 3px solid var(--warning); }
-.overview-timeline-item.stay     { border-left: 3px solid #3B82F6; }
-.overview-timeline-item.new-booking { border-left: 3px solid #8B5CF6; }
-.overview-empty {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  text-align: center;
-  padding: 16px 0;
-}
-.overview-timeline-footer {
-  font-size: 11px;
-  color: var(--jade);
-  font-weight: 600;
-  text-align: right;
-  margin-top: 8px;
-  cursor: pointer;
-}
-
-/* Widget header */
-.widget-header {
+.status-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
-}
-.widget-kicker {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--text-tertiary);
-  margin-bottom: 3px;
-}
-.widget-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-/* Séparateur */
-.separator {
-  height: 1px;
-  background: var(--border-color);
-  margin: 20px 0;
-}
-
-
-/* ============================================================
-   2. KPI CARDS — variantes spécifiques dashboard
-   ============================================================ */
-
-/* KPI cliquable avec effet hover accentué */
-.kpi-card--clickable {
-  cursor: pointer;
-  transition: transform .2s var(--ease-out), box-shadow .2s, border-color .15s;
-}
-.kpi-card--clickable:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-float);
-  border-color: var(--sand);
-}
-.kpi-card--clickable:active { transform: translateY(-1px); }
-
-/* Couleurs spécifiques KPI dashboard */
-.kpi-icon-wrap {
-  width: 36px; height: 36px;
-  border-radius: var(--radius-sm);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
   margin-bottom: 12px;
 }
-.kpi-icon-wrap.green  { background: var(--jade-glow); color: var(--jade); }
-.kpi-icon-wrap.blue   { background: rgba(37,99,235,.1); color: #2563EB; }
-.kpi-icon-wrap.amber  { background: rgba(217,119,6,.1); color: var(--warning); }
-.kpi-icon-wrap.red    { background: var(--error-bg); color: var(--error); }
-.kpi-icon-wrap.purple { background: rgba(139,92,246,.1); color: #8B5CF6; }
+
+/* Icône de la plateforme */
+.status-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.status-icon-airbnb  { background: rgba(255,90,95,.12); color: #FF5A5F; }
+.status-icon-booking { background: rgba(0,53,128,.12); color: #003580; }
+.status-icon-stripe  { background: rgba(99,91,255,.12); color: #635BFF; }
+.status-icon-direct  { background: var(--jade-glow); color: var(--jade); }
+
+/* Label statut (connecté / non connecté) */
+.status-label {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.status-ok      { background: var(--jade-subtle); color: var(--jade); }
+.status-warning { background: var(--warning-bg); color: var(--warning); }
+.status-error   { background: var(--error-bg); color: var(--error); }
+
+article.status-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 5px;
+}
+article.status-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
 
 
 /* ============================================================
-   3. CHECKIN / CHECKOUT / MÉNAGE
+   3. SECTION HEADERS
    ============================================================ */
 
-.checkin, .arrival  { color: var(--jade); }
-.checkout, .departure { color: var(--warning); }
-.stay               { color: #3B82F6; }
-.cleaning           { color: #8B5CF6; }
-.new-booking        { color: #8B5CF6; }
-
-/* Checklists */
-.checklists-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.checklist-card {
-  background: var(--cream-warm);
-  border: 1px solid var(--border-warm);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  transition: transform .2s var(--ease-out), box-shadow .2s;
-}
-.checklist-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
-}
-[data-theme="dark"] .checklist-card { background: #111827; border-color: rgba(255,255,255,.08); }
-
-.checklist-card-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-color);
+.section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
 }
-.checklist-card.checklist-card-completed { border-left: 3px solid var(--jade); }
-.checklist-card.checklist-card-pending   { border-left: 3px solid var(--warning); }
-.checklist-card-completed .checklist-card-header { background: var(--jade-subtle); }
-.checklist-card-pending   .checklist-card-header { background: rgba(217,119,6,.06); }
 
-.checklist-info { padding: 12px 16px; }
-.checklist-info-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-.checklist-property {
-  font-size: 14px;
-  font-weight: 700;
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -.02em;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin: 0;
 }
 
-.checklist-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 600;
-}
-.checklist-badge-completed { background: var(--jade-subtle); color: var(--jade); }
-.checklist-badge-pending   { background: rgba(217,119,6,.1); color: var(--warning); }
-
-.checklist-footer {
-  padding: 10px 16px;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+.section-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
 }
 
 
 /* ============================================================
-   4. CLEANING WIDGET
+   4. MODALS — structure générique
    ============================================================ */
 
-.cleaning-checklists-widget { margin-top: 20px; }
-.cleaning-messages-section  { margin-top: 16px; }
-.email-messaging-section    { margin-top: 20px; }
-.ai-section                 { margin-top: 20px; }
-
-
-/* ============================================================
-   5. MODAL CHECKLIST
-   ============================================================ */
-
-.checklist-modal-overlay {
+/* Overlay + positionnement */
+.modal {
+  display: none;
   position: fixed;
   inset: 0;
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
   background: rgba(0,0,0,.5);
   backdrop-filter: blur(4px);
-  z-index: 9998;
-  display: none;
+  padding: 20px;
 }
-.checklist-modal-overlay.active { display: block; }
+.modal.active,
+.modal[style*="flex"],
+.modal[style*="block"] {
+  display: flex;
+}
 
-.checklist-modal {
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+/* Boite du modal */
+.modal-box,
+.modal-dialog,
+.modal .modal-content {
   background: var(--cream-warm);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  width: 90%;
-  max-width: 560px;
-  max-height: 85vh;
+  max-width: 580px;
+  width: 100%;
+  max-height: 90vh;
   overflow: auto;
-  z-index: 9999;
-  display: none;
+  animation: modalIn .3s var(--ease-out);
+  position: relative;
 }
-.checklist-modal.active { display: block; animation: modalIn .3s var(--ease-out); }
-[data-theme="dark"] .checklist-modal { background: #1C2333; }
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .modal-dialog,
+[data-theme="dark"] .modal .modal-content {
+  background: #1C2333;
+}
 
-.checklist-modal-header {
-  padding: 20px 22px;
-  border-bottom: 1px solid var(--border-color);
+/* Titre du modal */
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Bouton fermer */
+.close-modal-btn {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--cream-deep);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.close-modal-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Form dans modal */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Margin utilitaire manquant */
+.mb-lg { margin-bottom: 24px; }
+
+
+/* ============================================================
+   5. CALENDAR HEADER — correction fond noir + view tabs
+   ============================================================ */
+
+/* Le header principal du calendrier (fond obsidian) */
+.calendar-modern-header {
+  background: var(--obsidian);
+  color: white;
+}
+[data-theme="dark"] .calendar-modern-header { background: #060D16; }
+
+/* Header top : titre + actions */
+.calendar-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.checklist-modal-header h3 {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.checklist-modal-body   { padding: 20px 22px; }
-.checklist-modal-footer {
   padding: 16px 22px;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
 }
-.checklist-modal-meta {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-bottom: 14px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.checklist-modal-status { margin-bottom: 16px; }
 
-/* Tasks in modal */
-.tasks-list { display: flex; flex-direction: column; gap: 8px; }
-.task-item-modal {
+/* Zone view selector (sous le header top) */
+.view-selector {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  padding: 10px 16px;
+  gap: 8px;
+  background: var(--obsidian);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+[data-theme="dark"] .view-selector { background: #060D16; }
+
+/* Les onglets Jour/Semaine/Mois/Année */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,.08);
   border-radius: var(--radius-sm);
-  transition: background .12s;
-}
-.task-item-modal:hover { background: var(--cream-deep); }
-[data-theme="dark"] .task-item-modal { background: rgba(255,255,255,.04); }
-.task-item-modal.checked {
-  opacity: .65;
-  border-color: var(--jade);
-}
-.task-name {
-  font-size: 13.5px;
-  color: var(--text-primary);
-  flex: 1;
-}
-.task-item-modal.checked .task-name {
-  text-decoration: line-through;
-  color: var(--text-tertiary);
+  padding: 4px;
 }
 
-.task-checkbox {
-  width: 18px; height: 18px;
-  border-radius: 4px;
-  border: 2px solid var(--border-color);
+.view-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-xs);
+  border: none;
   background: transparent;
+  color: rgba(255,255,255,.55);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.view-tab:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.9); }
+.view-tab.active {
+  background: var(--jade);
+  color: white;
+  font-weight: 600;
+}
+
+/* Titre calendrier dans le header obsidian */
+.calendar-title-modern {
+  font-family: 'Instrument Serif', serif;
+  font-size: 18px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  margin: 0;
+}
+.calendar-title-modern i { font-size: 16px; opacity: .8; }
+
+/* Boutons d'action dans le header calendrier */
+.calendar-action-btn {
+  width: 34px; height: 34px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,.75);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: all .15s;
+  font-size: 13px;
+  transition: background .15s;
 }
-.task-checkbox.checked {
-  background: var(--jade);
-  border-color: var(--jade);
+.calendar-action-btn:hover {
+  background: rgba(255,255,255,.2);
   color: white;
-  font-size: 10px;
 }
 
 
 /* ============================================================
-   6. NOTIFICATIONS PANEL
+   6. MAIN HEADER / TOPBAR — version réelle du HTML
    ============================================================ */
 
-.notifications-panel {
-  position: fixed;
-  top: 0; right: 0; bottom: 0;
-  width: 360px;
-  background: var(--cream-warm);
-  border-left: 1px solid var(--border-warm);
-  box-shadow: var(--shadow-xl);
-  z-index: 500;
+header.main-header {
   display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform .3s var(--ease-out);
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: var(--cream-warm);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-lg);
+  margin: 20px 20px 24px;
+  box-shadow: var(--shadow-sm);
+  gap: 16px;
 }
-.notifications-panel.open { transform: translateX(0); }
-[data-theme="dark"] .notifications-panel {
+[data-theme="dark"] header.main-header {
   background: #111827;
   border-color: rgba(255,255,255,.07);
 }
 
-.notifications-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-.notifications-header h2 {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.notifications-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-.notification-badge {
-  background: var(--error);
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-}
-
-/* Activité */
-.activity-section { margin-bottom: 24px; }
-.activity-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--text-tertiary);
-  margin-bottom: 10px;
-}
-.activity-list { display: flex; flex-direction: column; gap: 6px; }
-.activity-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px 12px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  transition: background .12s;
-}
-.activity-item:hover { background: var(--cream-deep); }
-[data-theme="dark"] .activity-item { background: rgba(255,255,255,.04); }
-
-.activity-icon {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.activity-content { flex: 1; min-width: 0; }
-.activity-title   { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.activity-subtitle{ font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
-.activity-time    { font-size: 10.5px; color: var(--text-tertiary); margin-top: 3px; }
-.activity-empty   { text-align: center; padding: 20px; color: var(--text-tertiary); font-size: 13px; }
-.activity-loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
-
-
-/* ============================================================
-   7. STATUTS CONNEXIONS (intégrations)
-   ============================================================ */
-
-.status-icon {
-  width: 42px; height: 42px;
-  border-radius: var(--radius-sm);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-.status-logo {
-  max-width: 32px;
-  max-height: 32px;
-  object-fit: contain;
-}
-.status-booking-letter {
-  font-size: 16px;
-  font-weight: 800;
-  color: white;
-}
-.bh-source-letter {
-  width: 20px; height: 20px;
-  border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  color: white;
-  flex-shrink: 0;
-}
-.booking-letter {
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-}
-.status-completed { color: var(--jade); }
-.status-pending   { color: var(--warning); }
-
-
-/* ============================================================
-   8. FAB (bouton flottant mobile)
-   ============================================================ */
-
-.fab,
-.fab-add-resa {
-  position: fixed;
-  bottom: calc(80px + var(--sab));
-  right: 20px;
-  width: 52px; height: 52px;
-  background: var(--jade);
-  color: white;
-  border-radius: var(--radius-full);
-  border: none;
-  box-shadow: var(--jade-shadow), 0 4px 16px rgba(0,0,0,.15);
-  font-size: 22px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 200;
-  transition: transform .2s var(--ease-out), box-shadow .2s;
-}
-.fab:active,
-.fab-add-resa:active {
-  transform: scale(.92);
-  box-shadow: var(--shadow-md);
-}
-
-@media (max-width: 1024px) {
-  .fab,
-  .fab-add-resa { display: flex; }
-}
-
-
-/* ============================================================
-   9. THEME TOGGLE (header desktop)
-   ============================================================ */
-
-.theme-toggle {
-  width: 44px; height: 24px;
-  background: var(--cream-deep);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  position: relative;
-  transition: background .2s;
-  flex-shrink: 0;
-}
-.theme-toggle::after {
-  content: '';
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 16px; height: 16px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: var(--shadow-sm);
-  transition: transform .2s var(--ease-out);
-}
-[data-theme="dark"] .theme-toggle { background: var(--jade); border-color: var(--jade); }
-[data-theme="dark"] .theme-toggle::after { transform: translateX(20px); }
-
-
-/* ============================================================
-   10. LOADING / EMPTY STATES
-   ============================================================ */
-
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(245,240,232,.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: inherit;
-  z-index: 10;
-  backdrop-filter: blur(2px);
-}
-[data-theme="dark"] .loading-overlay { background: rgba(17,24,39,.8); }
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 32px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
-.loading-spinner {
-  width: 28px; height: 28px;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--jade);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--text-tertiary);
-  gap: 12px;
-}
-.empty-state i { font-size: 40px; opacity: .4; }
-.empty-state p { font-size: 14px; max-width: 280px; }
-
-
-/* ============================================================
-   11. CALENDAR — vues spécifiques
-   ============================================================ */
-
-/* Vue mois (mini-grille) */
-.month-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
-  background: var(--border-color);
-  padding: 1px;
-}
-.month-cell {
-  background: var(--cream-warm);
-  padding: 8px;
-  min-height: 80px;
-  position: relative;
-  cursor: pointer;
-  transition: background .12s;
-}
-[data-theme="dark"] .month-cell { background: #1C2333; }
-.month-cell:hover { background: var(--cream-deep); }
-[data-theme="dark"] .month-cell:hover { background: rgba(255,255,255,.04); }
-.month-cell-date {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  margin-bottom: 4px;
-}
-.month-cell.today .month-cell-date { color: var(--jade); font-weight: 700; }
-.month-cell.other-month {
-  background: var(--bg-tertiary);
-  opacity: .5;
-}
-
-/* Vue semaine */
-.week-view-header {
-  display: grid;
-  grid-template-columns: var(--property-column-width) repeat(7, 1fr);
-  background: var(--cream-deep);
-  border-bottom: 2px solid var(--border-color);
-}
-
-/* Vue année */
-.year-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  padding: 20px;
-  background: var(--bg-secondary);
-}
-.year-month-card {
-  background: var(--cream-warm);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  border: 1px solid var(--border-warm);
-  cursor: pointer;
-  transition: transform .2s var(--ease-out), box-shadow .2s, border-color .15s;
-}
-.year-month-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
-  border-color: var(--jade);
-}
-[data-theme="dark"] .year-month-card { background: #111827; border-color: rgba(255,255,255,.07); }
-.year-month-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: var(--text-primary);
-}
-.year-month-stats {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  flex-wrap: wrap;
-}
-.year-month-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.year-month-stat i { font-size: 11px; color: var(--jade); }
-
-/* Filtres calendrier */
-.property-filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--cream-deep);
-}
-[data-theme="dark"] .property-filters { background: #0D1117; }
-
-/* Property badge (couleur par logement) */
-.property-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all .15s;
-  background: var(--cream-warm);
-  color: var(--text-secondary);
-}
-.property-badge:hover { background: var(--cream-deep); }
-.property-badge.active { color: white; border-color: transparent; }
-
-/* Photos grid (dans modal réservation) */
-.photos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-.photo-item {
-  aspect-ratio: 4/3;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  position: relative;
-  cursor: pointer;
-}
-.photo-item img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: transform .3s;
-}
-.photo-item:hover img { transform: scale(1.05); }
-.photo-zoom-icon {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  opacity: 0;
-  transition: opacity .15s;
-}
-.photo-item:hover .photo-zoom-icon { opacity: 1; }
-
-/* Notes dans modal */
-.notes-content {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  min-height: 60px;
-  white-space: pre-wrap;
-}
-[data-theme="dark"] .notes-content { background: rgba(255,255,255,.04); }
-
-/* FC (FullCalendar) overrides */
-.fc-button {
-  background: var(--jade);
-  border-color: var(--jade);
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  transition: background .15s;
-}
-.fc-button:hover { background: var(--jade-light); border-color: var(--jade-light); }
-.fc-button:disabled { opacity: .5; }
-.fc-event {
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-}
-
-/* Toast container */
-.toast-container {
-  position: fixed;
-  top: calc(16px + var(--sat));
-  right: 20px;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-}
-.toast-container .toast { pointer-events: all; }
-
-/* Modal info grid */
-.modal-info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-.modal-info-item {}
-.modal-info-label {
+.page-kicker {
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: .12em;
   color: var(--text-tertiary);
   margin-bottom: 4px;
 }
-.modal-info-value {
-  font-size: 14px;
-  font-weight: 600;
+h1.page-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -.025em;
   color: var(--text-primary);
+  margin: 0 0 5px;
+  line-height: 1.2;
 }
-.modal-section { margin-bottom: 20px; }
-.modal-section-title {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
+.page-subtitle {
+  font-size: 13px;
   color: var(--text-tertiary);
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-color);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 480px;
 }
-.modal-body {
-  padding: 20px 22px;
-}
-.modal-footer {
-  padding: 16px 22px;
-  border-top: 1px solid var(--border-color);
+
+.header-left { flex: 1; }
+.header-actions {
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 
 /* ============================================================
-   12. RESPONSIVE DASHBOARD
+   7. PAGE CONTENT — padding et layout général
    ============================================================ */
 
-@media (max-width: 1024px) {
-  .status-grid { grid-template-columns: repeat(2, 1fr); }
-  .year-grid { grid-template-columns: repeat(3, 1fr); }
-  .modal-info-grid { grid-template-columns: 1fr; }
-  .notifications-panel { width: 320px; }
+main.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100dvh;
+  background: var(--bg-primary);
+}
+[data-theme="dark"] main.main-content { background: var(--bg-primary); }
+
+div.page-content {
+  padding: 0 20px 40px;
 }
 
-@media (max-width: 768px) {
-  .status-grid { grid-template-columns: 1fr; }
-  .year-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; }
-  .checklists-grid { grid-template-columns: 1fr; }
-  .notifications-panel {
-    width: 100%;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    top: auto;
-    bottom: 0;
-    height: 80vh;
-    transform: translateY(100%);
+/* Sur mobile */
+@media (max-width: 1024px) {
+  main.main-content { margin-left: 0; }
+  div.page-content  { padding: 0 12px 100px; }
+  header.main-header {
+    margin: 12px 12px 16px;
+    padding: 14px 16px;
+    flex-direction: column;
+    gap: 12px;
   }
-  .notifications-panel.open { transform: translateY(0); }
-  .modal-info-grid { grid-template-columns: 1fr; }
+  h1.page-title { font-size: 22px; }
+  .page-subtitle { display: none; }
+  .header-actions { width: 100%; }
+  .form-grid { grid-template-columns: 1fr; }
+  .status-cards-grid { grid-template-columns: 1fr 1fr; }
+}
 
-  /* Sur mobile : cacher les éléments non essentiels du dashboard */
-  .hide-on-mobile { display: none; }
+@media (max-width: 640px) {
+  .status-cards-grid { grid-template-columns: 1fr; }
+  .kpi-grid-section  { grid-template-columns: 1fr 1fr; }
+  .view-tab span { display: none; }
+}
+
+
+/* ============================================================
+   8. APP CONTAINER
+   ============================================================ */
+
+div.app-container {
+  display: flex;
+  min-height: 100dvh;
 }
