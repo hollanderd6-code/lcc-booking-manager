@@ -8508,6 +8508,90 @@ if (document.readyState === 'loading') {
 
 </script>
 <script></script><script src="/js/bh-layout.js"></script>
+<script src="/js/bh-theme-v3-nav.js"></script>
+<script>
+/* Fallback inline si bh-theme-v3-nav.js non dispo sur le serveur */
+(function(){
+  if(document.documentElement.getAttribute('data-theme-v3')!=='1') return;
+  if(document.getElementById('bh-demo-nav-el')) return; // déjà injecté par le JS externe
+  var NAV=[
+    {l:'Dashboard',i:'fa-chart-line',h:'/app.html',p:'app'},
+    {l:'Messages',i:'fa-comment-dots',h:'/messages.html',p:'messages'},
+    {l:'Logements',i:'fa-building',h:'/settings.html',p:'settings'},
+    {l:'Cautions',i:'fa-shield-halved',h:'/deposits.html',p:'deposits'},
+    {l:'Factures',i:'fa-file-invoice',h:'/factures.html',p:'factures'},
+    {l:'Livret',i:'fa-book-open',h:'/welcome.html',p:'welcome'}
+  ];
+  var page=document.body.getAttribute('data-page')||'';
+  var path=window.location.pathname.toLowerCase();
+  function init(){
+    if(document.getElementById('bh-demo-nav-el')) return;
+    // Restore saved theme
+    try{var t=localStorage.getItem('bh_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+    var btns=NAV.map(function(p){
+      var active=p.p===page||path===p.h.toLowerCase();
+      return '<a href="'+p.h+'?v3=1" style="padding:4px 13px;border-radius:999px;border:1px solid rgba(255,255,255,'+(active?'0':'0.15')+');background:'+(active?'#1A7A5E':'transparent')+';color:'+(active?'white':'rgba(255,255,255,.6)')+';font-family:DM Sans,sans-serif;font-size:11.5px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><i class="fas '+p.i+'"></i> '+p.l+'</a>';
+    }).join('');
+    var nav=document.createElement('div');
+    nav.id='bh-demo-nav-el';
+    nav.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#0D1117;display:flex;align-items:center;gap:6px;padding:0 16px;height:40px;font-family:DM Sans,sans-serif;';
+    nav.innerHTML='<span style="color:rgba(255,255,255,.4);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-right:6px;">Vue</span>'
+      +btns
+      +'<div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;">'
+      +'<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;">Mode</span>'
+      +'<button id="bhV3ToggleInline" style="width:44px;height:24px;background:rgba(255,255,255,.15);border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .2s;" title="Dark/Light"></button>'
+      +'</div>';
+    document.body.insertBefore(nav,document.body.firstChild);
+    // Toggle dot
+    var tog=document.getElementById('bhV3ToggleInline');
+    var dot=document.createElement('span');
+    dot.style.cssText='position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform .2s;display:block;';
+    tog.appendChild(dot);
+    function updateToggle(){
+      var dark=document.documentElement.getAttribute('data-theme')==='dark';
+      tog.style.background=dark?'#1A7A5E':'rgba(255,255,255,.15)';
+      dot.style.transform=dark?'translateX(20px)':'translateX(0)';
+    }
+    updateToggle();
+    tog.addEventListener('click',function(){
+      var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+      document.documentElement.setAttribute('data-theme',next);
+      try{localStorage.setItem('bh_theme',next);}catch(e){}
+      updateToggle();
+    });
+    // Titre en Instrument Serif
+    setTimeout(function(){
+      var titles={app:'Tableau de <em style="font-style:italic;color:#1A7A5E;">bord</em>',messages:'Mes <em style="font-style:italic;color:#1A7A5E;">messages</em>',settings:'Mes <em style="font-style:italic;color:#1A7A5E;">logements</em>',deposits:'Gestion des <em style="font-style:italic;color:#1A7A5E;">cautions</em>',factures:'Factures <em style="font-style:italic;color:#1A7A5E;">clients</em>',welcome:"Livret d'<em style='font-style:italic;color:#1A7A5E;'>accueil</em>"};
+      var el=document.querySelector('.main-header h1.page-title,.main-header .page-title');
+      if(el&&titles[page]&&!el.querySelector('em')) el.innerHTML=titles[page];
+      // Légende calendrier
+      var vs=document.querySelector('.view-selector');
+      if(vs&&!vs.querySelector('.bh-cal-leg')){
+        var leg=document.createElement('div');
+        leg.className='bh-cal-leg';
+        leg.style.cssText='display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;';
+        leg.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;display:inline-block;"></span>Airbnb</span>'
+          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#4A90E2;flex-shrink:0;display:inline-block;"></span>Booking</span>'
+          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#2AAE86;flex-shrink:0;display:inline-block;"></span>Direct</span>';
+        vs.appendChild(leg);
+      }
+    },800);
+    setTimeout(function(){
+      var vs=document.querySelector('.view-selector');
+      if(vs&&!vs.querySelector('.bh-cal-leg')){
+        var leg=document.createElement('div');
+        leg.className='bh-cal-leg';
+        leg.style.cssText='display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;';
+        leg.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;display:inline-block;"></span>Airbnb</span>'
+          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#4A90E2;flex-shrink:0;display:inline-block;"></span>Booking</span>'
+          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#2AAE86;flex-shrink:0;display:inline-block;"></span>Direct</span>';
+        vs.appendChild(leg);
+      }
+    },2500);
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}else{init();}
+})();
+</script>
 
 <!-- Capacitor Core -->
 <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
