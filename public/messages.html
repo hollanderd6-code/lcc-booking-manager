@@ -591,10 +591,68 @@ html[data-theme-v3="1"] .page-content {
   padding: 0 !important;
   margin: 0 !important;
 }
+/* ── Hide back button from bh-layout.js ── */
+html[data-theme-v3="1"] .header-actions .btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
+  display: none !important;
+}
+
+/* ── Style page title like "Mes messages" ── */
+html[data-theme-v3="1"] header.main-header .page-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+}
+html[data-theme-v3="1"] header.main-header .page-kicker {
+  font-size: 10.5px !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: rgba(13,17,23,.38) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Header actions layout (refresh + group btn) ── */
+html[data-theme-v3="1"] .header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* ── Hide emoji bar if it gets injected ── */
+html[data-theme-v3="1"] [id*="emoji"],
+html[data-theme-v3="1"] [class*="emoji"],
+html[data-theme-v3="1"] .emoji-picker,
+html[data-theme-v3="1"] .emoji-panel {
+  display: none !important;
+}
+
+/* ── Show property in conversation item ── */
+#conversationsList .conv-property {
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: .85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  margin-top: 1px;
+}
+
+/* Photo attach button */
+.msgs-attach-btn {
+  width: 36px; height: 36px; flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 10px; background: white;
+  color: #8A96A3; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: all .15s;
+}
+.msgs-attach-btn:hover { background: #f5f2ec; color: #1A7A5E; }
+
 </style>
 </head>
 
-<body data-page="messages">
+<body data-page="messages" data-kicker="Communication" data-title="Messages" data-subtitle="">
 
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
@@ -772,17 +830,10 @@ html[data-theme-v3="1"] .page-content {
   <main class="main-content">
     <div id="bhHeader"></div>
 
-    <!-- Page header -->
-    <div class="msgs-page-header">
-      <div>
-        <div class="msgs-kicker">Communication</div>
-        <h1 class="msgs-heading">Mes <em>messages</em></h1>
-      </div>
-      <div class="msgs-header-right">
-        <button class="msgs-icon-btn" title="Notifications"><i class="fas fa-bell"></i></button>
-        <button class="msgs-icon-btn" title="Actualiser" onclick="if(window.loadConversations) loadConversations();"><i class="fas fa-sync-alt"></i></button>
-        <button class="msgs-group-btn"><i class="fas fa-plus"></i> Message groupé</button>
-      </div>
+    <!-- Custom actions for bh-layout.js header -->
+    <div id="bhHeaderActions" style="display:none;">
+      <button class="msgs-icon-btn" title="Actualiser" onclick="if(window.loadConversations) loadConversations();"><i class="fas fa-sync-alt"></i></button>
+      <button class="msgs-group-btn"><i class="fas fa-plus"></i> Message groupé</button>
     </div>
 
     <!-- Legacy hidden containers (JS compatibility) -->
@@ -853,8 +904,8 @@ html[data-theme-v3="1"] .page-content {
 
         <!-- Input: chat-owner.js uses #chatInput and #sendBtn -->
         <div class="chat-modal-input" id="chatInputArea" style="display:none;">
+          <button class="msgs-attach-btn" id="photoUploadBtn" title="Envoyer une photo" onclick="if(window.openPhotoUpload) openPhotoUpload();"><i class="fas fa-image"></i></button>
           <textarea class="chat-input" id="chatInput" placeholder="Répondre à…" rows="1"></textarea>
-          <button class="msgs-icon-btn" title="Réponse rapide"><i class="fas fa-bolt"></i></button>
           <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()"><i class="fas fa-paper-plane"></i></button>
         </div>
 
@@ -1426,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/logout-fix.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
-<script src="/js/chat-emoji-photo.js"></script>
+<!-- chat-emoji-photo removed - emoji bar not wanted -->
 <script src="/js/messages-badge-desktop-mobile.js"></script> 
 <script>
 // Fix scroll iOS Capacitor
@@ -1552,32 +1603,81 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     };
   }
 
-  // Search filter
-  document.addEventListener('DOMContentLoaded', function() {
+  // Search filter + property name injection + back button hide
+  function initMessages() {
+    // Search
     var input = document.getElementById('msgsSearchInput');
-    if (!input) return;
-    input.addEventListener('input', function() {
-      var q = this.value.toLowerCase();
-      document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
-        var h3 = item.querySelector('h3');
-        var name = h3 ? h3.textContent.toLowerCase() : '';
-        item.style.display = name.includes(q) ? '' : 'none';
+    if (input) {
+      input.addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
+          var h3 = item.querySelector('h3');
+          var name = h3 ? h3.textContent.toLowerCase() : '';
+          item.style.display = name.includes(q) ? '' : 'none';
+        });
       });
-    });
+    }
     
-    // Hide back button
-    document.querySelectorAll('.back-btn, .btn-back, .header-back, [class*="back-btn"]').forEach(function(el) {
-      if (el.textContent.includes('dashboard') || el.textContent.includes('Retour')) {
-        el.style.display = 'none';
-      }
+    // Hide back button injected by bh-layout.js
+    document.querySelectorAll('.header-actions .btn-ghost, .header-actions .btn.btn-ghost').forEach(function(el) {
+      el.style.display = 'none';
     });
+  }
+  
+  // Inject property label into each conversation item after chat-owner.js renders
+  function injectPropertyLabels() {
+    document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
+      if (item.querySelector('.conv-property')) return; // already done
+      var propBadge = item.querySelector('.property-badge');
+      if (!propBadge) return;
+      var propName = propBadge.textContent.trim();
+      var propColor = propBadge.style.color || '#1A7A5E';
+      if (!propName || propName === 'Logement') return;
+      
+      var h3 = item.querySelector('.conversation-info h3');
+      if (!h3) return;
+      
+      var propEl = document.createElement('div');
+      propEl.className = 'conv-property';
+      propEl.textContent = propName;
+      propEl.style.color = propColor;
+      h3.parentNode.insertBefore(propEl, h3.nextSibling);
+    });
+  }
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    initMessages();
+    // Watch for conversation items being rendered
+    var convList = document.getElementById('conversationsList');
+    if (convList) {
+      new MutationObserver(function() {
+        injectPropertyLabels();
+        // Re-hide back button
+        document.querySelectorAll('.header-actions .btn-ghost').forEach(function(el) {
+          el.style.display = 'none';
+        });
+        // Hide emoji panel
+        document.querySelectorAll('[id*="emoji"],[class*="emoji"]').forEach(function(el) {
+          el.style.display = 'none';
+        });
+      }).observe(convList, { childList: true, subtree: true });
+    }
   });
   
   setTimeout(function() {
-    document.querySelectorAll('.back-btn, .btn-back, [class*="back-btn"]').forEach(function(el) {
-      if (el.textContent.includes('dashboard') || el.textContent.includes('Retour')) el.style.display = 'none';
+    initMessages();
+    injectPropertyLabels();
+    // Hide back btn
+    document.querySelectorAll('.header-actions .btn-ghost, .header-actions a').forEach(function(el) {
+      if (!el.classList.contains('msgs-icon-btn') && !el.classList.contains('msgs-group-btn')) {
+        el.style.display = 'none';
+      }
     });
-  }, 1000);
+    // Hide emoji
+    document.querySelectorAll('[id*="emoji"],[class*="emoji"],[class*="Emoji"]').forEach(function(el) {
+      el.style.cssText += 'display:none!important;';
+    });
+  }, 800);
 })();
 </script>
 
