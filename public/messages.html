@@ -666,6 +666,10 @@ html[data-theme-v3="1"] .emoji-panel {
   cursor: pointer;
   transition: background .15s;
   white-space: nowrap;
+  position: fixed;
+  top: calc(40px + 12px);
+  right: 24px;
+  z-index: 200;
 }
 .msgs-back-btn:hover { background: #15624B; }
 .msgs-back-btn i { font-size: 13px; }
@@ -1860,30 +1864,19 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
 
 <script>
-// Move back button into bh-layout header + hide the btn-ghost back link
+// Hide bh-layout's back button, keep ours fixed
 (function() {
-  function fixHeader() {
-    var headerActions = document.querySelector('header.main-header .header-actions');
-    var backBtn = document.getElementById('msgsDirectBackBtn');
-    if (headerActions && backBtn && !backBtn._moved) {
-      // Hide the btn-ghost (retour au dashboard from bh-layout)
-      headerActions.querySelectorAll('.btn-ghost, .btn.btn-ghost').forEach(function(el) {
-        el.style.display = 'none';
-      });
-      // Move our button into header-actions at the start
-      headerActions.insertBefore(backBtn, headerActions.firstChild);
-      backBtn.style.position = '';
-      backBtn._moved = true;
-    }
+  function hideLayoutBackBtn() {
+    document.querySelectorAll('.header-actions .btn-ghost, .header-actions .btn.btn-ghost, header .btn-ghost').forEach(function(el) {
+      el.style.display = 'none';
+    });
   }
-  
-  // Try immediately and via MutationObserver on #bhHeader
   var bhHeader = document.getElementById('bhHeader');
   if (bhHeader) {
-    new MutationObserver(function() { fixHeader(); }).observe(bhHeader, { childList: true, subtree: true });
+    new MutationObserver(hideLayoutBackBtn).observe(bhHeader, { childList: true, subtree: true });
   }
-  setTimeout(fixHeader, 300);
-  setTimeout(fixHeader, 800);
+  setTimeout(hideLayoutBackBtn, 300);
+  setTimeout(hideLayoutBackBtn, 1000);
 })();
 </script>
 
