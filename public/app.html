@@ -7945,6 +7945,59 @@ html[data-theme-v3="1"] main.main-content {
     padding-top: calc(28px + 72px) !important;
   }
 }
+
+/* ══════════════════════════════════════
+   SIDEBAR FIXE — tout visible sans scroll
+══════════════════════════════════════ */
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important;
+  top: 40px !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-theme-v3="1"] .sidebar nav.sidebar-nav,
+html[data-theme-v3="1"] .sidebar .sidebar-nav {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  padding: 4px 8px !important;
+  min-height: 0 !important;
+}
+html[data-theme-v3="1"] .sidebar nav.sidebar-nav::-webkit-scrollbar,
+html[data-theme-v3="1"] .sidebar .sidebar-nav::-webkit-scrollbar { display: none !important; }
+
+/* Nav-items compacts pour tout faire tenir */
+html[data-theme-v3="1"] .sidebar .nav-item,
+html[data-theme-v3="1"] aside.sidebar a.nav-item {
+  padding: 8px 12px !important;
+  margin: 1px 0 !important;
+  gap: 10px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+html[data-theme-v3="1"] .sidebar .nav-item i,
+html[data-theme-v3="1"] aside.sidebar a.nav-item i {
+  font-size: 14px !important;
+  width: 18px !important;
+}
+
+/* Titres de section compacts */
+html[data-theme-v3="1"] .sidebar .nav-section-title,
+html[data-theme-v3="1"] .sidebar .sidebar-nav-label {
+  padding: 8px 8px 3px !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+}
+html[data-theme-v3="1"] .sidebar .nav-section {
+  margin-bottom: 0 !important;
+}
 </style>
 
 <!-- ========================== -->
