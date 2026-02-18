@@ -666,10 +666,6 @@ html[data-theme-v3="1"] .emoji-panel {
   cursor: pointer;
   transition: background .15s;
   white-space: nowrap;
-  position: fixed;
-  top: calc(40px + 12px);
-  right: 24px;
-  z-index: 200;
 }
 .msgs-back-btn:hover { background: #15624B; }
 .msgs-back-btn i { font-size: 13px; }
@@ -725,9 +721,7 @@ html[data-theme-v3="1"] .emoji-panel {
 <body data-page="messages" data-kicker="Communication" data-title="Messages" data-subtitle="">
 
 <script src="/js/auth-fetch.js"></script>
-<link rel="stylesheet" href="/css/mobile-native-styles.css">
-</head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+
 <script>
 (function() {
   'use strict';
@@ -1105,18 +1099,36 @@ console.log('✅ Fonctions helpers messages chargées');
 
 <!-- Script -->
 
-<script>
-// Override isMobileDevice before chat-owner.js loads
-// Forces desktop mode so openChat() never redirects to chat-mobile.html
-function isMobileDevice() { return false; }
-window.isMobileDevice = function() { return false; };
-</script>
 <script src="/js/chat-owner.js"></script>
+
 <script>
-// Reassign isMobileDevice after chat-owner.js - simple override
-window.isMobileDevice = function() { return false; };
-isMobileDevice = function() { return false; };
+// Expose internal chat-owner.js functions needed by our openChat override
+// These are declared as local functions/vars, we expose them via a trick:
+// Re-read them after chat-owner.js executes
+window._bhExposeInternals = function() {
+  // currentConversationId is a var in chat-owner.js scope - can't access directly
+  // But we set it ourselves in our openChat override, so that's fine
+  
+  // loadMessages and markMessagesAsRead - expose via eval if accessible
+  try {
+    if (typeof loadMessages !== 'undefined') window.loadMessages = loadMessages;
+    if (typeof markMessagesAsRead !== 'undefined') window.markMessagesAsRead = markMessagesAsRead;
+    if (typeof socket !== 'undefined') window.socket = socket;
+    if (typeof currentConversationId !== 'undefined') {
+      Object.defineProperty(window, 'currentConversationId', {
+        get: function() { return currentConversationId; },
+        set: function(v) { currentConversationId = v; },
+        configurable: true
+      });
+    }
+    console.log('✅ Internals exposed:', !!window.loadMessages, !!window.markMessagesAsRead);
+  } catch(e) {
+    console.warn('Could not expose internals:', e);
+  }
+};
+window._bhExposeInternals();
 </script>
+
 <!-- Auth + User -->
 <script>
     (async function checkSubscriptionAccess() {
@@ -1642,16 +1654,55 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (!orig || orig._bhPatched) return;
 
     window.openChat = function(conversationId) {
-      // Call original → populates #chatMessages, #chatModalTitle, etc.
-      orig.call(this, conversationId);
+      console.log('🎯 BH openChat override:', conversationId);
+      
+      // Set currentConversationId (used by sendMessageOwner etc.)
+      window.currentConversationId = conversationId;
+      
+      var conv = (window.allConversations || []).find(function(c) {
+        return String(c.id) === String(conversationId);
+      });
+      if (!conv) { console.warn('Conv not found:', conversationId); return; }
 
-      // Show our inline panel
-      setTimeout(function() {
-        var conv = (window.allConversations || []).find(function(c) {
-          return String(c.id) === String(conversationId);
-        });
-        showInlineChat(conv || { id: conversationId });
-      }, 80);
+      // Update title (chat-owner.js normally does this)
+      var titleEl = document.getElementById('chatModalTitle');
+      if (titleEl && window.cleanGuestName) titleEl.textContent = window.cleanGuestName(conv);
+      else if (titleEl) titleEl.textContent = conv.guest_display_name || conv.guest_name || 'Conversation';
+
+      var propEl = document.getElementById('chatPropertyName');
+      if (propEl) propEl.textContent = conv.property_name || '';
+
+      var checkinEl = document.getElementById('chatCheckinDate');
+      if (checkinEl && conv.reservation_start_date) {
+        checkinEl.textContent = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR');
+      }
+
+      var copyBtn = document.getElementById('btnCopyInviteLink');
+      if (copyBtn) copyBtn.style.display = (conv.chat_token && conv.pin_code) ? 'inline-flex' : 'none';
+
+      var bookingBtn = document.getElementById('btnBookingMessage');
+      if (bookingBtn) {
+        var isBooking = (conv.platform || '').toLowerCase().includes('booking');
+        bookingBtn.style.display = isBooking ? 'inline-flex' : 'none';
+      }
+
+      // Show our inline panel immediately
+      showInlineChat(conv);
+
+      // Load messages via the original loadMessages function
+      if (window.loadMessages) {
+        window.loadMessages(conversationId);
+      }
+
+      // Mark as read
+      if (window.markMessagesAsRead) {
+        window.markMessagesAsRead(conversationId);
+      }
+
+      // Join socket room
+      if (window.socket) {
+        window.socket.emit('join_conversation', conversationId);
+      }
     };
     window.openChat._bhPatched = true;
   }
