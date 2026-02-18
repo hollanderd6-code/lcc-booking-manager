@@ -37,18 +37,15 @@ function getSidebarHTML() {
   return `
 <aside class="sidebar">
   <div class="sidebar-header">
-    <a class="sidebar-logo" href="/">
-      <!-- Logo V3 : icône maison sur fond dark (remplace le cercle vert) -->
-      <span class="sidebar-logo-icon" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;min-width:36px;background:#0D1117;border-radius:10px;flex-shrink:0;">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 12L12 3l9 9v9H15v-5h-6v5H3z" fill="#2AAE86"/>
-        </svg>
+    <a class="sidebar-logo" href="/" style="display:flex;align-items:center;gap:10px;padding:22px 18px 18px;text-decoration:none;">
+      <span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;min-width:36px;background:#0D1117;border-radius:10px;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M3 12L12 3l9 9v9H15v-5h-6v5H3z" fill="#2AAE86"/></svg>
       </span>
-      <div class="sidebar-logo-text" style="display:flex;flex-direction:column;justify-content:center;margin-left:10px;">
-        <span class="sidebar-logo-title" style="font-family:'Instrument Serif',Georgia,serif;font-size:18px;line-height:1.15;font-weight:400;letter-spacing:-0.01em;">
-          <span style="color:#0D1117;font-weight:400;font-style:normal;">Boosting</span><span style="color:#1A7A5E;font-weight:400;font-style:italic;">host</span>
+      <div style="display:flex;flex-direction:column;justify-content:center;">
+        <span style="font-family:'Instrument Serif',Georgia,serif;font-size:18px;line-height:1.15;font-weight:400;letter-spacing:-0.01em;">
+          <span style="color:#0D1117;">Boosting</span><em style="color:#1A7A5E;font-style:italic;">host</em>
         </span>
-        <span class="sidebar-logo-subtitle" style="font-size:10px;color:#7A8695;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;margin-top:1px;">
+        <span style="font-size:10px;color:#7A8695;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;margin-top:1px;">
           ${isSubAccount ? 'ESPACE COLLABORATEUR' : 'Smart Property Manager'}
         </span>
       </div>
@@ -140,15 +137,15 @@ function getSidebarHTML() {
     ` : ''}
   </nav>
 
-  <div class="sidebar-footer" style="flex-shrink:0;border-top:1px solid rgba(200,184,154,.4);padding:14px 12px;background:#F5F0E8;">
-    <div class="user-profile" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background .15s;">
-      <div class="user-avatar" id="sidebarUserAvatar" style="width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);border-radius:999px;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;flex-shrink:0;">C</div>
-      <div class="user-info" style="flex:1;min-width:0;">
-        <div class="user-name" id="sidebarUserName" style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Sans',sans-serif;line-height:1.3;">Utilisateur</div>
-        <div class="user-email" id="sidebarUserCompany" style="font-size:11px;color:#3D4A5C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Sans',sans-serif;line-height:1.3;">${isSubAccount ? 'Sous-compte' : 'Mon espace'}</div>
+  <div style="flex-shrink:0;border-top:1px solid #E8E0D0;padding:12px;background:#F5F0E8;">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;">
+      <div id="sidebarUserAvatar" style="width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;flex-shrink:0;">C</div>
+      <div style="flex:1;min-width:0;">
+        <div id="sidebarUserName" style="font-size:13px;font-weight:600;color:#0D1117 !important;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">Utilisateur</div>
+        <div id="sidebarUserCompany" style="font-size:11px;color:#5A6A7A;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">${isSubAccount ? 'Sous-compte' : 'Mon espace'}</div>
       </div>
-      <button type="button" id="logoutBtn" style="background:#EDE8DF;border:1px solid rgba(200,184,154,.5);color:#3D4A5C;border-radius:8px;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-        <i class="fas fa-sign-out-alt" style="font-size:11px;color:#3D4A5C;"></i>
+      <button id="logoutBtn" style="background:#EDE8DF;border:1px solid #D4C9B8;color:#5A6A7A;border-radius:8px;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+        <i class="fas fa-sign-out-alt" style="font-size:11px;"></i>
       </button>
     </div>
   </div>
