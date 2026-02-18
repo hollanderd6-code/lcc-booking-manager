@@ -19,7 +19,13 @@
 <link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/> 
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
-<link rel="stylesheet" href="/css/messages-badge-desktop.css">  
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=2">
+<script>
+  if (new URLSearchParams(location.search).get('v3') === '1') {
+    document.documentElement.setAttribute('data-theme-v3','1');
+  }
+</script>    
 <style>
     html, body {
       margin: 0 !important;
