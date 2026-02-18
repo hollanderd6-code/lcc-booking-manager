@@ -38,9 +38,7 @@ function getSidebarHTML() {
 <aside class="sidebar">
   <div class="sidebar-header">
     <a class="sidebar-logo" href="/" style="display:flex;align-items:center;gap:10px;padding:22px 18px 18px;text-decoration:none;">
-      <span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;min-width:36px;background:#0D1117;border-radius:10px;flex-shrink:0;">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M3 12L12 3l9 9v9H15v-5h-6v5H3z" fill="#2AAE86"/></svg>
-      </span>
+      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:36px;height:36px;min-width:36px;border-radius:10px;flex-shrink:0;object-fit:contain;">
       <div style="display:flex;flex-direction:column;justify-content:center;">
         <span style="font-family:'Instrument Serif',Georgia,serif;font-size:18px;line-height:1.15;font-weight:400;letter-spacing:-0.01em;">
           <span style="color:#0D1117;">Boosting</span><em style="color:#1A7A5E;font-style:italic;">host</em>
