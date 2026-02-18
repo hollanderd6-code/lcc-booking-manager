@@ -1432,6 +1432,15 @@ html[data-theme-v3="1"][data-theme="dark"] .sidebar .user-profile:hover { backgr
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .nav-section-title { color: rgba(255,255,255,.25) !important; }
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .user-name,
 html[data-theme-v3="1"][data-theme="dark"] .sidebar #sidebarUserName { color: var(--text-1) !important; }
+/* Sidebar footer reste clair même en dark — fond #F5F0E8 */
+html[data-theme-v3="1"] .sidebar .sidebar-footer .user-name,
+html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
+html[data-theme-v3="1"] .sidebar .sidebar-footer .user-email,
+html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3D4A5C !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer .user-name,
+html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer .user-email,
+html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3D4A5C !important; }
 
 html[data-theme-v3="1"][data-theme="dark"] .kpi-card,
 html[data-theme-v3="1"][data-theme="dark"] .card,
