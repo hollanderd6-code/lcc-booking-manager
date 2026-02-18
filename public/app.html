@@ -45,6 +45,11 @@ html[data-theme-v3="1"] header.main-header {
   align-items: center !important; padding: 0 32px !important; gap: 16px !important;
   margin: 0 !important;
 }
+/* CRITIQUE: le body a padding-top:40px (demo-nav) → sticky top:0 colle
+   juste sous la demo-nav. Si gap persist, forcer avec margin-top négatif */
+html[data-theme-v3="1"] .main-content > header.main-header:first-child {
+  margin-top: 0 !important;
+}
 
 /* Écraser les gradients colorés des boutons header */
 html[data-theme-v3="1"] #syncBtn,
@@ -122,11 +127,16 @@ html[data-theme-v3="1"][data-theme="dark"] #themeToggle, html[data-theme-v3="1"]
 html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
 html[data-theme-v3="1"] .sidebar .sidebar-logo > img { display: none !important; }
 
-/* Forcer couleur texte footer sidebar (même sans hover) */
+/* Forcer couleur texte footer sidebar — hardcodé pour éviter var(--text-1) blanc en dark */
 html[data-theme-v3="1"] .sidebar .user-name,
 html[data-theme-v3="1"] .sidebar #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
 html[data-theme-v3="1"] .sidebar .user-email,
 html[data-theme-v3="1"] .sidebar #sidebarUserCompany { color: #3D4A5C !important; }
+/* Même chose scoped sur sidebar-footer pour gagner en spécificité */
+html[data-theme-v3="1"] .sidebar .sidebar-footer .user-name,
+html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
+html[data-theme-v3="1"] .sidebar .sidebar-footer .user-email,
+html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3D4A5C !important; }
 </style>
 <style>
     html, body {
