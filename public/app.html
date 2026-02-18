@@ -35,7 +35,7 @@ html[data-theme-v3="1"] .sidebar {
 }
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important;
-  top: 40px !important; /* collé juste sous la barre dark */
+  top: 0 !important; /* body a déjà padding-top:40px — sticky à 0 = collé sous la barre dark */
   z-index: 50 !important;
   margin-top: 0 !important;
 }
@@ -44,6 +44,11 @@ html[data-theme-v3="1"] main.main-content {
   margin-top: 0 !important;
 }
 html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Tuer tout espace parasite entre barre dark et header */
+html[data-theme-v3="1"] main.main-content > header.main-header {
   margin-top: 0 !important;
   padding-top: 0 !important;
 }
@@ -7882,6 +7887,33 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     }
   }
 </style>
+
+<!-- ═══════════════════════════════════════
+     OVERRIDE FINAL : header collé à la barre dark, sans espace
+     Placé en dernier pour écraser tous les autres CSS
+═══════════════════════════════════════ -->
+<style>
+html[data-theme-v3="1"] body {
+  padding-top: 40px !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .app-container,
+html[data-theme-v3="1"] .main-content,
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+/* Le header sticky reste collé en haut du viewport (body a déjà padding-top:40px) */
+html[data-theme-v3="1"] header.main-header,
+html[data-theme-v3="1"] #bhMainHeader {
+  position: sticky !important;
+  top: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  z-index: 90 !important;
+}
+</style>
+
 <!-- ========================== -->
 <!--  SCRIPTS DE RÉPARATION    -->
 <!-- ========================== -->
