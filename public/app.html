@@ -637,8 +637,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       align-items: center;
       justify-content: space-between;
       padding: 16px 20px;
-      background: var(--bg-secondary);
-      border-bottom: 2px solid var(--calendar-border);
+      background: #F5F2EC;
+      border-bottom: 1px solid rgba(0,0,0,.08);
     }
 
     .period-nav-btn {
@@ -2870,7 +2870,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 </div>
 
 <!-- View Selector (hidden - now in header) -->
-<div class="view-selector" style="display:none;">
+<div class="view-selector" style="display:none !important; visibility:hidden !important; height:0 !important; overflow:hidden !important;">
 <div class="view-tabs">
 <button class="view-tab" data-view="day"><i class="fas fa-calendar-day"></i><span>Jour</span></button>
 <button class="view-tab" data-view="week"><i class="fas fa-calendar-week"></i><span>Semaine</span></button>
@@ -5021,13 +5021,13 @@ const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voya
             const tagsHtml = (r.riskTags && r.riskTags.length) 
               ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
                   ${r.riskTags.map(t => `
-                    <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; background:#f3f4f6; color:#374151;">
+                    <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; background:rgba(0,0,0,.06); color:#374151;">
                       ${String(t)}
                     </span>`).join('')}
                 </div>`
               : '';
             
-            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#f9fafb; border-radius:0 8px 8px 0;">
+            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <div style="font-weight:900; font-size:16px; color:${color};">${riskLabel} — ${score}/100</div>
                 <div style="font-weight:600; opacity:0.7;">${prop}</div>
@@ -6784,7 +6784,7 @@ try {
     const tagsHtml = riskTags.length
       ? `<div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
           ${riskTags.map(t => `
-            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f3f4f6; color:#374151;">
+            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.06); color:#374151;">
               ${String(t)}
             </span>`).join('')}
         </div>`
@@ -9288,5 +9288,45 @@ if (window.Capacitor) {
 <!-- Badge Messages -->
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/bh-layout.js"></script>  
+
+<style id="final-overrides">
+/* Force view-selector hidden regardless of any external CSS */
+.view-selector { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
+
+/* Force period-navigation to cream color */
+.period-navigation { background: #F5F2EC !important; border-bottom: 1px solid rgba(0,0,0,.08) !important; }
+</style>
+
+<script id="final-js-overrides">
+// Patch modal backgrounds after any modal is created or shown
+(function() {
+  function fixModalColors(root) {
+    // Fix modal-box backgrounds
+    (root || document).querySelectorAll('.modal-box, .modal-content').forEach(function(el) {
+      if (el.style.background === '#fff' || el.style.background === 'white' || 
+          el.style.backgroundColor === '#fff') {
+        el.style.background = '#F5F2EC';
+      }
+    });
+    // Fix risk row backgrounds  
+    (root || document).querySelectorAll('[style*="f9fafb"]').forEach(function(el) {
+      el.style.background = el.style.background.replace('#f9fafb', '#EDE8DF');
+    });
+  }
+  
+  // Run on DOM changes (catches dynamically created modals)
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(n) {
+        if (n.nodeType === 1) fixModalColors(n);
+      });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  
+  // Run once on load
+  document.addEventListener('DOMContentLoaded', function() { fixModalColors(); });
+})();
+</script>
 </body>
 </html>
