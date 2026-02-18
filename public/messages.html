@@ -1561,169 +1561,141 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
 <script>
 // ============================================================
-// PATCH: intercept chatModal.classList.add('active') → show inline chat
+// PATCH: inline chat panel + photo upload + utilities
+// Runs AFTER chat-owner.js (correct order)
 // ============================================================
 (function() {
-  // Patch openChat to show our inline panel instead of modal
-  var _openChat = window.openChat;
-  
+
+  // ── Show inline chat panel ──
   function showInlineChat(conv) {
-    var placeholder = document.getElementById('msgsChatPlaceholder');
-    var header = document.getElementById('msgsChatHeader');
-    var messages = document.getElementById('chatMessages');
-    var input = document.getElementById('chatInputArea');
-    
-    if (placeholder) placeholder.style.display = 'none';
-    if (header) header.style.display = 'flex';
-    if (messages) messages.style.display = 'flex';
-    if (input) input.style.display = 'flex';
-    
-    // Update header avatar - match list item color and letter
+    document.getElementById('msgsChatPlaceholder').style.display = 'none';
+    document.getElementById('msgsChatHeader').style.display = 'flex';
+    document.getElementById('chatMessages').style.display = 'flex';
+    document.getElementById('chatInputArea').style.display = 'flex';
+
+    // Avatar: letter + color matching conversation list
     var avatarEl = document.getElementById('msgsChatAvatar');
     if (conv && avatarEl) {
-      var name = (conv.guest_display_name || conv.guest_first_name || conv.guest_name || 'V');
-      var initial = name.charAt(0).toUpperCase();
-      avatarEl.textContent = initial;
+      var name = conv.guest_display_name || conv.guest_first_name || conv.guest_name || 'V';
+      avatarEl.textContent = name.charAt(0).toUpperCase();
       avatarEl.style.background = conv.property_color || '#1A7A5E';
     }
 
-    // Show meta separators if values present
-    setTimeout(function() {
-      var prop = document.getElementById('chatPropertyName');
-      var plat = document.getElementById('chatPlatform');
-      var date = document.getElementById('chatCheckinDate');
-      var sep1 = document.getElementById('chatMetaSep1');
-      var sep2 = document.getElementById('chatMetaSep2');
-      if (prop && plat && prop.textContent && plat.textContent) {
-        if(sep1) sep1.style.display = '';
-      }
-      if (plat && date && plat.textContent && date.textContent) {
-        if(sep2) sep2.style.display = '';
-      }
-      // Update platform text from conv data
-      if (conv && plat) plat.textContent = conv.platform || '';
-    }, 100);
-    
-    // Mark conversation active in list
+    // Platform in meta
+    var platEl = document.getElementById('chatPlatform');
+    if (conv && platEl) platEl.textContent = conv.platform || '';
+
+    // Active state in list
     document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
-      el.classList.toggle('active', el.dataset.conversationId == conv.id);
+      el.classList.toggle('active', String(el.dataset.conversationId) === String(conv && conv.id));
     });
 
-    // Prevent body scroll lock from chat-owner.js
+    // Unlock scroll (chat-owner.js locks it)
     setTimeout(function() {
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
       document.body.style.height = '';
       document.body.classList.remove('modal-open');
-    }, 10);
+      document.documentElement.style.overflow = '';
+    }, 30);
   }
 
-  // Override openChat
-  var origOpenChat = window.openChat;
-  window.openChat = function(conversationId) {
-    // Don't redirect mobile to chat-mobile.html on desktop
-    if (window.innerWidth >= 768) {
-      // Store so we can call showInlineChat after JS loads conv data
-      window._pendingInlineChatId = conversationId;
-    }
-    
-    // Call original (it populates chatMessages, chatModalTitle etc.)
-    if (origOpenChat) {
-      origOpenChat.apply(this, arguments);
-    }
-    
-    // Then show inline
-    setTimeout(function() {
-      var allConvs = window.allConversations || [];
-      var conv = allConvs.find(function(c) { return c.id == conversationId; });
-      showInlineChat(conv || {id: conversationId});
-    }, 50);
-  };
+  // ── Override openChat after chat-owner.js loaded ──
+  function patchOpenChat() {
+    var orig = window.openChat;
+    if (!orig || orig._bhPatched) return;
 
-  // Also intercept chatModal classList changes
-  var chatModal = document.getElementById('chatModal');
-  if (chatModal) {
-    var origAdd = chatModal.classList.add.bind(chatModal.classList);
-    chatModal.classList.add = function() {
-      // Don't show modal as overlay - we're inline
-      return;
+    window.openChat = function(conversationId) {
+      // Force desktop mode (prevent redirect to chat-mobile.html)
+      var origIsMobile = window.isMobileDevice;
+      window.isMobileDevice = function() { return false; };
+
+      // Call original → populates #chatMessages, #chatModalTitle, etc.
+      orig.call(this, conversationId);
+
+      // Restore
+      window.isMobileDevice = origIsMobile;
+
+      // Show our inline panel
+      setTimeout(function() {
+        var conv = (window.allConversations || []).find(function(c) {
+          return String(c.id) === String(conversationId);
+        });
+        showInlineChat(conv || { id: conversationId });
+      }, 80);
     };
+    window.openChat._bhPatched = true;
   }
 
-  // ── CLOSE CONVERSATION ──
+  // ── Close conversation ──
   window.closeCurrentConversation = function() {
     var convId = window.currentConversationId;
     if (!convId) return;
     if (!confirm('Clore cette conversation ? Elle passera en bas de liste.')) return;
-    
+
     var token = localStorage.getItem('lcc_token');
-    
-    // Try PATCH first, fallback to local only
     fetch('/api/chat/conversations/' + convId, {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'closed' })
-    }).catch(function() {}); // silent fail if API doesn't support PATCH
-    
-    // Local: find item in list, gray it out, move to bottom
+    }).catch(function() {});
+
     var item = document.querySelector('#conversationsList [data-conversation-id="' + convId + '"]');
     if (item) {
       item.style.opacity = '0.45';
       item.style.filter = 'grayscale(0.5)';
-      var list = document.getElementById('conversationsList');
-      if (list) list.appendChild(item); // move to bottom
+      document.getElementById('conversationsList').appendChild(item);
     }
-    
-    // Update allConversations status
-    if (window.allConversations) {
-      var conv = window.allConversations.find(function(c) { return c.id == convId; });
-      if (conv) conv.status = 'closed';
-    }
-    
-    // Update close button
+
     var btn = document.getElementById('chatCloseConvBtn');
     if (btn) {
       btn.innerHTML = '<i class="fas fa-undo"></i> Rouvrir';
-      btn.style.opacity = '.6';
-      btn.onclick = function() { window.reopenConversation && window.reopenConversation(convId); };
+      btn.onclick = function() {
+        fetch('/api/chat/conversations/' + convId, {
+          method: 'PATCH',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'active' })
+        }).catch(function() {});
+        if (item) { item.style.opacity = ''; item.style.filter = ''; }
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Clore la conversation';
+      };
     }
   };
 
-  // ── PHOTO UPLOAD (Cloudinary) ──
+  // ── Photo upload (Cloudinary) ──
   window.openPhotoUpload = function() {
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.multiple = true;
     input.style.display = 'none';
-    
+
     input.addEventListener('change', async function(e) {
       var files = Array.from(e.target.files);
-      if (!files.length) return;
-      
+      if (!files.length) { input.remove(); return; }
+
       var btn = document.getElementById('photoUploadBtn');
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-      
+
       try {
         for (var i = 0; i < files.length; i++) {
           var file = files[i];
           if (!file.type.startsWith('image/')) throw new Error('Doit être une image');
           if (file.size > 5 * 1024 * 1024) throw new Error('Max 5MB');
-          
+
           var formData = new FormData();
           formData.append('file', file);
           formData.append('upload_preset', 'chat-photos');
-          
+
           var res = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
             method: 'POST', body: formData
           });
-          
-          if (!res.ok) throw new Error('Erreur upload');
+          if (!res.ok) throw new Error('Erreur upload Cloudinary');
           var data = await res.json();
           var imageUrl = data.secure_url;
-          
-          // Send as message
+
+          // Send via API (correct field names from server.js)
           var token = localStorage.getItem('lcc_token');
           await fetch('/api/chat/send', {
             method: 'POST',
@@ -1735,14 +1707,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
               sender_name: 'Vous'
             })
           });
-          // Render image immediately in chat
-          if (window.appendMessage) {
-            window.appendMessage({
-              sender_type: 'owner',
-              message: '[IMAGE:' + imageUrl + ']',
-              created_at: new Date().toISOString()
-            });
-          }
         }
       } catch(err) {
         alert('Erreur photo: ' + err.message);
@@ -1751,134 +1715,92 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         input.remove();
       }
     });
-    
+
     document.body.appendChild(input);
     input.click();
   };
 
-  // Intercept appendMessage to render [IMAGE:url] as actual images
-  function patchAppendMessage() {
-    var orig = window.appendMessage;
-    if (!orig || orig._patched) return;
-    window.appendMessage = function(message) {
-      orig(message);
-      // Find the last bubble and convert [IMAGE:url] to <img>
-      var bubbles = document.querySelectorAll('#chatMessages .chat-bubble');
-      var last = bubbles[bubbles.length - 1];
-      if (last) {
-        var text = last.textContent || '';
-        var imgMatch = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
-        if (imgMatch) {
-          last.innerHTML = '<img src="' + imgMatch[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,'_blank')" />';
-        }
-      }
-    };
-    window.appendMessage._patched = true;
-  }
-  
-  // Also retroactively fix existing [IMAGE:url] text in chat
-  function fixExistingImageBubbles() {
-    document.querySelectorAll('#chatMessages .chat-bubble').forEach(function(bubble) {
+  // ── Render [IMAGE:url] as actual <img> in bubbles ──
+  function fixImageBubbles(root) {
+    (root || document).querySelectorAll('#chatMessages .chat-bubble').forEach(function(bubble) {
       var text = bubble.textContent || '';
-      var imgMatch = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
-      if (imgMatch) {
-        bubble.innerHTML = '<img src="' + imgMatch[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,'_blank')" />';
+      var m = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
+      if (m) {
+        bubble.innerHTML = '<img src="' + m[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,'_blank')" />';
       }
     });
   }
-  
-  // Patch as soon as appendMessage is available
-  var patchInterval = setInterval(function() {
-    if (window.appendMessage) {
-      patchAppendMessage();
-      clearInterval(patchInterval);
-    }
-  }, 100);
-  
-  // Fix images whenever chatMessages changes (after loadMessages)
-  var chatMsgsEl = document.getElementById('chatMessages');
-  if (chatMsgsEl) {
-    new MutationObserver(function() {
-      fixExistingImageBubbles();
-      patchAppendMessage();
-    }).observe(chatMsgsEl, { childList: true, subtree: true });
+
+  // ── Search ──
+  function initSearch() {
+    var input = document.getElementById('msgsSearchInput');
+    if (!input) return;
+    input.addEventListener('input', function() {
+      var q = this.value.toLowerCase();
+      document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
+        var h3 = item.querySelector('h3');
+        item.style.display = (h3 && h3.textContent.toLowerCase().includes(q)) ? '' : 'none';
+      });
+    });
   }
 
-  // Search filter + property name injection + back button hide
-  function initMessages() {
-    // Search
-    var input = document.getElementById('msgsSearchInput');
-    if (input) {
-      input.addEventListener('input', function() {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
-          var h3 = item.querySelector('h3');
-          var name = h3 ? h3.textContent.toLowerCase() : '';
-          item.style.display = name.includes(q) ? '' : 'none';
-        });
-      });
-    }
-    
-    // Hide back button injected by bh-layout.js
+  // ── Property label injection ──
+  function injectPropertyLabels() {
+    document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
+      if (item.querySelector('.conv-property')) return;
+      var badge = item.querySelector('.property-badge');
+      if (!badge) return;
+      var name = badge.textContent.trim();
+      if (!name || name === 'Logement') return;
+      var color = badge.style.color || '#1A7A5E';
+      var h3 = item.querySelector('.conversation-info h3');
+      if (!h3) return;
+      var el = document.createElement('div');
+      el.className = 'conv-property';
+      el.textContent = name;
+      el.style.color = color;
+      h3.parentNode.insertBefore(el, h3.nextSibling);
+    });
+  }
+
+  // ── Hide back button from bh-layout.js ──
+  function hideBackBtn() {
     document.querySelectorAll('.header-actions .btn-ghost, .header-actions .btn.btn-ghost').forEach(function(el) {
       el.style.display = 'none';
     });
   }
-  
-  // Inject property label into each conversation item after chat-owner.js renders
-  function injectPropertyLabels() {
-    document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
-      if (item.querySelector('.conv-property')) return; // already done
-      var propBadge = item.querySelector('.property-badge');
-      if (!propBadge) return;
-      var propName = propBadge.textContent.trim();
-      var propColor = propBadge.style.color || '#1A7A5E';
-      if (!propName || propName === 'Logement') return;
-      
-      var h3 = item.querySelector('.conversation-info h3');
-      if (!h3) return;
-      
-      var propEl = document.createElement('div');
-      propEl.className = 'conv-property';
-      propEl.textContent = propName;
-      propEl.style.color = propColor;
-      h3.parentNode.insertBefore(propEl, h3.nextSibling);
-    });
-  }
-  
+
+  // ── Init ──
   document.addEventListener('DOMContentLoaded', function() {
-    initMessages();
-    // Watch for conversation items being rendered
-    var convList = document.getElementById('conversationsList');
-    if (convList) {
+    initSearch();
+
+    // Watch conversationsList
+    var list = document.getElementById('conversationsList');
+    if (list) {
       new MutationObserver(function() {
         injectPropertyLabels();
-        // Re-hide back button
-        document.querySelectorAll('.header-actions .btn-ghost').forEach(function(el) {
-          el.style.display = 'none';
-        });
-        // Hide emoji panel
-        document.querySelectorAll('[id*="emoji"],[class*="emoji"]').forEach(function(el) {
-          el.style.display = 'none';
-        });
-      }).observe(convList, { childList: true, subtree: true });
+        hideBackBtn();
+      }).observe(list, { childList: true, subtree: true });
+    }
+
+    // Watch chatMessages for image rendering
+    var msgs = document.getElementById('chatMessages');
+    if (msgs) {
+      new MutationObserver(function() { fixImageBubbles(); }).observe(msgs, { childList: true, subtree: true });
     }
   });
-  
+
+  // Patch openChat as soon as it's available
+  var interval = setInterval(function() {
+    if (window.openChat) { patchOpenChat(); clearInterval(interval); }
+  }, 50);
+
   setTimeout(function() {
-    initMessages();
+    patchOpenChat();
+    hideBackBtn();
     injectPropertyLabels();
-    // Hide back btn
-    document.querySelectorAll('.header-actions .btn-ghost, .header-actions a').forEach(function(el) {
-      if (!el.classList.contains('msgs-icon-btn') && !el.classList.contains('msgs-group-btn')) {
-        el.style.display = 'none';
-      }
-    });
-    // Hide emoji
-    document.querySelectorAll('[id*="emoji"],[class*="emoji"],[class*="Emoji"]').forEach(function(el) {
-      el.style.cssText += 'display:none!important;';
-    });
-  }, 800);
+  }, 1000);
+
 })();
 </script>
 
