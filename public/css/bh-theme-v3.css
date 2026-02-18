@@ -1,0 +1,87 @@
+/* bh-theme-v3.css
+   Skin V3 (Luxury Minimal / Editorial Warm)
+   Activation: add ?v3=1 to URL
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+html[data-theme-v3="1"]{
+  --jade:#1A7A5E;
+  --jade-light:#2AAE86;
+  --jade-subtle:rgba(26,122,94,.07);
+  --obsidian:#0D1117;
+  --cream:#FAF8F5;
+  --cream-warm:#F5F0E8;
+  --cream-deep:#EDE8DF;
+  --text-1:#0D1117;
+  --text-2:#3D4A5C;
+  --text-3:#7A8695;
+  --border:rgba(13,17,23,.09);
+  --border-warm:rgba(200,184,154,.40);
+  --shadow-card:0 2px 8px rgba(13,17,23,.06),0 1px 2px rgba(13,17,23,.04);
+  --shadow-jade:0 8px 28px rgba(26,122,94,.22);
+
+  --primary-color:var(--jade);
+  --primary-hover:var(--jade-light);
+  --primary-light:var(--jade-subtle);
+  --bg-primary:var(--cream);
+  --bg-secondary:var(--cream);
+  --bg-tertiary:var(--cream-warm);
+  --text-primary:var(--text-1);
+  --text-secondary:var(--text-2);
+  --text-tertiary:var(--text-3);
+  --border-color:var(--border);
+}
+
+html[data-theme-v3="1"] body{
+  font-family:"DM Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif!important;
+  background:var(--cream)!important;
+  color:var(--text-1)!important;
+}
+
+html[data-theme-v3="1"] .page-title{
+  font-family:"Instrument Serif",serif!important;
+  letter-spacing:-0.02em;
+}
+
+html[data-theme-v3="1"] .main-header{
+  background:var(--cream)!important;
+  border:1px solid var(--border)!important;
+  border-radius:20px!important;
+  box-shadow:none!important;
+}
+
+html[data-theme-v3="1"] .sidebar{
+  background:var(--cream-warm)!important;
+  border-right:1px solid var(--border-warm)!important;
+}
+
+html[data-theme-v3="1"] .nav-item{
+  border-radius:12px!important;
+}
+
+html[data-theme-v3="1"] .nav-item.active{
+  background:var(--jade-subtle)!important;
+  color:var(--jade)!important;
+  font-weight:600!important;
+}
+
+html[data-theme-v3="1"] .card{
+  background:rgba(250,248,245,.9)!important;
+  border:1px solid var(--border)!important;
+  border-radius:20px!important;
+  box-shadow:var(--shadow-card)!important;
+}
+
+html[data-theme-v3="1"] .btn-primary,
+html[data-theme-v3="1"] .btn-success{
+  background:var(--jade)!important;
+  border:none!important;
+  color:#fff!important;
+  box-shadow:var(--shadow-jade)!important;
+}
+
+html[data-theme-v3="1"] .btn-primary:hover,
+html[data-theme-v3="1"] .btn-success:hover{
+  background:var(--jade-light)!important;
+}
