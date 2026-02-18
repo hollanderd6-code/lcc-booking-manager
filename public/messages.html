@@ -649,6 +649,52 @@ html[data-theme-v3="1"] .emoji-panel {
 }
 .msgs-attach-btn:hover { background: #f5f2ec; color: #1A7A5E; }
 
+/* Back to dashboard button */
+.msgs-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 10px;
+  background: white;
+  color: #5A6A7A;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.msgs-back-btn:hover { background: #f0ebe3; color: #0D1117; }
+.msgs-back-btn i { font-size: 12px; }
+
+/* Close conversation button */
+#chatCloseConvBtn {
+  border-color: rgba(0,0,0,.12);
+}
+#chatCloseConvBtn:hover { background: #FEF2F2; color: #DC2626; border-color: rgba(220,38,38,.3); }
+#chatCloseConvBtn i { color: inherit; }
+
+/* Closed conversation items */
+#conversationsList .conversation-item.closed-conv {
+  opacity: .45 !important;
+  filter: grayscale(0.4) !important;
+}
+
+/* Image messages */
+#chatMessages .chat-bubble img {
+  max-width: 240px;
+  max-height: 200px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: block;
+}
+#chatMessages .chat-bubble {
+  word-break: break-word;
+}
+/* Override [IMAGE:...] raw text display */
+
 </style>
 </head>
 
@@ -830,8 +876,12 @@ html[data-theme-v3="1"] .emoji-panel {
   <main class="main-content">
     <div id="bhHeader"></div>
 
-    <!-- No custom actions in header -->
-    <div id="bhHeaderActions" style="display:none;"></div>
+    <!-- Header custom actions -->
+    <div id="bhHeaderActions" style="display:none;">
+      <button class="msgs-back-btn" onclick="window.location.href='/app.html'">
+        <i class="fas fa-arrow-left"></i> Tableau de bord
+      </button>
+    </div>
 
     <!-- Legacy hidden containers (JS compatibility) -->
     <div class="page-content" style="display:none!important">
@@ -889,8 +939,7 @@ html[data-theme-v3="1"] .emoji-panel {
             </div>
           </div>
           <div class="msgs-chat-actions">
-            <button class="msgs-icon-btn" id="chatGuestInfoBtn" title="Infos voyageur"><i class="fas fa-user"></i></button>
-            <button class="msgs-auto-btn" id="chatAutoReplyBtn"><i class="fas fa-reply"></i> Réponse auto</button>
+            <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="closeCurrentConversation()"><i class="fas fa-check-circle"></i> Clore la conversation</button>
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
           </div>
@@ -1527,12 +1576,12 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (messages) messages.style.display = 'flex';
     if (input) input.style.display = 'flex';
     
-    // Update header avatar
+    // Update header avatar - match list item color and letter
     var avatarEl = document.getElementById('msgsChatAvatar');
-    var nameEl = document.getElementById('chatModalTitle');
     if (conv && avatarEl) {
       var name = (conv.guest_display_name || conv.guest_first_name || conv.guest_name || 'V');
-      avatarEl.textContent = name.charAt(0).toUpperCase();
+      var initial = name.charAt(0).toUpperCase();
+      avatarEl.textContent = initial;
       avatarEl.style.background = conv.property_color || '#1A7A5E';
     }
 
@@ -1597,6 +1646,120 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     chatModal.classList.add = function() {
       // Don't show modal as overlay - we're inline
       return;
+    };
+  }
+
+  // ── CLOSE CONVERSATION ──
+  window.closeCurrentConversation = function() {
+    var convId = window.currentConversationId;
+    if (!convId) return;
+    if (!confirm('Clore cette conversation ? Elle passera en bas de liste.')) return;
+    
+    var token = localStorage.getItem('lcc_token');
+    
+    // Try PATCH first, fallback to local only
+    fetch('/api/chat/conversations/' + convId, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'closed' })
+    }).catch(function() {}); // silent fail if API doesn't support PATCH
+    
+    // Local: find item in list, gray it out, move to bottom
+    var item = document.querySelector('#conversationsList [data-conversation-id="' + convId + '"]');
+    if (item) {
+      item.style.opacity = '0.45';
+      item.style.filter = 'grayscale(0.5)';
+      var list = document.getElementById('conversationsList');
+      if (list) list.appendChild(item); // move to bottom
+    }
+    
+    // Update allConversations status
+    if (window.allConversations) {
+      var conv = window.allConversations.find(function(c) { return c.id == convId; });
+      if (conv) conv.status = 'closed';
+    }
+    
+    // Update close button
+    var btn = document.getElementById('chatCloseConvBtn');
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-undo"></i> Rouvrir';
+      btn.style.opacity = '.6';
+      btn.onclick = function() { window.reopenConversation && window.reopenConversation(convId); };
+    }
+  };
+
+  // ── PHOTO UPLOAD (Cloudinary) ──
+  window.openPhotoUpload = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.style.display = 'none';
+    
+    input.addEventListener('change', async function(e) {
+      var files = Array.from(e.target.files);
+      if (!files.length) return;
+      
+      var btn = document.getElementById('photoUploadBtn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+      
+      try {
+        for (var i = 0; i < files.length; i++) {
+          var file = files[i];
+          if (!file.type.startsWith('image/')) throw new Error('Doit être une image');
+          if (file.size > 5 * 1024 * 1024) throw new Error('Max 5MB');
+          
+          var formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', 'chat-photos');
+          
+          var res = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
+            method: 'POST', body: formData
+          });
+          
+          if (!res.ok) throw new Error('Erreur upload');
+          var data = await res.json();
+          var imageUrl = data.secure_url;
+          
+          // Send as message
+          var token = localStorage.getItem('lcc_token');
+          await fetch('/api/chat/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({
+              conversationId: window.currentConversationId,
+              message: '[IMAGE:' + imageUrl + ']',
+              senderType: 'owner'
+            })
+          });
+        }
+      } catch(err) {
+        alert('Erreur photo: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i>'; }
+        input.remove();
+      }
+    });
+    
+    document.body.appendChild(input);
+    input.click();
+  };
+
+  // Also handle [IMAGE:url] rendering in appendMessage
+  var _origAppendMessage = window.appendMessage;
+  if (_origAppendMessage) {
+    window.appendMessage = function(message) {
+      _origAppendMessage(message);
+      // Find last bubble and check for image tag
+      var bubbles = document.querySelectorAll('#chatMessages .chat-bubble');
+      var last = bubbles[bubbles.length - 1];
+      if (last) {
+        var text = last.textContent;
+        var imgMatch = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
+        if (imgMatch) {
+          last.innerHTML = '<img src="' + imgMatch[1] + '" style="max-width:240px;max-height:200px;border-radius:10px;cursor:pointer;" onclick="window.open(this.src,\'_blank\')" />';
+        }
+      }
     };
   }
 
