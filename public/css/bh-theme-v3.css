@@ -1,87 +1,451 @@
 /* bh-theme-v3.css
-   Skin V3 (Luxury Minimal / Editorial Warm)
-   Activation: add ?v3=1 to URL
+   BOOSTINGHOST — THEME V3 (Full Skin for existing app)
+   Goal: match the provided redesign HTML as closely as possible, INCLUDING FullCalendar.
+   Rollout: only active when html has data-theme-v3="1" (enable via ?v3=1 helper script).
 */
 
+/* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
+/* =========================
+   1) V3 TOKENS + V2 MAPPING
+   ========================= */
 html[data-theme-v3="1"]{
-  --jade:#1A7A5E;
-  --jade-light:#2AAE86;
-  --jade-subtle:rgba(26,122,94,.07);
-  --obsidian:#0D1117;
-  --cream:#FAF8F5;
-  --cream-warm:#F5F0E8;
-  --cream-deep:#EDE8DF;
-  --text-1:#0D1117;
-  --text-2:#3D4A5C;
-  --text-3:#7A8695;
-  --border:rgba(13,17,23,.09);
-  --border-warm:rgba(200,184,154,.40);
-  --shadow-card:0 2px 8px rgba(13,17,23,.06),0 1px 2px rgba(13,17,23,.04);
-  --shadow-jade:0 8px 28px rgba(26,122,94,.22);
+  /* Primary palette (from redesign) */
+  --jade:        #1A7A5E;
+  --jade-light:  #2AAE86;
+  --jade-glow:   rgba(26,122,94,.12);
+  --jade-subtle: rgba(26,122,94,.07);
 
-  --primary-color:var(--jade);
-  --primary-hover:var(--jade-light);
-  --primary-light:var(--jade-subtle);
-  --bg-primary:var(--cream);
-  --bg-secondary:var(--cream);
-  --bg-tertiary:var(--cream-warm);
-  --text-primary:var(--text-1);
-  --text-secondary:var(--text-2);
-  --text-tertiary:var(--text-3);
-  --border-color:var(--border);
+  --obsidian:    #0D1117;
+  --slate:       #1C2333;
+  --slate-mid:   #2D3748;
+
+  --cream:       #FAF8F5;
+  --cream-warm:  #F5F0E8;
+  --cream-deep:  #EDE8DF;
+
+  --sand:        #C8B89A;
+  --sand-light:  #E8DECE;
+
+  --text-1:      #0D1117;
+  --text-2:      #3D4A5C;
+  --text-3:      #7A8695;
+  --text-inv:    #FAFAFA;
+
+  --border:      rgba(13,17,23,.09);
+  --border-2:    rgba(13,17,23,.12);
+  --border-warm: rgba(200,184,154,.40);
+
+  --shadow-card:  0 2px 8px rgba(13,17,23,.06), 0 1px 2px rgba(13,17,23,.04);
+  --shadow-float: 0 12px 40px rgba(13,17,23,.12), 0 4px 12px rgba(13,17,23,.06);
+  --shadow-jade:  0 10px 28px rgba(26,122,94,.24);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* V2 -> V3 mapping (keeps existing components working) */
+  --primary-color: var(--jade);
+  --primary-hover: var(--jade-light);
+  --primary-light: var(--jade-subtle);
+  --primary-dark:  #145f49;
+
+  --bg-primary:   var(--cream);
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary:  var(--cream-warm);
+  --bg-hover:     var(--cream-deep);
+
+  --text-primary:   var(--text-1);
+  --text-secondary: var(--text-2);
+  --text-tertiary:  var(--text-3);
+
+  --border-color:        var(--border);
+  --border-color-subtle: var(--border);
+  --border-hover:        rgba(26,122,94,.25);
+
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-float);
+  --shadow-lg: var(--shadow-float);
+  --shadow-xl: var(--shadow-float);
 }
 
+/* Dark mode compatibility (your app uses [data-theme="dark"]) */
+html[data-theme="dark"][data-theme-v3="1"]{
+  --cream:       #0D1117;
+  --cream-warm:  #111827;
+  --cream-deep:  #1C2333;
+  --bg-secondary:#0F1622;
+
+  --text-1:      #F0EDE8;
+  --text-2:      #A8B4C0;
+  --text-3:      #6B7785;
+
+  --border:      rgba(240,237,232,.08);
+  --border-2:    rgba(240,237,232,.12);
+  --border-warm: rgba(200,184,154,.15);
+
+  --shadow-card: 0 2px 10px rgba(0,0,0,.32), 0 1px 2px rgba(0,0,0,.20);
+  --shadow-float:0 14px 44px rgba(0,0,0,.40), 0 6px 16px rgba(0,0,0,.24);
+}
+
+/* =========================
+   2) GLOBAL BASE (matches redesign)
+   ========================= */
 html[data-theme-v3="1"] body{
-  font-family:"DM Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif!important;
-  background:var(--cream)!important;
-  color:var(--text-1)!important;
+  font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif !important;
+  background: radial-gradient(1200px 800px at 10% -10%, rgba(26,122,94,.08), transparent 55%),
+              radial-gradient(900px 600px at 90% -10%, rgba(200,184,154,.18), transparent 55%),
+              var(--cream) !important;
+  color: var(--text-1) !important;
+  letter-spacing: -0.01em;
 }
 
+html[data-theme-v3="1"] a{ color: inherit; }
+html[data-theme-v3="1"] ::selection{ background: rgba(26,122,94,.18); }
+
+/* Headings: editorial */
+html[data-theme-v3="1"] h1,
 html[data-theme-v3="1"] .page-title{
-  font-family:"Instrument Serif",serif!important;
-  letter-spacing:-0.02em;
+  font-family: "Instrument Serif", serif !important;
+  letter-spacing: -0.02em;
+}
+html[data-theme-v3="1"] h2,
+html[data-theme-v3="1"] h3{
+  letter-spacing: -0.015em;
 }
 
-html[data-theme-v3="1"] .main-header{
-  background:var(--cream)!important;
-  border:1px solid var(--border)!important;
-  border-radius:20px!important;
-  box-shadow:none!important;
+/* Small label look from redesign */
+html[data-theme-v3="1"] .kpi-label,
+html[data-theme-v3="1"] .section-label,
+html[data-theme-v3="1"] .page-kicker{
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 12px;
+  color: var(--text-3) !important;
 }
 
+/* =========================
+   3) APP LAYOUT SURFACES
+   ========================= */
+html[data-theme-v3="1"] .app-container{
+  background: transparent !important;
+}
+
+/* Sidebar */
 html[data-theme-v3="1"] .sidebar{
-  background:var(--cream-warm)!important;
-  border-right:1px solid var(--border-warm)!important;
+  background: linear-gradient(180deg, rgba(245,240,232,.95), rgba(250,248,245,.92)) !important;
+  border-right: 1px solid var(--border-warm) !important;
+  box-shadow: none !important;
 }
 
+/* Sidebar header + logo */
+html[data-theme-v3="1"] .sidebar-header{
+  border-bottom: 1px solid rgba(200,184,154,.22) !important;
+}
+html[data-theme-v3="1"] .sidebar-logo{
+  gap: 10px !important;
+}
+html[data-theme-v3="1"] .sidebar-logo i{
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, var(--obsidian), #1c2333) !important;
+  color: var(--jade-light) !important;
+  box-shadow: 0 12px 30px rgba(13,17,23,.18) !important;
+}
+html[data-theme-v3="1"] .sidebar-logo span,
+html[data-theme-v3="1"] .mobile-logo{
+  font-family: "Instrument Serif", serif !important;
+  letter-spacing: -0.02em;
+}
+
+/* Nav items */
 html[data-theme-v3="1"] .nav-item{
-  border-radius:12px!important;
+  border-radius: 14px !important;
+  transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
 }
-
+html[data-theme-v3="1"] .nav-item:hover{
+  background: rgba(237,232,223,.75) !important;
+  transform: translateY(-1px);
+}
 html[data-theme-v3="1"] .nav-item.active{
-  background:var(--jade-subtle)!important;
-  color:var(--jade)!important;
-  font-weight:600!important;
+  background: var(--jade-subtle) !important;
+  color: var(--jade) !important;
+  font-weight: 650 !important;
+  box-shadow: inset 0 0 0 1px rgba(26,122,94,.14);
+}
+html[data-theme-v3="1"] .nav-badge{
+  background: rgba(26,122,94,.12) !important;
+  color: var(--jade) !important;
+  border: 1px solid rgba(26,122,94,.18) !important;
 }
 
+/* Main content spacing feel */
+html[data-theme-v3="1"] .main-content{
+  background: transparent !important;
+}
+html[data-theme-v3="1"] .page-content{
+  background: transparent !important;
+}
+
+/* Header (top bar) */
+html[data-theme-v3="1"] .main-header{
+  background: rgba(255,255,255,.65) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--shadow-card) !important;
+}
+html[data-theme="dark"][data-theme-v3="1"] .main-header{
+  background: rgba(15,22,34,.62) !important;
+}
+
+/* Header actions buttons/chips */
+html[data-theme-v3="1"] .header-actions .btn,
+html[data-theme-v3="1"] .header-actions button{
+  border-radius: 999px !important;
+}
+
+/* =========================
+   4) CARDS / KPI / LISTS
+   ========================= */
 html[data-theme-v3="1"] .card{
-  background:rgba(250,248,245,.9)!important;
-  border:1px solid var(--border)!important;
-  border-radius:20px!important;
-  box-shadow:var(--shadow-card)!important;
+  background: rgba(255,255,255,.72) !important;
+  border: 1px solid rgba(13,17,23,.08) !important;
+  border-radius: 26px !important;
+  box-shadow: var(--shadow-card) !important;
+}
+html[data-theme="dark"][data-theme-v3="1"] .card{
+  background: rgba(15,22,34,.72) !important;
+  border-color: rgba(240,237,232,.10) !important;
+}
+html[data-theme-v3="1"] .card:hover{
+  box-shadow: var(--shadow-float) !important;
+}
+
+/* KPI grid (if present) */
+html[data-theme-v3="1"] .kpi-grid .card,
+html[data-theme-v3="1"] .kpi-card{
+  border-radius: 28px !important;
+}
+
+/* Tables/list rows */
+html[data-theme-v3="1"] .upcoming-row,
+html[data-theme-v3="1"] .upcoming-row-header{
+  border-radius: 18px !important;
+  border: 1px solid rgba(13,17,23,.06) !important;
+  background: rgba(255,255,255,.55) !important;
+}
+html[data-theme="dark"][data-theme-v3="1"] .upcoming-row,
+html[data-theme="dark"][data-theme-v3="1"] .upcoming-row-header{
+  background: rgba(15,22,34,.55) !important;
+  border-color: rgba(240,237,232,.08) !important;
+}
+
+/* =========================
+   5) BUTTONS (matches redesign)
+   ========================= */
+html[data-theme-v3="1"] .btn,
+html[data-theme-v3="1"] button.btn,
+html[data-theme-v3="1"] a.btn{
+  border-radius: 14px !important;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease, color .18s ease;
 }
 
 html[data-theme-v3="1"] .btn-primary,
 html[data-theme-v3="1"] .btn-success{
-  background:var(--jade)!important;
-  border:none!important;
-  color:#fff!important;
-  box-shadow:var(--shadow-jade)!important;
+  background: linear-gradient(135deg, var(--jade), var(--jade-light)) !important;
+  border: 1px solid rgba(26,122,94,.22) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 26px rgba(26,122,94,.22) !important;
 }
-
 html[data-theme-v3="1"] .btn-primary:hover,
 html[data-theme-v3="1"] .btn-success:hover{
-  background:var(--jade-light)!important;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(26,122,94,.28) !important;
 }
+html[data-theme-v3="1"] .btn-outline-primary,
+html[data-theme-v3="1"] .btn-secondary{
+  background: rgba(255,255,255,.7) !important;
+  border: 1px solid rgba(13,17,23,.12) !important;
+}
+html[data-theme-v3="1"] .btn-outline-primary:hover,
+html[data-theme-v3="1"] .btn-secondary:hover{
+  background: rgba(237,232,223,.8) !important;
+  transform: translateY(-1px);
+}
+
+/* Tiny buttons */
+html[data-theme-v3="1"] .btn-xs{
+  border-radius: 999px !important;
+}
+
+/* =========================
+   6) INPUTS / FORMS
+   ========================= */
+html[data-theme-v3="1"] input,
+html[data-theme-v3="1"] select,
+html[data-theme-v3="1"] textarea{
+  border-radius: 14px !important;
+  border: 1px solid rgba(13,17,23,.12) !important;
+  background: rgba(255,255,255,.70) !important;
+  color: var(--text-1) !important;
+}
+html[data-theme="dark"][data-theme-v3="1"] input,
+html[data-theme="dark"][data-theme-v3="1"] select,
+html[data-theme="dark"][data-theme-v3="1"] textarea{
+  background: rgba(15,22,34,.70) !important;
+  border-color: rgba(240,237,232,.12) !important;
+}
+html[data-theme-v3="1"] input:focus,
+html[data-theme-v3="1"] select:focus,
+html[data-theme-v3="1"] textarea:focus{
+  outline: none !important;
+  border-color: rgba(26,122,94,.55) !important;
+  box-shadow: 0 0 0 4px rgba(26,122,94,.14) !important;
+}
+
+/* =========================
+   7) FULLCALENDAR (match redesign vibe)
+   ========================= */
+html[data-theme-v3="1"] .fc{
+  /* Base variables for FC */
+  --fc-border-color: rgba(13,17,23,.10);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(245,240,232,.55);
+  --fc-today-bg-color: rgba(26,122,94,.08);
+  --fc-highlight-color: rgba(26,122,94,.12);
+  --fc-event-bg-color: rgba(26,122,94,.12);
+  --fc-event-border-color: rgba(26,122,94,.20);
+  --fc-event-text-color: var(--jade);
+  --fc-non-business-color: rgba(200,184,154,.08);
+
+  --fc-button-bg-color: var(--jade);
+  --fc-button-border-color: rgba(26,122,94,.35);
+  --fc-button-text-color: #fff;
+  --fc-button-hover-bg-color: var(--jade-light);
+  --fc-button-hover-border-color: rgba(26,122,94,.45);
+  --fc-button-active-bg-color: #145f49;
+  --fc-button-active-border-color: rgba(26,122,94,.55);
+}
+
+/* Toolbar typography */
+html[data-theme-v3="1"] .fc .fc-toolbar-title{
+  font-family: "Instrument Serif", serif !important;
+  letter-spacing: -0.02em;
+  font-size: 26px !important;
+  color: var(--text-1) !important;
+}
+
+/* Toolbar buttons -> pill, luxury */
+html[data-theme-v3="1"] .fc .fc-button{
+  border-radius: 999px !important;
+  padding: 8px 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 10px 22px rgba(26,122,94,.18) !important;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+html[data-theme-v3="1"] .fc .fc-button:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(26,122,94,.22) !important;
+}
+html[data-theme-v3="1"] .fc .fc-button:focus{
+  box-shadow: 0 0 0 4px rgba(26,122,94,.14) !important;
+}
+
+/* Calendar surface */
+html[data-theme-v3="1"] #calendar,
+html[data-theme-v3="1"] .fc .fc-view-harness{
+  border-radius: 26px !important;
+}
+html[data-theme-v3="1"] .fc .fc-scrollgrid{
+  border: 1px solid rgba(13,17,23,.10) !important;
+  border-radius: 26px !important;
+  overflow: hidden;
+  background: rgba(255,255,255,.58);
+  box-shadow: var(--shadow-card);
+}
+html[data-theme="dark"][data-theme-v3="1"] .fc .fc-scrollgrid{
+  background: rgba(15,22,34,.58);
+  border-color: rgba(240,237,232,.10) !important;
+}
+
+/* Day headers */
+html[data-theme-v3="1"] .fc .fc-col-header-cell{
+  background: rgba(245,240,232,.55);
+}
+html[data-theme-v3="1"] .fc .fc-col-header-cell-cushion{
+  padding: 10px 8px !important;
+  font-weight: 650 !important;
+  color: var(--text-2) !important;
+}
+
+/* Day numbers */
+html[data-theme-v3="1"] .fc .fc-daygrid-day-number{
+  font-weight: 600;
+  color: var(--text-2) !important;
+  padding: 8px !important;
+}
+
+/* Today highlight */
+html[data-theme-v3="1"] .fc .fc-day-today{
+  background: rgba(26,122,94,.07) !important;
+}
+
+/* Events: warm pill */
+html[data-theme-v3="1"] .fc .fc-event{
+  border-radius: 999px !important;
+  border: 1px solid rgba(26,122,94,.22) !important;
+  background: rgba(26,122,94,.10) !important;
+  color: var(--jade) !important;
+  box-shadow: 0 8px 18px rgba(26,122,94,.10);
+}
+html[data-theme-v3="1"] .fc .fc-event .fc-event-title{
+  font-weight: 650 !important;
+}
+html[data-theme-v3="1"] .fc .fc-event:hover{
+  background: rgba(26,122,94,.14) !important;
+}
+
+/* Popover (more bookings) */
+html[data-theme-v3="1"] .fc .fc-popover{
+  border-radius: 18px !important;
+  border: 1px solid rgba(13,17,23,.12) !important;
+  box-shadow: var(--shadow-float) !important;
+  overflow: hidden;
+}
+html[data-theme-v3="1"] .fc .fc-popover-header{
+  background: rgba(245,240,232,.75) !important;
+  font-weight: 650;
+}
+
+/* Time grid (if used) */
+html[data-theme-v3="1"] .fc .fc-timegrid-slot-label,
+html[data-theme-v3="1"] .fc .fc-timegrid-axis-cushion{
+  color: var(--text-3) !important;
+}
+
+/* =========================
+   8) MOBILE BOTTOM BAR (visual only)
+   (works with your existing bottom-bar CSS; we only re-skin)
+   ========================= */
+html[data-theme-v3="1"] .mobile-bottom-bar,
+html[data-theme-v3="1"] .bottom-bar{
+  background: rgba(255,255,255,.70) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(13,17,23,.08) !important;
+}
+html[data-theme="dark"][data-theme-v3="1"] .mobile-bottom-bar,
+html[data-theme="dark"][data-theme-v3="1"] .bottom-bar{
+  background: rgba(15,22,34,.70) !important;
+  border-top-color: rgba(240,237,232,.08) !important;
+}
+
+/* =========================
+   9) SAFETY: DO NOT OVERRIDE CALENDAR/TABLE LAYOUT MECHANICS
+   We avoid widths/overflow/flex rules on .calendar-* and tables.
+   ========================= */
