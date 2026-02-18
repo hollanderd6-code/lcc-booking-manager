@@ -7889,42 +7889,61 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 </style>
 
 <!-- ═══════════════════════════════════════
-     OVERRIDE FINAL : header collé à la barre dark, sans espace
+     OVERRIDE FINAL : header FIXE permanent
      Placé en dernier pour écraser tous les autres CSS
 ═══════════════════════════════════════ -->
 <style>
+/* ── Body offset : barre dark (40px) ── */
 html[data-theme-v3="1"] body {
   padding-top: 40px !important;
   margin-top: 0 !important;
 }
-/* Masquer mobile-header sur desktop (il crée un espace) */
+
+/* ── Masquer mobile-header sur desktop ── */
 @media (min-width: 769px) {
   html[data-theme-v3="1"] .mobile-header,
   html[data-theme-v3="1"] .mobile-menu-btn {
     display: none !important;
   }
 }
+
+/* ── Pas de padding/margin parasite ── */
 html[data-theme-v3="1"] .app-container,
-html[data-theme-v3="1"] .main-content,
 html[data-theme-v3="1"] main.main-content {
   padding-top: 0 !important;
   margin-top: 0 !important;
 }
-/* Le header sticky reste collé en haut du viewport (body a déjà padding-top:40px) */
-html[data-theme-v3="1"] header.main-header,
-html[data-theme-v3="1"] #bhMainHeader {
-  position: sticky !important;
-  top: 0 !important;
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  z-index: 90 !important;
-}
-/* Annuler tout padding venant de style.css sur main-content */
-html[data-theme-v3="1"] .main-content,
-html[data-theme-v3="1"] main.main-content,
-html[data-theme-v3="1"] .main-content > *:first-child {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
+
+/* ══════════════════════════════════════
+   HEADER FIXE — reste visible en scroll
+   top: 40px  = juste sous la barre dark
+   left: 248px = juste à droite de la sidebar
+══════════════════════════════════════ */
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] header.main-header,
+  html[data-theme-v3="1"] #bhMainHeader {
+    position: fixed !important;
+    top: 40px !important;
+    left: 248px !important;
+    right: 0 !important;
+    z-index: 89 !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    border-radius: 0 !important;
+    /* Annuler le style "carte" de bh-shared.css */
+    background: var(--cream, #FAF8F5) !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(13,17,23,.09) !important;
+    box-shadow: 0 1px 0 rgba(13,17,23,.04) !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Compenser la hauteur du header fixe (72px) dans le contenu */
+  html[data-theme-v3="1"] .page-content {
+    padding-top: calc(28px + 72px) !important;
+  }
 }
 </style>
 
