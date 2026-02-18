@@ -1031,15 +1031,92 @@ html[data-theme-v3="1"] tbody tr:last-child td { border-bottom: none !important;
 html[data-theme-v3="1"] tbody tr:hover td { background: var(--cream-deep) !important; }
 
 /* ─────────────────────────────────────────────────────────────
-   CALENDRIER
+   CALENDRIER — écraser tous les background: white en dur
 ───────────────────────────────────────────────────────────── */
-html[data-theme-v3="1"] .calendar-wrapper {
+
+/* Conteneurs principaux */
+html[data-theme-v3="1"] .calendar-wrapper,
+html[data-theme-v3="1"] .calendar-container,
+html[data-theme-v3="1"] .calendar-grid,
+html[data-theme-v3="1"] .calendar-grid-wrapper,
+html[data-theme-v3="1"] .calendar-row,
+html[data-theme-v3="1"] .calendar-body,
+html[data-theme-v3="1"] .property-list-column,
+html[data-theme-v3="1"] .property-list-items,
+html[data-theme-v3="1"] .property-item,
+html[data-theme-v3="1"] .period-nav-btn {
   background: var(--cream-warm) !important;
+}
+
+html[data-theme-v3="1"] .calendar-wrapper {
   border: 1px solid var(--border-warm-v3) !important;
   border-radius: 28px !important;
   overflow: hidden !important;
   box-shadow: var(--shadow-card-v3) !important;
 }
+
+/* Cellules vides = beige */
+html[data-theme-v3="1"] .calendar-cell {
+  background: var(--cream-warm) !important;
+}
+
+/* Cellules weekend = légèrement plus foncé */
+html[data-theme-v3="1"] .calendar-cell.weekend {
+  background: var(--cream-deep) !important;
+}
+
+/* Cellule aujourd'hui */
+html[data-theme-v3="1"] .calendar-cell.today {
+  background: rgba(26,122,94,.06) !important;
+}
+
+html[data-theme-v3="1"] .calendar-cell:hover {
+  background: rgba(26,122,94,.09) !important;
+}
+
+html[data-theme-v3="1"] .calendar-cell.selected {
+  background: rgba(26,122,94,.15) !important;
+}
+
+/* Colonne logements */
+html[data-theme-v3="1"] .property-item {
+  background: var(--cream-warm) !important;
+}
+
+html[data-theme-v3="1"] .property-item:hover {
+  background: var(--cream-deep) !important;
+}
+
+/* ── Légende plateformes (injectée par bh-theme-v3-nav.js) ── */
+html[data-theme-v3="1"] .bh-cal-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+html[data-theme-v3="1"] .bh-cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,.7);
+  white-space: nowrap;
+}
+
+html[data-theme-v3="1"] .bh-cal-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+html[data-theme-v3="1"] .bh-cal-legend-dot.airbnb  { background: #FF5A5F; }
+html[data-theme-v3="1"] .bh-cal-legend-dot.booking { background: #4A90E2; }
+html[data-theme-v3="1"] .bh-cal-legend-dot.direct  { background: #2AAE86; }
 
 html[data-theme-v3="1"] .calendar-modern-header {
   background: var(--obsidian) !important;
