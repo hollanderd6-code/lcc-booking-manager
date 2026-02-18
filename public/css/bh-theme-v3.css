@@ -716,26 +716,7 @@ html[data-theme-v3="1"] .kpi-card--clickable:hover {
 }
 
 /* 1ère carte featured dark */
-html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child,
-html[data-theme-v3="1"] #kpiPropertiesCard {
-  background: var(--obsidian) !important;
-  border-color: var(--obsidian) !important;
-}
-
-html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-label,
-html[data-theme-v3="1"] #kpiPropertiesCard .kpi-label {
-  color: rgba(255,255,255,.45) !important;
-}
-
-html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
-html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value {
-  color: white !important;
-}
-
-html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub,
-html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub {
-  color: var(--jade-light) !important;
-}
+/* First KPI card: same style as others (no dark background) */
 
 html[data-theme-v3="1"] .kpi-header {
   display: flex !important;
