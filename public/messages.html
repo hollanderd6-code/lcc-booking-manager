@@ -696,6 +696,25 @@ html[data-theme-v3="1"] .emoji-panel {
 }
 /* Override [IMAGE:...] raw text display */
 
+
+/* Conversation list background beige */
+#conversationsList,
+.msgs-left,
+.msgs-left .msgs-search-wrap {
+  background: #F5F2EC !important;
+}
+#conversationsList .conversation-item {
+  background: #F5F2EC !important;
+}
+#conversationsList .conversation-item:hover {
+  background: #EDE8DE !important;
+}
+#conversationsList .conversation-item.active {
+  background: #E2EDE8 !important;
+}
+.msgs-search {
+  background: #FDFCFA !important;
+}
 </style>
 </head>
 
@@ -1081,6 +1100,13 @@ console.log('✅ Fonctions helpers messages chargées');
 </script>
 
 <!-- Script -->
+
+<script>
+// Override isMobileDevice before chat-owner.js loads
+// Forces desktop mode so openChat() never redirects to chat-mobile.html
+function isMobileDevice() { return false; }
+window.isMobileDevice = function() { return false; };
+</script>
 <script src="/js/chat-owner.js"></script>
 <!-- Auth + User -->
 <script>
