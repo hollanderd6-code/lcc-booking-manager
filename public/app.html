@@ -20,124 +20,49 @@
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=3">
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=4">
 <script>
   if (new URLSearchParams(location.search).get('v3') === '1') {
     document.documentElement.setAttribute('data-theme-v3','1');
   }
 </script>
-<!-- V3 OVERRIDES — dans le DOM, toujours après le CSS externe -->
-<style id="bh-v3-overrides">
-/* Supprime le gap blanc entre demo-nav et topbar */
-html[data-theme-v3="1"] body { padding-top: 40px !important; margin: 0 !important; }
-html[data-theme-v3="1"] .app-container,
-html[data-theme-v3="1"] main.main-content,
-html[data-theme-v3="1"] header.main-header,
-html[data-theme-v3="1"] .page-content { margin-top: 0 !important; padding-top: 0 !important; }
-
-/* Colle le main-header directement sous la demo-nav — pas de gap */
-html[data-theme-v3="1"] .main-content { padding-top: 0 !important; margin-top: 0 !important; }
+<style id="v3-critical">
+/* ── LAYOUT V3 ── */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+}
 html[data-theme-v3="1"] header.main-header {
-  position: sticky !important; top: 0 !important; z-index: 50 !important;
-  height: 72px !important; background: #FAF8F5 !important;
-  border-bottom: 1px solid rgba(13,17,23,.09) !important;
-  box-shadow: none !important; display: flex !important;
-  align-items: center !important; padding: 0 32px !important; gap: 16px !important;
-  margin: 0 !important;
+  position: sticky !important;
+  top: 40px !important;
+  z-index: 50 !important;
 }
-/* CRITIQUE: le body a padding-top:40px (demo-nav) → sticky top:0 colle
-   juste sous la demo-nav. Si gap persist, forcer avec margin-top négatif */
-html[data-theme-v3="1"] .main-content > header.main-header:first-child {
-  margin-top: 0 !important;
-}
-
-/* Écraser les gradients colorés des boutons header */
+/* ── Boutons header ── */
 html[data-theme-v3="1"] #syncBtn,
 html[data-theme-v3="1"] #notificationsBtn,
 html[data-theme-v3="1"] #themeToggle,
-html[data-theme-v3="1"] .header-actions .btn-icon,
-html[data-theme-v3="1"] .header-actions .theme-toggle {
-  background: transparent !important; background-image: none !important;
-  border: 1px solid rgba(13,17,23,.09) !important; color: #3D4A5C !important;
-  box-shadow: none !important; width: 36px !important; height: 36px !important;
-  border-radius: 10px !important; transform: none !important; overflow: visible !important;
-}
-html[data-theme-v3="1"] #syncBtn:hover,
-html[data-theme-v3="1"] #notificationsBtn:hover,
-html[data-theme-v3="1"] #themeToggle:hover,
-html[data-theme-v3="1"] .header-actions .btn-icon:hover,
-html[data-theme-v3="1"] .header-actions .theme-toggle:hover {
-  background: #F5F0E8 !important; border-color: rgba(200,184,154,.4) !important;
-  box-shadow: none !important; transform: none !important;
-}
-html[data-theme-v3="1"] .header-actions .btn-icon i,
-html[data-theme-v3="1"] .header-actions .theme-toggle i,
-html[data-theme-v3="1"] #syncBtn i, html[data-theme-v3="1"] #notificationsBtn i,
-html[data-theme-v3="1"] #themeToggle i {
-  color: #3D4A5C !important; font-size: 14px !important; animation: none !important;
+html[data-theme-v3="1"] .header-actions .btn-icon {
+  background: transparent !important;
+  background-image: none !important;
+  border: 1px solid rgba(13,17,23,.1) !important;
+  color: #3D4A5C !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 html[data-theme-v3="1"] .header-actions .btn-icon::before,
-html[data-theme-v3="1"] .header-actions .theme-toggle::before { display: none !important; }
-
-/* Sidebar — hauteur depuis sous la demo-nav */
-html[data-theme-v3="1"] .sidebar {
-  height: calc(100vh - 40px) !important;
-  top: 40px !important;
-}
-
-/* Footer sidebar — contraste et visibilité */
-html[data-theme-v3="1"] .sidebar-footer {
-  flex-shrink: 0 !important;
-  background: #F5F0E8 !important;
-  border-top: 1px solid rgba(200,184,154,.4) !important;
-  padding: 14px 12px !important;
-}
-html[data-theme-v3="1"] .sidebar-footer .user-name,
-html[data-theme-v3="1"] .sidebar-footer #sidebarUserName {
-  color: #0D1117 !important; font-size: 13px !important; font-weight: 600 !important;
-}
-html[data-theme-v3="1"] .sidebar-footer .user-email,
-html[data-theme-v3="1"] .sidebar-footer #sidebarUserCompany {
-  color: #3D4A5C !important; font-size: 11px !important;
-}
-html[data-theme-v3="1"] .sidebar-footer #logoutBtn {
-  background: #EDE8DF !important; border: 1px solid rgba(200,184,154,.4) !important;
-  color: #3D4A5C !important; border-radius: 8px !important;
-  width: 28px !important; height: 28px !important; padding: 0 !important;
-  display: flex !important; align-items: center !important;
-  justify-content: center !important; cursor: pointer !important;
-}
-html[data-theme-v3="1"] .sidebar-footer #logoutBtn i { color: #3D4A5C !important; font-size: 11px !important; }
-html[data-theme-v3="1"] .sidebar-footer #logoutBtn:hover { background: #C8B89A !important; color: #0D1117 !important; }
-
-/* Dark mode */
-html[data-theme-v3="1"][data-theme="dark"] header.main-header { background: #0D1117 !important; border-color: rgba(255,255,255,.08) !important; }
-html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer { background: #111827 !important; border-color: rgba(255,255,255,.1) !important; }
-html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer .user-name,
-html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer #sidebarUserName { color: #F0EDE8 !important; }
-html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer .user-email,
-html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer #sidebarUserCompany { color: #A8B4C0 !important; }
-html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer #logoutBtn { background: rgba(255,255,255,.08) !important; border-color: rgba(255,255,255,.12) !important; color: rgba(255,255,255,.5) !important; }
-html[data-theme-v3="1"][data-theme="dark"] #syncBtn, html[data-theme-v3="1"][data-theme="dark"] #notificationsBtn,
-html[data-theme-v3="1"][data-theme="dark"] #themeToggle, html[data-theme-v3="1"][data-theme="dark"] .header-actions .btn-icon {
-  border-color: rgba(255,255,255,.12) !important; color: rgba(255,255,255,.6) !important;
-}
-
-/* Neutralise le ::before CSS externe (évite le double carré noir) */
-html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
+html[data-theme-v3="1"] #syncBtn::before,
+html[data-theme-v3="1"] #notificationsBtn::before,
+html[data-theme-v3="1"] #themeToggle::before { display: none !important; }
+html[data-theme-v3="1"] #syncBtn i,
+html[data-theme-v3="1"] #notificationsBtn i,
+html[data-theme-v3="1"] #themeToggle i,
+html[data-theme-v3="1"] .header-actions .btn-icon i { animation: none !important; }
+/* ── Cache le logo image (remplacé par bh-layout.js) ── */
 html[data-theme-v3="1"] .sidebar .sidebar-logo > img { display: none !important; }
-
-/* Forcer couleur texte footer sidebar — hardcodé pour éviter var(--text-1) blanc en dark */
-html[data-theme-v3="1"] .sidebar .user-name,
-html[data-theme-v3="1"] .sidebar #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
-html[data-theme-v3="1"] .sidebar .user-email,
-html[data-theme-v3="1"] .sidebar #sidebarUserCompany { color: #3D4A5C !important; }
-/* Même chose scoped sur sidebar-footer pour gagner en spécificité */
-html[data-theme-v3="1"] .sidebar .sidebar-footer .user-name,
-html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
-html[data-theme-v3="1"] .sidebar .sidebar-footer .user-email,
-html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3D4A5C !important; }
-</style>
+html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
+</style>    
 <style>
     html, body {
       margin: 0 !important;
@@ -2536,7 +2461,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3
 <!-- Main Content -->
 <main class="main-content">
 <!-- Header -->
-<header class="main-header">
+<header class="main-header" id="bhMainHeader">
 <div class="header-left">
 <div class="page-kicker">Vue d’ensemble</div>
 <h1 class="page-title">Dashboard</h1>
@@ -8531,88 +8456,151 @@ if (document.readyState === 'loading') {
 
 </script>
 <script></script><script src="/js/bh-layout.js"></script>
-<script src="/js/bh-theme-v3-nav.js"></script>
 <script>
-/* Fallback inline si bh-theme-v3-nav.js non dispo sur le serveur */
 (function(){
-  if(document.documentElement.getAttribute('data-theme-v3')!=='1') return;
-  if(document.getElementById('bh-demo-nav-el')) return; // déjà injecté par le JS externe
-  var NAV=[
-    {l:'Dashboard',i:'fa-chart-line',h:'/app.html',p:'app'},
-    {l:'Messages',i:'fa-comment-dots',h:'/messages.html',p:'messages'},
-    {l:'Logements',i:'fa-building',h:'/settings.html',p:'settings'},
-    {l:'Cautions',i:'fa-shield-halved',h:'/deposits.html',p:'deposits'},
-    {l:'Factures',i:'fa-file-invoice',h:'/factures.html',p:'factures'},
-    {l:'Livret',i:'fa-book-open',h:'/welcome.html',p:'welcome'}
+  'use strict';
+  var V3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+  if (!V3) return;
+
+  /* ── Restaurer le thème dark/light ── */
+  try {
+    var saved = localStorage.getItem('bh_theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  } catch(e) {}
+
+  /* ── Demo nav ── */
+  var PAGES = [
+    {l:'Dashboard', i:'fa-chart-line', h:'/app.html', p:'app'},
+    {l:'Messages',  i:'fa-comment-dots', h:'/messages.html', p:'messages'},
+    {l:'Logements', i:'fa-building', h:'/settings.html', p:'settings'},
+    {l:'Cautions',  i:'fa-shield-halved', h:'/deposits.html', p:'deposits'},
+    {l:'Factures',  i:'fa-file-invoice', h:'/factures.html', p:'factures'},
+    {l:'Livret',    i:'fa-book-open', h:'/welcome.html', p:'welcome'}
   ];
-  var page=document.body.getAttribute('data-page')||'';
-  var path=window.location.pathname.toLowerCase();
-  function init(){
-    if(document.getElementById('bh-demo-nav-el')) return;
-    // Restore saved theme
-    try{var t=localStorage.getItem('bh_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
-    var btns=NAV.map(function(p){
-      var active=p.p===page||path===p.h.toLowerCase();
-      return '<a href="'+p.h+'?v3=1" style="padding:4px 13px;border-radius:999px;border:1px solid rgba(255,255,255,'+(active?'0':'0.15')+');background:'+(active?'#1A7A5E':'transparent')+';color:'+(active?'white':'rgba(255,255,255,.6)')+';font-family:DM Sans,sans-serif;font-size:11.5px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><i class="fas '+p.i+'"></i> '+p.l+'</a>';
-    }).join('');
-    var nav=document.createElement('div');
-    nav.id='bh-demo-nav-el';
-    nav.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#0D1117;display:flex;align-items:center;gap:6px;padding:0 16px;height:40px;font-family:DM Sans,sans-serif;';
-    nav.innerHTML='<span style="color:rgba(255,255,255,.4);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-right:6px;">Vue</span>'
-      +btns
-      +'<div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;">'
-      +'<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;">Mode</span>'
-      +'<button id="bhV3ToggleInline" style="width:44px;height:24px;background:rgba(255,255,255,.15);border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .2s;" title="Dark/Light"></button>'
-      +'</div>';
-    document.body.insertBefore(nav,document.body.firstChild);
-    // Toggle dot
-    var tog=document.getElementById('bhV3ToggleInline');
-    var dot=document.createElement('span');
-    dot.style.cssText='position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform .2s;display:block;';
-    tog.appendChild(dot);
-    function updateToggle(){
-      var dark=document.documentElement.getAttribute('data-theme')==='dark';
-      tog.style.background=dark?'#1A7A5E':'rgba(255,255,255,.15)';
-      dot.style.transform=dark?'translateX(20px)':'translateX(0)';
-    }
-    updateToggle();
-    tog.addEventListener('click',function(){
-      var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
-      document.documentElement.setAttribute('data-theme',next);
-      try{localStorage.setItem('bh_theme',next);}catch(e){}
-      updateToggle();
-    });
-    // Titre en Instrument Serif
-    setTimeout(function(){
-      var titles={app:'Tableau de <em style="font-style:italic;color:#1A7A5E;">bord</em>',messages:'Mes <em style="font-style:italic;color:#1A7A5E;">messages</em>',settings:'Mes <em style="font-style:italic;color:#1A7A5E;">logements</em>',deposits:'Gestion des <em style="font-style:italic;color:#1A7A5E;">cautions</em>',factures:'Factures <em style="font-style:italic;color:#1A7A5E;">clients</em>',welcome:"Livret d'<em style='font-style:italic;color:#1A7A5E;'>accueil</em>"};
-      var el=document.querySelector('.main-header h1.page-title,.main-header .page-title');
-      if(el&&titles[page]&&!el.querySelector('em')) el.innerHTML=titles[page];
-      // Légende calendrier
-      var vs=document.querySelector('.view-selector');
-      if(vs&&!vs.querySelector('.bh-cal-leg')){
-        var leg=document.createElement('div');
-        leg.className='bh-cal-leg';
-        leg.style.cssText='display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;';
-        leg.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;display:inline-block;"></span>Airbnb</span>'
-          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#4A90E2;flex-shrink:0;display:inline-block;"></span>Booking</span>'
-          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#2AAE86;flex-shrink:0;display:inline-block;"></span>Direct</span>';
-        vs.appendChild(leg);
-      }
-    },800);
-    setTimeout(function(){
-      var vs=document.querySelector('.view-selector');
-      if(vs&&!vs.querySelector('.bh-cal-leg')){
-        var leg=document.createElement('div');
-        leg.className='bh-cal-leg';
-        leg.style.cssText='display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;';
-        leg.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;display:inline-block;"></span>Airbnb</span>'
-          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#4A90E2;flex-shrink:0;display:inline-block;"></span>Booking</span>'
-          +'<span style="display:flex;align-items:center;gap:6px;font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);"><span style="width:8px;height:8px;border-radius:50%;background:#2AAE86;flex-shrink:0;display:inline-block;"></span>Direct</span>';
-        vs.appendChild(leg);
-      }
-    },2500);
+  var curPage = document.body.getAttribute('data-page') || '';
+  var curPath  = location.pathname.toLowerCase();
+
+  var nav = document.createElement('div');
+  nav.id  = 'bhDemoNav';
+  nav.style.cssText = [
+    'position:fixed','top:0','left:0','right:0','z-index:9999',
+    'background:#0D1117','display:flex','align-items:center',
+    'gap:6px','padding:0 16px','height:40px','box-sizing:border-box'
+  ].join(';');
+
+  var html = '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">Vue</span>';
+  PAGES.forEach(function(p){
+    var active = p.p === curPage || curPath === p.h.toLowerCase();
+    html += '<a href="' + p.h + '?v3=1" style="'
+      + 'padding:4px 12px;border-radius:999px;text-decoration:none;'
+      + 'font-family:DM Sans,sans-serif;font-size:11.5px;font-weight:500;'
+      + 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;'
+      + 'border:1px solid ' + (active ? 'transparent' : 'rgba(255,255,255,.15)') + ';'
+      + 'background:' + (active ? '#1A7A5E' : 'transparent') + ';'
+      + 'color:' + (active ? '#fff' : 'rgba(255,255,255,.6)') + ';'
+      + '"><i class="fas ' + p.i + '" style="font-size:10px;"></i> ' + p.l + '</a>';
+  });
+
+  /* Toggle dark/light */
+  html += '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">';
+  html += '<span style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;">Mode</span>';
+  html += '<button id="bhModeToggle" style="width:40px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;background:#1A7A5E;">';
+  html += '<span id="bhModeDot" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block;"></span>';
+  html += '</button></div>';
+  nav.innerHTML = html;
+  document.body.insertBefore(nav, document.body.firstChild);
+
+  function applyTheme() {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var dot = document.getElementById('bhModeDot');
+    var btn = document.getElementById('bhModeToggle');
+    if (dot) dot.style.transform = dark ? 'translateX(18px)' : 'translateX(0)';
+    if (btn) btn.style.background = dark ? '#1A7A5E' : 'rgba(255,255,255,.2)';
   }
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}else{init();}
+  applyTheme();
+  document.getElementById('bhModeToggle').addEventListener('click', function(){
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('bh_theme', next); } catch(e) {}
+    applyTheme();
+  });
+
+  /* ── Appliquer les styles V3 une fois le DOM prêt ── */
+  function applyV3Styles() {
+    /* Header sticky top:40px */
+    var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
+    if (header) {
+      header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
+    }
+
+    /* Sidebar top:40px */
+    var sidebar = document.querySelector('aside.sidebar');
+    if (sidebar) {
+      sidebar.style.cssText += ';position:fixed !important;top:40px !important;bottom:0 !important;height:auto !important;';
+    }
+
+    /* Titre page en Instrument Serif */
+    var titles = {
+      app:      'Tableau de <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">bord</em>',
+      messages: 'Mes <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">messages</em>',
+      settings: 'Mes <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">logements</em>',
+      deposits: 'Gestion des <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">cautions</em>',
+      factures: 'Factures <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">clients</em>',
+      welcome:  "Livret d'<em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">accueil</em>"
+    };
+    var titleEl = document.querySelector('h1.page-title, .page-title');
+    if (titleEl && titles[curPage] && !titleEl.querySelector('em')) {
+      titleEl.innerHTML = titles[curPage];
+      titleEl.style.cssText += ';font-family:'Instrument Serif',Georgia,serif !important;';
+    }
+
+    /* Forcer couleur du nom sidebar — inline style sur l'élément lui-même */
+    var nameEl = document.getElementById('sidebarUserName');
+    if (nameEl) { nameEl.style.color = '#0D1117'; nameEl.style.fontWeight = '600'; }
+    var compEl = document.getElementById('sidebarUserCompany');
+    if (compEl) { compEl.style.color = '#5A6A7A'; }
+
+    /* Légende calendrier */
+    var vs = document.querySelector('.view-selector');
+    if (vs && !vs.querySelector('.bh-leg')) {
+      var leg = document.createElement('div');
+      leg.className = 'bh-leg';
+      leg.style.cssText = 'display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;';
+      leg.innerHTML = [
+        ['#FF5A5F','Airbnb'], ['#4A90E2','Booking'], ['#2AAE86','Direct']
+      ].map(function(x){
+        return '<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgba(255,255,255,.75);font-family:DM Sans,sans-serif;">'
+          + '<span style="width:8px;height:8px;border-radius:50%;background:'+x[0]+';flex-shrink:0;display:inline-block;"></span>'+x[1]+'</span>';
+      }).join('');
+      vs.appendChild(leg);
+    }
+
+    /* Bouton + Nouvelle réservation */
+    var actions = document.querySelector('.header-actions');
+    if (actions && !document.getElementById('newReservationBtn') && curPage === 'app') {
+      var btn = document.createElement('button');
+      btn.id = 'newReservationBtn';
+      btn.style.cssText = 'background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;';
+      btn.innerHTML = '<i class="fas fa-plus"></i> Nouvelle réservation';
+      btn.onclick = function(){ var m=document.getElementById('newReservationModal'); if(m) m.style.display='flex'; };
+      actions.appendChild(btn);
+    }
+  }
+
+  /* Lancer après le DOM + après l'injection sidebar */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(applyV3Styles, 100);
+      setTimeout(applyV3Styles, 800);
+    });
+  } else {
+    setTimeout(applyV3Styles, 100);
+    setTimeout(applyV3Styles, 800);
+  }
+  document.addEventListener('sidebarReady', function(){
+    setTimeout(applyV3Styles, 50);
+  });
+
 })();
 </script>
 
