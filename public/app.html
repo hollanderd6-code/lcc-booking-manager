@@ -8888,20 +8888,7 @@ if (document.readyState === 'loading') {
     var compEl = document.getElementById('sidebarUserCompany');
     if (compEl) { compEl.style.color = '#5A6A7A'; }
 
-    /* Légende calendrier */
-    var vs = document.querySelector('.view-selector');
-    if (vs && !vs.querySelector('.bh-leg')) {
-      var leg = document.createElement('div');
-      leg.className = 'bh-leg';
-      leg.style.cssText = 'display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;';
-      leg.innerHTML = [
-        ['#FF5A5F','Airbnb'], ['#4A90E2','Booking'], ['#2AAE86','Direct']
-      ].map(function(x){
-        return '<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgba(255,255,255,.75);font-family:DM Sans,sans-serif;">'
-          + '<span style="width:8px;height:8px;border-radius:50%;background:'+x[0]+';flex-shrink:0;display:inline-block;"></span>'+x[1]+'</span>';
-      }).join('');
-      vs.appendChild(leg);
-    }
+    /* Légende calendrier déplacée dans le header dark - plus besoin ici */
 
     /* Bouton + Nouvelle réservation */
     var actions = document.querySelector('.header-actions');
