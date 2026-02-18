@@ -2,7 +2,7 @@
   'use strict';
 
 /* /js/bh-layout.js – injection sidebar + header avec filtrage permissions sous-comptes */
-const LOGO_B_SVG = `<img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
+const LOGO_B_SVG = `<img src="/public/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;flex-shrink:0;">`;
 
 function getSidebarHTML() {
   // Vérifier si sous-compte
@@ -38,7 +38,7 @@ function getSidebarHTML() {
 <aside class="sidebar">
   <div class="sidebar-header">
     <a class="sidebar-logo" href="/" style="display:flex;align-items:center;gap:10px;padding:22px 18px 18px;text-decoration:none;">
-      <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:36px;height:36px;min-width:36px;border-radius:10px;flex-shrink:0;object-fit:contain;">
+      <img src="/public/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:36px;height:36px;min-width:36px;border-radius:10px;flex-shrink:0;object-fit:contain;">
       <div style="display:flex;flex-direction:column;justify-content:center;">
         <span style="font-family:'Instrument Serif',Georgia,serif;font-size:18px;line-height:1.15;font-weight:400;letter-spacing:-0.01em;">
           <span style="color:#0D1117;">Boosting</span><em style="color:#1A7A5E;font-style:italic;">host</em>
