@@ -35,12 +35,15 @@ html[data-theme-v3="1"] main.main-content,
 html[data-theme-v3="1"] header.main-header,
 html[data-theme-v3="1"] .page-content { margin-top: 0 !important; padding-top: 0 !important; }
 
+/* Colle le main-header directement sous la demo-nav — pas de gap */
+html[data-theme-v3="1"] .main-content { padding-top: 0 !important; margin-top: 0 !important; }
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important; top: 0 !important; z-index: 50 !important;
   height: 72px !important; background: #FAF8F5 !important;
   border-bottom: 1px solid rgba(13,17,23,.09) !important;
   box-shadow: none !important; display: flex !important;
   align-items: center !important; padding: 0 32px !important; gap: 16px !important;
+  margin: 0 !important;
 }
 
 /* Écraser les gradients colorés des boutons header */
@@ -114,6 +117,16 @@ html[data-theme-v3="1"][data-theme="dark"] #syncBtn, html[data-theme-v3="1"][dat
 html[data-theme-v3="1"][data-theme="dark"] #themeToggle, html[data-theme-v3="1"][data-theme="dark"] .header-actions .btn-icon {
   border-color: rgba(255,255,255,.12) !important; color: rgba(255,255,255,.6) !important;
 }
+
+/* Neutralise le ::before CSS externe (évite le double carré noir) */
+html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
+html[data-theme-v3="1"] .sidebar .sidebar-logo > img { display: none !important; }
+
+/* Forcer couleur texte footer sidebar (même sans hover) */
+html[data-theme-v3="1"] .sidebar .user-name,
+html[data-theme-v3="1"] .sidebar #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
+html[data-theme-v3="1"] .sidebar .user-email,
+html[data-theme-v3="1"] .sidebar #sidebarUserCompany { color: #3D4A5C !important; }
 </style>
 <style>
     html, body {
