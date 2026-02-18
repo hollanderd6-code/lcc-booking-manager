@@ -1567,3 +1567,17 @@ html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub,
 html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub {
   color: var(--jade) !important;
 }
+
+/* Period navigation & year view - pas de vert */
+html[data-theme-v3="1"] .period-navigation {
+  background: #F5F2EC !important;
+  border-bottom: 1px solid rgba(0,0,0,.08) !important;
+}
+html[data-theme-v3="1"] .period-nav-btn {
+  background: white !important;
+  border: 1px solid rgba(0,0,0,.12) !important;
+  color: var(--obsidian) !important;
+}
+html[data-theme-v3="1"] .year-grid {
+  background: #F5F2EC !important;
+}
