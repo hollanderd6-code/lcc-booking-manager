@@ -7897,6 +7897,13 @@ html[data-theme-v3="1"] body {
   padding-top: 40px !important;
   margin-top: 0 !important;
 }
+/* Masquer mobile-header sur desktop (il crée un espace) */
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] .mobile-header,
+  html[data-theme-v3="1"] .mobile-menu-btn {
+    display: none !important;
+  }
+}
 html[data-theme-v3="1"] .app-container,
 html[data-theme-v3="1"] .main-content,
 html[data-theme-v3="1"] main.main-content {
@@ -7911,6 +7918,13 @@ html[data-theme-v3="1"] #bhMainHeader {
   margin-top: 0 !important;
   padding-top: 0 !important;
   z-index: 90 !important;
+}
+/* Annuler tout padding venant de style.css sur main-content */
+html[data-theme-v3="1"] .main-content,
+html[data-theme-v3="1"] main.main-content,
+html[data-theme-v3="1"] .main-content > *:first-child {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 </style>
 
