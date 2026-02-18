@@ -1147,7 +1147,7 @@ html[data-theme-v3="1"] .calendar-action-btn {
 
 html[data-theme-v3="1"] .calendar-action-btn:hover { background: rgba(255,255,255,.2) !important; color: white !important; }
 
-html[data-theme-v3="1"] .view-selector { background: transparent !important; }
+html[data-theme-v3="1"] .view-selector { display: none !important; } /* Tabs moved to dark header */
 
 html[data-theme-v3="1"] .view-tabs {
   display: flex !important;
@@ -1533,4 +1533,37 @@ html[data-theme-v3="1"] .page-content {
 html[data-theme-v3="1"] .app-container {
   margin-top: 0 !important;
   padding-top: 0 !important;
+}
+
+
+/* ============================================================
+   FIXES INDÉPENDANTS DU HTML - s'appliquent sur toutes les pages
+   ============================================================ */
+
+/* 1. Vue année - cacher le view-selector ancien */
+html[data-theme-v3="1"] .view-selector { display: none !important; }
+
+/* 2. FAB bouton + flottant - masqué */
+html[data-theme-v3="1"] .fab,
+html[data-theme-v3="1"] #addBookingBtn {
+  display: none !important;
+}
+
+/* 3. KPI première carte - pas de fond noir */
+html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child,
+html[data-theme-v3="1"] #kpiPropertiesCard {
+  background: var(--cream) !important;
+  border-color: var(--border) !important;
+}
+html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-label,
+html[data-theme-v3="1"] #kpiPropertiesCard .kpi-label {
+  color: var(--text-muted) !important;
+}
+html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
+html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value {
+  color: var(--text-primary) !important;
+}
+html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub,
+html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub {
+  color: var(--jade) !important;
 }
