@@ -593,14 +593,48 @@ html[data-theme-v3="1"] .chat-date-separator span {
   z-index: 1;
 }
 
+/* ============================================================
+   HEADER FIXE + SUPPRESSION RETOUR AU DASHBOARD
+   ============================================================ */
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  margin-top: 0 !important;
+  background: #F5F2EC !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Hide back button */
+html[data-theme-v3="1"] .back-btn,
+html[data-theme-v3="1"] .btn-back,
+html[data-theme-v3="1"] [href="/app.html"].back,
+html[data-theme-v3="1"] .header-back,
+html[data-theme-v3="1"] .page-back-btn,
+html[data-theme-v3="1"] a[data-back],
+html[data-theme-v3="1"] .header-breadcrumb,
+html[data-theme-v3="1"] .breadcrumb {
+  display: none !important;
+}
+
 </style>
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+<body  data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
 
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+<body  data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
 <script>
 (function() {
   'use strict';
@@ -1602,6 +1636,29 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 <style id="final-overrides">
 .view-selector { display: none !important; }
 </style>
+
+
+<script>
+// Hide back button injected by bh-layout.js
+(function() {
+  function hideBackBtn() {
+    // Common selectors for the back button
+    document.querySelectorAll('.back-btn, .btn-back, .header-back, .page-back-btn, [class*="back"]').forEach(function(el) {
+      var text = el.textContent || '';
+      if (text.includes('dashboard') || text.includes('Dashboard') || text.includes('Retour') || el.href && el.href.includes('app.html')) {
+        el.style.display = 'none';
+      }
+    });
+  }
+  // Run immediately and after layout injection
+  hideBackBtn();
+  document.addEventListener('DOMContentLoaded', hideBackBtn);
+  setTimeout(hideBackBtn, 500);
+  setTimeout(hideBackBtn, 1500);
+  // MutationObserver to catch dynamically injected elements
+  new MutationObserver(hideBackBtn).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 
 </body>
 </html>
