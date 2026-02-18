@@ -1552,16 +1552,16 @@ html[data-theme-v3="1"] #addBookingBtn {
 /* 3. KPI première carte - pas de fond noir */
 html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child,
 html[data-theme-v3="1"] #kpiPropertiesCard {
-  background: var(--cream) !important;
-  border-color: var(--border) !important;
+  background: var(--cream-warm) !important;
+  border: 1px solid var(--border-warm-v3) !important;
 }
 html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-label,
 html[data-theme-v3="1"] #kpiPropertiesCard .kpi-label {
-  color: var(--text-muted) !important;
+  color: var(--text-muted-v3, #7A8695) !important;
 }
 html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
 html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value {
-  color: var(--text-primary) !important;
+  color: var(--obsidian) !important;
 }
 html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub,
 html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub {
