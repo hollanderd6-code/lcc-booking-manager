@@ -4,24 +4,47 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Messages — Boostinghost</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="/css/style.css" rel="stylesheet"/>
 <link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
 <link href="/css/bh-theme-v3.css" rel="stylesheet"/>
 <link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link href="/css/chat-modern.css" rel="stylesheet">
-<link href="/css/guest-info-styles.css" rel="stylesheet">
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
-
 <style>
 /* ============================================================
-   DARK BAR CSS
+   DARK BAR + STICKY HEADER (identical to app.html)
    ============================================================ */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important; /* body a déjà padding-top:40px — sticky à 0 = collé sous la barre dark */
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Tuer tout espace parasite entre barre dark et header */
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ── BARRE DARK EN HAUT ── */
 html[data-theme-v3="1"] .bh-demo-nav {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -113,43 +136,45 @@ html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 /* ============================================================
-   MESSAGES PAGE - REDESIGN V3
+   PAGE MESSAGES — REDESIGN V3
    ============================================================ */
 html[data-theme-v3="1"] body {
-  padding-top: 40px !important;
   background: #F5F2EC !important;
   font-family: 'DM Sans', sans-serif !important;
 }
 
 html[data-theme-v3="1"] .main-content {
   background: #F5F2EC !important;
+  overflow: hidden !important;
 }
 
-/* Header de page */
-html[data-theme-v3="1"] .msgs-page-header {
+/* Hide back button */
+html[data-theme-v3="1"] .back-btn,
+html[data-theme-v3="1"] .btn-back,
+html[data-theme-v3="1"] .header-back,
+html[data-theme-v3="1"] .page-back-btn {
+  display: none !important;
+}
+
+/* ── Page header ── */
+.msgs-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px 14px;
-  background: transparent;
-  gap: 16px;
+  padding: 16px 24px 12px;
+  flex-shrink: 0;
 }
 
-html[data-theme-v3="1"] .msgs-page-title {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-html[data-theme-v3="1"] .msgs-page-kicker {
+.msgs-kicker {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: rgba(13,17,23,.4);
+  color: rgba(13,17,23,.38);
+  margin-bottom: 2px;
 }
 
-html[data-theme-v3="1"] .msgs-page-heading {
+.msgs-heading {
   font-family: 'Instrument Serif', serif;
   font-size: 26px;
   font-weight: 400;
@@ -158,18 +183,18 @@ html[data-theme-v3="1"] .msgs-page-heading {
   line-height: 1.1;
 }
 
-html[data-theme-v3="1"] .msgs-page-heading em {
+.msgs-heading em {
   font-style: italic;
   color: #1A7A5E;
 }
 
-html[data-theme-v3="1"] .msgs-header-actions {
+.msgs-header-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-html[data-theme-v3="1"] .msgs-icon-btn {
+.msgs-icon-btn {
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -180,16 +205,13 @@ html[data-theme-v3="1"] .msgs-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   transition: all .15s;
 }
 
-html[data-theme-v3="1"] .msgs-icon-btn:hover {
-  background: #f0ebe3;
-  color: #0D1117;
-}
+.msgs-icon-btn:hover { background: #eee8df; color: #0D1117; }
 
-html[data-theme-v3="1"] .msgs-group-btn {
+.msgs-group-btn {
   background: #1A7A5E;
   color: white;
   border: none;
@@ -206,40 +228,37 @@ html[data-theme-v3="1"] .msgs-group-btn {
   transition: background .15s;
 }
 
-html[data-theme-v3="1"] .msgs-group-btn:hover {
-  background: #15624B;
-}
+.msgs-group-btn:hover { background: #15624B; }
 
-/* ============================================================
-   SPLIT LAYOUT
-   ============================================================ */
-html[data-theme-v3="1"] .msgs-split {
+/* ── Split container ── */
+.msgs-split {
   display: flex;
-  height: calc(100vh - 40px - 72px);  /* minus topbar + header */
   margin: 0 16px 16px;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,.08);
-  box-shadow: 0 4px 24px rgba(0,0,0,.06);
+  box-shadow: 0 2px 20px rgba(0,0,0,.06);
   background: white;
+  height: calc(100vh - 40px - 80px);
 }
 
-/* LEFT PANEL */
-html[data-theme-v3="1"] .msgs-left {
-  width: 340px;
-  min-width: 340px;
+/* ── Left panel ── */
+.msgs-left {
+  width: 330px;
+  min-width: 330px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(0,0,0,.07);
   background: #FAFAF8;
+  overflow: hidden;
 }
 
-html[data-theme-v3="1"] .msgs-search-wrap {
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
+.msgs-search-wrap {
+  padding: 12px 12px 10px;
+  flex-shrink: 0;
 }
 
-html[data-theme-v3="1"] .msgs-search {
+.msgs-search {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -247,328 +266,324 @@ html[data-theme-v3="1"] .msgs-search {
   border: 1px solid rgba(0,0,0,.1);
   border-radius: 10px;
   padding: 0 12px;
-  height: 38px;
+  height: 36px;
 }
 
-html[data-theme-v3="1"] .msgs-search i {
-  color: #9AA3AE;
-  font-size: 13px;
-  flex-shrink: 0;
-}
+.msgs-search i { color: #B0BAC5; font-size: 12px; }
 
-html[data-theme-v3="1"] .msgs-search input {
+.msgs-search input {
   flex: 1;
   border: none;
   background: transparent;
   font-family: 'DM Sans', sans-serif;
-  font-size: 13.5px;
+  font-size: 13px;
   color: #0D1117;
   outline: none;
 }
 
-html[data-theme-v3="1"] .msgs-search input::placeholder {
-  color: #9AA3AE;
-}
+.msgs-search input::placeholder { color: #B0BAC5; }
 
-html[data-theme-v3="1"] .msgs-conv-list {
+/* Conv list scroll */
+#conversationsList {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
-html[data-theme-v3="1"] .msgs-conv-list::-webkit-scrollbar {
-  width: 4px;
+#conversationsList::-webkit-scrollbar { width: 3px; }
+#conversationsList::-webkit-scrollbar-thumb { background: rgba(0,0,0,.08); border-radius: 2px; }
+
+/* ── Conversation items — override chat-owner.js ── */
+#conversationsList .conversation-item {
+  padding: 11px 14px !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(0,0,0,.05) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+  transition: background .12s !important;
 }
 
-html[data-theme-v3="1"] .msgs-conv-list::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,.1);
-  border-radius: 2px;
+#conversationsList .conversation-item:hover { background: #F0EBE3 !important; }
+#conversationsList .conversation-item.active { background: #E8F4EF !important; border-left: 3px solid #1A7A5E !important; }
+
+/* Avatar */
+#conversationsList .conversation-avatar {
+  width: 40px !important; height: 40px !important; min-width: 40px !important;
+  border-radius: 50% !important; font-size: 15px !important; font-weight: 700 !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  flex-shrink: 0 !important; color: white !important;
 }
 
-/* Conversation items */
-html[data-theme-v3="1"] .conversation-item {
-  padding: 13px 14px;
-  border-bottom: 1px solid rgba(0,0,0,.05);
-  cursor: pointer;
+/* Content */
+#conversationsList .conversation-content {
+  flex: 1 !important; min-width: 0 !important;
+}
+
+/* Header row */
+#conversationsList .conversation-header {
+  display: flex !important; align-items: center !important;
+  justify-content: space-between !important; margin-bottom: 2px !important;
+}
+
+/* Name */
+#conversationsList .conversation-info h3 {
+  font-size: 13.5px !important; font-weight: 700 !important; color: #0D1117 !important;
+  margin: 0 !important; white-space: nowrap !important; overflow: hidden !important;
+  text-overflow: ellipsis !important; max-width: 160px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+/* Hide phone, meta (property/date/platform), delete button, status badge */
+#conversationsList .conversation-phone,
+#conversationsList .meta,
+#conversationsList .conversation-actions,
+#conversationsList .status-badge {
+  display: none !important;
+}
+
+/* Status area — only time + unread */
+#conversationsList .conversation-status {
+  display: flex !important; flex-direction: column !important;
+  align-items: flex-end !important; gap: 4px !important; flex-shrink: 0 !important;
+}
+
+#conversationsList .conversation-time {
+  font-size: 11px !important; color: #B0BAC5 !important; font-weight: 400 !important;
+  white-space: nowrap !important;
+}
+
+#conversationsList .unread-badge {
+  background: #EF4444 !important; color: white !important;
+  width: 20px !important; height: 20px !important; min-width: 20px !important;
+  border-radius: 50% !important; display: flex !important; align-items: center !important;
+  justify-content: center !important; font-size: 10px !important; font-weight: 700 !important;
+}
+
+/* ── Preview line (show if exists) ── */
+#conversationsList .conversation-preview {
+  font-size: 12.5px !important; color: #8A96A3 !important;
+  white-space: nowrap !important; overflow: hidden !important;
+  text-overflow: ellipsis !important; max-width: 200px !important;
+  font-family: 'DM Sans', sans-serif !important; margin: 0 !important;
+}
+
+/* Empty state */
+#conversationsList .empty-state {
+  text-align: center; padding: 40px 20px; color: #B0BAC5;
+}
+#conversationsList .empty-state i { font-size: 36px; display: block; margin-bottom: 12px; opacity: .4; }
+#conversationsList .empty-state h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #6B7A8A; }
+#conversationsList .empty-state p { font-size: 13px; }
+
+/* ── Right panel ── */
+.msgs-right {
+  flex: 1;
   display: flex;
-  gap: 11px;
-  align-items: flex-start;
-  transition: background .12s;
-  position: relative;
+  flex-direction: column;
+  background: white;
+  overflow: hidden;
+  min-width: 0;
 }
 
-html[data-theme-v3="1"] .conversation-item:hover {
-  background: #F0EBE3;
+/* Placeholder */
+#msgsChatPlaceholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #C5CDD5;
+}
+#msgsChatPlaceholder i { font-size: 48px; opacity: .35; }
+#msgsChatPlaceholder p { font-size: 14px; }
+
+/* Chat header */
+#msgsChatHeader {
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  background: white;
 }
 
-html[data-theme-v3="1"] .conversation-item.active {
-  background: #E8F4EF;
-  border-left: 3px solid #1A7A5E;
-}
-
-html[data-theme-v3="1"] .conversation-item:last-child {
-  border-bottom: none;
-}
-
-html[data-theme-v3="1"] .conversation-avatar {
-  width: 42px;
-  height: 42px;
+.msgs-chat-avatar {
+  width: 38px; height: 38px; min-width: 38px;
   border-radius: 50%;
   background: #1A7A5E;
   color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 16px;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px;
   font-family: 'DM Sans', sans-serif;
 }
 
-html[data-theme-v3="1"] .conversation-content {
-  flex: 1;
-  min-width: 0;
-}
+.msgs-chat-info { flex: 1; min-width: 0; }
 
-html[data-theme-v3="1"] .conversation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 3px;
-}
-
-html[data-theme-v3="1"] .conversation-info h3 {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0D1117;
-  margin: 0;
-  font-family: 'DM Sans', sans-serif;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
-}
-
-html[data-theme-v3="1"] .conversation-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-html[data-theme-v3="1"] .conversation-time {
-  font-size: 11.5px;
-  color: #9AA3AE;
-  font-weight: 400;
-}
-
-html[data-theme-v3="1"] .unread-badge {
-  background: #EF4444;
-  color: white;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-html[data-theme-v3="1"] .conversation-preview {
-  font-size: 13px;
-  color: #6B7A8A;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: 'DM Sans', sans-serif;
-}
-
-html[data-theme-v3="1"] .conversation-actions {
-  display: none;
-}
-
-/* RIGHT PANEL */
-html[data-theme-v3="1"] .msgs-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: white;
-}
-
-html[data-theme-v3="1"] .msgs-chat-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #9AA3AE;
-  gap: 12px;
-}
-
-html[data-theme-v3="1"] .msgs-chat-placeholder i {
-  font-size: 48px;
-  opacity: .3;
-}
-
-html[data-theme-v3="1"] .msgs-chat-placeholder p {
-  font-size: 15px;
-  color: #9AA3AE;
-}
-
-/* Chat header in right panel */
-html[data-theme-v3="1"] .msgs-chat-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  border-bottom: 1px solid rgba(0,0,0,.07);
-  background: white;
-  flex-shrink: 0;
-}
-
-html[data-theme-v3="1"] .msgs-chat-header-info {
-  flex: 1;
-  min-width: 0;
-}
-
-html[data-theme-v3="1"] .msgs-chat-guest-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0D1117;
+.msgs-chat-name {
+  font-size: 15px; font-weight: 700; color: #0D1117;
   font-family: 'DM Sans', sans-serif;
   margin-bottom: 2px;
 }
 
-html[data-theme-v3="1"] .msgs-chat-meta {
-  font-size: 12.5px;
-  color: #6B7A8A;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.msgs-chat-meta {
+  font-size: 12px; color: #8A96A3;
+  display: flex; align-items: center; gap: 5px;
 }
 
-html[data-theme-v3="1"] .msgs-chat-meta .dot {
-  opacity: .4;
+.msgs-chat-meta .sep { opacity: .4; }
+
+.msgs-chat-actions {
+  display: flex; align-items: center; gap: 7px;
 }
 
-html[data-theme-v3="1"] .msgs-chat-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-html[data-theme-v3="1"] .msgs-auto-reply-btn {
-  background: white;
+.msgs-auto-btn {
   border: 1px solid rgba(0,0,0,.12);
-  border-radius: 10px;
-  padding: 0 14px;
-  height: 34px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #0D1117;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  transition: all .15s;
+  border-radius: 10px; padding: 0 13px; height: 32px;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+  color: #0D1117; background: white; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: background .15s;
 }
-
-html[data-theme-v3="1"] .msgs-auto-reply-btn:hover {
-  background: #f5f2ec;
-}
+.msgs-auto-btn:hover { background: #f5f2ec; }
 
 /* Messages area */
-html[data-theme-v3="1"] .chat-modal-messages {
+#chatMessages {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
   background: #F5F2EC;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  min-height: 0;
 }
 
-/* Owner bubble = dark */
-html[data-theme-v3="1"] .chat-message.owner .chat-bubble {
+#chatMessages::-webkit-scrollbar { width: 4px; }
+#chatMessages::-webkit-scrollbar-thumb { background: rgba(0,0,0,.1); border-radius: 2px; }
+
+/* Message bubbles */
+.chat-message {
+  display: flex;
+  gap: 10px;
+  max-width: 72%;
+  animation: fadeInUp .2s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message.owner {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.chat-message.guest, .chat-message.bot { align-self: flex-start; }
+
+.chat-avatar {
+  width: 32px; height: 32px; min-width: 32px;
+  border-radius: 50%; background: #1A7A5E; color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 12px; flex-shrink: 0;
+}
+.chat-message.guest .chat-avatar { background: #3B82F6; }
+.chat-message.bot .chat-avatar { background: #8B5CF6; }
+
+.chat-bubble {
+  background: white;
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  font-size: 14px;
+  line-height: 1.5;
+  color: #0D1117;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+.chat-message.owner .chat-bubble {
   background: #0D1117;
   color: white;
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 16px 16px 4px 16px;
 }
+.chat-message.bot .chat-bubble { background: #EDE9FE; }
 
-html[data-theme-v3="1"] .chat-message.owner .chat-time {
-  color: rgba(255,255,255,.6);
-}
-
-/* Guest bubble = white */
-html[data-theme-v3="1"] .chat-message.guest .chat-bubble,
-html[data-theme-v3="1"] .chat-message.bot .chat-bubble {
-  background: white;
-  border-radius: 18px 18px 18px 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06);
-}
+.chat-sender { font-size: 11px; font-weight: 600; color: #8A96A3; margin-bottom: 3px; }
+.chat-time, .chat-meta { font-size: 10px; color: #B0BAC5; margin-top: 4px; }
+.chat-message.owner .chat-time { color: rgba(255,255,255,.5); }
 
 /* Input area */
-html[data-theme-v3="1"] .chat-modal-input {
-  padding: 12px 16px;
+.chat-modal-input {
+  padding: 10px 14px;
   border-top: 1px solid rgba(0,0,0,.07);
   background: white;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-end;
+  flex-shrink: 0;
 }
 
-html[data-theme-v3="1"] .chat-input {
+.chat-input {
   flex: 1;
-  padding: 10px 16px;
+  padding: 9px 14px;
   border: 1px solid rgba(0,0,0,.1);
-  border-radius: 24px;
+  border-radius: 20px;
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
   resize: none;
-  max-height: 120px;
+  max-height: 100px;
   background: #F5F2EC;
   outline: none;
   color: #0D1117;
 }
+.chat-input:focus { border-color: rgba(26,122,94,.4); background: white; }
 
-html[data-theme-v3="1"] .chat-input:focus {
-  border-color: rgba(26,122,94,.4);
-  background: white;
+.send-btn {
+  width: 38px; height: 38px; flex-shrink: 0;
+  background: #1A7A5E; color: white; border: none;
+  border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: background .15s;
+}
+.send-btn:hover { background: #15624B; }
+.send-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Date separator */
+.chat-date-sep {
+  text-align: center; padding: 6px 0;
+  font-size: 11.5px; color: #B0BAC5;
 }
 
-html[data-theme-v3="1"] .send-btn {
-  width: 40px;
-  height: 40px;
-  background: #1A7A5E;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
-  transition: background .15s;
+/* Old modal → transformed to inline */
+#chatModal {
+  position: static !important;
+  display: contents !important;
+  background: none !important;
+  backdrop-filter: none !important;
+  pointer-events: none !important;
+}
+#chatModal.active {
+  display: contents !important;
+}
+#chatModal .chat-modal {
+  display: contents !important;
+}
+#chatModal .chat-modal-header {
+  display: none !important; /* We use our own header */
 }
 
-html[data-theme-v3="1"] .send-btn:hover {
-  background: #15624B;
-}
-
-/* Empty state */
-html[data-theme-v3="1"] .empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #9AA3AE;
-}
-
-/* Hide old layout elements */
+/* Hide legacy elements */
 html[data-theme-v3="1"] .stats-section,
 html[data-theme-v3="1"] .filters-section,
-html[data-theme-v3="1"] .conversations-section,
-html[data-theme-v3="1"] .modal-overlay#chatModal {
+html[data-theme-v3="1"] .conversations-section {
   display: none !important;
 }
 
@@ -576,65 +591,15 @@ html[data-theme-v3="1"] .page-content {
   padding: 0 !important;
   margin: 0 !important;
 }
-
-/* Date separator */
-html[data-theme-v3="1"] .chat-date-separator {
-  text-align: center;
-  font-size: 11.5px;
-  color: #9AA3AE;
-  padding: 8px 0;
-  position: relative;
-}
-
-html[data-theme-v3="1"] .chat-date-separator span {
-  background: #F5F2EC;
-  padding: 0 10px;
-  position: relative;
-  z-index: 1;
-}
-
-/* ============================================================
-   HEADER FIXE + SUPPRESSION RETOUR AU DASHBOARD
-   ============================================================ */
-html[data-theme-v3="1"] header.main-header {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 50 !important;
-  margin-top: 0 !important;
-  background: #F5F2EC !important;
-}
-html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-}
-html[data-theme-v3="1"] .app-container {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-html[data-theme-v3="1"] main.main-content > header.main-header {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-/* Hide back button */
-html[data-theme-v3="1"] .back-btn,
-html[data-theme-v3="1"] .btn-back,
-html[data-theme-v3="1"] [href="/app.html"].back,
-html[data-theme-v3="1"] .header-back,
-html[data-theme-v3="1"] .page-back-btn,
-html[data-theme-v3="1"] a[data-back],
-html[data-theme-v3="1"] .header-breadcrumb,
-html[data-theme-v3="1"] .breadcrumb {
-  display: none !important;
-}
-
 </style>
 </head>
-<body  data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+
+<body data-page="messages">
 
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
-<body  data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Communication" data-page="messages" data-subtitle="Centralisez et gérez toutes vos conversations." data-title="Messages">
 <script>
 (function() {
   'use strict';
@@ -688,20 +653,14 @@ html[data-theme-v3="1"] .breadcrumb {
 })();
 </script>
 
-<!-- MOBILE HEADER -->
+<!-- Mobile header -->
 <div class="mobile-header">
-<a class="mobile-logo" href="/app.html">
-<i class="fas fa-calendar-check"></i>
-<span class="mobile-logo-text">Boostinghost</span>
-</a>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
+  <a class="mobile-logo" href="/app.html"><i class="fas fa-calendar-check"></i><span class="mobile-logo-text">Boostinghost</span></a>
+  <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
 </div>
-
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-<!-- DARK TOP BAR -->
+<!-- Dark bar -->
 <div class="bh-demo-nav" id="bhTopBar">
   <!-- Connexions centrées -->
   <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;">
@@ -809,112 +768,112 @@ html[data-theme-v3="1"] .breadcrumb {
 </script>
 
 <div class="app-container">
-<!-- Sidebar -->
-<div id="bhSidebar"></div>
+  <div id="bhSidebar"></div>
+  <main class="main-content">
+    <div id="bhHeader"></div>
 
-<!-- Main -->
-<main class="main-content">
-<div id="bhHeader"></div>
-
-<!-- Page Header -->
-<div class="msgs-page-header">
-  <div class="msgs-page-title">
-    <span class="msgs-page-kicker">Communication</span>
-    <h1 class="msgs-page-heading">Mes <em>messages</em></h1>
-  </div>
-  <div class="msgs-header-actions">
-    <button class="msgs-icon-btn" title="Notifications" id="notifBtn"><i class="fas fa-bell"></i></button>
-    <button class="msgs-icon-btn" title="Actualiser" onclick="if(window.loadConversations) window.loadConversations(); else window.location.reload();"><i class="fas fa-sync-alt"></i></button>
-    <button class="msgs-group-btn" id="groupMessageBtn"><i class="fas fa-plus"></i> Message groupé</button>
-  </div>
-</div>
-
-<!-- Page Content (hidden elements kept for JS compatibility) -->
-<div class="page-content">
-  <div class="stats-section" style="display:none!important">
-    <div class="stat-card"><div class="stat-icon"></div><div class="stat-content"><h3 id="statTotal">0</h3><p>Conversations totales</p></div></div>
-    <div class="stat-card"><div class="stat-icon"></div><div class="stat-content"><h3 id="statUnread">0</h3><p>Messages non lus</p></div></div>
-    <div class="stat-card"><div class="stat-icon"></div><div class="stat-content"><h3 id="statActive">0</h3><p>Conversations actives</p></div></div>
-  </div>
-  <div class="filters-section" style="display:none!important">
-    <div class="filter-group"><label>Statut</label><select id="filterStatus"><option value="">Tous</option><option selected value="active">Actives</option><option value="pending">En attente</option><option value="closed">Fermées</option></select></div>
-    <div class="filter-group"><label>Logement</label><select id="filterProperty"><option value="">Tous les logements</option></select></div>
-  </div>
-  <div class="conversations-section" style="display:none!important">
-    <div class="conversations-header"><h2>Vos conversations</h2></div>
-    <div id="conversationsList"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div></div>
-  </div>
-</div>
-
-<!-- NEW SPLIT LAYOUT -->
-<div class="msgs-split">
-  <!-- Left: conversations list -->
-  <div class="msgs-left">
-    <div class="msgs-search-wrap">
-      <div class="msgs-search">
-        <i class="fas fa-search"></i>
-        <input id="msgsSearchInput" placeholder="Rechercher un voyageur..." type="text"/>
+    <!-- Page header -->
+    <div class="msgs-page-header">
+      <div>
+        <div class="msgs-kicker">Communication</div>
+        <h1 class="msgs-heading">Mes <em>messages</em></h1>
+      </div>
+      <div class="msgs-header-right">
+        <button class="msgs-icon-btn" title="Notifications"><i class="fas fa-bell"></i></button>
+        <button class="msgs-icon-btn" title="Actualiser" onclick="if(window.loadConversations) loadConversations();"><i class="fas fa-sync-alt"></i></button>
+        <button class="msgs-group-btn"><i class="fas fa-plus"></i> Message groupé</button>
       </div>
     </div>
-    <div class="msgs-conv-list" id="msgsConvList">
-      <div class="empty-state">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>Chargement...</p>
-      </div>
-    </div>
-  </div>
 
-  <!-- Right: chat panel -->
-  <div class="msgs-right" id="msgsChatPanel">
-    <div class="msgs-chat-placeholder" id="msgsChatPlaceholder">
-      <i class="fas fa-comments"></i>
-      <p>Sélectionnez une conversation</p>
-    </div>
-    <!-- Chat header (shown when conversation selected) -->
-    <div class="msgs-chat-header" id="msgsChatHeader" style="display:none;">
-      <div class="conversation-avatar" id="msgsChatAvatar" style="width:38px;height:38px;font-size:15px;"></div>
-      <div class="msgs-chat-header-info">
-        <div class="msgs-chat-guest-name" id="msgsChatGuestName"></div>
-        <div class="msgs-chat-meta" id="msgsChatMeta"></div>
+    <!-- Legacy hidden containers (JS compatibility) -->
+    <div class="page-content" style="display:none!important">
+      <div class="stats-section">
+        <div class="stat-card"><div class="stat-content"><h3 id="statTotal">0</h3><p>Conversations totales</p></div></div>
+        <div class="stat-card"><div class="stat-content"><h3 id="statUnread">0</h3><p>Non lus</p></div></div>
+        <div class="stat-card"><div class="stat-content"><h3 id="statActive">0</h3><p>Actives</p></div></div>
       </div>
-      <div class="msgs-chat-header-actions">
-        <button class="msgs-icon-btn" title="Profil voyageur" id="chatGuestInfoBtn"><i class="fas fa-user"></i></button>
-        <button class="msgs-icon-btn" title="Réservation" id="chatBookingInfoBtn"><i class="fas fa-calendar"></i></button>
-        <button class="msgs-auto-reply-btn" id="chatAutoReplyBtn"><i class="fas fa-reply"></i> Réponse auto</button>
+      <div class="filters-section">
+        <div class="filter-group"><select id="filterStatus"><option value="">Tous</option><option selected value="active">Actives</option><option value="pending">En attente</option><option value="closed">Fermées</option></select></div>
+        <div class="filter-group"><select id="filterProperty"><option value="">Tous les logements</option></select></div>
       </div>
     </div>
-    <!-- Messages area -->
-    <div class="chat-modal-messages" id="chatMessages" style="display:none;">
-      <div class="loading" style="text-align:center;padding:40px;">
-        <i class="fas fa-spinner fa-spin" style="font-size:32px;"></i>
-        <p>Chargement des messages...</p>
-      </div>
-    </div>
-    <!-- Input -->
-    <div class="chat-modal-input" id="msgsChatInput" style="display:none;">
-      <textarea class="chat-input" id="chatInput" placeholder="Répondre..." rows="1"></textarea>
-      <button class="msgs-icon-btn" id="chatLightningBtn" title="Réponse rapide"><i class="fas fa-bolt"></i></button>
-      <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()"><i class="fas fa-paper-plane"></i></button>
-    </div>
-  </div>
-</div>
 
-<!-- Old chat modal kept for JS compatibility (hidden) -->
-<div class="modal-overlay" id="chatModal" style="display:none!important;">
-<div class="chat-modal">
-<div class="chat-modal-header">
-<div style="flex:1;"><h2 id="chatModalTitle">Conversation</h2></div>
-<button class="close-modal" onclick="closeChat()"><i class="fas fa-times"></i></button>
-</div>
-</div>
-</div>
+    <!-- SPLIT LAYOUT -->
+    <div class="msgs-split">
 
-</main>
+      <!-- LEFT: conversation list -->
+      <div class="msgs-left">
+        <div class="msgs-search-wrap">
+          <div class="msgs-search">
+            <i class="fas fa-search"></i>
+            <input id="msgsSearchInput" placeholder="Rechercher un voyageur..." type="text"/>
+          </div>
+        </div>
+        <!-- chat-owner.js writes directly here -->
+        <div id="conversationsList">
+          <div class="empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Chargement...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: chat panel -->
+      <div class="msgs-right">
+
+        <!-- Placeholder -->
+        <div id="msgsChatPlaceholder">
+          <i class="fas fa-comments"></i>
+          <p>Sélectionnez une conversation</p>
+        </div>
+
+        <!-- Chat header (shown after selecting conversation) -->
+        <div id="msgsChatHeader" style="display:none;">
+          <div class="msgs-chat-avatar" id="msgsChatAvatar">?</div>
+          <div class="msgs-chat-info">
+            <div class="msgs-chat-name" id="chatModalTitle">Conversation</div>
+            <div class="msgs-chat-meta">
+              <span id="chatPropertyName"></span>
+              <span class="sep" id="chatMetaSep1" style="display:none">·</span>
+              <span id="chatPlatform"></span>
+              <span class="sep" id="chatMetaSep2" style="display:none">·</span>
+              <span id="chatCheckinDate"></span>
+            </div>
+          </div>
+          <div class="msgs-chat-actions">
+            <button class="msgs-icon-btn" id="chatGuestInfoBtn" title="Infos voyageur"><i class="fas fa-user"></i></button>
+            <button class="msgs-auto-btn" id="chatAutoReplyBtn"><i class="fas fa-reply"></i> Réponse auto</button>
+            <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
+            <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+
+        <!-- chatMessages: chat-owner.js writes here -->
+        <div class="chat-modal-messages" id="chatMessages" style="display:none;"></div>
+
+        <!-- Input: chat-owner.js uses #chatInput and #sendBtn -->
+        <div class="chat-modal-input" id="chatInputArea" style="display:none;">
+          <textarea class="chat-input" id="chatInput" placeholder="Répondre à…" rows="1"></textarea>
+          <button class="msgs-icon-btn" title="Réponse rapide"><i class="fas fa-bolt"></i></button>
+          <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- chatModal: kept for chat-owner.js openChat() but invisible/inline -->
+    <div id="chatModal" style="display:none!important; pointer-events:none!important;">
+      <div class="chat-modal">
+        <div class="chat-modal-header"></div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
 <div class="loading-overlay" id="loadingOverlay" style="display:none;">
-<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>
+  <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>
 </div>
 
 <!-- Socket.IO -->
@@ -1501,164 +1460,130 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 }
 </script>
 
-
 <script>
 // ============================================================
-// BRIDGE: connect old chat-owner.js to new split layout
+// PATCH: intercept chatModal.classList.add('active') → show inline chat
 // ============================================================
 (function() {
-  'use strict';
-
-  // Mirror conversations from the hidden #conversationsList to #msgsConvList
-  function syncConvList() {
-    const source = document.getElementById('conversationsList');
-    const target = document.getElementById('msgsConvList');
-    if (!source || !target) return;
-
-    const items = source.querySelectorAll('.conversation-item');
-    if (items.length === 0) {
-      // Still loading or empty
-      if (source.querySelector('.empty-state')) {
-        target.innerHTML = source.innerHTML;
-      }
-      return;
+  // Patch openChat to show our inline panel instead of modal
+  var _openChat = window.openChat;
+  
+  function showInlineChat(conv) {
+    var placeholder = document.getElementById('msgsChatPlaceholder');
+    var header = document.getElementById('msgsChatHeader');
+    var messages = document.getElementById('chatMessages');
+    var input = document.getElementById('chatInputArea');
+    
+    if (placeholder) placeholder.style.display = 'none';
+    if (header) header.style.display = 'flex';
+    if (messages) messages.style.display = 'flex';
+    if (input) input.style.display = 'flex';
+    
+    // Update header avatar
+    var avatarEl = document.getElementById('msgsChatAvatar');
+    var nameEl = document.getElementById('chatModalTitle');
+    if (conv && avatarEl) {
+      var name = (conv.guest_display_name || conv.guest_first_name || conv.guest_name || 'V');
+      avatarEl.textContent = name.charAt(0).toUpperCase();
+      avatarEl.style.background = conv.property_color || '#1A7A5E';
     }
 
-    // Clone items into new panel
-    target.innerHTML = '';
-    items.forEach(function(item) {
-      const clone = item.cloneNode(true);
-      // Re-attach click handlers
-      clone.addEventListener('click', function(e) {
-        // Sync active state
-        target.querySelectorAll('.conversation-item').forEach(function(i) { i.classList.remove('active'); });
-        clone.classList.add('active');
-        // Trigger original click
-        item.click();
-      });
-      target.appendChild(clone);
+    // Show meta separators if values present
+    setTimeout(function() {
+      var prop = document.getElementById('chatPropertyName');
+      var plat = document.getElementById('chatPlatform');
+      var date = document.getElementById('chatCheckinDate');
+      var sep1 = document.getElementById('chatMetaSep1');
+      var sep2 = document.getElementById('chatMetaSep2');
+      if (prop && plat && prop.textContent && plat.textContent) {
+        if(sep1) sep1.style.display = '';
+      }
+      if (plat && date && plat.textContent && date.textContent) {
+        if(sep2) sep2.style.display = '';
+      }
+      // Update platform text from conv data
+      if (conv && plat) plat.textContent = conv.platform || '';
+    }, 100);
+    
+    // Mark conversation active in list
+    document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
+      el.classList.toggle('active', el.dataset.conversationId == conv.id);
     });
+
+    // Prevent body scroll lock from chat-owner.js
+    setTimeout(function() {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.classList.remove('modal-open');
+    }, 10);
   }
 
-  // Mirror chat from old modal to new right panel  
-  function syncChatPanel() {
-    const oldModal = document.getElementById('chatModal');
-    const newMsgs = document.getElementById('chatMessages');
-    const newHeader = document.getElementById('msgsChatHeader');
-    const newInput = document.getElementById('msgsChatInput');
-    const placeholder = document.getElementById('msgsChatPlaceholder');
-    const oldTitle = document.getElementById('chatModalTitle');
+  // Override openChat
+  var origOpenChat = window.openChat;
+  window.openChat = function(conversationId) {
+    // Don't redirect mobile to chat-mobile.html on desktop
+    if (window.innerWidth >= 768) {
+      // Store so we can call showInlineChat after JS loads conv data
+      window._pendingInlineChatId = conversationId;
+    }
+    
+    // Call original (it populates chatMessages, chatModalTitle etc.)
+    if (origOpenChat) {
+      origOpenChat.apply(this, arguments);
+    }
+    
+    // Then show inline
+    setTimeout(function() {
+      var allConvs = window.allConversations || [];
+      var conv = allConvs.find(function(c) { return c.id == conversationId; });
+      showInlineChat(conv || {id: conversationId});
+    }, 50);
+  };
 
-    if (!oldModal || !newMsgs) return;
-
-    // When old modal becomes active, show new panel
-    const observer = new MutationObserver(function() {
-      const isActive = oldModal.classList.contains('active') || oldModal.style.display === 'flex';
-      if (isActive) {
-        placeholder.style.display = 'none';
-        newHeader.style.display = 'flex';
-        newMsgs.style.display = 'flex';
-        newInput.style.display = 'flex';
-
-        // Copy title
-        if (oldTitle) {
-          document.getElementById('msgsChatGuestName').textContent = oldTitle.textContent;
-        }
-
-        // Mirror messages
-        const oldMsgs = oldModal.querySelector('#chatMessages, .chat-modal-messages');
-        if (oldMsgs && oldMsgs !== newMsgs) {
-          newMsgs.innerHTML = oldMsgs.innerHTML;
-        }
-
-        // Close the old modal overlay (we're showing inline)
-        oldModal.classList.remove('active');
-        oldModal.style.display = 'none';
-      }
-    });
-    observer.observe(oldModal, { attributes: true, attributeFilter: ['class', 'style'], childList: true, subtree: true });
-
-    // Also observe chatMessages for new content
-    const msgObserver = new MutationObserver(function() {
-      const oldMsgArea = document.querySelector('#chatModal .chat-modal-messages, #chatModal #chatMessages');
-      if (oldMsgArea) {
-        newMsgs.innerHTML = oldMsgArea.innerHTML;
-        newMsgs.scrollTop = newMsgs.scrollHeight;
-      }
-    });
-    msgObserver.observe(document.body, { childList: true, subtree: true });
+  // Also intercept chatModal classList changes
+  var chatModal = document.getElementById('chatModal');
+  if (chatModal) {
+    var origAdd = chatModal.classList.add.bind(chatModal.classList);
+    chatModal.classList.add = function() {
+      // Don't show modal as overlay - we're inline
+      return;
+    };
   }
 
   // Search filter
-  function initSearch() {
-    const input = document.getElementById('msgsSearchInput');
+  document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('msgsSearchInput');
     if (!input) return;
     input.addEventListener('input', function() {
-      const q = this.value.toLowerCase();
-      document.querySelectorAll('#msgsConvList .conversation-item').forEach(function(item) {
-        const name = item.querySelector('h3, .conversation-info h3');
-        const text = name ? name.textContent.toLowerCase() : '';
-        item.style.display = text.includes(q) ? '' : 'none';
+      var q = this.value.toLowerCase();
+      document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
+        var h3 = item.querySelector('h3');
+        var name = h3 ? h3.textContent.toLowerCase() : '';
+        item.style.display = name.includes(q) ? '' : 'none';
       });
     });
-  }
-
-  // Observe conversationsList for changes and sync
-  function watchAndSync() {
-    const source = document.getElementById('conversationsList');
-    if (!source) return;
-    const obs = new MutationObserver(function() {
-      setTimeout(syncConvList, 100);
-    });
-    obs.observe(source, { childList: true, subtree: true });
-    syncConvList();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      watchAndSync();
-      syncChatPanel();
-      initSearch();
-    });
-  } else {
-    watchAndSync();
-    syncChatPanel();
-    initSearch();
-  }
-
-  // Also sync every second as fallback
-  setTimeout(syncConvList, 1000);
-  setTimeout(syncConvList, 2000);
-  setTimeout(syncConvList, 3000);
-})();
-</script>
-
-<style id="final-overrides">
-.view-selector { display: none !important; }
-</style>
-
-
-<script>
-// Hide back button injected by bh-layout.js
-(function() {
-  function hideBackBtn() {
-    // Common selectors for the back button
-    document.querySelectorAll('.back-btn, .btn-back, .header-back, .page-back-btn, [class*="back"]').forEach(function(el) {
-      var text = el.textContent || '';
-      if (text.includes('dashboard') || text.includes('Dashboard') || text.includes('Retour') || el.href && el.href.includes('app.html')) {
+    
+    // Hide back button
+    document.querySelectorAll('.back-btn, .btn-back, .header-back, [class*="back-btn"]').forEach(function(el) {
+      if (el.textContent.includes('dashboard') || el.textContent.includes('Retour')) {
         el.style.display = 'none';
       }
     });
-  }
-  // Run immediately and after layout injection
-  hideBackBtn();
-  document.addEventListener('DOMContentLoaded', hideBackBtn);
-  setTimeout(hideBackBtn, 500);
-  setTimeout(hideBackBtn, 1500);
-  // MutationObserver to catch dynamically injected elements
-  new MutationObserver(hideBackBtn).observe(document.body, { childList: true, subtree: true });
+  });
+  
+  setTimeout(function() {
+    document.querySelectorAll('.back-btn, .btn-back, [class*="back-btn"]').forEach(function(el) {
+      if (el.textContent.includes('dashboard') || el.textContent.includes('Retour')) el.style.display = 'none';
+    });
+  }, 1000);
 })();
 </script>
+
+<style>
+.view-selector { display: none !important; }
+</style>
 
 </body>
 </html>
