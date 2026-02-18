@@ -283,7 +283,7 @@ function getSidebarHTML() {
       const needsUpdate =
         !existingLogo ||
         (existingLogo.tagName.toLowerCase() === "img" &&
-          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png")) ||
+          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existing.getAttribute("src") || "").startsWith("data:image")) ||
         existingLogo.tagName.toLowerCase() === "svg";
 
       if (needsUpdate) {
@@ -303,8 +303,8 @@ function getSidebarHTML() {
       const isOkImg =
         existing &&
         existing.tagName.toLowerCase() === "img" &&
-        ((existing.getAttribute("src") || "").includes("boostinghost-icon-circle.png") ||
-         (existing.src || "").includes("boostinghost-icon-circle.png"));
+        ((existing.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existing.getAttribute("src") || "").startsWith("data:image") ||
+         (existing.src || "").includes("boostinghost-icon-circle.png") || (existing.getAttribute("src") || "").startsWith("data:image"));
 
       if (!isOkImg) {
         const old = a.querySelector("svg, img");
