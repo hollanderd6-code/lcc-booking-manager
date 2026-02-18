@@ -591,11 +591,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
     /* View Selector */
     .view-selector {
-      display: flex;
-      align-items: center;
-      padding: 12px 20px;
-      gap: 16px;
-      background: var(--calendar-header-bg);
+      display: none !important; /* Tabs moved to calendar dark header */
     }
 
     .view-tabs {
@@ -4766,11 +4762,13 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
         if (!list.length) return '';
         return `
           <div style="margin-bottom:14px;">
-            <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <div style="font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; color:#1A7A5E;">
               <i class="fas ${icon}"></i> ${label} (${list.length})
             </div>
             ${list.map(r => {
-              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+              const platform = (r.src || '').toLowerCase();
+              const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
               return `
                 <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
@@ -4849,7 +4847,9 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
     } else {
       content.innerHTML = rows.map(r => {
-        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+        const platform = (r.src || '').toLowerCase();
+        const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
         const score = r.riskScore != null ? `${r.riskScore}/100` : '';
         return `
           <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
@@ -6377,10 +6377,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 </form>
 </div>
 </div>
-<!-- Floating Action Button (bouton +) -->
-<button class="fab" id="addBookingBtn" title="Nouvelle réservation">
-<i class="fas fa-plus"></i>
-</button>
+<!-- Floating Action Button supprimé -->
 <script>
 // Script complet pour le blocage de dates
 (function() {
