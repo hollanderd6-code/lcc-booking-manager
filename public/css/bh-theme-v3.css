@@ -504,7 +504,7 @@ html[data-theme-v3="1"] header.main-header {
   border-bottom: 1px solid var(--border-v3) !important;
   gap: 16px !important;
   position: sticky !important;
-  top: 40px !important;
+  top: 0 !important;   /* body a déjà padding-top:40px */
   z-index: 50 !important;
   box-shadow: none !important;
   flex-shrink: 0 !important;
@@ -1482,4 +1482,70 @@ html[data-theme-v3="1"][data-theme="dark"] #themeToggle {
 @keyframes bh-fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CORRECTIFS CIBLÉS
+───────────────────────────────────────────────────────────── */
+
+/* 1. Sidebar footer — fond explicite + bon contraste */
+html[data-theme-v3="1"] .sidebar .sidebar-footer {
+  background: var(--cream-warm) !important;
+  border-top: 1px solid var(--border-warm-v3) !important;
+}
+
+html[data-theme-v3="1"] .sidebar .user-name,
+html[data-theme-v3="1"] .sidebar #sidebarUserName {
+  color: var(--text-1) !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme-v3="1"] .sidebar .user-email,
+html[data-theme-v3="1"] .sidebar #sidebarUserCompany {
+  color: var(--text-2) !important;
+}
+
+html[data-theme-v3="1"] .sidebar #logoutBtn {
+  background: var(--cream-deep) !important;
+  border-color: var(--border-warm-v3) !important;
+  color: var(--text-2) !important;
+}
+
+html[data-theme-v3="1"] .sidebar #logoutBtn:hover {
+  background: var(--sand-light, #E8DECE) !important;
+  color: var(--text-1) !important;
+}
+
+/* Dark mode footer */
+html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer {
+  background: #111827 !important;
+}
+
+html[data-theme-v3="1"][data-theme="dark"] .sidebar #logoutBtn {
+  background: rgba(255,255,255,.06) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: rgba(255,255,255,.5) !important;
+}
+
+/* 2. Supprimer le gap blanc entre demo-nav et main-header
+      Le body a padding-top:40px, le main-content commence direct.
+      On s'assure qu'il n'y a pas de margin parasite. */
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+html[data-theme-v3="1"] header.main-header {
+  margin-top: 0 !important;
+}
+
+/* Supprimer tout padding/margin en haut de .page-content qui créerait un espace */
+html[data-theme-v3="1"] .page-content {
+  margin-top: 0 !important;
+}
+
+/* S'assurer que .app-container ne crée pas de gap */
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }
