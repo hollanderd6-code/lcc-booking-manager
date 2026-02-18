@@ -1105,21 +1105,18 @@ console.log('✅ Fonctions helpers messages chargées');
 
 <!-- Script -->
 
+<script>
+// Override isMobileDevice before chat-owner.js loads
+// Forces desktop mode so openChat() never redirects to chat-mobile.html
+function isMobileDevice() { return false; }
+window.isMobileDevice = function() { return false; };
+</script>
 <script src="/js/chat-owner.js"></script>
 <script>
-// Lock isMobileDevice to always return false AFTER chat-owner.js defines it
-// This prevents openChat() from redirecting to chat-mobile.html
-try {
-  Object.defineProperty(window, 'isMobileDevice', {
-    get: function() { return function() { return false; }; },
-    configurable: false
-  });
-} catch(e) {
-  window.isMobileDevice = function() { return false; };
-}
-console.log('✅ isMobileDevice locked to false');
+// Reassign isMobileDevice after chat-owner.js - simple override
+window.isMobileDevice = function() { return false; };
+isMobileDevice = function() { return false; };
 </script>
-
 <!-- Auth + User -->
 <script>
     (async function checkSubscriptionAccess() {
@@ -1645,15 +1642,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (!orig || orig._bhPatched) return;
 
     window.openChat = function(conversationId) {
-      // Force desktop mode (prevent redirect to chat-mobile.html)
-      var origIsMobile = window.isMobileDevice;
-      window.isMobileDevice = function() { return false; };
-
       // Call original → populates #chatMessages, #chatModalTitle, etc.
       orig.call(this, conversationId);
-
-      // Restore
-      window.isMobileDevice = origIsMobile;
 
       // Show our inline panel
       setTimeout(function() {
