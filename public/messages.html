@@ -460,7 +460,7 @@ html[data-theme-v3="1"] .page-back-btn {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #F5F2EC;
+  background: #F5F2EC !important;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -510,9 +510,9 @@ html[data-theme-v3="1"] .page-back-btn {
   white-space: pre-wrap;
 }
 .chat-message.owner .chat-bubble {
-  background: #0D1117;
-  color: white;
-  border-radius: 16px 16px 4px 16px;
+  background: #0D1117 !important;
+  color: white !important;
+  border-radius: 16px 16px 4px 16px !important;
 }
 .chat-message.bot .chat-bubble { background: #EDE9FE; }
 
@@ -830,11 +830,8 @@ html[data-theme-v3="1"] .emoji-panel {
   <main class="main-content">
     <div id="bhHeader"></div>
 
-    <!-- Custom actions for bh-layout.js header -->
-    <div id="bhHeaderActions" style="display:none;">
-      <button class="msgs-icon-btn" title="Actualiser" onclick="if(window.loadConversations) loadConversations();"><i class="fas fa-sync-alt"></i></button>
-      <button class="msgs-group-btn"><i class="fas fa-plus"></i> Message groupé</button>
-    </div>
+    <!-- No custom actions in header -->
+    <div id="bhHeaderActions" style="display:none;"></div>
 
     <!-- Legacy hidden containers (JS compatibility) -->
     <div class="page-content" style="display:none!important">
@@ -1683,6 +1680,30 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
 <style>
 .view-selector { display: none !important; }
+</style>
+
+
+<style>
+/* FINAL OVERRIDES */
+/* Owner bubble dark */
+.chat-message.owner .chat-bubble,
+[class*="chat"] .owner .chat-bubble,
+.chat-bubble.owner-bubble { 
+  background: #0D1117 !important; 
+  color: #ffffff !important; 
+}
+/* Messages area beige */
+#chatMessages,
+.chat-modal-messages { 
+  background: #F5F2EC !important; 
+}
+/* Right panel beige when no conversation */
+.msgs-right {
+  background: #F5F2EC !important;
+}
+#msgsChatPlaceholder {
+  background: #F5F2EC !important;
+}
 </style>
 
 </body>
