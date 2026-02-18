@@ -20,12 +20,101 @@
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=2">
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=3">
 <script>
   if (new URLSearchParams(location.search).get('v3') === '1') {
     document.documentElement.setAttribute('data-theme-v3','1');
   }
-</script>    
+</script>
+<!-- V3 OVERRIDES — dans le DOM, toujours après le CSS externe -->
+<style id="bh-v3-overrides">
+/* Supprime le gap blanc entre demo-nav et topbar */
+html[data-theme-v3="1"] body { padding-top: 40px !important; margin: 0 !important; }
+html[data-theme-v3="1"] .app-container,
+html[data-theme-v3="1"] main.main-content,
+html[data-theme-v3="1"] header.main-header,
+html[data-theme-v3="1"] .page-content { margin-top: 0 !important; padding-top: 0 !important; }
+
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important; top: 0 !important; z-index: 50 !important;
+  height: 72px !important; background: #FAF8F5 !important;
+  border-bottom: 1px solid rgba(13,17,23,.09) !important;
+  box-shadow: none !important; display: flex !important;
+  align-items: center !important; padding: 0 32px !important; gap: 16px !important;
+}
+
+/* Écraser les gradients colorés des boutons header */
+html[data-theme-v3="1"] #syncBtn,
+html[data-theme-v3="1"] #notificationsBtn,
+html[data-theme-v3="1"] #themeToggle,
+html[data-theme-v3="1"] .header-actions .btn-icon,
+html[data-theme-v3="1"] .header-actions .theme-toggle {
+  background: transparent !important; background-image: none !important;
+  border: 1px solid rgba(13,17,23,.09) !important; color: #3D4A5C !important;
+  box-shadow: none !important; width: 36px !important; height: 36px !important;
+  border-radius: 10px !important; transform: none !important; overflow: visible !important;
+}
+html[data-theme-v3="1"] #syncBtn:hover,
+html[data-theme-v3="1"] #notificationsBtn:hover,
+html[data-theme-v3="1"] #themeToggle:hover,
+html[data-theme-v3="1"] .header-actions .btn-icon:hover,
+html[data-theme-v3="1"] .header-actions .theme-toggle:hover {
+  background: #F5F0E8 !important; border-color: rgba(200,184,154,.4) !important;
+  box-shadow: none !important; transform: none !important;
+}
+html[data-theme-v3="1"] .header-actions .btn-icon i,
+html[data-theme-v3="1"] .header-actions .theme-toggle i,
+html[data-theme-v3="1"] #syncBtn i, html[data-theme-v3="1"] #notificationsBtn i,
+html[data-theme-v3="1"] #themeToggle i {
+  color: #3D4A5C !important; font-size: 14px !important; animation: none !important;
+}
+html[data-theme-v3="1"] .header-actions .btn-icon::before,
+html[data-theme-v3="1"] .header-actions .theme-toggle::before { display: none !important; }
+
+/* Sidebar — hauteur depuis sous la demo-nav */
+html[data-theme-v3="1"] .sidebar {
+  height: calc(100vh - 40px) !important;
+  top: 40px !important;
+}
+
+/* Footer sidebar — contraste et visibilité */
+html[data-theme-v3="1"] .sidebar-footer {
+  flex-shrink: 0 !important;
+  background: #F5F0E8 !important;
+  border-top: 1px solid rgba(200,184,154,.4) !important;
+  padding: 14px 12px !important;
+}
+html[data-theme-v3="1"] .sidebar-footer .user-name,
+html[data-theme-v3="1"] .sidebar-footer #sidebarUserName {
+  color: #0D1117 !important; font-size: 13px !important; font-weight: 600 !important;
+}
+html[data-theme-v3="1"] .sidebar-footer .user-email,
+html[data-theme-v3="1"] .sidebar-footer #sidebarUserCompany {
+  color: #3D4A5C !important; font-size: 11px !important;
+}
+html[data-theme-v3="1"] .sidebar-footer #logoutBtn {
+  background: #EDE8DF !important; border: 1px solid rgba(200,184,154,.4) !important;
+  color: #3D4A5C !important; border-radius: 8px !important;
+  width: 28px !important; height: 28px !important; padding: 0 !important;
+  display: flex !important; align-items: center !important;
+  justify-content: center !important; cursor: pointer !important;
+}
+html[data-theme-v3="1"] .sidebar-footer #logoutBtn i { color: #3D4A5C !important; font-size: 11px !important; }
+html[data-theme-v3="1"] .sidebar-footer #logoutBtn:hover { background: #C8B89A !important; color: #0D1117 !important; }
+
+/* Dark mode */
+html[data-theme-v3="1"][data-theme="dark"] header.main-header { background: #0D1117 !important; border-color: rgba(255,255,255,.08) !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer { background: #111827 !important; border-color: rgba(255,255,255,.1) !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer .user-name,
+html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer #sidebarUserName { color: #F0EDE8 !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer .user-email,
+html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer #sidebarUserCompany { color: #A8B4C0 !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar-footer #logoutBtn { background: rgba(255,255,255,.08) !important; border-color: rgba(255,255,255,.12) !important; color: rgba(255,255,255,.5) !important; }
+html[data-theme-v3="1"][data-theme="dark"] #syncBtn, html[data-theme-v3="1"][data-theme="dark"] #notificationsBtn,
+html[data-theme-v3="1"][data-theme="dark"] #themeToggle, html[data-theme-v3="1"][data-theme="dark"] .header-actions .btn-icon {
+  border-color: rgba(255,255,255,.12) !important; color: rgba(255,255,255,.6) !important;
+}
+</style>
 <style>
     html, body {
       margin: 0 !important;
@@ -8787,7 +8876,6 @@ if (window.Capacitor) {
 </script>
 
 <!-- Badge Messages -->
-<script src="/js/messages-badge-desktop-mobile.js"></script>  
-<script src="/js/bh-theme-v3-nav.js"></script>  
+<script src="/js/messages-badge-desktop-mobile.js"></script>    
 </body>
 </html>
