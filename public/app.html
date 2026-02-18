@@ -538,7 +538,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
     /* Header du calendrier */
     .calendar-modern-header {
-      background: linear-gradient(135deg, var(--calendar-header-bg), var(--calendar-header-hover));
+      background: #0D1117;
       color: white;
       padding: 0;
     }
@@ -547,8 +547,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 14px 20px;
+      gap: 16px;
     }
 
     .calendar-title-modern {
@@ -2823,41 +2823,63 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 <!-- Calendar Header -->
 <div class="calendar-modern-header">
 <div class="calendar-header-top">
+<!-- Titre gauche -->
 <h3 class="calendar-title-modern">
-<i class="fas fa-calendar"></i>
-<span>Calendrier</span>
+  <span style="background:#1A7A5E;width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <i class="fas fa-calendar-alt" style="font-size:16px;color:white;"></i>
+  </span>
+  <div>
+    <div style="font-size:17px;font-weight:600;">Calendrier des <em style="color:#4ADE80;font-style:italic;">réservations</em></div>
+    <div id="calendarSubtitle" style="font-size:12px;font-weight:400;opacity:.55;margin-top:2px;">Vue mensuelle</div>
+  </div>
 </h3>
+
+<!-- Centre : légendes + vue toggle -->
+<div style="display:flex;align-items:center;gap:16px;">
+  <!-- Légendes plateformes -->
+  <div style="display:flex;align-items:center;gap:12px;padding:6px 14px;background:rgba(255,255,255,.07);border-radius:999px;border:1px solid rgba(255,255,255,.1);">
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;"></span>Airbnb
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#003580;flex-shrink:0;"></span>Booking
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>Direct
+    </span>
+  </div>
+
+  <!-- Vue tabs -->
+  <div class="view-tabs" style="background:rgba(255,255,255,.07);border-radius:999px;padding:3px;display:flex;gap:2px;border:1px solid rgba(255,255,255,.1);">
+    <button class="view-tab" data-view="day" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar-day" style="font-size:11px;"></i><span>Jour</span>
+    </button>
+    <button class="view-tab" data-view="week" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar-week" style="font-size:11px;"></i><span>Semaine</span>
+    </button>
+    <button class="view-tab active" data-view="month" style="padding:5px 14px;border-radius:999px;border:none;background:#1A7A5E;color:white;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar-alt" style="font-size:11px;"></i><span>Mois</span>
+    </button>
+    <button class="view-tab" data-view="year" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar" style="font-size:11px;"></i><span>Année</span>
+    </button>
+  </div>
+</div>
+
+<!-- Actions droite -->
 <div class="calendar-actions-top">
-<button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
-<i class="fas fa-search"></i>
-</button>
-<button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
-<i class="fas fa-filter"></i>
-</button>
-<button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
-<i class="fas fa-cog"></i>
-</button>
+  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher"><i class="fas fa-search"></i></button>
+  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres"><i class="fas fa-sliders-h"></i></button>
 </div>
 </div>
-<!-- View Selector -->
-<div class="view-selector">
+
+<!-- View Selector (hidden - now in header) -->
+<div class="view-selector" style="display:none;">
 <div class="view-tabs">
-<button class="view-tab" data-view="day">
-<i class="fas fa-calendar-day"></i>
-<span>Jour</span>
-</button>
-<button class="view-tab" data-view="week">
-<i class="fas fa-calendar-week"></i>
-<span>Semaine</span>
-</button>
-<button class="view-tab active" data-view="month">
-<i class="fas fa-calendar-alt"></i>
-<span>Mois</span>
-</button>
-<button class="view-tab" data-view="year">
-<i class="fas fa-calendar"></i>
-<span>Année</span>
-</button>
+<button class="view-tab" data-view="day"><i class="fas fa-calendar-day"></i><span>Jour</span></button>
+<button class="view-tab" data-view="week"><i class="fas fa-calendar-week"></i><span>Semaine</span></button>
+<button class="view-tab active" data-view="month"><i class="fas fa-calendar-alt"></i><span>Mois</span></button>
+<button class="view-tab" data-view="year"><i class="fas fa-calendar"></i><span>Année</span></button>
 </div>
 </div>
 </div>
@@ -5401,6 +5423,10 @@ window.LCC_PROPERTIES = properties;
         console.info('✅ Calendrier moderne: ' + state.properties.length +
                      ' logements / ' + state.bookings.length + ' réservations');
 
+        // Mettre à jour le sous-titre avec le nombre de logements
+        var sub = document.getElementById('calendarSubtitle');
+        if (sub) sub.textContent = state.properties.length + ' logement' + (state.properties.length > 1 ? 's' : '') + ' · Vue mensuelle';
+
         renderPropertyList();
         renderCalendar();
         
@@ -5438,8 +5464,20 @@ window.LCC_PROPERTIES = properties;
 
             for (var j = 0; j < viewTabs.length; j++) {
               var t = viewTabs[j];
-              t.classList.toggle('active', t.getAttribute('data-view') === view);
+              var isActive = t.getAttribute('data-view') === view;
+              t.classList.toggle('active', isActive);
+              // Mettre à jour les styles inline des tabs du nouveau header
+              if (t.style.background !== undefined) {
+                t.style.background = isActive ? '#1A7A5E' : 'transparent';
+                t.style.color = isActive ? 'white' : 'rgba(255,255,255,.6)';
+                t.style.fontWeight = isActive ? '600' : '500';
+              }
             }
+
+            // Mettre à jour le sous-titre
+            var subtitles = {day:'Vue journalière', week:'Vue hebdomadaire', month:'Vue mensuelle', year:'Vue annuelle'};
+            var sub = document.getElementById('calendarSubtitle');
+            if (sub) sub.textContent = subtitles[view] || '';
 
             updatePeriodDisplay();
             renderCalendar();
