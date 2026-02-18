@@ -877,13 +877,13 @@ html[data-theme-v3="1"] .emoji-panel {
   <main class="main-content">
     <div id="bhHeader"></div>
 
-    <!-- Header custom actions -->
-    <div id="bhHeaderActions" style="display:none;">
-      <button class="msgs-back-btn" onclick="window.location.href='/app.html'">
-        <i class="fas fa-arrow-left"></i> Tableau de bord
-      </button>
-      <button class="msgs-group-btn" style="display:none" id="msgGroupBtn"><i class="fas fa-plus"></i> Message groupé</button>
-    </div>
+    <!-- bhHeaderActions for bh-layout.js (empty) -->
+    <div id="bhHeaderActions" style="display:none;"></div>
+    
+    <!-- Back button injected directly -->
+    <button class="msgs-back-btn" id="msgsDirectBackBtn" onclick="window.location.href='/app.html'">
+      <i class="fas fa-arrow-left"></i> Tableau de bord
+    </button>
 
     <!-- Legacy hidden containers (JS compatibility) -->
     <div class="page-content" style="display:none!important">
@@ -961,7 +961,7 @@ html[data-theme-v3="1"] .emoji-panel {
     </div>
 
     <!-- chatModal: kept for chat-owner.js openChat() but invisible/inline -->
-    <div id="chatModal" style="display:none!important; pointer-events:none!important;">
+    <div id="chatModal" style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;">
       <div class="chat-modal">
         <div class="chat-modal-header"></div>
       </div>
@@ -1831,6 +1831,35 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   background: #F5F2EC !important;
 }
 </style>
+
+
+<script>
+// Move back button into bh-layout header + hide the btn-ghost back link
+(function() {
+  function fixHeader() {
+    var headerActions = document.querySelector('header.main-header .header-actions');
+    var backBtn = document.getElementById('msgsDirectBackBtn');
+    if (headerActions && backBtn && !backBtn._moved) {
+      // Hide the btn-ghost (retour au dashboard from bh-layout)
+      headerActions.querySelectorAll('.btn-ghost, .btn.btn-ghost').forEach(function(el) {
+        el.style.display = 'none';
+      });
+      // Move our button into header-actions at the start
+      headerActions.insertBefore(backBtn, headerActions.firstChild);
+      backBtn.style.position = '';
+      backBtn._moved = true;
+    }
+  }
+  
+  // Try immediately and via MutationObserver on #bhHeader
+  var bhHeader = document.getElementById('bhHeader');
+  if (bhHeader) {
+    new MutationObserver(function() { fixHeader(); }).observe(bhHeader, { childList: true, subtree: true });
+  }
+  setTimeout(fixHeader, 300);
+  setTimeout(fixHeader, 800);
+})();
+</script>
 
 </body>
 </html>
