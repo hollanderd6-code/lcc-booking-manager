@@ -649,25 +649,26 @@ html[data-theme-v3="1"] .emoji-panel {
 }
 .msgs-attach-btn:hover { background: #f5f2ec; color: #1A7A5E; }
 
-/* Back to dashboard button */
+/* Back to dashboard button — same style as Nouvelle réservation */
 .msgs-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid rgba(0,0,0,.1);
+  height: 38px;
+  padding: 0 18px;
+  border: none;
   border-radius: 10px;
-  background: white;
-  color: #5A6A7A;
+  background: #1A7A5E;
+  color: white;
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all .15s;
+  transition: background .15s;
+  white-space: nowrap;
 }
-.msgs-back-btn:hover { background: #f0ebe3; color: #0D1117; }
-.msgs-back-btn i { font-size: 12px; }
+.msgs-back-btn:hover { background: #15624B; }
+.msgs-back-btn i { font-size: 13px; }
 
 /* Close conversation button */
 #chatCloseConvBtn {
@@ -881,6 +882,7 @@ html[data-theme-v3="1"] .emoji-panel {
       <button class="msgs-back-btn" onclick="window.location.href='/app.html'">
         <i class="fas fa-arrow-left"></i> Tableau de bord
       </button>
+      <button class="msgs-group-btn" style="display:none" id="msgGroupBtn"><i class="fas fa-plus"></i> Message groupé</button>
     </div>
 
     <!-- Legacy hidden containers (JS compatibility) -->
@@ -1727,11 +1729,20 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
             body: JSON.stringify({
-              conversationId: window.currentConversationId,
+              conversation_id: window.currentConversationId,
               message: '[IMAGE:' + imageUrl + ']',
-              senderType: 'owner'
+              sender_type: 'owner',
+              sender_name: 'Vous'
             })
           });
+          // Render image immediately in chat
+          if (window.appendMessage) {
+            window.appendMessage({
+              sender_type: 'owner',
+              message: '[IMAGE:' + imageUrl + ']',
+              created_at: new Date().toISOString()
+            });
+          }
         }
       } catch(err) {
         alert('Erreur photo: ' + err.message);
@@ -1745,22 +1756,52 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     input.click();
   };
 
-  // Also handle [IMAGE:url] rendering in appendMessage
-  var _origAppendMessage = window.appendMessage;
-  if (_origAppendMessage) {
+  // Intercept appendMessage to render [IMAGE:url] as actual images
+  function patchAppendMessage() {
+    var orig = window.appendMessage;
+    if (!orig || orig._patched) return;
     window.appendMessage = function(message) {
-      _origAppendMessage(message);
-      // Find last bubble and check for image tag
+      orig(message);
+      // Find the last bubble and convert [IMAGE:url] to <img>
       var bubbles = document.querySelectorAll('#chatMessages .chat-bubble');
       var last = bubbles[bubbles.length - 1];
       if (last) {
-        var text = last.textContent;
+        var text = last.textContent || '';
         var imgMatch = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
         if (imgMatch) {
-          last.innerHTML = '<img src="' + imgMatch[1] + '" style="max-width:240px;max-height:200px;border-radius:10px;cursor:pointer;" onclick="window.open(this.src,\'_blank\')" />';
+          last.innerHTML = '<img src="' + imgMatch[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,'_blank')" />';
         }
       }
     };
+    window.appendMessage._patched = true;
+  }
+  
+  // Also retroactively fix existing [IMAGE:url] text in chat
+  function fixExistingImageBubbles() {
+    document.querySelectorAll('#chatMessages .chat-bubble').forEach(function(bubble) {
+      var text = bubble.textContent || '';
+      var imgMatch = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
+      if (imgMatch) {
+        bubble.innerHTML = '<img src="' + imgMatch[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,'_blank')" />';
+      }
+    });
+  }
+  
+  // Patch as soon as appendMessage is available
+  var patchInterval = setInterval(function() {
+    if (window.appendMessage) {
+      patchAppendMessage();
+      clearInterval(patchInterval);
+    }
+  }, 100);
+  
+  // Fix images whenever chatMessages changes (after loadMessages)
+  var chatMsgsEl = document.getElementById('chatMessages');
+  if (chatMsgsEl) {
+    new MutationObserver(function() {
+      fixExistingImageBubbles();
+      patchAppendMessage();
+    }).observe(chatMsgsEl, { childList: true, subtree: true });
   }
 
   // Search filter + property name injection + back button hide
