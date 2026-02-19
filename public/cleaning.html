@@ -1405,6 +1405,41 @@ html[data-theme-v3="1"] .checklist-detail-modal .btn-secondary {
 html[data-theme-v3="1"] #qrModal .checklist-detail-panel {
   background: #F5F0E8 !important;
 }
+
+/* ── Template editor en beige ── */
+html[data-theme-v3="1"] #templateEditorSection,
+html[data-theme-v3="1"] .template-editor {
+  background: #F5F0E8 !important;
+}
+html[data-theme-v3="1"] .template-editor input[type=text],
+html[data-theme-v3="1"] .template-editor select,
+html[data-theme-v3="1"] .template-editor textarea {
+  background: rgba(255,255,255,.6) !important;
+}
+html[data-theme-v3="1"] .template-editor input[type=text]:focus,
+html[data-theme-v3="1"] .template-editor select:focus {
+  background: white !important;
+}
+/* Task items dans le template editor */
+html[data-theme-v3="1"] .task-item,
+html[data-theme-v3="1"] .template-task,
+html[data-theme-v3="1"] [class*="task-row"],
+html[data-theme-v3="1"] #templateTasksEditor input[type=text] {
+  background: rgba(255,255,255,.6) !important;
+  border-color: rgba(13,17,23,.12) !important;
+  border-radius: 10px !important;
+}
+html[data-theme-v3="1"] #templateTasksEditor input[type=text]:focus {
+  background: white !important;
+  border-color: #1A7A5E !important;
+}
+/* Templates list cards */
+html[data-theme-v3="1"] .template-card,
+html[data-theme-v3="1"] #templatesList > div {
+  background: #F5F0E8 !important;
+  border-color: rgba(200,184,154,.4) !important;
+  border-radius: 14px !important;
+}
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
