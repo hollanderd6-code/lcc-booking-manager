@@ -140,7 +140,7 @@
     /* (patched) removed inline .main-content padding override for iOS safe-area */
     .page-content {
       margin-top: 0 !important;
-      max-width: 1100px;
+      max-width: none !important;
     }
     html {
       scroll-behavior: smooth;
@@ -744,6 +744,8 @@ html[data-theme-v3="1"] main.main-content {
   height: 100% !important;
   background: #F5F2EC !important;
   padding-top: 70px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 html[data-theme-v3="1"] header.main-header {
   position: fixed !important;
@@ -772,8 +774,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* Page content */
 html[data-theme-v3="1"] .page-content {
   padding: 24px !important;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: none !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Tabs */
