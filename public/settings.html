@@ -3019,5 +3019,48 @@ function insertVariable(textareaId, variable, event) {
   setTimeout(updateCount, 800);
 })();
 </script>
+
+<style>
+/* !! FORCE 3 colonnes — override settings-harmonize.css !! */
+html body .app-container .main-content #propertiesGrid,
+html body #propertiesGrid,
+#propertiesGrid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 20px !important;
+  padding: 24px !important;
+}
+@media (max-width: 900px) {
+  html body #propertiesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 580px) {
+  html body #propertiesGrid { grid-template-columns: 1fr !important; }
+}
+</style>
+<script>
+// Belt + suspenders: set inline style directly on the grid element
+document.addEventListener('DOMContentLoaded', function() {
+  var grid = document.getElementById('propertiesGrid');
+  if (grid) {
+    grid.style.setProperty('display', 'grid', 'important');
+    grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+    grid.style.setProperty('gap', '20px', 'important');
+    grid.style.setProperty('padding', '24px', 'important');
+  }
+});
+// Also after properties are rendered
+var _orig = window.renderProperties;
+if (typeof _orig === 'function') {
+  window.renderProperties = function() {
+    _orig.apply(this, arguments);
+    var grid = document.getElementById('propertiesGrid');
+    if (grid) {
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+    }
+  };
+}
+</script>
+
 </body>
 </html>
