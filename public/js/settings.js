@@ -968,8 +968,8 @@ const chatSectionHtml = `
             </div>
             <!-- Actions -->
             <div class="property-actions">
-              <button type="button" class="btn btn-ghost btn-edit" data-id="${escapeHtml(id)}">Modifier</button>
-              <button type="button" class="btn btn-jade btn-manage" data-id="${escapeHtml(id)}" onclick="window.location.href='/gestion.html?property=${escapeHtml(id)}'">Gérer</button>
+              <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
+              <button type="button" class="btn btn-jade btn-edit" data-id="${escapeHtml(id)}">Gérer</button>
             </div>
           </div>
         </div>
@@ -979,7 +979,7 @@ const chatSectionHtml = `
 
   // Add dashed "Ajouter" card at the end
   const addCard = `
-    <div class="property-card property-card-add" id="addPropertyBtn" onclick="document.querySelector('.btn-show-form, #showAddFormBtn, [data-action=add-property]')?.click(); window.showAddPropertyForm && window.showAddPropertyForm();">
+    <div class="property-card property-card-add" id="addPropertyBtn" onclick="openAddPropertyModal()">
       <div class="property-card-add-inner">
         <div class="property-card-add-icon">
           <i class="fas fa-plus"></i>
