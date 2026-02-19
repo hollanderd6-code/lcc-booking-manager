@@ -201,20 +201,30 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 /* ── Livrets list ── */
 .livrets-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 20px;
   margin-bottom: 24px;
 }
+@media(max-width:1000px){ .livrets-grid { grid-template-columns: repeat(2,1fr) !important; } }
+@media(max-width:600px){ .livrets-grid { grid-template-columns: 1fr !important; } }
 .livret-card {
   background: #F5F0E8;
   border: 1px solid rgba(200,184,154,.4);
-  border-radius: 16px;
-  padding: 20px;
-  display: flex; flex-direction: column; gap: 12px;
-  transition: all .2s;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: all .2s cubic-bezier(0.16,1,0.3,1);
 }
-.livret-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,17,23,.1); }
+.livret-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(13,17,23,.12); border-color: #C8B89A; }
+.livret-card-hero {
+  height: 110px;
+  background: linear-gradient(135deg, #1A7A5E 0%, #2AAE86 60%, #C8B89A 100%);
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.livret-card-hero-icon { font-size: 40px; opacity: .9; }
+.livret-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .livret-card-icon {
   width: 44px; height: 44px; border-radius: 12px;
   background: rgba(26,122,94,.1); display: flex; align-items: center;
@@ -222,7 +232,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 }
 .livret-card-name {
   font-size: 15px; font-weight: 700; color: #0D1117;
-  font-family: 'DM Sans', sans-serif; flex: 1;
+  font-family: 'DM Sans', sans-serif; margin-bottom: 3px;
 }
 .livret-card-date { font-size: 12px; color: #7A8695; }
 .livret-card-actions {
@@ -251,11 +261,11 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .livret-card-add {
   background: transparent;
   border: 2px dashed rgba(26,122,94,.3);
-  border-radius: 16px; padding: 28px;
+  border-radius: 20px; padding: 28px;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
+  align-items: center; justify-content: center; gap: 12px;
   cursor: pointer; transition: all .2s; text-align: center;
-  min-height: 140px;
+  min-height: 240px;
 }
 .livret-card-add:hover { border-color: #1A7A5E; background: rgba(26,122,94,.04); }
 .livret-card-add-icon {
@@ -1522,19 +1532,23 @@ function displayLivretsList(livrets) {
     appendAddCard(grid);
     return;
   }
-  const html = livrets.map(livret => `
+  const emojis = ['📖','🏡','🌿','🔑','🏖️','🌄','🛋️','✨'];
+  const html = livrets.map((livret, idx) => `
     <div class="livret-card">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div class="livret-card-icon"><i class="fas fa-book-open"></i></div>
+      <div class="livret-card-hero">
+        <div class="livret-card-hero-icon">${emojis[idx % emojis.length]}</div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,.2);backdrop-filter:blur(8px);color:white;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">● Actif</div>
+      </div>
+      <div class="livret-card-body">
         <div>
           <div class="livret-card-name">${livret.propertyName || 'Sans nom'}</div>
-          <div class="livret-card-date">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
+          <div class="livret-card-date"><i class="fas fa-clock" style="font-size:10px;"></i> Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
         </div>
-      </div>
-      <div class="livret-card-actions">
-        <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
-        <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
-        <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>
+        <div class="livret-card-actions">
+          <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
+          <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
+          <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>
+        </div>
       </div>
     </div>
   `).join('');
