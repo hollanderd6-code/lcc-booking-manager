@@ -1359,6 +1359,52 @@ html[data-theme-v3="1"] .templates-list,
 html[data-theme-v3="1"] .stats-grid {
   background: transparent !important;
 }
+
+/* ── Checklists + Modal en beige ── */
+html[data-theme-v3="1"] .checklist-item {
+  background: #F5F0E8 !important;
+  border-color: rgba(200,184,154,.4) !important;
+  border-radius: 14px !important;
+}
+html[data-theme-v3="1"] .checklist-item:hover {
+  background: #EDE8DF !important;
+  box-shadow: 0 4px 12px rgba(13,17,23,.08) !important;
+}
+html[data-theme-v3="1"] .checklist-item-actions .btn {
+  background: rgba(255,255,255,.6) !important;
+  border-color: rgba(13,17,23,.12) !important;
+  border-radius: 10px !important;
+}
+html[data-theme-v3="1"] .checklist-item-actions .btn:hover {
+  background: white !important;
+}
+
+/* Modal detail */
+html[data-theme-v3="1"] .checklist-detail-panel {
+  background: #F5F0E8 !important;
+  border-radius: 20px !important;
+}
+html[data-theme-v3="1"] .checklist-detail-header {
+  background: rgba(245,240,232,.8) !important;
+  border-bottom-color: rgba(200,184,154,.4) !important;
+}
+html[data-theme-v3="1"] .checklist-detail-modal .btn {
+  border-radius: 12px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+html[data-theme-v3="1"] .checklist-detail-modal .btn-primary {
+  background: #1A7A5E !important;
+  border-color: #1A7A5E !important;
+}
+html[data-theme-v3="1"] .checklist-detail-modal .btn-ghost,
+html[data-theme-v3="1"] .checklist-detail-modal .btn-secondary {
+  background: rgba(255,255,255,.7) !important;
+  border-color: rgba(13,17,23,.12) !important;
+}
+/* QR modal aussi */
+html[data-theme-v3="1"] #qrModal .checklist-detail-panel {
+  background: #F5F0E8 !important;
+}
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
