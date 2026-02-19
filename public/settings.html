@@ -1,21 +1,217 @@
 <!DOCTYPE html>
 
-<html data-theme="light" lang="fr">
+<html data-theme="light" data-theme-v3="1" lang="fr">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Boostinghost – Mes logements</title>
 <!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- Global CSS de l'app -->
-<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
 <link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">    
     <style>
+/* ============================================================
+   DARK BAR + STICKY HEADER (identical to app.html)
+   ============================================================ */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+  z-index: 30 !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  position: relative !important;
+  z-index: 35 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Tuer tout espace parasite entre barre dark et header */
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ── BARRE DARK EN HAUT ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: #0D1117;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  /* Pour le centrage absolu des badges */
+  position: fixed;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
+  color: rgba(255,255,255,.4);
+  font-weight: 500;
+  margin-right: 6px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: white;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
+  background: #1A7A5E;
+  color: white;
+  border-color: #1A7A5E;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
+  color: rgba(255,255,255,.4);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+html[data-theme-v3="1"] .bh-theme-toggle {
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,.15);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-theme-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
+
+
+/* ============================================================
+   PAGE LOGEMENTS — V3 FIXES
+   ============================================================ */
+html[data-theme-v3="1"] body {
+  background: #F5F2EC !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+html[data-theme-v3="1"] .main-content {
+  background: #F5F2EC !important;
+}
+/* Prevent page scroll — header stays fixed */
+html[data-theme-v3="1"],
+html[data-theme-v3="1"] body {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+}
+html[data-theme-v3="1"] .main-content {
+  overflow-y: auto !important;
+  height: 100% !important;
+}
+/* Hide bh-layout back button */
+html[data-theme-v3="1"] .header-actions .btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
+  display: none !important;
+}
+/* Style page title */
+html[data-theme-v3="1"] header.main-header .page-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+}
+html[data-theme-v3="1"] header.main-header .page-kicker {
+  font-size: 10.5px !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: rgba(13,17,23,.38) !important;
+  font-weight: 600 !important;
+}
+/* Back button */
+.settings-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 12px;
+  background: #1A7A5E;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+  position: fixed;
+  top: calc(40px + 13px);
+  right: 24px;
+  z-index: 200;
+}
+.settings-back-btn:hover { background: #15624B; }
+.settings-back-btn i { font-size: 13px; }
+/* Sidebar z-index fix */
+html[data-theme-v3="1"] .sidebar {
+  z-index: 30 !important;
+}
+
     html, body {
       margin: 0 !important;
       }
@@ -1058,6 +1254,113 @@
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="settings" data-subtitle="Ajoutez, modifiez et organisez vos logements." data-title="Mes logements">
+<!-- Dark bar -->
+<div class="bh-demo-nav" id="bhTopBar">
+  <!-- Connexions centrées -->
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;">
+
+    <!-- Airbnb -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fa-brands fa-airbnb" style="font-size:15px;color:#FF5A5F;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Airbnb</span>
+      <span id="topbar-status-airbnb" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+
+    <!-- Booking.com -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="font-size:13px;font-weight:800;color:#003580;">B.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Booking.com</span>
+      <span id="topbar-status-booking" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+
+    <!-- Stripe -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fa-brands fa-stripe-s" style="font-size:17px;color:#6772E5;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Stripe</span>
+      <span id="topbar-status-stripe" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+  </div>
+
+  <!-- Toggle dark mode (droite) -->
+  <div class="bh-demo-right">
+    <span class="bh-demo-mode-label">Mode</span>
+    <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
+  </div>
+</div>
+
+<script>
+// Mise à jour des statuts de connexion dans la top bar
+(function updateTopBarStatus() {
+  function setStatus(id, connected) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (connected) {
+      el.style.background = 'rgba(34,197,94,.2)';
+      el.style.color = '#4ADE80';
+      el.style.borderColor = 'rgba(34,197,94,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Connecté';
+    } else {
+      el.style.background = 'rgba(239,68,68,.2)';
+      el.style.color = '#F87171';
+      el.style.borderColor = 'rgba(239,68,68,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté';
+    }
+  }
+
+  function checkStatuses() {
+    try {
+      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      const hasAirbnb = reservations.some(r =>
+        (r.source || r.platform || '').toLowerCase().includes('airbnb')
+      );
+      const hasBooking = reservations.some(r =>
+        (r.source || r.platform || '').toLowerCase().includes('booking')
+      );
+      setStatus('topbar-status-airbnb', hasAirbnb);
+      setStatus('topbar-status-booking', hasBooking);
+
+      // Stripe : vérifie lcc_user ou LCC_PROPERTIES
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      const hasStripe = !!(
+        user.stripeAccountId ||
+        user.stripe_account_id ||
+        user.stripeConnected ||
+        properties.some(p => p.stripeAccountId || p.stripe_account_id)
+      );
+      setStatus('topbar-status-stripe', hasStripe);
+    } catch(e) {
+      console.warn('TopBar status error:', e);
+    }
+  }
+
+  // Vérifier au chargement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkStatuses);
+  } else {
+    checkStatuses();
+  }
+
+  // Re-vérifier après chargement des données API (délai)
+  setTimeout(checkStatuses, 2000);
+  setTimeout(checkStatuses, 5000);
+
+  // Exposer pour appel manuel après loadData
+  window.updateTopBarStatus = checkStatuses;
+})();
+</script>
+
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
@@ -1074,6 +1377,7 @@
 <div id="bhSidebar"></div>
 <!-- MAIN -->
 <main class="main-content"><div id="bhHeader"></div>
+    <button class="settings-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 
 <div class="page-content">
 <section class="card settings-container">
