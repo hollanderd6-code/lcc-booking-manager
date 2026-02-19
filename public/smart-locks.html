@@ -48,7 +48,7 @@
     /* CONTENT */
     .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
     .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-    .main-content { padding: 32px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    .main-content { padding: 0; max-width: none; margin: 0; width: 100%; box-sizing: border-box; }
 
     /* DASHBOARD */
     .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -321,23 +321,29 @@ html[data-theme-v3="1"] body {
   font-family: 'DM Sans', sans-serif !important;
   background: #F5F2EC !important;
 }
-html[data-theme-v3="1"] .app-container,
-html[data-theme-v3="1"] .main-wrapper {
+html[data-theme-v3="1"] .app-container {
   height: calc(100vh - 40px) !important;
   overflow: hidden !important;
 }
+html[data-theme-v3="1"] .main-wrapper {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
 html[data-theme-v3="1"] main.main-content {
   overflow-y: auto !important;
-  height: 100% !important;
+  flex: 1 !important;
   background: #F5F2EC !important;
   padding-top: 70px !important;
   padding-left: 24px !important;
   padding-right: 24px !important;
+  padding-bottom: 40px !important;
   max-width: none !important;
+  width: 100% !important;
   box-sizing: border-box !important;
 }
-html[data-theme-v3="1"] header.main-header,
-html[data-theme-v3="1"] header.top-bar {
+html[data-theme-v3="1"] header.main-header {
   position: fixed !important;
   top: 40px !important;
   left: 0 !important; right: 0 !important;
@@ -345,8 +351,11 @@ html[data-theme-v3="1"] header.top-bar {
   margin-left: 260px !important;
 }
 @media(max-width:768px){
-  html[data-theme-v3="1"] header.main-header,
-  html[data-theme-v3="1"] header.top-bar { margin-left: 0 !important; }
+  html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
+}
+/* Hide the empty top-bar placeholder */
+html[data-theme-v3="1"] header.top-bar {
+  display: none !important;
 }
 html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 html[data-theme-v3="1"] .header-actions .btn-ghost,
