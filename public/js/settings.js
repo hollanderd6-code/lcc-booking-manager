@@ -931,77 +931,47 @@ const chatSectionHtml = `
       `
         : "";
 
+      const arrivalLabel = arrivalTime ? arrivalTime : '--';
+      const departureLabel = departureTime ? departureTime : '--';
+      const depositShort = p.depositAmount != null && p.depositAmount !== '' ? p.depositAmount + ' €' : '–';
+      const propertyEmoji = photoUrl ? '' : ['🏢','🌲','🏙️','🏡','🏖️','🏔️'][Math.abs(name.charCodeAt(0)) % 6];
+
       return `
-        <div class="property-card">
-          <div class="property-header">
-            <div class="property-info">
-              <div class="property-name">
-                <span class="color-badge" style="background:${color};"></span>
-                <span>${escapeHtml(name)}</span>
+        <div class="property-card" data-id="${escapeHtml(id)}">
+          <!-- Image / hero -->
+          <div class="property-img">
+            ${photoUrl
+              ? `<img class="property-img-bg" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(name)}" />`
+              : `<div class="property-img-placeholder" style="background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%); width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:52px;">${propertyEmoji}</div>`
+            }
+            <div class="property-img-overlay"></div>
+            <div class="property-img-badge active-badge">● Actif</div>
+          </div>
+          <!-- Info -->
+          <div class="property-info">
+            <div class="property-name">${escapeHtml(name)}</div>
+            ${address ? `<div class="property-address"><i class="fas fa-location-dot" style="color:#1A7A5E;font-size:11px;"></i> ${escapeHtml(address)}</div>` : ''}
+            <!-- Stats -->
+            <div class="property-stats">
+              <div class="prop-stat">
+                <div class="prop-stat-val">${arrivalLabel}</div>
+                <div class="prop-stat-label">Arrivée</div>
               </div>
-                            <div class="property-meta">
-                ${addressBadge}
-                ${timesBadge}
-                ${depositBadge}
-                ${wifiBadge}
-                ${accessBadge}
-                ${welcomeBookBadge}
+              <div class="prop-stat">
+                <div class="prop-stat-val">${departureLabel}</div>
+                <div class="prop-stat-label">Départ</div>
+              </div>
+              <div class="prop-stat">
+                <div class="prop-stat-val" style="color:#1A7A5E;">${depositShort}</div>
+                <div class="prop-stat-label">Caution</div>
               </div>
             </div>
-            <div class="property-photo-wrapper">
-              ${
-                photoUrl
-                  ? `<img src="${escapeHtml(photoUrl)}" alt="Photo logement" />`
-                  : `<span class="property-photo-placeholder"><i class="fas fa-image"></i></span>`
-              }
+            <!-- Actions -->
+            <div class="property-actions">
+              <button type="button" class="btn btn-ghost btn-edit" data-id="${escapeHtml(id)}">Modifier</button>
+              <button type="button" class="btn btn-jade btn-manage" data-id="${escapeHtml(id)}" onclick="window.location.href='/gestion.html?property=${escapeHtml(id)}'">Gérer</button>
             </div>
           </div>
-
-          <div class="property-actions">
-            <button
-              type="button"
-              class="btn-icon-action btn-reorder"
-              data-id="${escapeHtml(id)}"
-              data-direction="up"
-              title="Monter"
-              style="background:#dbeafe;color:#1e40af;"
-            >
-              <i class="fas fa-arrow-up"></i>
-            </button>
-            <button
-              type="button"
-              class="btn-icon-action btn-reorder"
-              data-id="${escapeHtml(id)}"
-              data-direction="down"
-              title="Descendre"
-              style="background:#dbeafe;color:#1e40af;"
-            >
-              <i class="fas fa-arrow-down"></i>
-            </button>
-            <button
-              type="button"
-              class="btn-icon-action btn-edit"
-              data-id="${escapeHtml(id)}"
-            >
-              <i class="fas fa-pen"></i>
-            </button>
-            <button
-              type="button"
-              class="btn-icon-action btn-delete"
-              data-id="${escapeHtml(id)}"
-            >
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-
-          <div class="ical-urls">
-            ${icalListHtml}
-          </div>
-
-          ${boostinghostHtml}
-          
-          ${chatSectionHtml}
-        </div>
       `;
     })
     .join("");
