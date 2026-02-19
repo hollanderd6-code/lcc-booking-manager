@@ -972,6 +972,7 @@ const chatSectionHtml = `
               <button type="button" class="btn btn-jade btn-manage" data-id="${escapeHtml(id)}" onclick="window.location.href='/gestion.html?property=${escapeHtml(id)}'">Gérer</button>
             </div>
           </div>
+        </div>
       `;
     })
     .join("");
