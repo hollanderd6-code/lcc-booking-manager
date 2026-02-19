@@ -935,6 +935,69 @@ html[data-theme-v3="1"] .subscription-card {
   background: transparent !important;
   border: none !important;
 }
+
+/* ── Fix espace interne carte abonnement ── */
+html[data-theme-v3="1"] #tab-subscription .card {
+  padding: 0 !important;
+}
+html[data-theme-v3="1"] #tab-subscription .card-header {
+  padding: 16px 20px !important;
+}
+html[data-theme-v3="1"] #tab-subscription .card-body {
+  padding: 20px !important;
+}
+
+/* ── Subscription tab: zéro espace supplémentaire ── */
+html[data-theme-v3="1"] #tab-subscription {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+html[data-theme-v3="1"] #tab-subscription > * {
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .settings-tabs {
+  margin-bottom: 8px !important;
+}
+html[data-theme-v3="1"] .tab-pane {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ── Subscription: compacter tout l'espace ── */
+html[data-theme-v3="1"] #tab-subscription .card-header {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  min-height: 0 !important;
+}
+html[data-theme-v3="1"] #tab-subscription .card-body {
+  padding-top: 16px !important;
+}
+html[data-theme-v3="1"] #tab-subscription .subscription-card {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+
+/* ── Supprimer tout espace avant les cards ── */
+html[data-theme-v3="1"] .page-content {
+  padding-top: 16px !important;
+}
+html[data-theme-v3="1"] .settings-tabs {
+  margin-bottom: 8px !important;
+}
+html[data-theme-v3="1"] .tab-pane {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+html[data-theme-v3="1"] .tab-pane > section:first-child,
+html[data-theme-v3="1"] .tab-pane > div:first-child {
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .card {
+  padding: 16px 20px !important;
+}
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
