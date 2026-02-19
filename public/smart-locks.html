@@ -471,6 +471,37 @@ html[data-theme-v3="1"] .modal-content {
   border: 1px solid rgba(200,184,154,.4) !important;
   box-shadow: 0 24px 64px rgba(13,17,23,.2) !important;
 }
+
+/* ── Forcer pleine largeur ── */
+html[data-theme-v3="1"] .stats-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
+  width: 100% !important;
+}
+html[data-theme-v3="1"] .tab-content,
+html[data-theme-v3="1"] .tab-content.active,
+html[data-theme-v3="1"] #tab-locks,
+html[data-theme-v3="1"] #tab-config {
+  width: 100% !important;
+}
+html[data-theme-v3="1"] .tab-content > div,
+html[data-theme-v3="1"] .tab-content > section,
+html[data-theme-v3="1"] .tab-content > .card {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+html[data-theme-v3="1"] .locks-grid,
+html[data-theme-v3="1"] #locksGrid {
+  width: 100% !important;
+}
+/* Remove page-content max-width */
+html[data-theme-v3="1"] .page-content {
+  max-width: none !important;
+  width: 100% !important;
+}
 </style>
 <!-- Script auth + user + logout -->
 <script src="/js/auth-fetch.js"></script>
