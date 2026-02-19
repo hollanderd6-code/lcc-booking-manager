@@ -325,15 +325,10 @@ html[data-theme-v3="1"] .app-container {
   height: calc(100vh - 40px) !important;
   overflow: hidden !important;
 }
-html[data-theme-v3="1"] .main-wrapper {
-  height: calc(100vh - 40px) !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
+
 html[data-theme-v3="1"] main.main-content {
   overflow-y: auto !important;
-  flex: 1 !important;
+  height: calc(100vh - 40px) !important;
   background: #F5F2EC !important;
   padding-top: 70px !important;
   padding-left: 24px !important;
@@ -677,9 +672,8 @@ html[data-theme-v3="1"] .page-content {
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <!-- Sidebar -->
+<div class="app-container">
 <div id="bhSidebar"></div>
-<div class="main-wrapper">
-<header class="top-bar"></header>
 <main class="main-content">
 <div id="bhHeader"></div>
 <button class="locks-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
