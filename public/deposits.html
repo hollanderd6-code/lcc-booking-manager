@@ -912,6 +912,61 @@ html[data-theme-v3="1"] .modal-header {
 html[data-theme-v3="1"] .modal-footer {
   border-top-color: rgba(200,184,154,.35) !important;
 }
+
+/* ── Boutons Actualiser + Voir sur Stripe : taille réduite ── */
+html[data-theme-v3="1"] #refreshBtn,
+html[data-theme-v3="1"] #refreshHistoryBtn {
+  width: auto !important;
+  padding: 0 14px !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.6) !important;
+  border: 1.5px solid rgba(13,17,23,.12) !important;
+  color: #374151 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+html[data-theme-v3="1"] #refreshBtn:hover,
+html[data-theme-v3="1"] #refreshHistoryBtn:hover {
+  background: white !important;
+  border-color: rgba(13,17,23,.2) !important;
+}
+/* Voir sur Stripe : même taille */
+html[data-theme-v3="1"] .card-header a.btn,
+html[data-theme-v3="1"] .card-header .btn-ghost {
+  width: auto !important;
+  padding: 0 14px !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.6) !important;
+  border: 1.5px solid rgba(13,17,23,.12) !important;
+  color: #374151 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+html[data-theme-v3="1"] .card-header a.btn:hover,
+html[data-theme-v3="1"] .card-header .btn-ghost:hover {
+  background: white !important;
+}
+
+/* ── Stripe Connect banner : fond bleu très light ── */
+html[data-theme-v3="1"] .stripe-connect-notice {
+  background: rgba(219,234,254,.35) !important;
+  border: 1px solid rgba(147,197,253,.4) !important;
+  border-radius: 14px !important;
+}
+html[data-theme-v3="1"] .stripe-connect-notice h3 {
+  color: #1e3a5f !important;
+}
+html[data-theme-v3="1"] .stripe-connect-notice p {
+  color: #374151 !important;
+}
 </style>
 <!-- Script auth + user + logout -->
 <script>
