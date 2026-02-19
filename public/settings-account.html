@@ -1501,6 +1501,16 @@ html[data-theme-v3="1"] .plan-card.current {
 .team-member-inactive .team-member-avatar {
   background: #9ca3af;
 }
+
+/* ── Supprimer espace extra sur tab abonnement ── */
+html[data-theme-v3="1"] #tab-subscription {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] #tab-subscription > section:first-child,
+html[data-theme-v3="1"] #tab-subscription > .card:first-child {
+  margin-top: 0 !important;
+}
 </style>
 
 </div><!-- Fin onglet team -->
