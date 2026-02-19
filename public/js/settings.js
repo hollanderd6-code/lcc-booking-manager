@@ -976,7 +976,19 @@ const chatSectionHtml = `
     })
     .join("");
 
-  grid.innerHTML = cardsHtml;
+  // Add dashed "Ajouter" card at the end
+  const addCard = `
+    <div class="property-card property-card-add" id="addPropertyBtn" onclick="document.querySelector('.btn-show-form, #showAddFormBtn, [data-action=add-property]')?.click(); window.showAddPropertyForm && window.showAddPropertyForm();">
+      <div class="property-card-add-inner">
+        <div class="property-card-add-icon">
+          <i class="fas fa-plus"></i>
+        </div>
+        <div class="property-card-add-label">Ajouter un logement</div>
+        <div class="property-card-add-sub">Connectez Airbnb, Booking, direct</div>
+      </div>
+    </div>`;
+
+  grid.innerHTML = cardsHtml + addCard;
 
   grid.querySelectorAll(".btn-edit").forEach((btn) => {
     btn.addEventListener("click", () => {
