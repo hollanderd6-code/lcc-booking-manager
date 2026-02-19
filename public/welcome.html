@@ -520,9 +520,25 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* Hidden form section */
 .form-section { display: none; }
 .form-section.active { display: block; }
+
+/* Hide redundant page title — banner replaces it */
+html[data-theme-v3="1"] #bhHeader .page-title,
+html[data-theme-v3="1"] #bhHeader .bh-page-title,
+html[data-theme-v3="1"] #bhHeader h1,
+html[data-theme-v3="1"] #bhHeader .header-title,
+html[data-theme-v3="1"] #bhHeader .page-header-title {
+  display: none !important;
+}
+
+/* Hide bh-layout injected page title for welcome page */
+.main-content > .page-title:not(#bhHeader),
+.main-content .bh-page-header,
+.container > .page-title {
+  display: none !important;
+}
 </style>
 </head>
-<body data-back-href="/app.html" data-kicker="Gestion" data-page="welcome" data-title="Livret d'accueil">
+<body data-back-href="/app.html" data-page="welcome">
 
 <!-- Dark bar -->
 <div class="bh-demo-nav" id="bhTopBar">
@@ -644,16 +660,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 <div class="welcome-container">
 
-  <!-- ── Header ── -->
-  <div class="welcome-section-header">
-    <div>
-      <div class="welcome-kicker" id="livretsCount">LIVRETS D'ACCUEIL</div>
-      <h1 class="welcome-title">Mes <em>livrets</em></h1>
-    </div>
-    <button class="wiz-btn-next" onclick="createNewLivret()" id="newLivretBtn" style="display:none;">
-      <i class="fas fa-plus"></i> Nouveau livret
-    </button>
-  </div>
+
 
   <!-- ── Tip banner ── -->
   <div class="welcome-tip-banner" id="welcomeTipBanner">
@@ -1647,11 +1654,11 @@ function displayLivretsList(livrets) {
 function appendAddCard(grid) {
   // Update count in header
   const cards = grid.querySelectorAll('.livret-card');
-  const countEl = document.getElementById('livretsCount');
-  if (countEl) countEl.textContent = cards.length + ' LIVRET' + (cards.length > 1 ? 'S' : '') + " D'ACCUEIL";
-  // Show header button if has livrets
-  const newBtn = document.getElementById('newLivretBtn');
-  if (newBtn && cards.length > 0) newBtn.style.display = 'inline-flex';
+  // Update banner subtitle with count
+  const subEl = document.querySelector('.welcome-tip-sub');
+  if (subEl && cards.length > 0) {
+    subEl.innerHTML = '<strong style="color:white;">' + cards.length + ' livret' + (cards.length > 1 ? 's' : '') + ' actif' + (cards.length > 1 ? 's' : '') + '</strong> · Partagez-les via lien ou QR Code, vos voyageurs y accèdent sans application.';
+  }
 
   const add = document.createElement('div');
   add.className = 'livret-card-add';
