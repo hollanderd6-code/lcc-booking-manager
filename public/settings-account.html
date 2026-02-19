@@ -1502,14 +1502,17 @@ html[data-theme-v3="1"] .plan-card.current {
   background: #9ca3af;
 }
 
-/* ── Supprimer espace extra sur tab abonnement ── */
-html[data-theme-v3="1"] #tab-subscription {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
+
+
+/* ── Espace abonnement : aligner avec les autres tabs ── */
+html[data-theme-v3="1"] .subscription-loading {
+  padding: 16px !important;
+  text-align: left !important;
 }
-html[data-theme-v3="1"] #tab-subscription > section:first-child,
-html[data-theme-v3="1"] #tab-subscription > .card:first-child {
-  margin-top: 0 !important;
+html[data-theme-v3="1"] .subscription-card {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
 }
 </style>
 
