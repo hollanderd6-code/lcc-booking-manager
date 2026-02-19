@@ -27,13 +27,19 @@ html[data-theme-v3="1"] .sidebar {
   z-index: 30 !important;
 }
 html[data-theme-v3="1"] header.main-header {
-  position: sticky !important;
-  top: 0 !important;
+  position: fixed !important;
+  top: 40px !important;
+  left: 0 !important;
+  right: 0 !important;
   z-index: 50 !important;
   margin-top: 0 !important;
+  margin-left: 260px !important;
+}
+@media(max-width:768px){
+  html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
 }
 html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important;
+  padding-top: 70px !important;
   margin-top: 0 !important;
   position: relative !important;
   z-index: 35 !important;
@@ -159,7 +165,7 @@ html[data-theme-v3="1"] .main-content {
 }
 html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important;
+  padding-top: 70px !important;
   margin-top: 0 !important;
   position: relative !important;
   z-index: 35 !important;
@@ -522,13 +528,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .form-section.active { display: block; }
 
 /* Hide redundant page title — banner replaces it */
-html[data-theme-v3="1"] #bhHeader .page-title,
-html[data-theme-v3="1"] #bhHeader .bh-page-title,
-html[data-theme-v3="1"] #bhHeader h1,
-html[data-theme-v3="1"] #bhHeader .header-title,
-html[data-theme-v3="1"] #bhHeader .page-header-title {
-  display: none !important;
-}
+/* page title in bhHeader kept visible */
 
 /* Hide bh-layout injected page title for welcome page */
 .main-content > .page-title:not(#bhHeader),
@@ -538,7 +538,7 @@ html[data-theme-v3="1"] #bhHeader .page-header-title {
 }
 </style>
 </head>
-<body data-back-href="/app.html" data-page="welcome">
+<body data-back-href="/app.html" data-page="welcome" data-title="Livret d'accueil" data-kicker="Gestion">
 
 <!-- Dark bar -->
 <div class="bh-demo-nav" id="bhTopBar">
@@ -1770,13 +1770,8 @@ window.addPlace = function() {
 document.addEventListener('DOMContentLoaded', function() {
   // bh-layout injects into #bhHeader - hide the page title part
   setTimeout(function() {
-    var hdr = document.getElementById('bhHeader');
-    if (hdr) {
-      // Hide any h1/h2 and .page-title inside bhHeader
-      hdr.querySelectorAll('h1,h2,.page-title,.header-page-title,.bh-page-title,.page-header').forEach(function(el) {
-        el.style.display = 'none';
-      });
-    }
+    // Only hide page-title injected OUTSIDE the header (below the header)
+    // Do NOT touch bhHeader contents - that's where "Livret d'accueil" should show
     // Also hide any .page-title injected directly into .container or main
     document.querySelectorAll('.container .page-title, .main-content > .page-title, .welcome-container > .page-title').forEach(function(el) {
       el.style.display = 'none';
