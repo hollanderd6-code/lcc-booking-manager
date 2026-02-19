@@ -689,6 +689,16 @@ html[data-theme-v3="1"] #bhHeader .page-header-title {
   <!-- ── Wizard de création ── -->
   <form id="welcomeForm" style="display:none;">
 
+    <!-- Progress bar -->
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span id="wizProgressLabel" style="font-size:12px;font-weight:600;color:#1A7A5E;">Étape 1 / 5</span>
+        <span id="wizProgressPct" style="font-size:12px;color:#9CA3AF;">0%</span>
+      </div>
+      <div style="height:6px;background:rgba(13,17,23,.08);border-radius:999px;overflow:hidden;">
+        <div id="wizProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#1A7A5E,#2AAE86);border-radius:999px;transition:width .4s cubic-bezier(0.16,1,0.3,1);"></div>
+      </div>
+    </div>
     <!-- Stepper -->
     <div class="wizard-stepper" id="wizardStepper">
       <div class="wizard-step active" data-step="1">
@@ -1006,11 +1016,38 @@ function showSection(index) {
 }
 
 function nextSection() {
-  showSection(currentSectionIndex + 1);
+  const next = currentSectionIndex + 1;
+  showSection(next);
+  updateStepperDirect(next);
+  updateProgressBar(next);
 }
 
 function prevSection() {
-  showSection(currentSectionIndex - 1);
+  const prev = currentSectionIndex - 1;
+  showSection(prev);
+  updateStepperDirect(prev);
+  updateProgressBar(prev);
+}
+
+function updateStepperDirect(index) {
+  document.querySelectorAll('.wizard-step').forEach((step, i) => {
+    step.classList.remove('active','done');
+    if (i === index) step.classList.add('active');
+    else if (i < index) step.classList.add('done');
+  });
+  // Update progress bar
+  updateProgressBar(index);
+}
+
+function updateProgressBar(index) {
+  const total = 5;
+  const pct = Math.round(((index) / (total - 1)) * 100);
+  const bar = document.getElementById('wizProgressBar');
+  const label = document.getElementById('wizProgressLabel');
+  if (bar) bar.style.width = pct + '%';
+  if (label) label.textContent = 'Étape ' + (index + 1) + ' / ' + total;
+  const pctEl = document.getElementById('wizProgressPct');
+  if (pctEl) pctEl.textContent = pct + '%';
 }
 
 // ----------------------------
@@ -1198,31 +1235,6 @@ async function loadLivretsList() {
   }
 }
 
-// Afficher la liste des livrets
-function displayLivretsList(livrets) {
-  const html = livrets.map(livret => `
-    <div style="border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; background: white;">
-      <div>
-        <strong style="font-size: 16px; color: #1a202c;">${livret.propertyName || 'Sans nom'}</strong>
-        <br>
-        <small style="color: #64748b;">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</small>
-      </div>
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-secondary" onclick="editLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem;">
-          <i class="fas fa-edit"></i> Modifier
-        </button>
-        <button class="btn btn-secondary" onclick="viewLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem;">
-          <i class="fas fa-eye"></i> Voir
-        </button>
-        <button class="btn btn-secondary" onclick="deleteLivret('${livret.uniqueId}')" style="font-size: 14px; padding: 0.5rem 1rem; background: #e53e3e; color: white;">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-  
-  document.getElementById('livretsList').innerHTML = html;
-}
 
 // Créer un nouveau livret
 function createNewLivret() {
@@ -1611,12 +1623,7 @@ function updateStepper(index) {
   });
 }
 
-// Patch showSection to also update stepper
-const _origShowSection = showSection;
-window.showSection = function(index) {
-  _origShowSection(index);
-  updateStepper(index);
-};
+// stepper updated directly in nextSection/prevSection
 
 // Redesign displayLivretsList
 function displayLivretsList(livrets) {
@@ -1757,5 +1764,26 @@ window.addPlace = function() {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
+
+<script>
+// Hide bh-layout injected page title
+document.addEventListener('DOMContentLoaded', function() {
+  // bh-layout injects into #bhHeader - hide the page title part
+  setTimeout(function() {
+    var hdr = document.getElementById('bhHeader');
+    if (hdr) {
+      // Hide any h1/h2 and .page-title inside bhHeader
+      hdr.querySelectorAll('h1,h2,.page-title,.header-page-title,.bh-page-title,.page-header').forEach(function(el) {
+        el.style.display = 'none';
+      });
+    }
+    // Also hide any .page-title injected directly into .container or main
+    document.querySelectorAll('.container .page-title, .main-content > .page-title, .welcome-container > .page-title').forEach(function(el) {
+      el.style.display = 'none';
+    });
+  }, 100);
+});
+</script>
+
 </body>
 </html>
