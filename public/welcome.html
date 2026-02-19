@@ -1605,7 +1605,7 @@ function createNewLivret() {
 <script>
 // ── Redesign helpers ──
 function copyLivretLink(uniqueId, btn) {
-  const url = \`\${API_BASE}/welcome/\${uniqueId}\`;
+  const url = API_BASE + '/welcome/' + uniqueId;
   navigator.clipboard.writeText(url).then(() => {
     const old = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-check"></i>';
