@@ -179,7 +179,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 /* Page container */
 .welcome-container {
-  max-width: 860px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 28px 24px 60px;
 }
@@ -218,12 +218,12 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 }
 .livret-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(13,17,23,.12); border-color: #C8B89A; }
 .livret-card-hero {
-  height: 110px;
+  height: 160px;
   background: linear-gradient(135deg, #1A7A5E 0%, #2AAE86 60%, #C8B89A 100%);
   position: relative;
   display: flex; align-items: center; justify-content: center;
 }
-.livret-card-hero-icon { font-size: 40px; opacity: .9; }
+.livret-card-hero-icon { font-size: 56px; opacity: .9; }
 .livret-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .livret-card-icon {
   width: 44px; height: 44px; border-radius: 12px;
@@ -459,6 +459,64 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   color: #92400E; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;
 }
 
+
+.livret-card-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; padding: 10px 0;
+  border-top: 1px solid rgba(13,17,23,.08);
+  margin-top: 4px;
+}
+.livret-stat { text-align: center; }
+.livret-stat-val { font-size: 15px; font-weight: 700; color: #0D1117; }
+.livret-stat-label { font-size: 10px; color: #7A8695; text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+
+
+/* ── Tip banner ── */
+.welcome-tip-banner {
+  background: linear-gradient(135deg, #0D1117 0%, #1A3A2E 100%);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  position: relative; overflow: hidden;
+}
+.welcome-tip-banner::before {
+  content: '📖';
+  position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+  font-size: 80px; opacity: .08;
+}
+.welcome-tip-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px; font-weight: 400; color: white; margin-bottom: 6px;
+}
+.welcome-tip-title em { font-style: italic; color: #4ADE80; }
+.welcome-tip-sub { font-size: 13px; color: rgba(255,255,255,.55); line-height: 1.5; max-width: 500px; }
+.welcome-tip-badges { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.welcome-tip-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.7); font-size: 12px; font-weight: 500;
+  padding: 5px 12px; border-radius: 999px;
+}
+.welcome-tip-badge i { color: #4ADE80; font-size: 11px; }
+.welcome-tip-cta {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 42px; padding: 0 22px; border: none; border-radius: 12px;
+  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+  white-space: nowrap;
+}
+.welcome-tip-cta:hover { background: #15624B; }
+
+/* QR button on card */
+.btn-lv-qr {
+  flex: 0 0 34px !important; width: 34px;
+  background: rgba(26,122,94,.1); color: #1A7A5E;
+  border: 1px solid rgba(26,122,94,.2) !important;
+}
+.btn-lv-qr:hover { background: rgba(26,122,94,.2); }
+
 /* Hidden form section */
 .form-section { display: none; }
 .form-section.active { display: block; }
@@ -589,9 +647,29 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   <!-- ── Header ── -->
   <div class="welcome-section-header">
     <div>
-      <div class="welcome-kicker">Gestion</div>
+      <div class="welcome-kicker" id="livretsCount">LIVRETS D'ACCUEIL</div>
       <h1 class="welcome-title">Mes <em>livrets</em></h1>
     </div>
+    <button class="wiz-btn-next" onclick="createNewLivret()" id="newLivretBtn" style="display:none;">
+      <i class="fas fa-plus"></i> Nouveau livret
+    </button>
+  </div>
+
+  <!-- ── Tip banner ── -->
+  <div class="welcome-tip-banner" id="welcomeTipBanner">
+    <div>
+      <div class="welcome-tip-title">Partagez un <em>livret numérique</em> à vos voyageurs</div>
+      <div class="welcome-tip-sub">Créez un livret d'accueil complet en 5 étapes. Vos voyageurs y accèdent via un lien ou un QR Code, sans application à installer.</div>
+      <div class="welcome-tip-badges">
+        <span class="welcome-tip-badge"><i class="fas fa-check"></i> Lien personnalisé</span>
+        <span class="welcome-tip-badge"><i class="fas fa-check"></i> QR Code inclus</span>
+        <span class="welcome-tip-badge"><i class="fas fa-check"></i> Toujours à jour</span>
+        <span class="welcome-tip-badge"><i class="fas fa-check"></i> Sans application</span>
+      </div>
+    </div>
+    <button class="welcome-tip-cta" onclick="createNewLivret()">
+      <i class="fas fa-plus"></i> Créer un livret
+    </button>
   </div>
 
   <!-- ── Liste des livrets ── -->
@@ -1507,6 +1585,15 @@ function createNewLivret() {
 
 <script>
 // ── Redesign helpers ──
+function copyLivretLink(uniqueId, btn) {
+  const url = \`\${API_BASE}/welcome/\${uniqueId}\`;
+  navigator.clipboard.writeText(url).then(() => {
+    const old = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i>';
+    btn.style.background = 'rgba(26,122,94,.2)';
+    setTimeout(() => { btn.innerHTML = old; btn.style.background = ''; }, 1500);
+  }).catch(() => prompt('Copie le lien :', url));
+}
 
 // Update stepper UI
 function updateStepper(index) {
@@ -1547,6 +1634,7 @@ function displayLivretsList(livrets) {
         <div class="livret-card-actions">
           <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
           <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
+          <button class="btn-lv btn-lv-qr" onclick="copyLivretLink('${livret.uniqueId}', this)" title="Copier le lien"><i class="fas fa-link"></i></button>
           <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
@@ -1557,6 +1645,14 @@ function displayLivretsList(livrets) {
 }
 
 function appendAddCard(grid) {
+  // Update count in header
+  const cards = grid.querySelectorAll('.livret-card');
+  const countEl = document.getElementById('livretsCount');
+  if (countEl) countEl.textContent = cards.length + ' LIVRET' + (cards.length > 1 ? 'S' : '') + " D'ACCUEIL";
+  // Show header button if has livrets
+  const newBtn = document.getElementById('newLivretBtn');
+  if (newBtn && cards.length > 0) newBtn.style.display = 'inline-flex';
+
   const add = document.createElement('div');
   add.className = 'livret-card-add';
   add.onclick = createNewLivret;
