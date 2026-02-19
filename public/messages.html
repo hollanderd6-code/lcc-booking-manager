@@ -27,7 +27,7 @@ html[data-theme-v3="1"] .sidebar {
 }
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important;
-  top: 0 !important; /* body a déjà padding-top:40px — sticky à 0 = collé sous la barre dark */
+  top: 0 !important;
   z-index: 50 !important;
   margin-top: 0 !important;
 }
@@ -148,7 +148,7 @@ html[data-theme-v3="1"] body {
 
 html[data-theme-v3="1"] .main-content {
   background: #F5F2EC !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 /* Hide back button */
@@ -738,6 +738,17 @@ html[data-theme-v3="1"] .msgs-split {
 #conversationsList .conversation-item {
   position: relative !important;
   z-index: 46 !important;
+}
+
+/* Prevent page scroll - only internal panels scroll */
+html[data-theme-v3="1"],
+html[data-theme-v3="1"] body {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
 }
 </style>
 </head>
