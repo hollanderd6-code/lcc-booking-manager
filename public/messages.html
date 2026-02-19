@@ -1174,8 +1174,6 @@ window.isMobileDevice = function() { return false; };
     }
     return;
   }
-
-  // ✅ Vérifier que c'est du JSON
     })();
 </script>
 
@@ -1775,7 +1773,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       var text = bubble.textContent || '';
       var m = text.match(/\[IMAGE:(https?:\/\/[^\]]+)\]/);
       if (m) {
-        bubble.innerHTML = '<img src="' + m[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,'_blank')" />';
+        bubble.innerHTML = '<img src="' + m[1] + '" style="max-width:220px;max-height:180px;border-radius:10px;cursor:pointer;display:block;" onclick="window.open(this.src,\'_blank\')" />';
       }
     });
   }
