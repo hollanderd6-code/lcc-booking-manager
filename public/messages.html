@@ -657,26 +657,27 @@ html[data-theme-v3="1"] .emoji-panel {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 38px;
-  padding: 0 18px;
-  border: none;
+  height: 36px;
+  padding: 0 16px;
+  border: 1.5px solid rgba(0,0,0,.15);
   border-radius: 10px;
-  background: #1A7A5E;
-  color: white;
+  background: white;
+  color: #0D1117;
   font-family: 'DM Sans', sans-serif;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .15s;
+  transition: all .15s;
   white-space: nowrap;
-
+  text-decoration: none;
   position: fixed;
-  top: calc(40px + 12px);
+  top: calc(40px + 14px);
   right: 24px;
   z-index: 200;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
-.msgs-back-btn:hover { background: #15624B; }
-.msgs-back-btn i { font-size: 13px; }
+.msgs-back-btn:hover { background: #f5f5f5; border-color: rgba(0,0,0,.25); }
+.msgs-back-btn i { font-size: 12px; color: #5A6A7A; }
 
 /* Close conversation button */
 #chatCloseConvBtn {
@@ -1654,6 +1655,9 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (!orig || orig._bhPatched) return;
 
     window.openChat = function(conversationId) {
+      // Set window.currentConversationId so photo upload + close work
+      window.currentConversationId = conversationId;
+
       // Force desktop mode (prevent redirect to chat-mobile.html)
       var origIsMobile = window.isMobileDevice;
       window.isMobileDevice = function() { return false; };
