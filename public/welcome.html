@@ -1,1255 +1,889 @@
 <!DOCTYPE html>
-
-<html lang="fr">
+<html lang="fr" data-theme="light" data-theme-v3="1">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
-<title>Créateur de Livret d'Accueil – Boostinghost</title>
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Cormorant+Garamond:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<!-- Font Awesome -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Livret d'accueil – Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <script src="/js/auth-fetch.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- Platform CSS -->
-<link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
-<link href="/css/welcome-books-mobile-fix.css" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/messages-badge-red.css">   
-   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    :root {
-      --primary: #10B981;
-      --primary-dark: #059669;
-      --secondary: #3B82F6;
-      --accent: #E67E50;
-      --dark: #111827;
-      --gray-50: #F9FAFB;
-      --gray-100: #F3F4F6;
-      --gray-200: #E5E7EB;
-      --gray-300: #D1D5DB;
-      --gray-400: #9CA3AF;
-      --gray-500: #6B7280;
-      --gray-600: #4B5563;
-      --gray-700: #374151;
-      --gray-800: #1F2937;
-      --gray-900: #111827;
-      --white: #FFFFFF;
-      --success: #10B981;
-      --warning: #F59E0B;
-      --danger: #EF4444;
-    }
-/* Layout avec sidebar */
-.app-container {
-  display: flex;
-  min-height: 100vh;
-}
-
-.sidebar {
-  width: 260px;
-  flex-shrink: 0;
-}
-
-.main-content-welcome {
-  flex: 1;
-  overflow-x: hidden;
-}
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--gray-50);
-      color: var(--gray-900);
-      line-height: 1.6;
-    }
-
-    .container {
-  max-width: 100%;
-  margin: 0;
-  padding: 2rem;
-  width: 100%;
-}
-
-    /* Header */
-
-    .header-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 1.2rem;
-    }
-
-    .logo-text {
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
-
-    .logo-text .green {
-      color: var(--primary);
-    }
-
-    .logo-text .dark {
-      color: var(--gray-900);
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 1rem;
-    }
-
-    /* Page Title */
-    .page-title {
-      margin-bottom: 2rem;
-    }
-
-    .page-title h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--gray-900);
-      margin-bottom: 0.5rem;
-    }
-
-    .page-title p {
-      font-size: 1rem;
-      color: var(--gray-500);
-    }
-
-    /* Progress Steps */
-    .progress-steps {
-      background: var(--white);
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-bottom: 2rem;
-    }
-
-    .steps-container {
-      display: flex;
-      justify-content: space-between;
-      position: relative;
-    }
-
-    .steps-container::before {
-      content: '';
-      position: absolute;
-      top: 20px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--gray-200);
-      z-index: 0;
-    }
-
-    .step {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-      flex: 1;
-    }
-
-    .step-number {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--gray-200);
-      color: var(--gray-500);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      transition: all 0.3s ease;
-    }
-
-    .step.active .step-number {
-      background: var(--primary);
-      color: white;
-    }
-
-    .step.completed .step-number {
-      background: var(--success);
-      color: white;
-    }
-
-    .step-label {
-      font-size: 0.875rem;
-      color: var(--gray-500);
-      text-align: center;
-      font-weight: 500;
-    }
-
-    .step.active .step-label {
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    /* Form Card */
-    .form-card {
-      background: var(--white);
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      padding: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .form-section {
-      display: none;
-    }
-
-    .form-section.active {
-      display: block;
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .section-header {
-      margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid var(--gray-100);
-    }
-
-    .section-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--gray-900);
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .section-title i {
-      color: var(--accent);
-    }
-
-    .section-description {
-      font-size: 0.95rem;
-      color: var(--gray-500);
-    }
-
-    /* Form Elements */
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--gray-700);
-      margin-bottom: 0.5rem;
-    }
-
-    .form-group label .required {
-      color: var(--danger);
-    }
-
-    .form-group .hint {
-      font-size: 0.8rem;
-      color: var(--gray-500);
-      font-weight: 400;
-      display: block;
-      margin-top: 0.25rem;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid var(--gray-300);
-      border-radius: 8px;
-      font-size: 0.95rem;
-      transition: all 0.3s ease;
-      font-family: 'Inter', sans-serif;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    }
-
-    textarea.form-control {
-      resize: vertical;
-      min-height: 100px;
-    }
-
-    /* Grid Layout */
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
-    }
-
-    /* Image Upload */
-    .image-upload-area {
-      border: 2px dashed var(--gray-300);
-      border-radius: 8px;
-      padding: 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      background: var(--gray-50);
-    }
-
-    .image-upload-area:hover {
-      border-color: var(--primary);
-      background: rgba(16, 185, 129, 0.05);
-    }
-
-    .image-upload-area i {
-      font-size: 3rem;
-      color: var(--gray-400);
-      margin-bottom: 1rem;
-    }
-
-    .image-upload-area p {
-      color: var(--gray-600);
-      margin-bottom: 0.5rem;
-    }
-
-    .image-upload-area .supported-formats {
-      font-size: 0.8rem;
-      color: var(--gray-400);
-    }
-
-    .image-preview {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .image-preview-item {
-      position: relative;
-      aspect-ratio: 4/3;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 2px solid var(--gray-200);
-    }
-
-    .image-preview-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .image-preview-item .remove-btn {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      background: rgba(239, 68, 68, 0.9);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-    }
-
-    .image-preview-item .remove-btn:hover {
-      background: var(--danger);
-      transform: scale(1.1);
-    }
-
-    /* Repeatable Items */
-    .repeatable-section {
-      margin-bottom: 2rem;
-    }
-
-    .repeatable-item {
-      background: var(--gray-50);
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      position: relative;
-      border: 1px solid var(--gray-200);
-    }
-
-    .repeatable-item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--gray-200);
-    }
-
-    .repeatable-item-title {
-      font-weight: 600;
-      color: var(--gray-700);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .remove-item-btn {
-      background: transparent;
-      border: none;
-      color: var(--danger);
-      cursor: pointer;
-      padding: 0.5rem;
-      border-radius: 6px;
-      transition: all 0.3s ease;
-    }
-
-    .remove-item-btn:hover {
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .add-item-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      background: var(--gray-100);
-      color: var(--gray-700);
-      border: 1px dashed var(--gray-300);
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      margin-top: 1rem;
-    }
-
-    .add-item-btn:hover {
-      background: var(--gray-200);
-      border-color: var(--gray-400);
-    }
-
-    /* Buttons */
-    .btn {
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .btn-secondary {
-      background: var(--gray-200);
-      color: var(--gray-700);
-    }
-
-    .btn-secondary:hover {
-      background: var(--gray-300);
-    }
-
-    .btn-accent {
-      background: var(--accent);
-      color: white;
-    }
-
-    .btn-accent:hover {
-      background: #d46d42;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(230, 126, 80, 0.3);
-    }
-
-    .form-actions {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-top: 2rem;
-      padding-top: 2rem;
-      border-top: 2px solid var(--gray-100);
-    }
-
-    /* Info Box */
-    .info-box {
-      background: rgba(16, 185, 129, 0.1);
-      border-left: 4px solid var(--primary);
-      padding: 1rem 1.25rem;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
-    }
-
-    .info-box i {
-      color: var(--primary);
-      margin-right: 0.5rem;
-    }
-
-    .info-box p {
-      color: var(--gray-700);
-      font-size: 0.9rem;
-    }
-
-    /* Warning Box */
-    .warning-box {
-      background: rgba(245, 158, 11, 0.1);
-      border-left: 4px solid var(--warning);
-      padding: 1rem 1.25rem;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
-    }
-
-    .warning-box i {
-      color: var(--warning);
-      margin-right: 0.5rem;
-    }
-
-    /* Success Message */
-    .success-message {
-      display: none;
-      background: var(--white);
-      border-radius: 12px;
-      padding: 3rem;
-      text-align: center;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .success-message.show {
-      display: block;
-      animation: fadeIn 0.5s ease;
-    }
-
-    .success-icon {
-      width: 80px;
-      height: 80px;
-      background: var(--success);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1.5rem;
-      color: white;
-      font-size: 2.5rem;
-    }
-
-    .success-message h2 {
-      font-size: 1.75rem;
-      color: var(--gray-900);
-      margin-bottom: 0.75rem;
-    }
-
-    .success-message p {
-      color: var(--gray-600);
-      margin-bottom: 2rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .container {
-        padding: 1rem;
-      }
-
-      .form-card {
-        padding: 1.5rem;
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .steps-container {
-        flex-wrap: wrap;
-        gap: 1rem;
-      }
-
-      .step {
-        flex-basis: 45%;
-      }
-
-      .form-actions {
-        flex-direction: column;
-      }
-
-      .page-title h1 {
-        font-size: 1.5rem;
-      }
-    }
-
-    /* Loading Spinner */
-    .spinner {
-      border: 3px solid var(--gray-200);
-      border-top: 3px solid var(--primary);
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
- /* Fix définitif pour le contenu avec sidebar */
-.app-container {
-  display: flex;
-  min-height: 100vh;
-}
-
-.sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  z-index: 100;
-}
-
-.main-content-welcome {
-  flex: 1;
-  margin-left: 260px;
-  width: calc(100% - 260px);
-  background: var(--gray-50);
-  min-height: 100vh;
-}
-  .main-content-welcome {
-    margin-left: 0;
-    width: 100%;
-  }
-}
-   /* ✅ Welcome: sidebar mobile OFF-CANVAS (menu fonctionne) */
-@media (max-width: 768px) {
-  aside.sidebar, .sidebar { display: block !important; }
-
-  aside.sidebar {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    height: 100vh !important;
-    transform: translateX(-110%) !important;
-    transition: transform .25s ease !important;
-  }
-  aside.sidebar.active { transform: translateX(0) !important; }
-
-  #sidebarOverlay.sidebar-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    pointer-events: none;
-  }
-  #sidebarOverlay.sidebar-overlay.active {
-    pointer-events: auto;
-  }
-}
-
-/* ✅ Welcome: stepper mobile (scroll horizontal propre) */
-@media (max-width: 768px) {
-  .progress-steps {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 1rem !important;
-  }
-
-  .steps-container {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 14px !important;
-    min-width: max-content !important;
-    justify-content: flex-start !important;
-    padding: 8px 4px !important;
-  }
-
-  .steps-container::before { display: none !important; }
-
-  .step {
-    flex: 0 0 auto !important;
-    min-width: 150px !important;
-    align-items: flex-start !important;
-    background: #fff;
-    border: 1px solid rgba(148,163,184,.30);
-    border-radius: 16px;
-    padding: 12px;
-  }
-
-  .step-label {
-    text-align: left !important;
-    white-space: normal !important;
-    line-height: 1.25 !important;
-  }
-}
-<style>
-/* ✅ Uniformisation du bouton "Retour au dashboard" (header) */
-.main-header .header-actions .btn.btn-ghost{
-  border-radius: 999px !important;
-  border: 1px solid rgba(148, 163, 184, 0.45) !important;
-  background: transparent !important;
-  padding: 10px 16px !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  color: inherit !important;
-  box-shadow: none !important;
-}
-.main-header .header-actions .btn.btn-ghost i{
-  font-size: 16px !important;
-}
-.main-header .header-actions .btn.btn-ghost:hover{
-  background: rgba(15, 23, 42, 0.06) !important;
-}
-[data-theme="dark"] .main-header .header-actions .btn.btn-ghost:hover{
-  background: rgba(15, 23, 42, 0.90) !important;
-}
-</style><style id="bhWelcomeFixes">
-/* ✅ Mobile global : éviter le contenu sous le header mobile */
-@media (max-width: 768px){
-  body{ padding-top:72px !important; }
-}
-
-/* ✅ Welcome: stepper mobile en scroll horizontal */
-@media (max-width: 768px){
-  .progress-steps{ overflow-x:auto !important; -webkit-overflow-scrolling:touch; padding:1rem !important; }
-  .steps-container{ display:flex !important; flex-wrap:nowrap !important; gap:14px !important; min-width:max-content !important; justify-content:flex-start !important; padding:8px 4px !important; }
-  .steps-container::before{ display:none !important; }
-  .step{ flex:0 0 auto !important; min-width:150px !important; align-items:flex-start !important; }
-  .step-label{ text-align:left !important; white-space:normal !important; line-height:1.25 !important; }
-}
-
-/* ✅ Welcome: menu mobile OFF-CANVAS (sidebar visible + overlay cliquable) */
-@media (max-width: 768px){
-  #bhSidebar aside.sidebar, aside.sidebar{ display:block !important; position:fixed !important; left:0 !important; top:0 !important; height:100vh !important; transform:translateX(-110%) !important; transition:transform .25s ease !important; z-index:1200 !important; }
-  #bhSidebar aside.sidebar.active, aside.sidebar.active{ transform:translateX(0) !important; }
-  #sidebarOverlay.sidebar-overlay{ position:fixed !important; inset:0 !important; z-index:1100 !important; pointer-events:none; }
-  #sidebarOverlay.sidebar-overlay.active{ pointer-events:auto; }
-  .mobile-header{ position:fixed !important; top:0; left:0; right:0; z-index:1300 !important; }
-}
-</style>
-
-<!-- 🔥 FIX DEFINITIF SIDEBAR - NE PAS SUPPRIMER -->
-<style>
-/* CORRECTION : la sidebar masque le contenu */
-
-/* Desktop : le contenu doit avoir un margin-left pour éviter la sidebar */
-@media (min-width: 769px) {
-  .main-content-welcome,
-  .main-content {
-    margin-left: 260px !important;
-    width: calc(100% - 260px) !important;
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
-  }
-  
-  /* S'assurer que la sidebar est bien fixe à gauche */
-  #bhSidebar,
-  .sidebar,
-  aside.sidebar {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 260px !important;
-    height: 100vh !important;
-    overflow-y: auto !important;
-    z-index: 1000 !important;
-  }
-}
-
-/* Mobile : pas de margin, sidebar cachée */
-@media (max-width: 768px) {
-  .main-content-welcome,
-  .main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-}
-
-/* Container spacing */
-.container {
-  max-width: 1400px !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-</style>
-
+<link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+<style>
+/* ============================================================
+   DARK BAR + STICKY HEADER (identical to app.html)
+   ============================================================ */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+  z-index: 30 !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  position: relative !important;
+  z-index: 35 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Tuer tout espace parasite entre barre dark et header */
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ── BARRE DARK EN HAUT ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: #0D1117;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  /* Pour le centrage absolu des badges */
+  position: fixed;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
+  color: rgba(255,255,255,.4);
+  font-weight: 500;
+  margin-right: 6px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: white;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
+  background: #1A7A5E;
+  color: white;
+  border-color: #1A7A5E;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
+  color: rgba(255,255,255,.4);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+html[data-theme-v3="1"] .bh-theme-toggle {
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,.15);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-theme-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
+
+
+/* ============================================================
+   PAGE WELCOME — V3
+   ============================================================ */
+html[data-theme-v3="1"],
+html[data-theme-v3="1"] body {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+}
+html[data-theme-v3="1"] .main-content {
+  background: #F5F2EC !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+}
+html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  position: relative !important;
+  z-index: 35 !important;
+}
+html[data-theme-v3="1"] .header-actions .btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !important; }
+
+/* Back button */
+.welcome-back-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 20px; border: none; border-radius: 12px;
+  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200;
+}
+.welcome-back-btn:hover { background: #15624B; }
+
+/* Page container */
+.welcome-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+/* ── Section header ── */
+.welcome-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px;
+}
+.welcome-kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(13,17,23,.38); margin-bottom: 4px;
+}
+.welcome-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px; font-weight: 400; color: #0D1117; margin: 0;
+}
+.welcome-title em { font-style: italic; color: #1A7A5E; }
+
+/* ── Livrets list ── */
+.livrets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.livret-card {
+  background: #F5F0E8;
+  border: 1px solid rgba(200,184,154,.4);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  transition: all .2s;
+}
+.livret-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,17,23,.1); }
+.livret-card-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(26,122,94,.1); display: flex; align-items: center;
+  justify-content: center; font-size: 20px; color: #1A7A5E;
+}
+.livret-card-name {
+  font-size: 15px; font-weight: 700; color: #0D1117;
+  font-family: 'DM Sans', sans-serif; flex: 1;
+}
+.livret-card-date { font-size: 12px; color: #7A8695; }
+.livret-card-actions {
+  display: flex; gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(13,17,23,.08);
+}
+.livret-card-actions .btn-lv {
+  flex: 1; height: 34px; border-radius: 9px; font-size: 12.5px;
+  font-weight: 600; cursor: pointer; transition: all .15s; border: none;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-lv-edit { background: white; color: #0D1117; border: 1px solid rgba(0,0,0,.12) !important; }
+.btn-lv-edit:hover { background: #f0ede7; }
+.btn-lv-view { background: #1A7A5E; color: white; }
+.btn-lv-view:hover { background: #15624B; }
+.btn-lv-delete {
+  flex: 0 0 34px !important; width: 34px;
+  background: #FEF2F2; color: #DC2626;
+  border: 1px solid rgba(220,38,38,.15) !important;
+}
+.btn-lv-delete:hover { background: #FEE2E2; }
+
+/* Dashed add card */
+.livret-card-add {
+  background: transparent;
+  border: 2px dashed rgba(26,122,94,.3);
+  border-radius: 16px; padding: 28px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  cursor: pointer; transition: all .2s; text-align: center;
+  min-height: 140px;
+}
+.livret-card-add:hover { border-color: #1A7A5E; background: rgba(26,122,94,.04); }
+.livret-card-add-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(26,122,94,.1); display: flex; align-items: center;
+  justify-content: center; font-size: 20px; color: #1A7A5E;
+}
+.livret-card-add-label { font-size: 14px; font-weight: 700; color: #0D1117; }
+.livret-card-add-sub { font-size: 12px; color: #7A8695; }
+
+/* ── Wizard stepper ── */
+.wizard-stepper {
+  display: flex; align-items: center;
+  background: white; border-radius: 16px;
+  border: 1px solid rgba(200,184,154,.4);
+  padding: 16px 20px; margin-bottom: 24px;
+  gap: 4px; overflow-x: auto;
+}
+.wizard-step {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  transition: all .15s; white-space: nowrap; flex: 1;
+  justify-content: center;
+}
+.wizard-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(13,17,23,.08); color: #7A8695;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.wizard-step-label { font-size: 12.5px; font-weight: 600; color: #7A8695; }
+.wizard-step.active { background: rgba(26,122,94,.08); }
+.wizard-step.active .wizard-step-num { background: #1A7A5E; color: white; }
+.wizard-step.active .wizard-step-label { color: #1A7A5E; }
+.wizard-step.done .wizard-step-num { background: rgba(26,122,94,.15); color: #1A7A5E; }
+.wizard-step.done .wizard-step-label { color: #0D1117; }
+.wizard-sep { width: 24px; height: 2px; background: rgba(13,17,23,.08); flex-shrink: 0; }
+
+/* ── Form card ── */
+.wiz-card {
+  background: white; border: 1px solid rgba(200,184,154,.35);
+  border-radius: 16px; overflow: hidden; margin-bottom: 16px;
+}
+.wiz-card-header {
+  padding: 20px 24px; border-bottom: 1px solid rgba(13,17,23,.06);
+  background: #FAFAF8; display: flex; align-items: center; gap: 12px;
+}
+.wiz-card-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(26,122,94,.1); display: flex; align-items: center;
+  justify-content: center; color: #1A7A5E; font-size: 16px; flex-shrink: 0;
+}
+.wiz-card-title { font-size: 16px; font-weight: 700; color: #0D1117; margin: 0; }
+.wiz-card-sub { font-size: 13px; color: #7A8695; margin: 2px 0 0; }
+.wiz-card-body { padding: 24px; }
+
+/* ── Form elements ── */
+.wiz-group { margin-bottom: 20px; }
+.wiz-group:last-child { margin-bottom: 0; }
+.wiz-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: #374151; margin-bottom: 6px;
+}
+.wiz-hint { font-size: 12px; color: #9CA3AF; font-weight: 400; display: block; margin-top: 2px; }
+.wiz-required { color: #EF4444; }
+.wiz-input, .wiz-textarea, .wiz-select {
+  width: 100%; padding: 10px 14px;
+  background: #FAFAF8; border: 1.5px solid rgba(13,17,23,.12);
+  border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+  color: #0D1117; transition: border-color .15s;
+  outline: none;
+}
+.wiz-input:focus, .wiz-textarea:focus, .wiz-select:focus {
+  border-color: #1A7A5E; background: white;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.08);
+}
+.wiz-textarea { resize: vertical; min-height: 90px; }
+.wiz-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:640px){ .wiz-grid-2 { grid-template-columns: 1fr; } }
+
+/* Sub-sections inside card */
+.wiz-subsection { margin-bottom: 24px; }
+.wiz-subsection:last-child { margin-bottom: 0; }
+.wiz-subsection-title {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: #7A8695; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.wiz-subsection-title i { color: #1A7A5E; }
+.wiz-divider { border: none; border-top: 1px solid rgba(13,17,23,.07); margin: 24px 0; }
+
+/* Image upload */
+.wiz-upload {
+  border: 2px dashed rgba(13,17,23,.12); border-radius: 12px;
+  padding: 24px; text-align: center; cursor: pointer;
+  background: #FAFAF8; transition: all .15s;
+}
+.wiz-upload:hover { border-color: #1A7A5E; background: rgba(26,122,94,.03); }
+.wiz-upload i { font-size: 28px; color: #9CA3AF; margin-bottom: 8px; display: block; }
+.wiz-upload p { font-size: 13px; color: #9CA3AF; margin: 4px 0; }
+.wiz-upload-hint { font-size: 11px; color: #C4C4C4; }
+.image-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.image-preview-item img, .preview-thumb img {
+  width: 72px; height: 72px; object-fit: cover;
+  border-radius: 8px; border: 1px solid rgba(0,0,0,.08);
+}
+
+/* Repeat blocks */
+.wiz-repeat-block {
+  background: #FAFAF8; border: 1px solid rgba(13,17,23,.08);
+  border-radius: 12px; padding: 16px; margin-bottom: 12px; position: relative;
+}
+.wiz-repeat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.wiz-repeat-title { font-size: 13px; font-weight: 700; color: #374151; }
+.wiz-remove-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: none;
+  background: #FEF2F2; color: #DC2626; cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.wiz-remove-btn:hover { background: #FEE2E2; }
+.wiz-add-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 10px;
+  background: rgba(26,122,94,.08); color: #1A7A5E;
+  border: 1px dashed rgba(26,122,94,.3); cursor: pointer;
+  font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  transition: all .15s; width: 100%; justify-content: center; margin-top: 4px;
+}
+.wiz-add-btn:hover { background: rgba(26,122,94,.14); border-color: #1A7A5E; }
+
+/* Wizard nav buttons */
+.wiz-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0 8px;
+}
+.wiz-btn-back {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px;
+  padding: 0 20px; border: 1.5px solid rgba(13,17,23,.15); border-radius: 12px;
+  background: white; color: #374151; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.wiz-btn-back:hover { border-color: rgba(13,17,23,.3); }
+.wiz-btn-next {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px;
+  padding: 0 24px; border: none; border-radius: 12px;
+  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.wiz-btn-next:hover { background: #15624B; }
+.wiz-btn-submit {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px;
+  padding: 0 24px; border: none; border-radius: 12px;
+  background: #0D1117; color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.wiz-btn-submit:hover { background: #1C2333; }
+
+/* Success message */
+.wiz-success {
+  text-align: center; padding: 48px 24px;
+  background: white; border-radius: 16px;
+  border: 1px solid rgba(200,184,154,.35);
+}
+.wiz-success-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(26,122,94,.1); color: #1A7A5E;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin: 0 auto 20px;
+}
+.wiz-success h2 { font-family: 'Instrument Serif', serif; font-size: 26px; font-weight: 400; margin-bottom: 8px; }
+.wiz-success p { color: #7A8695; font-size: 14px; margin-bottom: 24px; }
+.wiz-success-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+.wiz-qr-box {
+  background: #FAFAF8; border: 1px solid rgba(13,17,23,.08);
+  border-radius: 14px; padding: 24px; max-width: 340px; margin: 24px auto 0;
+}
+.wiz-qr-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #0D1117; }
+
+/* Info/warning boxes */
+.wiz-info-box {
+  background: rgba(26,122,94,.06); border: 1px solid rgba(26,122,94,.2);
+  border-radius: 10px; padding: 12px 16px; font-size: 13px;
+  color: #1A7A5E; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;
+}
+.wiz-warn-box {
+  background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
+  border-radius: 10px; padding: 12px 16px; font-size: 13px;
+  color: #92400E; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;
+}
+
+/* Hidden form section */
+.form-section { display: none; }
+.form-section.active { display: block; }
+</style>
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="welcome" data-subtitle="Créez et gérez vos livrets d’accueil." data-title="Livret d'accueil"><div class="mobile-header">
-<a class="mobile-logo" href="/app.html">
-<i class="fas fa-calendar-check"></i>
-<span class="mobile-logo-text">Boostinghost</span>
-</a>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
+<body data-back-href="/app.html" data-kicker="Gestion" data-page="welcome" data-title="Livret d'accueil">
+
+<!-- Dark bar -->
+<div class="bh-demo-nav" id="bhTopBar">
+  <!-- Connexions centrées -->
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;">
+
+    <!-- Airbnb -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fa-brands fa-airbnb" style="font-size:15px;color:#FF5A5F;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Airbnb</span>
+      <span id="topbar-status-airbnb" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+
+    <!-- Booking.com -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="font-size:13px;font-weight:800;color:#003580;">B.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Booking.com</span>
+      <span id="topbar-status-booking" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+
+    <!-- Stripe -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fa-brands fa-stripe-s" style="font-size:17px;color:#6772E5;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Stripe</span>
+      <span id="topbar-status-stripe" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+  </div>
+
+  <!-- Toggle dark mode (droite) -->
+  <div class="bh-demo-right">
+    <span class="bh-demo-mode-label">Mode</span>
+    <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
+  </div>
 </div>
-<!-- Sidebar Overlay (pour mobile) -->
+
+<script>
+// Mise à jour des statuts de connexion dans la top bar
+(function updateTopBarStatus() {
+  function setStatus(id, connected) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (connected) {
+      el.style.background = 'rgba(34,197,94,.2)';
+      el.style.color = '#4ADE80';
+      el.style.borderColor = 'rgba(34,197,94,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Connecté';
+    } else {
+      el.style.background = 'rgba(239,68,68,.2)';
+      el.style.color = '#F87171';
+      el.style.borderColor = 'rgba(239,68,68,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté';
+    }
+  }
+
+  function checkStatuses() {
+    try {
+      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      const hasAirbnb = reservations.some(r =>
+        (r.source || r.platform || '').toLowerCase().includes('airbnb')
+      );
+      const hasBooking = reservations.some(r =>
+        (r.source || r.platform || '').toLowerCase().includes('booking')
+      );
+      setStatus('topbar-status-airbnb', hasAirbnb);
+      setStatus('topbar-status-booking', hasBooking);
+
+      // Stripe : vérifie lcc_user ou LCC_PROPERTIES
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      const hasStripe = !!(
+        user.stripeAccountId ||
+        user.stripe_account_id ||
+        user.stripeConnected ||
+        properties.some(p => p.stripeAccountId || p.stripe_account_id)
+      );
+      setStatus('topbar-status-stripe', hasStripe);
+    } catch(e) {
+      console.warn('TopBar status error:', e);
+    }
+  }
+
+  // Vérifier au chargement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkStatuses);
+  } else {
+    checkStatuses();
+  }
+
+  // Re-vérifier après chargement des données API (délai)
+  setTimeout(checkStatuses, 2000);
+  setTimeout(checkStatuses, 5000);
+
+  // Exposer pour appel manuel après loadData
+  window.updateTopBarStatus = checkStatuses;
+})();
+</script>
+
+<div class="mobile-header">
+  <a class="mobile-logo" href="/app.html"><i class="fas fa-calendar-check"></i><span class="mobile-logo-text">Boostinghost</span></a>
+  <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+</div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
-<!-- Sidebar -->
 <div id="bhSidebar"></div>
-<!-- Main Content -->
-<main class="main-content-welcome main-content"><div id="bhHeader"></div>
-<div class="container">
-<!-- Page Title -->
-<div class="page-title">
-<h1>Créer un Livret d'Accueil</h1>
-<p>Créez un livret d'accueil personnalisé et professionnel pour vos voyageurs</p>
-</div>
-<!-- Progress Steps -->
-<div class="progress-steps">
-<div class="steps-container">
-<div class="step active" data-step="1">
-<div class="step-number">1</div>
-<div class="step-label">Informations<br/>générales</div>
-</div>
-<div class="step" data-step="2">
-<div class="step-number">2</div>
-<div class="step-label">Accès &amp;<br/>Arrivée</div>
-</div>
-<div class="step" data-step="3">
-<div class="step-number">3</div>
-<div class="step-label">Le<br/>Logement</div>
-</div>
-<div class="step" data-step="4">
-<div class="step-number">4</div>
-<div class="step-label">Informations<br/>pratiques</div>
-</div>
-<div class="step" data-step="5">
-<div class="step-number">5</div>
-<div class="step-label">Aux<br/>Alentours</div>
-</div>
-</div>
-</div>
-<!-- Liste des livrets existants -->
-<div class="form-card" id="livretsListSection" style="margin-bottom: 2rem;">
-<h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--gray-700);">
-<i class="fas fa-list"></i>
-    Mes livrets d'accueil
-  </h2>
-<div id="livretsList" style="margin-bottom: 1rem;">
-<p style="color: #64748b; text-align: center;">Chargement...</p>
-</div>
-<button class="btn btn-primary" onclick="createNewLivret()" type="button">
-<i class="fas fa-plus"></i>
-    Créer un nouveau livret
-  </button>
-</div>
-<!-- Form -->
-<form id="welcomeForm" style="display: none;">
-<!-- Section 1: Informations Générales -->
-<div class="form-section active" data-section="1">
-<div class="form-card">
-<div class="section-header">
-<h2 class="section-title">
-<i class="fas fa-home"></i>
-              Informations Générales
-            </h2>
-<p class="section-description">
-              Commencez par les informations de base de votre logement
-            </p>
-</div>
-<div class="info-box">
-<p><i class="fas fa-info-circle"></i> Ces informations apparaîtront sur la page d'accueil de votre livret</p>
-</div>
-<div class="form-group">
-<label>
-              Nom du logement <span class="required">*</span>
-<span class="hint">Ex: "Votre Pied-à-Terre ", "Appartement Cosy Centre-Ville"</span>
-</label>
-<input class="form-control" name="propertyName" placeholder="Nom de votre logement" required="" type="text"/>
-</div>
-<div class="form-group">
-<label>
-              Photo de couverture <span class="required">*</span>
-<span class="hint">Image principale qui apparaîtra en haut du livret (format recommandé: 1920x1080px)</span>
-</label>
-<div class="image-upload-area" onclick="document.getElementById('coverPhoto').click()">
-<i class="fas fa-cloud-upload-alt"></i>
-<p>Cliquez pour télécharger votre photo de couverture</p>
-<p class="supported-formats">JPG, PNG ou WebP (max 5MB)</p>
-</div>
-<input accept="image/*" id="coverPhoto" style="display: none;" type="file"/>
-<div class="image-preview" id="coverPhotoPreview"></div>
-</div>
-<div class="form-group">
-<label>
-              Description d'accueil
-              <span class="hint">Message de bienvenue pour vos voyageurs</span>
-</label>
-<textarea class="form-control" name="welcomeDescription" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement. Ce livret contient toutes les informations pour profiter pleinement de votre séjour." rows="3"></textarea>
-</div>
-<div class="form-group">
-<label>
-              Votre numéro de téléphone <span class="required">*</span>
-<span class="hint">Pour que vos voyageurs puissent vous contacter</span>
-</label>
-<input class="form-control" name="contactPhone" placeholder="06 XX XX XX XX" required="" type="tel"/>
-</div>
-</div>
-<div class="form-actions">
-<div></div>
-<button class="btn btn-primary" onclick="nextSection()" type="button">
-            Suivant
-            <i class="fas fa-arrow-right"></i>
-</button>
-</div>
-</div>
-<!-- Section 2: Accès & Arrivée -->
-<div class="form-section" data-section="2">
-<div class="form-card">
-<div class="section-header">
-<h2 class="section-title">
-<i class="fas fa-map-marker-alt"></i>
-              Accès &amp; Arrivée
-            </h2>
-<p class="section-description">
-              Comment vos voyageurs accèdent-ils à votre logement ?
-            </p>
-</div>
-<div class="form-grid">
-<div class="form-group">
-<label>
-                Adresse complète <span class="required">*</span>
-</label>
-<input class="form-control" name="address" placeholder="Numéro et rue" required="" type="text"/>
-</div>
-<div class="form-group">
-<label>
-                Code postal <span class="required">*</span>
-</label>
-<input class="form-control" name="postalCode" placeholder="75001" required="" type="text"/>
-</div>
-</div>
-<div class="form-grid">
-<div class="form-group">
-<label>
-                Ville <span class="required">*</span>
-</label>
-<input class="form-control" name="city" placeholder="Paris" required="" type="text"/>
-</div>
-<div class="form-group">
-<label>
-                Code de la boîte à clés
-                <span class="hint">Si applicable</span>
-</label>
-<input class="form-control" name="keyboxCode" placeholder="Ex: 8670" type="text"/>
-</div>
-</div>
-<div class="form-group">
-<label>
-              Instructions d'accès
-              <span class="hint">Expliquez comment accéder au logement (portail, étage, etc.)</span>
-</label>
-<textarea class="form-control" name="accessInstructions" placeholder="Ex: Poussez le portail, la boîte à clés est à gauche au niveau de la flèche rouge..." rows="4"></textarea>
-</div>
-<div class="form-group">
-<label>
-              Photos de l'entrée
-              <span class="hint">Photos du portail, de l'entrée, de la boîte à clés, etc.</span>
-</label>
-<div class="image-upload-area" onclick="document.getElementById('entrancePhotos').click()">
-<i class="fas fa-images"></i>
-<p>Cliquez pour télécharger les photos de l'entrée</p>
-<p class="supported-formats">Vous pouvez sélectionner plusieurs images</p>
-</div>
-<input accept="image/*" id="entrancePhotos" multiple="" style="display: none;" type="file"/>
-<div class="image-preview" id="entrancePhotosPreview"></div>
-</div>
-<div class="form-group">
-<label>
-              Parking
-              <span class="hint">Informations sur le stationnement</span>
-</label>
-<textarea class="form-control" name="parkingInfo" placeholder="Ex: Parking gratuit au 43-51 rue du Marché, 230 places sur 3 niveaux" rows="3"></textarea>
-</div>
-<div class="form-group">
-<label>
-              Photos du parking
-              <span class="hint">Si applicable</span>
-</label>
-<div class="image-upload-area" onclick="document.getElementById('parkingPhotos').click()">
-<i class="fas fa-parking"></i>
-<p>Cliquez pour télécharger les photos du parking</p>
-</div>
-<input accept="image/*" id="parkingPhotos" multiple="" style="display: none;" type="file"/>
-<div class="image-preview" id="parkingPhotosPreview"></div>
-</div>
-</div>
-<div class="form-actions">
-<button class="btn btn-secondary" onclick="prevSection()" type="button">
-<i class="fas fa-arrow-left"></i>
-            Précédent
-          </button>
-<button class="btn btn-primary" onclick="nextSection()" type="button">
-            Suivant
-            <i class="fas fa-arrow-right"></i>
-</button>
-</div>
-</div>
-<!-- Section 3: Le Logement -->
-<div class="form-section" data-section="3">
-<div class="form-card">
-<div class="section-header">
-<h2 class="section-title">
-<i class="fas fa-door-open"></i>
-              Le Logement
-            </h2>
-<p class="section-description">
-              Présentez les différentes pièces et espaces de votre logement
-            </p>
-</div>
-<div class="warning-box">
-<p><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire pour présenter votre logement</p>
-</div>
-<div class="repeatable-section" id="roomsContainer">
-<!-- Les pièces seront ajoutées ici dynamiquement -->
-</div>
-<button class="add-item-btn" onclick="addRoom()" type="button">
-<i class="fas fa-plus-circle"></i>
-            Ajouter une pièce / un espace
-          </button>
-</div>
-<div class="form-actions">
-<button class="btn btn-secondary" onclick="prevSection()" type="button">
-<i class="fas fa-arrow-left"></i>
-            Précédent
-          </button>
-<button class="btn btn-primary" onclick="nextSection()" type="button">
-            Suivant
-            <i class="fas fa-arrow-right"></i>
-</button>
-</div>
-</div>
-<!-- Section 4: Informations Pratiques -->
-<div class="form-section" data-section="4">
-<div class="form-card">
-<div class="section-header">
-<h2 class="section-title">
-<i class="fas fa-info-circle"></i>
-              Informations Pratiques
-            </h2>
-<p class="section-description">
-              WiFi, équipements, consignes et tout ce qui est utile au quotidien
-            </p>
-</div>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-wifi" style="color: var(--accent);"></i> WiFi
-          </h3>
-<div class="form-grid">
-<div class="form-group">
-<label>Nom du réseau WiFi (SSID)</label>
-<input class="form-control" name="wifiSSID" placeholder="Nom du réseau" type="text"/>
-</div>
-<div class="form-group">
-<label>Mot de passe WiFi</label>
-<input class="form-control" name="wifiPassword" placeholder="Mot de passe" type="text"/>
-</div>
-</div>
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-clipboard-list" style="color: var(--accent);"></i> Consignes de départ
-          </h3>
-<div class="form-group">
-<label>
-              Heure de départ
-              <span class="hint">Ex: 11h, 10h30</span>
-</label>
-<input class="form-control" name="checkoutTime" placeholder="11h" type="text"/>
-</div>
-<div class="form-group">
-<label>
-              Instructions de départ
-              <span class="hint">Ce que les voyageurs doivent faire avant de partir</span>
-</label>
-<textarea class="form-control" name="checkoutInstructions" placeholder="Ex:
-- Éteindre toutes les lumières
-- Laver la vaisselle
-- Poser les serviettes au sol..." rows="5"></textarea>
-</div>
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-toolbox" style="color: var(--accent);"></i> Équipements disponibles
-          </h3>
-<div class="form-group">
-<label>
-              Liste des équipements
-              <span class="hint">Un équipement par ligne</span>
-</label>
-<textarea class="form-control" name="equipmentList" placeholder="Ex:
-Machine à café Nespresso
-Micro-ondes
-Machine à laver
-Fer et planche à repasser..." rows="8"></textarea>
-</div>
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Règles importantes
-          </h3>
-<div class="form-group">
-<label>
-              Règles et avertissements
-              <span class="hint">Ex: Poutre basse, logement non-fumeur, attention aux marches...</span>
-</label>
-<textarea class="form-control" name="importantRules" placeholder="Entrez les règles importantes..." rows="4"></textarea>
-</div>
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-train" style="color: var(--accent);"></i> Transports
-          </h3>
-<div class="form-group">
-<label>
-              Informations sur les transports
-              <span class="hint">Comment accéder aux transports en commun, gares, etc.</span>
-</label>
-<textarea class="form-control" name="transportInfo" placeholder="Ex: Bus ligne 15 à 1 minute à pied..." rows="6"></textarea>
-</div>
-</div>
-<div class="form-actions">
-<button class="btn btn-secondary" onclick="prevSection()" type="button">
-<i class="fas fa-arrow-left"></i>
-            Précédent
-          </button>
-<button class="btn btn-primary" onclick="nextSection()" type="button">
-            Suivant
-            <i class="fas fa-arrow-right"></i>
-</button>
-</div>
-</div>
-<!-- Section 5: Aux Alentours -->
-<div class="form-section" data-section="5">
-<div class="form-card">
-<div class="section-header">
-<h2 class="section-title">
-<i class="fas fa-map-marked-alt"></i>
-              Aux Alentours
-            </h2>
-<p class="section-description">
-              Recommandations de restaurants, commerces et lieux à visiter
-            </p>
-</div>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-utensils" style="color: var(--accent);"></i> Restaurants &amp; Bars
-          </h3>
-<div class="repeatable-section" id="restaurantsContainer">
-<!-- Les restaurants seront ajoutés ici dynamiquement -->
-</div>
-<button class="add-item-btn" onclick="addRestaurant()" type="button">
-<i class="fas fa-plus-circle"></i>
-            Ajouter un restaurant / bar
-          </button>
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-shopping-bag" style="color: var(--accent);"></i> Commerces
-          </h3>
-<div class="form-group">
-<label>
-              Liste des commerces
-              <span class="hint">Supermarchés, boulangeries, pharmacies, etc. (un par ligne)</span>
-</label>
-<textarea class="form-control" name="shopsList" placeholder="Ex:
-FRANPRIX - 6 rue de Pontoise
-Boulangerie LA POTERNE - Place du marché..." rows="6"></textarea>
-</div>
-<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--gray-200);"/>
-<h3 style="margin-bottom: 1rem; color: var(--gray-700);">
-<i class="fas fa-map-signs" style="color: var(--accent);"></i> Lieux à Visiter
-          </h3>
-<div class="repeatable-section" id="placesContainer">
-<!-- Les lieux seront ajoutés ici dynamiquement -->
-</div>
-<button class="add-item-btn" onclick="addPlace()" type="button">
-<i class="fas fa-plus-circle"></i>
-            Ajouter un lieu à visiter
-          </button>
-</div>
-<div class="form-actions">
-<button class="btn btn-secondary" onclick="prevSection()" type="button">
-<i class="fas fa-arrow-left"></i>
-            Précédent
-          </button>
-<button class="btn btn-accent" type="submit">
-<i class="fas fa-check-circle"></i>
-            Créer le livret d'accueil
-          </button>
-</div>
-</div>
-</form>
-<!-- Success Message -->
-<div class="success-message" id="successMessage">
-<div class="success-icon">
-<i class="fas fa-check"></i>
-</div>
-<h2>Livret d'accueil créé avec succès !</h2>
-<p>Votre livret d'accueil personnalisé a été généré.</p>
-<!-- QR Code Section -->
-<div style="background: white; padding: 2rem; border-radius: 12px; margin: 2rem auto; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-<h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #374151;">
-<i class="fas fa-qrcode"></i> QR Code du livret
-    </h3>
-<div id="qrcode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
-<p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem;">
-      Scannez ce code pour accéder directement au livret
-    </p>
-<button class="btn btn-secondary" onclick="downloadQRCode()" style="width: 100%;">
-<i class="fas fa-download"></i>
-      Télécharger le QR Code
-    </button>
-</div>
-<div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-<button class="btn btn-primary" onclick="viewWelcomeBook()">
-<i class="fas fa-eye"></i>
-          Voir le livret
-        </button>
-<button class="btn btn-secondary" onclick="copyWelcomeBookLink(this)">
-<i class="fas fa-copy"></i>
-          Copier le lien
-        </button>
-<button class="btn btn-secondary" onclick="modifyCurrentLivret()">
-<i class="fas fa-edit"></i>
-          Modifier
-        </button>
-</div>
-</div>
-</div>
+<main class="main-content">
+<div id="bhHeader"></div>
+<button class="welcome-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
+
+<div class="welcome-container">
+
+  <!-- ── Header ── -->
+  <div class="welcome-section-header">
+    <div>
+      <div class="welcome-kicker">Gestion</div>
+      <h1 class="welcome-title">Mes <em>livrets</em></h1>
+    </div>
+  </div>
+
+  <!-- ── Liste des livrets ── -->
+  <div id="livretsListSection">
+    <div class="livrets-grid" id="livretsList">
+      <p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Chargement...</p>
+    </div>
+  </div>
+
+  <!-- ── Wizard de création ── -->
+  <form id="welcomeForm" style="display:none;">
+
+    <!-- Stepper -->
+    <div class="wizard-stepper" id="wizardStepper">
+      <div class="wizard-step active" data-step="1">
+        <div class="wizard-step-num">1</div>
+        <div class="wizard-step-label">Infos générales</div>
+      </div>
+      <div class="wizard-sep"></div>
+      <div class="wizard-step" data-step="2">
+        <div class="wizard-step-num">2</div>
+        <div class="wizard-step-label">Accès & Arrivée</div>
+      </div>
+      <div class="wizard-sep"></div>
+      <div class="wizard-step" data-step="3">
+        <div class="wizard-step-num">3</div>
+        <div class="wizard-step-label">Le logement</div>
+      </div>
+      <div class="wizard-sep"></div>
+      <div class="wizard-step" data-step="4">
+        <div class="wizard-step-num">4</div>
+        <div class="wizard-step-label">Infos pratiques</div>
+      </div>
+      <div class="wizard-sep"></div>
+      <div class="wizard-step" data-step="5">
+        <div class="wizard-step-num">5</div>
+        <div class="wizard-step-label">Aux alentours</div>
+      </div>
+    </div>
+
+    <!-- Section 1: Infos générales -->
+    <div class="form-section active" data-section="1">
+      <div class="wiz-card">
+        <div class="wiz-card-header">
+          <div class="wiz-card-icon"><i class="fas fa-home"></i></div>
+          <div>
+            <h2 class="wiz-card-title">Informations Générales</h2>
+            <p class="wiz-card-sub">Commencez par les informations de base de votre logement</p>
+          </div>
+        </div>
+        <div class="wiz-card-body">
+          <div class="wiz-info-box"><i class="fas fa-info-circle"></i> Ces informations apparaîtront sur la page d'accueil de votre livret</div>
+          <div class="wiz-group">
+            <label class="wiz-label">Nom du logement <span class="wiz-required">*</span><span class="wiz-hint">Ex: "Votre Pied-à-Terre", "Appartement Cosy Centre-Ville"</span></label>
+            <input class="wiz-input" name="propertyName" placeholder="Nom de votre logement" required type="text"/>
+          </div>
+          <div class="wiz-group">
+            <label class="wiz-label">Photo de couverture <span class="wiz-required">*</span><span class="wiz-hint">Image principale (format recommandé: 1920x1080px)</span></label>
+            <div class="wiz-upload" onclick="document.getElementById('coverPhoto').click()">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <p>Cliquez pour télécharger votre photo de couverture</p>
+              <p class="wiz-upload-hint">JPG, PNG ou WebP (max 5MB)</p>
+            </div>
+            <input accept="image/*" id="coverPhoto" style="display:none;" type="file"/>
+            <div class="image-preview" id="coverPhotoPreview"></div>
+          </div>
+          <div class="wiz-group">
+            <label class="wiz-label">Message de bienvenue<span class="wiz-hint">Message d'accueil pour vos voyageurs</span></label>
+            <textarea class="wiz-textarea" name="welcomeDescription" placeholder="Ex: Nous sommes ravis de vous accueillir dans cet appartement..."></textarea>
+          </div>
+          <div class="wiz-group">
+            <label class="wiz-label">Votre numéro de téléphone <span class="wiz-required">*</span><span class="wiz-hint">Pour que vos voyageurs puissent vous contacter</span></label>
+            <input class="wiz-input" name="contactPhone" placeholder="06 XX XX XX XX" required type="tel"/>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-nav"><div></div><button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button></div>
+    </div>
+
+    <!-- Section 2: Accès & Arrivée -->
+    <div class="form-section" data-section="2">
+      <div class="wiz-card">
+        <div class="wiz-card-header">
+          <div class="wiz-card-icon"><i class="fas fa-map-marker-alt"></i></div>
+          <div>
+            <h2 class="wiz-card-title">Accès &amp; Arrivée</h2>
+            <p class="wiz-card-sub">Comment vos voyageurs accèdent-ils à votre logement ?</p>
+          </div>
+        </div>
+        <div class="wiz-card-body">
+          <div class="wiz-grid-2">
+            <div class="wiz-group">
+              <label class="wiz-label">Adresse <span class="wiz-required">*</span></label>
+              <input class="wiz-input" name="address" placeholder="Numéro et rue" required type="text"/>
+            </div>
+            <div class="wiz-group">
+              <label class="wiz-label">Code postal <span class="wiz-required">*</span></label>
+              <input class="wiz-input" name="postalCode" placeholder="75001" required type="text"/>
+            </div>
+          </div>
+          <div class="wiz-grid-2">
+            <div class="wiz-group">
+              <label class="wiz-label">Ville <span class="wiz-required">*</span></label>
+              <input class="wiz-input" name="city" placeholder="Paris" required type="text"/>
+            </div>
+            <div class="wiz-group">
+              <label class="wiz-label">Code boîte à clés<span class="wiz-hint">Si applicable</span></label>
+              <input class="wiz-input" name="keyboxCode" placeholder="Ex: 8670" type="text"/>
+            </div>
+          </div>
+          <div class="wiz-group">
+            <label class="wiz-label">Instructions d'accès<span class="wiz-hint">Portail, étage, etc.</span></label>
+            <textarea class="wiz-textarea" name="accessInstructions" placeholder="Ex: Poussez le portail, la boîte à clés est à gauche..."></textarea>
+          </div>
+          <div class="wiz-group">
+            <label class="wiz-label">Photos de l'entrée<span class="wiz-hint">Portail, entrée, boîte à clés...</span></label>
+            <div class="wiz-upload" onclick="document.getElementById('entrancePhotos').click()">
+              <i class="fas fa-images"></i>
+              <p>Télécharger les photos de l'entrée</p>
+              <p class="wiz-upload-hint">Plusieurs images possibles</p>
+            </div>
+            <input accept="image/*" id="entrancePhotos" multiple style="display:none;" type="file"/>
+            <div class="image-preview" id="entrancePhotosPreview"></div>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-group">
+            <label class="wiz-label">Parking<span class="wiz-hint">Informations sur le stationnement</span></label>
+            <textarea class="wiz-textarea" name="parkingInfo" placeholder="Ex: Parking gratuit au 43-51 rue du Marché, 230 places..."></textarea>
+          </div>
+          <div class="wiz-group">
+            <label class="wiz-label">Photos du parking</label>
+            <div class="wiz-upload" onclick="document.getElementById('parkingPhotos').click()">
+              <i class="fas fa-parking"></i>
+              <p>Télécharger les photos du parking</p>
+            </div>
+            <input accept="image/*" id="parkingPhotos" multiple style="display:none;" type="file"/>
+            <div class="image-preview" id="parkingPhotosPreview"></div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-nav">
+        <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+        <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- Section 3: Le Logement -->
+    <div class="form-section" data-section="3">
+      <div class="wiz-card">
+        <div class="wiz-card-header">
+          <div class="wiz-card-icon"><i class="fas fa-door-open"></i></div>
+          <div>
+            <h2 class="wiz-card-title">Le Logement</h2>
+            <p class="wiz-card-sub">Présentez les différentes pièces et espaces</p>
+          </div>
+        </div>
+        <div class="wiz-card-body">
+          <div class="wiz-warn-box"><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire</div>
+          <div id="roomsContainer"></div>
+          <button class="wiz-add-btn" onclick="addRoom()" type="button"><i class="fas fa-plus"></i> Ajouter une pièce / un espace</button>
+        </div>
+      </div>
+      <div class="wiz-nav">
+        <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+        <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- Section 4: Infos pratiques -->
+    <div class="form-section" data-section="4">
+      <div class="wiz-card">
+        <div class="wiz-card-header">
+          <div class="wiz-card-icon"><i class="fas fa-info-circle"></i></div>
+          <div>
+            <h2 class="wiz-card-title">Informations Pratiques</h2>
+            <p class="wiz-card-sub">WiFi, équipements, consignes et tout ce qui est utile</p>
+          </div>
+        </div>
+        <div class="wiz-card-body">
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-wifi"></i> WiFi</div>
+            <div class="wiz-grid-2">
+              <div class="wiz-group">
+                <label class="wiz-label">Nom du réseau (SSID)</label>
+                <input class="wiz-input" name="wifiSSID" placeholder="Nom du réseau" type="text"/>
+              </div>
+              <div class="wiz-group">
+                <label class="wiz-label">Mot de passe</label>
+                <input class="wiz-input" name="wifiPassword" placeholder="Mot de passe" type="text"/>
+              </div>
+            </div>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-clipboard-list"></i> Consignes de départ</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Heure de départ<span class="wiz-hint">Ex: 11h, 10h30</span></label>
+              <input class="wiz-input" name="checkoutTime" placeholder="11h" type="text"/>
+            </div>
+            <div class="wiz-group">
+              <label class="wiz-label">Instructions de départ</label>
+              <textarea class="wiz-textarea" name="checkoutInstructions" placeholder="- Éteindre toutes les lumières&#10;- Laver la vaisselle&#10;- Poser les serviettes au sol..." style="min-height:110px;"></textarea>
+            </div>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-toolbox"></i> Équipements disponibles</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Liste des équipements<span class="wiz-hint">Un équipement par ligne</span></label>
+              <textarea class="wiz-textarea" name="equipmentList" placeholder="Machine à café Nespresso&#10;Micro-ondes&#10;Machine à laver..." style="min-height:140px;"></textarea>
+            </div>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-exclamation-triangle"></i> Règles importantes</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Règles et avertissements<span class="wiz-hint">Poutre basse, non-fumeur, etc.</span></label>
+              <textarea class="wiz-textarea" name="importantRules" placeholder="Entrez les règles importantes..."></textarea>
+            </div>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-train"></i> Transports</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Informations transports<span class="wiz-hint">Accès transports en commun, gares, etc.</span></label>
+              <textarea class="wiz-textarea" name="transportInfo" placeholder="Ex: Bus ligne 15 à 1 minute à pied..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-nav">
+        <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+        <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- Section 5: Aux alentours -->
+    <div class="form-section" data-section="5">
+      <div class="wiz-card">
+        <div class="wiz-card-header">
+          <div class="wiz-card-icon"><i class="fas fa-map-marked-alt"></i></div>
+          <div>
+            <h2 class="wiz-card-title">Aux Alentours</h2>
+            <p class="wiz-card-sub">Restaurants, commerces et lieux à visiter</p>
+          </div>
+        </div>
+        <div class="wiz-card-body">
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-utensils"></i> Restaurants &amp; Bars</div>
+            <div id="restaurantsContainer"></div>
+            <button class="wiz-add-btn" onclick="addRestaurant()" type="button"><i class="fas fa-plus"></i> Ajouter un restaurant / bar</button>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-shopping-bag"></i> Commerces</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Liste des commerces<span class="wiz-hint">Un commerce par ligne</span></label>
+              <textarea class="wiz-textarea" name="shopsList" placeholder="FRANPRIX - 6 rue de Pontoise&#10;Boulangerie LA POTERNE - Place du marché..." style="min-height:110px;"></textarea>
+            </div>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-map-signs"></i> Lieux à Visiter</div>
+            <div id="placesContainer"></div>
+            <button class="wiz-add-btn" onclick="addPlace()" type="button"><i class="fas fa-plus"></i> Ajouter un lieu à visiter</button>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-nav">
+        <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+        <button class="wiz-btn-submit" type="submit"><i class="fas fa-check-circle"></i> Créer le livret</button>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- ── Succès ── -->
+  <div id="successMessage" style="display:none;">
+    <div class="wiz-success">
+      <div class="wiz-success-icon"><i class="fas fa-check"></i></div>
+      <h2>Livret créé avec succès !</h2>
+      <p>Votre livret d'accueil personnalisé a été généré.</p>
+      <div class="wiz-qr-box">
+        <h3><i class="fas fa-qrcode"></i> QR Code du livret</h3>
+        <div id="qrcode" style="display:flex;justify-content:center;margin-bottom:12px;"></div>
+        <p style="font-size:12px;color:#9CA3AF;margin-bottom:12px;">Scannez pour accéder directement au livret</p>
+        <button class="wiz-btn-next" onclick="downloadQRCode()" style="width:100%;justify-content:center;"><i class="fas fa-download"></i> Télécharger le QR Code</button>
+      </div>
+      <div class="wiz-success-actions">
+        <button class="wiz-btn-next" onclick="viewWelcomeBook()"><i class="fas fa-eye"></i> Voir le livret</button>
+        <button class="wiz-btn-back" onclick="copyWelcomeBookLink(this)"><i class="fas fa-copy"></i> Copier le lien</button>
+        <button class="wiz-btn-back" onclick="modifyCurrentLivret()"><i class="fas fa-edit"></i> Modifier</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .welcome-container -->
+</main>
+</div>
+
 <script>
+
 const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
 window.getAuthToken = window.getAuthToken || (() => localStorage.getItem('lcc_token') || '');
@@ -1858,10 +1492,151 @@ function createNewLivret() {
   showFormHideLists();
 }
 
+
 </script>
-</main>
-</div>
+
+<script>
+// ── Redesign helpers ──
+
+// Update stepper UI
+function updateStepper(index) {
+  document.querySelectorAll('.wizard-step').forEach((step, i) => {
+    step.classList.remove('active','done');
+    if (i === index) step.classList.add('active');
+    else if (i < index) step.classList.add('done');
+  });
+}
+
+// Patch showSection to also update stepper
+const _origShowSection = showSection;
+window.showSection = function(index) {
+  _origShowSection(index);
+  updateStepper(index);
+};
+
+// Redesign displayLivretsList
+function displayLivretsList(livrets) {
+  const grid = document.getElementById('livretsList');
+  if (!livrets || !livrets.length) {
+    grid.innerHTML = '<p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Aucun livret pour le moment.</p>';
+    appendAddCard(grid);
+    return;
+  }
+  const html = livrets.map(livret => `
+    <div class="livret-card">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="livret-card-icon"><i class="fas fa-book-open"></i></div>
+        <div>
+          <div class="livret-card-name">${livret.propertyName || 'Sans nom'}</div>
+          <div class="livret-card-date">Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
+        </div>
+      </div>
+      <div class="livret-card-actions">
+        <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
+        <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
+        <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+  grid.innerHTML = html;
+  appendAddCard(grid);
+}
+
+function appendAddCard(grid) {
+  const add = document.createElement('div');
+  add.className = 'livret-card-add';
+  add.onclick = createNewLivret;
+  add.innerHTML = `
+    <div class="livret-card-add-icon"><i class="fas fa-plus"></i></div>
+    <div class="livret-card-add-label">Nouveau livret</div>
+    <div class="livret-card-add-sub">Créer un livret d'accueil</div>
+  `;
+  grid.appendChild(add);
+}
+
+// Redesign addRoom
+window.addRoom = function() {
+  const container = document.getElementById('roomsContainer');
+  if (!container) return;
+  roomCounter += 1;
+  const block = document.createElement('div');
+  block.className = 'wiz-repeat-block room-block';
+  block.innerHTML = `
+    <div class="wiz-repeat-header">
+      <span class="wiz-repeat-title"><i class="fas fa-door-open" style="color:#1A7A5E;margin-right:6px;"></i>Pièce ${roomCounter}</span>
+      <button type="button" class="wiz-remove-btn" onclick="this.closest('.wiz-repeat-block').remove()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="wiz-group">
+      <label class="wiz-label">Nom de la pièce</label>
+      <input type="text" class="wiz-input" name="room[${roomCounter}][name]" placeholder="Ex: Chambre 1">
+    </div>
+    <div class="wiz-group" style="margin-bottom:0">
+      <label class="wiz-label">Description</label>
+      <textarea class="wiz-textarea" name="room[${roomCounter}][description]" placeholder="Lit, rangement, etc."></textarea>
+    </div>
+  `;
+  container.appendChild(block);
+};
+
+window.addRestaurant = function() {
+  const container = document.getElementById('restaurantsContainer');
+  if (!container) return;
+  restaurantCounter += 1;
+  const block = document.createElement('div');
+  block.className = 'wiz-repeat-block restaurant-block';
+  block.innerHTML = `
+    <div class="wiz-repeat-header">
+      <span class="wiz-repeat-title"><i class="fas fa-utensils" style="color:#1A7A5E;margin-right:6px;"></i>Restaurant / Bar ${restaurantCounter}</span>
+      <button type="button" class="wiz-remove-btn" onclick="this.closest('.wiz-repeat-block').remove()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="wiz-grid-2">
+      <div class="wiz-group">
+        <label class="wiz-label">Nom</label>
+        <input type="text" class="wiz-input" name="restaurant[${restaurantCounter}][name]" placeholder="Nom du restaurant">
+      </div>
+      <div class="wiz-group">
+        <label class="wiz-label">Téléphone</label>
+        <input type="text" class="wiz-input" name="restaurant[${restaurantCounter}][phone]" placeholder="01 23 45 67 89">
+      </div>
+    </div>
+    <div class="wiz-group">
+      <label class="wiz-label">Adresse</label>
+      <input type="text" class="wiz-input" name="restaurant[${restaurantCounter}][address]" placeholder="Adresse">
+    </div>
+    <div class="wiz-group" style="margin-bottom:0">
+      <label class="wiz-label">Pourquoi le recommander ?</label>
+      <textarea class="wiz-textarea" name="restaurant[${restaurantCounter}][description]" placeholder="Cuisine, ambiance, spécialité..."></textarea>
+    </div>
+  `;
+  container.appendChild(block);
+};
+
+window.addPlace = function() {
+  const container = document.getElementById('placesContainer');
+  if (!container) return;
+  placeCounter += 1;
+  const block = document.createElement('div');
+  block.className = 'wiz-repeat-block place-block';
+  block.innerHTML = `
+    <div class="wiz-repeat-header">
+      <span class="wiz-repeat-title"><i class="fas fa-map-marker-alt" style="color:#1A7A5E;margin-right:6px;"></i>Lieu ${placeCounter}</span>
+      <button type="button" class="wiz-remove-btn" onclick="this.closest('.wiz-repeat-block').remove()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="wiz-group">
+      <label class="wiz-label">Nom</label>
+      <input type="text" class="wiz-input" name="place[${placeCounter}][name]" placeholder="Lieu à visiter">
+    </div>
+    <div class="wiz-group" style="margin-bottom:0">
+      <label class="wiz-label">Description</label>
+      <textarea class="wiz-textarea" name="place[${placeCounter}][description]" placeholder="Infos utiles, pourquoi y aller..."></textarea>
+    </div>
+  `;
+  container.appendChild(block);
+};
+</script>
+
 <script src="/js/bh-layout.js"></script>
+<script src="/js/logout-fix.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
