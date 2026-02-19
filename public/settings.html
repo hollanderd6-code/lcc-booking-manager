@@ -1376,7 +1376,7 @@ html[data-theme-v3="1"] .sidebar {
     <div class="properties-count" id="propertiesCount">… LOGEMENTS ACTIFS</div>
     <h2 class="properties-title">Mes <em>logements</em></h2>
   </div>
-  <button class="btn-add-property" onclick="document.getElementById('addPropertyBtn')?.click(); window.showAddPropertyForm && window.showAddPropertyForm();">
+  <button class="btn-add-property" onclick="openAddPropertyModal()">
     <i class="fas fa-plus"></i> Ajouter
   </button>
 </div>
@@ -3035,6 +3035,45 @@ html body #propertiesGrid,
 }
 @media (max-width: 580px) {
   html body #propertiesGrid { grid-template-columns: 1fr !important; }
+}
+
+/* Supprimer button — red/pink */
+.property-actions .btn-delete {
+  flex: 1; height: 36px; font-size: 13px; font-weight: 600;
+  border-radius: 10px; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid rgba(220,38,38,.2);
+}
+.property-actions .btn-delete:hover {
+  background: #FEE2E2;
+  border-color: rgba(220,38,38,.4);
+}
+
+/* Modal — neutralize green inputs/borders */
+html[data-theme-v3="1"] #editPropertyModal input:focus,
+html[data-theme-v3="1"] #editPropertyModal select:focus,
+html[data-theme-v3="1"] #editPropertyModal textarea:focus {
+  border-color: rgba(0,0,0,.3) !important;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06) !important;
+  outline: none;
+}
+html[data-theme-v3="1"] #editPropertyModal .btn-primary,
+html[data-theme-v3="1"] #editPropertyModal button[type="submit"] {
+  background: #1A7A5E !important;
+  border-color: #1A7A5E !important;
+}
+html[data-theme-v3="1"] #editPropertyModal a,
+html[data-theme-v3="1"] #editPropertyModal .text-green,
+html[data-theme-v3="1"] #editPropertyModal .text-emerald {
+  color: #374151 !important;
+}
+/* iCal add link */
+html[data-theme-v3="1"] #editPropertyModal .btn-add-url,
+html[data-theme-v3="1"] #editPropertyModal [class*="add-url"],
+html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
+  color: #374151 !important;
 }
 </style>
 <script>
