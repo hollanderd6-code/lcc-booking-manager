@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="light" data-theme-v3="1">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vérification de votre email - Boostinghost</title>
   
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
   <style>
@@ -181,6 +181,93 @@
       h1 { font-size: 24px; }
       .btn-secondary { margin-left: 0; margin-top: 12px; }
     }
+  
+/* ============================================================
+   VERIFY EMAIL — V3
+   ============================================================ */
+html[data-theme-v3="1"] body {
+  font-family: 'DM Sans', sans-serif !important;
+  background: #F5F2EC !important;
+  background-image: none !important;
+}
+
+/* Container */
+html[data-theme-v3="1"] .container {
+  background: #F5F0E8 !important;
+  border: 1px solid rgba(200,184,154,.4) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 60px rgba(13,17,23,.08) !important;
+}
+
+/* Logo */
+html[data-theme-v3="1"] .logo-title { font-family: 'DM Sans', sans-serif !important; }
+html[data-theme-v3="1"] .logo-title .green { color: #1A7A5E !important; }
+html[data-theme-v3="1"] .logo-subtitle { color: #7A8695 !important; }
+
+/* Typography */
+html[data-theme-v3="1"] h1 {
+  font-family: 'Instrument Serif', serif !important;
+  color: #0D1117 !important;
+}
+html[data-theme-v3="1"] p {
+  font-family: 'DM Sans', sans-serif !important;
+  color: #7A8695 !important;
+}
+html[data-theme-v3="1"] .email-highlight { color: #1A7A5E !important; }
+
+/* Spinner */
+html[data-theme-v3="1"] .spinner {
+  border-color: rgba(200,184,154,.4) !important;
+  border-top-color: #1A7A5E !important;
+}
+
+/* Icon circles */
+html[data-theme-v3="1"] .icon-circle.success {
+  background: #1A7A5E !important;
+  background-image: none !important;
+}
+html[data-theme-v3="1"] .icon-circle.error {
+  background: #DC2626 !important;
+  background-image: none !important;
+}
+html[data-theme-v3="1"] .icon-circle.expired {
+  background: #D97706 !important;
+  background-image: none !important;
+}
+
+/* Buttons */
+html[data-theme-v3="1"] .btn {
+  font-family: 'DM Sans', sans-serif !important;
+  background: #1A7A5E !important;
+  background-image: none !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(26,122,94,.25) !important;
+  transition: background .15s, transform .15s !important;
+}
+html[data-theme-v3="1"] .btn:hover {
+  background: #15624B !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(26,122,94,.3) !important;
+}
+html[data-theme-v3="1"] .btn-secondary {
+  background: rgba(255,255,255,.6) !important;
+  background-image: none !important;
+  color: #374151 !important;
+  border: 1.5px solid rgba(13,17,23,.12) !important;
+  box-shadow: none !important;
+}
+html[data-theme-v3="1"] .btn-secondary:hover {
+  background: white !important;
+  box-shadow: none !important;
+}
+
+/* Countdown */
+html[data-theme-v3="1"] .countdown {
+  font-family: 'DM Sans', sans-serif !important;
+  color: #7A8695 !important;
+}
+
   </style>
 </head>
 <body>
