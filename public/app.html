@@ -2426,6 +2426,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   /* 2. HEADER DASHBOARD — caché sur mobile (titre dans mobile-header via JS) */
   header.main-header, #bhMainHeader {
     display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
   }
   #newReservationBtn { display: none !important; }
 
@@ -8841,12 +8847,8 @@ if (document.readyState === 'loading') {
 
     /* Header sticky top:40px — desktop seulement */
     var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
-    if (header) {
-      if (isMobile) {
-        header.style.cssText += ';position:static !important;top:auto !important;';
-      } else {
-        header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
-      }
+    if (header && !isMobile) {
+      header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
     }
 
     /* Sidebar top:40px — desktop seulement */
