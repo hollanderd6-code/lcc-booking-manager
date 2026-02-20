@@ -2689,6 +2689,184 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <!-- Socket.io pour le temps réel -->
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>    
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style id="factures-proprietaires-mobile-master">
+@media (max-width: 768px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; }
+  html[data-theme-v3="1"] .main-content {
+    margin-left: 0 !important;
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+  header.top-bar { display: none !important; }
+
+  /* 2. MOBILE HEADER */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+
+  /* 3. BOUTONS HEADER DESKTOP → cacher */
+  .fp-header-btns, #bhHeader { display: none !important; }
+
+  /* 4. DASHBOARD HEADER */
+  .dashboard-header { margin-bottom: 16px !important; }
+  .dashboard-header h1 { font-size: 22px !important; margin: 0 0 4px !important; }
+
+  /* 5. STATS ROW — 3 colonnes compactes */
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+  .stat-card {
+    padding: 12px 10px !important;
+    border-radius: 12px !important;
+  }
+  .stat-label { font-size: 10px !important; line-height: 1.2 !important; }
+  .stat-value { font-size: 16px !important; font-weight: 700 !important; }
+
+  /* 6. ONGLETS — scroll horizontal */
+  html[data-theme-v3="1"] .nav-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
+    border-radius: 0 !important;
+    padding: 4px 0 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+  html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
+  html[data-theme-v3="1"] .nav-tab {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    padding: 8px 16px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+  }
+
+  /* 7. INVOICE CARDS GRID — 1 colonne */
+  .invoices-cards-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .invoice-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 14px !important;
+  }
+  .invoice-card-header,
+  .invoice-card-footer {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .invoice-row-actions {
+    width: 100% !important;
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+  .invoice-row-actions .btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+  }
+
+  /* 8. ÉDITEUR — 1 colonne */
+  .invoice-editor-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .editor-sidebar {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* Aperçu scrollable horizontalement */
+  .invoice-preview-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 16px !important;
+  }
+  .invoice-paper {
+    min-width: 500px !important;
+    padding: 24px !important;
+    font-size: 11px !important;
+  }
+
+  /* 9. FORMULAIRES ÉDITEUR */
+  .form-row { margin-bottom: 12px !important; }
+  .form-row input,
+  .form-row select,
+  .form-row textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important;
+  }
+  .form-row-inline,
+  [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* 10. FAB BOUTON NOUVELLE FACTURE — repositionner au-dessus des tabs */
+  #mobileFabButton {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    right: 16px !important;
+    width: 52px !important;
+    height: 52px !important;
+    font-size: 20px !important;
+  }
+
+  /* 11. CLIENTS */
+  .clients-section {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* 12. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
 </body>
 </html>
