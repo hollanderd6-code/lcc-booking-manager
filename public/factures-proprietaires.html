@@ -2747,7 +2747,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   .stat-label { font-size: 10px !important; line-height: 1.2 !important; }
   .stat-value { font-size: 16px !important; font-weight: 700 !important; }
 
-  /* 6. ONGLETS — scroll horizontal */
+  /* 6. ONGLETS — scroll horizontal + sticky pour rester visible */
   html[data-theme-v3="1"] .nav-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -2755,13 +2755,17 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
     gap: 6px !important;
-    background: transparent !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(8px) !important;
     border: none !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
     border-radius: 0 !important;
-    padding: 4px 0 10px !important;
+    padding: 8px 0 10px !important;
     margin-bottom: 16px !important;
     width: 100% !important;
+    position: sticky !important;
+    top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 100 !important;
   }
   html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
   html[data-theme-v3="1"] .nav-tab {
@@ -2839,13 +2843,19 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     gap: 10px !important;
   }
 
-  /* 10. FAB BOUTON NOUVELLE FACTURE — repositionner au-dessus des tabs */
+  /* 10. FAB BOUTON NOUVELLE FACTURE — au-dessus des bottom tabs, caché sur onglet éditeur */
   #mobileFabButton {
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 16px) !important;
     right: 16px !important;
     width: 52px !important;
     height: 52px !important;
     font-size: 20px !important;
+    z-index: 999 !important;
+  }
+  /* Masquer le FAB quand l'onglet Éditeur ou Clients est actif */
+  body:has(#tab-create.active) #mobileFabButton,
+  body:has(#tab-clients.active) #mobileFabButton {
+    display: none !important;
   }
 
   /* 11. CLIENTS */
