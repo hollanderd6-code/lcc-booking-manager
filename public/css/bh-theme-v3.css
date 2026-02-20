@@ -707,6 +707,11 @@ html[data-theme-v3="1"] .page-content {
 
 /* ── KPI GRID : mobile — 1 colonne, label gauche / valeur droite ── */
 @media (max-width: 768px) {
+  /* Reset body padding-top (demo-nav masquée sur mobile) */
+  html[data-theme-v3="1"] body {
+    padding-top: 0 !important;
+  }
+
   html[data-theme-v3="1"] .kpi-grid {
     display: flex !important;
     flex-direction: column !important;
