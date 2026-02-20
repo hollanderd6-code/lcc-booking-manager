@@ -869,44 +869,46 @@ html[data-theme-v3="1"] .kpi-card--clickable:hover {
 /* 1ère carte featured dark */
 /* First KPI card: same style as others (no dark background) */
 
-html[data-theme-v3="1"] .kpi-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  margin-bottom: 10px !important;
-}
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] .kpi-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 10px !important;
+  }
 
-html[data-theme-v3="1"] .kpi-label {
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  letter-spacing: .08em !important;
-  text-transform: uppercase !important;
-  color: var(--text-3) !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-}
+  html[data-theme-v3="1"] .kpi-label {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+    color: var(--text-3) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
 
-html[data-theme-v3="1"] .kpi-value {
-  font-family: 'Instrument Serif', serif !important;
-  font-size: 34px !important;
-  letter-spacing: -.03em !important;
-  color: var(--text-1) !important;
-  line-height: 1 !important;
-  font-weight: 400 !important;
-}
+  html[data-theme-v3="1"] .kpi-value {
+    font-family: 'Instrument Serif', serif !important;
+    font-size: 34px !important;
+    letter-spacing: -.03em !important;
+    color: var(--text-1) !important;
+    line-height: 1 !important;
+    font-weight: 400 !important;
+  }
 
-html[data-theme-v3="1"] .kpi-sub {
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  color: var(--jade) !important;
-}
+  html[data-theme-v3="1"] .kpi-sub {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--jade) !important;
+  }
 
-html[data-theme-v3="1"] .kpi-pill,
-html[data-theme-v3="1"] .kpi-pill-neutral {
-  display: none !important;
+  html[data-theme-v3="1"] .kpi-pill,
+  html[data-theme-v3="1"] .kpi-pill-neutral {
+    display: none !important;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
