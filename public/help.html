@@ -1032,7 +1032,18 @@ document.addEventListener('DOMContentLoaded', () => {
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
   .mobile-menu-btn, #mobileMenuBtn,
-  .help-back-btn, #bhHeader { display: none !important; }
+  .help-back-btn { display: none !important; }
+
+  /* bhHeader visible mais repositionné dans le flux normal,
+     le titre de page est géré par bh-layout.js via data-title */
+  #bhHeader {
+    display: none !important; /* desktop header caché, titre affiché via mobile-header */
+  }
+
+  /* Neutraliser le body.paddingTop forcé par mobile-logo-fix.js */
+  body {
+    padding-top: 0 !important;
+  }
 
   /* 3. PAGE CONTENT */
   html[data-theme-v3="1"] .page-content {
@@ -1103,6 +1114,53 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 }
 </style>
+
+<script>
+/* Injecter le titre de page dans le mobile-header sur mobile
+   et neutraliser le paddingTop inline forcé par mobile-logo-fix.js */
+(function() {
+  if (window.innerWidth > 768) return;
+
+  function applyMobileFixes() {
+    // 1. Neutraliser le body paddingTop forcé par mobile-logo-fix.js
+    document.body.style.removeProperty('padding-top');
+    document.body.style.paddingTop = '';
+
+    // 2. Injecter le titre sous le logo dans le mobile-header
+    var mh = document.querySelector('.mobile-header');
+    if (!mh) return;
+    if (mh.querySelector('.mobile-page-title')) return; // déjà fait
+
+    var title = document.body.getAttribute('data-title') || '';
+    if (!title) return;
+
+    var titleEl = document.createElement('span');
+    titleEl.className = 'mobile-page-title';
+    titleEl.style.cssText = 'font-size:13px;font-weight:600;color:#7A8695;position:absolute;bottom:6px;left:50%;transform:translateX(-50%);white-space:nowrap;letter-spacing:.02em;';
+    titleEl.textContent = title;
+    mh.style.position = 'fixed';
+    mh.appendChild(titleEl);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      applyMobileFixes();
+      setTimeout(applyMobileFixes, 200);
+    });
+  } else {
+    applyMobileFixes();
+    setTimeout(applyMobileFixes, 200);
+  }
+
+  // Observer les modifications de style sur body (mobile-logo-fix.js les remet)
+  var observer = new MutationObserver(function() {
+    if (document.body.style.paddingTop && document.body.style.paddingTop !== '') {
+      document.body.style.paddingTop = '';
+    }
+  });
+  observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
 
 </body>
 </html>
