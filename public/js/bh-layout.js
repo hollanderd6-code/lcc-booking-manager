@@ -283,7 +283,7 @@ function getSidebarHTML() {
       const needsUpdate =
         !existingLogo ||
         (existingLogo.tagName.toLowerCase() === "img" &&
-          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existing.getAttribute("src") || "").startsWith("data:image")) ||
+          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existingLogo.getAttribute("src") || "").startsWith("data:image")) ||
         existingLogo.tagName.toLowerCase() === "svg";
 
       if (needsUpdate) {
@@ -314,14 +314,15 @@ function getSidebarHTML() {
     });
   }
 
+
   function injectMobileTitle() {
     if (window.innerWidth > 768) return;
+    if (document.getElementById('bh-mobile-page-title')) return;
 
     const mobileHeader = document.querySelector('.mobile-header');
     if (!mobileHeader) return;
-    if (document.getElementById('bh-mobile-page-title')) return;
 
-    // Lire le titre depuis data-title ou h1
+    // Lire le titre
     const page = document.body.getAttribute('data-page');
     let title = document.body.getAttribute('data-title');
     if (!title && page === 'app') title = 'Dashboard';
@@ -331,88 +332,15 @@ function getSidebarHTML() {
     }
     if (!title) return;
 
-    // Restructurer le mobile-header : logo gauche, titre centre
-    mobileHeader.style.cssText = [
-      'display:flex',
-      'position:fixed',
-      'top:0', 'left:0', 'right:0',
-      'height:calc(60px + env(safe-area-inset-top,0px))',
-      'z-index:1100',
-      'align-items:center',
-      'justify-content:space-between',
-      'padding:env(safe-area-inset-top,0px) 16px 0',
-      'background:rgba(245,242,236,0.97)',
-      'backdrop-filter:blur(12px)',
-      '-webkit-backdrop-filter:blur(12px)',
-      'border-bottom:1px solid rgba(200,184,154,0.4)',
-      'gap:12px'
-    ].join(';');
-
-    // Logo : flex-shrink:0 pour ne pas être écrasé
-    const logo = mobileHeader.querySelector('.mobile-logo');
-    if (logo) {
-      logo.style.cssText = 'flex-shrink:0;display:flex;align-items:center;text-decoration:none;';
-    }
-
-    // Titre centré
+    // Injecter le titre centré dans mobile-header
     const titleEl = document.createElement('span');
     titleEl.id = 'bh-mobile-page-title';
     titleEl.textContent = title;
-    titleEl.style.cssText = [
-      'font-family:"Instrument Serif",Georgia,serif',
-      'font-size:20px',
-      'font-weight:400',
-      'color:#0D1117',
-      'flex:1',
-      'text-align:center',
-      'white-space:nowrap',
-      'overflow:hidden',
-      'text-overflow:ellipsis',
-      'min-width:0'
-    ].join(';');
+    titleEl.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%;pointer-events:none;';
 
-    if (logo) {
-      logo.after(titleEl);
-    } else {
-      mobileHeader.prepend(titleEl);
-    }
-
-    // Page app : déplacer le bouton sync dans la mobile-header + cacher #bhMainHeader
-    const page = document.body.getAttribute('data-page');
-    if (page === 'app') {
-      const syncBtn = document.getElementById('syncBtn');
-      const mainHeader = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
-
-      if (syncBtn && !document.getElementById('bh-mobile-sync')) {
-        const syncClone = document.createElement('button');
-        syncClone.id = 'bh-mobile-sync';
-        syncClone.title = 'Synchroniser';
-        syncClone.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        syncClone.style.cssText = [
-          'width:44px', 'height:44px',
-          'border-radius:12px',
-          'border:1.5px solid rgba(200,184,154,0.6)',
-          'background:transparent',
-          'color:#1A7A5E',
-          'font-size:18px',
-          'display:flex',
-          'align-items:center',
-          'justify-content:center',
-          'cursor:pointer',
-          'flex-shrink:0'
-        ].join(';');
-        syncClone.onclick = function() { syncBtn.click(); };
-        mobileHeader.appendChild(syncClone);
-      }
-
-      if (mainHeader) {
-        mainHeader.style.cssText = 'display:none !important;';
-      }
-    }
-
-    // Cacher le menu burger
-    const menuBtn = document.getElementById('mobileMenuBtn');
-    if (menuBtn) menuBtn.style.display = 'none';
+    // mobile-header doit être en position relative pour que absolute fonctionne
+    mobileHeader.style.position = 'fixed';
+    mobileHeader.appendChild(titleEl);
   }
 
   function init() {
@@ -432,7 +360,6 @@ function getSidebarHTML() {
     setTimeout(() => {
       forceUpdateSidebarLogo();
       normalizeBranding();
-      injectMobileTitle();
     }, 500);
     
     console.log("✅ bh-layout.js - Prêt avec filtrage permissions");
