@@ -722,9 +722,10 @@ html[data-theme-v3="1"] .page-content {
     box-shadow: none !important;
     cursor: pointer !important;
     animation: none !important;
+    /* Layout : label gauche, valeur+sub droite, alignés en haut */
     display: flex !important;
     flex-direction: row !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     justify-content: space-between !important;
     gap: 16px !important;
   }
@@ -736,6 +737,7 @@ html[data-theme-v3="1"] .page-content {
     align-items: flex-start !important;
     gap: 4px !important;
     margin-bottom: 0 !important;
+    padding-top: 2px !important;
   }
 
   html[data-theme-v3="1"] .kpi-main {
@@ -775,11 +777,12 @@ html[data-theme-v3="1"] .page-content {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 12px 14px !important;
+    padding: 12px 16px !important;
     margin-bottom: 14px !important;
     border-radius: 16px !important;
     position: static !important;
     gap: 12px !important;
+    min-height: 52px !important;
   }
 
   html[data-theme-v3="1"] header.main-header .page-kicker,
@@ -787,15 +790,29 @@ html[data-theme-v3="1"] .page-content {
     display: none !important;
   }
 
+  /* header-left prend tout l'espace dispo */
   html[data-theme-v3="1"] header.main-header .header-left {
     max-width: none !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
   }
 
   html[data-theme-v3="1"] header.main-header .page-title {
     font-size: 20px !important;
     margin: 0 !important;
-    line-height: 1 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* header-actions ne rétrécit pas */
+  html[data-theme-v3="1"] header.main-header .header-actions {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
 
   html[data-theme-v3="1"] #newReservationBtn {
