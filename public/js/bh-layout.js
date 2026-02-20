@@ -332,15 +332,28 @@ function getSidebarHTML() {
     }
     if (!title) return;
 
-    // Injecter le titre centré dans mobile-header
+    // Restructurer mobile-header : logo à gauche, titre à droite
+    mobileHeader.style.justifyContent = 'flex-start';
+    mobileHeader.style.paddingLeft = '16px';
+    mobileHeader.style.paddingRight = '16px';
+    mobileHeader.style.gap = '12px';
+
+    // Masquer le sous-titre "Smart Property Manager"
+    const logoSubtitle = mobileHeader.querySelector('.mobile-logo-subtitle');
+    if (logoSubtitle) logoSubtitle.style.display = 'none';
+
+    // Injecter le titre après le logo
     const titleEl = document.createElement('span');
     titleEl.id = 'bh-mobile-page-title';
     titleEl.textContent = title;
-    titleEl.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%;pointer-events:none;';
+    titleEl.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;';
 
-    // mobile-header doit être en position relative pour que absolute fonctionne
-    mobileHeader.style.position = 'fixed';
-    mobileHeader.appendChild(titleEl);
+    const logo = mobileHeader.querySelector('.mobile-logo');
+    if (logo) {
+      logo.after(titleEl);
+    } else {
+      mobileHeader.appendChild(titleEl);
+    }
   }
 
   function init() {
