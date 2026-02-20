@@ -2883,22 +2883,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
   /* 7. TEAM MEMBER CARDS */
   html[data-theme-v3="1"] .team-member-card,
-  html[data-theme-v3="1"] .member-card {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
+  html[data-theme-v3="1"] .member-card,
+  .team-member-card {
+    overflow: hidden !important;
+    box-sizing: border-box !important;
     padding: 14px !important;
   }
-  .team-member-card .member-actions,
-  .member-card .member-actions {
-    width: 100% !important;
+  .team-member-header {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  .team-member-info {
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+  .team-member-details {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  .team-member-details h3 {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  /* Actions : ligne séparée sous les infos */
+  .team-member-actions {
+    flex-shrink: 0 !important;
     display: flex !important;
     gap: 8px !important;
   }
-  .team-member-card .member-actions .btn,
-  .member-card .member-actions .btn {
-    flex: 1 !important;
-    justify-content: center !important;
+  .team-member-actions button {
+    flex-shrink: 0 !important;
+  }
+
+  /* 8. RADIO BUTTONS — empêcher le chevauchement */
+  .form-row [style*="display: flex"][style*="gap: 20px"] {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .form-row label[style*="display: flex"] {
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  input[type="radio"] {
+    flex-shrink: 0 !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
   }
 
   /* 8. BOUTONS */
