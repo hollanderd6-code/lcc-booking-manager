@@ -451,7 +451,10 @@ html[data-theme-v3="1"] .support-msg-bubble.support {
   border-radius: 14px 14px 14px 4px !important;
 }
 
-/* ── mobile-header visible en v3 mobile (géré par notre CSS mobile) ── */
+/* ── Masquer mobile-header en v3 desktop ── */
+html[data-theme-v3="1"] .mobile-header {
+  display: none !important;
+}
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
@@ -567,7 +570,7 @@ html[data-theme-v3="1"] .support-msg-bubble.support {
 
 
 <!-- MOBILE HEADER -->
-<div class="mobile-header">
+<div class="mobile-header" style="display:none!important;">
 <a class="mobile-logo" href="/app.html">
 <i class="fas fa-calendar-check"></i>
 <span class="mobile-logo-text">Bookingmanage</span>
@@ -1158,8 +1161,6 @@ document.addEventListener('DOMContentLoaded', () => {
   observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
 })();
 </script>
-
-<script src="/js/mobile-logo-fix.js"></script>
 
 </body>
 </html>
