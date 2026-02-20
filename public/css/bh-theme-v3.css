@@ -856,6 +856,12 @@ html[data-theme-v3="1"] .page-content {
     padding: 14px 14px 90px !important;
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 24px) !important;
   }
+
+  /* app.html gère son propre espacement via margin-top sur le header */
+  body[data-page="app"] html[data-theme-v3="1"] .page-content,
+  html[data-theme-v3="1"] body[data-page="app"] .page-content {
+    padding-top: 14px !important;
+  }
 }
 
 html[data-theme-v3="1"] .kpi-grid .kpi-card:nth-child(1) { animation-delay: .05s !important; }
