@@ -314,21 +314,92 @@ function getSidebarHTML() {
     });
   }
 
+  function injectMobileTitle() {
+    if (window.innerWidth > 768) return;
+
+    const mobileHeader = document.querySelector('.mobile-header');
+    if (!mobileHeader) return;
+    if (document.getElementById('bh-mobile-page-title')) return;
+
+    // Lire le titre depuis data-title ou h1
+    const page = document.body.getAttribute('data-page');
+    let title = document.body.getAttribute('data-title');
+    if (!title && page === 'app') title = 'Dashboard';
+    if (!title) {
+      const h1 = document.querySelector('h1.page-title');
+      if (h1) title = h1.textContent.trim();
+    }
+    if (!title) return;
+
+    // Restructurer le mobile-header : logo gauche, titre centre
+    mobileHeader.style.cssText = [
+      'display:flex',
+      'position:fixed',
+      'top:0', 'left:0', 'right:0',
+      'height:calc(60px + env(safe-area-inset-top,0px))',
+      'z-index:1100',
+      'align-items:center',
+      'justify-content:space-between',
+      'padding:env(safe-area-inset-top,0px) 16px 0',
+      'background:rgba(245,242,236,0.97)',
+      'backdrop-filter:blur(12px)',
+      '-webkit-backdrop-filter:blur(12px)',
+      'border-bottom:1px solid rgba(200,184,154,0.4)',
+      'gap:12px'
+    ].join(';');
+
+    // Logo : flex-shrink:0 pour ne pas être écrasé
+    const logo = mobileHeader.querySelector('.mobile-logo');
+    if (logo) {
+      logo.style.cssText = 'flex-shrink:0;display:flex;align-items:center;text-decoration:none;';
+    }
+
+    // Titre centré
+    const titleEl = document.createElement('span');
+    titleEl.id = 'bh-mobile-page-title';
+    titleEl.textContent = title;
+    titleEl.style.cssText = [
+      'font-family:"Instrument Serif",Georgia,serif',
+      'font-size:20px',
+      'font-weight:400',
+      'color:#0D1117',
+      'flex:1',
+      'text-align:center',
+      'white-space:nowrap',
+      'overflow:hidden',
+      'text-overflow:ellipsis',
+      'min-width:0'
+    ].join(';');
+
+    if (logo) {
+      logo.after(titleEl);
+    } else {
+      mobileHeader.prepend(titleEl);
+    }
+
+    // Cacher le menu burger (pas utile sur mobile v3)
+    const menuBtn = document.getElementById('mobileMenuBtn');
+    if (menuBtn) menuBtn.style.display = 'none';
+  }
+
   function init() {
     console.log("🚀 bh-layout.js - Initialisation avec filtrage permissions...");
     
     injectSidebar();
     injectHeader();
     normalizeBranding();
+    injectMobileTitle();
     
     setTimeout(() => {
       normalizeBranding();
       forceUpdateSidebarLogo();
+      injectMobileTitle();
     }, 100);
     
     setTimeout(() => {
       forceUpdateSidebarLogo();
       normalizeBranding();
+      injectMobileTitle();
     }, 500);
     
     console.log("✅ bh-layout.js - Prêt avec filtrage permissions");
