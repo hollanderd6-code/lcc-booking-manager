@@ -332,11 +332,16 @@ function getSidebarHTML() {
     // Trouver ou créer la mobile-header
     let mobileHeader = document.querySelector('.mobile-header');
     if (!mobileHeader) {
-      // Créer une mobile-header si elle n'existe pas
+      // Créer une mobile-header avec logo si elle n'existe pas
       mobileHeader = document.createElement('div');
       mobileHeader.className = 'mobile-header';
+      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;text-decoration:none;"></a>';
       const appContainer = document.querySelector('.app-container') || document.querySelector('.main-content') || document.body;
       appContainer.parentNode.insertBefore(mobileHeader, appContainer);
+      // Laisser normalizeBranding injecter le bon logo
+      if (window.bhLayout && window.bhLayout.normalizeBranding) {
+        setTimeout(function(){ window.bhLayout.normalizeBranding(); }, 50);
+      }
     }
 
     // Forcer l'affichage (certaines pages ont display:none inline)
