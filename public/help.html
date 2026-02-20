@@ -1004,5 +1004,105 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
+
+<style id="help-mobile-master">
+@media (max-width: 768px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
+
+  /* 2. MOBILE HEADER — override le display:none!important inline */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .mobile-menu-btn, #mobileMenuBtn,
+  .help-back-btn, #bhHeader { display: none !important; }
+
+  /* 3. PAGE CONTENT */
+  html[data-theme-v3="1"] .page-content {
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* 4. CARDS */
+  html[data-theme-v3="1"] .card {
+    border-radius: 16px !important;
+    margin-bottom: 14px !important;
+  }
+  .card-body { padding: 14px !important; }
+
+  /* 5. FAQ */
+  html[data-theme-v3="1"] .faq-item {
+    border-radius: 12px !important;
+    margin-bottom: 8px !important;
+  }
+  .faq-question {
+    font-size: 14px !important;
+    padding: 14px !important;
+    line-height: 1.4 !important;
+  }
+  .faq-answer {
+    font-size: 14px !important;
+    padding: 0 14px !important;
+    line-height: 1.6 !important;
+  }
+  .faq-item.open .faq-answer {
+    padding: 8px 14px 14px !important;
+  }
+
+  /* 6. SEARCH FAQ */
+  #faqSearch {
+    font-size: 16px !important; /* évite zoom iOS */
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  /* 7. SUPPORT SECTION — boutons pleine largeur */
+  #supportSection .card-body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  #supportSection .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+  }
+
+  /* 8. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
 </body>
 </html>
