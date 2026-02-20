@@ -8939,28 +8939,28 @@ if (document.readyState === 'loading') {
       'z-index:auto'
     ].join(' !important;') + ' !important';
 
-    /* S'assurer que header-left est visible et prend l'espace */
+    /* Injecter le titre directement dans le header comme premier enfant */
+    var existingMobileTitle = document.getElementById('bh-mobile-title');
+    if (!existingMobileTitle) {
+      var titleText = 'Dashboard';
+      var originalTitle = header.querySelector('.page-title, h1');
+      if (originalTitle) titleText = originalTitle.textContent.trim();
+
+      var mobileTitle = document.createElement('span');
+      mobileTitle.id = 'bh-mobile-title';
+      mobileTitle.textContent = titleText;
+      mobileTitle.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:22px;font-weight:400;color:#0D1117;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      header.insertBefore(mobileTitle, header.firstChild);
+    }
+
+    /* Cacher header-left (le vrai, qui pose problème) */
     var headerLeft = header.querySelector('.header-left');
-    if (headerLeft) {
-      headerLeft.style.cssText = 'flex:1 1 auto !important;min-width:0 !important;display:flex !important;flex-direction:column !important;';
-    }
-
-    /* S'assurer que le titre est visible */
-    var title = header.querySelector('.page-title, h1');
-    if (title) {
-      title.style.cssText = 'display:block !important;visibility:visible !important;opacity:1 !important;font-size:20px !important;margin:0 !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;';
-    }
-
-    /* Cacher kicker et subtitle */
-    var kicker = header.querySelector('.page-kicker');
-    if (kicker) kicker.style.display = 'none';
-    var subtitle = header.querySelector('.page-subtitle');
-    if (subtitle) subtitle.style.display = 'none';
+    if (headerLeft) headerLeft.style.cssText = 'display:none !important;';
 
     /* header-actions à droite, ne rétrécit pas */
     var actions = header.querySelector('.header-actions');
     if (actions) {
-      actions.style.cssText = 'flex-shrink:0 !important;display:flex !important;align-items:center !important;gap:8px !important;';
+      actions.style.cssText = 'flex-shrink:0;display:flex;align-items:center;gap:8px;';
     }
 
     /* Cacher le bouton nouvelle réservation */
