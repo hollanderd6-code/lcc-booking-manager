@@ -1893,8 +1893,258 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 }
 </style>
 
+<style id="messages-mobile-master">
+/* ================================================================
+   📱 MESSAGES — LAYOUT MOBILE NATIF
+   Navigation liste → chat en slide, comme une vraie app
+   ================================================================ */
+@media (max-width: 768px) {
 
+  /* ── 1. LAYOUT DE BASE ── */
+  html, body {
+    overflow: hidden !important;
+    height: 100% !important;
+    max-width: 100vw !important;
+  }
 
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container {
+    height: 100vh !important;
+    overflow: hidden !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+  html[data-theme-v3="1"] .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* ── 2. CACHER ÉLÉMENTS INUTILES SUR MOBILE ── */
+  #bhHeader,
+  #bhHeaderActions,
+  .page-content,
+  #msgsDirectBackBtn,
+  .msgs-back-btn {
+    display: none !important;
+  }
+
+  /* ── 3. MOBILE HEADER FIXE ── */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+  }
+  .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
+
+  /* ── 4. SPLIT CONTAINER → PLEIN ÉCRAN AVEC SLIDE ── */
+  .msgs-split {
+    display: block !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    height: 100vh !important;
+    width: 100vw !important;
+    position: relative !important;
+    overflow: hidden !important;
+    margin-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100vh - 60px - env(safe-area-inset-top, 0px) - 68px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* ── 5. LISTE CONVERSATIONS — vue par défaut ── */
+  .msgs-left {
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: unset !important;
+    border-right: none !important;
+    transform: translateX(0) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: 10 !important;
+    background: #F5F2EC !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* État chat ouvert : liste glisse à gauche */
+  .msgs-split.chat-open .msgs-left {
+    transform: translateX(-100%) !important;
+  }
+
+  /* ── 6. PANEL CHAT — caché à droite par défaut ── */
+  .msgs-right {
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: translateX(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: 20 !important;
+    background: #F5F2EC !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* État chat ouvert : panel chat glisse en vue */
+  .msgs-split.chat-open .msgs-right {
+    transform: translateX(0) !important;
+  }
+
+  /* ── 7. BARRE RETOUR MOBILE DANS LE CHAT ── */
+  .msgs-mobile-back {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 12px 16px !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+  }
+  .msgs-mobile-back i {
+    color: #1A7A5E !important;
+    font-size: 18px !important;
+  }
+  .msgs-mobile-back span {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #1A7A5E !important;
+  }
+
+  /* ── 8. CHAT HEADER COMPACT ── */
+  #msgsChatHeader {
+    padding: 10px 14px !important;
+    flex-shrink: 0 !important;
+  }
+  .msgs-chat-actions {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .msgs-auto-btn {
+    font-size: 11px !important;
+    padding: 0 10px !important;
+    height: 28px !important;
+  }
+
+  /* ── 9. ZONE MESSAGES ── */
+  #chatMessages, .chat-modal-messages {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    min-height: 0 !important;
+    padding: 12px !important;
+  }
+
+  /* ── 10. INPUT CHAT ── */
+  .chat-modal-input {
+    flex-shrink: 0 !important;
+    padding: 10px 12px !important;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* ── 11. ITEMS CONVERSATION PLUS HAUTS ── */
+  #conversationsList .conversation-item {
+    padding: 14px 16px !important;
+    min-height: 72px !important;
+  }
+
+  /* ── 12. BOTTOM TABS ── */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
+<script>
+/* ── MESSAGES MOBILE: navigation liste ↔ chat ── */
+(function() {
+  if (window.innerWidth > 768) return;
+
+  function init() {
+    var split = document.querySelector('.msgs-split');
+    var right = document.querySelector('.msgs-right');
+    if (!split || !right) return;
+
+    /* Injecter le bouton retour en haut du panel droit */
+    if (!document.getElementById('msgsMobileBack')) {
+      var backBar = document.createElement('div');
+      backBar.id = 'msgsMobileBack';
+      backBar.className = 'msgs-mobile-back';
+      backBar.innerHTML = '<i class="fas fa-arrow-left"></i><span>Conversations</span>';
+      backBar.addEventListener('click', function() {
+        split.classList.remove('chat-open');
+      });
+      right.insertBefore(backBar, right.firstChild);
+    }
+
+    /* Ouvrir le chat au clic sur une conversation */
+    document.addEventListener('click', function(e) {
+      var item = e.target.closest('#conversationsList .conversation-item');
+      if (item) {
+        setTimeout(function() {
+          split.classList.add('chat-open');
+        }, 80);
+      }
+    });
+
+    /* Patch showInlineChat pour déclencher le slide */
+    var origPatch = window._bhMobileChatPatched;
+    if (!origPatch) {
+      window._bhMobileChatPatched = true;
+      var checkInterval = setInterval(function() {
+        if (window.openChat && !window.openChat._mobileSlidePatch) {
+          var orig = window.openChat;
+          window.openChat = function(id) {
+            orig.call(this, id);
+            setTimeout(function() {
+              if (split) split.classList.add('chat-open');
+            }, 100);
+          };
+          window.openChat._bhPatched = true;
+          window.openChat._mobileSlidePatch = true;
+          clearInterval(checkInterval);
+        }
+      }, 200);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  setTimeout(init, 500);
+})();
+</script>
 
 </body>
 </html>
