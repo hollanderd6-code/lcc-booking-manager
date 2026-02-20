@@ -2429,6 +2429,23 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   }
   #newReservationBtn { display: none !important; }
 
+  /* Bouton sync mobile — affiché en haut du contenu */
+  #syncBtn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    background: var(--cream-warm, #F5F0E8) !important;
+    border: 1px solid var(--border-warm-v3, #E0D5C0) !important;
+    color: var(--text-2, #5A6A7A) !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    margin-bottom: 16px !important;
+    box-shadow: none !important;
+  }
+
   /* 3. ÉLÉMENTS CACHÉS */
   .status-grid, .onboarding-section, .overview-card,
   #calendarFiltersSection, #upcomingSection,
@@ -2697,15 +2714,16 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
           </p>
 </div>
 <div class="header-actions">
-<button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
-<i class="fas fa-sync-alt"></i>
-</button>
 <button id="newReservationBtn" onclick="var m=document.getElementById('newReservationModal');if(m){m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
 </button>
 </div>
 </header>
 <div class="page-content">
+<!-- Bouton sync mobile -->
+<button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
+<i class="fas fa-sync-alt"></i>
+</button>
 <!-- Page Content -->
 <!-- KPI PRINCIPAUX -->
 <section class="kpi-grid">
@@ -8891,78 +8909,6 @@ if (document.readyState === 'loading') {
 
 <script>
 /* ── FIX MOBILE HEADER — écrase tous les inline styles JS ── */
-(function fixMobileHeader() {
-  if (window.innerWidth > 768) return;
-
-  function apply() {
-    var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
-    if (!header) return;
-
-    /* Reset complet de tous les inline styles sur le header */
-    header.style.cssText = [
-      'display:flex',
-      'flex-direction:row',
-      'align-items:center',
-      'justify-content:space-between',
-      'padding:12px 16px',
-      'margin-top:60px',
-      'margin-bottom:14px',
-      'border-radius:16px',
-      'position:static',
-      'top:auto',
-      'height:auto',
-      'gap:12px',
-      'min-height:52px',
-      'background:#FAF8F5',
-      'border-bottom:1px solid rgba(13,17,23,.09)',
-      'box-shadow:none',
-      'z-index:auto'
-    ].join(' !important;') + ' !important';
-
-    /* Injecter le titre directement dans le header comme premier enfant */
-    var existingMobileTitle = document.getElementById('bh-mobile-title');
-    if (!existingMobileTitle) {
-      var titleText = 'Dashboard';
-      var originalTitle = header.querySelector('.page-title, h1');
-      if (originalTitle) titleText = originalTitle.textContent.trim();
-
-      var mobileTitle = document.createElement('span');
-      mobileTitle.id = 'bh-mobile-title';
-      mobileTitle.textContent = titleText;
-      mobileTitle.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:22px;font-weight:400;color:#0D1117;flex:1 1 auto;width:0;min-width:0;max-width:calc(100% - 60px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;visibility:visible;opacity:1;';
-      header.insertBefore(mobileTitle, header.firstChild);
-    }
-
-    /* Cacher header-left (le vrai, qui pose problème) */
-    var headerLeft = header.querySelector('.header-left');
-    if (headerLeft) headerLeft.style.cssText = 'display:none !important;';
-
-    /* header-actions à droite, ne rétrécit pas */
-    var actions = header.querySelector('.header-actions');
-    if (actions) {
-      actions.style.cssText = 'flex-shrink:0;display:flex;align-items:center;gap:8px;margin-left:auto;';
-    }
-
-    /* Cacher le bouton nouvelle réservation */
-    var newResaBtn = document.getElementById('newReservationBtn');
-    if (newResaBtn) newResaBtn.style.display = 'none';
-  }
-
-  /* Lancer à plusieurs moments pour être sûr d'écraser tout */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(apply, 150);
-      setTimeout(apply, 500);
-      setTimeout(apply, 1000);
-    });
-  } else {
-    setTimeout(apply, 150);
-    setTimeout(apply, 500);
-    setTimeout(apply, 1000);
-  }
-  document.addEventListener('sidebarReady', function() { setTimeout(apply, 100); });
-  window.addEventListener('resize', function() { if (window.innerWidth <= 768) apply(); });
-})();
 </script>
 
 <!-- Capacitor Core -->
