@@ -1,141 +1,163 @@
 /* ============================================
-   📱 BOOSTINGHOST - FIX LOGO MOBILE
+   🔧 BOOSTINGHOST - FIX LOGO MOBILE FORCÉ
    
-   À ajouter APRÈS tous les autres CSS
-   Version ULTRA RENFORCÉE
+   Ce script force l'affichage du logo après le 
+   chargement de la page, même si d'autres CSS 
+   tentent de le masquer.
+   
+   À ajouter JUSTE AVANT </body>
    ============================================ */
 
-@media (max-width: 768px) {
+(function() {
+  'use strict';
   
-  /* ============================================
-     HEADER MOBILE - STRUCTURE
-     ============================================ */
-  
-  html body .mobile-header,
-  html body div.mobile-header,
-  .mobile-header.mobile-header {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 12px 16px !important;
-    background: #FFFFFF !important;
-    border-bottom: 1px solid #E5E7EB !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 1000 !important;
-    height: 60px !important;
-    box-sizing: border-box !important;
-  }
-  
-  /* ============================================
-     LOGO MOBILE - VISIBLE ET STYLÉ
-     ============================================ */
-  
-  html body .mobile-logo,
-  html body a.mobile-logo,
-  .mobile-header .mobile-logo {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    text-decoration: none !important;
-    cursor: pointer !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  
-  /* Image du logo - FORCER L'AFFICHAGE */
-  html body .mobile-logo img,
-  html body a.mobile-logo img,
-  .mobile-header .mobile-logo img,
-  .mobile-logo img[src*="base64"] {
-    display: block !important;
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 50% !important;
-    flex-shrink: 0 !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    object-fit: cover !important;
-    max-width: 32px !important;
-    max-height: 32px !important;
-  }
-  
-  /* Texte "Boostinghost" */
-  html body .mobile-logo-text,
-  html body span.mobile-logo-text,
-  .mobile-header .mobile-logo-text {
-    display: inline-flex !important;
-    align-items: center !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    line-height: 1 !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  
-  /* Styles pour "Boosting" (vert) */
-  html body .mobile-logo-text span:first-child,
-  html body span.mobile-logo-text span:first-child,
-  .mobile-header .mobile-logo-text span:first-child {
-    color: #10B981 !important;
-    font-weight: 800 !important;
-    display: inline !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  
-  /* Styles pour "host" (noir) */
-  html body .mobile-logo-text span:last-child,
-  html body span.mobile-logo-text span:last-child,
-  .mobile-header .mobile-logo-text span:last-child {
-    color: #111827 !important;
-    font-weight: 600 !important;
-    display: inline !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-  
-  /* ============================================
-     CACHER LE MENU HAMBURGER
-     ============================================ */
-  
-  html body .mobile-menu-btn,
-  html body #mobileMenuBtn,
-  .mobile-header .mobile-menu-btn,
-  .mobile-header #mobileMenuBtn {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-  }
-  
-  /* ============================================
-     AJUSTER LE CONTENU POUR L'ESPACE DU HEADER
-     ============================================ */
-  
-  html body,
-  html body .app-container,
-  html body main {
-    padding-top: 60px !important;
-  }
-  
-  /* ============================================
-     DARK MODE
-     ============================================ */
-  
-  [data-theme="dark"] html body .mobile-header,
-  [data-theme="dark"] .mobile-header {
-    background: #1F2937 !important;
-    border-bottom-color: #374151 !important;
-  }
-  
-  [data-theme="dark"] html body .mobile-logo-text span:last-child,
-  [data-theme="dark"] .mobile-logo-text span:last-child {
-    color: #F9FAFB !important;
-  }
-}
+  // Fonction pour forcer l'affichage du logo
+  function forceLogoDisplay() {
+    const mobileHeader = document.querySelector('.mobile-header');
+    const mobileLogo = document.querySelector('.mobile-logo');
+    const logoImg = document.querySelector('.mobile-logo img');
+    const logoText = document.querySelector('.mobile-logo-text');
+    
+    if (window.innerWidth <= 768) {
+      // Forcer l'affichage du header
+      if (mobileHeader) {
+        mobileHeader.style.cssText = `
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 12px 16px !important;
+          background: rgba(245, 242, 236, 0.97) !important;
+          border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          z-index: 1100 !important;
+          height: 60px !important;
+          box-sizing: border-box !important;
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
+        `;
 
-/* ============================================
-   FIN DES STYLES LOGO MOBILE
-   ============================================ */
+        // Injecter le titre de la page sous le logo (une seule fois)
+        if (!mobileHeader.querySelector('.mobile-page-title')) {
+          const title = document.body.getAttribute('data-title') || '';
+          if (title) {
+            const titleEl = document.createElement('span');
+            titleEl.className = 'mobile-page-title';
+            titleEl.style.cssText = `
+              font-size: 11px !important;
+              font-weight: 600 !important;
+              color: #7A8695 !important;
+              position: absolute !important;
+              bottom: 6px !important;
+              left: 50% !important;
+              transform: translateX(-50%) !important;
+              white-space: nowrap !important;
+              letter-spacing: 0.06em !important;
+              text-transform: uppercase !important;
+            `;
+            titleEl.textContent = title;
+            mobileHeader.appendChild(titleEl);
+          }
+        }
+      }
+      
+      // Forcer l'affichage du logo
+      if (mobileLogo) {
+        mobileLogo.style.cssText = `
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          text-decoration: none !important;
+          cursor: pointer !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        `;
+      }
+      
+      // Forcer l'affichage de l'image
+      if (logoImg) {
+        logoImg.style.cssText = `
+          display: block !important;
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 50% !important;
+          flex-shrink: 0 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        `;
+      }
+      
+      // Forcer l'affichage du texte
+      if (logoText) {
+        logoText.style.cssText = `
+          display: inline-flex !important;
+          align-items: center !important;
+          font-size: 18px !important;
+          font-weight: 700 !important;
+          line-height: 1 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        `;
+        
+        // Forcer les couleurs sur les spans
+        const spans = logoText.querySelectorAll('span');
+        if (spans.length >= 2) {
+          // "Boosting" en vert
+          spans[0].style.cssText = `
+            color: #10B981 !important;
+            font-weight: 800 !important;
+          `;
+          // "host" en noir
+          spans[1].style.cssText = `
+            color: #111827 !important;
+            font-weight: 600 !important;
+          `;
+        }
+      }
+      
+      // Cacher le menu hamburger
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      if (menuBtn) {
+        menuBtn.style.display = 'none';
+      }
+      
+      // ⚠️ NE PAS forcer paddingTop sur body —
+      // le padding-top est géré par le CSS de chaque page via .page-content / .main-content
+    }
+  }
+  
+  // Exécuter immédiatement
+  forceLogoDisplay();
+  
+  // Exécuter après chargement du DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', forceLogoDisplay);
+  }
+  
+  // Exécuter après chargement complet
+  window.addEventListener('load', function() {
+    forceLogoDisplay();
+    setTimeout(forceLogoDisplay, 100);
+  });
+  
+  // Observer les changements de style pour les réappliquer
+  const observer = new MutationObserver(function(mutations) {
+    if (window.innerWidth <= 768) {
+      forceLogoDisplay();
+    }
+  });
+  
+  // Observer le document entier
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['style', 'class'],
+    subtree: true
+  });
+  
+  // Réappliquer au redimensionnement
+  window.addEventListener('resize', forceLogoDisplay);
+  
+  console.log('✅ Logo mobile force display activated');
+})();
