@@ -1683,6 +1683,14 @@ html[data-theme-v3="1"] header.main-header {
   margin-top: 0 !important;
 }
 
+/* Sur mobile : le header doit se placer sous le mobile-header fixe (60px) */
+@media (max-width: 768px) {
+  html[data-theme-v3="1"] header.main-header,
+  html[data-theme-v3="1"] #bhMainHeader {
+    margin-top: 60px !important;
+  }
+}
+
 /* Supprimer tout padding/margin en haut de .page-content qui créerait un espace */
 html[data-theme-v3="1"] .page-content {
   margin-top: 0 !important;
