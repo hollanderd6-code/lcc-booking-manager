@@ -8841,15 +8841,21 @@ if (document.readyState === 'loading') {
 
   /* ── Appliquer les styles V3 une fois le DOM prêt ── */
   function applyV3Styles() {
-    /* Header sticky top:40px */
+    var isMobile = window.innerWidth <= 768;
+
+    /* Header sticky top:40px — desktop seulement */
     var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
     if (header) {
-      header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
+      if (isMobile) {
+        header.style.cssText += ';position:static !important;top:auto !important;';
+      } else {
+        header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
+      }
     }
 
-    /* Sidebar top:40px */
+    /* Sidebar top:40px — desktop seulement */
     var sidebar = document.querySelector('aside.sidebar');
-    if (sidebar) {
+    if (sidebar && !isMobile) {
       sidebar.style.cssText += ';position:fixed !important;top:40px !important;bottom:0 !important;height:auto !important;';
     }
 
