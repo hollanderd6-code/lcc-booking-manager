@@ -682,22 +682,156 @@ html[data-theme-v3="1"] .page-content {
 /* ─────────────────────────────────────────────────────────────
    KPI GRID
 ───────────────────────────────────────────────────────────── */
-html[data-theme-v3="1"] .kpi-grid {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 16px !important;
-  margin-bottom: 28px !important;
+/* ── KPI GRID : desktop uniquement ── */
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] .kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    margin-bottom: 28px !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-card {
+    background: var(--cream-warm) !important;
+    border: 1px solid var(--border-warm-v3) !important;
+    border-radius: 20px !important;
+    padding: 20px 22px !important;
+    transition: all .2s var(--ease-out-v3) !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    animation: bh-fadeUp .4s var(--ease-out-v3) both !important;
+  }
 }
 
-html[data-theme-v3="1"] .kpi-card {
-  background: var(--cream-warm) !important;
-  border: 1px solid var(--border-warm-v3) !important;
-  border-radius: 20px !important;
-  padding: 20px 22px !important;
-  transition: all .2s var(--ease-out-v3) !important;
-  cursor: pointer !important;
-  box-shadow: none !important;
-  animation: bh-fadeUp .4s var(--ease-out-v3) both !important;
+/* ── KPI GRID : mobile — 1 colonne, label gauche / valeur droite ── */
+@media (max-width: 768px) {
+  html[data-theme-v3="1"] .kpi-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-card {
+    width: 100% !important;
+    padding: 16px 20px !important;
+    border-radius: 16px !important;
+    background: var(--cream-warm) !important;
+    border: 1px solid var(--border-warm-v3) !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    animation: none !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-header {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    margin-bottom: 0 !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-main {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-value {
+    font-size: 42px !important;
+    line-height: 1 !important;
+    color: var(--jade) !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-sub {
+    text-align: right !important;
+    max-width: 160px !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-label {
+    text-transform: uppercase !important;
+    font-size: 11px !important;
+    letter-spacing: .06em !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-pill,
+  html[data-theme-v3="1"] .kpi-pill-neutral {
+    display: none !important;
+  }
+
+  /* Header dashboard compact */
+  html[data-theme-v3="1"] header.main-header,
+  html[data-theme-v3="1"] #bhMainHeader {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 14px !important;
+    margin-bottom: 14px !important;
+    border-radius: 16px !important;
+    position: static !important;
+    gap: 12px !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header .page-kicker,
+  html[data-theme-v3="1"] header.main-header .page-subtitle {
+    display: none !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header .header-left {
+    max-width: none !important;
+    flex: 1 !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header .page-title {
+    font-size: 20px !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+  }
+
+  html[data-theme-v3="1"] #newReservationBtn {
+    display: none !important;
+  }
+
+  /* Éléments cachés */
+  html[data-theme-v3="1"] .status-grid,
+  html[data-theme-v3="1"] .onboarding-section,
+  html[data-theme-v3="1"] .overview-card,
+  html[data-theme-v3="1"] #calendarFiltersSection,
+  html[data-theme-v3="1"] #upcomingSection,
+  html[data-theme-v3="1"] .ai-section,
+  html[data-theme-v3="1"] .email-messaging-section,
+  html[data-theme-v3="1"] .cleaning-messages-section {
+    display: none !important;
+  }
+
+  /* Calendrier : cacher le header noir */
+  html[data-theme-v3="1"] #calendarSection .calendar-modern-header {
+    display: none !important;
+  }
+
+  html[data-theme-v3="1"] #calendarSection.card {
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+
+  html[data-theme-v3="1"] #calendarSection .section-header {
+    display: none !important;
+  }
+
+  html[data-theme-v3="1"] .page-content {
+    padding: 14px 14px 90px !important;
+  }
 }
 
 html[data-theme-v3="1"] .kpi-grid .kpi-card:nth-child(1) { animation-delay: .05s !important; }
