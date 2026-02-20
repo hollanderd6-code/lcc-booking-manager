@@ -223,12 +223,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
         gap: 8px;
       }
 
-      /* On garde les KPI en colonne */
-      .kpi-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
+      /* KPI grid mobile : géré par #bh-mobile-fixes en fin de fichier */
 
       /* On masque les cartes de connexions + overview + onboarding + filtres calendrier */
       .status-grid,
@@ -7857,18 +7852,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       display: none;
     }
 
-    /* KPI en colonne pleine largeur */
-    .kpi-grid {
-      display: flex !important;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 8px;
-      margin-bottom: 12px;
-    }
-
-    .kpi-card {
-      width: 100%;
-    }
+    /* KPI : géré par bh-mobile-fixes en bas — NE PAS ÉCRASER */
+    /* (règles déplacées vers #bh-mobile-fixes pour éviter les conflits) */
 
     /* Calendrier bien visible sous les KPI */
     #calendarSection {
@@ -9213,7 +9198,7 @@ if (window.Capacitor) {
 
 <style id="bh-mobile-fixes">
 /* ============================================================
-   MOBILE FIXES v3 — à ajouter directement dans app-28.html
+   MOBILE FIXES v3 — VERSION CORRIGÉE
    ============================================================ */
 
 @media (max-width: 768px) {
@@ -9227,34 +9212,54 @@ if (window.Capacitor) {
     display: none !important;
   }
 
-  /* ─── 2. KPI GRID — 2 colonnes propres ─── */
+  /* ─── 2. KPI GRID — 2 colonnes propres et lisibles ─── */
   .kpi-grid {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 10px !important;
-    margin: 12px 0 16px !important;
+    margin: 0 0 16px !important;
     padding: 0 !important;
   }
   .kpi-card {
     min-width: 0 !important;
     width: auto !important;
-    padding: 14px !important;
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
   }
+  /* Label KPI : lisible mais pas trop grand */
   .kpi-label {
-    font-size: 10px !important;
+    font-size: 11px !important;
     line-height: 1.3 !important;
+    font-weight: 600 !important;
+    color: #6b7280 !important;
   }
+  /* Valeur KPI : grande et impactante */
   .kpi-value {
-    font-size: 32px !important;
+    font-size: 36px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+    margin-top: 6px !important;
   }
+  /* Sous-texte KPI */
   .kpi-sub {
     font-size: 11px !important;
+    line-height: 1.3 !important;
+    margin-top: 2px !important;
   }
+  /* Cacher la pill pour gagner de la place */
   .kpi-pill {
     display: none !important;
   }
+  /* Header de carte KPI */
+  .kpi-header {
+    margin-bottom: 4px !important;
+  }
+  /* Section principale bien espacée */
+  .kpi-main {
+    gap: 4px !important;
+  }
 
-  /* ─── 3. CALENDAR HEADER — fond v3 vert, pas noir ─── */
+  /* ─── 3. CALENDAR HEADER — fond v3 vert ─── */
   .calendar-modern-header {
     background: linear-gradient(135deg, #1A7A5E, #15624B) !important;
   }
@@ -9281,7 +9286,7 @@ if (window.Capacitor) {
     width: 100% !important;
   }
 
-  /* ─── 5. NAVIGATION MOIS — centrée ─── */
+  /* ─── 5. NAVIGATION MOIS — bien centrée ─── */
   .period-navigation {
     display: flex !important;
     align-items: center !important;
@@ -9314,13 +9319,18 @@ if (window.Capacitor) {
 
   /* ─── 8. PAGE-CONTENT padding correct ─── */
   .page-content {
-    padding: 12px 12px 90px !important;
+    padding: 16px 16px 90px !important;
   }
 
-  /* ─── 9. CALENDAR wrapper pleine largeur ─── */
+  /* ─── 9. CALENDAR — pleine largeur, CENTRÉ ─── */
   #calendarSection {
-    margin: 12px -12px 0 !important;
+    /* Annuler le padding parent pour aller bord à bord */
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    margin-top: 0 !important;
     border-radius: 0 !important;
+    /* Largeur calculée pour compenser les marges négatives */
+    width: calc(100% + 32px) !important;
   }
   .calendar-wrapper {
     border-radius: 0 !important;
@@ -9330,7 +9340,15 @@ if (window.Capacitor) {
   .calendar-container {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
+    /* Centrer le contenu dans le scroll */
+    display: block !important;
   }
+
+  /* ─── 10. SECTION CHECKLISTS — cohérence ─── */
+  .cleaning-checklists-widget {
+    margin-bottom: 16px !important;
+  }
+
 }
 
 </style>
