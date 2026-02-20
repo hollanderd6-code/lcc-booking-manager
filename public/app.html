@@ -8931,6 +8931,7 @@ if (document.readyState === 'loading') {
       'border-radius:16px',
       'position:static',
       'top:auto',
+      'height:auto',
       'gap:12px',
       'min-height:52px',
       'background:#FAF8F5',
@@ -8949,7 +8950,7 @@ if (document.readyState === 'loading') {
       var mobileTitle = document.createElement('span');
       mobileTitle.id = 'bh-mobile-title';
       mobileTitle.textContent = titleText;
-      mobileTitle.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:22px;font-weight:400;color:#0D1117;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      mobileTitle.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:22px;font-weight:400;color:#0D1117;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;visibility:visible;opacity:1;';
       header.insertBefore(mobileTitle, header.firstChild);
     }
 
