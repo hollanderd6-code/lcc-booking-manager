@@ -1779,6 +1779,155 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 100);
 });
 </script>
+<style id="welcome-mobile-master">
+@media (max-width: 768px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] main.main-content {
+    margin-left: 0 !important;
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* 2. MOBILE HEADER */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .mobile-menu-btn, #mobileMenuBtn,
+  .welcome-back-btn, #bhHeader { display: none !important; }
+
+  /* 3. WELCOME CONTAINER */
+  .welcome-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* 4. TIP BANNER */
+  .welcome-tip-banner {
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+    margin-bottom: 20px !important;
+  }
+  .welcome-tip-cta {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .welcome-tip-badges {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* 5. SECTION HEADER */
+  .welcome-section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .welcome-title { font-size: 22px !important; }
+
+  /* 6. LIVRETS GRID → 1 colonne */
+  .livrets-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .livret-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .livret-card-actions {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .livret-card-actions .btn-lv {
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+  }
+  .livret-card-stats {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* 7. WIZARD STEPPER — scroll horizontal */
+  .wizard-stepper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 12px 16px !important;
+    gap: 2px !important;
+    scrollbar-width: none !important;
+  }
+  .wizard-stepper::-webkit-scrollbar { display: none !important; }
+  .wizard-step {
+    flex: 0 0 auto !important;
+    padding: 8px 12px !important;
+  }
+  .wizard-step-label { font-size: 11px !important; }
+  .wizard-sep { width: 16px !important; flex-shrink: 0 !important; }
+
+  /* 8. WIZ CARD */
+  .wiz-card { border-radius: 14px !important; }
+  .wiz-card-header { padding: 14px 16px !important; }
+  .wiz-card-body { padding: 16px !important; }
+
+  /* 9. FORMULAIRE WIZARD */
+  .wiz-input, .wiz-textarea, .wiz-select {
+    font-size: 16px !important; /* évite zoom iOS */
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .wiz-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .wiz-group { margin-bottom: 16px !important; }
+
+  /* 10. NAVIGATION WIZARD (Précédent / Suivant) */
+  .wiz-nav {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 16px !important;
+  }
+  .wiz-btn-next,
+  .wiz-btn-prev {
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+  }
+
+  /* 11. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
 
 </body>
 </html>
