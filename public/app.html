@@ -2421,34 +2421,11 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     margin-left: 0 !important;
     padding-top: 0 !important;
   }
-  .page-content { padding: 14px 14px 90px !important; }
+  .page-content { padding: calc(60px + env(safe-area-inset-top,0px) + 14px) 14px 90px !important; }
 
-  /* 2. HEADER DASHBOARD — compact, titre + sync visibles */
+  /* 2. HEADER DASHBOARD — caché sur mobile (titre dans mobile-header via JS) */
   header.main-header, #bhMainHeader {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    padding: 12px 14px !important;
-    margin-top: 60px !important;
-    margin-bottom: 14px !important;
-    border-radius: 16px !important;
-    position: static !important;
-    min-height: 0 !important;
-    gap: 12px !important;
-  }
-  header.main-header .page-kicker,
-  #bhMainHeader .page-kicker,
-  header.main-header .page-subtitle,
-  #bhMainHeader .page-subtitle { display: none !important; }
-  header.main-header .header-left,
-  #bhMainHeader .header-left { max-width: none !important; flex: 1 !important; }
-  header.main-header .page-title,
-  #bhMainHeader .page-title {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    margin: 0 !important;
-    line-height: 1 !important;
+    display: none !important;
   }
   #newReservationBtn { display: none !important; }
 
