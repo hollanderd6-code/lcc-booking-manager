@@ -490,28 +490,30 @@ html[data-theme-v3="1"] .main-content {
 /* ─────────────────────────────────────────────────────────────
    MAIN HEADER (topbar)
 ───────────────────────────────────────────────────────────── */
-html[data-theme-v3="1"] header.main-header {
-  display: flex !important;
-  align-items: center !important;
-  padding: 0 32px !important;
-  height: 72px !important;
-  background: var(--cream) !important;
-  border-bottom: 1px solid var(--border-v3) !important;
-  gap: 16px !important;
-  position: sticky !important;
-  top: 0 !important;   /* body a déjà padding-top:40px */
-  z-index: 50 !important;
-  box-shadow: none !important;
-  flex-shrink: 0 !important;
-  flex-direction: row !important;
-}
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] header.main-header {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 32px !important;
+    height: 72px !important;
+    background: var(--cream) !important;
+    border-bottom: 1px solid var(--border-v3) !important;
+    gap: 16px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    box-shadow: none !important;
+    flex-shrink: 0 !important;
+    flex-direction: row !important;
+  }
 
-html[data-theme-v3="1"] .main-header .header-left {
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  flex: 1 !important;
-  min-width: 0 !important;
+  html[data-theme-v3="1"] .main-header .header-left {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
 }
 
 html[data-theme-v3="1"] .main-header .page-kicker {
@@ -781,8 +783,12 @@ html[data-theme-v3="1"] .page-content {
     margin-bottom: 14px !important;
     border-radius: 16px !important;
     position: static !important;
+    top: auto !important;
+    height: auto !important;
     gap: 12px !important;
     min-height: 52px !important;
+    background: #FAF8F5 !important;
+    z-index: auto !important;
   }
 
   html[data-theme-v3="1"] header.main-header .page-kicker,
