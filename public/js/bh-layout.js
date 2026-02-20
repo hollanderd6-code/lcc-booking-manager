@@ -319,10 +319,7 @@ function getSidebarHTML() {
     if (window.innerWidth > 768) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
-    const mobileHeader = document.querySelector('.mobile-header');
-    if (!mobileHeader) return;
-
-    // Lire le titre
+    // Lire le titre depuis data-title ou page
     const page = document.body.getAttribute('data-page');
     let title = document.body.getAttribute('data-title');
     if (!title && page === 'app') title = 'Dashboard';
@@ -332,11 +329,31 @@ function getSidebarHTML() {
     }
     if (!title) return;
 
-    // Restructurer mobile-header : logo à gauche, titre à droite
-    mobileHeader.style.justifyContent = 'flex-start';
-    mobileHeader.style.paddingLeft = '16px';
-    mobileHeader.style.paddingRight = '16px';
-    mobileHeader.style.gap = '12px';
+    // Trouver ou créer la mobile-header
+    let mobileHeader = document.querySelector('.mobile-header');
+    if (!mobileHeader) {
+      // Créer une mobile-header si elle n'existe pas
+      mobileHeader = document.createElement('div');
+      mobileHeader.className = 'mobile-header';
+      const appContainer = document.querySelector('.app-container') || document.querySelector('.main-content') || document.body;
+      appContainer.parentNode.insertBefore(mobileHeader, appContainer);
+    }
+
+    // Forcer l'affichage (certaines pages ont display:none inline)
+    mobileHeader.style.setProperty('display', 'flex', 'important');
+    mobileHeader.style.setProperty('position', 'fixed', 'important');
+    mobileHeader.style.setProperty('top', '0', 'important');
+    mobileHeader.style.setProperty('left', '0', 'important');
+    mobileHeader.style.setProperty('right', '0', 'important');
+    mobileHeader.style.setProperty('height', 'calc(60px + env(safe-area-inset-top,0px))', 'important');
+    mobileHeader.style.setProperty('z-index', '1100', 'important');
+    mobileHeader.style.setProperty('align-items', 'center', 'important');
+    mobileHeader.style.setProperty('justify-content', 'flex-start', 'important');
+    mobileHeader.style.setProperty('padding', 'env(safe-area-inset-top,0px) 16px 0', 'important');
+    mobileHeader.style.setProperty('gap', '12px', 'important');
+    mobileHeader.style.setProperty('background', 'rgba(245,242,236,0.97)', 'important');
+    mobileHeader.style.setProperty('backdrop-filter', 'blur(12px)', 'important');
+    mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
 
     // Masquer le sous-titre "Smart Property Manager"
     const logoSubtitle = mobileHeader.querySelector('.mobile-logo-subtitle');
@@ -353,6 +370,12 @@ function getSidebarHTML() {
       logo.after(titleEl);
     } else {
       mobileHeader.appendChild(titleEl);
+    }
+
+    // S'assurer que le contenu principal est décalé vers le bas
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent && !mainContent.style.paddingTop) {
+      mainContent.style.setProperty('padding-top', 'calc(60px + env(safe-area-inset-top,0px))', 'important');
     }
   }
 
