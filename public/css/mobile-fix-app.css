@@ -1,0 +1,290 @@
+/* ============================================================
+   📱 MOBILE-FIX-APP.CSS
+   Correction complète du layout mobile pour app.html
+   À inclure EN DERNIER, après tous les autres CSS
+   ============================================================ */
+
+/* ──────────────────────────────────────────
+   RESET MOBILE — annule les conflits desktop
+   ────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* 1. Body : aucun padding-top hérité du desktop (barre dark) */
+  html[data-theme-v3="1"] body,
+  body {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* 2. Masquer sidebar et barre dark */
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] #bhSidebar,
+  html[data-theme-v3="1"] .bh-demo-nav,
+  html[data-theme-v3="1"] .sidebar-overlay {
+    display: none !important;
+  }
+
+  /* 3. App container : pleine largeur, sans marge gauche */
+  html[data-theme-v3="1"] .app-container,
+  .app-container {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 4. Main-content : décalé uniquement pour le mobile-header fixe */
+  html[data-theme-v3="1"] main.main-content,
+  .main-content {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 5. Header principal desktop → caché */
+  html[data-theme-v3="1"] header.main-header,
+  html[data-theme-v3="1"] #bhMainHeader,
+  header.main-header,
+  #bhMainHeader {
+    display: none !important;
+  }
+
+  /* ──────────────────────────────────────────
+     MOBILE HEADER FIXE EN HAUT
+     ────────────────────────────────────────── */
+
+  html[data-theme-v3="1"] .mobile-header,
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding: 0 16px !important;
+    box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
+    /* Safe area iPhone */
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Cacher le bouton hamburger */
+  .mobile-menu-btn,
+  #mobileMenuBtn {
+    display: none !important;
+  }
+
+  /* ──────────────────────────────────────────
+     PAGE CONTENT : espace pour header + bottom bar
+     ────────────────────────────────────────── */
+
+  .page-content {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* ──────────────────────────────────────────
+     KPI GRID — 2 colonnes propres
+     ────────────────────────────────────────── */
+
+  .kpi-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin: 0 0 16px 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .kpi-card {
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  .kpi-label {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  .kpi-value {
+    font-size: 28px !important;
+  }
+
+  .kpi-sub {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  .kpi-pill {
+    display: none !important;
+  }
+
+  /* ──────────────────────────────────────────
+     STATUS GRID — masquée sur mobile
+     ────────────────────────────────────────── */
+
+  .status-grid,
+  .overview-card,
+  .onboarding-section,
+  #calendarFiltersSection {
+    display: none !important;
+  }
+
+  /* ──────────────────────────────────────────
+     CALENDRIER — pleine largeur
+     ────────────────────────────────────────── */
+
+  #calendarSection {
+    display: block !important;
+    margin: 0 -12px !important;
+    border-radius: 0 !important;
+  }
+
+  .calendar-wrapper {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  .calendar-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* ──────────────────────────────────────────
+     BOTTOM TABS — harmonisation v3
+     ────────────────────────────────────────── */
+
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    box-shadow: 0 -2px 12px rgba(13, 17, 23, 0.06) !important;
+    padding: 8px 0 !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .mobile-tabs .tab-btn {
+    color: #A0AABA !important;
+    font-family: 'DM Sans', -apple-system, sans-serif !important;
+  }
+
+  .mobile-tabs .tab-btn.active {
+    color: #1A7A5E !important;
+  }
+
+  .mobile-tabs .tab-btn.active::before {
+    background: #1A7A5E !important;
+  }
+
+  .mobile-tabs .tab-btn::after {
+    background: rgba(26, 122, 94, 0.15) !important;
+  }
+
+  /* ──────────────────────────────────────────
+     FAB BUTTON
+     ────────────────────────────────────────── */
+
+  .fab-add-resa,
+  .btn-fab,
+  .fab-btn {
+    background: #1A7A5E !important;
+    position: fixed !important;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 20px !important;
+    z-index: 999 !important;
+  }
+
+  /* ──────────────────────────────────────────
+     CALENDAR HEADER — couleur v3
+     ────────────────────────────────────────── */
+
+  .calendar-modern-header {
+    background: linear-gradient(135deg, #1A7A5E, #15624B) !important;
+  }
+
+  .view-selector {
+    background: #15624B !important;
+  }
+
+  .period-navigation {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 20px !important;
+    padding: 12px 16px !important;
+    background: #fff !important;
+  }
+
+  .period-nav-btn {
+    background: #F5F0E8 !important;
+    border: 1px solid rgba(200, 184, 154, 0.5) !important;
+    color: #1A7A5E !important;
+  }
+
+  .period-display {
+    flex: 1 !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  /* ──────────────────────────────────────────
+     MISC — empêcher débordements
+     ────────────────────────────────────────── */
+
+  * {
+    box-sizing: border-box !important;
+  }
+
+  img,
+  video,
+  iframe {
+    max-width: 100% !important;
+  }
+}
+
+/* ──────────────────────────────────────────
+   DESKTOP : s'assurer que mobile-header
+   et mobile-tabs restent cachés
+   ────────────────────────────────────────── */
+@media (min-width: 769px) {
+  .mobile-header,
+  .mobile-tabs {
+    display: none !important;
+  }
+}
