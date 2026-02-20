@@ -2527,6 +2527,151 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <!-- Socket.io pour le temps réel -->
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>    
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style id="deposits-mobile-master">
+@media (max-width: 768px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
+
+  /* 2. MOBILE HEADER injecté via bhMobileHeader */
+  #bhMobileHeader {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .deposits-back-btn, #bhHeader { display: none !important; }
+
+  /* 3. PAGE CONTENT */
+  html[data-theme-v3="1"] .page-content {
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* 4. ONGLETS — scroll horizontal */
+  html[data-theme-v3="1"] .tabs-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
+    border-radius: 0 !important;
+    padding: 4px 0 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+  html[data-theme-v3="1"] .tabs-container::-webkit-scrollbar { display: none !important; }
+  html[data-theme-v3="1"] .tab-button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    padding: 8px 16px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+  }
+
+  /* 5. CARDS */
+  html[data-theme-v3="1"] .card {
+    border-radius: 16px !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* 6. DEPOSIT CARDS — pleine largeur */
+  .deposits-cards-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .deposit-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 14px !important;
+  }
+  .deposit-card-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .deposit-card-footer {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .deposit-card-footer .btn,
+  .deposit-card-footer button {
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+  }
+
+  /* 7. FILTRE LOGEMENT */
+  .form-row[style*="display:flex"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+  #propertyFilter, #propertyFilterHistory {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important;
+  }
+
+  /* 8. TABLE PAIEMENTS — scroll horizontal */
+  .tab-pane table,
+  #paymentsContainer table {
+    min-width: 600px !important;
+    width: 600px !important;
+  }
+  [style*="overflow-x: auto"],
+  .tab-pane > .card > div {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 9. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
+<script>
+/* Injecter le logo dans bhMobileHeader sur mobile */
+(function() {
+  if (window.innerWidth > 768) return;
+  var mh = document.getElementById('bhMobileHeader');
+  if (mh && !mh.querySelector('a')) {
+    mh.innerHTML = '<a href="/app.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><img src="/images/logo-bh.png" onerror="this.style.display=\'none\'" style="height:32px;"><span style="font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;color:#0D1117;">Boostinghost</span></a>';
+  }
+})();
+</script>
+
 </body>
 </html>
