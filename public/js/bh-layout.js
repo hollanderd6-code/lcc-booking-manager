@@ -335,6 +335,7 @@ function getSidebarHTML() {
       // Créer une mobile-header avec logo si elle n'existe pas
       mobileHeader = document.createElement('div');
       mobileHeader.className = 'mobile-header';
+      mobileHeader.id = 'bhMobileHeader';
       mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
       const appContainer = document.querySelector('.app-container') || document.querySelector('.main-content') || document.body;
       appContainer.parentNode.insertBefore(mobileHeader, appContainer);
@@ -373,11 +374,7 @@ function getSidebarHTML() {
       mobileHeader.appendChild(titleEl);
     }
 
-    // S'assurer que le contenu principal est décalé vers le bas
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent && !mainContent.style.paddingTop) {
-      mainContent.style.setProperty('padding-top', 'calc(60px + env(safe-area-inset-top,0px))', 'important');
-    }
+
   }
 
   function init() {
