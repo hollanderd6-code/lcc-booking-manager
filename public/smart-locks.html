@@ -1083,5 +1083,145 @@ window.addEventListener('DOMContentLoaded', init);
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
+
+<style id="smart-locks-mobile-master">
+@media (max-width: 768px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
+
+  /* 2. MOBILE HEADER */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .locks-back-btn, #bhHeader { display: none !important; }
+
+  /* 3. PAGE CONTENT */
+  html[data-theme-v3="1"] .page-content {
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* 4. DASHBOARD HEADER — titre de page */
+  .dashboard-header {
+    margin-bottom: 16px !important;
+  }
+  .dashboard-header h1 { font-size: 22px !important; margin: 0 0 4px !important; }
+  .dashboard-header p { font-size: 13px !important; margin: 0 !important; }
+
+  /* 5. STATS ROW — 3 colonnes compactes */
+  html[data-theme-v3="1"] .stats-row {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+    margin-top: 0 !important;
+  }
+  .stat-card {
+    padding: 12px 10px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  .stat-label {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+  .stat-value {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+  }
+
+  /* 6. ONGLETS — scroll horizontal */
+  html[data-theme-v3="1"] .nav-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
+    border-radius: 0 !important;
+    padding: 4px 0 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+  html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
+  html[data-theme-v3="1"] .nav-tab {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    padding: 8px 16px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+  }
+
+  /* 7. TAB CONTENT */
+  html[data-theme-v3="1"] .tab-content > div {
+    border-radius: 16px !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* 8. LOCK CARDS — 1 colonne */
+  .lock-list {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .lock-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 14px !important;
+    padding: 14px !important;
+  }
+
+  /* 9. MODALS — bottom sheet */
+  .modal-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    margin: 0 !important;
+  }
+  .modal { align-items: flex-end !important; }
+
+  /* 10. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
 </body>
 </html>
