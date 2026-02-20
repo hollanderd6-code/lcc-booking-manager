@@ -377,7 +377,40 @@ function getSidebarHTML() {
       mobileHeader.prepend(titleEl);
     }
 
-    // Cacher le menu burger (pas utile sur mobile v3)
+    // Page app : déplacer le bouton sync dans la mobile-header + cacher #bhMainHeader
+    const page = document.body.getAttribute('data-page');
+    if (page === 'app') {
+      const syncBtn = document.getElementById('syncBtn');
+      const mainHeader = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
+
+      if (syncBtn && !document.getElementById('bh-mobile-sync')) {
+        const syncClone = document.createElement('button');
+        syncClone.id = 'bh-mobile-sync';
+        syncClone.title = 'Synchroniser';
+        syncClone.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        syncClone.style.cssText = [
+          'width:44px', 'height:44px',
+          'border-radius:12px',
+          'border:1.5px solid rgba(200,184,154,0.6)',
+          'background:transparent',
+          'color:#1A7A5E',
+          'font-size:18px',
+          'display:flex',
+          'align-items:center',
+          'justify-content:center',
+          'cursor:pointer',
+          'flex-shrink:0'
+        ].join(';');
+        syncClone.onclick = function() { syncBtn.click(); };
+        mobileHeader.appendChild(syncClone);
+      }
+
+      if (mainHeader) {
+        mainHeader.style.cssText = 'display:none !important;';
+      }
+    }
+
+    // Cacher le menu burger
     const menuBtn = document.getElementById('mobileMenuBtn');
     if (menuBtn) menuBtn.style.display = 'none';
   }
