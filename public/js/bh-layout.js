@@ -360,10 +360,6 @@ function getSidebarHTML() {
     mobileHeader.style.setProperty('backdrop-filter', 'blur(12px)', 'important');
     mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
 
-    // Masquer le sous-titre "Smart Property Manager"
-    const logoSubtitle = mobileHeader.querySelector('.mobile-logo-subtitle');
-    if (logoSubtitle) logoSubtitle.style.display = 'none';
-
     // Injecter le titre après le logo
     const titleEl = document.createElement('span');
     titleEl.id = 'bh-mobile-page-title';
