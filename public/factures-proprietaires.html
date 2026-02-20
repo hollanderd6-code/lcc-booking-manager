@@ -2702,15 +2702,23 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
   html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
   html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; }
-  html[data-theme-v3="1"] .main-content {
-    margin-left: 0 !important;
+
+  /* CRITIQUE : retirer overflow-y:auto du main-content pour que le scroll
+     se fasse sur body — sinon sticky et fixed ne fonctionnent pas */
+  html[data-theme-v3="1"] main.main-content {
+    overflow-y: visible !important;
+    height: auto !important;
     padding: 0 14px 90px !important;
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
     max-width: 100% !important;
-    box-sizing: border-box !important;
     width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
   }
-  header.top-bar { display: none !important; }
+  html[data-theme-v3="1"] .app-container {
+    overflow-y: visible !important;
+    height: auto !important;
+  }
 
   /* 2. MOBILE HEADER */
   .mobile-header {
@@ -2747,7 +2755,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   .stat-label { font-size: 10px !important; line-height: 1.2 !important; }
   .stat-value { font-size: 16px !important; font-weight: 700 !important; }
 
-  /* 6. ONGLETS — scroll horizontal + sticky pour rester visible */
+  /* 6. ONGLETS — sticky sous le mobile header, scroll horizontal */
   html[data-theme-v3="1"] .nav-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -2843,8 +2851,9 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     gap: 10px !important;
   }
 
-  /* 10. FAB BOUTON NOUVELLE FACTURE — au-dessus des bottom tabs, caché sur onglet éditeur */
+  /* 10. FAB BOUTON NOUVELLE FACTURE — fixé par rapport à la fenêtre (body scroll) */
   #mobileFabButton {
+    position: fixed !important;
     bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 16px) !important;
     right: 16px !important;
     width: 52px !important;
