@@ -3076,24 +3076,222 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   color: #374151 !important;
 }
 </style>
-<script>
-// Belt + suspenders: set inline style directly on the grid element
-document.addEventListener('DOMContentLoaded', function() {
-  var grid = document.getElementById('propertiesGrid');
-  if (grid) {
-    grid.style.setProperty('display', 'grid', 'important');
-    grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
-    grid.style.setProperty('gap', '20px', 'important');
-    grid.style.setProperty('padding', '24px', 'important');
+<style id="settings-mobile-master">
+/* ================================================================
+   📱 SETTINGS — LAYOUT MOBILE
+   ================================================================ */
+@media (max-width: 768px) {
+
+  /* ── 1. LAYOUT DE BASE ── */
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container {
+    margin-left: 0 !important;
+    padding: 0 !important;
   }
+  html[data-theme-v3="1"] .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* ── 2. MOBILE HEADER FIXE ── */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .mobile-menu-btn, #mobileMenuBtn,
+  .settings-back-btn { display: none !important; }
+
+  /* ── 3. PAGE CONTENT ── */
+  .page-content {
+    padding: 0 12px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+  #bhHeader { display: none !important; }
+
+  /* ── 4. SETTINGS CONTAINER ── */
+  .settings-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ── 5. SECTION HEADER : titre + bouton Ajouter ── */
+  .properties-section-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 16px 0 12px !important;
+    gap: 12px !important;
+  }
+  .properties-count {
+    font-size: 10px !important;
+    letter-spacing: 0.08em !important;
+    margin-bottom: 2px !important;
+  }
+  .properties-title {
+    font-size: 22px !important;
+    margin: 0 !important;
+  }
+  .btn-add-property {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    background: #1A7A5E !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+  }
+
+  /* ── 6. GRILLE LOGEMENTS → 1 COLONNE ── */
+  #propertiesGrid,
+  .properties-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 0 !important;
+    width: 100% !important;
+    grid-template-columns: unset !important;
+  }
+
+  /* ── 7. PROPERTY CARD ── */
+  .property-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+    transform: none !important;
+  }
+  .property-card:hover { transform: none !important; }
+
+  .property-header {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .property-name { font-size: 15px !important; }
+
+  /* Actions en ligne */
+  .property-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+  }
+  .property-actions .btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+    padding: 9px 10px !important;
+    white-space: nowrap !important;
+  }
+
+  /* URLs iCal */
+  .url-copy-section,
+  .chat-link-section {
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .url-copy-section input,
+  .chat-link-section input {
+    font-size: 11px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ── 8. BOUTON AJOUTER EN BAS ── */
+  #btnAddProperty {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-top: 8px !important;
+    background: #1A7A5E !important;
+  }
+
+  /* ── 9. MODAL — plein écran ── */
+  .modal-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+  }
+  .modal {
+    align-items: flex-end !important;
+  }
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── 10. BOTTOM TABS ── */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
+<script>
+// Grille responsive : 3 colonnes desktop, 1 colonne mobile
+document.addEventListener('DOMContentLoaded', function() {
+  function applyGrid() {
+    var grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+    if (window.innerWidth <= 768) {
+      grid.style.removeProperty('grid-template-columns');
+      grid.style.setProperty('display', 'flex', 'important');
+      grid.style.setProperty('flex-direction', 'column', 'important');
+      grid.style.setProperty('gap', '12px', 'important');
+      grid.style.setProperty('padding', '0', 'important');
+    } else {
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+      grid.style.setProperty('gap', '20px', 'important');
+      grid.style.setProperty('padding', '24px', 'important');
+    }
+  }
+  applyGrid();
+  window.addEventListener('resize', applyGrid);
 });
-// Also after properties are rendered
+
 var _orig = window.renderProperties;
 if (typeof _orig === 'function') {
   window.renderProperties = function() {
     _orig.apply(this, arguments);
     var grid = document.getElementById('propertiesGrid');
-    if (grid) {
+    if (!grid) return;
+    if (window.innerWidth <= 768) {
+      grid.style.removeProperty('grid-template-columns');
+      grid.style.setProperty('display', 'flex', 'important');
+      grid.style.setProperty('flex-direction', 'column', 'important');
+    } else {
       grid.style.setProperty('display', 'grid', 'important');
       grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
     }
