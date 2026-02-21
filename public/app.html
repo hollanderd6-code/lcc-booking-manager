@@ -28,6 +28,7 @@
 <style id="v3-critical">
 /* ── LAYOUT V3 ── */
 html[data-theme-v3="1"] body { padding-top: 40px !important; }
+@media (max-width: 768px) { html[data-theme-v3="1"] body { padding-top: 0 !important; } }
 html[data-theme-v3="1"] .sidebar {
   position: fixed !important; top: 40px !important;
   left: 0 !important; bottom: 0 !important;
@@ -8009,10 +8010,15 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 <style>
 /* ── Body offset : barre dark (40px) — desktop seulement ── */
 @media (min-width: 769px) {
-  html[data-theme-v3="1"] body {
-    padding-top: 40px !important;
-    margin-top: 0 !important;
-  }
+html[data-theme-v3="1"] body {
+  padding-top: 40px !important;
+  margin-top: 0 !important;
+}
+}
+@media (max-width: 768px) {
+html[data-theme-v3="1"] body {
+  padding-top: 0 !important;
+}
 }
 
 /* ── Masquer mobile-header sur desktop ── */
