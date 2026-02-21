@@ -2582,15 +2582,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   .fab-add-resa { background: #1A7A5E !important; }
 }
 </style>
-
-<style id="debug-spacing">
-/* DEBUG sans sélecteur v3 */
-.mobile-header { background: red !important; outline: 3px solid red !important; }
-.main-content { background: rgba(0,0,255,0.3) !important; }
-.page-content { background: rgba(0,255,0,0.3) !important; }
-.app-container { background: rgba(255,165,0,0.3) !important; }
-body { background: pink !important; }
-</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
@@ -9365,6 +9356,35 @@ if (window.Capacitor) {
   // Run once on load
   document.addEventListener('DOMContentLoaded', function() { fixModalColors(); });
 })();
+</script>
+
+<script id="debug-measure">
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    var els = {
+      'body': document.body,
+      'main-content': document.querySelector('.main-content'),
+      'page-content': document.querySelector('.page-content'),
+      'mobile-header': document.querySelector('.mobile-header'),
+      'main-header': document.querySelector('.main-header'),
+      'kpi-grid': document.querySelector('.kpi-grid'),
+    };
+    
+    var info = [];
+    for (var name in els) {
+      var el = els[name];
+      if (!el) { info.push(name + ': NOT FOUND'); continue; }
+      var cs = window.getComputedStyle(el);
+      var rect = el.getBoundingClientRect();
+      info.push(name + ': top=' + Math.round(rect.top) + ' paddingTop=' + cs.paddingTop + ' marginTop=' + cs.marginTop + ' h=' + Math.round(rect.height));
+    }
+    
+    var div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.85);color:white;font-size:11px;padding:8px;z-index:99999;font-family:monospace;';
+    div.innerHTML = info.join('<br>');
+    document.body.appendChild(div);
+  }, 1000);
+});
 </script>
 </body>
 </html>
