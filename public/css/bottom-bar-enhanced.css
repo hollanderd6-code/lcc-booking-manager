@@ -20,10 +20,10 @@
     left: 0;
     right: 0;
     height: auto;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(245, 242, 236, 0.97);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid rgba(200, 184, 154, 0.4);
     display: flex;
     align-items: center;
     justify-content: space-around;
@@ -328,5 +328,15 @@
   
   .mobile-tabs .tab-btn.active i {
     transform: none;
+  }
+}
+
+
+/* ── Menu "Plus" — fond beige cohérent ── */
+@media (max-width: 768px) {
+  #moreMenuSheet {
+    background: #F5F0E8 !important;
+    background-color: #F5F0E8 !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
   }
 }
