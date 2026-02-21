@@ -89,6 +89,17 @@ body[data-page="help"] [class*="sheet"] .btn[onclick*="help"] {
   font-weight: 700 !important;
 }
 
+
+/* Serrures connectées */
+body[data-page="smart-locks"] .bottom-sheet .btn[onclick*="smart-locks"],
+body[data-page="smart-locks"] [class*="sheet"] .btn[onclick*="smart-locks"] {
+  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  font-weight: 700 !important;
+}
+
 /* ============================================
    ✨ ICÔNE ACTIVE avec petit symbole
    ============================================ */
@@ -101,6 +112,7 @@ body[data-page="deposits"] .bottom-sheet .btn[onclick*="deposits"]::before,
 body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"]::before,
 body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"]::before,
 body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"]::before,
+body[data-page="smart-locks"] .bottom-sheet .btn[onclick*="smart-locks"]::before,
 body[data-page="help"] .bottom-sheet .btn[onclick*="help"]::before {
   content: '✓';
   margin-right: 8px;
@@ -140,6 +152,7 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
 [data-theme="dark"] body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
 [data-theme="dark"] body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"],
 [data-theme="dark"] body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
+[data-theme="dark"] body[data-page="smart-locks"] .bottom-sheet .btn[onclick*="smart-locks"],
 [data-theme="dark"] body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
   background: linear-gradient(135deg, #2AAE86, #1A7A5E) !important;
 }
@@ -157,6 +170,7 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
   body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
   body[data-page="factures-proprietaires"] .bottom-sheet .btn[onclick*="factures-proprietaires"],
   body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
+  body[data-page="smart-locks"] .bottom-sheet .btn[onclick*="smart-locks"],
   body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
     transform: scale(1.02);
   }
@@ -165,3 +179,25 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
 /* ============================================
    FIN DES STYLES BOUTON ACTIF
    ============================================ */
+
+/* Welcome - sélecteurs élargis au cas où data-page diffère */
+body[data-page="welcome"] [class*="sheet"] .btn[onclick*="welcome.html"],
+body[data-page="livrets"] [class*="sheet"] .btn[onclick*="welcome"],
+body[data-page="livrets"] .bottom-sheet .btn[onclick*="welcome"] {
+  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  font-weight: 700 !important;
+}
+
+/* Smart-locks - sélecteurs élargis */
+body[data-page="smart-locks"] [class*="sheet"] .btn[onclick*="smart-locks.html"],
+body[data-page="smart_locks"] [class*="sheet"] .btn[onclick*="smart-locks"],
+body[data-page="smart_locks"] .bottom-sheet .btn[onclick*="smart-locks"] {
+  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  font-weight: 700 !important;
+}
