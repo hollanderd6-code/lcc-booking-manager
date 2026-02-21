@@ -743,9 +743,13 @@ html[data-theme-v3="1"] main.main-content {
   overflow-y: auto !important;
   height: 100% !important;
   background: #F5F2EC !important;
-  padding-top: 70px !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
+}
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] main.main-content {
+    padding-top: 70px !important;
+  }
 }
 html[data-theme-v3="1"] header.main-header {
   position: fixed !important;
