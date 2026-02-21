@@ -14,12 +14,165 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
-<link href="/css/force-light-mode.css" rel="stylesheet"/> 
-<link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/> 
+<link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/bh-v3-mobile.css" rel="stylesheet"/> 
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
-<link rel="stylesheet" href="/css/messages-badge-desktop.css">  
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=4">  
+<script>
+  // Activation permanente du thème V3
+  document.documentElement.setAttribute('data-theme-v3','1');
+</script>
+<style id="v3-critical">
+/* ── LAYOUT V3 ── */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important; /* body a déjà padding-top:40px — sticky à 0 = collé sous la barre dark */
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Tuer tout espace parasite entre barre dark et header */
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ── BARRE DARK EN HAUT ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: #0D1117;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  /* Pour le centrage absolu des badges */
+  position: fixed;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
+  color: rgba(255,255,255,.4);
+  font-weight: 500;
+  margin-right: 6px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: white;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
+  background: #1A7A5E;
+  color: white;
+  border-color: #1A7A5E;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
+  color: rgba(255,255,255,.4);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+html[data-theme-v3="1"] .bh-theme-toggle {
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,.15);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-theme-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
+
+/* Masquer la barre dark sur mobile */
+@media (max-width: 768px) {
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar { top: 0 !important; }
+}
+/* ── Boutons header ── */
+html[data-theme-v3="1"] #syncBtn,
+html[data-theme-v3="1"] #notificationsBtn,
+html[data-theme-v3="1"] #themeToggle,
+html[data-theme-v3="1"] .header-actions .btn-icon {
+  background: transparent !important;
+  background-image: none !important;
+  border: 1px solid rgba(13,17,23,.1) !important;
+  color: #3D4A5C !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+html[data-theme-v3="1"] .header-actions .btn-icon::before,
+html[data-theme-v3="1"] #syncBtn::before,
+html[data-theme-v3="1"] #notificationsBtn::before,
+html[data-theme-v3="1"] #themeToggle::before { display: none !important; }
+html[data-theme-v3="1"] #syncBtn i,
+html[data-theme-v3="1"] #notificationsBtn i,
+html[data-theme-v3="1"] #themeToggle i,
+html[data-theme-v3="1"] .header-actions .btn-icon i { animation: none !important; }
+/* ── Logo sidebar géré par bh-layout.js ── */
+html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
+</style>    
 <style>
     html, body {
       margin: 0 !important;
@@ -54,49 +207,6 @@
     }
 
     /* Responsive global dashboard layout */
-    @media (max-width: 768px) {
-      /* (patched) removed inline .main-content padding override for iOS safe-area */
-
-      .main-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      /* On garde les KPI en colonne */
-      .kpi-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      /* On masque les cartes de connexions + overview + onboarding + filtres calendrier */
-      .status-grid,
-      .overview-card,
-      .onboarding-section,
-      #calendarFiltersSection {
-        display: none !important;
-      }
-
-      /* Les cartes visibles (KPI + calendrier) prennent toute la largeur */
-      .kpi-card,
-      .card {
-        width: 100%;
-      }
-
-      /* On force l'affichage du calendrier en mobile */
-      #calendarSection {
-        display: block !important;
-        margin-top: 16px;
-      }
-    }
     /* KPI cliquables : effet hover pour montrer qu'on peut cliquer */
     .kpi-card--clickable {
       cursor: pointer;
@@ -150,7 +260,7 @@
 
 /* Bouton Sync - Vert */
 #syncBtn {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: linear-gradient(135deg, #1A7A5E 0%, #145f4a 100%);
   color: white;
 }
 
@@ -385,7 +495,7 @@
 
     /* Header du calendrier */
     .calendar-modern-header {
-      background: linear-gradient(135deg, var(--calendar-header-bg), var(--calendar-header-hover));
+      background: #0D1117;
       color: white;
       padding: 0;
     }
@@ -394,8 +504,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 14px 20px;
+      gap: 16px;
     }
 
     .calendar-title-modern {
@@ -438,11 +548,7 @@
 
     /* View Selector */
     .view-selector {
-      display: flex;
-      align-items: center;
-      padding: 12px 20px;
-      gap: 16px;
-      background: var(--calendar-header-bg);
+      display: none !important; /* Tabs moved to calendar dark header */
     }
 
     .view-tabs {
@@ -488,8 +594,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 20px;
-      background: var(--bg-secondary);
-      border-bottom: 2px solid var(--calendar-border);
+      background: #F5F2EC;
+      border-bottom: 1px solid rgba(0,0,0,.08);
     }
 
     .period-nav-btn {
@@ -1186,7 +1292,9 @@
       max-width: 600px;
       width: 90%;
       max-height: 90vh;
-      overflow: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
       z-index: 10001;
       animation: modalSlideIn 0.3s ease;
     }
@@ -1212,6 +1320,7 @@
       justify-content: space-between;
       padding: 24px;
       border-bottom: 1px solid #e5e7eb;
+      flex-shrink: 0;
     }
 
     [data-theme="dark"] .booking-modal .modal-header {
@@ -1269,6 +1378,9 @@
     /* Reservation Details */
     .reservation-details {
       padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .detail-group {
@@ -1382,6 +1494,7 @@
       gap: 12px;
       padding: 20px 24px;
       border-top: 1px solid #e5e7eb;
+      flex-shrink: 0;
     }
 
     [data-theme="dark"] .modal-actions {
@@ -1856,51 +1969,7 @@
   </style>
 <!-- Simplification mobile : KPI + calendrier uniquement -->
 <style>
-  @media (max-width: 768px) {
-    /* On masque les cartes de connexions + overview + onboarding + filtres calendrier */
-    .status-grid,
-    .overview-card,
-    .onboarding-section,
-    #calendarFiltersSection {
-      display: none !important;
-    }
-
-    /* KPI en colonne */
-    .kpi-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 12px;
-      margin-bottom: 16px;
-    }
-
-    /* On force le calendrier à être visible sous les KPI */
-    #calendarSection {
-      display: block !important;
-      margin-top: 8px;
-    }
-
-    #calendarSection .calendar-wrapper {
-      border-radius: 16px;
-      box-shadow: none;
-      border-width: 0;
-    }
-  }
-  /* ===== WIDGET CHECKLISTS DE MÉNAGE ===== */
-.cleaning-checklists-widget {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  margin-bottom: var(--spacing-xl);
-}
-
-.widget-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-lg);
-}
+  
 
 .widget-kicker {
   font-size: 12px;
@@ -2069,55 +2138,7 @@
 }
   <style>
     /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
-    @media (max-width: 768px) {
-      /* On masque les blocs que tu ne veux pas sur mobile */
-      .status-grid,
-      .onboarding-section,
-      #upcomingSection,
-      #calendarFiltersSection,
-      .ai-section,
-      .email-messaging-section,
-      .cleaning-messages-section {
-        display: none !important;
-      }
-
-      /* KPI plein écran en colonne */
-      .kpi-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 12px;
-        margin-bottom: 16px;
-      }
-
-      /* On s’assure que la carte calendrier est bien visible */
-      #calendarSection {
-        display: block !important;
-        margin-top: 8px;
-      }
-
-      .calendar-wrapper {
-        display: block !important;
-      }
-
-      .page-content {
-        padding-bottom: 80px;
-      }
-    }
-  </style>
-<style>
-  /* ✨ Fix calendrier MOBILE
-     - la page ne glisse plus en horizontal
-     - la colonne LOGEMENTS reste alignée avec les lignes de réservations
-     - les jours gardent une largeur fixe (plus de "LUNMAR..." collé) */
-  @media (max-width: 768px) {
-
-    /* 1. Le conteneur général ne fait plus glisser toute la page */
-    .calendar-container {
-      overflow-x: hidden !important;
-      overflow-y: visible !important;
-      display: flex;
-    }
+    
 
     /* 2. Scroll horizontal UNIQUEMENT sur la partie droite (jours + résa) */
     .calendar-container .calendar-grid-wrapper {
@@ -2389,6 +2410,178 @@
 </style>
  <!-- Protection sous-comptes -->
 <script src="/js/sub-account-guard.js"></script>   
+
+<style id="bh-mobile-master">
+/* ================================================================
+   MOBILE MASTER — source unique, injectée directement dans le HTML
+   Appliquée EN DERNIER dans le <head> pour écraser tout le reste
+   ================================================================ */
+@media (max-width: 768px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+
+  /* Bottom nav + menu "Plus" — fond beige cohérent */
+  .mobile-tabs {
+    background: rgba(245, 242, 236, 0.97) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+  }
+  #moreMenuSheet {
+    background: #F5F0E8 !important;
+  }
+  #moreMenuSheet .btn-secondary {
+    background: rgba(255, 255, 255, 0.7) !important;
+  }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .main-content,
+  html[data-theme-v3="1"] .app-content {
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+  }
+  .page-content { padding: calc(60px + env(safe-area-inset-top,0px) + 6px) 14px 90px !important; }
+
+
+  /* 2. HEADER DASHBOARD — caché sur mobile (titre dans mobile-header via JS) */
+  header.main-header, #bhMainHeader {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+  #newReservationBtn { display: none !important; }
+
+
+
+  /* 3. ÉLÉMENTS CACHÉS */
+  .status-grid, .onboarding-section, .overview-card,
+  #calendarFiltersSection, #calendarSection, #upcomingSection,
+  .ai-section, .email-messaging-section,
+  .cleaning-messages-section { display: none !important; }
+
+  /* 4. KPI — 1 colonne, label gauche / valeur droite */
+  .kpi-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  .kpi-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 16px 20px !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+  }
+  .kpi-card .kpi-header {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    margin-bottom: 0 !important;
+  }
+  .kpi-card .kpi-label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+  }
+  .kpi-card .kpi-pill {
+    font-size: 11px !important;
+    padding: 2px 8px !important;
+  }
+  .kpi-card .kpi-main {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 2px !important;
+    flex-shrink: 0 !important;
+  }
+  .kpi-card .kpi-value {
+    font-size: 42px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+    color: #1A7A5E !important;
+    letter-spacing: -0.02em !important;
+  }
+  .kpi-card .kpi-sub {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    text-align: right !important;
+    max-width: 160px !important;
+  }
+
+  /* 5. CALENDRIER — header noir caché, navigation centrée */
+  #calendarSection {
+    display: block !important;
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+  #calendarSection .section-header { display: none !important; }
+  #calendarSection .calendar-modern-header { display: none !important; }
+  .view-selector {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+  .period-navigation {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 16px !important;
+    background: #F5F2EC !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+  }
+  .period-display {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    text-align: center !important;
+  }
+  .period-nav-btn {
+    flex-shrink: 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .calendar-container {
+    overflow-x: hidden !important;
+    display: flex !important;
+    width: 100% !important;
+  }
+  .calendar-container .calendar-grid-wrapper {
+    flex: 1 1 auto !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .calendar-container .days-header .day-header,
+  .calendar-container .calendar-grid .calendar-cell {
+    flex: 0 0 48px !important;
+    min-width: 48px !important;
+  }
+  .property-list-column {
+    width: 110px !important;
+    min-width: 110px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 6. FAB */
+  .fab-add-resa { background: #1A7A5E !important; }
+}
+</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
@@ -2400,6 +2593,112 @@
     </button>
 </div>
 </div>
+<!-- DARK TOP BAR (barre noire fixe en haut) -->
+<div class="bh-demo-nav" id="bhTopBar">
+  <!-- Connexions centrées -->
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;">
+
+    <!-- Airbnb -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fa-brands fa-airbnb" style="font-size:15px;color:#FF5A5F;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Airbnb</span>
+      <span id="topbar-status-airbnb" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+
+    <!-- Booking.com -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="font-size:13px;font-weight:800;color:#003580;">B.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Booking.com</span>
+      <span id="topbar-status-booking" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+
+    <!-- Stripe -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fa-brands fa-stripe-s" style="font-size:17px;color:#6772E5;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Stripe</span>
+      <span id="topbar-status-stripe" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
+      </span>
+    </div>
+
+  </div>
+
+  <!-- Toggle dark mode (droite) -->
+  <div class="bh-demo-right">
+    <span class="bh-demo-mode-label">Mode</span>
+    <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
+  </div>
+</div>
+
+<script>
+// Mise à jour des statuts de connexion dans la top bar
+(function updateTopBarStatus() {
+  function setStatus(id, connected) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (connected) {
+      el.style.background = 'rgba(34,197,94,.2)';
+      el.style.color = '#4ADE80';
+      el.style.borderColor = 'rgba(34,197,94,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Connecté';
+    } else {
+      el.style.background = 'rgba(239,68,68,.2)';
+      el.style.color = '#F87171';
+      el.style.borderColor = 'rgba(239,68,68,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté';
+    }
+  }
+
+  function checkStatuses() {
+    try {
+      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+      const hasAirbnb = reservations.some(r =>
+        (r.source || r.platform || '').toLowerCase().includes('airbnb')
+      );
+      const hasBooking = reservations.some(r =>
+        (r.source || r.platform || '').toLowerCase().includes('booking')
+      );
+      setStatus('topbar-status-airbnb', hasAirbnb);
+      setStatus('topbar-status-booking', hasBooking);
+
+      // Stripe : vérifie lcc_user ou LCC_PROPERTIES
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      const hasStripe = !!(
+        user.stripeAccountId ||
+        user.stripe_account_id ||
+        user.stripeConnected ||
+        properties.some(p => p.stripeAccountId || p.stripe_account_id)
+      );
+      setStatus('topbar-status-stripe', hasStripe);
+    } catch(e) {
+      console.warn('TopBar status error:', e);
+    }
+  }
+
+  // Vérifier au chargement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkStatuses);
+  } else {
+    checkStatuses();
+  }
+
+  // Re-vérifier après chargement des données API (délai)
+  setTimeout(checkStatuses, 2000);
+  setTimeout(checkStatuses, 5000);
+
+  // Exposer pour appel manuel après loadData
+  window.updateTopBarStatus = checkStatuses;
+})();
+</script>
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
   <a class="mobile-logo" href="/app.html">
@@ -2418,7 +2717,7 @@
 <!-- Main Content -->
 <main class="main-content">
 <!-- Header -->
-<header class="main-header">
+<header class="main-header" id="bhMainHeader">
 <div class="header-left">
 <div class="page-kicker">Vue d’ensemble</div>
 <h1 class="page-title">Dashboard</h1>
@@ -2430,51 +2729,13 @@
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
+<button id="newReservationBtn" onclick="var m=document.getElementById('newReservationModal');if(m){m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
+  <i class="fas fa-plus"></i> Nouvelle réservation
+</button>
 </div>
 </header>
 <div class="page-content">
 <!-- Page Content -->
-<!-- ÉTAT DES CONNEXIONS -->
-<section class="status-grid">
-<!-- Airbnb -->
-<article class="status-card">
-<div class="status-card-header">
-<div class="status-icon status-icon-airbnb">
-<i class="fa-brands fa-airbnb"></i>
-</div>
-<span class="status-label status-warning">À connecter</span>
-</div>
-<h3>Airbnb</h3>
-<p>Ajoutez vos liens iCal Airbnb.</p>
-<button class="btn btn-ghost btn-xs" onclick="window.location.href='/settings.html'">Gérer les connexions</button>
-</article>
-<!-- Booking.com -->
-<article class="status-card">
-<div class="status-card-header">
-<div class="status-icon status-icon-booking">
-<span class="status-booking-letter">B.</span>
-</div>
-<span class="status-label status-warning">À connecter</span>
-</div>
-<h3>Booking.com</h3>
-<p>Ajoutez votre lien iCal Booking.com.</p>
-<button class="btn btn-ghost btn-xs" onclick="window.location.href='/settings.html'">Gérer les connexions</button>
-</article>
-<!-- Stripe -->
-<article class="status-card">
-<div class="status-card-header">
-<div class="status-icon status-icon-stripe">
-<i class="fa-brands fa-stripe-s"></i>
-</div>
-<span class="status-label status-ok">Connecté</span>
-</div>
-<h3>Stripe</h3>
-<p>Cautions et paiements sécurisés.</p>
-<button class="btn btn-ghost btn-xs" onclick="window.location.href='/deposits.html'">
-    Voir les cautions
-  </button>
-</article>
-</section>
 <!-- KPI PRINCIPAUX -->
 <section class="kpi-grid">
 <!-- KPI 1 : Logements actifs -->
@@ -2602,41 +2863,63 @@
 <!-- Calendar Header -->
 <div class="calendar-modern-header">
 <div class="calendar-header-top">
+<!-- Titre gauche -->
 <h3 class="calendar-title-modern">
-<i class="fas fa-calendar"></i>
-<span>Calendrier</span>
+  <span style="background:#1A7A5E;width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <i class="fas fa-calendar-alt" style="font-size:16px;color:white;"></i>
+  </span>
+  <div>
+    <div style="font-size:17px;font-weight:600;">Calendrier des <em style="color:#4ADE80;font-style:italic;">réservations</em></div>
+    <div id="calendarSubtitle" style="font-size:12px;font-weight:400;opacity:.55;margin-top:2px;">Vue mensuelle</div>
+  </div>
 </h3>
+
+<!-- Centre : légendes + vue toggle -->
+<div style="display:flex;align-items:center;gap:16px;">
+  <!-- Légendes plateformes -->
+  <div style="display:flex;align-items:center;gap:12px;padding:6px 14px;background:rgba(255,255,255,.07);border-radius:999px;border:1px solid rgba(255,255,255,.1);">
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;"></span>Airbnb
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#003580;flex-shrink:0;"></span>Booking
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>Direct
+    </span>
+  </div>
+
+  <!-- Vue tabs -->
+  <div class="view-tabs" style="background:rgba(255,255,255,.07);border-radius:999px;padding:3px;display:flex;gap:2px;border:1px solid rgba(255,255,255,.1);">
+    <button class="view-tab" data-view="day" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar-day" style="font-size:11px;"></i><span>Jour</span>
+    </button>
+    <button class="view-tab" data-view="week" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar-week" style="font-size:11px;"></i><span>Semaine</span>
+    </button>
+    <button class="view-tab active" data-view="month" style="padding:5px 14px;border-radius:999px;border:none;background:#1A7A5E;color:white;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar-alt" style="font-size:11px;"></i><span>Mois</span>
+    </button>
+    <button class="view-tab" data-view="year" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-calendar" style="font-size:11px;"></i><span>Année</span>
+    </button>
+  </div>
+</div>
+
+<!-- Actions droite -->
 <div class="calendar-actions-top">
-<button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher">
-<i class="fas fa-search"></i>
-</button>
-<button class="calendar-action-btn" id="calendarFilterBtn" title="Filtrer">
-<i class="fas fa-filter"></i>
-</button>
-<button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres">
-<i class="fas fa-cog"></i>
-</button>
+  <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher"><i class="fas fa-search"></i></button>
+  <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres"><i class="fas fa-sliders-h"></i></button>
 </div>
 </div>
-<!-- View Selector -->
-<div class="view-selector">
+
+<!-- View Selector (hidden - now in header) -->
+<div class="view-selector" style="display:none !important; visibility:hidden !important; height:0 !important; overflow:hidden !important;">
 <div class="view-tabs">
-<button class="view-tab" data-view="day">
-<i class="fas fa-calendar-day"></i>
-<span>Jour</span>
-</button>
-<button class="view-tab" data-view="week">
-<i class="fas fa-calendar-week"></i>
-<span>Semaine</span>
-</button>
-<button class="view-tab active" data-view="month">
-<i class="fas fa-calendar-alt"></i>
-<span>Mois</span>
-</button>
-<button class="view-tab" data-view="year">
-<i class="fas fa-calendar"></i>
-<span>Année</span>
-</button>
+<button class="view-tab" data-view="day"><i class="fas fa-calendar-day"></i><span>Jour</span></button>
+<button class="view-tab" data-view="week"><i class="fas fa-calendar-week"></i><span>Semaine</span></button>
+<button class="view-tab active" data-view="month"><i class="fas fa-calendar-alt"></i><span>Mois</span></button>
+<button class="view-tab" data-view="year"><i class="fas fa-calendar"></i><span>Année</span></button>
 </div>
 </div>
 </div>
@@ -4268,8 +4551,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const totalNightsPossible = (properties.length || 1) * daysInMonth;
-    let nightsBooked = 0;
-
+    // Intervalles par logement (évite double-comptage iCal)
+    const intervalsPerProp = {};
     let checkinsToday = 0;
     let checkoutsToday = 0;
     let cleaning48h = 0;
@@ -4283,22 +4566,38 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       const end = parseDateSafe(rawEnd);
       if (!start || !end) return;
 
-      // Occupation (clamp dans le mois)
-      const startClamped = start < monthStart ? monthStart : start;
-      const endClamped = end > monthEnd ? monthEnd : end;
-      if (endClamped > startClamped) {
-        nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+      const isBlock = r.type === 'block' || r.source === 'BLOCK';
+      if (!isBlock) {
+        const startClamped = start < monthStart ? monthStart : start;
+        const endClamped = end > monthEnd ? monthEnd : end;
+        if (endClamped > startClamped) {
+          const pid = String(r.propertyId || r.property_id ||
+            (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 'unknown');
+          if (!intervalsPerProp[pid]) intervalsPerProp[pid] = [];
+          intervalsPerProp[pid].push([startClamped.getTime(), endClamped.getTime()]);
+        }
       }
 
-      // Check-in / out du jour (date-only)
       const sStr = dateOnlyStr(rawStart);
       const eStr = dateOnlyStr(rawEnd);
       if (sStr === todayStr) checkinsToday += 1;
       if (eStr === todayStr) checkoutsToday += 1;
 
-      // Ménages à prévoir (48h) : départ aujourd'hui ou demain (date-only)
       const endDay = startOfDay(end);
       if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
+    });
+
+    // Union des intervalles → nuits réelles sans double-comptage
+    let nightsBooked = 0;
+    Object.values(intervalsPerProp).forEach(intervals => {
+      intervals.sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const iv of intervals) {
+        if (merged.length && iv[0] < merged[merged.length-1][1]) {
+          merged[merged.length-1][1] = Math.max(merged[merged.length-1][1], iv[1]);
+        } else { merged.push([...iv]); }
+      }
+      merged.forEach(iv => { nightsBooked += (iv[1] - iv[0]) / (1000 * 60 * 60 * 24); });
     });
 
     // taux d’occupation
@@ -4436,7 +4735,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
   // IMPORTANT: on utilise la classe "modal" existante (overlay plein écran)
   overlay.className = 'modal';
   overlay.innerHTML = `
-    <div class="modal-box" style="background:#fff; border-radius:16px; width:min(720px, 92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+    <div class="modal-box" style="background:#F5F2EC; border-radius:16px; width:min(720px, 92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.15);">
       <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.08);">
         <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
           <i class="fas fa-list"></i> ${titleText}
@@ -4523,11 +4822,13 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
         if (!list.length) return '';
         return `
           <div style="margin-bottom:14px;">
-            <div style="font-weight:900; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <div style="font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; color:#1A7A5E;">
               <i class="fas ${icon}"></i> ${label} (${list.length})
             </div>
             ${list.map(r => {
-              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+              const platform = (r.src || '').toLowerCase();
+              const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
               return `
                 <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
@@ -4606,7 +4907,9 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
     } else {
       content.innerHTML = rows.map(r => {
-        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${window.riskColor(r.riskLevel)};margin-right:10px;"></span>`;
+        const platform = (r.src || '').toLowerCase();
+        const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
         const score = r.riskScore != null ? `${r.riskScore}/100` : '';
         return `
           <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
@@ -4778,13 +5081,13 @@ const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voya
             const tagsHtml = (r.riskTags && r.riskTags.length) 
               ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
                   ${r.riskTags.map(t => `
-                    <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; background:#f3f4f6; color:#374151;">
+                    <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; background:rgba(0,0,0,.06); color:#374151;">
                       ${String(t)}
                     </span>`).join('')}
                 </div>`
               : '';
             
-            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#f9fafb; border-radius:0 8px 8px 0;">
+            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <div style="font-weight:900; font-size:16px; color:${color};">${riskLabel} — ${score}/100</div>
                 <div style="font-weight:600; opacity:0.7;">${prop}</div>
@@ -4868,6 +5171,8 @@ window.LCC_PROPERTIES = properties;
         window.renderModernCalendar(reservations, properties);
       }
       computeKpis(reservations, properties);
+      // Mettre à jour les statuts de connexion dans la top bar
+      if (window.updateTopBarStatus) window.updateTopBarStatus();
       // updateTopRisksKpi est maintenant appelé dans renderModernCalendar avec state.bookings
       const movesCard = document.getElementById('kpiTodayMovesCard');
       if (movesCard && !movesCard.dataset.bound) {
@@ -5178,6 +5483,10 @@ window.LCC_PROPERTIES = properties;
         console.info('✅ Calendrier moderne: ' + state.properties.length +
                      ' logements / ' + state.bookings.length + ' réservations');
 
+        // Mettre à jour le sous-titre avec le nombre de logements
+        var sub = document.getElementById('calendarSubtitle');
+        if (sub) sub.textContent = state.properties.length + ' logement' + (state.properties.length > 1 ? 's' : '') + ' · Vue mensuelle';
+
         renderPropertyList();
         renderCalendar();
         
@@ -5215,8 +5524,20 @@ window.LCC_PROPERTIES = properties;
 
             for (var j = 0; j < viewTabs.length; j++) {
               var t = viewTabs[j];
-              t.classList.toggle('active', t.getAttribute('data-view') === view);
+              var isActive = t.getAttribute('data-view') === view;
+              t.classList.toggle('active', isActive);
+              // Mettre à jour les styles inline des tabs du nouveau header
+              if (t.style.background !== undefined) {
+                t.style.background = isActive ? '#1A7A5E' : 'transparent';
+                t.style.color = isActive ? 'white' : 'rgba(255,255,255,.6)';
+                t.style.fontWeight = isActive ? '600' : '500';
+              }
             }
+
+            // Mettre à jour le sous-titre
+            var subtitles = {day:'Vue journalière', week:'Vue hebdomadaire', month:'Vue mensuelle', year:'Vue annuelle'};
+            var sub = document.getElementById('calendarSubtitle');
+            if (sub) sub.textContent = subtitles[view] || '';
 
             updatePeriodDisplay();
             renderCalendar();
@@ -5910,13 +6231,14 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 <!-- Modal blocage calendrier -->
 <div class="modal" id="blockModal">
 <div class="modal-dialog">
-<button class="modal-close" id="blockModalClose">
-<i class="fas fa-times"></i>
-</button>
-<h2 class="modal-title">
-<i class="fas fa-lock"></i>
-      Bloquer le calendrier
-    </h2>
+<div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-color);">
+  <h2 class="modal-title" style="margin:0;display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;">
+    <i class="fas fa-lock"></i> Bloquer le calendrier
+  </h2>
+  <button id="blockModalClose" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--bg-hover,#f3f4f6);color:var(--text-primary,#111);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+    <i class="fas fa-times"></i>
+  </button>
+</div>
 <div class="modal-body">
 <div class="form-group">
 <label for="blockPropertySelect">Logement</label>
@@ -6116,10 +6438,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 </form>
 </div>
 </div>
-<!-- Floating Action Button (bouton +) -->
-<button class="fab" id="addBookingBtn" title="Nouvelle réservation">
-<i class="fas fa-plus"></i>
-</button>
+<!-- Floating Action Button supprimé -->
 <script>
 // Script complet pour le blocage de dates
 (function() {
@@ -6526,7 +6845,7 @@ try {
     const tagsHtml = riskTags.length
       ? `<div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
           ${riskTags.map(t => `
-            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:#f3f4f6; color:#374151;">
+            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.06); color:#374151;">
               ${String(t)}
             </span>`).join('')}
         </div>`
@@ -7335,24 +7654,36 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
               null;
             if (!pid) return;
 
-            let nightsBooked = 0;
-
+            // Calcul par union d'intervalles (évite le double-comptage iCal)
+            const intervals = [];
             (reservations || []).forEach(function (r) {
               if (!r.start || !r.end) return;
+              if (r.type === 'block' || r.source === 'BLOCK') return;
 
               const rPid = getReservationPropertyId(r);
               if (!rPid || rPid !== pid) return;
 
               const start = new Date(r.start);
               const end = new Date(r.end);
-
               const startClamped = start < monthStart ? monthStart : start;
               const endClamped = end > monthEnd ? monthEnd : end;
-
               if (endClamped > startClamped) {
-                const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
-                nightsBooked += d;
+                intervals.push([startClamped.getTime(), endClamped.getTime()]);
               }
+            });
+
+            intervals.sort(function(a, b) { return a[0] - b[0]; });
+            const merged = [];
+            intervals.forEach(function(iv) {
+              if (merged.length && iv[0] < merged[merged.length-1][1]) {
+                merged[merged.length-1][1] = Math.max(merged[merged.length-1][1], iv[1]);
+              } else {
+                merged.push([iv[0], iv[1]]);
+              }
+            });
+            let nightsBooked = 0;
+            merged.forEach(function(iv) {
+              nightsBooked += (iv[1] - iv[0]) / (1000 * 60 * 60 * 24);
             });
 
             let occupancy = Math.round((nightsBooked / daysInMonth) * 100);
@@ -7668,59 +7999,121 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 </script>
 <style>
   /* Mode mobile : on garde seulement KPI + Calendrier */
-  @media (max-width: 768px) {
-
-    /* On masque tout ce qui n'est pas prioritaire */
-    .status-grid,              /* cartes Airbnb / Booking / Stripe / IA */
-    .onboarding-section,       /* bloc "Bien démarrer" */
-    .overview-card,            /* "Aujourd’hui & à venir" */
-    #calendarFiltersSection,   /* filtre par logement */
-    #upcomingSection,
-    .ai-section,
-    .email-messaging-section,
-    .cleaning-messages-section {
-      display: none !important;
-    }
-
-    /* Header plus compact */
-    .main-header {
-      margin-bottom: 8px;
-    }
-    .page-subtitle {
-      display: none;
-    }
-
-    /* KPI en colonne pleine largeur */
-    .kpi-grid {
-      display: flex !important;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 8px;
-      margin-bottom: 12px;
-    }
-
-    .kpi-card {
-      width: 100%;
-    }
-
-    /* Calendrier bien visible sous les KPI */
-    #calendarSection {
-      display: block !important;
-      margin-top: 4px;
-    }
-
-    #calendarSection .calendar-wrapper {
-      border-radius: 16px;
-      box-shadow: none;
-      border: 0;
-    }
-
-    /* Un peu de marge en bas pour respirer */
-    .page-content {
-      padding-bottom: 80px;
-    }
-  }
+  
 </style>
+
+<!-- ═══════════════════════════════════════
+     OVERRIDE FINAL : header FIXE permanent
+     Placé en dernier pour écraser tous les autres CSS
+═══════════════════════════════════════ -->
+<style>
+/* ── Body offset : barre dark (40px) ── */
+html[data-theme-v3="1"] body {
+  padding-top: 40px !important;
+  margin-top: 0 !important;
+}
+
+/* ── Masquer mobile-header sur desktop ── */
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] .mobile-header,
+  html[data-theme-v3="1"] .mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+/* ── Pas de padding/margin parasite ── */
+html[data-theme-v3="1"] .app-container,
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* ══════════════════════════════════════
+   HEADER FIXE — reste visible en scroll
+   top: 40px  = juste sous la barre dark
+   left: 248px = juste à droite de la sidebar
+══════════════════════════════════════ */
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] header.main-header,
+  html[data-theme-v3="1"] #bhMainHeader {
+    position: fixed !important;
+    top: 40px !important;
+    left: 248px !important;
+    right: 0 !important;
+    z-index: 89 !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    border-radius: 0 !important;
+    /* Annuler le style "carte" de bh-shared.css */
+    background: var(--cream, #FAF8F5) !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(13,17,23,.09) !important;
+    box-shadow: 0 1px 0 rgba(13,17,23,.04) !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Compenser la hauteur du header fixe (72px) dans le contenu */
+  html[data-theme-v3="1"] .page-content {
+    padding-top: calc(28px + 72px) !important;
+  }
+}
+
+/* ══════════════════════════════════════
+   SIDEBAR FIXE — tout visible sans scroll
+══════════════════════════════════════ */
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important;
+  top: 40px !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html[data-theme-v3="1"] .sidebar nav.sidebar-nav,
+html[data-theme-v3="1"] .sidebar .sidebar-nav {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  padding: 4px 8px !important;
+  min-height: 0 !important;
+}
+html[data-theme-v3="1"] .sidebar nav.sidebar-nav::-webkit-scrollbar,
+html[data-theme-v3="1"] .sidebar .sidebar-nav::-webkit-scrollbar { display: none !important; }
+
+/* Nav-items compacts pour tout faire tenir */
+html[data-theme-v3="1"] .sidebar .nav-item,
+html[data-theme-v3="1"] aside.sidebar a.nav-item {
+  padding: 8px 12px !important;
+  margin: 1px 0 !important;
+  gap: 10px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+html[data-theme-v3="1"] .sidebar .nav-item i,
+html[data-theme-v3="1"] aside.sidebar a.nav-item i {
+  font-size: 14px !important;
+  width: 18px !important;
+}
+
+/* Titres de section compacts */
+html[data-theme-v3="1"] .sidebar .nav-section-title,
+html[data-theme-v3="1"] .sidebar .sidebar-nav-label {
+  padding: 8px 8px 3px !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+}
+html[data-theme-v3="1"] .sidebar .nav-section {
+  margin-bottom: 0 !important;
+}
+</style>
+
 <!-- ========================== -->
 <!--  SCRIPTS DE RÉPARATION    -->
 <!-- ========================== -->
@@ -8413,6 +8806,146 @@ if (document.readyState === 'loading') {
 
 </script>
 <script></script><script src="/js/bh-layout.js"></script>
+<script>
+(function(){
+  'use strict';
+  var V3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+  if (!V3) return;
+
+  /* ── Restaurer le thème dark/light ── */
+  try {
+    var saved = localStorage.getItem('bh_theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  } catch(e) {}
+
+  /* ── Demo nav ── */
+  var PAGES = [
+    {l:'Dashboard', i:'fa-chart-line', h:'/app.html', p:'app'},
+    {l:'Messages',  i:'fa-comment-dots', h:'/messages.html', p:'messages'},
+    {l:'Logements', i:'fa-building', h:'/settings.html', p:'settings'},
+    {l:'Cautions',  i:'fa-shield-halved', h:'/deposits.html', p:'deposits'},
+    {l:'Factures',  i:'fa-file-invoice', h:'/factures.html', p:'factures'},
+    {l:'Livret',    i:'fa-book-open', h:'/welcome.html', p:'welcome'}
+  ];
+  var curPage = document.body.getAttribute('data-page') || '';
+  var curPath  = location.pathname.toLowerCase();
+
+  var nav = document.createElement('div');
+  nav.id  = 'bhDemoNav';
+  nav.style.cssText = [
+    'position:fixed','top:0','left:0','right:0','z-index:9999',
+    'background:#0D1117','display:flex','align-items:center',
+    'gap:6px','padding:0 16px','height:40px','box-sizing:border-box'
+  ].join(';');
+
+  var html = '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">Vue</span>';
+  PAGES.forEach(function(p){
+    var active = p.p === curPage || curPath === p.h.toLowerCase();
+    html += '<a href="' + p.h + '?v3=1" style="'
+      + 'padding:4px 12px;border-radius:999px;text-decoration:none;'
+      + 'font-family:DM Sans,sans-serif;font-size:11.5px;font-weight:500;'
+      + 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;'
+      + 'border:1px solid ' + (active ? 'transparent' : 'rgba(255,255,255,.15)') + ';'
+      + 'background:' + (active ? '#1A7A5E' : 'transparent') + ';'
+      + 'color:' + (active ? '#fff' : 'rgba(255,255,255,.6)') + ';'
+      + '"><i class="fas ' + p.i + '" style="font-size:10px;"></i> ' + p.l + '</a>';
+  });
+
+  /* Toggle dark/light */
+  html += '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">';
+  html += '<span style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;">Mode</span>';
+  html += '<button id="bhModeToggle" style="width:40px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;background:#1A7A5E;">';
+  html += '<span id="bhModeDot" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block;"></span>';
+  html += '</button></div>';
+  nav.innerHTML = html;
+  document.body.insertBefore(nav, document.body.firstChild);
+
+  function applyTheme() {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var dot = document.getElementById('bhModeDot');
+    var btn = document.getElementById('bhModeToggle');
+    if (dot) dot.style.transform = dark ? 'translateX(18px)' : 'translateX(0)';
+    if (btn) btn.style.background = dark ? '#1A7A5E' : 'rgba(255,255,255,.2)';
+  }
+  applyTheme();
+  document.getElementById('bhModeToggle').addEventListener('click', function(){
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('bh_theme', next); } catch(e) {}
+    applyTheme();
+  });
+
+  /* ── Appliquer les styles V3 une fois le DOM prêt ── */
+  function applyV3Styles() {
+    var isMobile = window.innerWidth <= 768;
+
+    /* Header sticky top:40px — desktop seulement */
+    var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
+    if (header && !isMobile) {
+      header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
+    }
+
+    /* Sidebar top:40px — desktop seulement */
+    var sidebar = document.querySelector('aside.sidebar');
+    if (sidebar && !isMobile) {
+      sidebar.style.cssText += ';position:fixed !important;top:40px !important;bottom:0 !important;height:auto !important;';
+    }
+
+    /* Titre page en Instrument Serif */
+    var titles = {
+      app:      'Tableau de <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">bord</em>',
+      messages: 'Mes <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">messages</em>',
+      settings: 'Mes <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">logements</em>',
+      deposits: 'Gestion des <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">cautions</em>',
+      factures: 'Factures <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">clients</em>',
+      welcome:  "Livret d'<em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">accueil</em>"
+    };
+    var titleEl = document.querySelector('h1.page-title, .page-title');
+    if (titleEl && titles[curPage] && !titleEl.querySelector('em')) {
+      titleEl.innerHTML = titles[curPage];
+      titleEl.style.cssText += ';font-family:'Instrument Serif',Georgia,serif !important;';
+    }
+
+    /* Forcer couleur du nom sidebar — inline style sur l'élément lui-même */
+    var nameEl = document.getElementById('sidebarUserName');
+    if (nameEl) { nameEl.style.color = '#0D1117'; nameEl.style.fontWeight = '600'; }
+    var compEl = document.getElementById('sidebarUserCompany');
+    if (compEl) { compEl.style.color = '#5A6A7A'; }
+
+    /* Légende calendrier déplacée dans le header dark - plus besoin ici */
+
+    /* Bouton + Nouvelle réservation */
+    var actions = document.querySelector('.header-actions');
+    if (actions && !document.getElementById('newReservationBtn') && curPage === 'app') {
+      var btn = document.createElement('button');
+      btn.id = 'newReservationBtn';
+      btn.style.cssText = 'background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;';
+      btn.innerHTML = '<i class="fas fa-plus"></i> Nouvelle réservation';
+      btn.onclick = function(){ var m=document.getElementById('newReservationModal'); if(m) m.style.display='flex'; };
+      actions.appendChild(btn);
+    }
+  }
+
+  /* Lancer après le DOM + après l'injection sidebar */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){\
+      setTimeout(applyV3Styles, 100);
+      setTimeout(applyV3Styles, 800);
+    });
+  } else {
+    setTimeout(applyV3Styles, 100);
+    setTimeout(applyV3Styles, 800);
+  }
+  document.addEventListener('sidebarReady', function(){
+    setTimeout(applyV3Styles, 50);
+  });
+
+})();
+</script>
+
+<script>
+/* ── FIX MOBILE HEADER — écrase tous les inline styles JS ── */
+</script>
 
 <!-- Capacitor Core -->
 <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
@@ -8435,6 +8968,7 @@ if (document.readyState === 'loading') {
 <!-- 📱 Expérience Mobile Native -->
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
+
 <script>
 (function() {
   const el = document.querySelector('.calendar-grid-wrapper');
@@ -8781,6 +9315,47 @@ if (window.Capacitor) {
 </script>
 
 <!-- Badge Messages -->
-<script src="/js/messages-badge-desktop-mobile.js"></script>    
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+<script src="/js/bh-layout.js"></script>  
+
+<style id="final-overrides">
+/* Force view-selector hidden regardless of any external CSS */
+.view-selector { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
+
+/* Force period-navigation to cream color */
+.period-navigation { background: #F5F2EC !important; border-bottom: 1px solid rgba(0,0,0,.08) !important; }
+</style>
+
+<script id="final-js-overrides">
+// Patch modal backgrounds after any modal is created or shown
+(function() {
+  function fixModalColors(root) {
+    // Fix modal-box backgrounds
+    (root || document).querySelectorAll('.modal-box, .modal-content').forEach(function(el) {
+      if (el.style.background === '#fff' || el.style.background === 'white' || 
+          el.style.backgroundColor === '#fff') {
+        el.style.background = '#F5F2EC';
+      }
+    });
+    // Fix risk row backgrounds  
+    (root || document).querySelectorAll('[style*="f9fafb"]').forEach(function(el) {
+      el.style.background = el.style.background.replace('#f9fafb', '#EDE8DF');
+    });
+  }
+  
+  // Run on DOM changes (catches dynamically created modals)
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(n) {
+        if (n.nodeType === 1) fixModalColors(n);
+      });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  
+  // Run once on load
+  document.addEventListener('DOMContentLoaded', function() { fixModalColors(); });
+})();
+</script>
 </body>
 </html>

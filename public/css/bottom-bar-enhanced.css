@@ -20,10 +20,10 @@
     left: 0;
     right: 0;
     height: auto;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(245, 242, 236, 0.97);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid rgba(200, 184, 154, 0.4);
     display: flex;
     align-items: center;
     justify-content: space-around;
@@ -78,7 +78,7 @@
      ============================================ */
   
   .mobile-tabs .tab-btn.active {
-    color: #10B981;
+    color: #1A7A5E;
   }
   
   .mobile-tabs .tab-btn.active i {
@@ -99,7 +99,7 @@
     transform: translateX(-50%);
     width: 4px;
     height: 4px;
-    background: #10B981;
+    background: #1A7A5E;
     border-radius: 50%;
     animation: indicatorPulse 2s ease-in-out infinite;
   }
@@ -263,7 +263,7 @@
   
   /* Focus visible pour navigation clavier */
   .mobile-tabs .tab-btn:focus {
-    outline: 2px solid #10B981;
+    outline: 2px solid #1A7A5E;
     outline-offset: 2px;
   }
   
@@ -302,7 +302,7 @@
     transform: translateX(-50%);
     width: 40px;
     height: 3px;
-    background: #10B981;
+    background: #1A7A5E;
     border-radius: 0 0 3px 3px;
     animation: none;
   }
@@ -328,5 +328,19 @@
   
   .mobile-tabs .tab-btn.active i {
     transform: none;
+  }
+}
+
+
+/* ── Menu "Plus" — fond beige cohérent ── */
+@media (max-width: 768px) {
+  .bottom-sheet-content {
+    background: #F5F0E8 !important;
+    background-color: #F5F0E8 !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+  }
+  #moreMenuSheet {
+    background: #F5F0E8 !important;
+    background-color: #F5F0E8 !important;
   }
 }

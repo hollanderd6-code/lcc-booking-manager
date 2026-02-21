@@ -61,7 +61,7 @@ body[data-page="factures"] .tab-btn[data-tab="more"],
 body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"],
 body[data-page="welcome"] .tab-btn[data-tab="more"],
 body[data-page="help"] .tab-btn[data-tab="more"] {
-  color: var(--primary-color, #10B981) !important;
+  color: var(--primary-color, #1A7A5E) !important;
   opacity: 1;
 }
 
@@ -81,7 +81,7 @@ body[data-page="help"] .tab-btn[data-tab="more"]::before {
   transform: translateX(-50%);
   width: 4px;
   height: 4px;
-  background: #10B981;
+  background: #1A7A5E;
   border-radius: 50%;
   animation: indicatorPulse 2s ease-in-out infinite;
 }
@@ -218,7 +218,7 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   body[data-page="factures-proprietaires"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
-    color: #10B981 !important;
+    color: #1A7A5E !important;
     opacity: 1;
   }
 }

@@ -1166,6 +1166,18 @@ ON invoice_download_tokens(token);
       `);
       console.log('✅ Colonnes escalated ajoutées à conversations');
     } catch (e) {
+      console.log('ℹ️ Colonnes escalated: ', e.message);
+    }
+
+    // Ajouter colonnes escalade sur conversations (si pas déjà existantes)
+    try {
+      await pool.query(`
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pending_escalation BOOLEAN DEFAULT FALSE;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
+      `);
+      console.log('✅ Colonnes escalated ajoutées à conversations');
+    } catch (e) {
       // Colonnes déjà existantes ou table pas encore créée
       console.log('ℹ️ Colonnes escalated: ', e.message);
     }
@@ -7676,24 +7688,30 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     );
     
     // Construire le lien de réinitialisation
-    const resetUrl = `${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/reset-password.html?token=${resetToken}`;
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, ''); // ✅ Supprimer le slash final
+    const resetUrl = `${appUrl}/reset-password.html?token=${resetToken}`;
     
-    // Envoyer l'email
-    const mailOptions = {
-      from: EMAIL_FROM,
+    console.log('📧 Tentative envoi email reset à:', user.email);
+    console.log('🔗 Reset URL:', resetUrl);
+    console.log('📤 EMAIL_FROM:', process.env.EMAIL_FROM || process.env.EMAIL_USER);
+    console.log('🔑 BREVO_API_KEY défini:', !!process.env.BREVO_API_KEY);
+    
+    // Envoyer l'email via sendEmail (même fonction que les autres emails)
+    await sendEmail({
+      from: `"Boostinghost" <${(process.env.EMAIL_FROM || process.env.EMAIL_USER || '').replace(/[<>"]/g, '').trim()}>`,
       to: user.email,
-      subject: '🔑 Réinitialisation de votre mot de passe',
+      subject: '🔑 Réinitialisation de votre mot de passe - Boostinghost',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <style>
-            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-            .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; background: #10b981; color: white !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; margin: 20px 0; }
             .warning { background: #fef3c7; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 20px 0; }
             .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
           </style>
@@ -7701,21 +7719,15 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">🔑 Réinitialisation de mot de passe</h1>
+              <h1 style="margin: 0; font-size: 26px;">🔑 Réinitialisation de mot de passe</h1>
             </div>
             <div class="content">
-              <p>Bonjour ${user.first_name || 'cher utilisateur'},</p>
-              
+              <p>Bonjour <strong>${user.first_name || 'cher utilisateur'}</strong>,</p>
               <p>Vous avez demandé à réinitialiser votre mot de passe Boostinghost.</p>
-              
               <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-              
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" class="button">
-                  Réinitialiser mon mot de passe
-                </a>
+                <a href="${resetUrl}" class="button">Réinitialiser mon mot de passe</a>
               </div>
-              
               <div class="warning">
                 <strong>⚠️ Important :</strong>
                 <ul style="margin: 8px 0; padding-left: 20px;">
@@ -7724,32 +7736,32 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                   <li>Ne partagez jamais ce lien avec qui que ce soit</li>
                 </ul>
               </div>
-              
               <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
                 Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
                 <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
               </p>
             </div>
             <div class="footer">
-              <p>Questions ? Contactez-nous : support@boostinghost.com</p>
+              <p>Questions ? <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a></p>
               <p>© ${new Date().getFullYear()} Boostinghost</p>
             </div>
           </div>
         </body>
         </html>
       `
-    };
+    });
     
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Email de réinitialisation envoyé à:', user.email);
+    console.log('✅ Email reset password envoyé à:', user.email);
     
     res.json({ 
       message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' 
     });
     
   } catch (error) {
-    console.error('❌ Erreur forgot password:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('❌ Erreur forgot password:', error.message);
+    console.error('❌ Stack:', error.stack);
+    console.error('❌ Détails:', error.response?.body || error.response?.data || error);
+    res.status(500).json({ error: 'Erreur serveur: ' + error.message });
   }
 });
 
@@ -9832,6 +9844,9 @@ app.post('/api/properties',
       ]
     );
 
+    // Rafraîchir le cache mémoire
+    await loadProperties();
+
     res.json({
       success: true,
       message: 'Propriété créée avec succès',
@@ -10663,7 +10678,7 @@ app.get('/api/verify-email', async (req, res) => {
            verification_token_expires = NULL,
            updated_at = NOW()
        WHERE id = $1`,
-      [userId]
+      [user.id]  // ✅ FIX: user.id au lieu de userId
     );
 
     console.log('✅ Email vérifié pour:', user.email);

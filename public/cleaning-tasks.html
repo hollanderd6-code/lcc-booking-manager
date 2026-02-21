@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="light" data-theme-v3="1">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
@@ -15,25 +15,25 @@
    ========================================== */
 
 :root {
-  --bg: #f8faf9;
-  --bg-card: #ffffff;
-  --text: #1a2e2a;
-  --text-secondary: #6b8078;
-  --text-tertiary: #9bb0a8;
-  --accent: #10b981;
-  --accent-light: #d1fae5;
-  --accent-dark: #059669;
-  --warning: #f59e0b;
-  --warning-light: #fef3c7;
-  --danger: #ef4444;
-  --danger-light: #fee2e2;
-  --border: #e2ece8;
+  --bg: #F5F2EC;
+  --bg-card: #F5F0E8;
+  --text: #0D1117;
+  --text-secondary: #7A8695;
+  --text-tertiary: #A0AABA;
+  --accent: #1A7A5E;
+  --accent-light: rgba(26,122,94,.1);
+  --accent-dark: #15624B;
+  --warning: #D97706;
+  --warning-light: rgba(217,119,6,.1);
+  --danger: #DC2626;
+  --danger-light: rgba(220,38,38,.08);
+  --border: rgba(200,184,154,.4);
   --radius: 16px;
   --radius-sm: 10px;
   --radius-xs: 6px;
-  --shadow-sm: 0 1px 3px rgba(26,46,42,0.06);
-  --shadow-md: 0 4px 16px rgba(26,46,42,0.08);
-  --shadow-lg: 0 8px 32px rgba(26,46,42,0.12);
+  --shadow-sm: 0 1px 3px rgba(13,17,23,0.05);
+  --shadow-md: 0 4px 16px rgba(13,17,23,0.07);
+  --shadow-lg: 0 8px 32px rgba(13,17,23,0.10);
   --font: 'DM Sans', -apple-system, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -59,21 +59,21 @@ html, body {
   justify-content: center;
   padding: 24px;
   padding-top: calc(24px + var(--safe-top));
-  background: linear-gradient(160deg, #ecfdf5 0%, #f0fdf4 40%, #f8faf9 100%);
+  background: #F5F2EC;
 }
 
 .login-logo {
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 32px;
   margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(16,185,129,0.3);
+  box-shadow: 0 8px 24px rgba(26,122,94,0.3);
 }
 
 .login-title {
@@ -114,7 +114,7 @@ html, body {
 .pin-input-group input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(16,185,129,0.12);
+  box-shadow: 0 0 0 4px rgba(26,122,94,0.12);
 }
 
 .login-btn {
@@ -123,14 +123,14 @@ html, body {
   padding: 16px;
   border: none;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--accent);
   color: white;
   font-size: 16px;
   font-weight: 700;
   font-family: var(--font);
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+  box-shadow: 0 4px 16px rgba(26,122,94,0.3);
 }
 
 .login-btn:active {
@@ -186,7 +186,7 @@ html, body {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--accent);
   color: white;
   display: flex;
   align-items: center;
@@ -393,7 +393,7 @@ html, body {
 
 .task-card-btn.btn-start {
   color: white;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--accent);
 }
 
 .task-card-btn.btn-continue {
@@ -758,7 +758,7 @@ html, body {
 .notes-section textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+  box-shadow: 0 0 0 3px rgba(26,122,94,0.1);
 }
 
 /* ===== SUBMIT BUTTON (FIXED BOTTOM) ===== */
@@ -793,9 +793,9 @@ html, body {
 }
 
 .submit-btn.ready {
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--accent);
   color: white;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+  box-shadow: 0 4px 16px rgba(26,122,94,0.3);
 }
 
 .submit-btn.not-ready {
@@ -843,7 +843,7 @@ html, body {
   justify-content: center;
   margin-bottom: 20px;
   animation: success-pop 0.5s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 8px 32px rgba(16,185,129,0.3);
+  box-shadow: 0 8px 32px rgba(26,122,94,0.3);
 }
 
 @keyframes success-pop {
@@ -975,6 +975,36 @@ html, body {
   .checklist-body { max-width: 540px; margin: 0 auto; }
   .photos-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ── Cleaning Tasks V3 extra ── */
+html[data-theme-v3="1"] .task-card,
+html[data-theme-v3="1"] .room-section,
+html[data-theme-v3="1"] .checklist-item {
+  background: #F5F0E8 !important;
+  border-color: rgba(200,184,154,.4) !important;
+}
+html[data-theme-v3="1"] .task-card:hover {
+  background: #EDE8DF !important;
+}
+html[data-theme-v3="1"] .pin-input-group input:focus {
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
+}
+html[data-theme-v3="1"] .progress-bar-fill {
+  background: #1A7A5E !important;
+}
+html[data-theme-v3="1"] .submit-btn.ready {
+  background: #1A7A5E !important;
+}
+html[data-theme-v3="1"] .checklist-header {
+  background: #F5F0E8 !important;
+  border-bottom-color: rgba(200,184,154,.4) !important;
+}
+html[data-theme-v3="1"] .top-bar {
+  background: #F5F0E8 !important;
+  border-bottom-color: rgba(200,184,154,.4) !important;
+}
+
 </style>
 </head>
 <body>
