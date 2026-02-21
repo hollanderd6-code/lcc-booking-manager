@@ -4531,8 +4531,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const totalNightsPossible = (properties.length || 1) * daysInMonth;
-    let nightsBooked = 0;
-
+    // Intervalles par logement (évite double-comptage iCal)
+    const intervalsPerProp = {};
     let checkinsToday = 0;
     let checkoutsToday = 0;
     let cleaning48h = 0;
@@ -4546,25 +4546,38 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       const end = parseDateSafe(rawEnd);
       if (!start || !end) return;
 
-      // Occupation (clamp dans le mois) — exclure les blocages manuels
       const isBlock = r.type === 'block' || r.source === 'BLOCK';
       if (!isBlock) {
         const startClamped = start < monthStart ? monthStart : start;
         const endClamped = end > monthEnd ? monthEnd : end;
         if (endClamped > startClamped) {
-          nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+          const pid = String(r.propertyId || r.property_id ||
+            (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 'unknown');
+          if (!intervalsPerProp[pid]) intervalsPerProp[pid] = [];
+          intervalsPerProp[pid].push([startClamped.getTime(), endClamped.getTime()]);
         }
       }
 
-      // Check-in / out du jour (date-only)
       const sStr = dateOnlyStr(rawStart);
       const eStr = dateOnlyStr(rawEnd);
       if (sStr === todayStr) checkinsToday += 1;
       if (eStr === todayStr) checkoutsToday += 1;
 
-      // Ménages à prévoir (48h) : départ aujourd'hui ou demain (date-only)
       const endDay = startOfDay(end);
       if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
+    });
+
+    // Union des intervalles → nuits réelles sans double-comptage
+    let nightsBooked = 0;
+    Object.values(intervalsPerProp).forEach(intervals => {
+      intervals.sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const iv of intervals) {
+        if (merged.length && iv[0] < merged[merged.length-1][1]) {
+          merged[merged.length-1][1] = Math.max(merged[merged.length-1][1], iv[1]);
+        } else { merged.push([...iv]); }
+      }
+      merged.forEach(iv => { nightsBooked += (iv[1] - iv[0]) / (1000 * 60 * 60 * 24); });
     });
 
     // taux d’occupation
@@ -7620,24 +7633,36 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
               null;
             if (!pid) return;
 
-            let nightsBooked = 0;
-
+            // Calcul par union d'intervalles (évite le double-comptage iCal)
+            const intervals = [];
             (reservations || []).forEach(function (r) {
               if (!r.start || !r.end) return;
+              if (r.type === 'block' || r.source === 'BLOCK') return;
 
               const rPid = getReservationPropertyId(r);
               if (!rPid || rPid !== pid) return;
 
               const start = new Date(r.start);
               const end = new Date(r.end);
-
               const startClamped = start < monthStart ? monthStart : start;
               const endClamped = end > monthEnd ? monthEnd : end;
-
               if (endClamped > startClamped) {
-                const d = (endClamped - startClamped) / (1000 * 60 * 60 * 24);
-                nightsBooked += d;
+                intervals.push([startClamped.getTime(), endClamped.getTime()]);
               }
+            });
+
+            intervals.sort(function(a, b) { return a[0] - b[0]; });
+            const merged = [];
+            intervals.forEach(function(iv) {
+              if (merged.length && iv[0] < merged[merged.length-1][1]) {
+                merged[merged.length-1][1] = Math.max(merged[merged.length-1][1], iv[1]);
+              } else {
+                merged.push([iv[0], iv[1]]);
+              }
+            });
+            let nightsBooked = 0;
+            merged.forEach(function(iv) {
+              nightsBooked += (iv[1] - iv[0]) / (1000 * 60 * 60 * 24);
             });
 
             let occupancy = Math.round((nightsBooked / daysInMonth) * 100);
