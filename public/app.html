@@ -1291,7 +1291,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       max-width: 600px;
       width: 90%;
       max-height: 90vh;
-      overflow: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
       z-index: 10001;
       animation: modalSlideIn 0.3s ease;
     }
@@ -1317,6 +1319,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       justify-content: space-between;
       padding: 24px;
       border-bottom: 1px solid #e5e7eb;
+      flex-shrink: 0;
     }
 
     [data-theme="dark"] .booking-modal .modal-header {
@@ -1374,6 +1377,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     /* Reservation Details */
     .reservation-details {
       padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .detail-group {
@@ -1487,6 +1493,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       gap: 12px;
       padding: 20px 24px;
       border-top: 1px solid #e5e7eb;
+      flex-shrink: 0;
     }
 
     [data-theme="dark"] .modal-actions {
@@ -6211,7 +6218,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 <!-- Modal blocage calendrier -->
 <div class="modal" id="blockModal">
 <div class="modal-dialog">
-<button class="modal-close" id="blockModalClose">
+<button class="modal-close" id="blockModalClose" style="position:absolute;top:16px;right:16px;left:auto;background:rgba(255,255,255,0.15);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;z-index:10;">
 <i class="fas fa-times"></i>
 </button>
 <h2 class="modal-title">
