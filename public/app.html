@@ -9358,44 +9358,56 @@ if (window.Capacitor) {
 })();
 </script>
 
-<!-- FIX ESPACE MOBILE - ajouté en dernier pour écraser tout -->
-<style id="mobile-gap-fix">
-@media (max-width: 768px) {
-  /* 1. body : pas de padding-top sur mobile */
-  body {
-    padding-top: 0 !important;
+<script id="mobile-gap-fix-js">
+(function fixMobileGap() {
+  if (window.innerWidth > 768) return;
+  
+  function applyFix() {
+    // 1. Body : supprimer padding-top
+    document.body.style.setProperty('padding-top', '0px', 'important');
+    
+    // 2. main-header : vraiment le cacher
+    var mainHeader = document.querySelector('header.main-header') || document.getElementById('bhMainHeader');
+    if (mainHeader) {
+      mainHeader.style.setProperty('display', 'none', 'important');
+      mainHeader.style.setProperty('height', '0', 'important');
+      mainHeader.style.setProperty('min-height', '0', 'important');
+      mainHeader.style.setProperty('margin', '0', 'important');
+      mainHeader.style.setProperty('padding', '0', 'important');
+      mainHeader.style.setProperty('overflow', 'hidden', 'important');
+      mainHeader.style.setProperty('position', 'absolute', 'important');
+    }
+    
+    // 3. main-content : padding = hauteur header mobile
+    var mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      var safeArea = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0') || 0;
+      mainContent.style.setProperty('padding-top', 'calc(60px + env(safe-area-inset-top, 0px))', 'important');
+      mainContent.style.setProperty('margin-top', '0', 'important');
+      mainContent.style.setProperty('margin-left', '0', 'important');
+    }
+    
+    // 4. page-content : padding minimal
+    var pageContent = document.querySelector('.page-content');
+    if (pageContent) {
+      pageContent.style.setProperty('padding', '16px 14px 90px', 'important');
+      pageContent.style.setProperty('margin-top', '0', 'important');
+    }
+    
+    console.log('[gap-fix] Applied. body.paddingTop=' + getComputedStyle(document.body).paddingTop);
   }
   
-  /* 2. main-header : vraiment caché, sans espace */
-  header.main-header,
-  #bhMainHeader {
-    display: none !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    max-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
-    position: absolute !important;
-    pointer-events: none !important;
+  // Appliquer immédiatement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyFix);
+  } else {
+    applyFix();
   }
-  
-  /* 3. main-content : juste le padding pour compenser le header fixe */
-  .main-content,
-  .app-content {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    margin-top: 0 !important;
-    margin-left: 0 !important;
-  }
-  
-  /* 4. page-content : padding normal */
-  .page-content {
-    padding: 16px 14px 90px !important;
-    margin-top: 0 !important;
-  }
-}
-</style>
+  // Et aussi après 500ms et 1500ms pour s'assurer que le JS tiers n'écrase pas
+  setTimeout(applyFix, 500);
+  setTimeout(applyFix, 1500);
+})();
+</script>
 
 </body>
 </html>
