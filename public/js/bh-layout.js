@@ -282,9 +282,10 @@ function getSidebarHTML() {
 
       const needsUpdate =
         !existingLogo ||
+        existingLogo.tagName.toLowerCase() === "svg" ||
         (existingLogo.tagName.toLowerCase() === "img" &&
-          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existingLogo.getAttribute("src") || "").startsWith("data:image")) ||
-        existingLogo.tagName.toLowerCase() === "svg";
+          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png") &&
+          !(existingLogo.getAttribute("src") || "").startsWith("data:image"));
 
       if (needsUpdate) {
         const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg, img");
