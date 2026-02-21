@@ -15,7 +15,8 @@
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
 <link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/> 
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/bh-v3-mobile.css" rel="stylesheet"/> 
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
@@ -259,7 +260,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
 /* Bouton Sync - Vert */
 #syncBtn {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: linear-gradient(135deg, #1A7A5E 0%, #145f4a 100%);
   color: white;
 }
 
@@ -8967,37 +8968,7 @@ if (document.readyState === 'loading') {
 <!-- 📱 Expérience Mobile Native -->
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
-<script>
-// Force beige sur le menu "Plus" dès qu'il apparaît dans le DOM
-(function() {
-  function applyMenuBeige() {
-    var sheet = document.getElementById('moreMenuSheet');
-    if (sheet) {
-      sheet.style.setProperty('background', '#F5F0E8', 'important');
-      sheet.style.setProperty('background-color', '#F5F0E8', 'important');
-    }
-  }
-  // Observer DOM mutations
-  var obs = new MutationObserver(function(mutations) {
-    mutations.forEach(function(m) {
-      m.addedNodes.forEach(function(n) {
-        if (n.id === 'moreMenuSheet' || (n.querySelector && n.querySelector('#moreMenuSheet'))) {
-          applyMenuBeige();
-        }
-      });
-      // Also check if style changed (show/hide)
-      if (m.target && m.target.id === 'moreMenuSheet') {
-        applyMenuBeige();
-      }
-    });
-  });
-  obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
-  // Also run on click of Plus tab
-  document.addEventListener('click', function(e) {
-    setTimeout(applyMenuBeige, 50);
-  });
-})();
-</script>
+
 <script>
 (function() {
   const el = document.querySelector('.calendar-grid-wrapper');
