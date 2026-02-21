@@ -28,7 +28,6 @@
 <style id="v3-critical">
 /* ── LAYOUT V3 ── */
 html[data-theme-v3="1"] body { padding-top: 40px !important; }
-@media (max-width: 768px) { html[data-theme-v3="1"] body { padding-top: 0 !important !important; } }
 html[data-theme-v3="1"] .sidebar {
   position: fixed !important; top: 40px !important;
   left: 0 !important; bottom: 0 !important;
@@ -2442,7 +2441,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     margin-left: 0 !important;
     padding-top: 0 !important;
   }
-  .page-content { padding: 16px 14px 90px !important; }
+  .page-content { padding: calc(60px + env(safe-area-inset-top,0px) + 6px) 14px 90px !important; }
 
 
   /* 2. HEADER DASHBOARD — caché sur mobile (titre dans mobile-header via JS) */
@@ -2582,6 +2581,15 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   /* 6. FAB */
   .fab-add-resa { background: #1A7A5E !important; }
 }
+</style>
+
+<style id="debug-spacing">
+/* DEBUG - identifier l'espace */
+.mobile-header { background: red !important; }
+.main-content { background: blue !important; }
+.page-content { background: green !important; }
+.app-container { background: orange !important; }
+body { background: pink !important; }
 </style>
 </head>
 <body data-page="app">
@@ -8008,15 +8016,10 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
      Placé en dernier pour écraser tous les autres CSS
 ═══════════════════════════════════════ -->
 <style>
-/* ── Body offset : barre dark (40px) — desktop seulement ── */
-@media (min-width: 769px) {
+/* ── Body offset : barre dark (40px) ── */
 html[data-theme-v3="1"] body {
   padding-top: 40px !important;
   margin-top: 0 !important;
-}
-}
-@media (max-width: 768px) {
-html[data-theme-v3="1"] body { padding-top: 0 !important; }
 }
 
 /* ── Masquer mobile-header sur desktop ── */
