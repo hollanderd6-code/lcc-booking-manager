@@ -1740,11 +1740,11 @@ html[data-theme-v3="1"] #kpiPropertiesCard .kpi-label {
 }
 html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
 html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value {
-  color: var(--obsidian) !important;
+  color: var(--jade) !important;
 }
 html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub,
 html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub {
-  color: var(--jade) !important;
+  color: var(--text-muted-v3, #7A8695) !important;
 }
 
 /* Period navigation & year view - pas de vert */
