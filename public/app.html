@@ -8007,10 +8007,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
      Placé en dernier pour écraser tous les autres CSS
 ═══════════════════════════════════════ -->
 <style>
-/* ── Body offset : barre dark (40px) ── */
-html[data-theme-v3="1"] body {
-  padding-top: 40px !important;
-  margin-top: 0 !important;
+/* ── Body offset : barre dark (40px) — desktop seulement ── */
+@media (min-width: 769px) {
+  html[data-theme-v3="1"] body {
+    padding-top: 40px !important;
+    margin-top: 0 !important;
+  }
 }
 
 /* ── Masquer mobile-header sur desktop ── */
