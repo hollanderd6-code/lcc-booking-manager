@@ -9358,33 +9358,44 @@ if (window.Capacitor) {
 })();
 </script>
 
-<script id="debug-measure">
-window.addEventListener('load', function() {
-  setTimeout(function() {
-    var els = {
-      'body': document.body,
-      'main-content': document.querySelector('.main-content'),
-      'page-content': document.querySelector('.page-content'),
-      'mobile-header': document.querySelector('.mobile-header'),
-      'main-header': document.querySelector('.main-header'),
-      'kpi-grid': document.querySelector('.kpi-grid'),
-    };
-    
-    var info = [];
-    for (var name in els) {
-      var el = els[name];
-      if (!el) { info.push(name + ': NOT FOUND'); continue; }
-      var cs = window.getComputedStyle(el);
-      var rect = el.getBoundingClientRect();
-      info.push(name + ': top=' + Math.round(rect.top) + ' paddingTop=' + cs.paddingTop + ' marginTop=' + cs.marginTop + ' h=' + Math.round(rect.height));
-    }
-    
-    var div = document.createElement('div');
-    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.85);color:white;font-size:11px;padding:8px;z-index:99999;font-family:monospace;';
-    div.innerHTML = info.join('<br>');
-    document.body.appendChild(div);
-  }, 1000);
-});
-</script>
+<!-- FIX ESPACE MOBILE - ajouté en dernier pour écraser tout -->
+<style id="mobile-gap-fix">
+@media (max-width: 768px) {
+  /* 1. body : pas de padding-top sur mobile */
+  body {
+    padding-top: 0 !important;
+  }
+  
+  /* 2. main-header : vraiment caché, sans espace */
+  header.main-header,
+  #bhMainHeader {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+  }
+  
+  /* 3. main-content : juste le padding pour compenser le header fixe */
+  .main-content,
+  .app-content {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  /* 4. page-content : padding normal */
+  .page-content {
+    padding: 16px 14px 90px !important;
+    margin-top: 0 !important;
+  }
+}
+</style>
+
 </body>
 </html>
