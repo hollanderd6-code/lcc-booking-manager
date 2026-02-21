@@ -2436,22 +2436,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   }
   #newReservationBtn { display: none !important; }
 
-  /* Bouton sync mobile — affiché en haut du contenu */
-  #syncBtn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px !important;
-    height: 48px !important;
-    border-radius: 14px !important;
-    background: var(--cream-warm, #F5F0E8) !important;
-    border: 1px solid var(--border-warm-v3, #E0D5C0) !important;
-    color: var(--text-2, #5A6A7A) !important;
-    font-size: 18px !important;
-    cursor: pointer !important;
-    margin-bottom: 16px !important;
-    box-shadow: none !important;
-  }
+
 
   /* 3. ÉLÉMENTS CACHÉS */
   .status-grid, .onboarding-section, .overview-card,
@@ -2721,16 +2706,15 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
           </p>
 </div>
 <div class="header-actions">
-<button id="newReservationBtn" onclick="var m=document.getElementById('newReservationModal');if(m){m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:7px;white-space:nowrap;">
+<button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
+<i class="fas fa-sync-alt"></i>
+</button>
+<button id="newReservationBtn" onclick="var m=document.getElementById('newReservationModal');if(m){m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
 </button>
 </div>
 </header>
 <div class="page-content">
-<!-- Bouton sync mobile -->
-<button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
-<i class="fas fa-sync-alt"></i>
-</button>
 <!-- Page Content -->
 <!-- KPI PRINCIPAUX -->
 <section class="kpi-grid">
@@ -4562,11 +4546,14 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       const end = parseDateSafe(rawEnd);
       if (!start || !end) return;
 
-      // Occupation (clamp dans le mois)
-      const startClamped = start < monthStart ? monthStart : start;
-      const endClamped = end > monthEnd ? monthEnd : end;
-      if (endClamped > startClamped) {
-        nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+      // Occupation (clamp dans le mois) — exclure les blocages manuels
+      const isBlock = r.type === 'block' || r.source === 'BLOCK';
+      if (!isBlock) {
+        const startClamped = start < monthStart ? monthStart : start;
+        const endClamped = end > monthEnd ? monthEnd : end;
+        if (endClamped > startClamped) {
+          nightsBooked += (endClamped - startClamped) / (1000 * 60 * 60 * 24);
+        }
       }
 
       // Check-in / out du jour (date-only)
@@ -7974,12 +7961,10 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
      Placé en dernier pour écraser tous les autres CSS
 ═══════════════════════════════════════ -->
 <style>
-/* ── Body offset : barre dark (40px) — desktop seulement ── */
-@media (min-width: 769px) {
-  html[data-theme-v3="1"] body {
-    padding-top: 40px !important;
-    margin-top: 0 !important;
-  }
+/* ── Body offset : barre dark (40px) ── */
+html[data-theme-v3="1"] body {
+  padding-top: 40px !important;
+  margin-top: 0 !important;
 }
 
 /* ── Masquer mobile-header sur desktop ── */
