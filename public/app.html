@@ -8968,6 +8968,37 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
 <script>
+// Force beige sur le menu "Plus" dès qu'il apparaît dans le DOM
+(function() {
+  function applyMenuBeige() {
+    var sheet = document.getElementById('moreMenuSheet');
+    if (sheet) {
+      sheet.style.setProperty('background', '#F5F0E8', 'important');
+      sheet.style.setProperty('background-color', '#F5F0E8', 'important');
+    }
+  }
+  // Observer DOM mutations
+  var obs = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(n) {
+        if (n.id === 'moreMenuSheet' || (n.querySelector && n.querySelector('#moreMenuSheet'))) {
+          applyMenuBeige();
+        }
+      });
+      // Also check if style changed (show/hide)
+      if (m.target && m.target.id === 'moreMenuSheet') {
+        applyMenuBeige();
+      }
+    });
+  });
+  obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+  // Also run on click of Plus tab
+  document.addEventListener('click', function(e) {
+    setTimeout(applyMenuBeige, 50);
+  });
+})();
+</script>
+<script>
 (function() {
   const el = document.querySelector('.calendar-grid-wrapper');
   if (!el) return;
