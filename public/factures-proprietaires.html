@@ -2700,7 +2700,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
   html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; overflow: visible !important; height: auto !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
   html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; }
 
   /* CRITIQUE : retirer overflow-y:auto du main-content pour que le scroll
@@ -2886,6 +2886,59 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   }
 }
 </style>
+
+
+<script id="fix-scroll-editor">
+(function() {
+  if (window.innerWidth > 768) return;
+  
+  function fixScroll() {
+    // Forcer tous les containers à permettre le scroll
+    var els = [
+      document.body,
+      document.documentElement,
+      document.querySelector('.app-container'),
+      document.querySelector('.main-wrapper'),
+      document.querySelector('.main-content'),
+      document.querySelector('.page-content'),
+      document.querySelector('#tab-create'),
+      document.querySelector('.invoice-editor-layout'),
+      document.querySelector('.editor-sidebar'),
+    ];
+    
+    els.forEach(function(el) {
+      if (!el) return;
+      el.style.removeProperty('overflow');
+      el.style.removeProperty('height');
+      el.style.removeProperty('max-height');
+      el.style.setProperty('overflow-x', 'hidden', 'important');
+      el.style.setProperty('height', 'auto', 'important');
+    });
+    
+    // Le scroll doit se faire sur body
+    document.body.style.setProperty('overflow-y', 'auto', 'important');
+    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+    
+    // Annuler tout touch listener qui bloquerait le scroll
+    document.querySelector('.main-content') && 
+      document.querySelector('.main-content').style.setProperty('overflow-y', 'visible', 'important');
+    
+    console.log('[fix-scroll] Applied');
+  }
+  
+  // Appliquer au chargement
+  document.addEventListener('DOMContentLoaded', fixScroll);
+  setTimeout(fixScroll, 500);
+  setTimeout(fixScroll, 1500);
+  
+  // Aussi appliquer quand on clique sur l'onglet Éditeur
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'btn-create') {
+      setTimeout(fixScroll, 100);
+    }
+  });
+})();
+</script>
 
 </body>
 </html>
