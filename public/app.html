@@ -9358,6 +9358,94 @@ if (window.Capacitor) {
 })();
 </script>
 
+
+<script id="mobile-gap-fix-js">
+(function fixMobileGap() {
+  if (window.innerWidth > 768) return;
+  
+  function applyFix() {
+    document.body.style.setProperty('padding-top', '0px', 'important');
+    
+    var mainHeader = document.querySelector('header.main-header') || document.getElementById('bhMainHeader');
+    if (mainHeader) {
+      mainHeader.style.setProperty('display', 'none', 'important');
+      mainHeader.style.setProperty('height', '0', 'important');
+      mainHeader.style.setProperty('min-height', '0', 'important');
+      mainHeader.style.setProperty('margin', '0', 'important');
+      mainHeader.style.setProperty('padding', '0', 'important');
+      mainHeader.style.setProperty('overflow', 'hidden', 'important');
+      mainHeader.style.setProperty('position', 'absolute', 'important');
+    }
+    
+    var mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      mainContent.style.setProperty('padding-top', 'calc(60px + env(safe-area-inset-top, 0px))', 'important');
+      mainContent.style.setProperty('margin-top', '0', 'important');
+      mainContent.style.setProperty('margin-left', '0', 'important');
+    }
+    
+    var pageContent = document.querySelector('.page-content');
+    if (pageContent) {
+      pageContent.style.setProperty('padding', '16px 14px 90px', 'important');
+      pageContent.style.setProperty('margin-top', '0', 'important');
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyFix);
+  } else {
+    applyFix();
+  }
+  setTimeout(applyFix, 500);
+  setTimeout(applyFix, 1500);
+})();
+</script>
+
+<script id="fix-scroll-editor">
+(function() {
+  if (window.innerWidth > 768) return;
+  
+  function fixScroll() {
+    var els = [
+      document.body,
+      document.documentElement,
+      document.querySelector('.app-container'),
+      document.querySelector('.main-wrapper'),
+      document.querySelector('.main-content'),
+      document.querySelector('.page-content'),
+      document.querySelector('#tab-create'),
+      document.querySelector('.invoice-editor-layout'),
+      document.querySelector('.editor-sidebar'),
+    ];
+    
+    els.forEach(function(el) {
+      if (!el) return;
+      el.style.removeProperty('overflow');
+      el.style.removeProperty('height');
+      el.style.removeProperty('max-height');
+      el.style.setProperty('overflow-x', 'hidden', 'important');
+      el.style.setProperty('height', 'auto', 'important');
+    });
+    
+    document.body.style.setProperty('overflow-y', 'auto', 'important');
+    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+    
+    var mc = document.querySelector('.main-content');
+    if (mc) mc.style.setProperty('overflow-y', 'visible', 'important');
+  }
+  
+  document.addEventListener('DOMContentLoaded', fixScroll);
+  setTimeout(fixScroll, 500);
+  setTimeout(fixScroll, 1500);
+  
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'btn-create') {
+      setTimeout(fixScroll, 100);
+    }
+  });
+})();
+</script>
+
 <script id="fcm-token-handler">
 // ============================================
 // 🔔 FCM TOKEN — envoi au serveur
