@@ -3662,6 +3662,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
         if (res.status === 401 || res.status === 403) {
           localStorage.removeItem('lcc_token');
           localStorage.removeItem('lcc_user');
+          if (window._syncTokenToNative) window._syncTokenToNative('');
           window.location.href = '/login.html';
         }
         return;
@@ -9358,14 +9359,11 @@ if (window.Capacitor) {
 })();
 </script>
 
-
 <script id="mobile-gap-fix-js">
 (function fixMobileGap() {
   if (window.innerWidth > 768) return;
-  
   function applyFix() {
     document.body.style.setProperty('padding-top', '0px', 'important');
-    
     var mainHeader = document.querySelector('header.main-header') || document.getElementById('bhMainHeader');
     if (mainHeader) {
       mainHeader.style.setProperty('display', 'none', 'important');
@@ -9376,26 +9374,20 @@ if (window.Capacitor) {
       mainHeader.style.setProperty('overflow', 'hidden', 'important');
       mainHeader.style.setProperty('position', 'absolute', 'important');
     }
-    
     var mainContent = document.querySelector('.main-content');
     if (mainContent) {
       mainContent.style.setProperty('padding-top', 'calc(60px + env(safe-area-inset-top, 0px))', 'important');
       mainContent.style.setProperty('margin-top', '0', 'important');
       mainContent.style.setProperty('margin-left', '0', 'important');
     }
-    
     var pageContent = document.querySelector('.page-content');
     if (pageContent) {
       pageContent.style.setProperty('padding', '16px 14px 90px', 'important');
       pageContent.style.setProperty('margin-top', '0', 'important');
     }
   }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyFix);
-  } else {
-    applyFix();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyFix);
+  else applyFix();
   setTimeout(applyFix, 500);
   setTimeout(applyFix, 1500);
 })();
@@ -9404,21 +9396,13 @@ if (window.Capacitor) {
 <script id="fix-scroll-editor">
 (function() {
   if (window.innerWidth > 768) return;
-  
   function fixScroll() {
-    var els = [
-      document.body,
-      document.documentElement,
-      document.querySelector('.app-container'),
-      document.querySelector('.main-wrapper'),
-      document.querySelector('.main-content'),
-      document.querySelector('.page-content'),
-      document.querySelector('#tab-create'),
-      document.querySelector('.invoice-editor-layout'),
-      document.querySelector('.editor-sidebar'),
-    ];
-    
-    els.forEach(function(el) {
+    [document.body, document.documentElement,
+     document.querySelector('.app-container'),
+     document.querySelector('.main-wrapper'),
+     document.querySelector('.main-content'),
+     document.querySelector('.page-content'),
+    ].forEach(function(el) {
       if (!el) return;
       el.style.removeProperty('overflow');
       el.style.removeProperty('height');
@@ -9426,74 +9410,40 @@ if (window.Capacitor) {
       el.style.setProperty('overflow-x', 'hidden', 'important');
       el.style.setProperty('height', 'auto', 'important');
     });
-    
     document.body.style.setProperty('overflow-y', 'auto', 'important');
     document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
-    
     var mc = document.querySelector('.main-content');
     if (mc) mc.style.setProperty('overflow-y', 'visible', 'important');
   }
-  
   document.addEventListener('DOMContentLoaded', fixScroll);
   setTimeout(fixScroll, 500);
   setTimeout(fixScroll, 1500);
-  
-  document.addEventListener('click', function(e) {
-    if (e.target && e.target.id === 'btn-create') {
-      setTimeout(fixScroll, 100);
-    }
-  });
 })();
 </script>
 
 <script id="fcm-token-handler">
-// ============================================
-// 🔔 FCM TOKEN — envoi au serveur
-// ============================================
 async function saveTokenToServer(token) {
   if (!token) return;
   try {
-    // Récupérer le JWT depuis localStorage ou sessionStorage
-    const jwt = localStorage.getItem('authToken') || 
-                localStorage.getItem('token') || 
-                sessionStorage.getItem('authToken') ||
-                sessionStorage.getItem('token');
-    
-    if (!jwt) {
-      console.warn('[FCM] Pas de JWT trouvé, retry dans 3s...');
-      setTimeout(() => saveTokenToServer(token), 3000);
-      return;
-    }
-    
-    const apiBase = window.API_BASE || window.apiBase || 'https://boostinghost.fr';
-    
-    const res = await fetch(`${apiBase}/api/save-token`, {
+    const jwt = localStorage.getItem('lcc_token');
+    if (!jwt) { setTimeout(() => saveTokenToServer(token), 3000); return; }
+    const apiBase = window.API_BASE || 'https://lcc-booking-manager.onrender.com';
+    const res = await fetch(apiBase + '/api/save-token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${jwt}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
       body: JSON.stringify({ token, device_type: 'ios' }),
     });
-    
     const data = await res.json();
-    console.log('[FCM] ✅ Token sauvegardé en base:', data);
+    console.log('[FCM] ✅ Token sauvegardé:', data);
   } catch (err) {
-    console.error('[FCM] ❌ Erreur sauvegarde token:', err);
+    console.error('[FCM] ❌ Erreur:', err);
   }
 }
-
-// Handler appelé par l'AppDelegate iOS via evaluateJavaScript
 window.onFCMToken = function(token) {
-  console.log('[FCM] Token reçu depuis iOS:', token.substring(0, 20) + '...');
+  console.log('[FCM] Token reçu depuis iOS');
   saveTokenToServer(token);
 };
-
-// Si le token était déjà injecté avant ce script (race condition)
-if (window.fcmToken) {
-  console.log('[FCM] Token déjà disponible au chargement, envoi immédiat');
-  saveTokenToServer(window.fcmToken);
-}
+if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
 </body>
