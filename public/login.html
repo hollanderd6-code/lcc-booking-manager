@@ -320,6 +320,8 @@
 
           // Stocker le token
           localStorage.setItem('lcc_token', data.token);
+          // ✅ Sync vers UserDefaults iOS pour persistance
+          if (window._syncTokenToNative) window._syncTokenToNative(data.token);
 
           // Stocker le type de compte
           const accountType = data.accountType || (data.subAccount ? 'sub' : 'main');
