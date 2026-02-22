@@ -2700,7 +2700,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
   html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; overflow: visible !important; height: auto !important; }
   html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; }
 
   /* CRITIQUE : retirer overflow-y:auto du main-content pour que le scroll
@@ -2755,34 +2755,33 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   .stat-label { font-size: 10px !important; line-height: 1.2 !important; }
   .stat-value { font-size: 16px !important; font-weight: 700 !important; }
 
-  /* 6. ONGLETS — position statique, pas de sticky (bug hit-test iOS) */
+  /* 6. ONGLETS — sticky sous le mobile header, scroll horizontal */
   html[data-theme-v3="1"] .nav-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
-    overflow-x: visible !important;
-    gap: 4px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
     background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(8px) !important;
     border: none !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
     border-radius: 0 !important;
-    padding: 8px 14px 10px !important;
+    padding: 8px 0 10px !important;
     margin-bottom: 16px !important;
     width: 100% !important;
-    box-sizing: border-box !important;
-    position: static !important;
+    position: sticky !important;
+    top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 100 !important;
   }
   html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
   html[data-theme-v3="1"] .nav-tab {
-    flex: 1 !important;
+    flex-shrink: 0 !important;
     white-space: nowrap !important;
-    padding: 10px 4px !important;
+    padding: 8px 16px !important;
     border-radius: 999px !important;
-    font-size: 12px !important;
-    text-align: center !important;
-    min-width: 0 !important;
-    cursor: pointer !important;
-    touch-action: manipulation !important;
-    position: static !important;
+    font-size: 13px !important;
   }
 
   /* 7. INVOICE CARDS GRID — 1 colonne */
