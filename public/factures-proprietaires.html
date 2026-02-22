@@ -644,21 +644,8 @@ html[data-theme-v3="1"] .modal-content {
   .form-control { font-size: 16px !important; padding: 10px 12px !important; }
   .editor-section [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
   .editor-section .btn { width: 100%; padding: 12px 16px !important; font-size: 15px !important; }
-  .nav-tabs { 
-    width: 100% !important; 
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    box-sizing: border-box !important;
-  }
-  .nav-tabs::-webkit-scrollbar { display: none !important; }
-  .nav-tab { 
-    flex: 1 !important; 
-    font-size: 13px !important; 
-    white-space: nowrap !important;
-    min-width: fit-content !important;
-    text-align: center !important;
-  }
+  .nav-tabs { width: 100% !important; }
+  .nav-tab { flex: 1 !important; font-size: 13px !important; }
 }
 </style>
 <style>
@@ -2768,33 +2755,33 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   .stat-label { font-size: 10px !important; line-height: 1.2 !important; }
   .stat-value { font-size: 16px !important; font-weight: 700 !important; }
 
-  /* 6. ONGLETS — sticky sous le mobile header, scroll horizontal */
+  /* 6. ONGLETS — sticky sous le mobile header */
   html[data-theme-v3="1"] .nav-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    gap: 6px !important;
+    overflow-x: visible !important;
+    gap: 4px !important;
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(8px) !important;
     border: none !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
     border-radius: 0 !important;
-    padding: 8px 0 10px !important;
+    padding: 8px 14px 10px !important;
     margin-bottom: 16px !important;
     width: 100% !important;
+    box-sizing: border-box !important;
     position: sticky !important;
     top: calc(60px + env(safe-area-inset-top, 0px)) !important;
     z-index: 100 !important;
   }
-  html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
   html[data-theme-v3="1"] .nav-tab {
-    flex-shrink: 0 !important;
+    flex: 1 !important;
     white-space: nowrap !important;
-    padding: 8px 16px !important;
+    padding: 8px 4px !important;
     border-radius: 999px !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
+    text-align: center !important;
+    min-width: 0 !important;
   }
 
   /* 7. INVOICE CARDS GRID — 1 colonne */
