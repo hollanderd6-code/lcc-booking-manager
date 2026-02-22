@@ -2704,6 +2704,32 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   <a class="mobile-logo" href="/app.html">
     <span class="mobile-logo-text"></span>
   </a>
+  <button id="mobileSyncBtn" onclick="
+    this.style.background='rgba(26,122,94,0.25)';
+    this.querySelector('i').style.transform='rotate(360deg)';
+    setTimeout(() => { this.style.background='rgba(26,122,94,0.12)'; this.querySelector('i').style.transform='rotate(0deg)'; }, 600);
+    document.getElementById('syncBtn') && document.getElementById('syncBtn').click();
+  " style="
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(26,122,94,0.12);
+    color: #1A7A5E;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 17px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
+  ">
+    <i class="fas fa-sync-alt" style="transition: transform 0.6s ease;"></i>
+  </button>
 </div>
 <button class="mobile-menu-btn" id="mobileMenuBtn">
 <i class="fas fa-bars"></i>
