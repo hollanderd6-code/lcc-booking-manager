@@ -644,8 +644,21 @@ html[data-theme-v3="1"] .modal-content {
   .form-control { font-size: 16px !important; padding: 10px 12px !important; }
   .editor-section [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
   .editor-section .btn { width: 100%; padding: 12px 16px !important; font-size: 15px !important; }
-  .nav-tabs { width: 100% !important; }
-  .nav-tab { flex: 1 !important; font-size: 13px !important; }
+  .nav-tabs { 
+    width: 100% !important; 
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    box-sizing: border-box !important;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none !important; }
+  .nav-tab { 
+    flex: 1 !important; 
+    font-size: 13px !important; 
+    white-space: nowrap !important;
+    min-width: fit-content !important;
+    text-align: center !important;
+  }
 }
 </style>
 <style>
