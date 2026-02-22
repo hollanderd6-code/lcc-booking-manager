@@ -2755,14 +2755,13 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   .stat-label { font-size: 10px !important; line-height: 1.2 !important; }
   .stat-value { font-size: 16px !important; font-weight: 700 !important; }
 
-  /* 6. ONGLETS — sticky sous le mobile header */
+  /* 6. ONGLETS — position statique, pas de sticky (bug hit-test iOS) */
   html[data-theme-v3="1"] .nav-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: visible !important;
     gap: 4px !important;
     background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(8px) !important;
     border: none !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
     border-radius: 0 !important;
@@ -2770,10 +2769,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     margin-bottom: 16px !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    position: sticky !important;
-    top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 500 !important;
-    isolation: isolate !important;
+    position: static !important;
   }
   html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
   html[data-theme-v3="1"] .nav-tab {
@@ -2784,11 +2780,9 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     font-size: 12px !important;
     text-align: center !important;
     min-width: 0 !important;
-    position: relative !important;
-    z-index: 501 !important;
     cursor: pointer !important;
     touch-action: manipulation !important;
-    -webkit-tap-highlight-color: rgba(0,0,0,0.1) !important;
+    position: static !important;
   }
 
   /* 7. INVOICE CARDS GRID — 1 colonne */
