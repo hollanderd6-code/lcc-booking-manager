@@ -9489,7 +9489,7 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
   history.replaceState(null, null, window.location.pathname);
   window.addEventListener('load', function() {
     setTimeout(function() {
-      window.scrollTo({ top: 1027, behavior: 'auto' });
+      document.documentElement.scrollTo({ top: 1027, behavior: 'auto' });
     }, 300);
   });
 })();
