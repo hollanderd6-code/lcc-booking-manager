@@ -5206,6 +5206,14 @@ window.LCC_PROPERTIES = properties;
       window.__LCC_KPI_STATE = { reservations, properties };
       if (window.renderModernCalendar) {
         window.renderModernCalendar(reservations, properties);
+        // Scroll vers le calendrier si demandé via ?scroll=calendar
+        if (new URLSearchParams(window.location.search).get('scroll') === 'calendar') {
+          history.replaceState(null, null, window.location.pathname);
+          setTimeout(function() {
+            var el = document.getElementById('calendarSection');
+            if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: 'auto' });
+          }, 50);
+        }
       }
       computeKpis(reservations, properties);
       // Mettre à jour les statuts de connexion dans la top bar
@@ -9483,34 +9491,8 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
 <script>
-// Scroll vers le calendrier via ?scroll=calendar (sans ancre HTML pour éviter le scroll natif)
-(function() {
-  function checkScrollParam() {
-    var params = new URLSearchParams(window.location.search);
-    if (params.get('scroll') !== 'calendar') return;
-    history.replaceState(null, null, window.location.pathname);
-
-    function doScroll() {
-      var el = document.getElementById('calendarSection');
-      if (!el) return;
-      // Récupérer la position réelle de l'élément dans la page
-      var rect = el.getBoundingClientRect();
-      var top = rect.top + window.scrollY;
-      window.scrollTo({ top: top, behavior: 'auto' });
-    }
-
-    // Attendre que les données soient chargées (le calendrier se rend après l'API)
-    setTimeout(doScroll, 300);
-    setTimeout(doScroll, 800);
-    setTimeout(doScroll, 1500);
-    setTimeout(doScroll, 2500);
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkScrollParam);
-  } else {
-    checkScrollParam();
-  }
-})();
+// Scroll vers le calendrier géré directement dans loadDataAndUpdateKpis
+(function() {})();
 </script>
 
 </body>
