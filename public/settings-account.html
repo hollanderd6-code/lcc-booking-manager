@@ -274,71 +274,34 @@
     }
 
     /* ===== Notifications toggles ===== */
-    .notif-group {
-      margin-bottom: 24px;
-    }
+    .notif-group { margin-bottom: 24px; }
     .notif-group-title {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-secondary);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-secondary);
+      margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
     }
     .notif-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--border-color);
     }
     .notif-row:last-child { border-bottom: none; }
-    .notif-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .notif-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-    .notif-desc {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    /* Toggle switch style Apple */
+    .notif-info { display: flex; flex-direction: column; gap: 2px; }
+    .notif-label { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+    .notif-desc { font-size: 12px; color: var(--text-secondary); }
     .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 26px;
-      flex-shrink: 0;
-      margin-left: 16px;
+      position: relative; display: inline-block;
+      width: 44px; height: 26px; flex-shrink: 0; margin-left: 16px;
     }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .toggle-slider {
-      position: absolute;
-      cursor: pointer;
+      position: absolute; cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: #ccc;
-      border-radius: 26px;
-      transition: .3s;
+      background: #ccc; border-radius: 26px; transition: .3s;
     }
     .toggle-slider:before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 3px;
-      bottom: 3px;
-      background: white;
-      border-radius: 50%;
-      transition: .3s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      position: absolute; content: ""; height: 20px; width: 20px;
+      left: 3px; bottom: 3px; background: white; border-radius: 50%;
+      transition: .3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
     .toggle-switch input:checked + .toggle-slider { background: #1A7A5E; }
     .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
@@ -1167,13 +1130,13 @@ html[data-theme-v3="1"] .subscription-card {
 <i class="fas fa-users"></i>
             Équipe &amp; Accès
           </button>
+<button class="settings-tab" data-tab="notifications">
+  <i class="fas fa-bell"></i>
+  Notifications
+</button>
 <button class="settings-tab" data-tab="subscription">
 <i class="fas fa-crown"></i>
     Mon abonnement
-  </button>
-  <button class="settings-tab" data-tab="notifications">
-    <i class="fas fa-bell"></i>
-    Notifications
   </button>
 </div>
 <!-- Onglet : Profil -->
@@ -1604,6 +1567,51 @@ html[data-theme-v3="1"] .subscription-card {
 
 <!-- Fin onglet team -->
 <!-- Onglet : Mon abonnement -->
+<div class="tab-pane" data-tab="notifications" id="tab-notifications">
+  <section class="card mb-lg">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-bell"></i> Préférences de notifications</div>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
+        Choisissez les notifications push que vous souhaitez recevoir sur votre iPhone.
+      </p>
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-calendar-check"></i> Réservations</div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Nouvelle réservation</span><span class="notif-desc">Quand une réservation est créée ou synchronisée</span></div><label class="toggle-switch"><input type="checkbox" id="notif_new_reservation" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Réservation annulée</span><span class="notif-desc">Quand une réservation est annulée</span></div><label class="toggle-switch"><input type="checkbox" id="notif_reservation_cancelled" checked><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-house"></i> Opérationnel</div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Récap du matin (8h)</span><span class="notif-desc">Arrivées et départs du jour chaque matin</span></div><label class="toggle-switch"><input type="checkbox" id="notif_daily_summary" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Rappel arrivées de demain</span><span class="notif-desc">La veille des arrivées prévues</span></div><label class="toggle-switch"><input type="checkbox" id="notif_reminder_j1" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Rappel ménage (J-1)</span><span class="notif-desc">La veille d'un départ avec ménage à prévoir</span></div><label class="toggle-switch"><input type="checkbox" id="notif_cleaning_reminder" checked><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-broom"></i> Ménage</div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Ménage terminé</span><span class="notif-desc">Quand un prestataire marque le ménage comme terminé</span></div><label class="toggle-switch"><input type="checkbox" id="notif_cleaning_completed" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Checklist validée</span><span class="notif-desc">Quand toutes les tâches d'une checklist sont cochées</span></div><label class="toggle-switch"><input type="checkbox" id="notif_checklist_done" checked><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-shield-alt"></i> Cautions</div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Demande de caution</span><span class="notif-desc">J-2 avant l'arrivée d'un voyageur</span></div><label class="toggle-switch"><input type="checkbox" id="notif_deposit_request" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Rappel libération caution</span><span class="notif-desc">J-1 avant la date de libération</span></div><label class="toggle-switch"><input type="checkbox" id="notif_deposit_release" checked><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-comment"></i> Messages</div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Nouveau message</span><span class="notif-desc">Quand un voyageur envoie un message</span></div><label class="toggle-switch"><input type="checkbox" id="notif_new_message" checked><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-file-invoice"></i> Factures</div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">Nouvelle facture propriétaire</span><span class="notif-desc">Quand une facture est générée</span></div><label class="toggle-switch"><input type="checkbox" id="notif_new_invoice" checked><span class="toggle-slider"></span></label></div>
+      </div>
+      <button id="saveNotifPrefs" class="btn btn-primary" style="margin-top:8px;">
+        <i class="fas fa-save"></i> Enregistrer les préférences
+      </button>
+      <div id="notifPrefsStatus" class="save-status-inline"></div>
+    </div>
+  </section>
+</div>
 <div class="tab-pane" data-tab="subscription" id="tab-subscription">
 <section class="card mb-lg">
 <div class="card-header">
@@ -1624,133 +1632,6 @@ html[data-theme-v3="1"] .subscription-card {
 </div>
 </div>
 </div>
-
-<div class="tab-pane" data-tab="notifications" id="tab-notifications">
-  <section class="card mb-lg">
-    <div class="card-header">
-      <div class="card-title">
-        <i class="fas fa-bell"></i>
-        Préférences de notifications
-      </div>
-    </div>
-    <div class="card-body">
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
-        Choisissez les notifications push que vous souhaitez recevoir sur votre iPhone.
-      </p>
-
-      <!-- Réservations -->
-      <div class="notif-group">
-        <div class="notif-group-title"><i class="fas fa-calendar-check"></i> Réservations</div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Nouvelle réservation</span>
-            <span class="notif-desc">Quand une réservation est créée ou synchronisée</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_new_reservation" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Réservation annulée</span>
-            <span class="notif-desc">Quand une réservation est annulée</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_reservation_cancelled" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Opérationnel -->
-      <div class="notif-group">
-        <div class="notif-group-title"><i class="fas fa-house"></i> Opérationnel</div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Récap du matin (8h)</span>
-            <span class="notif-desc">Arrivées et départs du jour chaque matin</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_daily_summary" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Rappel ménage (J-1)</span>
-            <span class="notif-desc">La veille d'un départ avec ménage à prévoir</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_cleaning_reminder" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Cautions -->
-      <div class="notif-group">
-        <div class="notif-group-title"><i class="fas fa-shield-alt"></i> Cautions</div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Demande de caution</span>
-            <span class="notif-desc">J-2 avant l'arrivée d'un voyageur</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_deposit_request" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Rappel libération caution</span>
-            <span class="notif-desc">J-1 avant la date de libération</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_deposit_release" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Messages -->
-      <div class="notif-group">
-        <div class="notif-group-title"><i class="fas fa-comment"></i> Messages</div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Nouveau message</span>
-            <span class="notif-desc">Quand un voyageur envoie un message</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_new_message" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Factures -->
-      <div class="notif-group">
-        <div class="notif-group-title"><i class="fas fa-file-invoice"></i> Factures</div>
-        <div class="notif-row">
-          <div class="notif-info">
-            <span class="notif-label">Nouvelle facture propriétaire</span>
-            <span class="notif-desc">Quand une facture est générée</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="notif_new_invoice" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <button id="saveNotifPrefs" class="btn btn-primary" style="margin-top:8px;">
-        <i class="fas fa-save"></i> Enregistrer les préférences
-      </button>
-      <div id="notifSaveStatus" class="save-status-inline"></div>
-    </div>
-  </section>
-</div>
-
 </main>
 </div>
 <!-- Script auth + user + logout -->
@@ -2100,102 +1981,6 @@ if (logoInput && logoPreview) {
     }
   });
 }
-
-            /* -------- NOTIFICATIONS -------- */
-
-      const notifNewReservation = document.getElementById('notifNewReservation');
-      const notifReminder       = document.getElementById('notifReminder');
-      const saveNotifBtn        = document.getElementById('saveNotifBtn');
-      const notifSaveStatus     = document.getElementById('notifSaveStatus');
-
-      const tokenNotif = localStorage.getItem('lcc_token');
-
-      async function loadNotificationSettings() {
-        if (!notifNewReservation || !notifReminder) return;
-
-        // 1) Essayer de charger depuis l'API
-        if (tokenNotif) {
-          try {
-            const res = await fetch('/api/settings/notifications', {
-              headers: {
-                'Authorization': 'Bearer ' + tokenNotif
-              }
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              if (typeof data.newReservation === 'boolean') {
-                notifNewReservation.checked = data.newReservation;
-              }
-              if (typeof data.reminder === 'boolean') {
-                notifReminder.checked = data.reminder;
-              }
-
-              // On garde aussi une copie locale pour l'UI
-              localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
-              return; // on s'arrête là si tout va bien
-            }
-          } catch (e) {
-            console.error('Erreur chargement notifs depuis API', e);
-          }
-        }
-
-        // 2) Fallback : lire depuis le localStorage si l'API n'a pas répondu
-        const savedNotifRaw = localStorage.getItem('lcc_settings_notif');
-        if (savedNotifRaw) {
-          try {
-            const savedNotif = JSON.parse(savedNotifRaw);
-            if (typeof savedNotif.newReservation === 'boolean') {
-              notifNewReservation.checked = savedNotif.newReservation;
-            }
-            if (typeof savedNotif.reminder === 'boolean') {
-              notifReminder.checked = savedNotif.reminder;
-            }
-          } catch (e) {
-            console.error('Erreur lecture notifs paramètres', e);
-          }
-        }
-      }
-
-      loadNotificationSettings();
-
-      if (saveNotifBtn && notifNewReservation && notifReminder) {
-        saveNotifBtn.addEventListener('click', async function () {
-          const data = {
-            newReservation: notifNewReservation.checked,
-            reminder: notifReminder.checked
-          };
-
-          // Sauvegarde locale pour l'UI
-          localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
-
-          // Sauvegarde côté serveur
-          if (tokenNotif) {
-            try {
-              const res = await fetch('/api/settings/notifications', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer ' + tokenNotif
-                },
-                body: JSON.stringify(data)
-              });
-              if (!res.ok) {
-                console.error('Erreur API sauvegarde notifs, statut:', res.status);
-              }
-            } catch (e) {
-              console.error('Erreur sauvegarde notifs via API', e);
-            }
-          }
-
-          if (notifSaveStatus) {
-            notifSaveStatus.textContent = 'Préférences de notifications enregistrées.';
-            setTimeout(() => { notifSaveStatus.textContent = ''; }, 2500);
-          } else {
-            alert('Préférences de notifications enregistrées');
-          }
-        });
-      }
 
       /* -------- STRIPE CONNECT -------- */
 
@@ -3158,6 +2943,67 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 </style>
+
+
+  // ===== Notifications préférences =====
+  (function() {
+    const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_checklist_done', 'notif_deposit_request', 'notif_deposit_release', 'notif_new_message', 'notif_new_invoice'];
+    const tokenNotif = localStorage.getItem('lcc_token');
+
+    async function loadNotificationSettings() {
+      try {
+        const res = await fetch('/api/settings/notifications', {
+          headers: { 'Authorization': 'Bearer ' + tokenNotif }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          NOTIF_KEYS.forEach(key => {
+            const el = document.getElementById(key);
+            if (el && data[key] !== undefined) el.checked = data[key];
+          });
+          localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
+          return;
+        }
+      } catch(e) {}
+      const saved = localStorage.getItem('lcc_settings_notif');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          NOTIF_KEYS.forEach(key => {
+            const el = document.getElementById(key);
+            if (el && data[key] !== undefined) el.checked = data[key];
+          });
+        } catch(e) {}
+      }
+    }
+
+    loadNotificationSettings();
+
+    const saveBtn = document.getElementById('saveNotifPrefs');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async function() {
+        const prefs = {};
+        NOTIF_KEYS.forEach(key => {
+          const el = document.getElementById(key);
+          if (el) prefs[key] = el.checked;
+        });
+        localStorage.setItem('lcc_settings_notif', JSON.stringify(prefs));
+        try {
+          await fetch('/api/settings/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tokenNotif },
+            body: JSON.stringify(prefs)
+          });
+        } catch(e) {}
+        const status = document.getElementById('notifPrefsStatus');
+        if (status) {
+          status.textContent = '✅ Préférences sauvegardées';
+          status.style.color = '#059669';
+          setTimeout(() => status.textContent = '', 3000);
+        }
+      });
+    }
+  })();
 
 </body>
 </html>
