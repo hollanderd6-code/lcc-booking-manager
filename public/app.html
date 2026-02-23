@@ -5206,14 +5206,6 @@ window.LCC_PROPERTIES = properties;
       window.__LCC_KPI_STATE = { reservations, properties };
       if (window.renderModernCalendar) {
         window.renderModernCalendar(reservations, properties);
-        // Scroll vers le calendrier si demandé via ?scroll=calendar
-        if (new URLSearchParams(window.location.search).get('scroll') === 'calendar') {
-          history.replaceState(null, null, window.location.pathname);
-          setTimeout(function() {
-            var el = document.getElementById('calendarSection');
-            if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: 'auto' });
-          }, 50);
-        }
       }
       computeKpis(reservations, properties);
       // Mettre à jour les statuts de connexion dans la top bar
@@ -9491,8 +9483,21 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
 <script>
-// Scroll vers le calendrier géré directement dans loadDataAndUpdateKpis
-(function() {})();
+// Intercepter le scroll vers #calendarSection pour ajouter un offset
+(function() {
+  function scrollWithOffset() {
+    if (window.location.hash !== '#calendarSection') return;
+    var el = document.getElementById('calendarSection');
+    if (!el) return;
+    // Supprimer le hash pour éviter re-scroll
+    history.replaceState(null, null, window.location.pathname);
+    // Scroll manuel avec offset (120px = barre noire visible)
+    var top = el.getBoundingClientRect().top + window.scrollY - 120;
+    window.scrollTo({ top: top, behavior: 'auto' });
+  }
+  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
+})();
 </script>
 
 </body>
