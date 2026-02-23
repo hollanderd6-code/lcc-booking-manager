@@ -701,9 +701,24 @@ html[data-theme-v3="1"] .mobile-header {
 
 <!-- Auth check -->
 <script>
+// ============================================
+// HELPER : récupère le token depuis URL ou localStorage
+// Permet à l'app mobile de passer le token en paramètre URL
+// ex: /help.html?token=xxx
+// ============================================
+function getToken() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('token') || localStorage.getItem('lcc_token');
+}
+
 (function () {
-  const token = localStorage.getItem('lcc_token');
+  const token = getToken();
   if (!token) { window.location.href = '/login.html'; return; }
+  // Si le token vient de l'URL, le stocker dans localStorage pour la session
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('token')) {
+    localStorage.setItem('lcc_token', urlParams.get('token'));
+  }
   const rawUser = localStorage.getItem('lcc_user');
   let user = null;
   try { user = rawUser ? JSON.parse(rawUser) : null; } catch (e) {}
@@ -758,7 +773,7 @@ let selectedImageFile = null;
 // INITIALISATION
 // ============================================
 async function initSupportChat() {
-  const token = localStorage.getItem('lcc_token');
+  const token = getToken();
   if (!token) return;
 
   try {
@@ -798,7 +813,7 @@ async function initSupportChat() {
 // CHARGER LES MESSAGES
 // ============================================
 async function loadSupportMessages() {
-  const token = localStorage.getItem('lcc_token');
+  const token = getToken();
   const container = document.getElementById('supportMessages');
 
   const res = await fetch(`${API_URL}/api/support/messages/${supportConversationId}`, {
@@ -899,7 +914,7 @@ async function sendSupportMessage() {
   scrollToBottom();
 
   try {
-    const token = localStorage.getItem('lcc_token');
+    const token = getToken();
     const res = await fetch(`${API_URL}/api/support/messages`, {
       method: 'POST',
       headers: {
@@ -957,7 +972,7 @@ async function uploadSupportImage() {
   removeImagePreview();
 
   try {
-    const token = localStorage.getItem('lcc_token');
+    const token = getToken();
     await fetch(`${API_URL}/api/support/upload`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
@@ -985,7 +1000,7 @@ async function markMessagesAsRead() {
   // Le GET messages marque déjà comme lu côté serveur
   // On refait un appel silencieux
   try {
-    const token = localStorage.getItem('lcc_token');
+    const token = getToken();
     await fetch(`${API_URL}/api/support/messages/${supportConversationId}`, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
