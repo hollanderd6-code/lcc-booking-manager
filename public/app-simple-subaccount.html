@@ -9,38 +9,144 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Boostinghost Manager – Dashboard</title>
 <!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=3" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/style.css?v=3" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/bh-v3-mobile.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/messages-badge-red.css"> 
+<link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link rel="stylesheet" href="/css/dark-mode.css">    
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=4">
+<script>
+  // Activation permanente du thème V3
+  document.documentElement.setAttribute('data-theme-v3','1');
+</script>    
+<style id="v3-critical">
+/* ── LAYOUT V3 ── */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* ── BARRE DARK EN HAUT ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: #0D1117;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
+  color: rgba(255,255,255,.4);
+  font-weight: 500;
+  margin-right: 6px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: white;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
+  background: #1A7A5E;
+  color: white;
+  border-color: #1A7A5E;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-theme-toggle {
+  width: 44px; height: 24px;
+  background: rgba(255,255,255,.15);
+  border-radius: 999px; border: none; cursor: pointer;
+  position: relative; transition: background .2s; flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-theme-toggle::after {
+  content: ''; position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white; border-radius: 50%; transition: transform .2s;
+}
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
+@media (max-width: 768px) {
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar { top: 0 !important; }
+}
+html[data-theme-v3="1"] #syncBtn,
+html[data-theme-v3="1"] .header-actions .btn-icon {
+  background: transparent !important;
+  border: 1px solid rgba(13,17,23,.1) !important;
+  color: #3D4A5C !important;
+  box-shadow: none !important;
+}
+html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
+</style>
 <style>
-    html, body {
-      margin: 0 !important;
-      }
-
-    .app-container {
-      margin-top: 0 !important;
-    }
-
-    .main-header {
-      margin-top: 0 !important;
-    }
-
-    /* (patched) removed inline .main-content padding override for iOS safe-area */
-
-    .page-content {
-      margin-top: 0 !important;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    html, body { margin: 0 !important; }
+    .app-container { margin-top: 0 !important; }
+    .main-header { margin-top: 0 !important; }
+    .page-content { margin-top: 0 !important; }
+    html { scroll-behavior: smooth; }
 
     /* Badges source pour FullCalendar */
     .bh-event-source i {
@@ -2388,29 +2494,38 @@
 <script src="/js/sub-account-guard.js"></script>   
 </head>
 <body data-page="app">
+
+<!-- BARRE DARK V3 -->
+<nav class="bh-demo-nav" id="bhHeader">
+  <span class="bh-demo-label">Boostinghost</span>
+  <div class="bh-demo-right">
+    <span id="statusAirbnb" class="bh-demo-btn"><i class="fa-brands fa-airbnb"></i> Airbnb <span id="airbnbStatus" style="color:#4ade80">● Connecté</span></span>
+    <span id="statusBooking" class="bh-demo-btn"><span style="font-weight:700;color:#6ab0f5">B.</span> Booking.com <span id="bookingStatus" style="color:#4ade80">● Connecté</span></span>
+    <span id="statusStripe" class="bh-demo-btn"><i class="fa-brands fa-stripe-s"></i> Stripe <span id="stripeStatus" style="color:#4ade80">● Connecté</span></span>
+    <span class="bh-demo-mode-label" style="margin-left:8px;">MODE</span>
+    <button class="bh-theme-toggle" id="themeToggleV3" title="Basculer thème"></button>
+  </div>
+</nav>
+
 <div id="subscriptionAlert" style="display: none;">
 <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px 24px; text-align: center; font-size: 15px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 9999;">
 <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
 <span id="alertMessage"></span>
-<button onclick="window.location.href='/pricing.html'" style="margin-left: 16px; background: white; color: #d97706; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-      Choisir un plan
-    </button>
 </div>
 </div>
+
 <!-- MOBILE HEADER -->
-<div class="mobile-header">
-  <a class="mobile-logo" href="/app.html">
+<div class="mobile-header" style="display:none;">
+  <a class="mobile-logo" href="/sub-account.html">
     <span class="mobile-logo-text"></span>
   </a>
 </div>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
-</div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
-<!-- Sidebar -->
-<aside class="sidebar">
+<!-- Sidebar injectée dynamiquement par bh-layout.js -->
+<div id="bhSidebar"></div>
+<!-- PLACEHOLDER sidebar pour éviter les erreurs JS -->
+<aside class="sidebar" style="display:none;" id="legacySidebar">
 <div class="sidebar-header">
 <a class="sidebar-logo" href="/">
 <img src="/asset/boostinghost-icon-circle.png" alt="Boostinghost" style="width:40px;height:40px;">
@@ -2506,17 +2621,18 @@
 <!-- Main Content -->
 <main class="main-content">
 <!-- Header -->
-<header class="main-header">
+<header class="main-header" id="bhMainHeader">
 <div class="header-left">
 <div class="page-kicker">Vue d’ensemble</div>
 <h1 class="page-title">Dashboard</h1>
-<p class="page-subtitle">
-            Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
-          </p>
+<p class="page-subtitle">Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.</p>
 </div>
 <div class="header-actions">
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
+</button>
+<button id="newReservationBtn" onclick="var m=document.getElementById('newReservationModal');if(m){m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
+  <i class="fas fa-plus"></i> Nouvelle réservation
 </button>
 </div>
 </header>
@@ -8257,7 +8373,6 @@ if (document.readyState === 'loading') {
 }
 
 </script>
-<script></script><script src="/js/bh-layout.js"></script>
 
 <!-- Capacitor Core -->
 <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
@@ -8278,8 +8393,6 @@ if (document.readyState === 'loading') {
   }
 </script>
 <!-- 📱 Expérience Mobile Native -->
-<script src="/js/mobile-native-experience.js"></script>
-<script src="/js/mobile-tabs-handler.js"></script>
 <script>
 (function() {
   const el = document.querySelector('.calendar-grid-wrapper');
@@ -8449,7 +8562,6 @@ if (window.Capacitor) {
   });
 }
 </script>    
-<script src="/js/bh-layout.js?v=5"></script>    
 <!-- FAB Nouvelle réservation (mobile) -->
 <button class="fab-add-resa" id="fabAddResa" aria-label="Nouvelle réservation">+</button>
 
@@ -8480,6 +8592,72 @@ if (window.Capacitor) {
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <!-- Badge Messages -->
-<script src="/js/messages-badge-desktop-mobile.js"></script>    
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+<script src="/js/auth-fetch.js"></script>
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+
+<!-- Thème V3 toggle -->
+<script>
+(function() {
+  var toggle = document.getElementById('themeToggleV3');
+  var root = document.documentElement;
+  var saved = localStorage.getItem('bh_theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  if (toggle) {
+    toggle.addEventListener('click', function() {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('bh_theme', next);
+    });
+  }
+})();
+</script>
+
+<!-- Fix scroll mobile -->
+<script>
+(function() {
+  function fixScroll() {
+    [document.body, document.documentElement,
+     document.querySelector('.app-container'),
+     document.querySelector('.main-content'),
+     document.querySelector('.page-content'),
+    ].forEach(function(el) {
+      if (!el) return;
+      el.style.removeProperty('overflow');
+      el.style.removeProperty('height');
+      el.style.setProperty('overflow-x', 'hidden', 'important');
+      el.style.setProperty('height', 'auto', 'important');
+    });
+    document.body.style.setProperty('overflow-y', 'auto', 'important');
+    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+  }
+  document.addEventListener('DOMContentLoaded', fixScroll);
+  setTimeout(fixScroll, 500);
+  setTimeout(fixScroll, 1500);
+})();
+</script>
+
+<!-- Scroll vers #calendarSection -->
+<script>
+(function() {
+  function scrollWithOffset() {
+    if (window.location.hash !== '#calendarSection') return;
+    var el = document.getElementById('calendarSection');
+    if (!el) return;
+    history.replaceState(null, null, window.location.pathname);
+    var top = el.getBoundingClientRect().top + document.documentElement.scrollTop - 20;
+    document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
+    setTimeout(function() {
+      document.documentElement.scrollTo({ top: top, behavior: 'auto' });
+    }, 0);
+  }
+  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
+})();
+</script>
+
 </body>
 </html>
