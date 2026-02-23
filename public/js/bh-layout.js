@@ -55,10 +55,10 @@ function getSidebarHTML() {
     <div class="nav-section">
       <div class="nav-section-title">Principal</div>
       ${hasPermission('can_view_reservations') ? `
-      <a class="nav-item active" data-page="app" href="${isSubAccount ? '/sub-account.html' : '/app.html'}">
+      <a class="nav-item active" data-page="app" href="${isSubAccount ? '/app-simple-subaccount.html' : '/app.html'}">
         <i class="fas fa-th-large"></i><span>Dashboard</span>
       </a>
-      <a class="nav-item" href="${isSubAccount ? '/sub-account.html#calendarSection' : '/app.html#calendarSection'}" id="navCalendarLink">
+      <a class="nav-item" href="${isSubAccount ? '/app-simple-subaccount.html?scroll=calendar' : '/app.html?scroll=calendar'}" id="navCalendarLink">
         <i class="fas fa-calendar"></i><span>Calendrier</span>
       </a>
       ` : ''}
