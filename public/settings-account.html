@@ -272,6 +272,77 @@
       flex-shrink: 0;
       margin-top: 2px;
     }
+
+    /* ===== Notifications toggles ===== */
+    .notif-group {
+      margin-bottom: 24px;
+    }
+    .notif-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .notif-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .notif-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .notif-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    /* Toggle switch style Apple */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      border-radius: 26px;
+      transition: .3s;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: .3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #1A7A5E; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
+
     /* ===== INPUTS MODERNES ===== */
     
     /* Override des styles globaux pour cette page */
@@ -1100,6 +1171,10 @@ html[data-theme-v3="1"] .subscription-card {
 <i class="fas fa-crown"></i>
     Mon abonnement
   </button>
+  <button class="settings-tab" data-tab="notifications">
+    <i class="fas fa-bell"></i>
+    Notifications
+  </button>
 </div>
 <!-- Onglet : Profil -->
 <div class="tab-pane active" data-tab="profile" id="tab-profile">
@@ -1549,6 +1624,133 @@ html[data-theme-v3="1"] .subscription-card {
 </div>
 </div>
 </div>
+
+<div class="tab-pane" data-tab="notifications" id="tab-notifications">
+  <section class="card mb-lg">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-bell"></i>
+        Préférences de notifications
+      </div>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
+        Choisissez les notifications push que vous souhaitez recevoir sur votre iPhone.
+      </p>
+
+      <!-- Réservations -->
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-calendar-check"></i> Réservations</div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Nouvelle réservation</span>
+            <span class="notif-desc">Quand une réservation est créée ou synchronisée</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_new_reservation" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Réservation annulée</span>
+            <span class="notif-desc">Quand une réservation est annulée</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_reservation_cancelled" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Opérationnel -->
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-house"></i> Opérationnel</div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Récap du matin (8h)</span>
+            <span class="notif-desc">Arrivées et départs du jour chaque matin</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_daily_summary" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Rappel ménage (J-1)</span>
+            <span class="notif-desc">La veille d'un départ avec ménage à prévoir</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_cleaning_reminder" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Cautions -->
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-shield-alt"></i> Cautions</div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Demande de caution</span>
+            <span class="notif-desc">J-2 avant l'arrivée d'un voyageur</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_deposit_request" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Rappel libération caution</span>
+            <span class="notif-desc">J-1 avant la date de libération</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_deposit_release" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-comment"></i> Messages</div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Nouveau message</span>
+            <span class="notif-desc">Quand un voyageur envoie un message</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_new_message" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Factures -->
+      <div class="notif-group">
+        <div class="notif-group-title"><i class="fas fa-file-invoice"></i> Factures</div>
+        <div class="notif-row">
+          <div class="notif-info">
+            <span class="notif-label">Nouvelle facture propriétaire</span>
+            <span class="notif-desc">Quand une facture est générée</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif_new_invoice" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button id="saveNotifPrefs" class="btn btn-primary" style="margin-top:8px;">
+        <i class="fas fa-save"></i> Enregistrer les préférences
+      </button>
+      <div id="notifSaveStatus" class="save-status-inline"></div>
+    </div>
+  </section>
+</div>
+
 </main>
 </div>
 <!-- Script auth + user + logout -->
