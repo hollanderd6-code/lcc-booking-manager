@@ -58,7 +58,7 @@ function getSidebarHTML() {
       <a class="nav-item active" data-page="app" href="${isSubAccount ? '/sub-account.html' : '/app.html'}">
         <i class="fas fa-th-large"></i><span>Dashboard</span>
       </a>
-      <a class="nav-item" href="${isSubAccount ? '/sub-account.html?scroll=calendar' : '/app.html?scroll=calendar'}" id="navCalendarLink">
+      <a class="nav-item" href="${isSubAccount ? '/sub-account.html#calendarSection' : '/app.html#calendarSection'}" id="navCalendarLink">
         <i class="fas fa-calendar"></i><span>Calendrier</span>
       </a>
       ` : ''}
