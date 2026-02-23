@@ -480,9 +480,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     }
 
     /* Section Calendrier */
-    #calendarSection {
+    html, body {
+    scroll-padding-top: 120px;
+  }
+  #calendarSection {
       margin-top: 32px;
-      scroll-margin-top: 80px;
+      scroll-margin-top: 120px;
     }
 
     .calendar-wrapper {
@@ -4329,7 +4332,14 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       if (navCalendarLink && calendarSection) {
         navCalendarLink.addEventListener('click', function (e) {
           e.preventDefault();
-          calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const mainContent = document.querySelector('.main-content');
+          const offset = 80;
+          const top = calendarSection.getBoundingClientRect().top + (mainContent ? mainContent.scrollTop : window.scrollY) - offset;
+          if (mainContent) {
+            mainContent.scrollTo({ top: top, behavior: 'smooth' });
+          } else {
+            window.scrollTo({ top: top, behavior: 'smooth' });
+          }
         });
       }
     });
