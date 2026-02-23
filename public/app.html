@@ -9483,20 +9483,30 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
 <script>
-// Intercepter le scroll vers #calendarSection pour ajouter un offset
+// Scroll vers le calendrier via ?scroll=calendar (sans ancre HTML pour éviter le scroll natif)
 (function() {
-  function scrollWithOffset() {
-    if (window.location.hash !== '#calendarSection') return;
-    var el = document.getElementById('calendarSection');
-    if (!el) return;
-    // Supprimer le hash pour éviter re-scroll
+  function checkScrollParam() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('scroll') !== 'calendar') return;
+    // Nettoyer l'URL
     history.replaceState(null, null, window.location.pathname);
-    // Scroll manuel avec offset (120px = barre noire visible)
-    var top = el.getBoundingClientRect().top + window.scrollY - 120;
-    window.scrollTo({ top: top, behavior: 'auto' });
+    // Attendre que la page soit chargée et scrolle
+    function doScroll() {
+      var el = document.getElementById('calendarSection');
+      if (!el) return;
+      var top = el.getBoundingClientRect().top + window.scrollY - 120;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    }
+    // Plusieurs tentatives pour s'assurer que le DOM est prêt
+    setTimeout(doScroll, 100);
+    setTimeout(doScroll, 500);
+    setTimeout(doScroll, 1000);
   }
-  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
-  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkScrollParam);
+  } else {
+    checkScrollParam();
+  }
 })();
 </script>
 
