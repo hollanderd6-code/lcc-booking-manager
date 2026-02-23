@@ -498,19 +498,19 @@ cron.schedule('0 10 * * *', async () => {
         
         // Envoyer a TOUS les appareils
         if (await shouldSendNotification(user.id, 'notif_deposit_release')) {
-        for (const token of tokensResult.rows) {
-          await sendNotification(
-            token.fcm_token,
-            `Rappel : ${depositsResult.rows.length} caution(s) a liberer demain`,
-            depositsList,
-            { 
-              type: 'deposit_release_reminder', 
-              count: depositsResult.rows.length.toString() 
-            }
-          );
-        }
-        
-        console.log(`Rappel liberation caution envoye a user ${user.id} : ${depositsResult.rows.length} caution(s)`);
+          for (const token of tokensResult.rows) {
+            await sendNotification(
+              token.fcm_token,
+              `Rappel : ${depositsResult.rows.length} caution(s) a liberer demain`,
+              depositsList,
+              { 
+                type: 'deposit_release_reminder', 
+                count: depositsResult.rows.length.toString() 
+              }
+            );
+          }
+          console.log(`Rappel liberation caution envoye a user ${user.id} : ${depositsResult.rows.length} caution(s)`);
+        } // end shouldSendNotification
       }
     }
     
@@ -1213,7 +1213,7 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
   notif_deposit_request: true,
   notif_deposit_release: true,
   notif_new_message: true,
-  notif_new_invoice: true,
+  notif_new_invoice: true
 };
 
 function getEmailTransporter() {
@@ -1446,17 +1446,15 @@ async function saveNotificationSettings(userId, settings) {
   return clean;
 }
 
-// ============================================
-// ✅ HELPER : Vérifier préférences avant envoi
-// ============================================
+// ===== Helper: vérifier préférence avant envoi =====
 async function shouldSendNotification(userId, prefKey) {
   try {
     const settings = await getNotificationSettings(userId);
-    const allowed = settings[prefKey] !== false; // true par défaut si non défini
+    const allowed = settings[prefKey] !== false;
     if (!allowed) console.log(`ℹ️ Notif [${prefKey}] désactivée pour ${userId}`);
     return allowed;
   } catch(e) {
-    return true; // En cas d'erreur, on envoie quand même
+    return true;
   }
 }
 
@@ -3185,9 +3183,9 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
       
       console.log(`Notification reservation iCal envoyee pour ${propResult.rows[0].name}`);
     }
-  } catch (notifError) {
-    console.error('Erreur notification reservation:', notifError.message);
-  }
+    } catch (notifError) {
+      console.error('Erreur notification reservation:', notifError.message);
+    }
   } // end shouldSendNotification
 
   // ============================================
@@ -5873,6 +5871,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
         console.error('❌ Erreur notification:', notifError.message);
         // On continue, la suppression a réussi
       }
+      } // end shouldSendNotification
     }
     
     // ✅ Forcer la resynchronisation
@@ -6863,6 +6862,7 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
   } catch (notifError) {
     console.error('❌ Erreur notification ménage complété:', notifError.message);
   }
+  } // end shouldSendNotification
   
   res.json({ checklist: chk });
 });
@@ -6896,20 +6896,12 @@ app.post('/api/settings/notifications', async (req, res) => {
     try {
     const {
       newReservation, reminder, whatsappEnabled, whatsappNumber,
-      notif_new_reservation, notif_reservation_cancelled,
-      notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder,
-      notif_cleaning_completed, notif_checklist_done,
-      notif_deposit_request, notif_deposit_release,
-      notif_new_message, notif_new_invoice,
+      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice,
     } = req.body || {};
 
     const saved = await saveNotificationSettings(user.id, {
       newReservation, reminder, whatsappEnabled, whatsappNumber,
-      notif_new_reservation, notif_reservation_cancelled,
-      notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder,
-      notif_cleaning_completed, notif_checklist_done,
-      notif_deposit_request, notif_deposit_release,
-      notif_new_message, notif_new_invoice,
+      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice,
     });
 
     res.json({
@@ -14221,6 +14213,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
         }
+        } // end shouldSendNotification
       } else {
         console.log(`⚠️ Réservation ${uid} non trouvée dans PostgreSQL`);
       }
@@ -14789,7 +14782,6 @@ app.post('/api/chat/send', async (req, res) => {
         const conversation = convResult.rows[0];
         
         // Traiter le message (onboarding + réponses auto)
-        // Passer la préférence notif pour que handleIncomingMessage puisse l'utiliser
         const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
         await handleIncomingMessage(savedMessage, conversation, pool, io, { allowPushNotification: msgNotifAllowed });
       }
@@ -15370,6 +15362,7 @@ cron.schedule('0 8 * * *', async () => {
           console.error(`❌ Erreur envoi notif arrivées (token ${token.fcm_token.substring(0, 20)}...):`, notifErr.message);
         }
       }
+      } // end shouldSendNotification arrivées
       
       // Departs du jour
       const departuresResult = await pool.query(
@@ -15430,6 +15423,7 @@ cron.schedule('0 8 * * *', async () => {
           console.error(`❌ Erreur envoi notif départs (token ${token.fcm_token.substring(0, 20)}...):`, notifErr.message);
         }
       }
+      } // end shouldSendNotification
       
       console.log(`✅ Notifications quotidiennes envoyées à user ${user.id} (${tokensResult.rows.length} appareil(s))`);
     }
@@ -15527,6 +15521,7 @@ cron.schedule('0 18 * * *', async () => {
         }
         
         console.log(`Rappel J-1 envoye a user ${user.id} : ${count} arrivee(s)`);
+        } // end shouldSendNotification
       }
     }
     
