@@ -3,70 +3,17 @@
 <html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Boostinghost – Paramètres</title>
 <!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- CSS plateforme -->
-<link href="/css/style.css" rel="stylesheet"/>
-<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
-<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
-<link href="/css/bh-v3-mobile.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
-<link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=4">
-<script>
-  document.documentElement.setAttribute('data-theme-v3','1');
-</script>
-<style id="v3-critical">
-html[data-theme-v3="1"] body { padding-top: 40px !important; }
-html[data-theme-v3="1"] .sidebar {
-  position: fixed !important; top: 40px !important;
-  left: 0 !important; bottom: 0 !important; height: auto !important;
-}
-html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important; margin-top: 0 !important;
-}
-html[data-theme-v3="1"] .app-container,
-html[data-theme-v3="1"] .platform-layout {
-  margin-top: 0 !important; padding-top: 0 !important;
-}
-html[data-theme-v3="1"] .bh-demo-nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  z-index: 9999; background: #0D1117;
-  display: flex; align-items: center; gap: 6px;
-  padding: 0 16px; height: 40px;
-  font-family: 'DM Sans', sans-serif; font-size: 12px;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
-  color: rgba(255,255,255,.4); font-weight: 500; margin-right: 6px;
-  letter-spacing: .08em; text-transform: uppercase; font-size: 11px; white-space: nowrap;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
-  margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-}
-html[data-theme-v3="1"] .bh-theme-toggle {
-  width: 44px; height: 24px; background: rgba(255,255,255,.15);
-  border-radius: 999px; border: none; cursor: pointer;
-  position: relative; transition: background .2s; flex-shrink: 0;
-}
-html[data-theme-v3="1"] .bh-theme-toggle::after {
-  content: ''; position: absolute; top: 3px; left: 3px;
-  width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform .2s;
-}
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
-@media (max-width: 768px) {
-  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .sidebar { top: 0 !important; }
-}
-</style>    
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">    
     <style>
     html, body {
       margin: 0 !important;
@@ -763,20 +710,20 @@ html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: 
 }
   </style>
 </head>
-<body data-page="settings">
-
-<!-- BARRE DARK V3 -->
-<nav class="bh-demo-nav" id="bhHeader">
-  <span class="bh-demo-label">Boostinghost</span>
-  <div class="bh-demo-right">
-    <span class="bh-demo-mode-label">MODE</span>
-    <button class="bh-theme-toggle" id="themeToggleV3" title="Basculer thème"></button>
-  </div>
-</nav>
-
+<body>
 <div class="platform-layout" id="platformLayout">
-<!-- Sidebar injectée dynamiquement par bh-layout.js -->
+<!-- Sidebar -->
 <div id="bhSidebar"></div>
+<header class="mobile-header">
+<button aria-label="Ouvrir le menu" class="sidebar-toggle" id="sidebarToggle">
+<i class="fas fa-bars"></i>
+</button>
+<div class="brand">
+<i class="fas fa-rocket brand-icon"></i>
+<span class="brand-text">Boostinghost</span>
+</div>
+<div></div>
+</header>
 <!-- Main content -->
 <main class="main-content">
 <div class="page-content">
@@ -1984,23 +1931,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
-<!-- Thème V3 toggle -->
-<script>
-(function() {
-  var toggle = document.getElementById('themeToggleV3');
-  var root = document.documentElement;
-  var saved = localStorage.getItem('bh_theme') || 'light';
-  root.setAttribute('data-theme', saved);
-  if (toggle) {
-    toggle.addEventListener('click', function() {
-      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      root.setAttribute('data-theme', next);
-      localStorage.setItem('bh_theme', next);
-    });
-  }
-})();
-</script>
 
 </body>
 </html>
