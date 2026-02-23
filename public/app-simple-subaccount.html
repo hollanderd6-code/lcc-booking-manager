@@ -8640,22 +8640,29 @@ if (window.Capacitor) {
 })();
 </script>
 
-<!-- Scroll vers #calendarSection -->
+<!-- Scroll vers #calendarSection ou ?scroll=calendar -->
 <script>
 (function() {
-  function scrollWithOffset() {
-    if (window.location.hash !== '#calendarSection') return;
+  function doScroll() {
     var el = document.getElementById('calendarSection');
     if (!el) return;
-    history.replaceState(null, null, window.location.pathname);
     var top = el.getBoundingClientRect().top + document.documentElement.scrollTop - 20;
     document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
     setTimeout(function() {
       document.documentElement.scrollTo({ top: top, behavior: 'auto' });
     }, 0);
   }
-  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
-  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
+
+  function checkScroll() {
+    var hasHash = window.location.hash === '#calendarSection';
+    var hasParam = new URLSearchParams(window.location.search).get('scroll') === 'calendar';
+    if (!hasHash && !hasParam) return;
+    history.replaceState(null, null, window.location.pathname);
+    doScroll();
+  }
+
+  window.addEventListener('load', function() { setTimeout(checkScroll, 50); });
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(checkScroll, 100); });
 })();
 </script>
 
