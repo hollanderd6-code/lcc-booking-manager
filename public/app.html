@@ -9483,25 +9483,21 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
 <script>
-// Au chargement, si hash #calendarSection → scroll précis vers le calendrier
+// Intercepter le scroll vers #calendarSection pour ajouter un offset
 (function() {
-  if (window.location.hash !== '#calendarSection') return;
-  history.replaceState(null, null, window.location.pathname);
-  
-  function doScroll() {
+  function scrollWithOffset() {
+    if (window.location.hash !== '#calendarSection') return;
+    var el = document.getElementById('calendarSection');
+    if (!el) return;
+    history.replaceState(null, null, window.location.pathname);
+    var top = el.getBoundingClientRect().top + document.documentElement.scrollTop - 20;
     document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
     setTimeout(function() {
-      document.documentElement.scrollTo({ top: 1027, behavior: 'auto' });
+      document.documentElement.scrollTo({ top: top, behavior: 'auto' });
     }, 0);
   }
-
-  // Tenter immédiatement
-  doScroll();
-  // Et après le load au cas où
-  window.addEventListener('load', doScroll);
-  // Et après que les données API soient chargées
-  setTimeout(doScroll, 500);
-  setTimeout(doScroll, 1200);
+  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
 })();
 </script>
 
