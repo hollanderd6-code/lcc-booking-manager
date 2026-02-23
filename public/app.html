@@ -9488,19 +9488,22 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
   function checkScrollParam() {
     var params = new URLSearchParams(window.location.search);
     if (params.get('scroll') !== 'calendar') return;
-    // Nettoyer l'URL
     history.replaceState(null, null, window.location.pathname);
-    // Attendre que la page soit chargée et scrolle
+
     function doScroll() {
       var el = document.getElementById('calendarSection');
       if (!el) return;
-      var top = el.getBoundingClientRect().top + window.scrollY - 0;
-      window.scrollTo({ top: top, behavior: 'smooth' });
+      // Récupérer la position réelle de l'élément dans la page
+      var rect = el.getBoundingClientRect();
+      var top = rect.top + window.scrollY;
+      window.scrollTo({ top: top, behavior: 'auto' });
     }
-    // Plusieurs tentatives pour s'assurer que le DOM est prêt
-    setTimeout(doScroll, 100);
-    setTimeout(doScroll, 500);
-    setTimeout(doScroll, 1000);
+
+    // Attendre que les données soient chargées (le calendrier se rend après l'API)
+    setTimeout(doScroll, 300);
+    setTimeout(doScroll, 800);
+    setTimeout(doScroll, 1500);
+    setTimeout(doScroll, 2500);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkScrollParam);
