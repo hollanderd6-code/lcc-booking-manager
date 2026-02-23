@@ -9488,9 +9488,10 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
   if (window.location.hash !== '#calendarSection') return;
   history.replaceState(null, null, window.location.pathname);
   window.addEventListener('load', function() {
+    document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
     setTimeout(function() {
       document.documentElement.scrollTo({ top: 1027, behavior: 'auto' });
-    }, 300);
+    }, 0);
   });
 })();
 </script>
