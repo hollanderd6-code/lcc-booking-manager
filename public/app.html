@@ -9487,12 +9487,21 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
 (function() {
   if (window.location.hash !== '#calendarSection') return;
   history.replaceState(null, null, window.location.pathname);
-  window.addEventListener('load', function() {
+  
+  function doScroll() {
     document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
     setTimeout(function() {
       document.documentElement.scrollTo({ top: 1027, behavior: 'auto' });
     }, 0);
-  });
+  }
+
+  // Tenter immédiatement
+  doScroll();
+  // Et après le load au cas où
+  window.addEventListener('load', doScroll);
+  // Et après que les données API soient chargées
+  setTimeout(doScroll, 500);
+  setTimeout(doScroll, 1200);
 })();
 </script>
 
