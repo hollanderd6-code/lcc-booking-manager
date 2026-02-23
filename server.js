@@ -497,6 +497,7 @@ cron.schedule('0 10 * * *', async () => {
           .join(', ');
         
         // Envoyer a TOUS les appareils
+        if (await shouldSendNotification(user.id, 'notif_deposit_release')) {
         for (const token of tokensResult.rows) {
           await sendNotification(
             token.fcm_token,
@@ -1199,8 +1200,20 @@ const notificationUserCache = new Map();
 const DEFAULT_NOTIFICATION_SETTINGS = {
   newReservation: true,
   reminder: false,
-   whatsappEnabled: false,
-  whatsappNumber: ''
+  whatsappEnabled: false,
+  whatsappNumber: '',
+  // Nouvelles préférences granulaires
+  notif_new_reservation: true,
+  notif_reservation_cancelled: true,
+  notif_daily_summary: true,
+  notif_reminder_j1: true,
+  notif_cleaning_reminder: true,
+  notif_cleaning_completed: true,
+  notif_checklist_done: true,
+  notif_deposit_request: true,
+  notif_deposit_release: true,
+  notif_new_message: true,
+  notif_new_invoice: true,
 };
 
 function getEmailTransporter() {
@@ -1371,6 +1384,18 @@ async function getNotificationSettings(userId) {
       typeof raw.whatsappNumber === 'string'
         ? raw.whatsappNumber
         : DEFAULT_NOTIFICATION_SETTINGS.whatsappNumber,
+    // Préférences granulaires
+    notif_new_reservation: typeof raw.notif_new_reservation === 'boolean' ? raw.notif_new_reservation : DEFAULT_NOTIFICATION_SETTINGS.notif_new_reservation,
+    notif_reservation_cancelled: typeof raw.notif_reservation_cancelled === 'boolean' ? raw.notif_reservation_cancelled : DEFAULT_NOTIFICATION_SETTINGS.notif_reservation_cancelled,
+    notif_daily_summary: typeof raw.notif_daily_summary === 'boolean' ? raw.notif_daily_summary : DEFAULT_NOTIFICATION_SETTINGS.notif_daily_summary,
+    notif_reminder_j1: typeof raw.notif_reminder_j1 === 'boolean' ? raw.notif_reminder_j1 : DEFAULT_NOTIFICATION_SETTINGS.notif_reminder_j1,
+    notif_cleaning_reminder: typeof raw.notif_cleaning_reminder === 'boolean' ? raw.notif_cleaning_reminder : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_reminder,
+    notif_cleaning_completed: typeof raw.notif_cleaning_completed === 'boolean' ? raw.notif_cleaning_completed : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_completed,
+    notif_checklist_done: typeof raw.notif_checklist_done === 'boolean' ? raw.notif_checklist_done : DEFAULT_NOTIFICATION_SETTINGS.notif_checklist_done,
+    notif_deposit_request: typeof raw.notif_deposit_request === 'boolean' ? raw.notif_deposit_request : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_request,
+    notif_deposit_release: typeof raw.notif_deposit_release === 'boolean' ? raw.notif_deposit_release : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_release,
+    notif_new_message: typeof raw.notif_new_message === 'boolean' ? raw.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
+    notif_new_invoice: typeof raw.notif_new_invoice === 'boolean' ? raw.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
   };
 }
 
@@ -1395,6 +1420,18 @@ async function saveNotificationSettings(userId, settings) {
       typeof settings.whatsappNumber === 'string'
         ? settings.whatsappNumber.trim()
         : DEFAULT_NOTIFICATION_SETTINGS.whatsappNumber,
+    // Préférences granulaires
+    notif_new_reservation: typeof settings.notif_new_reservation === 'boolean' ? settings.notif_new_reservation : DEFAULT_NOTIFICATION_SETTINGS.notif_new_reservation,
+    notif_reservation_cancelled: typeof settings.notif_reservation_cancelled === 'boolean' ? settings.notif_reservation_cancelled : DEFAULT_NOTIFICATION_SETTINGS.notif_reservation_cancelled,
+    notif_daily_summary: typeof settings.notif_daily_summary === 'boolean' ? settings.notif_daily_summary : DEFAULT_NOTIFICATION_SETTINGS.notif_daily_summary,
+    notif_reminder_j1: typeof settings.notif_reminder_j1 === 'boolean' ? settings.notif_reminder_j1 : DEFAULT_NOTIFICATION_SETTINGS.notif_reminder_j1,
+    notif_cleaning_reminder: typeof settings.notif_cleaning_reminder === 'boolean' ? settings.notif_cleaning_reminder : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_reminder,
+    notif_cleaning_completed: typeof settings.notif_cleaning_completed === 'boolean' ? settings.notif_cleaning_completed : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_completed,
+    notif_checklist_done: typeof settings.notif_checklist_done === 'boolean' ? settings.notif_checklist_done : DEFAULT_NOTIFICATION_SETTINGS.notif_checklist_done,
+    notif_deposit_request: typeof settings.notif_deposit_request === 'boolean' ? settings.notif_deposit_request : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_request,
+    notif_deposit_release: typeof settings.notif_deposit_release === 'boolean' ? settings.notif_deposit_release : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_release,
+    notif_new_message: typeof settings.notif_new_message === 'boolean' ? settings.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
+    notif_new_invoice: typeof settings.notif_new_invoice === 'boolean' ? settings.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
   };
 
   await pool.query(
@@ -1408,6 +1445,21 @@ async function saveNotificationSettings(userId, settings) {
 
   return clean;
 }
+
+// ============================================
+// ✅ HELPER : Vérifier préférences avant envoi
+// ============================================
+async function shouldSendNotification(userId, prefKey) {
+  try {
+    const settings = await getNotificationSettings(userId);
+    const allowed = settings[prefKey] !== false; // true par défaut si non défini
+    if (!allowed) console.log(`ℹ️ Notif [${prefKey}] désactivée pour ${userId}`);
+    return allowed;
+  } catch(e) {
+    return true; // En cas d'erreur, on envoie quand même
+  }
+}
+
 // Récupère les assignations de ménage pour un utilisateur sous forme de map { propertyId -> cleaner }
 // Prend en compte : 1) assignation par reservation_key spécifique 2) cleaner par défaut du logement
 async function getCleanerAssignmentsMapForUser(userId) {
@@ -3115,6 +3167,7 @@ const reservationStart = new Date(reservation.start);
 const isWithinSixMonths = reservationStart >= now && reservationStart <= sixMonthsFromNow;
 
 if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual' && isWithinSixMonths) {
+  if (await shouldSendNotification(realUserId, 'notif_new_reservation')) {
   try {
     const propResult = await pool.query(
       'SELECT name FROM properties WHERE id = $1',
@@ -3135,6 +3188,7 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
   } catch (notifError) {
     console.error('Erreur notification reservation:', notifError.message);
   }
+  } // end shouldSendNotification
 
   // ============================================
   // CREATION AUTOMATIQUE DE CONVERSATION
@@ -5144,6 +5198,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         
         // 2. Notification push Firebase - ENVOYER À TOUS LES APPAREILS
         try {
+          if (await shouldSendNotification(user.id, 'notif_new_reservation')) {
           const tokenResult = await pool.query(
             'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
             [user.id]
@@ -5175,6 +5230,7 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
             
             console.log(`✅ Notification groupée envoyée à ${fcmTokens.length} appareil(s) pour ${property.name}`);
           }
+          } // end shouldSendNotification
         } catch (pushError) {
           console.error('❌ Erreur notification push:', pushError.message);
         }
@@ -5784,6 +5840,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
     
     // ✅ ENVOYER NOTIFICATION D'ANNULATION
     if (deleted && deletedReservation) {
+      if (await shouldSendNotification(user.id, 'notif_reservation_cancelled')) {
       try {
         const tokensResult = await pool.query(
           'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
@@ -6780,6 +6837,7 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
   await saveChecklists();
   
   // ✅ Envoyer notification push au propriétaire
+  if (await shouldSendNotification(user.id, 'notif_checklist_done')) {
   try {
     const tokensResult = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
@@ -6837,17 +6895,21 @@ app.post('/api/settings/notifications', async (req, res) => {
 
     try {
     const {
-      newReservation,
-      reminder,
-      whatsappEnabled,
-      whatsappNumber,
+      newReservation, reminder, whatsappEnabled, whatsappNumber,
+      notif_new_reservation, notif_reservation_cancelled,
+      notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder,
+      notif_cleaning_completed, notif_checklist_done,
+      notif_deposit_request, notif_deposit_release,
+      notif_new_message, notif_new_invoice,
     } = req.body || {};
 
     const saved = await saveNotificationSettings(user.id, {
-      newReservation,
-      reminder,
-      whatsappEnabled,
-      whatsappNumber,
+      newReservation, reminder, whatsappEnabled, whatsappNumber,
+      notif_new_reservation, notif_reservation_cancelled,
+      notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder,
+      notif_cleaning_completed, notif_checklist_done,
+      notif_deposit_request, notif_deposit_release,
+      notif_new_message, notif_new_invoice,
     });
 
     res.json({
@@ -8488,7 +8550,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
           [cleaner.user_id]
         );
 
-        if (tokensResult.rows.length > 0) {
+        if (tokensResult.rows.length > 0 && await shouldSendNotification(cleaner.user_id, 'notif_cleaning_completed')) {
           const title = `🧹 Ménage terminé — ${propertyName}`;
           const body = `${cleaner.name} a terminé le ménage${durationMin ? ' en ' + durationMin + ' min' : ''}. ${photos ? photos.length : 0} photos. À valider !`;
           const pushData = {
@@ -14126,6 +14188,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
         console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
         
         // 📩 ENVOYER NOTIFICATION D'ANNULATION
+        if (await shouldSendNotification(user.id, 'notif_reservation_cancelled')) {
         try {
           const deletedReservation = deleteResult.rows[0];
           
@@ -14726,7 +14789,9 @@ app.post('/api/chat/send', async (req, res) => {
         const conversation = convResult.rows[0];
         
         // Traiter le message (onboarding + réponses auto)
-        await handleIncomingMessage(savedMessage, conversation, pool, io);
+        // Passer la préférence notif pour que handleIncomingMessage puisse l'utiliser
+        const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
+        await handleIncomingMessage(savedMessage, conversation, pool, io, { allowPushNotification: msgNotifAllowed });
       }
     }
 
@@ -15292,6 +15357,7 @@ cron.schedule('0 8 * * *', async () => {
       console.log(`🔔 User ${user.id}: ${arrivalsCount} arrivée(s) - ${arrivalsText}`);
       
       // Envoyer a TOUS les appareils
+      if (await shouldSendNotification(user.id, 'notif_daily_summary')) {
       for (const token of tokensResult.rows) {
         try {
           await sendNotification(
@@ -15351,6 +15417,7 @@ cron.schedule('0 8 * * *', async () => {
       console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) unique(s) - ${departuresText}`);
       
       // Envoyer a TOUS les appareils
+      if (await shouldSendNotification(user.id, 'notif_daily_summary')) {
       for (const token of tokensResult.rows) {
         try {
           await sendNotification(
@@ -15449,6 +15516,7 @@ cron.schedule('0 18 * * *', async () => {
           .join(', ');
         
         // Envoyer a TOUS les appareils
+        if (await shouldSendNotification(user.id, 'notif_reminder_j1')) {
         for (const token of tokensResult.rows) {
           await sendNotification(
             token.fcm_token,
