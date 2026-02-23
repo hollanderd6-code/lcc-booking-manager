@@ -9494,7 +9494,7 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
     function doScroll() {
       var el = document.getElementById('calendarSection');
       if (!el) return;
-      var top = el.getBoundingClientRect().top + window.scrollY - 120;
+      var top = el.getBoundingClientRect().top + window.scrollY - 0;
       window.scrollTo({ top: top, behavior: 'smooth' });
     }
     // Plusieurs tentatives pour s'assurer que le DOM est prêt
