@@ -8640,7 +8640,7 @@ if (window.Capacitor) {
 })();
 </script>
 
-<!-- Scroll vers #calendarSection ou ?scroll=calendar -->
+<!-- Scroll vers calendrier via MutationObserver -->
 <script>
 (function() {
   function doScroll() {
@@ -8653,35 +8653,36 @@ if (window.Capacitor) {
     }, 0);
   }
 
-  // Intercepter le clic sur le lien Calendrier pour scroller sans recharger
   function bindCalendarLink() {
     var link = document.getElementById('navCalendarLink');
-    if (!link) return;
+    if (!link || link._scrollBound) return;
+    link._scrollBound = true;
     link.addEventListener('click', function(e) {
       e.preventDefault();
       doScroll();
     });
+    console.log('✅ navCalendarLink bindé');
   }
+
+  // Observer le DOM jusqu'à ce que navCalendarLink soit injecté
+  var observer = new MutationObserver(function() {
+    if (document.getElementById('navCalendarLink')) {
+      bindCalendarLink();
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
   // Au chargement si on arrive avec ?scroll=calendar
-  function checkScroll() {
-    var hasParam = new URLSearchParams(window.location.search).get('scroll') === 'calendar';
-    var hasHash = window.location.hash === '#calendarSection';
-    if (!hasHash && !hasParam) return;
-    history.replaceState(null, null, window.location.pathname);
-    doScroll();
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    bindCalendarLink();
-    setTimeout(checkScroll, 100);
-  });
   window.addEventListener('load', function() {
     bindCalendarLink();
-    setTimeout(checkScroll, 50);
+    var hasParam = new URLSearchParams(window.location.search).get('scroll') === 'calendar';
+    var hasHash = window.location.hash === '#calendarSection';
+    if (hasParam || hasHash) {
+      history.replaceState(null, null, window.location.pathname);
+      setTimeout(doScroll, 200);
+    }
   });
-  // Re-binder après injection sidebar par bh-layout.js
-  document.addEventListener('sidebarReady', bindCalendarLink);
 })();
 </script>
 
