@@ -1,17 +1,16 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 
-<html data-theme="light" lang="fr" data-theme-v3="1">
+<html data-theme="light" lang="fr">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
-<title>Boostinghost – Équipe & Accès</title>
+<title>Boostinghost – Paramètres</title>
 <!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- CSS plateforme -->
-<link href="/css/style.css" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">    
@@ -242,1491 +241,1689 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 14px;
+      gap: 16px;
     }
 
     .detail-label {
+      font-size: 14px;
       color: var(--text-secondary);
     }
 
     .detail-value {
+      font-size: 14px;
       font-weight: 500;
+      color: var(--text-primary);
+      text-align: right;
+    }
+
+    .upgrade-prompt {
+      margin-top: 20px;
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .upgrade-prompt h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--primary-color);
+    }
+
+    .upgrade-prompt p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .payment-history {
+      margin-top: 20px;
+    }
+
+    .payment-history h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
       color: var(--text-primary);
     }
 
-    .alert-warning {
-      background: #fffbeb;
-      border: 1px solid #fbbf24;
-      color: #92400e;
-      padding: 16px;
-      border-radius: var(--radius-md);
-      margin-top: 16px;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .alert-warning i {
-      font-size: 18px;
-      color: #f59e0b;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    /* ===== Notifications toggles ===== */
-    .notif-group { margin-bottom: 24px; }
-    .notif-group-title {
-      font-size: 12px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.06em; color: var(--text-secondary);
-      margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
-    }
-    .notif-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 0; border-bottom: 1px solid var(--border-color);
-    }
-    .notif-row:last-child { border-bottom: none; }
-    .notif-info { display: flex; flex-direction: column; gap: 2px; }
-    .notif-label { font-size: 14px; font-weight: 500; color: var(--text-primary); }
-    .notif-desc { font-size: 12px; color: var(--text-secondary); }
-    .toggle-switch {
-      position: relative; display: inline-block;
-      width: 44px; height: 26px; flex-shrink: 0; margin-left: 16px;
-    }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute; cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: #ccc; border-radius: 26px; transition: .3s;
-    }
-    .toggle-slider:before {
-      position: absolute; content: ""; height: 20px; width: 20px;
-      left: 3px; bottom: 3px; background: white; border-radius: 50%;
-      transition: .3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-    .toggle-switch input:checked + .toggle-slider { background: #1A7A5E; }
-    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
-
-    /* ===== INPUTS MODERNES ===== */
-    
-    /* Override des styles globaux pour cette page */
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    input[type="tel"],
-    input[type="number"],
-    input[type="url"],
-    textarea,
-    select {
-      width: 100%;
-      padding: 12px 16px !important;
-      font-size: 15px !important;
-      font-weight: 400 !important;
-      line-height: 1.5 !important;
-      color: var(--text-primary) !important;
-      background-color: #ffffff !important;
-      border: 1.5px solid #e5e7eb !important;
-      border-radius: 8px !important;
-      transition: all 0.15s ease !important;
-      font-family: 'Inter', sans-serif !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      appearance: none !important;
-    }
-
-    input[type="text"]:focus,
-    input[type="email"]:focus,
-    input[type="password"]:focus,
-    input[type="tel"]:focus,
-    input[type="number"]:focus,
-    input[type="url"]:focus,
-    textarea:focus,
-    select:focus {
-      outline: none !important;
-      border-color: var(--primary-color) !important;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
-      background-color: #ffffff !important;
-    }
-
-    input[type="text"]:hover:not(:focus),
-    input[type="email"]:hover:not(:focus),
-    input[type="password"]:hover:not(:focus),
-    input[type="tel"]:hover:not(:focus),
-    input[type="number"]:hover:not(:focus),
-    input[type="url"]:hover:not(:focus),
-    textarea:hover:not(:focus),
-    select:hover:not(:focus) {
-      border-color: #d1d5db !important;
-    }
-
-    input::placeholder,
-    textarea::placeholder {
-      color: #9ca3af !important;
-      opacity: 1 !important;
-    }
-
-    /* Labels plus modernes */
-    label {
-      display: block;
-      font-size: 14px !important;
-      font-weight: 600 !important;
-      color: var(--text-primary) !important;
-      margin-bottom: 8px !important;
-    }
-
-    /* Form groups avec espacement */
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    /* Boutons radio modernes */
-    input[type="radio"] {
-      width: 20px !important;
-      height: 20px !important;
-      border: 2px solid #d1d5db !important;
-      margin-right: 8px !important;
-      cursor: pointer !important;
-    }
-
-    input[type="radio"]:checked {
-      border-color: var(--primary-color) !important;
-      background-color: var(--primary-color) !important;
-    }
-
-    /* Upload de fichier moderne */
-    input[type="file"] {
-      padding: 10px !important;
-      border: 2px dashed #d1d5db !important;
-      background: #f9fafb !important;
-      cursor: pointer !important;
-    }
-
-    input[type="file"]:hover {
-      border-color: var(--primary-color) !important;
-      background: #f0fdf4 !important;
-    }
-
-    /* Textarea */
-    textarea {
-      min-height: 100px !important;
-      resize: vertical !important;
-    }
-
-    /* Select avec icône */
-    select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E") !important;
-      background-position: right 12px center !important;
-      background-repeat: no-repeat !important;
-      background-size: 20px !important;
-      padding-right: 40px !important;
-    }
-
-    /* Disabled state */
-    input:disabled,
-    textarea:disabled,
-    select:disabled {
-      background-color: #f3f4f6 !important;
-      color: #9ca3af !important;
-      cursor: not-allowed !important;
-      opacity: 0.6 !important;
-    }
-
-    /* Bouton de sauvegarde moderne */
-    .btn-primary,
-    button[type="submit"] {
-      padding: 12px 24px !important;
-      font-size: 15px !important;
-      font-weight: 600 !important;
-      border-radius: 8px !important;
-      transition: all 0.15s ease !important;
-    }
-
-    .btn-primary:hover,
-    button[type="submit"]:hover {
-      transform: translateY(-1px) !important;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
-    }
-
-    /* Messages d'erreur/succès */
-    .error-message {
-      color: #dc2626;
-      font-size: 13px;
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .success-message {
-      color: #059669;
-      font-size: 13px;
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Card sections plus espacées */
-    .card {
-      padding: 28px !important;
-    }
-
-    .card h2 {
-      margin-bottom: 24px !important;
-    }
-
-    /* ===== MODAL STYLES ===== */
-    .booking-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .booking-modal .modal-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1;
-    }
-
-    .booking-modal .modal-content {
-      position: relative;
-      z-index: 2;
-      background: white;
-      border-radius: 12px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-
-    .booking-modal .modal-header {
+    .payment-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 24px;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+      border: 1px solid var(--border-color);
     }
 
-    .booking-modal .modal-header h2 {
-      margin: 0;
-      font-size: 20px;
+    .payment-date {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .payment-amount {
+      font-size: 14px;
       font-weight: 600;
+      color: var(--text-primary);
     }
 
-    .booking-modal .modal-close {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: #6b7280;
-      padding: 0;
-      width: 32px;
-      height: 32px;
+    .payment-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(34, 197, 94, 0.1);
+      color: #166534;
+    }
+/* ===== Onglet Facturation ===== */
+    
+    .billing-section {
+      margin-bottom: 24px;
+    }
+
+    .billing-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .payment-method-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .payment-method-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 6px;
-      transition: all 0.2s;
+      color: white;
+      font-size: 20px;
     }
 
-    .booking-modal .modal-close:hover {
-      background: #f3f4f6;
-      color: #111827;
+    .payment-method-details {
+      flex: 1;
     }
 
-    .booking-modal .booking-form {
-      padding: 24px;
+    .payment-method-details h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-primary);
     }
 
-    .booking-modal .modal-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      padding: 16px 24px;
-      border-top: 1px solid #e5e7eb;
-      background: #f9fafb;
-      border-radius: 0 0 12px 12px;
+    .payment-method-details p {
+      font-size: 13px;
+      color: var(--text-secondary);
     }
-  /* ============================================================
-   DARK BAR + STICKY HEADER (identical to app.html)
-   ============================================================ */
-html[data-theme-v3="1"] body { padding-top: 40px !important; }
-html[data-theme-v3="1"] .sidebar {
-  position: fixed !important; top: 40px !important;
-  left: 0 !important; bottom: 0 !important;
-  height: auto !important;
-  z-index: 30 !important;
-}
-html[data-theme-v3="1"] header.main-header {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 50 !important;
-  margin-top: 0 !important;
-}
-html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-  position: relative !important;
-  z-index: 35 !important;
-}
-html[data-theme-v3="1"] .app-container {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-/* Tuer tout espace parasite entre barre dark et header */
-html[data-theme-v3="1"] main.main-content > header.main-header {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
 
-/* ── BARRE DARK EN HAUT ── */
-html[data-theme-v3="1"] .bh-demo-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 9999;
-  background: #0D1117;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 40px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  /* Pour le centrage absolu des badges */
-  position: fixed;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
-  color: rgba(255,255,255,.4);
-  font-weight: 500;
-  margin-right: 6px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  font-size: 11px;
-  white-space: nowrap;
-}
-html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
-  padding: 4px 13px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.15);
-  background: transparent;
-  color: rgba(255,255,255,.6);
-  cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11.5px;
-  font-weight: 500;
-  transition: all .2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
-  background: rgba(255,255,255,.1);
-  color: white;
-}
-html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #1A7A5E;
-  color: white;
-  border-color: #1A7A5E;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
-  color: rgba(255,255,255,.4);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-}
-html[data-theme-v3="1"] .bh-theme-toggle {
-  width: 44px;
-  height: 24px;
-  background: rgba(255,255,255,.15);
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  transition: background .2s;
-  flex-shrink: 0;
-}
-html[data-theme-v3="1"] .bh-theme-toggle::after {
-  content: '';
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 18px; height: 18px;
-  background: white;
-  border-radius: 50%;
-  transition: transform .2s;
-}
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
+    .invoices-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
 
+    .invoices-table thead {
+      background: var(--bg-secondary);
+    }
 
-/* ============================================================
-   PAGE SETTINGS-ACCOUNT — V3
-   ============================================================ */
-html[data-theme-v3="1"],
-html[data-theme-v3="1"] body {
-  overflow: hidden !important;
-  height: 100% !important;
-  font-family: 'DM Sans', sans-serif !important;
-  background: #F5F2EC !important;
-}
-html[data-theme-v3="1"] .app-container {
-  height: calc(100vh - 40px) !important;
-  overflow: hidden !important;
-}
-html[data-theme-v3="1"] main.main-content {
-  overflow-y: auto !important;
-  height: 100% !important;
-  background: #F5F2EC !important;
-}
-@media (min-width: 769px) {
-  html[data-theme-v3="1"] main.main-content {
-    padding-top: 70px !important;
-  }
-}
-html[data-theme-v3="1"] header.main-header {
-  position: fixed !important;
-  top: 40px !important;
-  left: 0 !important; right: 0 !important;
-  z-index: 50 !important;
-  margin-left: 260px !important;
-}
-@media(max-width:768px){
-  html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
-}
-html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
-html[data-theme-v3="1"] .header-actions .btn-ghost,
-html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !important; }
+    .invoices-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
 
-/* Back button */
-.settings-back-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 40px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200;
-}
-.settings-back-btn:hover { background: #15624B; }
+    .invoices-table td {
+      padding: 16px;
+      font-size: 14px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
 
-/* Page content */
-html[data-theme-v3="1"] .page-content {
-  padding: 24px !important;
-  max-width: none !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
-}
+    .invoices-table tbody tr:hover {
+      background: var(--bg-secondary);
+    }
 
-/* Tabs */
-html[data-theme-v3="1"] .settings-tabs {
-  display: flex !important; gap: 4px !important;
-  background: white !important;
-  border: 1px solid rgba(200,184,154,.35) !important;
-  border-radius: 14px !important;
-  padding: 5px !important;
-  width: fit-content !important;
-  margin-bottom: 12px !important;
-  flex-wrap: wrap !important;
-}
-html[data-theme-v3="1"] .settings-tab {
-  padding: 8px 18px !important; border-radius: 10px !important; border: none !important;
-  background: transparent !important; font-family: 'DM Sans', sans-serif !important;
-  font-size: 13px !important; font-weight: 600 !important; color: #7A8695 !important;
-  cursor: pointer !important; transition: all .15s !important;
-  display: flex !important; align-items: center !important; gap: 7px !important;
-}
-html[data-theme-v3="1"] .settings-tab.active {
-  background: #1A7A5E !important; color: white !important;
-}
-html[data-theme-v3="1"] .settings-tab:not(.active):hover {
-  background: rgba(26,122,94,.08) !important; color: #1A7A5E !important;
-}
+    .invoice-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+    }
 
-/* Cards & sections */
-html[data-theme-v3="1"] .card,
-html[data-theme-v3="1"] section.card,
-html[data-theme-v3="1"] .page-content section.card {
-  background: #F5F0E8 !important;
-  border: 1px solid rgba(200,184,154,.4) !important;
-  border-radius: 16px !important;
-  box-shadow: none !important;
-}
-html[data-theme-v3="1"] .card h2,
-html[data-theme-v3="1"] .section-header,
-html[data-theme-v3="1"] .card-header {
-  font-family: 'DM Sans', sans-serif !important;
-  font-weight: 700 !important;
-  border-bottom: 1px solid rgba(200,184,154,.35) !important;
-}
+    .invoice-status.paid {
+      background: rgba(34, 197, 94, 0.1);
+      color: #166534;
+    }
 
-/* Inputs */
-html[data-theme-v3="1"] input[type=text],
-html[data-theme-v3="1"] input[type=email],
-html[data-theme-v3="1"] input[type=tel],
-html[data-theme-v3="1"] input[type=number],
-html[data-theme-v3="1"] input[type=url],
-html[data-theme-v3="1"] textarea,
-html[data-theme-v3="1"] select {
-  background: rgba(255,255,255,.7) !important;
-  border-color: rgba(13,17,23,.12) !important;
-  border-radius: 10px !important;
-  font-family: 'DM Sans', sans-serif !important;
-}
-html[data-theme-v3="1"] input:focus,
-html[data-theme-v3="1"] textarea:focus,
-html[data-theme-v3="1"] select:focus {
-  background: white !important;
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08) !important;
-  outline: none !important;
-}
+    .invoice-status.pending {
+      background: rgba(251, 191, 36, 0.1);
+      color: #92400e;
+    }
 
-/* Buttons */
-html[data-theme-v3="1"] .btn-primary {
-  background: #1A7A5E !important; border-color: #1A7A5E !important;
-  border-radius: 10px !important; font-family: 'DM Sans', sans-serif !important;
-  font-weight: 600 !important;
-}
-html[data-theme-v3="1"] .btn-primary:hover { background: #15624B !important; }
-html[data-theme-v3="1"] .btn-secondary,
-html[data-theme-v3="1"] .btn-ghost {
-  background: rgba(255,255,255,.6) !important;
-  border-color: rgba(13,17,23,.12) !important;
-  border-radius: 10px !important;
-  font-family: 'DM Sans', sans-serif !important;
-  font-weight: 600 !important;
-}
-html[data-theme-v3="1"] .btn-secondary:hover,
-html[data-theme-v3="1"] .btn-ghost:hover { background: white !important; }
-html[data-theme-v3="1"] .btn-danger {
-  border-radius: 10px !important;
-  font-family: 'DM Sans', sans-serif !important;
-  font-weight: 600 !important;
-}
+    .invoice-status.failed {
+      background: rgba(239, 68, 68, 0.1);
+      color: #991b1b;
+    }
 
-/* Modals */
-html[data-theme-v3="1"] .booking-modal .modal-content,
-html[data-theme-v3="1"] .modal-content {
-  background: #F5F0E8 !important;
-  border-radius: 20px !important;
-  border: 1px solid rgba(200,184,154,.4) !important;
-  box-shadow: 0 24px 64px rgba(13,17,23,.2) !important;
-}
-html[data-theme-v3="1"] .booking-modal .modal-header {
-  border-bottom-color: rgba(200,184,154,.35) !important;
-  background: rgba(245,240,232,.8) !important;
-}
+    @media (max-width: 768px) {
+      .invoices-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+/* ===== Onglet Équipe ===== */
 
-/* Team member cards */
-html[data-theme-v3="1"] .team-member-card,
-html[data-theme-v3="1"] .member-card {
-  background: #EDE8DF !important;
-  border: 1px solid rgba(200,184,154,.4) !important;
-  border-radius: 12px !important;
-}
-
-/* Subscription / plan cards */
-html[data-theme-v3="1"] .plan-card,
-html[data-theme-v3="1"] .subscription-card {
-  background: #EDE8DF !important;
-  border: 1px solid rgba(200,184,154,.4) !important;
-  border-radius: 14px !important;
-}
-html[data-theme-v3="1"] .plan-card.active,
-html[data-theme-v3="1"] .plan-card.current {
-  border-color: #1A7A5E !important;
-  border-width: 2px !important;
+.team-members-grid {
+  display: grid;
+  gap: 16px;
 }
 
 .team-member-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 20px;
-  margin-bottom: 16px;
-  background: white;
-  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: box-shadow 0.2s ease;
 }
 
 .team-member-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.team-member-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  margin-bottom: 16px;
-}
-
-.team-member-info {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.team-member-avatar {
+.member-avatar {
   width: 48px;
   height: 48px;
+  background: linear-gradient(135deg, #10b981, #059669);
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  font-weight: 700;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
-.team-member-details h3 {
-  font-size: 16px;
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 15px;
   font-weight: 600;
-  margin: 0 0 4px;
-  color: #111827;
+  color: var(--text-primary);
+  margin-bottom: 4px;
 }
 
-.team-member-details p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 14px;
+.member-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.team-member-role {
+.member-role {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  background: #f3f4f6;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  margin-top: 8px;
-}
-
-.team-member-permissions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.permission-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 4px 10px;
-  background: #ecfdf5;
-  color: #059669;
-  border-radius: 6px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 500;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
 }
 
-.permission-badge i {
-  font-size: 10px;
-}
-
-.team-member-actions {
+.member-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
-.team-member-inactive {
-  opacity: 0.6;
-  background: #f9fafb;
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
-.team-member-inactive .team-member-avatar {
-  background: #9ca3af;
+.icon-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
-
-
-
-
-
-
-
-
-/* ── Espacement settings propre ── */
-html[data-theme-v3="1"] .settings-tabs {
-  margin-bottom: 16px !important;
+.icon-btn.danger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
 }
-html[data-theme-v3="1"] .page-content section.card {
-  padding: 20px 24px !important;
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
 }
-html[data-theme-v3="1"] .subscription-card {
-  padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
+
+.empty-state i {
+  font-size: 48px;
+  color: var(--text-secondary);
+  opacity: 0.3;
+  margin-bottom: 16px;
 }
-</style>
-<script src="/js/auth-fetch.js"></script>
-<link rel="stylesheet" href="/css/mobile-native-styles.css">
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  padding: 24px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* ===== PERMISSIONS CUSTOM ===== */
+
+.permissions-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.permission-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.permission-label {
+  flex: 1;
+}
+
+.permission-label strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.permission-label span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ===== TOGGLE SWITCH ===== */
+
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #cbd5e1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.toggle-switch.active {
+  background: var(--primary-color);
+}
+
+.toggle-switch::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active::before {
+  transform: translateX(20px);
+}
+
+@media (max-width: 640px) {
+  .team-member-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .member-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+  </style>
 </head>
-
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Paramètres" data-page="settings-account" data-subtitle="Gérez votre compte et votre équipe." data-title="Équipe & Accès">
-
-<div class="app-container">
+<body>
+<div class="platform-layout" id="platformLayout">
 <!-- Sidebar -->
 <div id="bhSidebar"></div>
-<!-- Main Content -->
-<main class="main-content"><div id="bhHeader"></div>
-<button class="settings-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Retour</button>
-
-<!-- Page Content -->
+<header class="mobile-header">
+<button aria-label="Ouvrir le menu" class="sidebar-toggle" id="sidebarToggle">
+<i class="fas fa-bars"></i>
+</button>
+<div class="brand">
+<i class="fas fa-rocket brand-icon"></i>
+<span class="brand-text">Boostinghost</span>
+</div>
+<div></div>
+</header>
+<!-- Main content -->
+<main class="main-content">
 <div class="page-content">
-
-<!-- Onglets -->
-<div class="settings-tabs" role="tablist">
-  <button class="settings-tab active" data-tab="team" role="tab">
-    <i class="fas fa-users"></i>
-    Équipe & Accès
-  </button>
-  <button class="settings-tab" data-tab="account" role="tab">
-    <i class="fas fa-user"></i>
-    Mon compte
-  </button>
+<!-- Header de page -->
+<section class="page-header">
+<div>
+<h1>Paramètres</h1>
+<p class="page-description">Gérez votre compte, votre abonnement et vos préférences</p>
 </div>
-
+</section>
+<!-- Onglets paramètres -->
+<div class="settings-tabs">
+<button class="settings-tab active" data-tab="account">
+<i class="fas fa-user"></i>
+Compte
+</button>
+<button class="settings-tab" data-tab="subscription">
+<i class="fas fa-crown"></i>
+Abonnement
+</button>
+<button class="settings-tab" data-tab="billing">
+<i class="fas fa-credit-card"></i>
+Facturation
+</button>
+<button class="settings-tab" data-tab="team">
+<i class="fas fa-users"></i>
+Équipe
+</button>
+<button class="settings-tab" data-tab="notifications">
+<i class="fas fa-bell"></i>
+Notifications
+</button>
+</div>
+<!-- ONGLET COMPTE -->
+<div class="tab-pane active" id="tab-account">
+<section class="card">
+<div class="card-header">
+<h2>Informations personnelles</h2>
+<p>Gérez vos informations de compte</p>
+</div>
+<div class="card-body">
+<form id="accountForm">
+<div class="form-row-inline">
+<div class="form-group">
+<label>Prénom</label>
+<input class="form-control" id="firstName" placeholder="Jean" required="" type="text"/>
+</div>
+<div class="form-group">
+<label>Nom</label>
+<input class="form-control" id="lastName" placeholder="Dupont" required="" type="text"/>
+</div>
+</div>
+<div class="form-group">
+<label>Email</label>
+<input class="form-control" id="email" placeholder="jean@exemple.fr" required="" type="email"/>
+</div>
+<div class="form-group">
+<label>Téléphone</label>
+<input class="form-control" id="phone" placeholder="+33 6 12 34 56 78" type="tel"/>
+</div>
+<div class="form-group">
+<label>Nom de la société</label>
+<input class="form-control" id="company" placeholder="Ma Conciergerie" type="text"/>
+</div>
+<div class="save-status-inline" id="accountSaveStatus"></div>
+<button class="btn btn-primary" type="submit">
+<i class="fas fa-save"></i>
+Enregistrer
+</button>
+</form>
+</div>
+</section>
+<section class="card">
+<div class="card-header">
+<h2>Sécurité</h2>
+<p>Modifier votre mot de passe</p>
+</div>
+<div class="card-body">
+<form id="passwordForm">
+<div class="form-group">
+<label>Mot de passe actuel</label>
+<input class="form-control" id="currentPassword" required="" type="password"/>
+</div>
+<div class="form-group">
+<label>Nouveau mot de passe</label>
+<input class="form-control" id="newPassword" required="" type="password"/>
+</div>
+<div class="form-group">
+<label>Confirmer le nouveau mot de passe</label>
+<input class="form-control" id="confirmPassword" required="" type="password"/>
+</div>
+<div class="save-status-inline" id="passwordSaveStatus"></div>
+<button class="btn btn-primary" type="submit">
+<i class="fas fa-lock"></i>
+Modifier le mot de passe
+</button>
+</form>
+</div>
+</section>
+<section class="card">
+<div class="card-header">
+<h2>Connexion Stripe</h2>
+<p>Gérez votre compte Stripe pour accepter les paiements</p>
+</div>
+<div class="card-body">
+<div id="stripeStatusContainer">
+<div class="pill-status stripe-pill-loading">
+<i class="fas fa-spinner fa-spin"></i>
+Chargement...
+</div>
+</div>
+<div class="settings-hint" id="stripeHintText">
+Vérification de votre compte Stripe en cours...
+</div>
+<div id="stripeActionContainer" style="margin-top: 16px;">
+</div>
+</div>
+</section>
+</div>
+<!-- ONGLET ABONNEMENT -->
+<div class="tab-pane" id="tab-subscription">
+<section class="card">
+<div class="card-header">
+<h2>Mon abonnement</h2>
+<p>Gérez votre plan Boostinghost</p>
+</div>
+<div class="card-body">
+<div class="subscription-card" id="subscriptionCard">
+<div class="subscription-loading">
+<i class="fas fa-spinner fa-spin"></i>
+Chargement...
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- ONGLET FACTURATION -->
+<div class="tab-pane" id="tab-billing">
+<section class="card">
+<div class="card-header">
+<h2>Facturation</h2>
+<p>Gérez vos informations de paiement et consultez votre historique</p>
+</div>
+<div class="card-body">
+<div class="billing-section">
+<h3>Méthode de paiement</h3>
+<div class="payment-method-card">
+<div class="payment-method-icon">
+<i class="fas fa-credit-card"></i>
+</div>
+<div class="payment-method-details">
+<h4>Carte bancaire</h4>
+<p>•••• •••• •••• 4242</p>
+</div>
+<button class="btn btn-secondary btn-sm">
+<i class="fas fa-edit"></i>
+Modifier
+</button>
+</div>
+</div>
+<div class="billing-section">
+<h3>Historique des factures</h3>
+<table class="invoices-table">
+<thead>
+<tr>
+<th>Date</th>
+<th>Description</th>
+<th>Montant</th>
+<th>Statut</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01/01/2024</td>
+<td>Plan Pro - Janvier 2024</td>
+<td>49,00€</td>
+<td><span class="invoice-status paid"><i class="fas fa-check"></i> Payée</span></td>
+<td>
+<button class="btn btn-secondary btn-sm">
+<i class="fas fa-download"></i>
+Télécharger
+</button>
+</td>
+</tr>
+<tr>
+<td>01/12/2023</td>
+<td>Plan Pro - Décembre 2023</td>
+<td>49,00€</td>
+<td><span class="invoice-status paid"><i class="fas fa-check"></i> Payée</span></td>
+<td>
+<button class="btn btn-secondary btn-sm">
+<i class="fas fa-download"></i>
+Télécharger
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
 <!-- ONGLET ÉQUIPE -->
-<div class="tab-pane active" data-tab="team" id="tab-team">
-  <section class="card mb-lg">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-users"></i> Gestion de l'équipe</div>
-      <button class="btn btn-primary" id="addTeamMemberBtn">
-        <i class="fas fa-plus"></i> Ajouter un membre
-      </button>
-    </div>
-    <div class="card-body">
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
-        Ajoutez des collaborateurs et définissez précisément leurs accès.
-      </p>
-      <div id="teamMembersList">
-        <div class="subscription-loading">
-          <i class="fas fa-spinner fa-spin"></i> Chargement...
-        </div>
-      </div>
-    </div>
-  </section>
+<div class="tab-pane" id="tab-team">
+<section class="card">
+<div class="card-header">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+<div>
+<h2>Gestion de l'équipe</h2>
+<p>Ajoutez des membres et gérez leurs permissions</p>
 </div>
-
-<!-- ONGLET MON COMPTE -->
-<div class="tab-pane" data-tab="account" id="tab-account">
-  <section class="card mb-lg">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-user"></i> Informations personnelles</div>
-    </div>
-    <div class="card-body">
-      <div class="form-row-inline">
-        <div class="form-row">
-          <label class="form-label">Prénom</label>
-          <input class="form-control" id="profileFirstName" placeholder="Prénom" type="text"/>
-        </div>
-        <div class="form-row">
-          <label class="form-label">Nom</label>
-          <input class="form-control" id="profileLastName" placeholder="Nom" type="text"/>
-        </div>
-      </div>
-      <div class="form-row">
-        <label class="form-label">Email</label>
-        <input class="form-control" id="profileEmail" placeholder="email@exemple.fr" type="email"/>
-      </div>
-      <div class="form-actions" style="margin-top:20px;">
-        <button class="btn btn-primary" id="saveProfileBtn">
-          <i class="fas fa-save"></i> Enregistrer
-        </button>
-        <span id="profileSaveStatus" style="margin-left:12px;font-size:13px;color:var(--text-secondary);"></span>
-      </div>
-    </div>
-  </section>
-
-  <section class="card mb-lg">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-lock"></i> Changer le mot de passe</div>
-    </div>
-    <div class="card-body">
-      <div class="form-row">
-        <label class="form-label">Nouveau mot de passe</label>
-        <input class="form-control" id="newPassword" placeholder="Min. 6 caractères" type="password"/>
-      </div>
-      <div class="form-row">
-        <label class="form-label">Confirmer le mot de passe</label>
-        <input class="form-control" id="confirmPassword" placeholder="Répétez le mot de passe" type="password"/>
-      </div>
-      <div class="form-actions" style="margin-top:20px;">
-        <button class="btn btn-primary" id="savePasswordBtn">
-          <i class="fas fa-save"></i> Changer le mot de passe
-        </button>
-        <span id="passwordSaveStatus" style="margin-left:12px;font-size:13px;"></span>
-      </div>
-    </div>
-  </section>
+<button class="btn btn-primary" id="addTeamMemberBtn">
+<i class="fas fa-plus"></i>
+Ajouter un membre
+</button>
 </div>
-
-</div><!-- /page-content -->
+</div>
+<div class="card-body">
+<div class="team-members-grid" id="teamMembersList">
+<div class="subscription-loading">
+<i class="fas fa-spinner fa-spin"></i>
+Chargement...
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- ONGLET NOTIFICATIONS -->
+<div class="tab-pane" id="tab-notifications">
+<section class="card">
+<div class="card-header">
+<h2>Préférences de notification</h2>
+<p>Choisissez comment vous souhaitez être notifié</p>
+</div>
+<div class="card-body">
+<div class="form-group">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+<div>
+<strong>Nouvelles réservations</strong>
+<p class="settings-hint">Recevoir un email pour chaque nouvelle réservation</p>
+</div>
+<label class="switch">
+<input checked="" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<div class="form-group">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+<div>
+<strong>Messages voyageurs</strong>
+<p class="settings-hint">Recevoir un email pour chaque nouveau message</p>
+</div>
+<label class="switch">
+<input checked="" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<div class="form-group">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+<div>
+<strong>Rappels de ménage</strong>
+<p class="settings-hint">Recevoir des rappels pour les tâches de ménage à venir</p>
+</div>
+<label class="switch">
+<input checked="" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<div class="form-group">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+<div>
+<strong>Rapports hebdomadaires</strong>
+<p class="settings-hint">Recevoir un résumé hebdomadaire de votre activité</p>
+</div>
+<label class="switch">
+<input type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<button class="btn btn-primary">
+<i class="fas fa-save"></i>
+Enregistrer les préférences
+</button>
+</div>
+</section>
+</div>
+</div>
 </main>
-</div><!-- /app-container -->
-
-<!-- MODAL Ajouter / Modifier un membre -->
-<div class="modal" id="addTeamMemberModal" style="display:none;">
-  <div class="modal-content" style="max-width:560px;max-height:90vh;overflow-y:auto;">
-    <div class="modal-header">
-      <h2 id="modalTitle">Ajouter un membre</h2>
-      <button class="modal-close" id="closeAddMemberModal"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <form id="addTeamMemberForm">
-        <div class="form-row-inline">
-          <div class="form-row">
-            <label class="form-label">Prénom</label>
-            <input class="form-control" id="memberFirstName" placeholder="Jean" required type="text"/>
-          </div>
-          <div class="form-row">
-            <label class="form-label">Nom</label>
-            <input class="form-control" id="memberLastName" placeholder="Dupont" required type="text"/>
-          </div>
-        </div>
-        <div class="form-row">
-          <label class="form-label">Email</label>
-          <input class="form-control" id="memberEmail" placeholder="jean@exemple.fr" required type="email"/>
-        </div>
-        <div class="form-row" id="passwordFieldContainer">
-          <label class="form-label">Mot de passe</label>
-          <input class="form-control" id="memberPassword" minlength="6" placeholder="Minimum 6 caractères" required type="password"/>
-        </div>
-        <div class="form-row">
-          <label class="form-label">Rôle</label>
-          <select class="form-control" id="memberRole" required>
-            <option value="manager">Manager</option>
-            <option value="cleaner">Personnel de ménage</option>
-            <option value="accountant">Comptable</option>
-            <option value="custom">Personnalisé</option>
-          </select>
-          <p class="settings-hint" id="roleDescription">Accès complet au calendrier, messages et gestion du ménage</p>
-        </div>
-        <div class="form-row">
-          <label class="form-label">Logements accessibles</label>
-          <div id="memberProperties" style="max-height:200px;overflow-y:auto;border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px;">
-            <div style="color:var(--text-secondary);padding:8px;">Chargement...</div>
-          </div>
-          <p class="settings-hint">Laissez vide pour accès à tous les logements</p>
-        </div>
-        <div class="form-row" id="customPermissions" style="display:none;">
-          <label class="form-label">Permissions personnalisées</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canViewCalendar" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Voir le calendrier</strong><br><span style="font-size:12px;color:var(--text-secondary);">Consulter les réservations</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canEditReservations" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Modifier réservations</strong><br><span style="font-size:12px;color:var(--text-secondary);">Éditer les détails</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canViewMessages" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Voir les messages</strong><br><span style="font-size:12px;color:var(--text-secondary);">Consulter les conversations</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canSendMessages" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Envoyer messages</strong><br><span style="font-size:12px;color:var(--text-secondary);">Répondre aux voyageurs</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canViewCleaning" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Voir le ménage</strong><br><span style="font-size:12px;color:var(--text-secondary);">Consulter les tâches</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canAssignCleaning" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Gérer le ménage</strong><br><span style="font-size:12px;color:var(--text-secondary);">Assigner les tâches</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canViewProperties" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Voir les logements</strong><br><span style="font-size:12px;color:var(--text-secondary);">Consulter les détails</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canViewDeposits" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Voir les cautions</strong><br><span style="font-size:12px;color:var(--text-secondary);">Consulter les dépôts</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canViewFinances" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Voir les finances</strong><br><span style="font-size:12px;color:var(--text-secondary);">Rapports financiers</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canManageLocks" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Gérer les serrures</strong><br><span style="font-size:12px;color:var(--text-secondary);">Codes d'accès</span></div>
-            </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer;">
-              <input id="perm_canCreateReservations" type="checkbox" style="margin-top:2px;flex-shrink:0;"/>
-              <div><strong style="font-size:13px;">Créer réservations</strong><br><span style="font-size:12px;color:var(--text-secondary);">Nouvelles réservations</span></div>
-            </label>
-          </div>
-        </div>
-      </form>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="cancelAddMember">Annuler</button>
-      <button class="btn btn-primary" id="submitMemberBtn" form="addTeamMemberForm" type="submit">
-        <i class="fas fa-save"></i> Enregistrer
-      </button>
-    </div>
-  </div>
+<!-- Bottom bar mobile -->
+<div class="bottom-bar" id="bottomBar">
+<a class="bottom-bar-item" href="/dashboard.html">
+<i class="fas fa-home"></i>
+<span>Accueil</span>
+</a>
+<a class="bottom-bar-item" href="/calendar.html">
+<i class="fas fa-calendar-alt"></i>
+<span>Calendrier</span>
+</a>
+<a class="bottom-bar-item" href="/messages.html" id="messages-bottom-link">
+<div style="position: relative;">
+<i class="fas fa-envelope"></i>
+<span class="badge-count-mobile" id="messages-badge-mobile" style="display: none;">0</span>
+</div>
+<span>Messages</span>
+</a>
+<button class="bottom-bar-item plus-button" id="plusButton">
+<div class="plus-icon">
+<i class="fas fa-plus"></i>
+</div>
+<span>Plus</span>
+</button>
+<a class="bottom-bar-item active" href="/settings.html">
+<i class="fas fa-cog"></i>
+<span>Paramètres</span>
+</a>
+</div>
+<!-- Menu Plus -->
+<div class="plus-menu" id="plusMenu">
+<div class="plus-menu-content">
+<button class="plus-menu-close" id="plusMenuClose">
+<i class="fas fa-times"></i>
+</button>
+<div class="plus-menu-header">
+<h3>Menu rapide</h3>
+</div>
+<div class="plus-menu-grid">
+<a class="plus-menu-item" href="/reservations.html">
+<div class="plus-menu-icon">
+<i class="fas fa-book"></i>
+</div>
+<span>Réservations</span>
+</a>
+<a class="plus-menu-item" href="/properties.html">
+<div class="plus-menu-icon">
+<i class="fas fa-building"></i>
+</div>
+<span>Logements</span>
+</a>
+<a class="plus-menu-item" href="/cleaning.html">
+<div class="plus-menu-icon">
+<i class="fas fa-broom"></i>
+</div>
+<span>Ménage</span>
+</a>
+<a class="plus-menu-item" href="/finances.html">
+<div class="plus-menu-icon">
+<i class="fas fa-chart-line"></i>
+</div>
+<span>Finances</span>
+</a>
+</div>
+</div>
+</div>
 </div>
 
-<script src="/js/sub-account-guard.js"></script>
+<!-- Modal Ajout Membre -->
+<div class="modal" id="addTeamMemberModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2>Ajouter un membre</h2>
+<button class="modal-close" id="closeAddMemberModal">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="modal-body">
+<form id="addTeamMemberForm">
+<div class="form-row-inline">
+<div class="form-group">
+<label>Prénom</label>
+<input class="form-control" id="memberFirstName" placeholder="Jean" required="" type="text"/>
+</div>
+<div class="form-group">
+<label>Nom</label>
+<input class="form-control" id="memberLastName" placeholder="Dupont" required="" type="text"/>
+</div>
+</div>
+<div class="form-group">
+<label>Email</label>
+<input class="form-control" id="memberEmail" placeholder="jean@exemple.fr" required="" type="email"/>
+</div>
+<div class="form-group" id="passwordFieldContainer">
+<label>Mot de passe</label>
+<input class="form-control" id="memberPassword" minlength="6" placeholder="Minimum 6 caractères" required="" type="password"/>
+</div>
+<div class="form-group">
+<label>Rôle</label>
+<select class="form-control" id="memberRole" required="">
+<option value="manager">Manager</option>
+<option value="cleaner">Personnel de ménage</option>
+<option value="accountant">Comptable</option>
+<option value="custom">Personnalisé</option>
+</select>
+<p class="settings-hint" id="roleDescription">Accès complet au calendrier, messages et gestion du ménage</p>
+</div>
+<div class="form-group">
+<label>Logements accessibles</label>
+<div id="memberProperties" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px;">
+<div style="color: #9ca3af; padding: 8px;">Chargement...</div>
+</div>
+<p class="settings-hint">Sélectionnez les logements auxquels ce membre aura accès</p>
+</div>
+<div class="form-group" id="customPermissions" style="display: none;">
+<label>Permissions personnalisées</label>
+<div class="permissions-grid">
+<div class="permission-item">
+<input id="perm_canViewCalendar" type="checkbox"/>
+<div class="permission-label">
+<strong>Voir le calendrier</strong>
+<span>Consulter les réservations</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canEditReservations" type="checkbox"/>
+<div class="permission-label">
+<strong>Modifier les réservations</strong>
+<span>Éditer les détails des réservations</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canCreateReservations" type="checkbox"/>
+<div class="permission-label">
+<strong>Créer des réservations</strong>
+<span>Ajouter de nouvelles réservations</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canViewMessages" type="checkbox"/>
+<div class="permission-label">
+<strong>Voir les messages</strong>
+<span>Consulter les conversations</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canSendMessages" type="checkbox"/>
+<div class="permission-label">
+<strong>Envoyer des messages</strong>
+<span>Répondre aux voyageurs</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canViewCleaning" type="checkbox"/>
+<div class="permission-label">
+<strong>Voir le ménage</strong>
+<span>Consulter les tâches de ménage</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canAssignCleaning" type="checkbox"/>
+<div class="permission-label">
+<strong>Gérer le ménage</strong>
+<span>Assigner et modifier les tâches</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canViewFinances" type="checkbox"/>
+<div class="permission-label">
+<strong>Voir les finances</strong>
+<span>Consulter les rapports financiers</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canViewProperties" type="checkbox"/>
+<div class="permission-label">
+<strong>Voir les logements</strong>
+<span>Consulter les détails des logements</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canViewDeposits" type="checkbox"/>
+<div class="permission-label">
+<strong>Voir les cautions</strong>
+<span>Consulter les dépôts de garantie</span>
+</div>
+</div>
+<div class="permission-item">
+<input id="perm_canManageLocks" type="checkbox"/>
+<div class="permission-label">
+<strong>Gérer les serrures</strong>
+<span>Créer et gérer les codes d'accès</span>
+</div>
+</div>
+</div>
+</div>
+</form>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" id="cancelAddMember">Annuler</button>
+<button class="btn btn-primary" form="addTeamMemberForm" type="submit">
+<i class="fas fa-save"></i>
+Enregistrer
+</button>
+</div>
+</div>
+</div>
 
+<!-- ============================================ -->
+<!-- 🔒 PROTECTION DE PAGE - SUB-ACCOUNT -->
+<!-- ============================================ -->
 <script>
-// ===== ONGLETS =====
-(function() {
-  var tabs = document.querySelectorAll('.settings-tab');
-  var panes = document.querySelectorAll('.tab-pane');
-  tabs.forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      tabs.forEach(function(t) { t.classList.remove('active'); });
-      panes.forEach(function(p) { p.classList.remove('active'); });
-      this.classList.add('active');
-      var target = document.querySelector('.tab-pane[data-tab="' + this.dataset.tab + '"]');
-      if (target) target.classList.add('active');
-      if (this.dataset.tab === 'team') setTimeout(loadTeamMembers, 100);
+(async function() {
+  console.log('🔵 Vérification authentification sous-compte...');
+  
+  const token = localStorage.getItem('lcc_token');
+  const isSubAccount = localStorage.getItem('is_sub_account') === 'true';
+  
+  // Si pas de token ou pas un sous-compte -> rediriger vers login
+  if (!token || !isSubAccount) {
+    console.log('❌ Non authentifié ou pas un sous-compte');
+    window.location.href = '/login.html';
+    return;
+  }
+  
+  try {
+    // Vérifier que le token est valide
+    const response = await fetch('/api/sub-accounts/verify', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
-  });
-})();
-</script>
-
-<script>
-// ===== PROFIL =====
-(function() {
-  var token = localStorage.getItem('lcc_token');
-  fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var u = data.user || data;
-      if (u.first_name) document.getElementById('profileFirstName').value = u.first_name;
-      if (u.last_name) document.getElementById('profileLastName').value = u.last_name;
-      if (u.email) document.getElementById('profileEmail').value = u.email;
-    }).catch(function() {});
-
-  document.getElementById('saveProfileBtn') && document.getElementById('saveProfileBtn').addEventListener('click', async function() {
-    try {
-      var res = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({
-          firstName: document.getElementById('profileFirstName').value,
-          lastName: document.getElementById('profileLastName').value,
-          email: document.getElementById('profileEmail').value
-        })
-      });
-      var status = document.getElementById('profileSaveStatus');
-      status.textContent = res.ok ? '✅ Enregistré' : '❌ Erreur';
-      status.style.color = res.ok ? '#059669' : '#dc2626';
-      setTimeout(function() { status.textContent = ''; }, 3000);
-    } catch(e) {}
-  });
-
-  document.getElementById('savePasswordBtn') && document.getElementById('savePasswordBtn').addEventListener('click', async function() {
-    var pwd = document.getElementById('newPassword').value;
-    var conf = document.getElementById('confirmPassword').value;
-    var status = document.getElementById('passwordSaveStatus');
-    if (pwd !== conf) {
-      status.textContent = '❌ Les mots de passe ne correspondent pas';
-      status.style.color = '#dc2626';
+    
+    if (!response.ok) {
+      console.log('❌ Token invalide');
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('is_sub_account');
+      window.location.href = '/login.html';
       return;
     }
-    try {
-      var res = await fetch('/api/user/password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ password: pwd })
-      });
-      if (res.ok) {
-        status.textContent = '✅ Mot de passe changé';
-        status.style.color = '#059669';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
-      } else {
-        status.textContent = '❌ Erreur';
-        status.style.color = '#dc2626';
-      }
-      setTimeout(function() { status.textContent = ''; }, 3000);
-    } catch(e) {}
-  });
+    
+    const data = await response.json();
+    
+    if (!data.success || !data.isSubAccount) {
+      console.log('❌ Pas un sous-compte valide');
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('is_sub_account');
+      window.location.href = '/login.html';
+      return;
+    }
+    
+    console.log('✅ Sous-compte authentifié:', data.subAccount.email);
+    
+    // Mettre à jour les infos utilisateur dans le DOM
+    if (data.subAccount) {
+      const nameEl = document.getElementById('sidebarUserName');
+      const avatarEl = document.getElementById('sidebarUserAvatar');
+      if (nameEl) nameEl.textContent = `${data.subAccount.firstName} ${data.subAccount.lastName}`;
+      if (avatarEl) avatarEl.textContent = data.subAccount.firstName.charAt(0).toUpperCase();
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur vérification:', error);
+    window.location.href = '/login.html';
+  }
 })();
 </script>
 
+<!-- SCRIPT INFORMATIONS UTILISATEUR -->
+  <script>
+    
+    (function() {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (user.firstName) {
+        const nameEl = document.getElementById('sidebarUserName');
+        const avatarEl = document.getElementById('sidebarUserAvatar');
+        if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
+        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      }
+      if (user.company) {
+        const companyEl = document.getElementById('sidebarUserCompany');
+        if (companyEl) companyEl.textContent = user.company;
+      }
+    })();
+  </script>
+
+<!-- SCRIPT ABONNEMENT -->
 <script>
-// ===== ÉQUIPE =====
-document.addEventListener('DOMContentLoaded', function() {
-  var ROLE_DESCRIPTIONS = {
+    // ✅ NOUVEAU : Fonction avec les vrais prix
+    function formatEUR(amount) {
+      const n = Number(amount || 0);
+      return n.toFixed(2).replace('.', ',') + '€';
+    }
+
+    // ✅ CORRIGÉ : Nouveaux plans et prix
+    function priceForPlan(planType) {
+      const p = (planType || 'solo').toLowerCase();
+      
+      // Nouveaux plans
+      if (p === 'solo') return 14.90;
+      if (p === 'pro') return 49.00;
+      if (p === 'business') return 99.00;
+      
+      // Anciens plans (pour compatibilité)
+      if (p === 'basic') return 14.90; // Redirection vers Solo
+      
+      return 14.90; // Par défaut : Solo
+    }
+
+    // ✅ NOUVEAU : Retourner le nom lisible du plan
+    function planDisplayName(planType) {
+      const p = (planType || 'solo').toLowerCase();
+      
+      if (p === 'solo') return 'Solo';
+      if (p === 'pro') return 'Pro';
+      if (p === 'business') return 'Business';
+      if (p === 'basic') return 'Solo'; // Ancien nom
+      
+      return 'Solo';
+    }
+
+    async function loadSubscriptionStatus() {
+      const token = localStorage.getItem('lcc_token');
+      const subscriptionCard = document.getElementById('subscriptionCard');
+
+      if (!subscriptionCard) return;
+
+      if (!token) {
+        subscriptionCard.innerHTML = `
+          <div class="alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>Non connecté</strong><br>
+              Veuillez vous connecter pour voir votre abonnement.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/subscription/status', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!res.ok) throw new Error('Erreur');
+
+        const data = await res.json();
+
+        if (!data.status) {
+          subscriptionCard.innerHTML = `
+            <div class="subscription-header">
+              <div class="subscription-info">
+                <h3>Aucun abonnement actif</h3>
+                <p style="color: var(--text-secondary); margin-top: 8px;">
+                  Choisissez un plan pour continuer à utiliser Boostinghost.
+                </p>
+              </div>
+            </div>
+            <div class="subscription-actions" style="margin-top: 20px;">
+              <a href="/pricing.html" class="btn btn-primary">
+                <i class="fas fa-arrow-right"></i>
+                Choisir un plan
+              </a>
+            </div>
+          `;
+          return;
+        }
+
+        let statusBadgeClass = 'trial';
+        let statusBadgeText = 'Essai gratuit';
+        let statusBadgeIcon = 'fa-hourglass-half';
+
+        if (data.status === 'active') {
+          statusBadgeClass = 'active';
+          statusBadgeText = 'Actif';
+          statusBadgeIcon = 'fa-check-circle';
+        } else if (data.status === 'expired' || data.status === 'canceled') {
+          statusBadgeClass = 'expired';
+          statusBadgeText = 'Expiré';
+          statusBadgeIcon = 'fa-exclamation-circle';
+        }
+
+        let daysRemainingHtml = '';
+        if (data.trialEndsAt && data.status === 'trial') {
+          const now = new Date();
+          const endDate = new Date(data.trialEndsAt);
+          const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+          daysRemainingHtml = `
+            <div class="days-remaining">
+              <i class="fas fa-clock"></i>
+              ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}
+            </div>
+          `;
+        }
+
+        let actionsHtml = '';
+        if (data.status === 'trial') {
+          actionsHtml = `
+            <div class="subscription-actions">
+              <a href="/pricing.html" class="btn btn-primary">
+                <i class="fas fa-crown"></i>
+                Passer à un plan payant
+              </a>
+            </div>
+          `;
+        } else if (data.status === 'active') {
+          actionsHtml = `
+            <div class="subscription-actions">
+              <button class="btn btn-secondary" onclick="manageSubscription()">
+                <i class="fas fa-cog"></i>
+                Gérer l'abonnement
+              </button>
+            </div>
+          `;
+        } else if (data.status === 'expired' || data.status === 'canceled') {
+          actionsHtml = `
+            <div class="subscription-actions">
+              <a href="/pricing.html" class="btn btn-primary">
+                <i class="fas fa-arrow-right"></i>
+                Réactiver mon abonnement
+              </a>
+            </div>
+          `;
+        }
+
+        // ✅ UTILISATION DES NOUVELLES FONCTIONS
+        const planName = planDisplayName(data.planType);
+        const planPrice = priceForPlan(data.planType);
+
+        subscriptionCard.innerHTML = `
+          <div class="subscription-header">
+            <div class="subscription-info">
+              <h3>Plan ${planName}</h3>
+              <div class="subscription-status">
+                <span class="status-badge ${statusBadgeClass}">
+                  <i class="fas ${statusBadgeIcon}"></i>
+                  ${statusBadgeText}
+                </span>
+                ${daysRemainingHtml}
+              </div>
+            </div>
+            ${actionsHtml}
+          </div>
+          <div class="subscription-details">
+            <div class="detail-row">
+              <span class="detail-label">Prix mensuel</span>
+              <span class="detail-value">${formatEUR(planPrice)}</span>
+            </div>
+            ${data.nextBillingDate ? `
+            <div class="detail-row">
+              <span class="detail-label">Prochaine facturation</span>
+              <span class="detail-value">${new Date(data.nextBillingDate).toLocaleDateString('fr-FR')}</span>
+            </div>
+            ` : ''}
+            ${data.cancelAtPeriodEnd ? `
+            <div class="detail-row">
+              <span class="detail-label">Annulation prévue</span>
+              <span class="detail-value" style="color: #ef4444;">
+                ${new Date(data.currentPeriodEnd).toLocaleDateString('fr-FR')}
+              </span>
+            </div>
+            ` : ''}
+          </div>
+        `;
+
+      } catch (error) {
+        console.error('Erreur chargement abonnement:', error);
+        subscriptionCard.innerHTML = `
+          <div class="alert-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>Erreur</strong><br>
+              Impossible de charger les informations d'abonnement.
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    async function manageSubscription() {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/stripe/create-portal-session', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert('Erreur lors de la redirection vers le portail Stripe');
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la création de la session portail');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const subTab = document.querySelector('[data-tab="subscription"]');
+      if (subTab) {
+        subTab.addEventListener('click', () => {
+          setTimeout(loadSubscriptionStatus, 100);
+        });
+      }
+    });
+  </script>
+
+<!-- SCRIPT ONGLETS -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.settings-tab');
+    const panes = document.querySelectorAll('.tab-pane');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.getAttribute('data-tab');
+        
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        panes.forEach(pane => {
+          if (pane.id === 'tab-' + targetId) {
+            pane.classList.add('active');
+          } else {
+            pane.classList.remove('active');
+          }
+        });
+      });
+    });
+  });
+</script>
+
+<!-- SCRIPT ÉQUIPE -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const ROLE_DESCRIPTIONS = {
     manager: 'Accès complet au calendrier, messages et gestion du ménage',
     cleaner: 'Accès au calendrier et aux tâches de ménage uniquement',
     accountant: 'Accès aux finances et au calendrier en lecture seule',
     custom: 'Définir les permissions manuellement'
   };
-  var editingMemberId = null;
-
-  function loadTeamMembers() {
-    var container = document.getElementById('teamMembersList');
-    container.innerHTML = '<div class="subscription-loading"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
-    var token = localStorage.getItem('lcc_token');
-    fetch('/api/sub-accounts/list', { headers: { 'Authorization': 'Bearer ' + token } })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (!data.success) throw new Error(data.error);
-        if (!data.subAccounts || data.subAccounts.length === 0) {
-          container.innerHTML = [
-            '<div style="text-align:center;padding:48px 24px;">',
-            '<div style="width:64px;height:64px;background:var(--bg-secondary);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">',
-            '<i class="fas fa-users" style="font-size:28px;color:var(--text-secondary);"></i></div>',
-            '<h3 style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">Aucun membre dans l'équipe</h3>',
-            '<p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">Ajoutez des membres pour collaborer</p>',
-            '<button class="btn btn-primary" onclick="document.getElementById('addTeamMemberBtn').click()"><i class="fas fa-plus"></i> Ajouter votre premier membre</button>',
-            '</div>'
-          ].join('');
-          return;
-        }
-        var properties = window.cachedProperties || [];
-        var roleLabels = { manager: 'Manager', cleaner: 'Personnel de ménage', accountant: 'Comptable', custom: 'Personnalisé' };
-        var roleColors = { manager: '#1A7A5E', cleaner: '#7C3AED', accountant: '#0369A1', custom: '#92400E' };
-
-        container.innerHTML = data.subAccounts.map(function(member) {
-          var initials = (member.first_name.charAt(0) + member.last_name.charAt(0)).toUpperCase();
-          var isActive = member.is_active;
-          var roleText = roleLabels[member.role] || 'Personnalisé';
-          var rc = roleColors[member.role] || '#92400E';
-
-          var propsHtml = '';
-          if (member.accessible_properties && member.accessible_properties.length > 0) {
-            var propNames = member.accessible_properties.map(function(id) {
-              var p = properties.find(function(p) { return p.id === id; });
-              return p ? p.name : ('Logement #' + id);
-            });
-            propsHtml = '<div style="margin-top:6px;font-size:12px;color:var(--text-secondary);"><i class="fas fa-building" style="margin-right:4px;"></i>' + propNames.join(', ') + '</div>';
-          }
-
-          var perms = member.permissions || {};
-          var badges = [
-            perms.can_view_calendar && '<span class="perm-badge">Calendrier</span>',
-            perms.can_view_messages && '<span class="perm-badge">Messages</span>',
-            perms.can_send_messages && '<span class="perm-badge">Réponses</span>',
-            perms.can_view_cleaning && '<span class="perm-badge">Ménage</span>',
-            perms.can_view_deposits && '<span class="perm-badge">Cautions</span>'
-          ].filter(Boolean).join('');
-
-          return [
-            '<div class="team-member-card" style="' + (!isActive ? 'opacity:0.55;' : '') + '">',
-            '<div class="team-member-header">',
-            '<div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;background:' + rc + '22;color:' + rc + ';">' + initials + '</div>',
-            '<div style="flex:1;min-width:0;">',
-            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">',
-            '<span style="font-size:15px;font-weight:600;color:var(--text-primary);">' + member.first_name + ' ' + member.last_name + '</span>',
-            '<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:' + rc + '18;color:' + rc + ';">' + roleText + '</span>',
-            (!isActive ? '<span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#fef2f2;color:#dc2626;">Inactif</span>' : ''),
-            '</div>',
-            '<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">' + member.email + '</div>',
-            propsHtml,
-            badges ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">' + badges + '</div>' : '',
-            '</div>',
-            '<div style="display:flex;gap:6px;flex-shrink:0;">',
-            '<button class="icon-btn" onclick="toggleTeamMember(' + member.id + ')" title="' + (isActive ? 'Désactiver' : 'Activer') + '" style="width:32px;height:32px;border-radius:8px;"><i class="fas fa-' + (isActive ? 'pause' : 'play') + '"></i></button>',
-            '<button class="icon-btn" onclick="editTeamMember(' + member.id + ')" title="Modifier" style="width:32px;height:32px;border-radius:8px;"><i class="fas fa-edit"></i></button>',
-            '<button class="icon-btn danger" onclick="deleteTeamMember(' + member.id + ', '' + member.email + '')" title="Supprimer" style="width:32px;height:32px;border-radius:8px;"><i class="fas fa-trash"></i></button>',
-            '</div>',
-            '</div>',
-            '</div>'
-          ].join('');
-        }).join('');
-      })
-      .catch(function(err) {
-        container.innerHTML = '<div class="alert-error"><i class="fas fa-exclamation-triangle"></i> ' + err.message + '</div>';
-      });
-  }
-
-  window.loadTeamMembers = loadTeamMembers;
-  loadTeamMembers();
-
-  async function loadPropertiesForSelect() {
+  
+  let editingMemberId = null;
+  
+  async function loadTeamMembers() {
+    console.log('🔵 Chargement équipe...');
+    const container = document.getElementById('teamMembersList');
+    
+    container.innerHTML = `
+      <div class="subscription-loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        Chargement...
+      </div>
+    `;
+    
     try {
-      var token = localStorage.getItem('lcc_token');
-      var res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
-      var data = await res.json();
-      window.cachedProperties = data.properties || [];
-      var container = document.getElementById('memberProperties');
-      if (!container) return;
-      if (!data.properties || data.properties.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-secondary);padding:8px;">Aucun logement</div>';
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/sub-accounts/list', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      const data = await res.json();
+      console.log('📦 Données reçues:', data);
+      
+      if (!data.success) throw new Error(data.error);
+      
+      if (!data.subAccounts || data.subAccounts.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-users"></i>
+            <h3>Aucun membre dans l'équipe</h3>
+            <p>Ajoutez des membres pour collaborer efficacement</p>
+            <button class="btn btn-primary" onclick="document.getElementById('addTeamMemberBtn').click()">
+              <i class="fas fa-plus"></i>
+              Ajouter votre premier membre
+            </button>
+          </div>
+        `;
         return;
       }
-      container.innerHTML = data.properties.map(function(p) {
-        return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;border-radius:8px;transition:.15s;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'">' +
-          '<input type="checkbox" class="property-checkbox" value="' + p.id + '" style="width:16px;height:16px;cursor:pointer;accent-color:#1A7A5E;">' +
-          '<span style="flex:1;font-size:14px;color:var(--text-primary);">' + p.name + '</span></label>';
+      
+      container.innerHTML = data.subAccounts.map(member => {
+        const initials = (member.first_name.charAt(0) + member.last_name.charAt(0)).toUpperCase();
+        const isActive = member.is_active;
+        const roleText = {
+          manager: 'Manager',
+          cleaner: 'Personnel de ménage',
+          accountant: 'Comptable',
+          custom: 'Personnalisé'
+        }[member.role] || 'Personnalisé';
+        
+        // ✅ NOUVEAU : Affichage des logements accessibles
+        let propertiesHtml = '';
+        if (member.accessible_properties && member.accessible_properties.length > 0) {
+          // Utiliser le cache global si disponible
+          const properties = window.cachedProperties || [];
+          const propertyNames = member.accessible_properties.map(propId => {
+            const prop = properties.find(p => p.id === propId);
+            return prop ? prop.name : `Logement #${propId}`;
+          });
+          
+          propertiesHtml = `
+            <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+              <i class="fas fa-building" style="margin-right: 4px;"></i>
+              ${propertyNames.join(', ')}
+            </div>
+          `;
+        }
+        
+        return `
+          <div class="team-member-card" style="${!isActive ? 'opacity: 0.6;' : ''}">
+            <div class="member-avatar">${initials}</div>
+            <div class="member-info">
+              <div class="member-name">${member.first_name} ${member.last_name}</div>
+              <div class="member-email">${member.email}</div>
+              <span class="member-role">
+                <i class="fas fa-user-tag"></i>
+                ${roleText}
+              </span>
+              ${propertiesHtml}
+            </div>
+            <div class="member-actions">
+              <button 
+                class="icon-btn" 
+                onclick="toggleTeamMember(${member.id})"
+                title="${isActive ? 'Désactiver' : 'Activer'}">
+                <i class="fas fa-${isActive ? 'pause' : 'play'}"></i>
+              </button>
+              <button 
+                class="icon-btn" 
+                onclick="editTeamMember(${member.id})"
+                title="Modifier">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button 
+                class="icon-btn danger" 
+                onclick="deleteTeamMember(${member.id}, '${member.email}')"
+                title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
       }).join('');
-    } catch(e) {}
+      
+      console.log('✅ Équipe chargée:', data.subAccounts.length);
+    } catch (error) {
+      console.error('❌ Erreur chargement équipe:', error);
+      container.innerHTML = `
+        <div class="alert-error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div>
+            <strong>Erreur</strong><br>
+            ${error.message}
+          </div>
+        </div>
+      `;
+    }
   }
-
-  document.getElementById('addTeamMemberBtn') && document.getElementById('addTeamMemberBtn').addEventListener('click', async function() {
-    editingMemberId = null;
-    document.getElementById('modalTitle').textContent = 'Ajouter un membre';
-    document.getElementById('addTeamMemberForm').reset();
-    document.getElementById('memberRole').dispatchEvent(new Event('change'));
-    var pwdField = document.getElementById('memberPassword');
-    if (pwdField) { pwdField.required = true; pwdField.parentElement.style.display = 'block'; }
-    document.getElementById('addTeamMemberModal').style.display = 'flex';
-    await loadPropertiesForSelect();
-  });
-
-  document.getElementById('closeAddMemberModal') && document.getElementById('closeAddMemberModal').addEventListener('click', function() {
+  
+  const addBtn = document.getElementById('addTeamMemberBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', async () => {
+      editingMemberId = null;
+      document.querySelector('#addTeamMemberModal h2').textContent = 'Ajouter un membre';
+      document.getElementById('addTeamMemberForm').reset();
+      document.getElementById('memberRole').dispatchEvent(new Event('change'));
+      const pwdField = document.getElementById('memberPassword');
+      if (pwdField) {
+        pwdField.required = true;
+        pwdField.parentElement.style.display = 'block';
+      }
+      const modal = document.getElementById('addTeamMemberModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        await loadPropertiesForSelect();
+      }
+    });
+  }
+  
+  document.getElementById('closeAddMemberModal')?.addEventListener('click', () => {
     document.getElementById('addTeamMemberModal').style.display = 'none';
   });
-  document.getElementById('cancelAddMember') && document.getElementById('cancelAddMember').addEventListener('click', function() {
+  
+  document.getElementById('cancelAddMember')?.addEventListener('click', () => {
     document.getElementById('addTeamMemberModal').style.display = 'none';
   });
-  document.getElementById('addTeamMemberModal') && document.getElementById('addTeamMemberModal').addEventListener('click', function(e) {
-    if (e.target === this) this.style.display = 'none';
-  });
-
-  document.getElementById('memberRole') && document.getElementById('memberRole').addEventListener('change', function() {
-    var desc = document.getElementById('roleDescription');
-    var custom = document.getElementById('customPermissions');
+  
+  document.getElementById('memberRole')?.addEventListener('change', function() {
+    const desc = document.getElementById('roleDescription');
+    const customPerms = document.getElementById('customPermissions');
     if (desc) desc.textContent = ROLE_DESCRIPTIONS[this.value] || '';
-    if (custom) custom.style.display = this.value === 'custom' ? 'block' : 'none';
+    if (customPerms) customPerms.style.display = this.value === 'custom' ? 'block' : 'none';
   });
-
-  document.getElementById('addTeamMemberForm') && document.getElementById('addTeamMemberForm').addEventListener('submit', async function(e) {
+  
+  async function loadPropertiesForSelect() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/properties', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      const container = document.getElementById('memberProperties');
+      if (!container) return;
+      
+      // ✅ Stocker dans un cache global pour l'affichage des cartes
+      window.cachedProperties = data.properties || [];
+      
+      if (!data.properties || data.properties.length === 0) {
+        container.innerHTML = '<div style="color:#9ca3af;padding:8px;">Aucun logement</div>';
+        return;
+      }
+      
+      // ✅ NOUVEAU : Générer des checkboxes au lieu d'un select
+      container.innerHTML = data.properties.map(p => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-radius:6px;transition:background 0.2s;" 
+               onmouseover="this.style.background='#f3f4f6'" 
+               onmouseout="this.style.background='transparent'">
+          <input type="checkbox" 
+                 class="property-checkbox" 
+                 value="${p.id}" 
+                 style="width:18px;height:18px;cursor:pointer;">
+          <span style="flex:1;font-size:14px;">${p.name}</span>
+        </label>
+      `).join('');
+      
+      console.log('✅ Propriétés chargées:', data.properties.length);
+    } catch (error) {
+      console.error('Erreur propriétés:', error);
+    }
+  }
+  
+  document.getElementById('addTeamMemberForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
-    var role = document.getElementById('memberRole').value;
-    var propertyIds = Array.from(document.querySelectorAll('.property-checkbox:checked')).map(function(cb) { return cb.value; });
-    var data = {
+    const role = document.getElementById('memberRole').value;
+    
+    // ✅ NOUVEAU : Récupérer les checkboxes cochées au lieu des options sélectionnées
+    const checkedBoxes = Array.from(document.querySelectorAll('.property-checkbox:checked'));
+    const propertyIds = checkedBoxes.map(cb => cb.value);
+    
+    const data = {
       email: document.getElementById('memberEmail').value,
       firstName: document.getElementById('memberFirstName').value,
       lastName: document.getElementById('memberLastName').value,
-      role: role, propertyIds: propertyIds
+      role: role,
+      propertyIds: propertyIds
     };
-    if (!editingMemberId) data.password = document.getElementById('memberPassword').value;
+    
+    if (!editingMemberId) {
+      data.password = document.getElementById('memberPassword').value;
+    }
+    
     if (role === 'custom') {
       data.permissions = {
-        can_view_reservations: !!document.getElementById('perm_canViewCalendar') && document.getElementById('perm_canViewCalendar').checked,
-        can_edit_reservations: !!document.getElementById('perm_canEditReservations') && document.getElementById('perm_canEditReservations').checked,
-        can_create_reservations: !!document.getElementById('perm_canCreateReservations') && document.getElementById('perm_canCreateReservations').checked,
-        can_view_messages: !!document.getElementById('perm_canViewMessages') && document.getElementById('perm_canViewMessages').checked,
-        can_send_messages: !!document.getElementById('perm_canSendMessages') && document.getElementById('perm_canSendMessages').checked,
-        can_view_cleaning: !!document.getElementById('perm_canViewCleaning') && document.getElementById('perm_canViewCleaning').checked,
-        can_manage_cleaning: !!document.getElementById('perm_canAssignCleaning') && document.getElementById('perm_canAssignCleaning').checked,
-        can_view_properties: !!document.getElementById('perm_canViewProperties') && document.getElementById('perm_canViewProperties').checked,
-        can_view_finances: !!document.getElementById('perm_canViewFinances') && document.getElementById('perm_canViewFinances').checked,
-        can_view_deposits: !!document.getElementById('perm_canViewDeposits') && document.getElementById('perm_canViewDeposits').checked,
-        can_manage_locks: !!document.getElementById('perm_canManageLocks') && document.getElementById('perm_canManageLocks').checked,
-        can_manage_team: false
+        can_view_reservations: document.getElementById('perm_canViewCalendar')?.checked || false,
+        can_edit_reservations: document.getElementById('perm_canEditReservations')?.checked || false,
+        can_create_reservations: document.getElementById('perm_canCreateReservations')?.checked || false,
+        can_view_messages: document.getElementById('perm_canViewMessages')?.checked || false,
+        can_send_messages: document.getElementById('perm_canSendMessages')?.checked || false,
+        can_view_cleaning: document.getElementById('perm_canViewCleaning')?.checked || false,
+        can_manage_cleaning: document.getElementById('perm_canAssignCleaning')?.checked || false,
+        can_view_properties: document.getElementById('perm_canViewProperties')?.checked || false,
+        can_edit_properties: false,
+        can_view_finances: document.getElementById('perm_canViewFinances')?.checked || false,
+        can_manage_team: false,
+        can_view_deposits: document.getElementById('perm_canViewDeposits')?.checked || false,
+        can_manage_locks: document.getElementById('perm_canManageLocks')?.checked || false
       };
+      console.log('🔐 Permissions:', data.permissions);
     }
-    var submitBtn = document.getElementById('submitMemberBtn');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+    
     try {
-      var token = localStorage.getItem('lcc_token');
-      var endpoint = editingMemberId ? ('/api/sub-accounts/' + editingMemberId) : '/api/sub-accounts';
-      var method = editingMemberId ? 'PUT' : 'POST';
-      var res = await fetch(endpoint, {
+      const token = localStorage.getItem('lcc_token');
+      const endpoint = editingMemberId ? `/api/sub-accounts/${editingMemberId}` : '/api/sub-accounts/create';
+      const method = editingMemberId ? 'PUT' : 'POST';
+      
+      const res = await fetch(endpoint, {
         method: method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(data)
       });
-      var result = await res.json();
+      
+      const result = await res.json();
       if (!result.success) throw new Error(result.error);
+      
+      alert(editingMemberId ? '✅ Modifié' : '✅ Ajouté');
       document.getElementById('addTeamMemberModal').style.display = 'none';
       this.reset();
       editingMemberId = null;
       loadTeamMembers();
-    } catch(err) {
-      alert('❌ ' + err.message);
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+    } catch (error) {
+      alert('❌ ' + error.message);
     }
   });
-
+  
   window.editTeamMember = async function(id) {
+    console.log('🔵 Edit:', id);
     try {
-      var token = localStorage.getItem('lcc_token');
-      var res = await fetch('/api/sub-accounts/list', { headers: { 'Authorization': 'Bearer ' + token } });
-      var data = await res.json();
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/sub-accounts/list', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      var member = data.subAccounts.find(function(m) { return m.id === id; });
+      
+      const member = data.subAccounts.find(m => m.id === id);
       if (!member) throw new Error('Membre introuvable');
+      
       editingMemberId = id;
       await loadPropertiesForSelect();
+      
       document.getElementById('memberEmail').value = member.email;
       document.getElementById('memberFirstName').value = member.first_name;
       document.getElementById('memberLastName').value = member.last_name;
       document.getElementById('memberRole').value = member.role;
+      
+      const pwdField = document.getElementById('memberPassword');
+      if (pwdField) {
+        pwdField.required = false;
+        pwdField.value = '';
+        pwdField.parentElement.style.display = 'none';
+      }
+      
       document.getElementById('memberRole').dispatchEvent(new Event('change'));
-      var pwdField = document.getElementById('memberPassword');
-      if (pwdField) { pwdField.required = false; pwdField.value = ''; pwdField.parentElement.style.display = 'none'; }
+      
+      // ✅ NOUVEAU : Cocher les checkboxes au lieu de sélectionner les options
       if (member.accessible_properties && member.accessible_properties.length > 0) {
-        document.querySelectorAll('.property-checkbox').forEach(function(cb) {
-          cb.checked = member.accessible_properties.map(Number).includes(parseInt(cb.value));
+        const checkboxes = document.querySelectorAll('.property-checkbox');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = member.accessible_properties.includes(checkbox.value);
         });
       }
-      if (member.role === 'custom' && member.permissions) {
-        var p = member.permissions;
-        var map = {
-          'perm_canViewCalendar': p.can_view_reservations,
-          'perm_canEditReservations': p.can_edit_reservations,
-          'perm_canCreateReservations': p.can_create_reservations,
-          'perm_canViewMessages': p.can_view_messages,
-          'perm_canSendMessages': p.can_send_messages,
-          'perm_canViewCleaning': p.can_view_cleaning,
-          'perm_canAssignCleaning': p.can_manage_cleaning,
-          'perm_canViewFinances': p.can_view_finances,
-          'perm_canViewProperties': p.can_view_properties,
-          'perm_canViewDeposits': p.can_view_deposits,
-          'perm_canManageLocks': p.can_manage_locks
-        };
-        Object.keys(map).forEach(function(elId) {
-          var el = document.getElementById(elId);
-          if (el) el.checked = !!map[elId];
-        });
+      
+      if (member.role === 'custom') {
+        if (document.getElementById('perm_canViewCalendar')) document.getElementById('perm_canViewCalendar').checked = member.can_view_reservations || false;
+        if (document.getElementById('perm_canEditReservations')) document.getElementById('perm_canEditReservations').checked = member.can_edit_reservations || false;
+        if (document.getElementById('perm_canCreateReservations')) document.getElementById('perm_canCreateReservations').checked = member.can_create_reservations || false;
+        if (document.getElementById('perm_canViewMessages')) document.getElementById('perm_canViewMessages').checked = member.can_view_messages || false;
+        if (document.getElementById('perm_canSendMessages')) document.getElementById('perm_canSendMessages').checked = member.can_send_messages || false;
+        if (document.getElementById('perm_canViewCleaning')) document.getElementById('perm_canViewCleaning').checked = member.can_view_cleaning || false;
+        if (document.getElementById('perm_canAssignCleaning')) document.getElementById('perm_canAssignCleaning').checked = member.can_manage_cleaning || false;
+        if (document.getElementById('perm_canViewFinances')) document.getElementById('perm_canViewFinances').checked = member.can_view_finances || false;
+        if (document.getElementById('perm_canViewProperties')) document.getElementById('perm_canViewProperties').checked = member.can_view_properties || false;
+        if (document.getElementById('perm_canViewDeposits')) document.getElementById('perm_canViewDeposits').checked = member.can_view_deposits || false;
+        if (document.getElementById('perm_canManageLocks')) document.getElementById('perm_canManageLocks').checked = member.can_manage_locks || false;
       }
-      document.getElementById('modalTitle').textContent = 'Modifier le membre';
+      
+      document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
       document.getElementById('addTeamMemberModal').style.display = 'flex';
-    } catch(e) { alert('❌ ' + e.message); }
+      console.log('✅ Modal édition ouverte');
+    } catch (error) {
+      alert('❌ ' + error.message);
+    }
   };
-
+  
   window.deleteTeamMember = async function(id, email) {
-    if (!confirm('Supprimer ' + email + ' ?')) return;
+    if (!confirm(`Supprimer ${email} ?`)) return;
     try {
-      var token = localStorage.getItem('lcc_token');
-      var res = await fetch('/api/sub-accounts/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
-      var data = await res.json();
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch(`/api/sub-accounts/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
       if (!data.success) throw new Error(data.error);
+      alert('✅ Supprimé');
       loadTeamMembers();
-    } catch(e) { alert('❌ ' + e.message); }
+    } catch (error) {
+      alert('❌ ' + error.message);
+    }
   };
-
+  
   window.toggleTeamMember = async function(id) {
     try {
-      var token = localStorage.getItem('lcc_token');
-      var res = await fetch('/api/sub-accounts/' + id + '/toggle', { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token } });
-      var data = await res.json();
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch(`/api/sub-accounts/${id}/toggle`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
       if (!data.success) throw new Error(data.error);
       loadTeamMembers();
-    } catch(e) { alert('❌ ' + e.message); }
+    } catch (error) {
+      alert('❌ ' + error.message);
+    }
   };
+  
+  const teamTab = document.querySelector('[data-tab="team"]');
+  if (teamTab) {
+    teamTab.addEventListener('click', () => setTimeout(loadTeamMembers, 100));
+  }
+  
+  console.log('✅ Script équipe initialisé');
 });
 </script>
-
-<style>
-.perm-badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-.team-member-card {
-  background: var(--bg-primary, white);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg, 12px);
-  padding: 16px;
-  margin-bottom: 12px;
-  transition: box-shadow .2s;
-}
-.team-member-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-.team-member-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-</style>
-
-<style id="settings-account-mobile-master">
-@media (max-width: 768px) {
-
-  /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; }
-  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .sidebar,
-  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
-  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
-
-  /* 2. MOBILE HEADER */
-  .mobile-header {
-    display: flex !important;
-    position: fixed !important;
-    top: 0 !important; left: 0 !important; right: 0 !important;
-    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 1100 !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-  }
-  .mobile-menu-btn, #mobileMenuBtn, .settings-back-btn, #bhHeader { display: none !important; }
-
-  /* 3. PAGE CONTENT */
-  html[data-theme-v3="1"] .page-content {
-    padding: 0 14px 90px !important;
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
-    width: 100% !important;
-  }
-
-  /* 4. ONGLETS — scroll horizontal natif */
-  html[data-theme-v3="1"] .settings-tabs {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    gap: 6px !important;
-    padding: 4px 0 10px !important;
-    margin-bottom: 16px !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-    border: none !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
-    width: 100% !important;
-  }
-  html[data-theme-v3="1"] .settings-tabs::-webkit-scrollbar { display: none !important; }
-  html[data-theme-v3="1"] .settings-tab {
-    flex-shrink: 0 !important;
-    white-space: nowrap !important;
-    padding: 8px 16px !important;
-    border-radius: 999px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-  }
-  html[data-theme-v3="1"] .settings-tab.active {
-    background: #1A7A5E !important;
-    color: white !important;
-  }
-
-  /* 5. CARDS */
-  html[data-theme-v3="1"] .card,
-  html[data-theme-v3="1"] section.card {
-    border-radius: 16px !important;
-    padding: 16px !important;
-    margin-bottom: 14px !important;
-  }
-
-  /* 6. FORMULAIRES — 1 colonne, font-size 16px (évite zoom iOS) */
-  .form-row-inline,
-  .form-grid-2 {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-  .form-row { margin-bottom: 12px !important; }
-  .form-row input,
-  .form-row select,
-  .form-row textarea {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    font-size: 16px !important;
-  }
-
-  /* 7. TEAM MEMBER CARDS */
-  html[data-theme-v3="1"] .team-member-card,
-  html[data-theme-v3="1"] .member-card,
-  .team-member-card {
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    padding: 14px !important;
-  }
-  .team-member-header {
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-  }
-  .team-member-info {
-    min-width: 0 !important;
-    flex: 1 !important;
-  }
-  .team-member-details {
-    min-width: 0 !important;
-    overflow: hidden !important;
-  }
-  .team-member-details h3 {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-  /* Actions : ligne séparée sous les infos */
-  .team-member-actions {
-    flex-shrink: 0 !important;
-    display: flex !important;
-    gap: 8px !important;
-  }
-  .team-member-actions button {
-    flex-shrink: 0 !important;
-  }
-
-  /* 8. RADIO BUTTONS — empêcher le chevauchement */
-  .form-row [style*="display: flex"][style*="gap: 20px"] {
-    flex-direction: column !important;
-    gap: 10px !important;
-  }
-  .form-row label[style*="display: flex"] {
-    align-items: center !important;
-    gap: 10px !important;
-    width: 100% !important;
-  }
-  input[type="radio"] {
-    flex-shrink: 0 !important;
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-  }
-
-  /* 8. BOUTONS */
-  .card-body .btn-primary,
-  .form-actions .btn {
-    width: 100% !important;
-    justify-content: center !important;
-  }
-
-  /* 9. BOTTOM TABS */
-  .mobile-tabs {
-    position: fixed !important;
-    bottom: 0 !important; left: 0 !important; right: 0 !important;
-    z-index: 1000 !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(16px) !important;
-    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-}
-</style>
-
 
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
@@ -1734,233 +1931,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
-<style id="settings-account-mobile-master">
-@media (max-width: 768px) {
-
-  /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; }
-  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .sidebar,
-  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
-  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
-
-  /* 2. MOBILE HEADER */
-  .mobile-header {
-    display: flex !important;
-    position: fixed !important;
-    top: 0 !important; left: 0 !important; right: 0 !important;
-    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 1100 !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-  }
-  .mobile-menu-btn, #mobileMenuBtn, .settings-back-btn, #bhHeader { display: none !important; }
-
-  /* 3. PAGE CONTENT */
-  html[data-theme-v3="1"] .page-content {
-    padding: 0 14px 90px !important;
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
-    width: 100% !important;
-  }
-
-  /* 4. ONGLETS — scroll horizontal natif */
-  html[data-theme-v3="1"] .settings-tabs {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    gap: 6px !important;
-    padding: 4px 0 10px !important;
-    margin-bottom: 16px !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-    border: none !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
-    width: 100% !important;
-  }
-  html[data-theme-v3="1"] .settings-tabs::-webkit-scrollbar { display: none !important; }
-  html[data-theme-v3="1"] .settings-tab {
-    flex-shrink: 0 !important;
-    white-space: nowrap !important;
-    padding: 8px 16px !important;
-    border-radius: 999px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-  }
-  html[data-theme-v3="1"] .settings-tab.active {
-    background: #1A7A5E !important;
-    color: white !important;
-  }
-
-  /* 5. CARDS */
-  html[data-theme-v3="1"] .card,
-  html[data-theme-v3="1"] section.card {
-    border-radius: 16px !important;
-    padding: 16px !important;
-    margin-bottom: 14px !important;
-  }
-
-  /* 6. FORMULAIRES — 1 colonne, font-size 16px (évite zoom iOS) */
-  .form-row-inline,
-  .form-grid-2 {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-  .form-row { margin-bottom: 12px !important; }
-  .form-row input,
-  .form-row select,
-  .form-row textarea {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    font-size: 16px !important;
-  }
-
-  /* 7. TEAM MEMBER CARDS */
-  html[data-theme-v3="1"] .team-member-card,
-  html[data-theme-v3="1"] .member-card,
-  .team-member-card {
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    padding: 14px !important;
-  }
-  .team-member-header {
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-  }
-  .team-member-info {
-    min-width: 0 !important;
-    flex: 1 !important;
-  }
-  .team-member-details {
-    min-width: 0 !important;
-    overflow: hidden !important;
-  }
-  .team-member-details h3 {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-  /* Actions : ligne séparée sous les infos */
-  .team-member-actions {
-    flex-shrink: 0 !important;
-    display: flex !important;
-    gap: 8px !important;
-  }
-  .team-member-actions button {
-    flex-shrink: 0 !important;
-  }
-
-  /* 8. RADIO BUTTONS — empêcher le chevauchement */
-  .form-row [style*="display: flex"][style*="gap: 20px"] {
-    flex-direction: column !important;
-    gap: 10px !important;
-  }
-  .form-row label[style*="display: flex"] {
-    align-items: center !important;
-    gap: 10px !important;
-    width: 100% !important;
-  }
-  input[type="radio"] {
-    flex-shrink: 0 !important;
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-  }
-
-  /* 8. BOUTONS */
-  .card-body .btn-primary,
-  .form-actions .btn {
-    width: 100% !important;
-    justify-content: center !important;
-  }
-
-  /* 9. BOTTOM TABS */
-  .mobile-tabs {
-    position: fixed !important;
-    bottom: 0 !important; left: 0 !important; right: 0 !important;
-    z-index: 1000 !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(16px) !important;
-    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-}
-</style>
-
-<script>
-  // ===== Notifications préférences =====
-  (function() {
-    const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_checklist_done', 'notif_deposit_request', 'notif_deposit_release', 'notif_new_message', 'notif_new_invoice'];
-    const tokenNotif = localStorage.getItem('lcc_token');
-
-    async function loadNotificationSettings() {
-      try {
-        const res = await fetch('/api/settings/notifications', {
-          headers: { 'Authorization': 'Bearer ' + tokenNotif }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          NOTIF_KEYS.forEach(key => {
-            const el = document.getElementById(key);
-            if (el && data[key] !== undefined) el.checked = data[key];
-          });
-          localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
-          return;
-        }
-      } catch(e) {}
-      const saved = localStorage.getItem('lcc_settings_notif');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          NOTIF_KEYS.forEach(key => {
-            const el = document.getElementById(key);
-            if (el && data[key] !== undefined) el.checked = data[key];
-          });
-        } catch(e) {}
-      }
-    }
-
-    loadNotificationSettings();
-
-    const saveBtn = document.getElementById('saveNotifPrefs');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', async function() {
-        const prefs = {};
-        NOTIF_KEYS.forEach(key => {
-          const el = document.getElementById(key);
-          if (el) prefs[key] = el.checked;
-        });
-        localStorage.setItem('lcc_settings_notif', JSON.stringify(prefs));
-        try {
-          await fetch('/api/settings/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tokenNotif },
-            body: JSON.stringify(prefs)
-          });
-        } catch(e) {}
-        const status = document.getElementById('notifPrefsStatus');
-        if (status) {
-          status.textContent = '✅ Préférences sauvegardées';
-          status.style.color = '#059669';
-          setTimeout(() => status.textContent = '', 3000);
-        }
-      });
-    }
-  })();
-</script>
-
 
 </body>
 </html>
