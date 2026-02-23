@@ -9482,5 +9482,23 @@ window.onFCMToken = function(token) {
 if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
+<script>
+// Intercepter le scroll vers #calendarSection pour ajouter un offset
+(function() {
+  function scrollWithOffset() {
+    if (window.location.hash !== '#calendarSection') return;
+    var el = document.getElementById('calendarSection');
+    if (!el) return;
+    // Supprimer le hash pour éviter re-scroll
+    history.replaceState(null, null, window.location.pathname);
+    // Scroll manuel avec offset (120px = barre noire visible)
+    var top = el.getBoundingClientRect().top + window.scrollY - 120;
+    window.scrollTo({ top: top, behavior: 'auto' });
+  }
+  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
+})();
+</script>
+
 </body>
 </html>
