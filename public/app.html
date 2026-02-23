@@ -9483,15 +9483,14 @@ if (window.fcmToken) saveTokenToServer(window.fcmToken);
 </script>
 
 <script>
-// Au chargement, si hash #calendarSection → simuler le clic sur navCalendarLink
+// Au chargement, si hash #calendarSection → scroll précis vers le calendrier
 (function() {
   if (window.location.hash !== '#calendarSection') return;
   history.replaceState(null, null, window.location.pathname);
   window.addEventListener('load', function() {
     setTimeout(function() {
-      var link = document.getElementById('navCalendarLink');
-      if (link) link.click();
-    }, 600);
+      window.scrollTo({ top: 1027, behavior: 'auto' });
+    }, 300);
   });
 })();
 </script>
