@@ -2604,53 +2604,50 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 <!-- DARK TOP BAR (barre noire fixe en haut) -->
 <div class="bh-demo-nav" id="bhTopBar">
   <!-- Connexions centrées -->
-  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;">
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap;">
 
     <!-- Airbnb -->
-    <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fa-brands fa-airbnb" style="font-size:15px;color:#FF5A5F;"></i>
-      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Airbnb</span>
-      <span id="topbar-status-airbnb" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
-        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
-      </span>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <i class="fa-brands fa-airbnb" style="font-size:14px;color:#FF5A5F;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Airbnb</span>
+      <span id="topbar-status-airbnb" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
 
-    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
 
     <!-- Booking.com -->
-    <div style="display:flex;align-items:center;gap:7px;">
-      <span style="font-size:13px;font-weight:800;color:#6B9FE4;">B.</span>
-      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Booking.com</span>
-      <span id="topbar-status-booking" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
-        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
-      </span>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:12px;font-weight:800;color:#6B9FE4;">B.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Booking</span>
+      <span id="topbar-status-booking" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
 
-    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
 
     <!-- Stripe -->
-    <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fa-brands fa-stripe-s" style="font-size:17px;color:#6772E5;"></i>
-      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Stripe</span>
-      <span id="topbar-status-stripe" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
-        <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
-      </span>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <i class="fa-brands fa-stripe-s" style="font-size:15px;color:#6772E5;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Stripe</span>
+      <span id="topbar-status-stripe" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
 
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
 
-    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
-    <div style="display:flex;align-items:center;gap:7px;">
-      <span style="font-size:13px;font-weight:800;color:#0096D6;">Ab.</span>
-      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Abritel</span>
-      <span id="topbar-status-abritel" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);"><i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté</span>
+    <!-- Abritel -->
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:12px;font-weight:800;color:#0096D6;">Ab.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Abritel</span>
+      <span id="topbar-status-abritel" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
-    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
-    <div style="display:flex;align-items:center;gap:7px;">
-      <span style="font-size:13px;font-weight:800;color:#4CAF50;">G.</span>
-      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Gîtes de France</span>
-      <span id="topbar-status-gites" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);"><i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté</span>
-    </div>
-  </div>
+
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+
+    <!-- Gîtes de France -->
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:12px;font-weight:800;color:#4CAF50;">G.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Gîtes</span>
+      <span id="topbar-status-gites" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>  </div>
 
   <!-- Toggle dark mode (droite) -->
   <div class="bh-demo-right">
@@ -2669,12 +2666,18 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       el.style.background = 'rgba(34,197,94,.2)';
       el.style.color = '#4ADE80';
       el.style.borderColor = 'rgba(34,197,94,.35)';
-      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Connecté';
+      el.style.display = 'inline-flex';
+      el.style.alignItems = 'center';
+      el.style.gap = '3px';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i>Connecté';
     } else {
       el.style.background = 'rgba(239,68,68,.2)';
       el.style.color = '#F87171';
       el.style.borderColor = 'rgba(239,68,68,.35)';
-      el.innerHTML = '<i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté';
+      el.style.display = 'inline-flex';
+      el.style.alignItems = 'center';
+      el.style.gap = '3px';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i>Non connecté';
     }
   }
 
