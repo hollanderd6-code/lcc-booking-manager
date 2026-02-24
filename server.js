@@ -1187,11 +1187,21 @@ ON invoice_download_tokens(token);
     try {
       await pool.query(`
         ALTER TABLE user_fcm_tokens ADD COLUMN IF NOT EXISTS sub_account_id INTEGER REFERENCES sub_accounts(id) ON DELETE CASCADE;
-        CREATE INDEX IF NOT EXISTS idx_user_fcm_tokens_sub_account ON user_fcm_tokens(sub_account_id) WHERE sub_account_id IS NOT NULL;
       `);
       console.log('✅ Colonne sub_account_id ajoutée à user_fcm_tokens');
     } catch (e) {
-      console.log('ℹ️ sub_account_id user_fcm_tokens:', e.message);
+      console.log('ℹ️ sub_account_id déjà existante:', e.message);
+    }
+    // Contrainte UNIQUE séparée pour le ON CONFLICT (sub_account_id, device_type)
+    try {
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_fcm_tokens_sub_device
+        ON user_fcm_tokens(sub_account_id, device_type)
+        WHERE sub_account_id IS NOT NULL;
+      `);
+      console.log('✅ Index unique sub_account_id+device_type créé');
+    } catch (e) {
+      console.log('ℹ️ Index sub_account déjà existant:', e.message);
     }
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
