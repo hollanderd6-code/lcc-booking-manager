@@ -1,5 +1,5 @@
   /* ============================================
-   BOOKINGMANAG - DESIGN SYSTEM V2.0
+   BOOSTINGHOST - DESIGN SYSTEM V2.0
    Modern, Clean, Professional
    ============================================ */
 
@@ -1701,4 +1701,24 @@ html, body {
 
 @media (max-width: 360px) {
   .mobile-logo-subtitle { display: none; }
+}
+
+
+/* ============================================================
+   COULEURS PLATEFORMES CALENDRIER
+   ============================================================ */
+
+/* Direct : orange (différencié du vert Gîtes de France) */
+.booking-block.direct {
+  background: linear-gradient(135deg, #F97316, #EA6A00) !important;
+}
+
+/* Abritel : bleu */
+.booking-block.abritel {
+  background: linear-gradient(135deg, #0096D6, #0077B3) !important;
+}
+
+/* Gîtes de France : vert foncé */
+.booking-block.gites {
+  background: linear-gradient(135deg, #2E7D32, #1B5E20) !important;
 }
