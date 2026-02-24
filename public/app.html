@@ -2507,9 +2507,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     color: #1A7A5E !important;
     letter-spacing: -0.02em !important;
   }
-  #kpiPropertiesValue {
-    color: #1e293b !important;
-  }
+  /* #kpiPropertiesValue stays green on mobile like other KPIs */
   .kpi-card .kpi-sub {
     font-size: 12px !important;
     line-height: 1.3 !important;
@@ -2758,7 +2756,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       </span>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiPropertiesValue" style="color:#1e293b !important;">0</span>
+<span class="kpi-value" id="kpiPropertiesValue">0</span>
 <span class="kpi-sub">connectés à au moins un OTA</span>
 </div>
 </article>
@@ -4634,7 +4632,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       
       switch(type) {
         case 'properties': // Logements actifs
-          color = '#1e293b'; // Toujours noir
+          color = window.innerWidth <= 768 ? '#1A7A5E' : '#1e293b';
           break;
           
         case 'moves': // Check-in / Check-out
@@ -9450,9 +9448,11 @@ if (window.Capacitor) {
 </script>
 
 
-<!-- ✅ KPI logements actifs : chiffre noir -->
+<!-- ✅ KPI logements actifs : chiffre noir sur desktop uniquement -->
 <style>
-#kpiPropertiesValue { color: #1e293b !important; }
+@media (min-width: 769px) {
+  #kpiPropertiesValue { color: #1e293b !important; }
+}
 </style>
 
 <!-- ✅ Couleurs plateformes - sélecteur identique à bh-theme-v3.css pour gagner -->
