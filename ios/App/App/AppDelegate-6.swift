@@ -11,11 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var splashViewController: UIViewController?
     var isWebViewLoaded = false
-
-    // Couleur principale Boostinghost #1A7A5E
     let brandColor = UIColor(red: 0.102, green: 0.478, blue: 0.369, alpha: 1.0)
-    
-    // ✅ Stocker le token FCM même si la WebView n'est pas encore prête
     var pendingFCMToken: String? = nil
 
     private func disablePullToRefresh(on webView: WKWebView) {
@@ -25,6 +21,52 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         sv.refreshControl = nil
         if #available(iOS 11.0, *) {
             sv.contentInsetAdjustmentBehavior = .never
+        }
+    }
+
+    // ============================================
+    // AUTH PERSISTENCE — UserDefaults
+    // ============================================
+    
+    func saveTokenToUserDefaults(_ token: String) {
+        UserDefaults.standard.set(token, forKey: "lcc_token")
+        UserDefaults.standard.synchronize()
+        print("💾 Token sauvegardé dans UserDefaults")
+    }
+
+    func clearTokenFromUserDefaults() {
+        UserDefaults.standard.removeObject(forKey: "lcc_token")
+        UserDefaults.standard.synchronize()
+        print("🗑️ Token supprimé de UserDefaults")
+    }
+
+    func restoreTokenIfNeeded(webView: WKWebView) {
+        guard let token = UserDefaults.standard.string(forKey: "lcc_token"),
+              !token.isEmpty else {
+            print("ℹ️ Pas de token sauvegardé dans UserDefaults")
+            return
+        }
+        
+        let js = """
+        (function() {
+            var existing = localStorage.getItem('lcc_token');
+            if (!existing || existing === 'undefined' || existing === 'null') {
+                localStorage.setItem('lcc_token', '\(token)');
+                console.log('[Auth] ✅ Token restauré depuis UserDefaults');
+            } else {
+                // Token déjà là — synchroniser UserDefaults avec la valeur actuelle
+                window._syncTokenToNative && window._syncTokenToNative(existing);
+                console.log('[Auth] ℹ️ Token déjà dans localStorage');
+            }
+        })();
+        """
+        
+        webView.evaluateJavaScript(js) { _, error in
+            if let error = error {
+                print("❌ Erreur restauration token: \(error)")
+            } else {
+                print("✅ Token restauré dans localStorage")
+            }
         }
     }
 
@@ -78,11 +120,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Badge à 0 + supprimer toutes les notifications du centre de notifs
         application.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-        print("📱 Badge remis à 0 + notifications effacées (active)")
+        print("📱 Badge remis à 0 (active)")
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -95,32 +135,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("❌ Erreur APNs: \(error.localizedDescription)")
     }
 
-    // ✅ Injecter le FCM token dans la WebView (appelé depuis didFinish et depuis MessagingDelegate)
     func injectFCMToken(_ token: String) {
         guard let rootVC = window?.rootViewController as? CAPBridgeViewController,
               let webView = rootVC.webView else {
-            print("📱 WebView pas prête, token mis en attente")
+            print("📱 WebView pas prête, FCM token mis en attente")
             pendingFCMToken = token
             return
         }
         
         let js = """
         window.fcmToken = '\(token)';
-        console.log('[FCM] Token reçu: \(token.prefix(20))...');
         if (typeof window.onFCMToken === 'function') {
             window.onFCMToken('\(token)');
         } else {
-            // Réessayer dans 1s si onFCMToken pas encore défini
-            setTimeout(function() {
-                if (typeof window.onFCMToken === 'function') {
-                    window.onFCMToken('\(token)');
-                }
-            }, 1000);
-            setTimeout(function() {
-                if (typeof window.onFCMToken === 'function') {
-                    window.onFCMToken('\(token)');
-                }
-            }, 3000);
+            setTimeout(function() { if (typeof window.onFCMToken === 'function') window.onFCMToken('\(token)'); }, 1000);
+            setTimeout(function() { if (typeof window.onFCMToken === 'function') window.onFCMToken('\(token)'); }, 3000);
         }
         """
         
@@ -128,14 +157,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             if let error = error {
                 print("❌ Erreur injection FCM token: \(error)")
             } else {
-                print("✅ FCM token injecté dans WebView")
+                print("✅ FCM token injecté")
                 self.pendingFCMToken = nil
             }
         }
     }
 
     // ============================================
-    // SPLASH SCREEN — Boostinghost #1A7A5E
+    // SPLASH SCREEN
     // ============================================
 
     func createAndShowSplashScreen() {
@@ -190,22 +219,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             circleView.centerYAnchor.constraint(equalTo: splashView.centerYAnchor, constant: -80),
             circleView.widthAnchor.constraint(equalToConstant: circleSize),
             circleView.heightAnchor.constraint(equalToConstant: circleSize),
-
             logoLabel.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
             logoLabel.centerYAnchor.constraint(equalTo: splashView.centerYAnchor, constant: -80),
             logoLabel.widthAnchor.constraint(equalToConstant: circleSize),
             logoLabel.heightAnchor.constraint(equalToConstant: circleSize),
-
             brandLabel.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
             brandLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 28),
             brandLabel.leadingAnchor.constraint(equalTo: splashView.leadingAnchor, constant: 40),
             brandLabel.trailingAnchor.constraint(equalTo: splashView.trailingAnchor, constant: -40),
-
             taglineLabel.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
             taglineLabel.topAnchor.constraint(equalTo: brandLabel.bottomAnchor, constant: 8),
             taglineLabel.leadingAnchor.constraint(equalTo: splashView.leadingAnchor, constant: 40),
             taglineLabel.trailingAnchor.constraint(equalTo: splashView.trailingAnchor, constant: -40),
-
             spinner.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
             spinner.bottomAnchor.constraint(equalTo: splashView.bottomAnchor, constant: -60),
         ])
@@ -221,30 +246,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         splashViewController = UIViewController()
         splashViewController?.view = splashView
 
-        print("✅ Splash screen affiché (#1A7A5E)")
-
-        UIView.animate(
-            withDuration: 0.65,
-            delay: 0.15,
-            usingSpringWithDamping: 0.6,
-            initialSpringVelocity: 0.8,
-            options: .curveEaseOut
-        ) {
-            logoLabel.alpha = 1
-            logoLabel.transform = .identity
-            circleView.alpha = 1
-            circleView.transform = .identity
+        UIView.animate(withDuration: 0.65, delay: 0.15, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.8, options: .curveEaseOut) {
+            logoLabel.alpha = 1; logoLabel.transform = .identity
+            circleView.alpha = 1; circleView.transform = .identity
         } completion: { _ in
-
             UIView.animate(withDuration: 0.3, delay: 0, options: [.autoreverse, .curveEaseInOut]) {
                 circleView.transform = CGAffineTransform(scaleX: 1.08, y: 1.08)
-            } completion: { _ in
-                circleView.transform = .identity
-            }
+            } completion: { _ in circleView.transform = .identity }
 
-            UIView.animate(withDuration: 0.2, delay: 0.15) {
-                brandLabel.alpha = 1
-            }
+            UIView.animate(withDuration: 0.2, delay: 0.15) { brandLabel.alpha = 1 }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 let brandText = "BOOSTINGHOST"
@@ -255,14 +265,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                     brandLabel.text = String(brandText.prefix(charIndex))
                     if charIndex >= brandText.count {
                         t.invalidate()
-                        UIView.animate(withDuration: 0.4, delay: 0.1) {
-                            taglineLabel.alpha = 1
-                        }
-                        UIView.animate(withDuration: 0.4, delay: 0.25) {
-                            spinner.alpha = 1
-                        } completion: { _ in
-                            spinner.startAnimating()
-                        }
+                        UIView.animate(withDuration: 0.4, delay: 0.1) { taglineLabel.alpha = 1 }
+                        UIView.animate(withDuration: 0.4, delay: 0.25) { spinner.alpha = 1 } completion: { _ in spinner.startAnimating() }
                     }
                 }
                 _ = timer
@@ -272,21 +276,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func hideSplashScreen() {
         guard let splashView = splashViewController?.view else { return }
-        print("🎬 Masquage du splash")
-
         if let rootVC = window?.rootViewController as? CAPBridgeViewController {
-            UIView.animate(withDuration: 0.3) {
-                rootVC.webView?.alpha = 1
-            }
+            UIView.animate(withDuration: 0.3) { rootVC.webView?.alpha = 1 }
         }
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            UIView.animate(withDuration: 0.4, animations: {
-                splashView.alpha = 0
-            }) { _ in
+            UIView.animate(withDuration: 0.4, animations: { splashView.alpha = 0 }) { _ in
                 splashView.removeFromSuperview()
                 self.splashViewController = nil
-                print("✨ Splash masqué")
             }
         }
     }
@@ -298,13 +294,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 extension AppDelegate: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         disablePullToRefresh(on: webView)
+        
+        // ✅ Exposer _syncTokenToNative pour que le JS puisse sync le token
+        let bridgeJS = """
+        window._syncTokenToNative = function(token) {
+            window.webkit && window.webkit.messageHandlers && 
+            window.webkit.messageHandlers.tokenSync && 
+            window.webkit.messageHandlers.tokenSync.postMessage(token);
+        };
+        """
+        webView.evaluateJavaScript(bridgeJS, completionHandler: nil)
+        
+        // ✅ Restaurer le token depuis UserDefaults si localStorage est vide
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.restoreTokenIfNeeded(webView: webView)
+        }
+        
         guard !isWebViewLoaded else { return }
         isWebViewLoaded = true
-        print("📱 WebView chargée — masquage splash dans 1.5s")
+        print("📱 WebView chargée")
         
-        // ✅ Si un token FCM était en attente, l'injecter maintenant
         if let token = pendingFCMToken {
-            print("📱 Injection du token FCM en attente...")
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.injectFCMToken(token)
             }
@@ -318,9 +328,7 @@ extension AppDelegate: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         disablePullToRefresh(on: webView)
         print("❌ Erreur WebView: \(error.localizedDescription)")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.hideSplashScreen()
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.hideSplashScreen() }
     }
 }
 
@@ -331,10 +339,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        // Incrémenter le badge à chaque notification reçue
         let current = UIApplication.shared.applicationIconBadgeNumber
         UIApplication.shared.applicationIconBadgeNumber = current + 1
-        
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .badge, .sound])
         } else {
@@ -345,11 +351,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Remettre le badge à 0 quand on tape sur une notification
         UIApplication.shared.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-        let userInfo = response.notification.request.content.userInfo
-        print("📱 Notification tapée: \(userInfo)")
         completionHandler()
     }
 }
@@ -361,10 +364,6 @@ extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         print("📱 FCM Token reçu: \(token.prefix(20))...")
-        
-        // ✅ Utiliser injectFCMToken qui gère le cas où la WebView n'est pas prête
-        DispatchQueue.main.async {
-            self.injectFCMToken(token)
-        }
+        DispatchQueue.main.async { self.injectFCMToken(token) }
     }
 }
