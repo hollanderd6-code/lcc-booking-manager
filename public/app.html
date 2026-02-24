@@ -9408,7 +9408,7 @@ if (window.Capacitor) {
 </script>
 
 
-<!-- Scroll vers calendarSection au clic sur navCalendarLink -->
+<!-- Scroll vers calendarSection au clic sur navCalendarLink ou bouton mobile -->
 <script>
 (function() {
   function doScroll() {
@@ -9418,28 +9418,44 @@ if (window.Capacitor) {
   }
 
   function bindCalendarLink() {
+    // Desktop : sidebar link
     var link = document.getElementById('navCalendarLink');
-    if (!link || link._scrollBound) return;
-    var clone = link.cloneNode(true);
-    link.parentNode.replaceChild(clone, link);
-    clone._scrollBound = true;
-    clone.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      doScroll();
+    if (link && !link._scrollBound) {
+      var clone = link.cloneNode(true);
+      link.parentNode.replaceChild(clone, link);
+      clone._scrollBound = true;
+      clone.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        doScroll();
+      });
+    }
+
+    // Mobile : bouton barre du bas contenant le texte "Calendrier"
+    document.querySelectorAll('a, button').forEach(function(el) {
+      if (el._scrollBound) return;
+      var text = el.textContent.trim();
+      if (text === 'Calendrier' || el.getAttribute('data-page') === 'calendar') {
+        el._scrollBound = true;
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          doScroll();
+        });
+      }
     });
   }
 
   var observer = new MutationObserver(function() {
-    var link = document.getElementById('navCalendarLink');
-    if (link && !link._scrollBound) {
-      setTimeout(function() {
-        bindCalendarLink();
-        observer.disconnect();
-      }, 300);
-    }
+    bindCalendarLink();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Aussi au chargement
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(bindCalendarLink, 500);
+    setTimeout(bindCalendarLink, 1500);
+  });
 })();
 </script>
 
