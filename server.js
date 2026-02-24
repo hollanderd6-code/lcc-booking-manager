@@ -15301,9 +15301,12 @@ cron.schedule('0 8 * * *', async () => {
       
       if (tokensResult.rows.length === 0) continue;
       
-      // ✅ Utiliser la date Paris pour éviter les décalages timezone
-      const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-      const todayStr = nowParis.toISOString().split('T')[0]; // ex: "2026-02-08"
+      // ✅ Date Paris correcte — toISOString() est toujours UTC, on utilise Intl.DateTimeFormat
+      // fr-CA retourne "YYYY-MM-DD" nativement, contrairement à fr-FR qui retourne "DD/MM/YYYY"
+      const todayStr = new Intl.DateTimeFormat('fr-CA', {
+        timeZone: 'Europe/Paris',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date()); // ex: "2026-02-24" - toujours en heure Paris
       
       // Arrivees du jour
       const arrivalsResult = await pool.query(
@@ -15459,11 +15462,15 @@ cron.schedule('0 18 * * *', async () => {
       
       if (tokensResult.rows.length === 0) continue;
       
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      const dayAfter = new Date(tomorrow);
-      dayAfter.setDate(dayAfter.getDate() + 1);
+      // ✅ Calcul en heure Paris pour éviter le décalage UTC
+      const tomorrowStr = new Intl.DateTimeFormat('fr-CA', {
+        timeZone: 'Europe/Paris',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date(Date.now() + 86400000)); // aujourd'hui + 1 jour en ms
+      const dayAfterStr = new Intl.DateTimeFormat('fr-CA', {
+        timeZone: 'Europe/Paris',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date(Date.now() + 2 * 86400000));
       
       // Arrivees de demain
       const arrivalsResult = await pool.query(
@@ -15499,7 +15506,7 @@ cron.schedule('0 18 * * *', async () => {
          AND r.start_date >= $2 
          AND r.start_date < $3
          AND r.status != 'cancelled'`,
-        [user.id, tomorrow, dayAfter]
+        [user.id, tomorrowStr, dayAfterStr]
       );
       
       const count = arrivalsResult.rows.length;
