@@ -2713,6 +2713,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   <a class="mobile-logo" href="/app.html">
     <span class="mobile-logo-text"></span>
   </a>
+  <button class="btn-icon" id="syncBtnMobile" title="Synchroniser les calendriers" style="margin-left:auto;background:transparent;border:1px solid rgba(13,17,23,.1);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#3D4A5C;font-size:15px;">
+    <i class="fas fa-sync-alt"></i>
+  </button>
 </div>
 <button class="mobile-menu-btn" id="mobileMenuBtn">
 <i class="fas fa-bars"></i>
@@ -9319,6 +9322,31 @@ if (window.Capacitor) {
   // Démarrage
   window.addEventListener('load', function() {
     setTimeout(function() { initSocket(); initPolling(); }, 800);
+  });
+})();
+</script>
+
+<!-- Bouton sync mobile -->
+<script>
+(function() {
+  function bindSyncMobile() {
+    var btnMobile = document.getElementById('syncBtnMobile');
+    var btnDesktop = document.getElementById('syncBtn');
+    if (btnMobile && btnDesktop && !btnMobile._bound) {
+      btnMobile._bound = true;
+      btnMobile.addEventListener('click', function() {
+        btnDesktop.click();
+        var icon = btnMobile.querySelector('i');
+        if (icon) {
+          icon.style.transition = 'transform 0.6s ease';
+          icon.style.transform = 'rotate(360deg)';
+          setTimeout(function() { icon.style.transform = ''; }, 700);
+        }
+      });
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(bindSyncMobile, 800);
   });
 })();
 </script>
