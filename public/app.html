@@ -4666,7 +4666,11 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
           break;
       }
       
-      element.style.setProperty('color', color, 'important');
+      if (type === 'properties') {
+        element.style.setProperty('color', color, 'important');
+      } else {
+        element.style.color = color;
+      }
       element.style.fontWeight = '700';
     }
     
