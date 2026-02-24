@@ -480,12 +480,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     }
 
     /* Section Calendrier */
-    html, body {
-    scroll-padding-top: 120px;
-  }
-  #calendarSection {
+    #calendarSection {
       margin-top: 32px;
-      scroll-margin-top: 120px;
+      scroll-margin-top: 20px;
     }
 
     .calendar-wrapper {
@@ -2707,32 +2704,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   <a class="mobile-logo" href="/app.html">
     <span class="mobile-logo-text"></span>
   </a>
-  <button id="mobileSyncBtn" onclick="
-    this.style.background='rgba(26,122,94,0.25)';
-    this.querySelector('i').style.transform='rotate(360deg)';
-    setTimeout(() => { this.style.background='rgba(26,122,94,0.12)'; this.querySelector('i').style.transform='rotate(0deg)'; }, 600);
-    document.getElementById('syncBtn') && document.getElementById('syncBtn').click();
-  " style="
-    position: absolute;
-    right: 60px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(26,122,94,0.12);
-    color: #1A7A5E;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 17px;
-    -webkit-tap-highlight-color: transparent;
-    transition: background 0.2s;
-  ">
-    <i class="fas fa-sync-alt" style="transition: transform 0.6s ease;"></i>
-  </button>
 </div>
 <button class="mobile-menu-btn" id="mobileMenuBtn">
 <i class="fas fa-bars"></i>
@@ -3691,7 +3662,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
         if (res.status === 401 || res.status === 403) {
           localStorage.removeItem('lcc_token');
           localStorage.removeItem('lcc_user');
-          if (window._syncTokenToNative) window._syncTokenToNative('');
           window.location.href = '/login.html';
         }
         return;
@@ -4332,14 +4302,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       if (navCalendarLink && calendarSection) {
         navCalendarLink.addEventListener('click', function (e) {
           e.preventDefault();
-          const mainContent = document.querySelector('.main-content');
-          const offset = 80;
-          const top = calendarSection.getBoundingClientRect().top + (mainContent ? mainContent.scrollTop : window.scrollY) - offset;
-          if (mainContent) {
-            mainContent.scrollTo({ top: top, behavior: 'smooth' });
-          } else {
-            window.scrollTo({ top: top, behavior: 'smooth' });
-          }
+          calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
       }
     });
@@ -9398,8 +9361,12 @@ if (window.Capacitor) {
 <script id="mobile-gap-fix-js">
 (function fixMobileGap() {
   if (window.innerWidth > 768) return;
+  
   function applyFix() {
+    // 1. Body : supprimer padding-top
     document.body.style.setProperty('padding-top', '0px', 'important');
+    
+    // 2. main-header : vraiment le cacher
     var mainHeader = document.querySelector('header.main-header') || document.getElementById('bhMainHeader');
     if (mainHeader) {
       mainHeader.style.setProperty('display', 'none', 'important');
@@ -9410,94 +9377,35 @@ if (window.Capacitor) {
       mainHeader.style.setProperty('overflow', 'hidden', 'important');
       mainHeader.style.setProperty('position', 'absolute', 'important');
     }
+    
+    // 3. main-content : padding = hauteur header mobile
     var mainContent = document.querySelector('.main-content');
     if (mainContent) {
+      var safeArea = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0') || 0;
       mainContent.style.setProperty('padding-top', 'calc(60px + env(safe-area-inset-top, 0px))', 'important');
       mainContent.style.setProperty('margin-top', '0', 'important');
       mainContent.style.setProperty('margin-left', '0', 'important');
     }
+    
+    // 4. page-content : padding minimal
     var pageContent = document.querySelector('.page-content');
     if (pageContent) {
       pageContent.style.setProperty('padding', '16px 14px 90px', 'important');
       pageContent.style.setProperty('margin-top', '0', 'important');
     }
+    
+    console.log('[gap-fix] Applied. body.paddingTop=' + getComputedStyle(document.body).paddingTop);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyFix);
-  else applyFix();
+  
+  // Appliquer immédiatement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyFix);
+  } else {
+    applyFix();
+  }
+  // Et aussi après 500ms et 1500ms pour s'assurer que le JS tiers n'écrase pas
   setTimeout(applyFix, 500);
   setTimeout(applyFix, 1500);
-})();
-</script>
-
-<script id="fix-scroll-editor">
-(function() {
-  if (window.innerWidth > 768) return;
-  function fixScroll() {
-    [document.body, document.documentElement,
-     document.querySelector('.app-container'),
-     document.querySelector('.main-wrapper'),
-     document.querySelector('.main-content'),
-     document.querySelector('.page-content'),
-    ].forEach(function(el) {
-      if (!el) return;
-      el.style.removeProperty('overflow');
-      el.style.removeProperty('height');
-      el.style.removeProperty('max-height');
-      el.style.setProperty('overflow-x', 'hidden', 'important');
-      el.style.setProperty('height', 'auto', 'important');
-    });
-    document.body.style.setProperty('overflow-y', 'auto', 'important');
-    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
-    var mc = document.querySelector('.main-content');
-    if (mc) mc.style.setProperty('overflow-y', 'visible', 'important');
-  }
-  document.addEventListener('DOMContentLoaded', fixScroll);
-  setTimeout(fixScroll, 500);
-  setTimeout(fixScroll, 1500);
-})();
-</script>
-
-<script id="fcm-token-handler">
-async function saveTokenToServer(token) {
-  if (!token) return;
-  try {
-    const jwt = localStorage.getItem('lcc_token');
-    if (!jwt) { setTimeout(() => saveTokenToServer(token), 3000); return; }
-    const apiBase = window.API_BASE || 'https://lcc-booking-manager.onrender.com';
-    const res = await fetch(apiBase + '/api/save-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
-      body: JSON.stringify({ token, device_type: 'ios' }),
-    });
-    const data = await res.json();
-    console.log('[FCM] ✅ Token sauvegardé:', data);
-  } catch (err) {
-    console.error('[FCM] ❌ Erreur:', err);
-  }
-}
-window.onFCMToken = function(token) {
-  console.log('[FCM] Token reçu depuis iOS');
-  saveTokenToServer(token);
-};
-if (window.fcmToken) saveTokenToServer(window.fcmToken);
-</script>
-
-<script>
-// Intercepter le scroll vers #calendarSection pour ajouter un offset
-(function() {
-  function scrollWithOffset() {
-    if (window.location.hash !== '#calendarSection') return;
-    var el = document.getElementById('calendarSection');
-    if (!el) return;
-    history.replaceState(null, null, window.location.pathname);
-    var top = el.getBoundingClientRect().top + document.documentElement.scrollTop - 20;
-    document.documentElement.scrollTo({ top: 0, behavior: 'auto' });
-    setTimeout(function() {
-      document.documentElement.scrollTo({ top: top, behavior: 'auto' });
-    }, 0);
-  }
-  window.addEventListener('load', function() { setTimeout(scrollWithOffset, 50); });
-  document.addEventListener('DOMContentLoaded', function() { setTimeout(scrollWithOffset, 100); });
 })();
 </script>
 
