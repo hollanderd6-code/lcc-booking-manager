@@ -465,7 +465,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       --booking-color-airbnb: #FF5A5F;
       --booking-color-booking: #003580;
       --booking-color-expedia: #FFC72C;
-      --booking-color-direct: #10B981;
+      --booking-color-direct: #F97316;
       --booking-color-vrbo: #1569C7;
       --booking-color-hotels: #D32F2F;
       --booking-color-abritel: #0096D6;
@@ -982,7 +982,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   background: linear-gradient(135deg, var(--booking-color-hotels), #B71C1C);
 }
 .booking-block.direct {
-  background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
+  background: linear-gradient(135deg, var(--booking-color-direct), #EA6A00);
 }
 .booking-block.abritel {
   background: linear-gradient(135deg, var(--booking-color-abritel), #0077B3);
@@ -2923,7 +2923,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       <span style="width:8px;height:8px;border-radius:50%;background:#003580;flex-shrink:0;"></span>Booking
     </span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
-      <span style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>Direct
+      <span style="width:8px;height:8px;border-radius:50%;background:#F97316;flex-shrink:0;"></span>Direct
     </span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
       <span style="width:8px;height:8px;border-radius:50%;background:#0096D6;flex-shrink:0;"></span>Abritel
@@ -4871,7 +4871,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
             </div>
             ${list.map(r => {
               const platform = (r.src || '').toLowerCase();
-              const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#1A7A5E';
+              const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#F97316';
               const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
               return `
@@ -4952,7 +4952,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     } else {
       content.innerHTML = rows.map(r => {
         const platform = (r.src || '').toLowerCase();
-        const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#1A7A5E';
+        const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#F97316';
         const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
         const score = r.riskScore != null ? `${r.riskScore}/100` : '';
         return `
