@@ -719,6 +719,14 @@ html[data-theme-v3="1"] .app-container {
   height: calc(100vh - 40px) !important;
   overflow: hidden !important;
 }
+/* ✅ Quand le modal est ouvert, l'app-container ne doit pas clipper */
+html[data-theme-v3="1"] .app-container:has(+ .booking-modal[style*="flex"]) {
+  overflow: visible !important;
+}
+/* ✅ Le modal est en position fixed, forcer le clipping correctement */
+.booking-modal[style*="flex"] {
+  display: flex !important;
+}
 html[data-theme-v3="1"] main.main-content {
   overflow-y: auto !important;
   height: 100% !important;
@@ -2577,10 +2585,12 @@ document.addEventListener('DOMContentLoaded', function() {
   
   document.getElementById('closeAddMemberModal')?.addEventListener('click', () => {
     document.getElementById('addTeamMemberModal').style.display = 'none';
+      document.querySelector('.app-container') && (document.querySelector('.app-container').style.overflow = '');
   });
   
   document.getElementById('cancelAddMember')?.addEventListener('click', () => {
     document.getElementById('addTeamMemberModal').style.display = 'none';
+      document.querySelector('.app-container') && (document.querySelector('.app-container').style.overflow = '');
   });
   
   document.getElementById('memberRole')?.addEventListener('change', function() {
@@ -2685,6 +2695,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       alert(editingMemberId ? '✅ Modifié' : '✅ Ajouté');
       document.getElementById('addTeamMemberModal').style.display = 'none';
+      document.querySelector('.app-container') && (document.querySelector('.app-container').style.overflow = '');
       this.reset();
       editingMemberId = null;
       loadTeamMembers();
@@ -2750,6 +2761,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
       document.getElementById('addTeamMemberModal').style.display = 'flex';
+      document.querySelector('.app-container') && (document.querySelector('.app-container').style.overflow = 'visible');
       console.log('✅ Modal édition ouverte');
     } catch (error) {
       alert('❌ ' + error.message);
