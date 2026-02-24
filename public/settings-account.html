@@ -1394,204 +1394,7 @@ html[data-theme-v3="1"] .subscription-card {
   </section>
 </div>
 
-<!-- ============================================ -->
-<!-- MODAL : AJOUTER UN MEMBRE -->
-<!-- ============================================ -->
-<div class="booking-modal" id="addTeamMemberModal" style="display:none;">
-  <div class="modal-overlay"></div>
-  <div class="modal-content" style="max-width:600px;">
-    <div class="modal-header">
-      <h2>Ajouter un membre d'équipe</h2>
-      <button class="modal-close" id="closeAddMemberModal" type="button">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
 
-    <form class="booking-form" id="addTeamMemberForm">
-      <!-- Informations de base -->
-      <div class="form-group">
-        <label>Email <span style="color:#ef4444;">*</span></label>
-        <input 
-          type="email" 
-          id="memberEmail" 
-          placeholder="sophie.martin@example.com"
-          required
-        />
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Prénom <span style="color:#ef4444;">*</span></label>
-          <input 
-            type="text" 
-            id="memberFirstName" 
-            placeholder="Sophie"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label>Nom <span style="color:#ef4444;">*</span></label>
-          <input 
-            type="text" 
-            id="memberLastName" 
-            placeholder="Martin"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Mot de passe <span style="color:#ef4444;">*</span></label>
-        <input 
-          type="password" 
-          id="memberPassword" 
-          placeholder="Minimum 8 caractères"
-          minlength="8"
-          required
-        />
-        <small style="color:#6b7280;">Le membre devra changer ce mot de passe à sa première connexion</small>
-      </div>
-
-      <!-- Rôle prédéfini -->
-      <div class="form-group">
-        <label>Rôle <span style="color:#ef4444;">*</span></label>
-        <select id="memberRole" required>
-          <option value="">-- Sélectionner un rôle --</option>
-          <option value="manager">👔 Manager / Assistant</option>
-          <option value="cleaner">🧹 Femme de ménage</option>
-          <option value="accountant">📊 Comptable</option>
-          <option value="custom">🎨 Personnalisé</option>
-        </select>
-        <small id="roleDescription" style="color:#6b7280; display:block; margin-top:8px;"></small>
-      </div>
-
-      <!-- Permissions détaillées (si rôle custom) -->
-      <div id="customPermissions" style="display:none;">
-        <div class="form-group">
-          <label style="font-weight:600; margin-bottom:12px; display:block;">
-            <i class="fas fa-shield-alt"></i>
-            Permissions détaillées
-          </label>
-
-          <div style="display:grid; gap:12px;">
-            <!-- Calendrier -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">📅 Calendrier</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canViewCalendar" />
-                <span>Voir le calendrier</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canEditReservations" />
-                <span>Modifier les réservations</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canCreateReservations" />
-                <span>Créer des réservations</span>
-              </label>
-            </div>
-
-            <!-- Messages -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">💬 Messages</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canViewMessages" />
-                <span>Voir les messages</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canSendMessages" />
-                <span>Répondre aux messages</span>
-              </label>
-            </div>
-
-            <!-- Ménages -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">🧹 Ménages</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canViewCleaning" />
-                <span>Voir les ménages</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canAssignCleaning" />
-                <span>Assigner les ménages</span>
-              </label>
-            </div>
-
-            <!-- Factures -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">🧾 Factures</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewInvoices" />
-                <span>Voir les factures</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <input type="checkbox" id="perm_canManageInvoices" />
-                <span>Créer / modifier les factures</span>
-              </label>
-            </div>
-
-            <!-- Logements -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">🏠 Logements</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewProperties" />
-                <span>Voir les logements</span>
-              </label>
-            </div>
-
-            <!-- Cautions -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">🛡️ Cautions</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewDeposits" />
-                <span>Voir les cautions</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <input type="checkbox" id="perm_canManageDeposits" />
-                <span>Gérer les cautions (capturer/libérer)</span>
-              </label>
-            </div>
-
-            <!-- Serrures connectées -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
-              <div style="font-weight:600; margin-bottom:8px;">🔒 Serrures</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewSmartLocks" />
-                <span>Voir les serrures connectées</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <input type="checkbox" id="perm_canManageSmartLocks" />
-                <span>Gérer les serrures connectées</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sélection des propriétés -->
-      <div class="form-group">
-        <label>
-          <i class="fas fa-home"></i>
-          Propriétés accessibles
-        </label>
-        <div id="memberProperties" style="max-height:200px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
-          <!-- Checkboxes chargées dynamiquement -->
-        </div>
-        <small style="color:#6b7280;">
-          Laissez tout décoché pour donner accès à toutes vos propriétés.
-        </small>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="cancelAddMember" type="button">Annuler</button>
-        <button class="btn btn-primary" type="submit">
-          <i class="fas fa-user-plus"></i>
-          Créer le compte
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
 
 <!-- ============================================ -->
 <!-- STYLE CSS POUR L'ONGLET ÉQUIPE -->
@@ -3042,5 +2845,205 @@ document.addEventListener('DOMContentLoaded', function() {
   })();
 </script>
 
+
+<!-- MODAL déplacé ici pour éviter le clipping par overflow:hidden -->
+<!-- ============================================ -->
+<!-- MODAL : AJOUTER UN MEMBRE -->
+<!-- ============================================ -->
+<div class="booking-modal" id="addTeamMemberModal" style="display:none;">
+  <div class="modal-overlay"></div>
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header">
+      <h2>Ajouter un membre d'équipe</h2>
+      <button class="modal-close" id="closeAddMemberModal" type="button">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form class="booking-form" id="addTeamMemberForm">
+      <!-- Informations de base -->
+      <div class="form-group">
+        <label>Email <span style="color:#ef4444;">*</span></label>
+        <input 
+          type="email" 
+          id="memberEmail" 
+          placeholder="sophie.martin@example.com"
+          required
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prénom <span style="color:#ef4444;">*</span></label>
+          <input 
+            type="text" 
+            id="memberFirstName" 
+            placeholder="Sophie"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label>Nom <span style="color:#ef4444;">*</span></label>
+          <input 
+            type="text" 
+            id="memberLastName" 
+            placeholder="Martin"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe <span style="color:#ef4444;">*</span></label>
+        <input 
+          type="password" 
+          id="memberPassword" 
+          placeholder="Minimum 8 caractères"
+          minlength="8"
+          required
+        />
+        <small style="color:#6b7280;">Le membre devra changer ce mot de passe à sa première connexion</small>
+      </div>
+
+      <!-- Rôle prédéfini -->
+      <div class="form-group">
+        <label>Rôle <span style="color:#ef4444;">*</span></label>
+        <select id="memberRole" required>
+          <option value="">-- Sélectionner un rôle --</option>
+          <option value="manager">👔 Manager / Assistant</option>
+          <option value="cleaner">🧹 Femme de ménage</option>
+          <option value="accountant">📊 Comptable</option>
+          <option value="custom">🎨 Personnalisé</option>
+        </select>
+        <small id="roleDescription" style="color:#6b7280; display:block; margin-top:8px;"></small>
+      </div>
+
+      <!-- Permissions détaillées (si rôle custom) -->
+      <div id="customPermissions" style="display:none;">
+        <div class="form-group">
+          <label style="font-weight:600; margin-bottom:12px; display:block;">
+            <i class="fas fa-shield-alt"></i>
+            Permissions détaillées
+          </label>
+
+          <div style="display:grid; gap:12px;">
+            <!-- Calendrier -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">📅 Calendrier</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewCalendar" />
+                <span>Voir le calendrier</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canEditReservations" />
+                <span>Modifier les réservations</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canCreateReservations" />
+                <span>Créer des réservations</span>
+              </label>
+            </div>
+
+            <!-- Messages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">💬 Messages</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewMessages" />
+                <span>Voir les messages</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canSendMessages" />
+                <span>Répondre aux messages</span>
+              </label>
+            </div>
+
+            <!-- Ménages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🧹 Ménages</div>
+              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <input type="checkbox" id="perm_canViewCleaning" />
+                <span>Voir les ménages</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canAssignCleaning" />
+                <span>Assigner les ménages</span>
+              </label>
+            </div>
+
+            <!-- Factures -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🧾 Factures</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewInvoices" />
+                <span>Voir les factures</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="perm_canManageInvoices" />
+                <span>Créer / modifier les factures</span>
+              </label>
+            </div>
+
+            <!-- Logements -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🏠 Logements</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewProperties" />
+                <span>Voir les logements</span>
+              </label>
+            </div>
+
+            <!-- Cautions -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🛡️ Cautions</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewDeposits" />
+                <span>Voir les cautions</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="perm_canManageDeposits" />
+                <span>Gérer les cautions (capturer/libérer)</span>
+              </label>
+            </div>
+
+            <!-- Serrures connectées -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:8px;">🔒 Serrures</div>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="perm_canViewSmartLocks" />
+                <span>Voir les serrures connectées</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                <input type="checkbox" id="perm_canManageSmartLocks" />
+                <span>Gérer les serrures connectées</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sélection des propriétés -->
+      <div class="form-group">
+        <label>
+          <i class="fas fa-home"></i>
+          Propriétés accessibles
+        </label>
+        <div id="memberProperties" style="max-height:200px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
+          <!-- Checkboxes chargées dynamiquement -->
+        </div>
+        <small style="color:#6b7280;">
+          Laissez tout décoché pour donner accès à toutes vos propriétés.
+        </small>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelAddMember" type="button">Annuler</button>
+        <button class="btn btn-primary" type="submit">
+          <i class="fas fa-user-plus"></i>
+          Créer le compte
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 </body>
 </html>
