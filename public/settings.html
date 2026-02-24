@@ -1188,7 +1188,59 @@ html[data-theme-v3="1"] .sidebar {
     padding: 3px 6px !important;
   }
 }
-  </style>
+  
+    /* ✅ Toggle switch - défini localement pour Safari */
+    .toggle-switch {
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-box-align: center;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .toggle-switch input[type="checkbox"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 44px;
+      min-width: 44px;
+      height: 24px;
+      background: #d1d5db;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-switch input[type="checkbox"]:checked {
+      background: #1A7A5E;
+    }
+    .toggle-switch input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input[type="checkbox"]:checked::after {
+      left: 22px;
+    }
+    .toggle-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1e293b;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .toggle-slider { display: none; } /* masqué, on utilise le CSS natif ci-dessus */
+</style>
 <!-- Script auth + user + logout -->
 <script src="/js/auth-fetch.js"></script>
 <script>
