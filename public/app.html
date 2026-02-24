@@ -4666,7 +4666,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
           break;
       }
       
-      element.style.color = color;
+      element.style.setProperty('color', color, 'important');
       element.style.fontWeight = '700';
     }
     
