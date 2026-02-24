@@ -1182,6 +1182,17 @@ ON invoice_download_tokens(token);
       // Colonnes déjà existantes ou table pas encore créée
       console.log('ℹ️ Colonnes escalated: ', e.message);
     }
+
+    // ✅ Migration : support FCM tokens pour sous-comptes
+    try {
+      await pool.query(`
+        ALTER TABLE user_fcm_tokens ADD COLUMN IF NOT EXISTS sub_account_id INTEGER REFERENCES sub_accounts(id) ON DELETE CASCADE;
+        CREATE INDEX IF NOT EXISTS idx_user_fcm_tokens_sub_account ON user_fcm_tokens(sub_account_id) WHERE sub_account_id IS NOT NULL;
+      `);
+      console.log('✅ Colonne sub_account_id ajoutée à user_fcm_tokens');
+    } catch (e) {
+      console.log('ℹ️ sub_account_id user_fcm_tokens:', e.message);
+    }
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -1455,6 +1466,43 @@ async function shouldSendNotification(userId, prefKey) {
     return allowed;
   } catch(e) {
     return true;
+  }
+}
+
+// ============================================================
+// 🔔 NOTIFICATIONS VERS LES SOUS-COMPTES
+// Envoie une notification push à tous les sous-comptes d'un
+// utilisateur parent qui ont la permission requise ET un token FCM.
+// requiredPermission : colonne DB de sub_account_permissions
+//   ex: 'can_view_calendar', 'can_view_cleaning', 'can_view_messages'
+// ============================================================
+async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data) {
+  data = data || {};
+  try {
+    const result = await pool.query(
+      `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
+       FROM user_fcm_tokens uft
+       JOIN sub_accounts sa ON sa.id = uft.sub_account_id
+       JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
+       WHERE sa.parent_user_id = $1
+         AND sa.is_active = TRUE
+         AND uft.sub_account_id IS NOT NULL
+         AND uft.fcm_token IS NOT NULL
+         AND sap.` + requiredPermission + ` = TRUE`,
+      [parentUserId]
+    );
+
+    if (result.rows.length === 0) {
+      console.log('ℹ️ Aucun sous-compte [' + requiredPermission + '] avec token pour user ' + parentUserId);
+      return;
+    }
+
+    const tokens = result.rows.map(function(r) { return r.fcm_token; });
+    console.log('📨 Notif sous-comptes [' + requiredPermission + ']: ' + tokens.length + ' destinataire(s)');
+    await sendNotificationToMultiple(tokens, title, body, data);
+    console.log('✅ Notif sous-comptes envoyée à ' + tokens.length + ' appareil(s)');
+  } catch (err) {
+    console.error('❌ sendNotificationToSubAccountsOf [' + requiredPermission + ']:', err.message);
   }
 }
 
@@ -3182,6 +3230,17 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
 );
       
       console.log(`Notification reservation iCal envoyee pour ${propResult.rows[0].name}`);
+      // ✅ Notif sous-comptes : nouvelle réservation
+      try {
+        const _gN = cleanGuestName(reservation.guestName, reservation.platform || reservation.source);
+        const _pN = propResult.rows[0].name;
+        await sendNotificationToSubAccountsOf(
+          realUserId, 'can_view_calendar',
+          '\uD83C\uDFE0 Nouvelle r\u00E9servation \u2014 ' + _pN,
+          _gN + ' \u00B7 ' + (reservation.start || '').slice(0,10) + ' \u2192 ' + (reservation.end || '').slice(0,10),
+          { type: 'new_reservation', propertyId: String(propertyId) }
+        );
+      } catch(_e) { console.error('Notif sous-comptes r\u00E9sa iCal:', _e.message); }
     }
     } catch (notifError) {
       console.error('Erreur notification reservation:', notifError.message);
@@ -5227,6 +5286,15 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
             );
             
             console.log(`✅ Notification groupée envoyée à ${fcmTokens.length} appareil(s) pour ${property.name}`);
+            // ✅ Notif sous-comptes : nouvelle réservation manuelle
+            try {
+              await sendNotificationToSubAccountsOf(
+                user.id, 'can_view_calendar',
+                '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + property.name,
+                property.name + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
+                { type: 'new_reservation', reservation_id: uid }
+              );
+            } catch(_e) { console.error('Notif sous-comptes r\u00E9sa manuelle:', _e.message); }
           }
           } // end shouldSendNotification
         } catch (pushError) {
@@ -5866,6 +5934,15 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
           );
           
           console.log(`✅ Notification annulation groupée envoyée à ${fcmTokens.length} appareil(s)`);
+          // ✅ Notif sous-comptes : annulation
+          try {
+            await sendNotificationToSubAccountsOf(
+              user.id, 'can_view_calendar',
+              '\u274C R\u00E9servation annul\u00E9e',
+              propertyName + ' - ' + cancelDate,
+              { type: 'reservation_cancelled', reservation_id: uid }
+            );
+          } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
         }
       } catch (notifError) {
         console.error('❌ Erreur notification:', notifError.message);
@@ -8198,6 +8275,15 @@ try {
     );
     
     console.log(`✅ Notification ménage envoyée à ${user.id}`);
+  // ✅ Notif sous-comptes : ménage assigné
+  try {
+    await sendNotificationToSubAccountsOf(
+      user.id, 'can_view_cleaning',
+      '\uD83E\uDDF9 M\u00E9nage assign\u00E9',
+      property.name + ' \u2014 ' + cleanerResult.rows[0].name,
+      { type: 'cleaning_assigned', reservationKey: reservationKey }
+    );
+  } catch(_e) { console.error('Notif sous-comptes m\u00E9nage:', _e.message); }
   }
 } catch (notifError) {
   console.error('❌ Erreur notification ménage:', notifError.message);
@@ -15026,37 +15112,59 @@ app.get('/api/test-notification', async (req, res) => {
 // ============================================
 // 🔔 ROUTES NOTIFICATIONS PUSH
 // ============================================
-// Endpoint pour sauvegarder le token FCM d'un utilisateur
+// Endpoint pour sauvegarder le token FCM d'un utilisateur (principal ou sous-compte)
 app.post('/api/save-token', authenticateAny, async (req, res) => {
   try {
     const { token, device_type } = req.body;
-    const userId = req.user.userId || req.user.id;
-    
+    const deviceType = device_type || 'ios';
+
     if (!token) {
       return res.status(400).json({ error: 'Token manquant' });
     }
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID manquant' });
+
+    // ✅ Distinguer compte principal et sous-compte
+    if (req.user.isSubAccount) {
+      // --- SOUS-COMPTE ---
+      const subAccountId = req.user.subAccountId;
+      if (!subAccountId) {
+        return res.status(400).json({ error: 'SubAccount ID manquant' });
+      }
+
+      console.log(`📱 [sous-compte ${subAccountId}] Enregistrement token FCM (${deviceType})`);
+
+      // Upsert sur (sub_account_id, device_type)
+      await pool.query(
+        `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
+         VALUES ($1, NULL, $2, $3, NOW(), NOW())
+         ON CONFLICT (sub_account_id, device_type)
+         DO UPDATE SET fcm_token = EXCLUDED.fcm_token, updated_at = NOW()`,
+        [subAccountId, token, deviceType]
+      );
+
+      console.log(`✅ Token FCM enregistré pour sous-compte ${subAccountId}`);
+      return res.json({ success: true, message: 'Token sauvegardé (sous-compte)' });
+
+    } else {
+      // --- COMPTE PRINCIPAL ---
+      const userId = req.user.userId || req.user.id;
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID manquant' });
+      }
+
+      console.log(`📱 [user ${userId}] Enregistrement token FCM (${deviceType})`);
+
+      await pool.query(
+        `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         ON CONFLICT (user_id, device_type)
+         DO UPDATE SET fcm_token = EXCLUDED.fcm_token, updated_at = NOW()`,
+        [userId, token, deviceType]
+      );
+
+      console.log(`✅ Token FCM enregistré pour user ${userId}`);
+      return res.json({ success: true, message: 'Token sauvegardé' });
     }
-    
-    // Déterminer le device_type
-    const deviceType = device_type || 'android';
-    
-    console.log(`📱 Enregistrement token pour ${userId} (${deviceType})`);
-    console.log(`   Token: ${token.substring(0, 30)}...`);
-    
-    await pool.query(
-  `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
-   VALUES ($1, $2, $3, NOW(), NOW())
-   ON CONFLICT (user_id, device_type)
-   DO UPDATE SET fcm_token = EXCLUDED.fcm_token,
-                 updated_at = NOW()`,
-  [userId, token, deviceType]
-);
-    
-    console.log(`✅ Token FCM enregistré pour ${userId} (${deviceType})`);
-    res.json({ success: true, message: 'Token sauvegardé' });
+
   } catch (error) {
     console.error('❌ Erreur sauvegarde token:', error);
     res.status(500).json({ error: 'Erreur serveur' });
