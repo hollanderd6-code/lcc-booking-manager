@@ -9382,5 +9382,41 @@ if (window.Capacitor) {
 })();
 </script>
 
+
+<!-- Scroll vers calendarSection au clic sur navCalendarLink -->
+<script>
+(function() {
+  function doScroll() {
+    var el = document.getElementById('calendarSection');
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function bindCalendarLink() {
+    var link = document.getElementById('navCalendarLink');
+    if (!link || link._scrollBound) return;
+    var clone = link.cloneNode(true);
+    link.parentNode.replaceChild(clone, link);
+    clone._scrollBound = true;
+    clone.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      doScroll();
+    });
+  }
+
+  var observer = new MutationObserver(function() {
+    var link = document.getElementById('navCalendarLink');
+    if (link && !link._scrollBound) {
+      setTimeout(function() {
+        bindCalendarLink();
+        observer.disconnect();
+      }, 300);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
 </body>
 </html>
