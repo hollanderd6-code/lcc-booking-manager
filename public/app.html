@@ -965,31 +965,15 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* Couleurs par plateforme (inchangé) */
-.booking-block.airbnb {
-  background: linear-gradient(135deg, var(--booking-color-airbnb), #E84C50);
-}
-.booking-block.booking {
-  background: linear-gradient(135deg, var(--booking-color-booking), #00224F);
-}
-.booking-block.expedia {
-  background: linear-gradient(135deg, var(--booking-color-expedia), #FFB000);
-}
-.booking-block.vrbo {
-  background: linear-gradient(135deg, var(--booking-color-vrbo), #0E4C99);
-}
-.booking-block.hotels {
-  background: linear-gradient(135deg, var(--booking-color-hotels), #B71C1C);
-}
-.booking-block.direct {
-  background: linear-gradient(135deg, var(--booking-color-direct), #EA6A00);
-}
-.booking-block.abritel {
-  background: linear-gradient(135deg, var(--booking-color-abritel), #0077B3);
-}
-.booking-block.gites {
-  background: linear-gradient(135deg, var(--booking-color-gites), #1B5E20);
-}
+/* Couleurs par plateforme — toutes hardcodées pour éviter override par style.css */
+.booking-block.airbnb  { background: linear-gradient(135deg, #FF5A5F, #E84C50) !important; }
+.booking-block.booking { background: linear-gradient(135deg, #003580, #00224F) !important; }
+.booking-block.expedia { background: linear-gradient(135deg, #FFC72C, #FFB000) !important; }
+.booking-block.vrbo    { background: linear-gradient(135deg, #1569C7, #0E4C99) !important; }
+.booking-block.hotels  { background: linear-gradient(135deg, #D32F2F, #B71C1C) !important; }
+.booking-block.direct  { background: linear-gradient(135deg, #F97316, #EA6A00) !important; }
+.booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
+.booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
 
 /* Premier jour de la réservation */
 .booking-block.start {
