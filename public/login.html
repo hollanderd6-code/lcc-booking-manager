@@ -339,12 +339,9 @@
           }
 
           // Redirection selon type de compte
-          let redirectUrl;
-          if (accountType === 'sub') {
-            redirectUrl = IS_NATIVE ? 'sub-account.html' : '/sub-account.html';
-          } else {
-            redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
-          }
+          // Sous-comptes et comptes principaux vont tous sur app.html
+          // (app.html gère les restrictions de permissions via sub-account-guard.js)
+          let redirectUrl = IS_NATIVE ? 'app.html' : '/app.html';
           console.log('🔄 [V3] Redirection:', redirectUrl);
           window.location.href = redirectUrl;
 

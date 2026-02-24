@@ -10,12 +10,14 @@
   // CONFIGURATION DES ROUTES
   // ============================================
   
+  const _isSubForRoutes = (localStorage.getItem('lcc_account_type') === 'sub');
+
   const ROUTES = {
     dashboard: '/app.html',
     calendar: '/app.html#calendar',
     messages: '/messages.html',
     'smart-locks': '/smart-locks.html',
-    properties: '/settings.html',  // Logements
+    properties: '/settings.html',
     more: 'bottomsheet'
   };
 
