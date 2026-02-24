@@ -483,12 +483,15 @@
       width: 100%;
       height: 100%;
       z-index: 10000;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      overflow-y: auto;
+      padding: 24px 0 40px;
+      box-sizing: border-box;
     }
 
     .booking-modal .modal-overlay {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
@@ -504,8 +507,8 @@
       border-radius: 12px;
       max-width: 600px;
       width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
+      max-height: none;
+      overflow-y: visible;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
 
