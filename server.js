@@ -15142,14 +15142,15 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
 
       console.log(`📱 [sous-compte ${subAccountId}] Enregistrement token FCM (${deviceType})`);
 
-      // Upsert manuel : DELETE + INSERT (contourne les limites ON CONFLICT sur index partiel)
-      await pool.query(
-        `DELETE FROM user_fcm_tokens WHERE sub_account_id = $1 AND device_type = $2`,
-        [subAccountId, deviceType]
-      );
+      // Le token FCM peut déjà exister (même iPhone = même token pour compte principal et sous-compte)
+      // On utilise ON CONFLICT sur fcm_token pour mettre à jour la ligne existante
       await pool.query(
         `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
-         VALUES ($1, NULL, $2, $3, NOW(), NOW())`,
+         VALUES ($1, NULL, $2, $3, NOW(), NOW())
+         ON CONFLICT (fcm_token)
+         DO UPDATE SET
+           sub_account_id = EXCLUDED.sub_account_id,
+           updated_at = NOW()`,
         [subAccountId, token, deviceType]
       );
 
