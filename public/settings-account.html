@@ -2926,97 +2926,141 @@ document.addEventListener('DOMContentLoaded', function() {
             Permissions détaillées
           </label>
 
-          <div style="display:grid; gap:12px;">
+          <div style="display:block;">
+
             <!-- Calendrier -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">📅 Calendrier</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canViewCalendar" />
-                <span>Voir le calendrier</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canEditReservations" />
-                <span>Modifier les réservations</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canCreateReservations" />
-                <span>Créer des réservations</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewCalendar" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir le calendrier</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canEditReservations" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Modifier les réservations</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canCreateReservations" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Créer des réservations</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Messages -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">💬 Messages</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canViewMessages" />
-                <span>Voir les messages</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canSendMessages" />
-                <span>Répondre aux messages</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewMessages" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les messages</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canSendMessages" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Répondre aux messages</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Ménages -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">🧹 Ménages</div>
-              <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <input type="checkbox" id="perm_canViewCleaning" />
-                <span>Voir les ménages</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canAssignCleaning" />
-                <span>Assigner les ménages</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewCleaning" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les ménages</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canAssignCleaning" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Assigner les ménages</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Factures -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">🧾 Factures</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewInvoices" />
-                <span>Voir les factures</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <input type="checkbox" id="perm_canManageInvoices" />
-                <span>Créer / modifier les factures</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewInvoices" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les factures</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canManageInvoices" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Créer / modifier les factures</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Logements -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">🏠 Logements</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewProperties" />
-                <span>Voir les logements</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewProperties" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les logements</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Cautions -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">🛡️ Cautions</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewDeposits" />
-                <span>Voir les cautions</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <input type="checkbox" id="perm_canManageDeposits" />
-                <span>Gérer les cautions (capturer/libérer)</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewDeposits" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les cautions</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canManageDeposits" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Gérer les cautions (capturer / libérer)</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Serrures connectées -->
-            <div style="padding:12px; background:#f9fafb; border-radius:8px;">
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
               <div style="font-weight:600; margin-bottom:8px;">🔒 Serrures</div>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="perm_canViewSmartLocks" />
-                <span>Voir les serrures connectées</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <input type="checkbox" id="perm_canManageSmartLocks" />
-                <span>Gérer les serrures connectées</span>
-              </label>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewSmartLocks" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les serrures connectées</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canManageSmartLocks" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Gérer les serrures connectées</td>
+                </tr>
+              </table>
             </div>
+
           </div>
         </div>
       </div>
