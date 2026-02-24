@@ -508,8 +508,29 @@
       max-width: 600px;
       width: 90%;
       max-height: none;
+      overflow-x: hidden;        /* ✅ empêche le débordement horizontal */
       overflow-y: visible;
+      box-sizing: border-box;    /* ✅ padding inclus dans la largeur */
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    /* ✅ Sur mobile : padding réduit pour que le texte ne soit pas coupé */
+    @media (max-width: 768px) {
+      .booking-modal {
+        padding: 16px 12px 40px;
+      }
+      .booking-modal .modal-content {
+        width: 100%;
+      }
+      .booking-modal .booking-form {
+        padding: 16px;
+      }
+      .booking-modal .modal-header {
+        padding: 16px;
+      }
+      .booking-modal .modal-actions {
+        padding: 12px 16px;
+      }
     }
 
     .booking-modal .modal-header {
