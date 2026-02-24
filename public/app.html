@@ -4632,9 +4632,10 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       let color = '#000000'; // Noir par défaut
       
       switch(type) {
-        case 'properties': // Logements actifs
-          color = window.innerWidth <= 768 ? '#1A7A5E' : '#1e293b';
-          break;
+        case 'properties': // Logements actifs — couleur gérée par CSS uniquement
+          element.style.removeProperty('color');
+          element.style.fontWeight = '700';
+          return;
           
         case 'moves': // Check-in / Check-out
           color = value >= 1 ? '#10B981' : '#000000';
