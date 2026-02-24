@@ -468,6 +468,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       --booking-color-direct: #10B981;
       --booking-color-vrbo: #1569C7;
       --booking-color-hotels: #D32F2F;
+      --booking-color-abritel: #0096D6;
+      --booking-color-gites: #2E7D32;
       
       --cell-hover-bg: rgba(16, 185, 129, 0.08);
     }
@@ -981,6 +983,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 .booking-block.direct {
   background: linear-gradient(135deg, var(--booking-color-direct), var(--primary-hover));
+}
+.booking-block.abritel {
+  background: linear-gradient(135deg, var(--booking-color-abritel), #0077B3);
+}
+.booking-block.gites {
+  background: linear-gradient(135deg, var(--booking-color-gites), #1B5E20);
 }
 
 /* Premier jour de la réservation */
@@ -2611,7 +2619,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
     <!-- Booking.com -->
     <div style="display:flex;align-items:center;gap:7px;">
-      <span style="font-size:13px;font-weight:800;color:#003580;">B.</span>
+      <span style="font-size:13px;font-weight:800;color:#6B9FE4;">B.</span>
       <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Booking.com</span>
       <span id="topbar-status-booking" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);">
         <i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté
@@ -2629,6 +2637,19 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       </span>
     </div>
 
+
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="font-size:13px;font-weight:800;color:#0096D6;">Ab.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Abritel</span>
+      <span id="topbar-status-abritel" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);"><i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté</span>
+    </div>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,.1);"></div>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="font-size:13px;font-weight:800;color:#4CAF50;">G.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:12px;font-weight:500;">Gîtes de France</span>
+      <span id="topbar-status-gites" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);"><i class="fas fa-circle" style="font-size:7px;margin-right:3px;vertical-align:middle;"></i>Non connecté</span>
+    </div>
   </div>
 
   <!-- Toggle dark mode (droite) -->
@@ -2886,6 +2907,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     </span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
       <span style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>Direct
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#0096D6;flex-shrink:0;"></span>Abritel
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
+      <span style="width:8px;height:8px;border-radius:50%;background:#2E7D32;flex-shrink:0;"></span>Gîtes
     </span>
   </div>
 
@@ -4827,7 +4854,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
             </div>
             ${list.map(r => {
               const platform = (r.src || '').toLowerCase();
-              const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+              const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#1A7A5E';
               const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
               return `
@@ -4908,7 +4935,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     } else {
       content.innerHTML = rows.map(r => {
         const platform = (r.src || '').toLowerCase();
-        const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+        const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#1A7A5E';
         const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
         const score = r.riskScore != null ? `${r.riskScore}/100` : '';
         return `
@@ -5946,6 +5973,14 @@ if (j === 0 || cells.length === 1) {
     iconEl = document.createElement('span');
     iconEl.className = 'platform-icon booking-letter';
     iconEl.textContent = 'B.';
+  } else if (platform === 'abritel') {
+    iconEl = document.createElement('span');
+    iconEl.className = 'platform-icon booking-letter';
+    iconEl.textContent = 'Ab.';
+  } else if (platform === 'gites') {
+    iconEl = document.createElement('span');
+    iconEl.className = 'platform-icon booking-letter';
+    iconEl.textContent = 'G.';
   } else {
     iconEl = document.createElement('i');
     iconEl.className =
@@ -6194,7 +6229,9 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
       if (val.indexOf('airbnb') !== -1) return 'airbnb';
       if (val.indexOf('booking') !== -1) return 'booking';
       if (val.indexOf('expedia') !== -1) return 'expedia';
-      if (val.indexOf('vrbo') !== -1 || val.indexOf('abritel') !== -1 || val.indexOf('homeaway') !== -1) return 'vrbo';
+      if (val.indexOf('vrbo') !== -1 || val.indexOf('homeaway') !== -1) return 'vrbo';
+      if (val.indexOf('abritel') !== -1) return 'abritel';
+      if (val.indexOf('gite') !== -1) return 'gites';
       if (val.indexOf('hotel') !== -1) return 'hotels';
       return 'direct';
     }
