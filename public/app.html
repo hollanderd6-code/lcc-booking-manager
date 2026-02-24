@@ -6137,6 +6137,17 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
         calendarGrid.scrollTop = propertyList.scrollTop;
         setTimeout(function() { isPropertyScrolling = false; }, 10);
       });
+
+      // Scroll horizontal vers aujourd'hui
+      var todayHeader = document.querySelector('#daysHeader .day-header.today');
+      if (todayHeader) {
+        var daysHeader = document.getElementById('daysHeader');
+        var container = daysHeader ? daysHeader.parentElement : null;
+        if (container) {
+          var offset = todayHeader.offsetLeft - (container.clientWidth / 2) + (todayHeader.offsetWidth / 2);
+          container.scrollLeft = Math.max(0, offset);
+        }
+      }
     }
 
     function selectProperty(propertyId) {
