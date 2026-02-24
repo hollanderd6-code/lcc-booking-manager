@@ -5491,8 +5491,7 @@ window.LCC_PROPERTIES = properties;
         renderCalendar();
         
         // S'assurer que le scroll vers aujourd'hui se fait après le rendu
-        setTimeout(scrollCalendarToToday, 200);
-        
+                
         // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
         console.log('⏰ Programmation du setTimeout pour updateTopRisksKpi dans 500ms...');
         setTimeout(() => {
@@ -5735,35 +5734,9 @@ window.LCC_PROPERTIES = properties;
       var range = getCurrentRange();
       renderDaysHeader(range);
       renderGrid(range);
-      setTimeout(scrollCalendarToToday, 100);
-      setTimeout(initScrollSync, 150);
+            setTimeout(initScrollSync, 150);
     }
-function scrollCalendarToToday() {
-  console.log('📅 scrollCalendarToToday appelé');
-  const grid = document.getElementById('calendarGrid');
-  if (!grid) {
-    console.log('❌ Grid non trouvé');
-    return;
-  }
 
-  // On prend la 1ère cellule "today" (il y en a une par logement)
-  const todayCell = grid.querySelector('.calendar-cell.today');
-  if (!todayCell) {
-    console.log('❌ Cellule today non trouvée');
-    return;
-  }
-
-  console.log('✅ Cellule today trouvée, scroll en cours...');
-  
-  // Utiliser scrollIntoView pour un meilleur contrôle
-  todayCell.scrollIntoView({ 
-    behavior: 'auto',
-    block: 'nearest', 
-    inline: 'center' 
-  });
-  
-  console.log('✅ Scroll effectué via scrollIntoView');
-}
         function renderDaysHeader(range) {
       var header = document.getElementById('daysHeader');
       if (!header) return;
