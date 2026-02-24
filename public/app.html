@@ -2507,7 +2507,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     color: #1A7A5E !important;
     letter-spacing: -0.02em !important;
   }
-  /* #kpiPropertiesValue : JS sets dark, mobile CSS green !important wins on mobile */
   .kpi-card .kpi-sub {
     font-size: 12px !important;
     line-height: 1.3 !important;
@@ -2713,9 +2712,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   <a class="mobile-logo" href="/app.html">
     <span class="mobile-logo-text"></span>
   </a>
-  <button class="btn-icon" id="syncBtnMobile" title="Synchroniser les calendriers" style="margin-left:auto;margin-right:16px;background:transparent;border:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:18px;">
-    <i class="fas fa-sync-alt"></i>
-  </button>
 </div>
 <button class="mobile-menu-btn" id="mobileMenuBtn">
 <i class="fas fa-bars"></i>
@@ -2759,8 +2755,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       </span>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiPropertiesValue">0</span>
-<span class="kpi-sub kpi-sub--green" style="color:#1A7A5E;font-weight:600;">connectés à au moins un OTA</span>
+<span class="kpi-value" id="kpiPropertiesValue" style="color:#1e293b !important;">0</span>
+<span class="kpi-sub" style="color:#1A7A5E !important;font-weight:600;">connectés à au moins un OTA</span>
 </div>
 </article>
 <!-- KPI 2 : Check-in / Check-out du jour -->
@@ -4634,8 +4630,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       let color = '#000000'; // Noir par défaut
       
       switch(type) {
-        case 'properties': // Logements actifs — toujours noir
-          color = '#1e293b';
+        case 'properties': // Logements actifs
+          color = '#1e293b'; // Toujours noir
           break;
           
         case 'moves': // Check-in / Check-out
@@ -6140,17 +6136,6 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
         calendarGrid.scrollTop = propertyList.scrollTop;
         setTimeout(function() { isPropertyScrolling = false; }, 10);
       });
-
-      // Scroll horizontal vers aujourd'hui
-      var todayHeader = document.querySelector('#daysHeader .day-header.today');
-      if (todayHeader) {
-        var daysHeader = document.getElementById('daysHeader');
-        var container = daysHeader ? daysHeader.parentElement : null;
-        if (container) {
-          var offset = todayHeader.offsetLeft - (container.clientWidth / 2) + (todayHeader.offsetWidth / 2);
-          container.scrollLeft = Math.max(0, offset);
-        }
-      }
     }
 
     function selectProperty(propertyId) {
@@ -9326,31 +9311,6 @@ if (window.Capacitor) {
 })();
 </script>
 
-<!-- Bouton sync mobile -->
-<script>
-(function() {
-  function bindSyncMobile() {
-    var btnMobile = document.getElementById('syncBtnMobile');
-    var btnDesktop = document.getElementById('syncBtn');
-    if (btnMobile && btnDesktop && !btnMobile._bound) {
-      btnMobile._bound = true;
-      btnMobile.addEventListener('click', function() {
-        btnDesktop.click();
-        var icon = btnMobile.querySelector('i');
-        if (icon) {
-          icon.style.transition = 'transform 0.6s ease';
-          icon.style.transform = 'rotate(360deg)';
-          setTimeout(function() { icon.style.transform = ''; }, 700);
-        }
-      });
-    }
-  }
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(bindSyncMobile, 800);
-  });
-})();
-</script>
-
 <!-- Badge Messages -->
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/bh-layout.js"></script>  
@@ -9447,7 +9407,7 @@ if (window.Capacitor) {
 </script>
 
 
-<!-- Scroll vers calendarSection au clic sur navCalendarLink ou bouton mobile -->
+<!-- Scroll vers calendarSection au clic sur navCalendarLink -->
 <script>
 (function() {
   function doScroll() {
@@ -9457,57 +9417,36 @@ if (window.Capacitor) {
   }
 
   function bindCalendarLink() {
-    // Desktop : sidebar link
     var link = document.getElementById('navCalendarLink');
-    if (link && !link._scrollBound) {
-      var clone = link.cloneNode(true);
-      link.parentNode.replaceChild(clone, link);
-      clone._scrollBound = true;
-      clone.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        doScroll();
-      });
-    }
-
-    // Mobile : bouton barre du bas contenant le texte "Calendrier"
-    document.querySelectorAll('a, button').forEach(function(el) {
-      if (el._scrollBound) return;
-      var text = el.textContent.trim();
-      if (text === 'Calendrier' || el.getAttribute('data-page') === 'calendar') {
-        el._scrollBound = true;
-        el.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          doScroll();
-        });
-      }
+    if (!link || link._scrollBound) return;
+    var clone = link.cloneNode(true);
+    link.parentNode.replaceChild(clone, link);
+    clone._scrollBound = true;
+    clone.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      doScroll();
     });
   }
 
   var observer = new MutationObserver(function() {
-    bindCalendarLink();
+    var link = document.getElementById('navCalendarLink');
+    if (link && !link._scrollBound) {
+      setTimeout(function() {
+        bindCalendarLink();
+        observer.disconnect();
+      }, 300);
+    }
   });
   observer.observe(document.body, { childList: true, subtree: true });
-
-  // Aussi au chargement
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(bindCalendarLink, 500);
-    setTimeout(bindCalendarLink, 1500);
-  });
 })();
 </script>
 
 
-<!-- ✅ KPI logements actifs : sous-texte vert sur desktop -->
+<!-- ✅ KPI logements actifs : chiffre noir -->
 <style>
-@media (min-width: 769px) {
-  html[data-theme-v3="1"] .kpi-card .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
-  html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
-  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
-  html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
-  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value,
-  html[data-theme-v3="1"] #kpiPropertiesValue { color: #1e293b !important; }
+#kpiPropertiesValue {
+  color: #1e293b !important;
 }
 </style>
 
