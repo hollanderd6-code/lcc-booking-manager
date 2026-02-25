@@ -15678,18 +15678,17 @@ cron.schedule('0 18 * * *', async () => {
           .map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`)
           .join(', ');
         
-        // Envoyer a TOUS les appareils
+        // Envoyer a TOUS les appareils en un seul appel groupé
         if (await shouldSendNotification(user.id, 'notif_reminder_j1')) {
-        for (const token of tokensResult.rows) {
-          await sendNotification(
-            token.fcm_token,
+          const allTokens = tokensResult.rows.map(r => r.fcm_token);
+          await sendNotificationToMultiple(
+            allTokens,
             `Rappel : ${count} arrivee(s) demain`,
             propertiesList,
             { type: 'reminder_j1', count: count.toString() }
           );
-        }
         
-        console.log(`Rappel J-1 envoye a user ${user.id} : ${count} arrivee(s)`);
+        console.log(`Rappel J-1 envoye a user ${user.id} : ${count} arrivee(s) sur ${allTokens.length} appareil(s)`);
         } // end shouldSendNotification
       }
     }
