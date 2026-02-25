@@ -322,7 +322,7 @@ async function processArrivalsForToday(pool, io, transporter) {
 
         try {
           await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'noreply@bookingmanage.com',
+            from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
             to: send.ownerEmail,
             subject: `Message de bienvenue envoye - ${send.propertyName}`,
             html: `
@@ -1285,7 +1285,7 @@ function getEmailTransporter() {
   return emailTransporter;
 }
 function getBrevoSender() {
-  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>';
 
   const match = from.match(/^(.*)<([^>]+)>$/);
   if (match) {
@@ -1612,7 +1612,7 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
     return;
   }
 
-  const from = process.env.EMAIL_FROM || "Boostinghost <no-reply@boostinghost.com>";
+  const from = process.env.EMAIL_FROM || "Boostinghost <no-reply@boostinghost.fr>";
   const tasks = [];
 
   const handleReservation = (res, type) => {
@@ -1774,7 +1774,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
     return;
   }
 
-  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>';
   const tasks = [];
 
   // On groupe par user, pour ne pas requêter 50 fois la base
@@ -1962,7 +1962,7 @@ async function sendDailyCleaningPlan() {
   }
 
   const tasks = [];
-  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>';
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>';
 
   Object.keys(tasksByCleanerId).forEach((cleanerId) => {
     const entry = tasksByCleanerId[cleanerId];
@@ -7849,7 +7849,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     
     // Envoyer l'email via sendEmail (même fonction que les autres emails)
     await sendEmail({
-      from: `"Boostinghost" <${(process.env.EMAIL_FROM || process.env.EMAIL_USER || '').replace(/[<>"]/g, '').trim()}>`,
+      from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
       to: user.email,
       subject: '🔑 Réinitialisation de votre mot de passe - Boostinghost',
       html: `
@@ -9268,7 +9268,7 @@ app.put('/api/cleaning/checklists/:id/reject',
               const transporter = getEmailTransporter();
               if (transporter) {
                 await transporter.sendMail({
-                  from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.com>',
+                  from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
                   to: cleaner.email,
                   subject,
                   html: htmlBody
@@ -12768,7 +12768,7 @@ const pdfUrl = `${origin}/api/invoice/download/${token}`;
       // Envoyer via transporter (utilise automatiquement Brevo API avec nettoyage)
       try {
         await transporter.sendMail({
-          from: process.env.EMAIL_FROM || user.email,
+          from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
           to: clientEmail,
           subject: `Facture ${invoiceNumber} - ${propertyName}`,
           html: emailHtml
