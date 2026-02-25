@@ -2033,7 +2033,7 @@ if ((useBrevo || transporter) && cleanerEmail) {
 const app = express();
 
 // ✅ Configuration de l'expéditeur des emails
-const EMAIL_FROM = `"Boostinghost" <${process.env.EMAIL_USER}>`;
+const EMAIL_FROM = process.env.EMAIL_FROM || `"Boostinghost" <no-reply@boostinghost.fr>`;
 
 // Rendre les variables globales disponibles pour les routes
 app.locals.pool = pool;
