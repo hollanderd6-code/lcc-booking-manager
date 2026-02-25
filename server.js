@@ -10649,7 +10649,7 @@ app.post('/api/auth/register', async (req, res) => {
     const mailOptions = {
       from: EMAIL_FROM,
       to: email,
-      subject: 'Vérif¦ Vérifiez votre adresse email - Boostinghost',
+      subject: '✅ Vérifiez votre adresse email - Boostinghost',
       html: `
         <!DOCTYPE html>
         <html>
