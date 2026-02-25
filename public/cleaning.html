@@ -1623,6 +1623,13 @@ html[data-theme-v3="1"] #templatesList > div {
 <label for="cleanerNotes">Notes / zone d'intervention</label>
 <textarea id="cleanerNotes" placeholder="Ex : intervient uniquement sur les appartements du centre-ville" rows="2"></textarea>
 </div>
+<div class="form-row">
+<label for="cleanerSubAccount">Compte app (optionnel)</label>
+<select id="cleanerSubAccount" style="width:100%; padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-primary); color:var(--text-primary); font-size:14px;">
+<option value="">— Aucun sous-compte lié —</option>
+</select>
+<div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">Si cette personne a un compte dans l'app, liez-la ici pour qu'elle reçoive les notifications push.</div>
+</div>
 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
 <button class="btn btn-primary" type="submit">
 <i class="fas fa-user-plus"></i>
@@ -2008,6 +2015,7 @@ html[data-theme-v3="1"] #templatesList > div {
 
       let cleaners = [];
       let assignments = {};
+      let subAccounts = [];
 
       // Filtre logement
       let selectedReservationPropertyFilter = '';
@@ -2153,6 +2161,19 @@ function formatDateFr(dateStr) {
               cleaners = cleanersData.cleaners;
             }
           }
+          populateSubAccountDropdown();
+
+          // Charger les sous-comptes pour le lien cleaner ↔ sous-compte
+          try {
+            const saResponse = await fetch(`${API_URL}/api/sub-accounts/list`, {
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            if (saResponse.ok) {
+              const saData = await saResponse.json().catch(() => ({}));
+              subAccounts = Array.isArray(saData.subAccounts) ? saData.subAccounts : 
+                            Array.isArray(saData) ? saData : [];
+            }
+          } catch(e) { console.warn('Sous-comptes non chargés:', e); }
 
           // Fallback de démo si aucune propriété
           if (!PROPERTIES.length) {
@@ -2263,6 +2284,7 @@ function formatDateFr(dateStr) {
                   ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
                   ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
                   ${c.pin_code ? `<span class="cleaner-pill" style="background: #d1fae5; color: #059669; font-weight: 600;"><i class="fas fa-key"></i> PIN: ${c.pin_code}</span>` : ''}
+                  ${c.sub_account_id ? `<span class="cleaner-pill" style="background: #dbeafe; color: #2563eb; font-weight: 600;"><i class="fas fa-bell"></i> Notifs activées</span>` : ''}
                 </div>
               </div>
               <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
@@ -2449,6 +2471,20 @@ function formatDateFr(dateStr) {
       }
 
       // Ajout d'un membre
+      // Remplir le dropdown sous-comptes quand ils sont chargés
+      function populateSubAccountDropdown() {
+        const sel = document.getElementById('cleanerSubAccount');
+        if (!sel) return;
+        // Garder l'option vide
+        sel.innerHTML = '<option value="">— Aucun sous-compte lié —</option>';
+        subAccounts.forEach(sa => {
+          const opt = document.createElement('option');
+          opt.value = sa.id;
+          opt.textContent = (sa.first_name || '') + ' ' + (sa.last_name || '') + ' (' + sa.email + ')';
+          sel.appendChild(opt);
+        });
+      }
+
       if (cleanerForm) {
         cleanerForm.addEventListener('submit', async (e) => {
           e.preventDefault();
@@ -2456,6 +2492,7 @@ function formatDateFr(dateStr) {
           const email = document.getElementById('cleanerEmail').value.trim();
           const phone = document.getElementById('cleanerPhone').value.trim();
           const notes = document.getElementById('cleanerNotes').value.trim();
+          const subAccountId = document.getElementById('cleanerSubAccount')?.value || null;
 
           if (!name) return;
 
@@ -2477,7 +2514,8 @@ function formatDateFr(dateStr) {
                 email: email || null,
                 phone: phone || null,
                 notes: notes || null,
-                isActive: true
+                isActive: true,
+                subAccountId: subAccountId ? parseInt(subAccountId) : null
               })
             });
 
