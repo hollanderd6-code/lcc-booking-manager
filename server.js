@@ -1203,6 +1203,16 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ Index sub_account déjà existant:', e.message);
     }
+
+    // ✅ Migration : colonne sub_account_id dans cleaners
+    try {
+      await pool.query(`
+        ALTER TABLE cleaners ADD COLUMN IF NOT EXISTS sub_account_id INTEGER REFERENCES sub_accounts(id) ON DELETE SET NULL;
+      `);
+      console.log('✅ Colonne sub_account_id ajoutée à cleaners');
+    } catch (e) {
+      console.log('ℹ️ sub_account_id cleaners déjà existante:', e.message);
+    }
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -8099,9 +8109,20 @@ app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_c
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { name, phone, email, notes, isActive } = req.body || {};
+    const { name, phone, email, notes, isActive, subAccountId } = req.body || {};
     if (!name) {
       return res.status(400).json({ error: 'Nom requis' });
+    }
+
+    // Vérifier que le sous-compte appartient bien à cet utilisateur si fourni
+    if (subAccountId) {
+      const saCheck = await pool.query(
+        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
+        [subAccountId, userId]
+      );
+      if (saCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Sous-compte introuvable' });
+      }
     }
 
     const id = 'c_' + Date.now().toString(36);
@@ -8121,10 +8142,10 @@ app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_c
     }
 
     const result = await pool.query(
-      `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), NOW())
-       RETURNING id, name, phone, email, notes, pin_code, is_active, created_at`,
-      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive]
+      `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), $9, NOW())
+       RETURNING id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at`,
+      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive, subAccountId || null]
     );
 
     res.status(201).json({
@@ -8149,7 +8170,18 @@ app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manag
     }
 
     const { id } = req.params;
-    const { name, phone, email, notes, isActive } = req.body || {};
+    const { name, phone, email, notes, isActive, subAccountId } = req.body || {};
+
+    // Vérifier sous-compte si fourni
+    if (subAccountId) {
+      const saCheck = await pool.query(
+        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
+        [subAccountId, userId]
+      );
+      if (saCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Sous-compte introuvable' });
+      }
+    }
 
     const result = await pool.query(
       `UPDATE cleaners
@@ -8158,10 +8190,11 @@ app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manag
          phone = COALESCE($4, phone),
          email = COALESCE($5, email),
          notes = COALESCE($6, notes),
-         is_active = COALESCE($7, is_active)
+         is_active = COALESCE($7, is_active),
+         sub_account_id = $8
        WHERE id = $1 AND user_id = $2
-       RETURNING id, name, phone, email, notes, is_active, created_at`,
-      [id, userId, name, phone, email, notes, isActive]
+       RETURNING id, name, phone, email, notes, is_active, sub_account_id, created_at`,
+      [id, userId, name, phone, email, notes, isActive, subAccountId || null]
     );
 
     if (result.rows.length === 0) {
@@ -8265,35 +8298,30 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 
     // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
 try {
-  const { sendNewCleaningNotification } = require('./server/notifications-service');
-  
-  // Récupérer la date de fin de la réservation depuis la DB
-  const resResult = await pool.query(
-    'SELECT end_date FROM reservations WHERE uid = $1 OR id::text = $1',
-    [reservationKey]
-  );
-  
-  if (resResult.rows.length > 0) {
-    const cleaningDate = resResult.rows[0].end_date;
-    
-    await sendNewCleaningNotification(
-      user.id,
-      reservationKey,
-      property.name,
-      cleanerResult.rows[0].name,
-      cleaningDate
+  const cleaner = cleanerResult.rows[0];
+  const title = '🧹 Nouveau ménage assigné';
+  const body = property.name + ' — Vous avez un ménage à effectuer';
+  const data = { type: 'cleaning_assigned', reservationKey: reservationKey };
+
+  // ✅ Si le cleaner est lié à un sous-compte → notif ciblée
+  if (cleaner.sub_account_id) {
+    const tokenRes = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
+      [cleaner.sub_account_id]
     );
-    
-    console.log(`✅ Notification ménage envoyée à ${user.id}`);
-  // ✅ Notif sous-comptes : ménage assigné
-  try {
+    if (tokenRes.rows.length > 0) {
+      const tokens = tokenRes.rows.map(r => r.fcm_token);
+      await sendNotificationToMultiple(tokens, title, body, data);
+      console.log(`✅ Notif ménage envoyée au sous-compte ${cleaner.sub_account_id}`);
+    } else {
+      console.log(`ℹ️ Sous-compte ${cleaner.sub_account_id} sans token FCM`);
+    }
+  } else {
+    // ✅ Sinon → notif à tous les sous-comptes can_view_cleaning
     await sendNotificationToSubAccountsOf(
       user.id, 'can_view_cleaning',
-      '\uD83E\uDDF9 M\u00E9nage assign\u00E9',
-      property.name + ' \u2014 ' + cleanerResult.rows[0].name,
-      { type: 'cleaning_assigned', reservationKey: reservationKey }
+      title, body, data
     );
-  } catch(_e) { console.error('Notif sous-comptes m\u00E9nage:', _e.message); }
   }
 } catch (notifError) {
   console.error('❌ Erreur notification ménage:', notifError.message);
