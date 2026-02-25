@@ -9509,11 +9509,14 @@ if (window.Capacitor) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
 }
-/* Mobile : sous-texte gris comme les autres */
+/* Mobile : sous-texte même couleur que les autres */
 @media (max-width: 768px) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
-  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: inherit !important; font-weight: normal !important; }
-  #kpiPropertiesCard .kpi-sub--green { color: inherit !important; font-weight: normal !important; }
+  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green,
+  #kpiPropertiesCard .kpi-sub--green { 
+    color: var(--text-muted-v3, #7A8695) !important; 
+    font-weight: normal !important; 
+  }
 }
 </style>
 
