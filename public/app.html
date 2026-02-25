@@ -4635,8 +4635,12 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       let color = '#000000'; // Noir par défaut
       
       switch(type) {
-        case 'properties': // Logements actifs — noir desktop, CSS gère mobile
-          element.style.setProperty('color', '#1e293b', 'important');
+        case 'properties': // Logements actifs — noir desktop uniquement, CSS gère mobile
+          if (window.innerWidth > 768) {
+            element.style.setProperty('color', '#1e293b', 'important');
+          } else {
+            element.style.removeProperty('color');
+          }
           element.style.fontWeight = '700';
           return;
           
