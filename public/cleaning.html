@@ -2017,6 +2017,18 @@ html[data-theme-v3="1"] #templatesList > div {
       let assignments = {};
       let subAccounts = [];
 
+      function populateSubAccountDropdown() {
+        const sel = document.getElementById('cleanerSubAccount');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">— Aucun sous-compte lié —</option>';
+        subAccounts.forEach(sa => {
+          const opt = document.createElement('option');
+          opt.value = sa.id;
+          opt.textContent = (sa.first_name || '') + ' ' + (sa.last_name || '') + ' (' + sa.email + ')';
+          sel.appendChild(opt);
+        });
+      }
+
       // Filtre logement
       let selectedReservationPropertyFilter = '';
       let propertyFilterInitialized = false;
@@ -2161,7 +2173,6 @@ function formatDateFr(dateStr) {
               cleaners = cleanersData.cleaners;
             }
           }
-          populateSubAccountDropdown();
 
           // Charger les sous-comptes pour le lien cleaner ↔ sous-compte
           try {
@@ -2174,6 +2185,8 @@ function formatDateFr(dateStr) {
                             Array.isArray(saData) ? saData : [];
             }
           } catch(e) { console.warn('Sous-comptes non chargés:', e); }
+
+          populateSubAccountDropdown();
 
           // Fallback de démo si aucune propriété
           if (!PROPERTIES.length) {
@@ -2471,20 +2484,6 @@ function formatDateFr(dateStr) {
       }
 
       // Ajout d'un membre
-      // Remplir le dropdown sous-comptes quand ils sont chargés
-      function populateSubAccountDropdown() {
-        const sel = document.getElementById('cleanerSubAccount');
-        if (!sel) return;
-        // Garder l'option vide
-        sel.innerHTML = '<option value="">— Aucun sous-compte lié —</option>';
-        subAccounts.forEach(sa => {
-          const opt = document.createElement('option');
-          opt.value = sa.id;
-          opt.textContent = (sa.first_name || '') + ' ' + (sa.last_name || '') + ' (' + sa.email + ')';
-          sel.appendChild(opt);
-        });
-      }
-
       if (cleanerForm) {
         cleanerForm.addEventListener('submit', async (e) => {
           e.preventDefault();
