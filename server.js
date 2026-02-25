@@ -8692,6 +8692,19 @@ app.post('/api/cleaning/checklist', async (req, res) => {
         console.error('❌ Erreur push Firebase ménage:', pushErr.message);
       }
 
+      // ✅ Notif sous-comptes Manager/Assistant avec can_view_cleaning
+      try {
+        const title = `🧹 Ménage terminé — ${propertyName}`;
+        const body = `${cleaner.name} a terminé le ménage${durationMin ? ' en ' + durationMin + ' min' : ''}. ${photos ? photos.length : 0} photos. À valider !`;
+        await sendNotificationToSubAccountsOf(
+          cleaner.user_id, 'can_view_cleaning',
+          title, body,
+          { type: 'cleaning_completed', checklistId: String(checklistId), propertyId, click_action: '/app.html' }
+        );
+      } catch (saErr) {
+        console.error('❌ Notif sous-comptes ménage terminé:', saErr.message);
+      }
+
       // ✅ Émettre événement Socket.IO temps réel (toast dans l'app web)
       if (typeof io !== 'undefined' && io) {
         io.to(`user_${cleaner.user_id}`).emit('cleaning:completed', {
