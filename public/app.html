@@ -6087,13 +6087,6 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 
       for (var i = 0; i < state.properties.length; i++) {
         var p = state.properties[i];
-        var count = 0;
-        for (var j = 0; j < state.bookings.length; j++) {
-          var b = state.bookings[j];
-          if (b.propertyId && String(b.propertyId) === String(p.id)) {
-            count++;
-          }
-        }
 
         var item = document.createElement('div');
         item.className = 'property-item';
@@ -6104,13 +6097,6 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
         nameSpan.textContent = p.name;
 
         item.appendChild(nameSpan);
-
-        if (count > 0) {
-          var badge = document.createElement('span');
-          badge.className = 'property-count';
-          badge.textContent = String(count);
-          item.appendChild(badge);
-        }
 
         (function(propertyId) {
           item.addEventListener('click', function() {
