@@ -238,22 +238,25 @@
 /* ── 15. MODAL PLEIN ÉCRAN MOBILE ── */
 @media (max-width: 768px) {
 
+  /* Le modal overlay couvre tout */
   html[data-theme-v3="1"] .modal {
     padding: 0 !important;
     align-items: flex-start !important;
     justify-content: flex-start !important;
+    z-index: 1099 !important; /* juste sous le mobile-header (1100) */
   }
 
+  /* Le contenu du modal commence sous le mobile-header fixe */
   html[data-theme-v3="1"] .modal-content {
     position: fixed !important;
-    top: 0 !important;
+    top: calc(60px + env(safe-area-inset-top, 0px)) !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
+    height: auto !important;
+    max-height: none !important;
     margin: 0 !important;
     border-radius: 0 !important;
     overflow: hidden !important;
@@ -265,8 +268,7 @@
   html[data-theme-v3="1"] .modal-header {
     flex-shrink: 0 !important;
     padding: 14px 16px !important;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 14px) !important;
-    background: var(--cream-warm, #fff) !important;
+    background: var(--cream-warm, #F5F2EC) !important;
     border-bottom: 1px solid var(--border-v3, #e5e7eb) !important;
     display: flex !important;
     align-items: center !important;
@@ -292,10 +294,10 @@
     flex-shrink: 0 !important;
     position: static !important;
     padding: 12px 16px !important;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 70px) !important; /* 70px = bottom tab bar */
     margin: 0 !important;
     border-top: 1px solid var(--border-v3, #e5e7eb) !important;
-    background: var(--cream-warm, #fff) !important;
+    background: var(--cream-warm, #F5F2EC) !important;
     display: flex !important;
     gap: 8px !important;
     justify-content: flex-end !important;
