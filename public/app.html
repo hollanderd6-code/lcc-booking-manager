@@ -6390,16 +6390,16 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 <div class="modal-overlay" id="modalOverlay"></div>
 <div class="modal-content">
 <div class="modal-header">
-<h2>Nouvelle Réservation</h2>
+<h2>Nouvelle réservation</h2>
 <button class="modal-close" id="closeModal">
 <i class="fas fa-times"></i>
 </button>
 </div>
-<form class="booking-form" id="bookingForm">
+<form class="booking-form" id="bookingForm" style="overflow-y:auto;flex:1;min-height:0;">
 <div class="form-group">
 <label for="bookingProperty">Logement</label>
 <select id="bookingProperty" required="">
-<option value="">Sélectionner un logement</option>
+<option value="">Sélectionner un logement...</option>
 </select>
 </div>
 <div class="form-row">
@@ -6430,14 +6430,14 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 <option value="direct">Direct</option>
 <option value="booking">Booking.com</option>
 <option value="airbnb">Airbnb</option>
+<option value="abritel">Abritel / VRBO</option>
 <option value="expedia">Expedia</option>
-<option value="vrbo">VRBO</option>
 <option value="hotels">Hotels.com</option>
 </select>
 </div>
 <div class="form-group">
 <label for="price">Prix (€)</label>
-<input id="price" min="0" placeholder="75" step="0.01" type="number"/>
+<input id="price" min="0" placeholder="Ex: 250" step="0.01" type="number"/>
 </div>
 <div class="form-group">
 <label for="notes">Notes</label>
