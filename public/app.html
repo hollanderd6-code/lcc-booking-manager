@@ -2677,8 +2677,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       const hasBooking = reservations.some(r =>
         (r.source || r.platform || '').toLowerCase().includes('booking')
       );
+      const hasAbritel = reservations.some(r => (r.source || r.platform || '').toLowerCase().includes('abritel') || (r.source || r.platform || '').toLowerCase().includes('vrbo'));
+      const hasGites   = reservations.some(r => (r.source || r.platform || '').toLowerCase().includes('gites') || (r.source || r.platform || '').toLowerCase().includes('gîtes'));
       setStatus('topbar-status-airbnb', hasAirbnb);
       setStatus('topbar-status-booking', hasBooking);
+      setStatus('topbar-status-abritel', hasAbritel);
+      setStatus('topbar-status-gites',   hasGites);
 
       // Stripe : vérifie lcc_user ou LCC_PROPERTIES
       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
