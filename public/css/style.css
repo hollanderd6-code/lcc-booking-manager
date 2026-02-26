@@ -1340,20 +1340,30 @@ body {
 }
 
 .loading-spinner {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: var(--bg-primary, #ffffff);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
-  color: var(--text-primary, #111827);
-  font-size: 14px;
+  gap: 8px;
 }
 
-.loading-spinner i {
-  font-size: 16px;
+.loading-spinner .dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #1A7A5E;
+  animation: bh-bounce 1.2s infinite ease-in-out;
 }
+.loading-spinner .dot:nth-child(1) { animation-delay: 0s; }
+.loading-spinner .dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-spinner .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bh-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%            { transform: scale(1.15); opacity: 1; }
+}
+
+/* Masquer l'ancien spinner icon et texte si présents */
+.loading-spinner i,
+.loading-spinner p { display: none; }
 
 
 .bh-source-direct {
@@ -1722,3 +1732,25 @@ html, body {
 .booking-block.gites {
   background: linear-gradient(135deg, #2E7D32, #1B5E20) !important;
 }
+
+/* Auto-génération des 3 points si les .dot ne sont pas dans le HTML */
+.loading-spinner:not(:has(.dot)) {
+  gap: 8px;
+}
+.loading-spinner:not(:has(.dot))::before,
+.loading-spinner:not(:has(.dot))::after,
+.loading-spinner:not(:has(.dot)) i {
+  content: '';
+  display: block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #1A7A5E;
+  animation: bh-bounce 1.2s infinite ease-in-out;
+  font-size: 0;
+  flex-shrink: 0;
+}
+.loading-spinner:not(:has(.dot))::before { animation-delay: 0s; }
+.loading-spinner:not(:has(.dot)) i      { animation-delay: 0.2s; }
+.loading-spinner:not(:has(.dot))::after { animation-delay: 0.4s; }
+.loading-spinner:not(:has(.dot)) p      { display: none; }
