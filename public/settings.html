@@ -2114,6 +2114,48 @@ function insertVariable(textareaId, variable, event) {
   </div>
 </div>
 
+<!-- ===== SECTION : CHAT VOYAGEUR ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-comments"></i>
+  <h3>Chat voyageurs</h3>
+  <small>Partagez ce lien à vos voyageurs pour démarrer une conversation sécurisée</small>
+</div>
+
+<div class="form-group" id="chatLinkSection" style="display:none;">
+  <!-- Lien unique -->
+  <label><i class="fas fa-link"></i><span>Lien unique</span></label>
+  <div style="display:flex;align-items:center;gap:8px;background:rgba(26,122,94,0.05);border:1.5px solid rgba(26,122,94,0.18);border-radius:12px;padding:9px 12px;margin-bottom:10px;">
+    <input id="chatLinkUrl" type="text" readonly onclick="this.select()"
+      style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text-primary);outline:none;min-width:0;cursor:pointer;" />
+    <button id="chatCopyLinkBtn" type="button"
+      onclick="(function(){var i=document.getElementById('chatLinkUrl');var b=document.getElementById('chatCopyLinkBtn');if(!i.value)return;navigator.clipboard.writeText(i.value).then(function(){b.innerHTML='<i class=\'fas fa-check\'></i> Copié !';b.style.background='#15624B';setTimeout(function(){b.innerHTML='<i class=\'fas fa-copy\'></i> Copier';b.style.background='#1A7A5E';},2000)}).catch(function(){i.select();document.execCommand('copy')});})()"
+      style="flex-shrink:0;border:none;border-radius:8px;padding:6px 11px;background:#1A7A5E;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+      <i class="fas fa-copy"></i> Copier
+    </button>
+  </div>
+
+  <!-- Code PIN -->
+  <label><i class="fas fa-key"></i><span>Code PIN voyageur</span></label>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <input id="chatPinInput" type="text" maxlength="4" class="chat-pin-input"
+      style="width:72px;background:#f9fafb;border:1.5px solid rgba(13,17,23,0.12);padding:8px 10px;border-radius:10px;font-size:20px;font-weight:700;color:var(--text-primary);text-align:center;font-family:ui-monospace,monospace;outline:none;" />
+    <button id="chatPinUpdateBtn" type="button" class="btn-update-pin"
+      style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:8px 12px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:all .15s;">
+      <i class="fas fa-save"></i> Sauvegarder
+    </button>
+    <button id="chatPinRegenBtn" type="button" class="btn-regenerate-pin" title="Générer un nouveau code aléatoire"
+      style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:8px 11px;border-radius:10px;cursor:pointer;font-size:13px;transition:all .15s;">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+  </div>
+
+  <!-- Message automatique -->
+  <button id="chatAutoMsgBtn" type="button" class="btn-copy-auto-message" style="margin-top:10px;width:100%;background:rgba(26,122,94,0.07);color:#1A7A5E;border:1.5px solid rgba(26,122,94,0.2);padding:10px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;">
+    <i class="fas fa-paper-plane"></i>
+    <span>Copier le message à envoyer au voyageur</span>
+  </button>
+</div>
+
 <div class="form-group">
 <label>
 <i class="fas fa-link"></i>
@@ -2127,6 +2169,85 @@ function insertVariable(textareaId, variable, event) {
 <span>Ajouter une URL iCal</span>
 </button>
 </div>
+
+<!-- ===== SECTION : LIEN CHAT VOYAGEUR ===== -->
+<div class="form-group" id="chatLinkSection" style="display:none;">
+  <label>
+    <i class="fas fa-comment-dots" style="color:#1A7A5E;"></i>
+    <span style="font-weight:600;">Lien chat voyageur</span>
+  </label>
+  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;">
+    Partagez ce lien à vos voyageurs sur toutes vos plateformes. Ils pourront l'utiliser pour démarrer une conversation avec vous.
+  </p>
+  <div style="display:flex;align-items:center;gap:8px;background:rgba(26,122,94,0.06);border:1.5px solid rgba(26,122,94,0.2);border-radius:12px;padding:10px 14px;">
+    <i class="fas fa-link" style="color:#1A7A5E;font-size:14px;flex-shrink:0;"></i>
+    <input id="chatLinkUrl" type="text" readonly
+      style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text-primary);outline:none;min-width:0;cursor:pointer;"
+      onclick="this.select()" />
+    <button type="button" onclick="copyChatLink()" id="chatLinkCopyBtn"
+      style="flex-shrink:0;border:none;border-radius:999px;padding:6px 12px;background:#1A7A5E;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .15s;">
+      <i class="fas fa-copy"></i> Copier
+    </button>
+  </div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(13,17,23,0.04);border-radius:10px;border:1px solid rgba(13,17,23,0.08);">
+    <i class="fas fa-key" style="color:rgba(13,17,23,0.4);font-size:12px;"></i>
+    <span style="font-size:12px;color:var(--text-secondary);">Code PIN voyageur :</span>
+    <span id="chatPinDisplay" style="font-family:ui-monospace,monospace;font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:0.15em;">—</span>
+  </div>
+</div>
+
+<script>
+function updateChatLink() {
+  const propertyId = document.getElementById('propertyId')?.value;
+  const section = document.getElementById('chatLinkSection');
+  const urlInput = document.getElementById('chatLinkUrl');
+  const pinDisplay = document.getElementById('chatPinDisplay');
+  if (!section || !urlInput) return;
+
+  if (propertyId) {
+    const url = `https://lcc-booking-manager.onrender.com/chat.html?property=${propertyId}`;
+    urlInput.value = url;
+    section.style.display = '';
+
+    // Récupérer le chatPin depuis LCC_PROPERTIES en localStorage
+    try {
+      const props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      const prop = props.find(p => String(p.id) === String(propertyId) || String(p.propertyId) === String(propertyId));
+      if (prop && (prop.chatPin || prop.chat_pin)) {
+        pinDisplay.textContent = prop.chatPin || prop.chat_pin;
+      } else {
+        pinDisplay.textContent = '—';
+      }
+    } catch(e) { pinDisplay.textContent = '—'; }
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+function copyChatLink() {
+  const input = document.getElementById('chatLinkUrl');
+  const btn = document.getElementById('chatLinkCopyBtn');
+  if (!input?.value) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+    btn.style.background = '#15624B';
+    setTimeout(() => {
+      btn.innerHTML = '<i class="fas fa-copy"></i> Copier';
+      btn.style.background = '#1A7A5E';
+    }, 2000);
+  }).catch(() => { input.select(); document.execCommand('copy'); });
+}
+
+// Brancher sur l'ouverture du modal
+const _origOpenChatModal = window.openEditModal;
+if (typeof _origOpenChatModal === 'function') {
+  window.openEditModal = function(...args) {
+    _origOpenChatModal.apply(this, args);
+    setTimeout(updateChatLink, 150);
+  };
+}
+document.addEventListener('DOMContentLoaded', updateChatLink);
+</script>
 
 <!-- ===== SECTION : LIEN iCal EXPORT ===== -->
 <div class="form-group" id="icalExportSection" style="display:none;">
