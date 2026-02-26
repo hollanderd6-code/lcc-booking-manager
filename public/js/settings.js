@@ -652,6 +652,32 @@ function openEditPropertyModal(propertyId) {
     }
   }
 
+  // ===== CHAT LINK SECTION =====
+  const pid = property._id || property.id || '';
+  const chatPin = property.chatPin || property.chat_pin || '';
+  const chatLink = `https://boostinghost.fr/guest?property=${pid}`;
+
+  const chatLinkSection = document.getElementById('chatLinkSection');
+  const chatLinkUrl = document.getElementById('chatLinkUrl');
+  const chatPinInput = document.getElementById('chatPinInput');
+  const chatPinUpdateBtn = document.getElementById('chatPinUpdateBtn');
+  const chatPinRegenBtn = document.getElementById('chatPinRegenBtn');
+  const chatAutoMsgBtn = document.getElementById('chatAutoMsgBtn');
+  const chatCopyLinkBtn = document.getElementById('chatCopyLinkBtn');
+
+  if (chatLinkSection) chatLinkSection.style.display = pid ? '' : 'none';
+  if (chatLinkUrl) chatLinkUrl.value = chatLink;
+  if (chatPinInput) { chatPinInput.value = chatPin; chatPinInput.dataset.propertyId = pid; }
+  if (chatPinUpdateBtn) chatPinUpdateBtn.dataset.propertyId = pid;
+  if (chatPinRegenBtn) chatPinRegenBtn.dataset.propertyId = pid;
+  if (chatAutoMsgBtn) {
+    chatAutoMsgBtn.dataset.link = chatLink;
+    chatAutoMsgBtn.dataset.pin = chatPin;
+    chatAutoMsgBtn.dataset.propertyName = property.name || '';
+  }
+  if (chatCopyLinkBtn) chatCopyLinkBtn.dataset.link = chatLink;
+  // ===== FIN CHAT LINK =====
+
   if (modal) modal.classList.add("active");
 }
 
