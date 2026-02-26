@@ -820,8 +820,8 @@ select:focus {
 
   .modal-header {
     flex-shrink: 0 !important;
-    padding: 14px 16px !important;
-    padding-top: max(14px, env(safe-area-inset-top, 14px)) !important;
+    padding: 14px 16px 14px !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 14px) !important;
     background: var(--bg-primary, #fff) !important;
     border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
     z-index: 10 !important;
