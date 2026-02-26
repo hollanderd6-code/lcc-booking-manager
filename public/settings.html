@@ -1049,11 +1049,16 @@ html[data-theme-v3="1"] .sidebar {
   /* Modal — mobile full screen */
   .modal {
     padding: 0 !important;
-    align-items: stretch !important;
+    align-items: flex-start !important;
     justify-content: flex-start !important;
   }
 
   .modal-content {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     height: 100% !important;
@@ -1068,7 +1073,8 @@ html[data-theme-v3="1"] .sidebar {
 
   .modal-header {
     flex-shrink: 0 !important;
-    padding: 50px 16px 14px !important; /* 50px = safe area iOS notch */
+    padding: 14px 16px !important;
+    padding-top: max(14px, env(safe-area-inset-top, 14px)) !important;
     background: var(--bg-primary, #fff) !important;
     border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
     z-index: 10 !important;
@@ -1085,12 +1091,15 @@ html[data-theme-v3="1"] .sidebar {
     overflow-x: hidden !important;
     padding: 16px !important;
     -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
   }
 
   .modal-actions {
     flex-shrink: 0 !important;
     position: static !important;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 16px)) !important;
+    padding: 12px 16px !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
     margin: 0 !important;
     border-top: 1px solid var(--border-color, #e5e7eb) !important;
     background: var(--bg-primary, #fff) !important;
@@ -1099,10 +1108,22 @@ html[data-theme-v3="1"] .sidebar {
     justify-content: flex-end !important;
   }
 
-  /* Forms — tout en colonne sur mobile */
+  /* Forms — 1 colonne sur mobile */
   .form-grid-2 {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
+  }
+
+  /* Inputs time et number pleine largeur */
+  input[type="time"],
+  input[type="number"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .input-with-suffix {
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .form-group {
