@@ -3476,19 +3476,8 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
     background: #1A7A5E !important;
   }
 
-  /* ── 9. MODAL — plein écran ── */
-  .modal-content {
-    max-width: 100% !important;
-    width: 100% !important;
-    max-height: 92vh !important;
-    border-radius: 20px 20px 0 0 !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    margin: 0 !important;
-  }
-  /* form-grid-2 déjà géré dans le bloc modal ci-dessus */
+  /* ── 9. MODAL — plein écran (ce bloc ne doit PAS écraser le flex column) ── */
+  /* Géré dans le bloc @media 768px plus haut */
 
   /* ── 10. BOTTOM TABS ── */
   .mobile-tabs {
