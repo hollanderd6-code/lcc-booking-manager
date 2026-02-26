@@ -3061,37 +3061,59 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 <i class="fas fa-times"></i>
 </button>
 </div>
-<div class="modal-body">
-<form class="form-grid" id="newReservationForm">
-<div class="form-row">
+<div class="modal-body" style="overflow-y:auto;flex:1;min-height:0;">
+<form class="booking-form" id="newReservationForm">
+<div class="form-group">
 <label for="nrProperty">Logement</label>
 <select id="nrProperty" name="propertyId" required="">
 <!-- On remplira en JS suivant PROPERTIES -->
 </select>
 </div>
 <div class="form-row">
-<label for="nrGuestName">Nom du client</label>
-<input id="nrGuestName" name="guestName" required="" type="text"/>
-</div>
-<div class="form-row">
+<div class="form-group">
 <label for="nrStartDate">Arrivée</label>
 <input id="nrStartDate" name="startDate" required="" type="date"/>
 </div>
-<div class="form-row">
+<div class="form-group">
 <label for="nrEndDate">Départ</label>
 <input id="nrEndDate" name="endDate" required="" type="date"/>
 </div>
-<div class="form-row">
-<label for="nrNotes">Notes</label>
-<textarea id="nrNotes" name="notes" rows="3"></textarea>
 </div>
-<div class="form-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-<button class="btn btn-ghost" id="newReservationCancel" type="button">
-              Annuler
-            </button>
-<button class="btn btn-primary" type="submit">
-              Enregistrer
-            </button>
+<div class="form-group">
+<label for="nrGuestName">Nom du client</label>
+<input id="nrGuestName" name="guestName" required="" type="text" placeholder="Ex: Jean Dupont"/>
+</div>
+<div class="form-group">
+<label for="nrPhone">Téléphone</label>
+<input id="nrPhone" name="phone" type="tel" placeholder="Ex: +33 6 12 34 56 78"/>
+</div>
+<div class="form-group">
+<label for="nrEmail">Email</label>
+<input id="nrEmail" name="email" type="email" placeholder="Ex: client@email.com"/>
+</div>
+<div class="form-group">
+<label for="nrPlatform">Plateforme</label>
+<select id="nrPlatform" name="platform">
+<option value="direct">Direct</option>
+<option value="booking">Booking.com</option>
+<option value="airbnb">Airbnb</option>
+<option value="abritel">Abritel / VRBO</option>
+<option value="gites">Gîtes de France</option>
+<option value="expedia">Expedia</option>
+<option value="hotels">Hotels.com</option>
+</select>
+</div>
+<div class="form-group">
+<label for="nrPrice">Prix (€)</label>
+<input id="nrPrice" name="price" min="0" placeholder="Ex: 250" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="nrNotes">Notes</label>
+<textarea id="nrNotes" name="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
+</div>
+<div class="modal-actions">
+<button class="btn btn-ghost" id="newReservationCancel" type="button">Annuler</button>
+<button class="btn btn-primary" type="submit">Enregistrer</button>
 </div>
 </form>
 </div>
@@ -8306,12 +8328,21 @@ html[data-theme-v3="1"] .sidebar .nav-section {
         e.preventDefault();
         if (!propertySelect || !startInput || !endInput) return;
 
+        const phoneInput    = document.getElementById('nrPhone');
+        const emailInput    = document.getElementById('nrEmail');
+        const platformInput = document.getElementById('nrPlatform');
+        const priceInput    = document.getElementById('nrPrice');
+
         const payload = {
           propertyId: propertySelect.value,
           start:      startInput.value,
           end:        endInput.value,
           guestName:  guestInput ? guestInput.value : '',
-          notes:      notesInput ? notesInput.value : ''
+          notes:      notesInput ? notesInput.value : '',
+          phone:      phoneInput ? phoneInput.value : '',
+          email:      emailInput ? emailInput.value : '',
+          platform:   platformInput ? platformInput.value : 'direct',
+          price:      priceInput && priceInput.value ? parseFloat(priceInput.value) : null
         };
 
         // Vérifs basiques
