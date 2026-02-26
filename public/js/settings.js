@@ -757,92 +757,96 @@ const chatLink = `https://boostinghost.fr/guest?property=${id}`;
         </div>
       `;
 const chatSectionHtml = `
-  <div class="chat-link-section" style="margin-top: 16px; padding: 14px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 14px;">
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-      <i class="fas fa-comments" style="color: #fff; font-size: 16px;"></i>
-      <span style="color: #fff; font-weight: 600; font-size: 14px;">Lien de chat voyageurs</span>
-    </div>
-    
-    <!-- Lien unique -->
-    <div class="chat-link-item" style="background: rgba(255,255,255,0.15); padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-        <i class="fas fa-link" style="color: #fff; font-size: 12px;"></i>
-        <span style="color: #fff; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Lien unique</span>
+  <div class="chat-link-section" style="margin-top:14px;padding:14px;background:#fff;border:1.5px solid rgba(26,122,94,0.18);border-radius:14px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:rgba(26,122,94,0.1);display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-comments" style="color:#1A7A5E;font-size:13px;"></i>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#0d1117;">Lien chat voyageurs</span>
+    </div>
+
+    <!-- Lien unique -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:500;color:rgba(13,17,23,0.45);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
+        <i class="fas fa-link" style="margin-right:4px;"></i>Lien unique
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(26,122,94,0.05);border:1px solid rgba(26,122,94,0.15);border-radius:10px;padding:8px 10px;">
         <input 
           type="text" 
           value="${escapeHtml(chatLink)}" 
           readonly 
           class="chat-link-input"
-          style="flex: 1; background: rgba(255,255,255,0.9); border: none; padding: 8px 10px; border-radius: 8px; font-size: 12px; color: #374151; font-family: 'Courier New', monospace;"
+          onclick="this.select()"
+          style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11px;color:#0d1117;outline:none;min-width:0;cursor:pointer;"
         />
         <button 
           type="button" 
           class="btn-copy-chat-link" 
           data-link="${escapeHtml(chatLink)}"
-          style="background: #fff; color: #059669; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;"
-          onmouseover="this.style.background='#f0fdf4'" 
-          onmouseout="this.style.background='#fff'"
+          style="flex-shrink:0;background:#1A7A5E;color:#fff;border:none;padding:5px 10px;border-radius:7px;cursor:pointer;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:background .15s;"
+          onmouseover="this.style.background='#15624B'" 
+          onmouseout="this.style.background='#1A7A5E'"
         >
           <i class="fas fa-copy"></i> Copier
         </button>
       </div>
     </div>
-    
+
     <!-- Code PIN -->
-    <div class="chat-pin-item" style="background: rgba(255,255,255,0.15); padding: 10px 12px; border-radius: 10px; margin-bottom: 10px;">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-        <i class="fas fa-lock" style="color: #fff; font-size: 12px;"></i>
-        <span style="color: #fff; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Code PIN (4 chiffres)</span>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:500;color:rgba(13,17,23,0.45);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
+        <i class="fas fa-key" style="margin-right:4px;"></i>Code PIN voyageur
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="display:flex;align-items:center;gap:6px;">
         <input 
           type="text" 
           value="${escapeHtml(chatPin)}" 
           maxlength="4"
           class="chat-pin-input"
           data-property-id="${escapeHtml(id)}"
-          style="width: 80px; background: rgba(255,255,255,0.9); border: none; padding: 8px 12px; border-radius: 8px; font-size: 16px; font-weight: 700; color: #374151; text-align: center; font-family: 'Courier New', monospace;"
+          style="width:72px;background:#f9fafb;border:1.5px solid rgba(13,17,23,0.12);padding:7px 10px;border-radius:9px;font-size:18px;font-weight:700;color:#0d1117;text-align:center;font-family:ui-monospace,monospace;outline:none;"
         />
         <button 
           type="button" 
           class="btn-update-pin" 
           data-property-id="${escapeHtml(id)}"
-          style="background: #fff; color: #059669; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;"
-          onmouseover="this.style.background='#f0fdf4'" 
-          onmouseout="this.style.background='#fff'"
+          style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:7px 11px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:all .15s;"
+          onmouseover="this.style.background='#e5e7eb'" 
+          onmouseout="this.style.background='#f3f4f6'"
         >
-          <i class="fas fa-save"></i> Modifier
+          <i class="fas fa-save"></i> Sauvegarder
         </button>
         <button 
           type="button" 
           class="btn-regenerate-pin" 
           data-property-id="${escapeHtml(id)}"
-          style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;"
-          onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
-          onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+          style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:7px 10px;border-radius:9px;cursor:pointer;font-size:13px;transition:all .15s;"
+          onmouseover="this.style.background='#e5e7eb'" 
+          onmouseout="this.style.background='#f3f4f6'"
           title="Générer un nouveau code aléatoire"
         >
           <i class="fas fa-sync-alt"></i>
         </button>
       </div>
     </div>
-    
-    <!-- Bouton copier message automatique -->
+
+    <!-- Bouton message automatique -->
     <button 
       type="button" 
       class="btn-copy-auto-message" 
       data-link="${escapeHtml(chatLink)}" 
       data-pin="${escapeHtml(chatPin)}"
       data-property-name="${escapeHtml(name)}"
-      style="width: 100%; background: #fff; color: #059669; border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;"
-      onmouseover="this.style.background='#f0fdf4'; this.style.transform='translateY(-1px)'" 
-      onmouseout="this.style.background='#fff'; this.style.transform='translateY(0)'"
+      style="width:100%;background:rgba(26,122,94,0.07);color:#1A7A5E;border:1.5px solid rgba(26,122,94,0.2);padding:9px 14px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;"
+      onmouseover="this.style.background='rgba(26,122,94,0.13)'" 
+      onmouseout="this.style.background='rgba(26,122,94,0.07)'"
     >
-      <i class="fas fa-copy"></i>
-      <span>Copier le message automatique</span>
+      <i class="fas fa-paper-plane"></i>
+      <span>Copier le message à envoyer au voyageur</span>
     </button>
+
   </div>
 `;
 
