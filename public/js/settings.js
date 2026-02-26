@@ -966,6 +966,8 @@ const chatSectionHtml = `
                 <div class="prop-stat-label">Caution</div>
               </div>
             </div>
+            <!-- Chat voyageur -->
+            ${chatSectionHtml}
             <!-- Actions -->
             <div class="property-actions">
               <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
