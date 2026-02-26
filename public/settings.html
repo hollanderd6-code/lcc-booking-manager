@@ -2170,84 +2170,9 @@ function insertVariable(textareaId, variable, event) {
 </button>
 </div>
 
-<!-- ===== SECTION : LIEN CHAT VOYAGEUR ===== -->
-<div class="form-group" id="chatLinkSection" style="display:none;">
-  <label>
-    <i class="fas fa-comment-dots" style="color:#1A7A5E;"></i>
-    <span style="font-weight:600;">Lien chat voyageur</span>
-  </label>
-  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;">
-    Partagez ce lien à vos voyageurs sur toutes vos plateformes. Ils pourront l'utiliser pour démarrer une conversation avec vous.
-  </p>
-  <div style="display:flex;align-items:center;gap:8px;background:rgba(26,122,94,0.06);border:1.5px solid rgba(26,122,94,0.2);border-radius:12px;padding:10px 14px;">
-    <i class="fas fa-link" style="color:#1A7A5E;font-size:14px;flex-shrink:0;"></i>
-    <input id="chatLinkUrl" type="text" readonly
-      style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text-primary);outline:none;min-width:0;cursor:pointer;"
-      onclick="this.select()" />
-    <button type="button" onclick="copyChatLink()" id="chatLinkCopyBtn"
-      style="flex-shrink:0;border:none;border-radius:999px;padding:6px 12px;background:#1A7A5E;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .15s;">
-      <i class="fas fa-copy"></i> Copier
-    </button>
-  </div>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(13,17,23,0.04);border-radius:10px;border:1px solid rgba(13,17,23,0.08);">
-    <i class="fas fa-key" style="color:rgba(13,17,23,0.4);font-size:12px;"></i>
-    <span style="font-size:12px;color:var(--text-secondary);">Code PIN voyageur :</span>
-    <span id="chatPinDisplay" style="font-family:ui-monospace,monospace;font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:0.15em;">—</span>
-  </div>
-</div>
 
-<script>
-function updateChatLink() {
-  const propertyId = document.getElementById('propertyId')?.value;
-  const section = document.getElementById('chatLinkSection');
-  const urlInput = document.getElementById('chatLinkUrl');
-  const pinDisplay = document.getElementById('chatPinDisplay');
-  if (!section || !urlInput) return;
 
-  if (propertyId) {
-    const url = `https://lcc-booking-manager.onrender.com/chat.html?property=${propertyId}`;
-    urlInput.value = url;
-    section.style.display = '';
 
-    // Récupérer le chatPin depuis LCC_PROPERTIES en localStorage
-    try {
-      const props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-      const prop = props.find(p => String(p.id) === String(propertyId) || String(p.propertyId) === String(propertyId));
-      if (prop && (prop.chatPin || prop.chat_pin)) {
-        pinDisplay.textContent = prop.chatPin || prop.chat_pin;
-      } else {
-        pinDisplay.textContent = '—';
-      }
-    } catch(e) { pinDisplay.textContent = '—'; }
-  } else {
-    section.style.display = 'none';
-  }
-}
-
-function copyChatLink() {
-  const input = document.getElementById('chatLinkUrl');
-  const btn = document.getElementById('chatLinkCopyBtn');
-  if (!input?.value) return;
-  navigator.clipboard.writeText(input.value).then(() => {
-    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    btn.style.background = '#15624B';
-    setTimeout(() => {
-      btn.innerHTML = '<i class="fas fa-copy"></i> Copier';
-      btn.style.background = '#1A7A5E';
-    }, 2000);
-  }).catch(() => { input.select(); document.execCommand('copy'); });
-}
-
-// Brancher sur l'ouverture du modal
-const _origOpenChatModal = window.openEditModal;
-if (typeof _origOpenChatModal === 'function') {
-  window.openEditModal = function(...args) {
-    _origOpenChatModal.apply(this, args);
-    setTimeout(updateChatLink, 150);
-  };
-}
-document.addEventListener('DOMContentLoaded', updateChatLink);
-</script>
 
 <!-- ===== SECTION : LIEN iCal EXPORT ===== -->
 <div class="form-group" id="icalExportSection" style="display:none;">
@@ -2332,14 +2257,14 @@ if (pidInput) {
 document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
 </script>
 
+</form>
+</div>
 <div class="modal-actions">
 <button class="btn-cancel" onclick="closeEditModal()" type="button">Annuler</button>
-<button class="btn-save" type="submit">
+<button class="btn-save" onclick="saveProperty(event)" type="button">
 <i class="fas fa-save"></i>
 <span>Enregistrer</span>
 </button>
-</div>
-</form>
 </div>
 </div>
 </div>
