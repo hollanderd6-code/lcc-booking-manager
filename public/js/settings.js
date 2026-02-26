@@ -477,6 +477,34 @@ function openAddPropertyModal() {
   const modal = document.getElementById("editPropertyModal");
   const titleEl = document.getElementById("modalTitle");
   if (titleEl) titleEl.querySelector("span").textContent = "Ajouter un logement";
+  // ===== CHAT LINK SECTION =====
+  const chatLinkSectionEl = document.getElementById('chatLinkSection');
+  const chatLinkUrlEl = document.getElementById('chatLinkUrl');
+  const chatPinInputEl = document.getElementById('chatPinInput');
+  const chatPinUpdateBtn = document.getElementById('chatPinUpdateBtn');
+  const chatPinRegenBtn = document.getElementById('chatPinRegenBtn');
+  const chatAutoMsgBtn = document.getElementById('chatAutoMsgBtn');
+  const chatCopyLinkBtn = document.getElementById('chatCopyLinkBtn');
+
+  const pid = property._id || property.id || '';
+  const chatPin = property.chatPin || property.chat_pin || '';
+  const chatLink = `https://boostinghost.fr/guest?property=${pid}`;
+
+  if (chatLinkSectionEl) chatLinkSectionEl.style.display = pid ? '' : 'none';
+  if (chatLinkUrlEl) chatLinkUrlEl.value = chatLink;
+  if (chatPinInputEl) {
+    chatPinInputEl.value = chatPin;
+    chatPinInputEl.dataset.propertyId = pid;
+  }
+  if (chatPinUpdateBtn) chatPinUpdateBtn.dataset.propertyId = pid;
+  if (chatPinRegenBtn) chatPinRegenBtn.dataset.propertyId = pid;
+  if (chatAutoMsgBtn) {
+    chatAutoMsgBtn.dataset.link = chatLink;
+    chatAutoMsgBtn.dataset.pin = chatPin;
+    chatAutoMsgBtn.dataset.propertyName = property.name || '';
+  }
+  if (chatCopyLinkBtn) chatCopyLinkBtn.dataset.link = chatLink;
+
   if (modal) modal.classList.add("active");
 }
 
@@ -970,8 +998,6 @@ const chatSectionHtml = `
                 <div class="prop-stat-label">Caution</div>
               </div>
             </div>
-            <!-- Chat voyageur -->
-            ${chatSectionHtml}
             <!-- Actions -->
             <div class="property-actions">
               <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
