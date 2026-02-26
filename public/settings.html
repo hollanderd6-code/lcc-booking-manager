@@ -1559,6 +1559,29 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 </div>
+<!-- ✅ SECTION : PAIEMENTS DIRECTS PAR LOGEMENT -->
+<div class="form-group" style="background:linear-gradient(135deg,#6772E510 0%,#6772E520 100%);padding:18px;border-radius:12px;border:1.5px solid #6772E530;">
+  <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <i class="fa-brands fa-stripe-s" style="color:#6772E5;font-size:18px;"></i>
+    <span style="font-weight:600;color:#1e293b;">Compte Stripe pour les paiements directs</span>
+    <span style="background:#6772E5;color:white;font-size:10px;padding:2px 7px;border-radius:12px;font-weight:600;letter-spacing:.04em;">OPTIONNEL</span>
+  </label>
+  <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5;">
+    Associez un compte Stripe spécifique à ce logement. Les paiements directs iront sur ce compte.<br>
+    <em>Si non renseigné, le compte Stripe global du profil sera utilisé.</em>
+  </p>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="position:relative;flex:1;">
+      <i class="fa-brands fa-stripe-s" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#6772E5;font-size:15px;"></i>
+      <input id="propertyStripeAccountId" type="text" placeholder="acct_1ABC..." style="width:100%;padding:9px 12px 9px 34px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Courier New',monospace;box-sizing:border-box;" />
+    </div>
+    <div id="propertyStripeStatus" style="display:none;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;"></div>
+  </div>
+  <small style="display:block;margin-top:6px;font-size:11px;color:#94a3b8;">
+    L'ID de compte Stripe commence par <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">acct_</code>. Retrouvez-le dans votre dashboard Stripe → Paramètres → Compte.
+  </small>
+</div>
+
 <!-- ✅ SECTION : LIVRET D'ACCUEIL -->
 <div class="form-group">
 <label for="propertyWelcomeBookUrl">
@@ -2407,8 +2430,11 @@ function insertVariable(textareaId, variable, event) {
         // Si on a un ownerId en attente, l'ajouter
         if (nextFetchOwnerId !== null) {
           body.ownerId = nextFetchOwnerId || null;
+          // Ajouter aussi le stripeAccountId du logement
+          const stripeInput = document.getElementById('propertyStripeAccountId');
+          if (stripeInput) body.stripeAccountId = stripeInput.value.trim() || null;
           options.body = JSON.stringify(body);
-          console.log('✅ owner_id ajouté à la requête:', body.ownerId);
+          console.log('✅ owner_id + stripeAccountId ajoutés à la requête:', body.ownerId, body.stripeAccountId);
           nextFetchOwnerId = null; // Reset
         }
       } catch (e) {
@@ -2459,7 +2485,8 @@ function insertVariable(textareaId, variable, event) {
       arrivalMessage: arrivalMessage || null,  // ✅ CORRIGÉ : camelCase comme le serveur l'attend
       wifiName: wifiName || null,
       wifiPassword: wifiPassword || null,
-      ownerId: ownerId || null
+      ownerId: ownerId || null,
+      stripeAccountId: (document.getElementById('propertyStripeAccountId') ? document.getElementById('propertyStripeAccountId').value.trim() || null : null)
     };
 
     console.log('📦 Payload envoyé:', payload);
@@ -2820,6 +2847,25 @@ function insertVariable(textareaId, variable, event) {
       const arrivalMessageField = document.getElementById('propertyArrivalMessage');
       if (arrivalMessageField && propertyData.arrival_message) {
         arrivalMessageField.value = propertyData.arrival_message;
+      }
+      
+      // ✅ CHARGER LE COMPTE STRIPE DU LOGEMENT
+      const stripeInput = document.getElementById('propertyStripeAccountId');
+      const stripeStatus = document.getElementById('propertyStripeStatus');
+      if (stripeInput) {
+        const accountId = propertyData.stripeAccountId || propertyData.stripe_account_id || '';
+        stripeInput.value = accountId;
+        if (stripeStatus) {
+          if (accountId && accountId.startsWith('acct_')) {
+            stripeStatus.style.display = 'inline-block';
+            stripeStatus.style.background = 'rgba(34,197,94,.15)';
+            stripeStatus.style.color = '#16a34a';
+            stripeStatus.style.border = '1px solid rgba(34,197,94,.3)';
+            stripeStatus.innerHTML = '<i class="fas fa-check-circle"></i> Compte lié';
+          } else {
+            stripeStatus.style.display = 'none';
+          }
+        }
       }
       
       // Charger les données étendues
@@ -3355,5 +3401,50 @@ if (typeof _orig === 'function') {
 }
 </script>
 
+
+<script>
+// Live validation du champ Stripe par logement
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('propertyStripeAccountId');
+  const status = document.getElementById('propertyStripeStatus');
+  if (!input || !status) return;
+
+  input.addEventListener('input', function() {
+    const val = this.value.trim();
+    if (!val) {
+      status.style.display = 'none';
+      input.style.borderColor = '#e2e8f0';
+      return;
+    }
+    if (val.startsWith('acct_') && val.length > 10) {
+      status.style.display = 'inline-block';
+      status.style.background = 'rgba(34,197,94,.15)';
+      status.style.color = '#16a34a';
+      status.style.border = '1px solid rgba(34,197,94,.3)';
+      status.innerHTML = '<i class="fas fa-check-circle"></i> Format valide';
+      input.style.borderColor = 'rgba(34,197,94,.5)';
+    } else {
+      status.style.display = 'inline-block';
+      status.style.background = 'rgba(239,68,68,.1)';
+      status.style.color = '#dc2626';
+      status.style.border = '1px solid rgba(239,68,68,.3)';
+      status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Doit commencer par acct_';
+      input.style.borderColor = 'rgba(239,68,68,.5)';
+    }
+  });
+
+  // Reset quand on ouvre la modal pour un nouveau logement
+  const addBtn = document.getElementById('addPropertyBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', function() {
+      setTimeout(function() {
+        input.value = '';
+        input.style.borderColor = '#e2e8f0';
+        status.style.display = 'none';
+      }, 100);
+    });
+  }
+});
+</script>
 </body>
 </html>
