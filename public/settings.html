@@ -1498,7 +1498,7 @@ html[data-theme-v3="1"] .sidebar {
 <i class="fas fa-home"></i>
 <span>Nom du logement</span>
 </label>
-<input id="propertyName" placeholder="Ex: Nantes - Apt 1" required="" type="text"/>
+<input id="propertyName" placeholder="Ex: Saint-Gratien - RDC" required="" type="text"/>
 </div>
 <div class="form-group">
 <label for="propertyOwnerId">
@@ -1518,7 +1518,7 @@ html[data-theme-v3="1"] .sidebar {
 <i class="fas fa-location-dot"></i>
 <span>Adresse</span>
 </label>
-<input id="propertyAddress" placeholder="Ex : 20 boulevard de la République, Nantes" type="text"/>
+<input id="propertyAddress" placeholder="Ex : 25 boulevard de la République, Saint-Gratien" type="text"/>
 </div>
 </div>
 <div class="form-grid-2">
@@ -1921,117 +1921,119 @@ function insertVariable(textareaId, variable, event) {
 </div>
 
 <!-- ===== SECTION : ÉQUIPEMENTS ===== -->
+<style>
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.chip-toggle {
+  display: none;
+}
+.chip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(13,17,23,0.15);
+  background: #fff;
+  color: rgba(13,17,23,0.55);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+.chip-label i {
+  font-size: 13px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.chip-label:hover {
+  border-color: rgba(26,122,94,0.4);
+  color: #1A7A5E;
+  background: rgba(26,122,94,0.04);
+}
+.chip-label:hover i { opacity: 0.8; }
+.chip-toggle:checked + .chip-label {
+  background: #1A7A5E;
+  border-color: #1A7A5E;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(26,122,94,0.25);
+}
+.chip-toggle:checked + .chip-label i { opacity: 1; }
+[data-theme="dark"] .chip-label {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.55);
+}
+[data-theme="dark"] .chip-label:hover {
+  border-color: rgba(26,122,94,0.6);
+  color: #4ADE80;
+  background: rgba(26,122,94,0.1);
+}
+[data-theme="dark"] .chip-toggle:checked + .chip-label {
+  background: #1A7A5E;
+  border-color: #1A7A5E;
+  color: #fff;
+}
+</style>
+
 <div class="form-section-header">
   <i class="fas fa-home"></i>
   <h3>Équipements du logement</h3>
   <small>Ces informations permettent de répondre automatiquement aux questions fréquentes des voyageurs</small>
 </div>
 
-<div class="checkbox-grid">
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityDraps" />
-    <div class="checkbox-content">
-      <i class="fas fa-bed"></i>
-      <span>Draps fournis</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityServiettes" />
-    <div class="checkbox-content">
-      <i class="fas fa-bath"></i>
-      <span>Serviettes fournies</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityCuisine" />
-    <div class="checkbox-content">
-      <i class="fas fa-utensils"></i>
-      <span>Cuisine équipée</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityLaveLinge" />
-    <div class="checkbox-content">
-      <i class="fas fa-tshirt"></i>
-      <span>Lave-linge</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityLaveVaisselle" />
-    <div class="checkbox-content">
-      <i class="fas fa-sink"></i>
-      <span>Lave-vaisselle</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityTelevision" />
-    <div class="checkbox-content">
-      <i class="fas fa-tv"></i>
-      <span>Télévision</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityParking" />
-    <div class="checkbox-content">
-      <i class="fas fa-car"></i>
-      <span>Parking</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="amenityClimatisation" />
-    <div class="checkbox-content">
-      <i class="fas fa-snowflake"></i>
-      <span>Climatisation</span>
-    </div>
-  </label>
+<div class="chip-grid">
+  <input class="chip-toggle" type="checkbox" id="amenityDraps" />
+  <label class="chip-label" for="amenityDraps"><i class="fas fa-bed"></i>Draps fournis</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityServiettes" />
+  <label class="chip-label" for="amenityServiettes"><i class="fas fa-bath"></i>Serviettes fournies</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityCuisine" />
+  <label class="chip-label" for="amenityCuisine"><i class="fas fa-utensils"></i>Cuisine équipée</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityLaveLinge" />
+  <label class="chip-label" for="amenityLaveLinge"><i class="fas fa-tshirt"></i>Lave-linge</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityLaveVaisselle" />
+  <label class="chip-label" for="amenityLaveVaisselle"><i class="fas fa-sink"></i>Lave-vaisselle</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityTelevision" />
+  <label class="chip-label" for="amenityTelevision"><i class="fas fa-tv"></i>Télévision</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityParking" />
+  <label class="chip-label" for="amenityParking"><i class="fas fa-car"></i>Parking</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityClimatisation" />
+  <label class="chip-label" for="amenityClimatisation"><i class="fas fa-snowflake"></i>Climatisation</label>
 </div>
 
 <!-- ===== SECTION : RÈGLES DE LA MAISON ===== -->
-<div class="form-section-header">
+<div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-list-check"></i>
   <h3>Règles de la maison</h3>
   <small>Définissez ce qui est autorisé ou non dans votre logement</small>
 </div>
 
-<div class="checkbox-grid">
-  <label class="checkbox-item">
-    <input type="checkbox" id="ruleAnimaux" />
-    <div class="checkbox-content">
-      <i class="fas fa-dog"></i>
-      <span>Animaux acceptés</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="ruleFumeurs" />
-    <div class="checkbox-content">
-      <i class="fas fa-smoking-ban"></i>
-      <span>Fumeurs acceptés</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="ruleFetes" />
-    <div class="checkbox-content">
-      <i class="fas fa-music"></i>
-      <span>Fêtes autorisées</span>
-    </div>
-  </label>
-  
-  <label class="checkbox-item">
-    <input type="checkbox" id="ruleEnfants" checked />
-    <div class="checkbox-content">
-      <i class="fas fa-baby"></i>
-      <span>Enfants bienvenus</span>
-    </div>
-  </label>
+<div class="chip-grid">
+  <input class="chip-toggle" type="checkbox" id="ruleAnimaux" />
+  <label class="chip-label" for="ruleAnimaux"><i class="fas fa-dog"></i>Animaux acceptés</label>
+
+  <input class="chip-toggle" type="checkbox" id="ruleFumeurs" />
+  <label class="chip-label" for="ruleFumeurs"><i class="fas fa-smoking-ban"></i>Fumeurs acceptés</label>
+
+  <input class="chip-toggle" type="checkbox" id="ruleFetes" />
+  <label class="chip-label" for="ruleFetes"><i class="fas fa-music"></i>Fêtes autorisées</label>
+
+  <input class="chip-toggle" type="checkbox" id="ruleEnfants" checked />
+  <label class="chip-label" for="ruleEnfants"><i class="fas fa-baby"></i>Enfants bienvenus</label>
 </div>
 
 <!-- ===== SECTION : INFOS PRATIQUES ===== -->
