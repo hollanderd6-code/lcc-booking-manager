@@ -457,7 +457,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       --calendar-header-bg: #10B981; /* Vert de votre thème */
       --calendar-header-hover: #059669;
       --calendar-cell-height: 28px;
-      --property-column-width: 160px;
+      --property-column-width: 210px;
       --day-header-height: 46px;
       --calendar-border: #e5e7eb;
       
@@ -1156,7 +1156,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     /* Responsive */
     @media (max-width: 1024px) {
       .property-list-column {
-        width: 140px;
+        width: 180px;
       }
       
       .day-header,
@@ -2959,8 +2959,11 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 <div class="calendar-container">
 <!-- Property List Column -->
 <div class="property-list-column">
-<div class="property-list-header">
+<div class="property-list-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 12px;">
 <span>Logements</span>
+<button id="btnReorderProperties" title="Réorganiser l'ordre" onclick="openReorderModal()" style="background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:6px;color:var(--text-secondary);font-size:13px;display:flex;align-items:center;transition:all .15s;" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--text-primary)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'">
+  <i class="fas fa-arrows-up-down"></i>
+</button>
 </div>
 <div class="property-list-items" id="propertyList">
 <!-- Les logements seront ajoutés dynamiquement -->
@@ -9531,5 +9534,286 @@ html[data-theme-v3="1"] .booking-block.direct,  .booking-block.direct  { backgro
 html[data-theme-v3="1"] .booking-block.abritel, .booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
 html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
 </style>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL RÉORGANISATION LOGEMENTS
+════════════════════════════════════════════════════ -->
+<div id="reorderModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-primary,#fff);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:360px;max-width:90vw;overflow:hidden;">
+    <!-- Header -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border-color,#e5e7eb);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary,#0D1117);">Ordre des logements</div>
+        <div style="font-size:12px;color:var(--text-secondary,#6B7280);margin-top:2px;">Glisser-déposer pour réorganiser</div>
+      </div>
+      <button onclick="closeReorderModal()" style="background:none;border:none;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary,#6B7280);font-size:16px;" onmouseover="this.style.background='var(--bg-hover,#f3f4f6)'" onmouseout="this.style.background='none'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <!-- List -->
+    <div id="reorderList" style="padding:12px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+      <!-- items injected by JS -->
+    </div>
+    <!-- Footer -->
+    <div style="padding:16px 24px;border-top:1px solid var(--border-color,#e5e7eb);display:flex;gap:10px;">
+      <button onclick="resetPropertyOrder()" style="flex:1;height:38px;border-radius:10px;border:1px solid var(--border-color,#e5e7eb);background:transparent;color:var(--text-secondary,#6B7280);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='var(--bg-hover,#f3f4f6)'" onmouseout="this.style.background='transparent'">
+        Réinitialiser
+      </button>
+      <button onclick="savePropertyOrder()" style="flex:2;height:38px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+        Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// RÉORGANISATION DES LOGEMENTS SUR LE CALENDRIER
+// ═══════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'LCC_PROPERTY_ORDER';
+
+// Récupère l'ordre sauvegardé [id, id, id, ...]
+function getSavedOrder() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
+  catch(e) { return null; }
+}
+
+// Applique l'ordre sauvegardé à un tableau de propriétés
+function applyPropertyOrder(props) {
+  const order = getSavedOrder();
+  if (!order || !order.length) return props;
+  const ordered = [];
+  // D'abord les props dans l'ordre sauvegardé
+  order.forEach(id => {
+    const p = props.find(x => String(x.id) === String(id));
+    if (p) ordered.push(p);
+  });
+  // Puis les nouvelles props pas encore dans l'ordre (ajoutées après)
+  props.forEach(p => {
+    if (!ordered.find(x => String(x.id) === String(p.id))) ordered.push(p);
+  });
+  return ordered;
+}
+
+// Intercepte renderModernCalendar pour injecter l'ordre
+(function() {
+  const _orig = window.renderModernCalendar;
+  if (typeof _orig !== 'function') return;
+  window.renderModernCalendar = function(reservations, properties) {
+    // On appelle l'original mais on patch state.properties après
+    _orig.call(this, reservations, properties);
+    // state est dans la closure — on doit re-trier via le render
+    // On utilise une autre approche : patcher avant l'appel
+  };
+  // Meilleure approche : patcher directement state après chargement
+  window.renderModernCalendar = function(reservations, properties) {
+    _orig.call(this, reservations, properties);
+    // Après l'appel, state.properties est peuplé — on réapplique l'ordre
+    if (window._calendarState) {
+      window._calendarState.properties = applyPropertyOrder(window._calendarState.properties);
+      // Re-render silencieux
+      if (window._renderGrid) window._renderGrid();
+      if (window._renderPropertyList) window._renderPropertyList();
+    }
+  };
+})();
+
+// Patch plus simple : hook sur state directement via MutationObserver sur propertyList
+// On patche renderPropertyList et renderGrid via le hook de rendu existant
+(function patchCalendarOrder() {
+  // Attend que le calendrier soit initialisé
+  let attempts = 0;
+  const interval = setInterval(function() {
+    attempts++;
+    const grid = document.getElementById('calendarGrid');
+    const list = document.getElementById('propertyList');
+    if (grid && list && grid.children.length > 0) {
+      clearInterval(interval);
+      reapplyOrderToDOM();
+    }
+    if (attempts > 30) clearInterval(interval);
+  }, 300);
+
+  // Observe les changements du calendrier pour réappliquer l'ordre
+  const observer = new MutationObserver(function() {
+    setTimeout(reapplyOrderToDOM, 50);
+  });
+  document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('calendarGrid');
+    const list = document.getElementById('propertyList');
+    if (grid) observer.observe(grid, { childList: true });
+    if (list) observer.observe(list, { childList: true });
+  });
+})();
+
+// Réapplique l'ordre sauvegardé aux DOM rows du calendrier + property list
+let _reapplying = false;
+function reapplyOrderToDOM() {
+  if (_reapplying) return;
+  const order = getSavedOrder();
+  if (!order || !order.length) return;
+
+  const grid = document.getElementById('calendarGrid');
+  const list = document.getElementById('propertyList');
+  if (!grid || !list) return;
+
+  _reapplying = true;
+
+  // Réordonner les rows du calendrier
+  const rows = Array.from(grid.querySelectorAll('.calendar-row[data-property-id]'));
+  if (rows.length > 0) {
+    const ordered = [];
+    order.forEach(id => {
+      const r = rows.find(x => x.getAttribute('data-property-id') === String(id));
+      if (r) ordered.push(r);
+    });
+    rows.forEach(r => { if (!ordered.includes(r)) ordered.push(r); });
+    ordered.forEach(r => grid.appendChild(r));
+  }
+
+  // Réordonner la liste des logements
+  const items = Array.from(list.querySelectorAll('.property-item[data-property-id]'));
+  if (items.length > 0) {
+    const ordered = [];
+    order.forEach(id => {
+      const item = items.find(x => x.getAttribute('data-property-id') === String(id));
+      if (item) ordered.push(item);
+    });
+    items.forEach(item => { if (!ordered.includes(item)) ordered.push(item); });
+    ordered.forEach(item => list.appendChild(item));
+  }
+
+  _reapplying = false;
+}
+
+// ── MODAL ──────────────────────────────────────────────
+
+function openReorderModal() {
+  const list = document.getElementById('propertyList');
+  const reorderList = document.getElementById('reorderList');
+  if (!list || !reorderList) return;
+
+  reorderList.innerHTML = '';
+
+  // Récupère les propriétés dans l'ordre actuel du DOM
+  const items = Array.from(list.querySelectorAll('.property-item[data-property-id]'));
+  items.forEach(function(item) {
+    const id = item.getAttribute('data-property-id');
+    const name = item.querySelector('.property-name') ? item.querySelector('.property-name').textContent : id;
+    const row = document.createElement('div');
+    row.setAttribute('data-id', id);
+    row.setAttribute('draggable', 'true');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-secondary,#f9fafb);border:1px solid var(--border-color,#e5e7eb);border-radius:10px;cursor:grab;user-select:none;transition:all .15s;';
+    row.innerHTML = `
+      <i class="fas fa-grip-vertical" style="color:var(--text-secondary,#9CA3AF);font-size:13px;flex-shrink:0;"></i>
+      <span style="flex:1;font-size:13px;font-weight:500;color:var(--text-primary,#0D1117);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <button onclick="moveReorderItem(this.closest('[data-id]'), -1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:var(--text-secondary,#9CA3AF);font-size:10px;" title="Monter"><i class="fas fa-chevron-up"></i></button>
+        <button onclick="moveReorderItem(this.closest('[data-id]'), 1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:var(--text-secondary,#9CA3AF);font-size:10px;" title="Descendre"><i class="fas fa-chevron-down"></i></button>
+      </div>
+    `;
+    // Drag & drop
+    row.addEventListener('dragstart', onDragStart);
+    row.addEventListener('dragover', onDragOver);
+    row.addEventListener('drop', onDrop);
+    row.addEventListener('dragend', onDragEnd);
+    row.addEventListener('mouseenter', function() { this.style.background = 'var(--bg-hover,#f3f4f6)'; this.style.borderColor = '#1A7A5E'; });
+    row.addEventListener('mouseleave', function() { this.style.background = 'var(--bg-secondary,#f9fafb)'; this.style.borderColor = 'var(--border-color,#e5e7eb)'; });
+    reorderList.appendChild(row);
+  });
+
+  const modal = document.getElementById('reorderModal');
+  modal.style.display = 'flex';
+}
+
+function closeReorderModal() {
+  document.getElementById('reorderModal').style.display = 'none';
+}
+
+function moveReorderItem(el, dir) {
+  const list = el.parentElement;
+  if (!list) return;
+  const items = Array.from(list.children);
+  const idx = items.indexOf(el);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= items.length) return;
+  if (dir === -1) list.insertBefore(el, items[newIdx]);
+  else list.insertBefore(items[newIdx], el);
+}
+
+function savePropertyOrder() {
+  const reorderList = document.getElementById('reorderList');
+  const items = Array.from(reorderList.querySelectorAll('[data-id]'));
+  const order = items.map(x => x.getAttribute('data-id'));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  closeReorderModal();
+  // Réapplique immédiatement
+  _reapplying = false;
+  reapplyOrderToDOM();
+  // Feedback visuel
+  const btn = document.getElementById('btnReorderProperties');
+  if (btn) {
+    btn.innerHTML = '<i class="fas fa-check" style="color:#1A7A5E;"></i>';
+    setTimeout(function() { btn.innerHTML = '<i class="fas fa-arrows-up-down"></i>'; }, 1500);
+  }
+}
+
+function resetPropertyOrder() {
+  localStorage.removeItem(STORAGE_KEY);
+  closeReorderModal();
+  // Recharge le calendrier pour remettre l'ordre d'origine
+  if (typeof window.loadData === 'function') window.loadData();
+  else window.location.reload();
+}
+
+// ── DRAG & DROP ────────────────────────────────────────
+let _dragSrc = null;
+
+function onDragStart(e) {
+  _dragSrc = this;
+  this.style.opacity = '.5';
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  this.style.borderColor = '#1A7A5E';
+  return false;
+}
+
+function onDrop(e) {
+  e.stopPropagation();
+  if (_dragSrc !== this) {
+    const list = this.parentElement;
+    const items = Array.from(list.children);
+    const srcIdx = items.indexOf(_dragSrc);
+    const tgtIdx = items.indexOf(this);
+    if (srcIdx < tgtIdx) list.insertBefore(_dragSrc, this.nextSibling);
+    else list.insertBefore(_dragSrc, this);
+  }
+  return false;
+}
+
+function onDragEnd() {
+  this.style.opacity = '1';
+  document.querySelectorAll('#reorderList [data-id]').forEach(function(el) {
+    el.style.borderColor = 'var(--border-color,#e5e7eb)';
+  });
+  _dragSrc = null;
+}
+
+// Close on backdrop click
+document.getElementById('reorderModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReorderModal();
+});
+
+// Applique l'ordre au premier chargement
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() { reapplyOrderToDOM(); }, 800);
+  setTimeout(function() { reapplyOrderToDOM(); }, 2000);
+});
+</script>
 </body>
 </html>
