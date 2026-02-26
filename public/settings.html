@@ -3311,9 +3311,19 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   /* ── 3. PAGE CONTENT ── */
   .page-content {
     padding: 0 12px 90px !important;
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 28px) !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
     box-sizing: border-box !important;
     width: 100% !important;
+  }
+
+  /* Bouton Ajouter — ne pas couper en haut */
+  .properties-section-header {
+    padding-top: 8px !important;
+    padding-bottom: 12px !important;
+  }
+  
+  .btn-add-property {
+    flex-shrink: 0 !important;
   }
   #bhHeader { display: none !important; }
 
