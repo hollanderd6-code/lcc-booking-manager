@@ -316,7 +316,7 @@ function getSidebarHTML() {
 
 
   function injectMobileTitle() {
-    if (window.innerWidth > 768) return;
+    if (window.innerWidth > 1024) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
     // Lire le titre depuis data-title ou page
