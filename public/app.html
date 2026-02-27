@@ -926,6 +926,17 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   border-bottom-right-radius: 999px;
 }
 
+/* Jour de checkout : débord 1/4 depuis la gauche */
+.booking-block.checkout-day {
+  left: -10px;
+  right: 62.5%; /* occupe ~37.5% = environ 1/4 de la cellule */
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  pointer-events: auto;
+}
+
 /* Jours intermédiaires : débord léger des deux côtés */
 .booking-block:not(.single):not(.start):not(.end) {
   left: -10px;
@@ -5954,26 +5965,37 @@ function riskColor(level) {
           cur.setDate(cur.getDate() + 1);
         }
 
+        // Ajouter le jour de checkout avec classe spéciale (débord 1/4)
+        var checkoutDateStr = formatDateForCell(endDay);
+        var checkoutSelector =
+          '.calendar-cell[data-date="' + checkoutDateStr + '"][data-property-id="' + (b.propertyId || '') + '"]';
+        var checkoutCell = document.querySelector(checkoutSelector);
+        if (checkoutCell) cells.push({ el: checkoutCell, isCheckout: true });
+
         if (!cells.length) continue;
 
         for (var j = 0; j < cells.length; j++) {
-          var cellEl = cells[j];
+          var cellItem = cells[j];
+          var isCheckoutDay = cellItem && cellItem.isCheckout;
+          var cellEl = isCheckoutDay ? cellItem.el : cellItem;
           var block = document.createElement('div');
           var platform = normalizePlatform(b.platform);
 
           block.className = 'booking-block ' + platform;
           block.setAttribute('data-booking-id', b.id);
 
-          if (cells.length === 1) {
+          if (isCheckoutDay) {
+            block.classList.add('checkout-day');
+          } else if (cells.length === 1 || (cells.length === 2 && cells[1] && cells[1].isCheckout)) {
             block.classList.add('single');
           } else if (j === 0) {
             block.classList.add('start');
-          } else if (j === cells.length - 1) {
+          } else if (!isCheckoutDay && j === cells.length - (checkoutCell ? 2 : 1)) {
             block.classList.add('end');
           }
 
-          // Texte seulement sur le 1er jour
-if (j === 0 || cells.length === 1) {
+          // Texte seulement sur le 1er jour (pas sur checkout)
+if (!isCheckoutDay && (j === 0 || cells.length === 1)) {
     // ✅ DOT risque (vert/orange/rouge/critique)
   var rawLevel = (b.riskLevel || b.riskLabel || '').toString().toLowerCase();
   var level = 'green';
