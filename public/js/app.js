@@ -331,10 +331,19 @@ function updateCalendarEvents() {
 
       const propertyName = (r.property && r.property.name) || 'Logement';
 
+      // Ajouter 12h à la fin pour que la barre déborde sur le jour de départ
+      // (symbolise un départ le matin de ce jour)
+      let displayEnd = r.end;
+      if (r.end) {
+        const endDate = new Date(r.end);
+        endDate.setHours(6, 0, 0, 0);
+        displayEnd = endDate.toISOString();
+      }
+
       return {
         title,
         start: r.start,
-        end: r.end,
+        end: displayEnd,
         backgroundColor: colors.bg,
         borderColor: colors.border,
         extendedProps: {
