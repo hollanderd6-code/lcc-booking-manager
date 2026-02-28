@@ -5926,10 +5926,10 @@ function riskColor(level) {
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
 
         // Nuits : du jour d'arrivée au jour AVANT le checkout
-        // On utilise UTC pour éviter le décalage timezone Paris (UTC+1)
-        // ex: '2026-03-01T00:00:00.000Z' serait interprété comme 28 fév en heure locale sinon
-        var startDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
-        var endDay   = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
+        // Les dates API sont en UTC minuit (ex: 2026-03-01T00:00:00.000Z)
+        // On lit en UTC pour éviter le décalage Paris UTC+1 qui ferait glisser d'un jour
+        var startDay = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
+        var endDay   = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
 
         if (endDay <= startDay) {
           endDay = new Date(startDay.getTime() + 24 * 60 * 60 * 1000);
