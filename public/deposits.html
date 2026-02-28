@@ -2257,7 +2257,7 @@ async function createDeposit() {
 // ============================================
 // GESTION DES ONGLETS
 // ============================================
-(function initTabs() {
+function initTabs() {
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabPanes = document.querySelectorAll('.tab-pane');
   
@@ -2265,15 +2265,12 @@ async function createDeposit() {
     button.addEventListener('click', () => {
       const targetTab = button.dataset.tab;
       
-      // Désactiver tous les boutons et panes
       tabButtons.forEach(btn => btn.classList.remove('active'));
       tabPanes.forEach(pane => pane.classList.remove('active'));
       
-      // Activer le bouton et pane ciblés
       button.classList.add('active');
       document.getElementById('tab-' + targetTab).classList.add('active');
       
-      // Actions spécifiques selon l'onglet
       if (targetTab === 'payments') {
         checkStripeConnectStatus();
         loadPayments();
@@ -2282,7 +2279,9 @@ async function createDeposit() {
       }
     });
   });
-})();
+}
+
+document.addEventListener('DOMContentLoaded', initTabs);
 
 // ============================================
 // VÉRIFICATION STATUT STRIPE CONNECT
