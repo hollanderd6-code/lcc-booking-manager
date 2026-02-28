@@ -2303,7 +2303,7 @@ async function checkStripeConnectStatus() {
     
     const data = await res.json();
     
-    if (data.connected && data.charges_enabled) {
+    if (data.connected && (data.charges_enabled || data.chargesEnabled)) {
       if (notice) notice.style.display = 'none';
       if (badge) {
         badge.style.display = 'inline-flex';
