@@ -2164,14 +2164,6 @@ async function createDeposit() {
 
       loadReservationsWithDeposits();
       loadPropertiesForFilter();
-
-      const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
-      if (refreshPaymentsBtn) {
-        refreshPaymentsBtn.addEventListener('click', async () => {
-          await checkStripeConnectStatus();
-          await loadPayments();
-        });
-      }
     });
   </script>
 <!-- MOBILE MENU SCRIPT -->
@@ -2257,7 +2249,7 @@ async function createDeposit() {
 // ============================================
 // GESTION DES ONGLETS
 // ============================================
-function initTabs() {
+(function initTabs() {
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabPanes = document.querySelectorAll('.tab-pane');
   
@@ -2265,12 +2257,15 @@ function initTabs() {
     button.addEventListener('click', () => {
       const targetTab = button.dataset.tab;
       
+      // Désactiver tous les boutons et panes
       tabButtons.forEach(btn => btn.classList.remove('active'));
       tabPanes.forEach(pane => pane.classList.remove('active'));
       
+      // Activer le bouton et pane ciblés
       button.classList.add('active');
       document.getElementById('tab-' + targetTab).classList.add('active');
       
+      // Actions spécifiques selon l'onglet
       if (targetTab === 'payments') {
         checkStripeConnectStatus();
         loadPayments();
@@ -2279,9 +2274,7 @@ function initTabs() {
       }
     });
   });
-}
-
-document.addEventListener('DOMContentLoaded', initTabs);
+})();
 
 // ============================================
 // VÉRIFICATION STATUT STRIPE CONNECT
@@ -2466,6 +2459,7 @@ async function loadPropertiesForPaymentsFilter() {
   }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
   const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
   if (refreshPaymentsBtn) {
     refreshPaymentsBtn.addEventListener('click', async () => {
@@ -2473,7 +2467,7 @@ async function loadPropertiesForPaymentsFilter() {
       await loadPayments();
     });
   }
-
+  
   loadPropertiesForPaymentsFilter();
 });
 </script>
