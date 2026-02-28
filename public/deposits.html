@@ -287,11 +287,47 @@
       justify-content: flex-end;
       gap: 8px;
     }
+    .modal-actions {
+      padding: 10px 18px 14px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
     .modal-close {
       border: none;
       background: transparent;
       cursor: pointer;
       color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      html[data-theme-v3="1"] .modal {
+        z-index: 1099 !important;
+        align-items: flex-start !important;
+      }
+      html[data-theme-v3="1"] .modal-content {
+        position: fixed !important;
+        top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+      html[data-theme-v3="1"] .modal-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      html[data-theme-v3="1"] .modal-actions {
+        flex-shrink: 0 !important;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 70px) !important;
+      }
     }
     .form-row {
       margin-bottom: 12px;
@@ -1310,7 +1346,7 @@ Actualiser
 <div class="form-row"><label for="paymentDescription">Description (optionnel)</label><input id="paymentDescription" type="text" placeholder="Ex: Loyer, Ménage..."/></div>
 <div class="small-hint" id="paymentError" style="color:#b91c1c;"></div>
 </div>
-<div class="modal-footer"><button class="btn btn-ghost" id="paymentCancelBtn">Annuler</button><button class="btn btn-primary" id="paymentCreateBtn">Générer le lien</button></div>
+<div class="modal-actions"><button class="btn btn-ghost" id="paymentCancelBtn">Annuler</button><button class="btn btn-primary" id="paymentCreateBtn">Générer le lien</button></div>
 </div>
 </div>
 
@@ -1336,7 +1372,7 @@ Actualiser
 </div>
 <div class="small-hint" id="depositError" style="color:#b91c1c;"></div>
 </div>
-<div class="modal-footer">
+<div class="modal-actions">
 <button class="btn btn-ghost" id="depositCancelBtn">Annuler</button>
 <button class="btn btn-primary" id="depositCreateBtn">Générer le lien</button>
 </div>
