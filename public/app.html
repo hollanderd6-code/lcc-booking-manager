@@ -921,7 +921,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 /* Dernier jour (dernière nuit, checkout le lendemain) */
 .booking-block.end {
   left: -10px;  /* revient légèrement dans la case précédente */
-  right: 4px;
+  right: -10px; /* déborde sur la case du checkout, comme pour 1 nuit */
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
 }
@@ -986,7 +986,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.end {
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
-  right: -8px; /* ✅ RÉDUIT pour éviter fusion visuelle */
+  right: -10px; /* Déborde sur la case du checkout, cohérent avec .single */
 }
 
 /* Réservation d’une seule nuit (start + end dans la même cellule) */
