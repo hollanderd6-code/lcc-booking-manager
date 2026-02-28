@@ -331,12 +331,14 @@ function updateCalendarEvents() {
 
       const propertyName = (r.property && r.property.name) || 'Logement';
 
-      // Ajouter 12h à la fin pour que la barre déborde sur le jour de départ
-      // (symbolise un départ le matin de ce jour)
+      // Ajouter 6h UTC à la fin pour que la barre déborde sur le jour de départ
+      // (symbolise un départ le matin de ce jour) — fonctionne pour 1 nuit comme pour plusieurs
       let displayEnd = r.end;
       if (r.end) {
-        const endDate = new Date(r.end);
-        endDate.setHours(6, 0, 0, 0);
+        // Normaliser en date pure avant d'ajouter les heures, pour éviter les décalages timezone
+        const dateStr = r.end.length >= 10 ? r.end.slice(0, 10) : r.end;
+        const endDate = new Date(dateStr + 'T00:00:00Z');
+        endDate.setUTCHours(6, 0, 0, 0);
         displayEnd = endDate.toISOString();
       }
 
