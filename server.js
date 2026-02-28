@@ -10991,7 +10991,7 @@ app.get('/api/stripe/status', async (req, res) => {
         error: 'Stripe non configuré côté serveur'
       });
     }
-
+console.log('DEBUG stripe/status user:', user.id, user.stripeAccountId);
     if (!user.stripeAccountId) {
       // L'utilisateur n'a encore jamais connecté de compte Stripe
       return res.json({ connected: false });
