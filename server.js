@@ -4807,6 +4807,10 @@ async function syncAllCalendars() {
 
       const newIcalReservations = reservations || [];
 
+// 🛡️ PROTECTION: si le fetch a retourné 0 réservations mais qu'on en avait avant,
+// c'est probablement une erreur réseau/iCal — on skip les annulations
+const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.length > 0;
+
       const oldIds = new Set(oldIcalReservations.map(r => r.uid));
       const newIds = new Set(newIcalReservations.map(r => r.uid));
 
@@ -4815,8 +4819,7 @@ async function syncAllCalendars() {
       
       // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
       const now = new Date();
-      const cancelledForProperty = oldIcalReservations.filter(r => {
-        // Si la réservation n'est plus dans le flux
+const cancelledForProperty = fetchedEmpty ? [] : oldIcalReservations.filter(r => {        // Si la réservation n'est plus dans le flux
         if (!newIds.has(r.uid)) {
           // Vérifier si c'est une réservation FUTURE
           const endDate = new Date(r.end);
