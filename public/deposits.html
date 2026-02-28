@@ -1297,6 +1297,23 @@ Actualiser
 </main>
 </div>
 <!-- MODAL: nouvelle caution -->
+<!-- MODAL PAIEMENT -->
+<div class="modal" id="paymentModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2>Nouveau paiement</h2>
+<button class="modal-close" id="paymentModalClose"><i class="fas fa-times"></i></button>
+</div>
+<div class="modal-body">
+<div class="form-row"><label>Réservation</label><div class="small-hint" id="paymentModalReservationLabel"></div></div>
+<div class="form-row"><label for="paymentAmount">Montant du paiement (€)</label><input id="paymentAmount" min="1" required="" step="1" type="number"/><div class="small-hint">Le montant sera encaissé via Stripe directement sur votre compte.</div></div>
+<div class="form-row"><label for="paymentDescription">Description (optionnel)</label><input id="paymentDescription" type="text" placeholder="Ex: Loyer, Ménage..."/>< /div>
+<div class="small-hint" id="paymentError" style="color:#b91c1c;"></div>
+</div>
+<div class="modal-footer"><button class="btn btn-ghost" id="paymentCancelBtn">Annuler</button><button class="btn btn-primary" id="paymentCreateBtn">Générer le lien</button></div>
+</div>
+</div>
+
 <div class="modal" id="depositModal">
 <div class="modal-content">
 <div class="modal-header">
@@ -2159,6 +2176,9 @@ async function createDeposit() {
       document.getElementById('depositModalClose').addEventListener('click', closeDepositModal);
       document.getElementById('depositCancelBtn').addEventListener('click', closeDepositModal);
       document.getElementById('depositCreateBtn').addEventListener('click', createDeposit);
+      document.getElementById('paymentModalClose').addEventListener('click', closePaymentModal);
+      document.getElementById('paymentCancelBtn').addEventListener('click', closePaymentModal);
+      document.getElementById('paymentCreateBtn').addEventListener('click', createPayment);
 
       loadReservationsWithDeposits();
       loadPropertiesForFilter();
@@ -2414,7 +2434,7 @@ function renderPaymentsTable() {
         </div>
         
         <div class="deposit-card-footer">
-          <button class="btn btn-primary btn-card" onclick="createPayment('${r.reservationUid}')">
+          <button class="btn btn-primary btn-card" onclick="openPaymentModalByUid('${r.reservationUid}')">
             <i class="fas fa-plus"></i> Créer un paiement
           </button>
         </div>
@@ -2426,8 +2446,74 @@ function renderPaymentsTable() {
   container.innerHTML = html;
 }
 
-function createPayment(reservationUid) {
-  alert('Fonctionnalité de création de paiement à venir !\n\nRéservation UID: ' + reservationUid);
+let currentReservationForPayment = null;
+
+function openPaymentModal(reservation) {
+  currentReservationForPayment = reservation;
+  const label = document.getElementById('paymentModalReservationLabel');
+  label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
+  document.getElementById('paymentAmount').value = '';
+  document.getElementById('paymentDescription').value = '';
+  document.getElementById('paymentError').textContent = '';
+  document.getElementById('paymentModal').classList.add('active');
+}
+
+function openPaymentModalByUid(uid) {
+  const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
+  if (reservation) {
+    openPaymentModal(reservation);
+  } else {
+    alert('Réservation introuvable');
+  }
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('active');
+  currentReservationForPayment = null;
+}
+
+async function createPayment() {
+  const errorEl = document.getElementById('paymentError');
+  errorEl.textContent = '';
+  if (!currentReservationForPayment) return;
+
+  const amountInput = document.getElementById('paymentAmount');
+  const amountValue = parseFloat(amountInput.value);
+  if (!amountValue || amountValue <= 0) {
+    errorEl.textContent = 'Merci de saisir un montant valide.';
+    return;
+  }
+
+  const description = document.getElementById('paymentDescription').value || '';
+  const reservation = currentReservationForPayment;
+
+  try {
+    const res = await fetch(API_BASE + '/payments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+      },
+      body: JSON.stringify({
+        reservationUid: reservation.reservationUid,
+        amount: amountValue,
+        description: description
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Erreur lors de la création du paiement');
+    }
+
+    closePaymentModal();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await loadPayments();
+    alert('Lien de paiement créé avec succès !');
+  } catch (e) {
+    console.error(e);
+    errorEl.textContent = e.message || 'Erreur lors de la création du paiement.';
+  }
 }
 
 async function loadPropertiesForPaymentsFilter() {
