@@ -2462,8 +2462,12 @@ async function loadPropertiesForPaymentsFilter() {
 document.addEventListener('DOMContentLoaded', () => {
   const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
   if (refreshPaymentsBtn) {
-    refreshPaymentsBtn.addEventListener('click', loadPayments);
+    refreshPaymentsBtn.addEventListener('click', async () => {
+      await checkStripeConnectStatus();
+      await loadPayments();
+    });
   }
+});
   
   loadPropertiesForPaymentsFilter();
 });
