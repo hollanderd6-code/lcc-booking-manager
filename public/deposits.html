@@ -2164,6 +2164,14 @@ async function createDeposit() {
 
       loadReservationsWithDeposits();
       loadPropertiesForFilter();
+
+      const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
+      if (refreshPaymentsBtn) {
+        refreshPaymentsBtn.addEventListener('click', async () => {
+          await checkStripeConnectStatus();
+          await loadPayments();
+        });
+      }
     });
   </script>
 <!-- MOBILE MENU SCRIPT -->
@@ -2459,7 +2467,6 @@ async function loadPropertiesForPaymentsFilter() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
   const refreshPaymentsBtn = document.getElementById('refreshPaymentsBtn');
   if (refreshPaymentsBtn) {
     refreshPaymentsBtn.addEventListener('click', async () => {
@@ -2467,8 +2474,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await loadPayments();
     });
   }
-});
-  
+
   loadPropertiesForPaymentsFilter();
 });
 </script>
