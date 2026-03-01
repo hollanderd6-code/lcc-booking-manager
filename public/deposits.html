@@ -2591,12 +2591,7 @@ function renderPaymentsTable() {
               <span class="detail-label">Créé le</span>
               <span class="detail-value">${new Date(p.createdAt || Date.now()).toLocaleString('fr-FR')}</span>
             </div>
-            ${p.checkoutUrl ? `<div class="detail-row" onclick="event.stopPropagation()">
-              <span class="detail-label">Lien</span>
-              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl}').then(()=>alert('Lien copié !')).catch(()=>alert('${safeUrl}'))">
-                <i class="fas fa-copy"></i> Copier
-              </button>
-            </div>` : ''}
+
           </div>
           ${isPending ? `<div class="details-actions" style="padding-top:12px;border-top:1px solid var(--border-color);">
             <p style="font-size:12px;color:#92400e;background:rgba(234,179,8,0.1);padding:8px;border-radius:8px;margin:0;">
