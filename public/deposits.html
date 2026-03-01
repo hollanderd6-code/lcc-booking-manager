@@ -2086,7 +2086,7 @@ function copyDepositLinkByUid(uid) {
         }
 
         // Générer la carte
-        const hasDetails = !isHistory && d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released');
+        const hasDetails = !isHistory && d && (d.status === 'pending' || d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released');
         let cardClass = hasDetails ? 'deposit-card expandable' : 'deposit-card';
         if (isHistory) cardClass += ' history-card';
         const cardClick = hasDetails ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
@@ -2467,7 +2467,7 @@ async function loadPayments() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/reservations-with-deposits', {
+    const res = await fetch('/api/reservations-with-payments', {
       headers: {
         'Authorization': 'Bearer ' + token
       }
@@ -2502,52 +2502,82 @@ function renderPaymentsTable() {
   }
   
   let html = '<div class="deposits-cards-grid">';
-  
+
   filtered.forEach((r) => {
-    const startDate = new Date(r.startDate).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    const endDate = new Date(r.endDate).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-    
+    const p = r.payment || null;
+    const guestName = r.guestName || '';
+
+    // Badge montant
+    let amountBadge = '<span class="badge badge-empty">Aucun</span>';
+    if (p && p.amountCents) {
+      amountBadge = '<span class="badge badge-amount">' + (p.amountCents / 100).toFixed(2).replace('.', ',') + ' €</span>';
+    }
+
+    // Badge statut
+    let statusBadge = '<span class="badge badge-empty">Pas de paiement</span>';
+    if (p) {
+      if (p.status === 'pending') statusBadge = '<span class="badge badge-pending">En attente</span>';
+      else if (p.status === 'paid' || p.status === 'succeeded') statusBadge = '<span class="badge badge-paid">Payé ✅</span>';
+      else if (p.status === 'refunded') statusBadge = '<span class="badge badge-refunded">Remboursé</span>';
+      else if (p.status === 'canceled') statusBadge = '<span class="badge badge-empty">Annulé</span>';
+      else if (p.status) statusBadge = '<span class="badge badge-empty">' + p.status + '</span>';
+    }
+
+    // Action
+    let actionHtml = '';
+    if (p && p.checkoutUrl) {
+      actionHtml = `
+        <button class="btn btn-primary btn-card" onclick="copyPaymentLinkByUid('${r.reservationUid}')">
+          <i class="fas fa-copy"></i> Copier le lien
+        </button>`;
+    } else {
+      actionHtml = `
+        <button class="btn btn-primary btn-card" onclick="openPaymentModalByUid('${r.reservationUid}')">
+          <i class="fas fa-plus"></i> Créer un paiement
+        </button>`;
+    }
+
     html += `
       <div class="deposit-card">
         <div class="deposit-card-header">
           <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
         </div>
-        
         <div class="deposit-card-body">
+          ${guestName ? `<div class="deposit-info-row" style="margin-bottom:4px;"><i class="fas fa-user"></i><span style="font-weight:600;">${guestName}</span></div>` : ''}
           <div class="deposit-info-row">
             <i class="fas fa-calendar"></i>
-            <span>${startDate} → ${endDate}</span>
+            <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
           </div>
-          
           <div class="deposit-info-grid-simple">
             <div class="deposit-info-item">
+              <div class="deposit-info-label">Montant</div>
+              <div class="deposit-info-value">${amountBadge}</div>
+            </div>
+            <div class="deposit-info-item">
               <div class="deposit-info-label">Statut</div>
-              <div class="deposit-info-value">
-                <span class="badge badge-empty">Pas de paiement</span>
-              </div>
+              <div class="deposit-info-value">${statusBadge}</div>
             </div>
           </div>
+          ${p && p.description ? `<div style="font-size:12px;color:#6b7280;margin-top:6px;"><i class="fas fa-tag" style="margin-right:4px;"></i>${p.description}</div>` : ''}
         </div>
-        
         <div class="deposit-card-footer">
-          <button class="btn btn-primary btn-card" onclick="openPaymentModalByUid('${r.reservationUid}')">
-            <i class="fas fa-plus"></i> Créer un paiement
-          </button>
+          ${actionHtml}
         </div>
       </div>
     `;
   });
-  
+
   html += '</div>';
   container.innerHTML = html;
+}
+
+function copyPaymentLinkByUid(reservationUid) {
+  const r = allPayments.find(x => x.reservationUid === reservationUid);
+  if (!r || !r.payment || !r.payment.checkoutUrl) {
+    alert('Lien de paiement introuvable');
+    return;
+  }
+  showLinkModal('Lien de paiement', r.payment.checkoutUrl);
 }
 
 let currentReservationForPayment = null;
