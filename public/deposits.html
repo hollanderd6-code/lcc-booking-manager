@@ -1198,12 +1198,18 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 </button>
 <button class="tab-button" data-tab="history">
 <i class="fas fa-history"></i>
-<span>Historique</span>
+<span>Historique cautions</span>
 <span class="tab-badge history" id="historyCount" style="display:none;">0</span>
 </button>
 <button class="tab-button" data-tab="payments">
 <i class="fas fa-euro-sign"></i>
-<span>Paiements de locations</span>
+<span>Paiements</span>
+<span class="tab-badge" id="paymentsCount" style="display:none;">0</span>
+</button>
+<button class="tab-button" data-tab="payments-history">
+<i class="fas fa-history"></i>
+<span>Historique paiements</span>
+<span class="tab-badge history" id="paymentsHistoryCount" style="display:none;">0</span>
 </button>
 </div>
 
@@ -1327,6 +1333,41 @@ Actualiser
 
 </div>
 <!-- FIN ONGLET PAIEMENTS -->
+
+<!-- ONGLET : HISTORIQUE PAIEMENTS -->
+<div class="tab-pane" id="tab-payments-history">
+<section class="card">
+<div class="card-header">
+<div class="card-title">
+<i class="fas fa-history"></i>
+<span>Historique des paiements</span>
+</div>
+<button class="btn btn-ghost btn-xs" id="refreshPaymentsHistoryBtn">
+<i class="fas fa-sync-alt"></i>
+Actualiser
+</button>
+</div>
+<div class="history-notice">
+  <i class="fas fa-info-circle"></i>
+  <span>Paiements des séjours terminés depuis moins d'un mois.</span>
+  <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost" style="margin-left:auto;padding:6px 12px;font-size:12px;">
+    <i class="fas fa-external-link-alt"></i> Voir sur Stripe
+  </a>
+</div>
+<div class="form-row" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+<label for="propertyFilterPaymentsHistory" style="font-size:13px;font-weight:500;">Logement :</label>
+<select id="propertyFilterPaymentsHistory">
+<option value="">Tous les logements</option>
+</select>
+</div>
+<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;">
+<div id="paymentsHistoryContainer">
+<p class="empty-state">Chargement de l'historique…</p>
+</div>
+</div>
+</section>
+</div>
+<!-- FIN ONGLET HISTORIQUE PAIEMENTS -->
 
 </div>
 </main>
@@ -1752,6 +1793,20 @@ function copyDepositLinkByUid(uid) {
     function updateTabCounts() {
       const activeData = filterActiveReservations(allReservationsWithDeposits);
       const historyData = filterHistoryReservations(allReservationsWithDeposits);
+
+      // Compteurs paiements
+      const activePayments = allPayments.filter(r => r.payment && filterActiveReservations([r]).length > 0);
+      const historyPayments = allPayments.filter(r => r.payment && filterHistoryReservations([r]).length > 0);
+      const paymentsCountEl = document.getElementById('paymentsCount');
+      const paymentsHistoryCountEl = document.getElementById('paymentsHistoryCount');
+      if (paymentsCountEl) {
+        if (activePayments.length > 0) { paymentsCountEl.textContent = activePayments.length; paymentsCountEl.style.display = 'inline-flex'; }
+        else paymentsCountEl.style.display = 'none';
+      }
+      if (paymentsHistoryCountEl) {
+        if (historyPayments.length > 0) { paymentsHistoryCountEl.textContent = historyPayments.length; paymentsHistoryCountEl.style.display = 'inline-flex'; }
+        else paymentsHistoryCountEl.style.display = 'none';
+      }
       
       const depositsCountEl = document.getElementById('depositsCount');
       const historyCountEl = document.getElementById('historyCount');
@@ -2411,6 +2466,8 @@ function showLinkModal(title, url) {
         loadPayments();
       } else if (targetTab === 'history') {
         renderHistoryTable();
+      } else if (targetTab === 'payments-history') {
+        renderPaymentsHistoryTable();
       }
     });
   });
@@ -2654,6 +2711,96 @@ function renderPaymentsTable() {
   container.innerHTML = html;
 }
 
+function renderPaymentsHistoryTable() {
+  const container = document.getElementById('paymentsHistoryContainer');
+  if (!container) return;
+
+  const select = document.getElementById('propertyFilterPaymentsHistory');
+  const selectedPropertyId = select ? select.value : '';
+
+  // Filtrer : séjours terminés du dernier mois, avec paiement
+  const historyData = filterHistoryReservations(allPayments);
+  const filtered = historyData.filter(r =>
+    (!selectedPropertyId || r.propertyId === selectedPropertyId)
+  );
+
+  const withPayment = filtered.filter(r => r.payment);
+
+  if (!filtered.length) {
+    container.innerHTML = '<p class="empty-state">Aucun séjour terminé ce dernier mois.</p>';
+    return;
+  }
+  if (!withPayment.length) {
+    container.innerHTML = '<p class="empty-state">Aucun paiement sur les séjours terminés.</p>';
+    return;
+  }
+
+  let html = '<div class="deposits-cards-grid">';
+
+  withPayment.forEach((r) => {
+    const p = r.payment;
+    const guestName = r.guestName || '';
+    const maxAmount = p.amountCents ? (p.amountCents / 100).toFixed(2) : '0.00';
+
+    let statusBadge = '<span class="badge badge-empty">' + (p.status || '—') + '</span>';
+    if (p.status === 'pending')                                statusBadge = '<span class="badge badge-pending">En attente</span>';
+    else if (p.status === 'paid' || p.status === 'succeeded') statusBadge = '<span class="badge badge-paid">Payé ✅</span>';
+    else if (p.status === 'refunded')                          statusBadge = '<span class="badge badge-refunded">Remboursé</span>';
+    else if (p.status === 'canceled')                          statusBadge = '<span class="badge badge-empty">Annulé</span>';
+
+    html += `
+      <div class="deposit-card history-card">
+        <div class="deposit-card-header">
+          <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
+        </div>
+        <div class="deposit-card-body">
+          ${guestName ? `<div class="deposit-info-row" style="margin-bottom:4px;"><i class="fas fa-user"></i><span style="font-weight:600;color:var(--text-primary);">${guestName}</span></div>` : ''}
+          <div class="deposit-info-row">
+            <i class="fas fa-calendar"></i>
+            <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
+          </div>
+          <div class="deposit-info-grid-simple">
+            <div class="deposit-info-item">
+              <div class="deposit-info-label">Montant</div>
+              <div class="deposit-info-value"><span class="badge badge-amount">${maxAmount} €</span></div>
+            </div>
+            <div class="deposit-info-item">
+              <div class="deposit-info-label">Statut</div>
+              <div class="deposit-info-value">${statusBadge}</div>
+            </div>
+          </div>
+          ${p.description ? `<div style="font-size:12px;color:#6b7280;margin-top:6px;"><i class="fas fa-tag" style="margin-right:4px;"></i>${p.description}</div>` : ''}
+        </div>
+        <div class="deposit-card-footer">
+          <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost btn-card">
+            <i class="fas fa-external-link-alt"></i> Voir sur Stripe
+          </a>
+        </div>
+      </div>`;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function loadPropertiesForPaymentsHistoryFilter() {
+  const select = document.getElementById('propertyFilterPaymentsHistory');
+  if (!select || select.options.length > 1) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    (data.properties || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', renderPaymentsHistoryTable);
+  } catch (e) { console.error(e); }
+}
+
 function togglePaymentDetails(reservationUid, event) {
   if (!event) event = window.event;
   const details = document.getElementById('payment-details-' + reservationUid);
@@ -2811,6 +2958,13 @@ document.addEventListener('DOMContentLoaded', () => {
       await loadPayments();
     });
   }
+
+  const refreshPaymentsHistoryBtn = document.getElementById('refreshPaymentsHistoryBtn');
+  if (refreshPaymentsHistoryBtn) {
+    refreshPaymentsHistoryBtn.addEventListener('click', renderPaymentsHistoryTable);
+  }
+
+  loadPropertiesForPaymentsHistoryFilter();
   
   loadPropertiesForPaymentsFilter();
 });
