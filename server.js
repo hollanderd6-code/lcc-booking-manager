@@ -6768,6 +6768,75 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 });
 
 // ============================================
+// GET /api/reservations-with-payments
+// Même structure que reservations-with-deposits mais avec payments
+// ============================================
+app.get('/api/reservations-with-payments', authenticateAny, loadSubAccountData(pool), async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Charger tous les paiements de l'utilisateur depuis PostgreSQL
+    const paymentsResult = await pool.query(
+      'SELECT * FROM payments WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
+    );
+    const paymentsRows = paymentsResult.rows;
+
+    // Indexer par reservation_uid
+    const paymentByUid = {};
+    paymentsRows.forEach(p => {
+      if (!paymentByUid[p.reservation_uid]) {
+        paymentByUid[p.reservation_uid] = {
+          id: p.id,
+          amountCents: p.amount_cents,
+          status: p.status,
+          checkoutUrl: p.checkout_url,
+          description: p.metadata?.description || '',
+          createdAt: p.created_at
+        };
+      }
+    });
+
+    const result = [];
+    const userProperties = PROPERTIES.filter(p => p.userId === userId);
+
+    userProperties.forEach(property => {
+      const propReservations = reservationsStore.properties[property.id] || [];
+      propReservations.forEach(r => {
+        if (!r.uid || r.type === 'block' || r.source === 'BLOCK') return;
+        const payment = paymentByUid[r.uid] || null;
+        result.push({
+          reservationUid: r.uid,
+          propertyId: property.id,
+          propertyName: property.name,
+          startDate: r.start,
+          endDate: r.end,
+          guestName: r.guestName || '',
+          source: r.source || '',
+          payment
+        });
+      });
+    });
+
+    // Trier: paiements en premier, puis par date de début
+    result.sort((a, b) => {
+      if (a.payment && !b.payment) return -1;
+      if (!a.payment && b.payment) return 1;
+      return new Date(a.startDate) - new Date(b.startDate);
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Erreur /api/reservations-with-payments:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // ✅ GET - Réservations enrichies (risque + checklist + sous-scores)
 // ============================================
 app.get('/api/reservations/enriched', authenticateAny, checkSubscription, async (req, res) => {
@@ -11122,7 +11191,7 @@ app.post('/api/deposits',
     }
 
     // Retrouver la réservation dans les réservations du user
-    const result = findReservationByUidForUser(reservationUid, userId);
+    const result = findReservationByUidForUser(reservationUid, user.id);
     if (!result) {
       return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
     }
@@ -11143,7 +11212,7 @@ app.post('/api/deposits',
       createdAt: new Date().toISOString()
     };
     // ✅ NOUVEAU : Sauvegarder en PostgreSQL
-  const saved = await saveDepositToDB(deposit, userId, property.id);
+  const saved = await saveDepositToDB(deposit, user.id, property.id);
   
   if (!saved) {
     return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -11181,7 +11250,7 @@ app.post('/api/deposits',
       metadata: {
         deposit_id: deposit.id,
         reservation_uid: reservationUid,
-        user_id: userId
+        user_id: user.id
       },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
@@ -11392,7 +11461,7 @@ app.get('/api/payments', async (req, res) => {
     const { status, propertyId } = req.query;
     
     let query = 'SELECT * FROM payments WHERE user_id = $1';
-    const params = [userId];
+    const params = [user.id];
     
     if (status) {
       query += ' AND status = $2';
