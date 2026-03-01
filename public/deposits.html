@@ -2514,15 +2514,39 @@ function renderPaymentsTable() {
   const filtered = allPayments.filter((r) =>
     !selectedPropertyId || r.propertyId === selectedPropertyId
   );
-  
-  if (!filtered.length) {
+
+  // Séparer : avec paiement en premier, sans paiement ensuite
+  const withPayment = filtered.filter(r => r.payment);
+  const withoutPayment = filtered.filter(r => !r.payment);
+  const sorted = [...withPayment, ...withoutPayment];
+
+  if (!sorted.length) {
     container.innerHTML = '<p class="empty-state">Aucune réservation pour ce filtre.</p>';
     return;
   }
-  
+
+  // Si aucun paiement du tout, proposer de créer
+  if (!withPayment.length) {
+    container.innerHTML = '<p class="empty-state" style="margin-bottom:12px;">Aucun paiement créé pour le moment.</p><div class="deposits-cards-grid">' +
+      withoutPayment.slice(0, 10).map(r => `
+        <div class="deposit-card">
+          <div class="deposit-card-header"><h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3></div>
+          <div class="deposit-card-body">
+            ${r.guestName ? `<div class="deposit-info-row"><i class="fas fa-user"></i><span style="font-weight:600">${r.guestName}</span></div>` : ''}
+            <div class="deposit-info-row"><i class="fas fa-calendar"></i><span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span></div>
+          </div>
+          <div class="deposit-card-footer">
+            <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); openPaymentModalByUid('${r.reservationUid}')">
+              <i class="fas fa-plus"></i> Créer un paiement
+            </button>
+          </div>
+        </div>`).join('') + '</div>';
+    return;
+  }
+
   let html = '<div class="deposits-cards-grid">';
   
-  filtered.forEach((r) => {
+  sorted.forEach((r) => {
     const startDate = new Date(r.startDate).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
