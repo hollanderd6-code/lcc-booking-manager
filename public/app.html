@@ -4785,20 +4785,19 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
 
   const overlay = document.createElement('div');
   overlay.id = modalId;
-
-  // IMPORTANT: on utilise la classe "modal" existante (overlay plein écran)
-  overlay.className = 'modal';
+  overlay.className = 'modal kpi-generic-modal';
   overlay.innerHTML = `
-    <div class="modal-box" style="background:#F5F2EC; border-radius:16px; width:min(720px, 92vw); max-height:80vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.15);">
+    <div class="modal-box kpi-modal-box" style="background:#F5F2EC; box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <div class="kpi-modal-handle"></div>
       <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.08);">
-        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+        <h3 style="margin:0; display:flex; align-items:center; gap:10px; font-size:17px;">
           <i class="fas fa-list"></i> ${titleText}
         </h3>
-        <button class="btn btn-ghost" data-close="1">
+        <button class="btn btn-ghost" data-close="1" style="width:32px;height:32px;border-radius:8px;background:rgba(0,0,0,.07);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
           <i class="fas fa-times"></i>
         </button>
       </div>
-      <div class="modal-body" id="${modalId}Content" style="padding:16px 18px;"></div>
+      <div class="modal-body" id="${modalId}Content" style="padding:16px 18px; overflow-y:auto; -webkit-overflow-scrolling:touch;"></div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -5141,15 +5140,15 @@ const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voya
                 </div>`
               : '';
             
-            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0; box-sizing:border-box; width:100%; overflow:hidden;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px;">
-                <div style="font-weight:900; font-size:15px; color:${color}; flex-shrink:0;">${riskLabel} — ${score}/100</div>
-                <div style="font-weight:600; opacity:0.7; font-size:13px; text-align:right; min-width:0; word-break:break-word;">${prop}</div>
+            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="font-weight:900; font-size:16px; color:${color};">${riskLabel} — ${score}/100</div>
+                <div style="font-weight:600; opacity:0.7;">${prop}</div>
               </div>
-              <div style="opacity:.85; font-size:13px; margin-bottom:4px; word-break:break-word;">
+              <div style="opacity:.85; font-size:14px; margin-bottom:4px;">
                 📅 ${start} → ${end} • 👤 ${name}
               </div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:12px;">${r.riskSummary}</div>` : ''}
+              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:13px;">${r.riskSummary}</div>` : ''}
               ${tagsHtml}
             </div>`;
           }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté pour les réservations à venir.</div>`;
@@ -9842,96 +9841,81 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() { reapplyOrderToDOM(); }, 2000);
 });
 </script>
+</body>
+</html>
 
 <style>
 /* ============================================
-   📱 KPI MODALES → BOTTOM SHEETS SUR MOBILE
+   📱 KPI GENERIC MODALS → BOTTOM SHEETS
    ============================================ */
-@media (max-width: 768px) {
 
-  /* La modale prend tout l'écran en position fixe */
-  .booking-modal {
+/* Desktop : centré comme avant */
+.kpi-modal-box {
+  border-radius: 16px;
+  width: min(720px, 92vw);
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-modal-box .modal-body {
+  max-height: calc(80vh - 60px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kpi-modal-handle { display: none; }
+
+/* Mobile : bottom sheet */
+@media (max-width: 768px) {
+  .kpi-generic-modal {
     align-items: flex-end !important;
   }
 
-  /* Le contenu monte du bas comme un bottom sheet */
-  .booking-modal .modal-content {
+  .kpi-modal-box {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 85vh !important;
     border-radius: 20px 20px 0 0 !important;
-    animation: bottomSheetIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) !important;
-    margin: 0 !important;
-    padding-bottom: env(safe-area-inset-bottom, 16px);
+    max-height: 82vh !important;
+    animation: kpiSheetIn 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  @keyframes bottomSheetIn {
-    from { transform: translateY(100%); opacity: 1; }
-    to   { transform: translateY(0);    opacity: 1; }
+  .kpi-modal-box .modal-body {
+    max-height: calc(82vh - 65px) !important;
+    padding-bottom: 24px !important;
   }
 
-  /* Poignée visuelle en haut du sheet */
-  .booking-modal .modal-header::before {
-    content: '';
+  /* Poignée */
+  .kpi-modal-handle {
     display: block;
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
     width: 36px;
     height: 4px;
-    border-radius: 2px;
     background: rgba(0,0,0,0.15);
+    border-radius: 2px;
+    margin: 10px auto 0;
   }
 
-  .booking-modal .modal-header {
-    position: relative;
-    padding-top: 28px !important;
-  }
-
-  /* Header plus compact */
-  .booking-modal .modal-header h2 {
-    font-size: 17px !important;
-  }
-
-  /* Contenu scrollable avec padding bottom */
-  .booking-modal .reservation-details,
-  .booking-modal .modal-body {
-    padding: 16px !important;
-    padding-bottom: 32px !important;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Les modales de détail de réservation aussi */
-  #detailsModal .modal-content,
-  #newReservationModal .modal-content,
-  #editModal .modal-content,
-  #cleaningTodayModal .modal-content,
-  #todayMovesModal .modal-content,
-  #cleaning48hModal .modal-content,
-  #topRisksModal .modal-content,
-  #occupancyDetailsModal .modal-content,
-  #activePropertiesModal .modal-content,
-  #depositsModal .modal-content {
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: 85vh !important;
-    border-radius: 20px 20px 0 0 !important;
-  }
-  /* Empêcher le débordement latéral dans tout contenu de modale */
-  .booking-modal .modal-content,
-  .booking-modal .reservation-details,
-  .booking-modal .modal-body {
-    overflow-x: hidden !important;
+  /* Risques : cartes sans débordement */
+  #topRisksModalContent > div {
     box-sizing: border-box !important;
+    width: 100% !important;
+    overflow: hidden !important;
   }
 
-  /* Safe area bas iPhone */
-  .booking-modal .modal-content {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  /* Arrivées/Départs : items sans débordement */
+  #todayMovesModalContent > div,
+  #cleaning48hModalContent > div {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
   }
 }
+
+@keyframes kpiSheetIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
 </style>
-</body>
-</html>
