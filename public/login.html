@@ -411,39 +411,35 @@
     const FACE_ID_KEY = 'lcc_faceid_enabled';
     const FACE_ID_TOKEN_KEY = 'lcc_faceid_token';
 
-    function getBiometricPlugin() {
-      // Capacitor expose les plugins natifs via window.Capacitor.Plugins
-      return window.Capacitor?.Plugins?.BiometricAuth || null;
+    // ✅ Bridge natif iOS via AppDelegate (LocalAuthentication)
+    function isBiometricAvailable() {
+      return new Promise(resolve => {
+        if (!IS_NATIVE || !window._checkBiometryAvailable) {
+          console.warn('🔍 Face ID bridge non disponible');
+          return resolve(false);
+        }
+        window._faceIDCheckCallback = function(result) {
+          console.log('🔍 Face ID disponible:', result);
+          resolve(result === true);
+        };
+        window._checkBiometryAvailable(window._faceIDCheckCallback);
+        setTimeout(() => resolve(false), 3000); // timeout sécurité
+      });
     }
 
-    async function isBiometricAvailable() {
-      try {
-        if (!IS_NATIVE) return false;
-        const plugin = getBiometricPlugin();
-        if (!plugin) { console.warn('BiometricAuth plugin non trouvé'); return false; }
-        const result = await plugin.checkBiometry();
-        console.log('🔍 Biometric check:', result);
-        return result?.isAvailable === true;
-      } catch (e) {
-        console.warn('isBiometricAvailable error:', e.message);
-        return false;
-      }
-    }
-
-    async function authenticateWithFaceID() {
-      try {
-        const plugin = getBiometricPlugin();
-        if (!plugin) throw new Error('Plugin BiometricAuth indisponible');
-        await plugin.authenticate({
-          reason: 'Accédez à votre espace Boostinghost',
-          cancelTitle: 'Annuler',
-          allowDeviceCredential: true,
-        });
-        return true;
-      } catch (e) {
-        console.warn('Face ID annulé ou échoué:', e.message);
-        return false;
-      }
+    function authenticateWithFaceID() {
+      return new Promise(resolve => {
+        if (!IS_NATIVE || !window._authenticateWithFaceID) {
+          console.warn('🔐 Face ID bridge non disponible');
+          return resolve(false);
+        }
+        window._faceIDAuthCallback = function(result) {
+          console.log('🔐 Face ID résultat:', result);
+          resolve(result === true);
+        };
+        window._authenticateWithFaceID(window._faceIDAuthCallback);
+        setTimeout(() => resolve(false), 30000); // timeout 30s
+      });
     }
 
     async function initFaceID() {
