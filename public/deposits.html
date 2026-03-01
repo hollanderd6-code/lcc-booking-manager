@@ -2178,25 +2178,93 @@ async function createDeposit() {
     });
 
     const data = await res.json();
+    console.log('🔍 Réponse serveur caution:', data);
     if (!res.ok) {
-      throw new Error(data.error || 'Erreur lors de la création de la caution');
+      throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la création de la caution');
     }
 
-    console.log('✅ Caution créée, réponse serveur:', data);
-
+    const checkoutUrl = data.checkoutUrl || data.checkout_url || data.url || data.link;
+    
     closeDepositModal();
-    
     await new Promise(resolve => setTimeout(resolve, 300));
-    
     await loadReservationsWithDeposits();
 
-    alert("Lien créé avec succès !");
+    if (checkoutUrl) {
+      showLinkModal('Caution créée ✅', checkoutUrl);
+    }
   } catch (e) {
-    console.error(e);
+    console.error('Erreur createDeposit:', e);
     errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
   }
 }
 
+
+
+// ============================================
+// MODAL AFFICHAGE DU LIEN (caution + paiement)
+// ============================================
+function showLinkModal(title, url) {
+  // Créer la modale si elle n'existe pas
+  let modal = document.getElementById('linkResultModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'linkResultModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+          <h2 id="linkResultTitle"></h2>
+          <button class="modal-close" id="linkResultClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding:24px;">
+          <p style="font-size:14px; color:#6b7280; margin-bottom:12px;">
+            Envoyez ce lien à votre voyageur pour qu'il puisse payer en ligne.
+          </p>
+          <div style="display:flex; gap:8px; align-items:center; background:#f3f4f6; border-radius:10px; padding:10px 14px; margin-bottom:16px; word-break:break-all;">
+            <i class="fas fa-link" style="color:#1A7A5E; flex-shrink:0;"></i>
+            <span id="linkResultUrl" style="font-size:13px; flex:1;"></span>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" id="linkResultCopy" style="flex:1;">
+              <i class="fas fa-copy"></i> Copier le lien
+            </button>
+            <a class="btn btn-ghost" id="linkResultOpen" target="_blank" style="flex:1; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <i class="fas fa-external-link-alt"></i> Ouvrir
+            </a>
+          </div>
+          <div id="linkResultCopied" style="display:none; text-align:center; margin-top:10px; color:#1A7A5E; font-size:13px; font-weight:600;">
+            ✅ Lien copié dans le presse-papiers !
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('linkResultClose').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+    document.getElementById('linkResultCopy').addEventListener('click', async () => {
+      const urlEl = document.getElementById('linkResultUrl');
+      try {
+        await navigator.clipboard.writeText(urlEl.textContent);
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = urlEl.textContent;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      const copiedEl = document.getElementById('linkResultCopied');
+      copiedEl.style.display = 'block';
+      setTimeout(() => copiedEl.style.display = 'none', 3000);
+    });
+  }
+  
+  document.getElementById('linkResultTitle').textContent = title;
+  document.getElementById('linkResultUrl').textContent = url;
+  document.getElementById('linkResultOpen').href = url;
+  document.getElementById('linkResultCopied').style.display = 'none';
+  modal.classList.add('active');
+}
 
     document.addEventListener('DOMContentLoaded', () => {
       const refreshBtn = document.getElementById('refreshBtn');
@@ -2538,16 +2606,24 @@ async function createPayment() {
     });
 
     const data = await res.json();
+    console.log('🔍 Réponse serveur paiement:', data);
     if (!res.ok) {
-      throw new Error(data.error || 'Erreur lors de la création du paiement');
+      throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la création du paiement');
     }
 
+    const checkoutUrl = data.checkoutUrl || data.checkout_url || data.url || data.link || data.payment_url;
+    
     closePaymentModal();
     await new Promise(resolve => setTimeout(resolve, 300));
     await loadPayments();
-    alert('Lien de paiement créé avec succès !');
+    
+    if (checkoutUrl) {
+      showLinkModal('Lien de paiement créé ✅', checkoutUrl);
+    } else {
+      alert('Lien de paiement créé avec succès !');
+    }
   } catch (e) {
-    console.error(e);
+    console.error('Erreur createPayment:', e);
     errorEl.textContent = e.message || 'Erreur lors de la création du paiement.';
   }
 }
