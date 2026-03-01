@@ -1221,10 +1221,14 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 <i class="fas fa-list"></i>
 <span>Réservations &amp; cautions</span>
 </div>
+<div style="display:flex;align-items:center;gap:8px;">
+<button class="btn btn-primary btn-xs" onclick="openFreeDepositModal()">
+<i class="fas fa-plus"></i> Caution libre
+</button>
 <button class="btn btn-ghost btn-xs" id="refreshBtn">
-<i class="fas fa-sync-alt"></i>
-              Actualiser
-            </button>
+<i class="fas fa-sync-alt"></i> Actualiser
+</button>
+</div>
 </div>
 <p class="card-subtitle">
             Pour chaque réservation, vous pouvez créer un lien Stripe de caution avec un montant libre.
@@ -1306,11 +1310,14 @@ Connecter mon compte Stripe
 <i class="fas fa-euro-sign"></i>
 <span>Paiements de locations</span>
 </div>
-<div style="display: flex; align-items: center; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 8px;">
 <div id="stripeStatusBadge" class="stripe-status-pill not-connected" style="display:none;">
 <i class="fas fa-circle" style="font-size: 8px;"></i>
 <span>Stripe non connecté</span>
 </div>
+<button class="btn btn-primary btn-xs" onclick="openFreePaymentModal()">
+<i class="fas fa-plus"></i> Paiement libre
+</button>
 <button class="btn btn-ghost btn-xs" id="refreshPaymentsBtn">
 <i class="fas fa-sync-alt"></i>
 Actualiser
@@ -1372,6 +1379,63 @@ Actualiser
 </div>
 </main>
 </div>
+
+<!-- MODAL: Paiement libre (sans réservation) -->
+<div class="modal" id="freePaymentModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2>Paiement libre</h2>
+<button class="modal-close" id="freePaymentModalClose"><i class="fas fa-times"></i></button>
+</div>
+<div class="modal-body">
+<div class="form-row">
+  <label for="freePaymentName">Nom du client</label>
+  <input id="freePaymentName" type="text" placeholder="Ex: Jean Dupont"/>
+</div>
+<div class="form-row">
+  <label for="freePaymentAmount">Montant (€)</label>
+  <input id="freePaymentAmount" min="1" step="1" type="number" placeholder="Ex: 500"/>
+  <div class="small-hint">Le montant sera encaissé via Stripe directement sur votre compte.</div>
+</div>
+<div class="form-row">
+  <label for="freePaymentDescription">Description</label>
+  <input id="freePaymentDescription" type="text" placeholder="Ex: Location villa août 2026"/>
+</div>
+<div class="small-hint" id="freePaymentError" style="color:#b91c1c;"></div>
+</div>
+<div class="modal-actions">
+  <button class="btn btn-ghost" id="freePaymentCancelBtn">Annuler</button>
+  <button class="btn btn-primary" id="freePaymentCreateBtn">Générer le lien</button>
+</div>
+</div>
+</div>
+
+<!-- MODAL: Caution libre (sans réservation) -->
+<div class="modal" id="freeDepositModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2>Caution libre</h2>
+<button class="modal-close" id="freeDepositModalClose"><i class="fas fa-times"></i></button>
+</div>
+<div class="modal-body">
+<div class="form-row">
+  <label for="freeDepositName">Nom du client</label>
+  <input id="freeDepositName" type="text" placeholder="Ex: Jean Dupont"/>
+</div>
+<div class="form-row">
+  <label for="freeDepositAmount">Montant de la caution (€)</label>
+  <input id="freeDepositAmount" min="1" step="1" type="number" placeholder="Ex: 200"/>
+  <div class="small-hint">Le montant sera autorisé via Stripe (empreinte bancaire). Vous pourrez le débiter ou le libérer ensuite.</div>
+</div>
+<div class="small-hint" id="freeDepositError" style="color:#b91c1c;"></div>
+</div>
+<div class="modal-actions">
+  <button class="btn btn-ghost" id="freeDepositCancelBtn">Annuler</button>
+  <button class="btn btn-primary" id="freeDepositCreateBtn">Générer le lien</button>
+</div>
+</div>
+</div>
+
 <!-- MODAL: nouvelle caution -->
 <!-- MODAL PAIEMENT -->
 <div class="modal" id="paymentModal">
@@ -2357,6 +2421,18 @@ function showLinkModal(title, url) {
       document.getElementById('paymentCancelBtn').addEventListener('click', closePaymentModal);
       document.getElementById('paymentCreateBtn').addEventListener('click', createPayment);
 
+      // Modales libres
+      document.getElementById('freePaymentModalClose').addEventListener('click', closeFreePaymentModal);
+      document.getElementById('freePaymentCancelBtn').addEventListener('click', closeFreePaymentModal);
+      document.getElementById('freePaymentCreateBtn').addEventListener('click', createFreePayment);
+      document.getElementById('freeDepositModalClose').addEventListener('click', closeFreeDepositModal);
+      document.getElementById('freeDepositCancelBtn').addEventListener('click', closeFreeDepositModal);
+      document.getElementById('freeDepositCreateBtn').addEventListener('click', createFreeDeposit);
+
+      // Fermer modales libres en cliquant sur l'overlay
+      document.getElementById('freePaymentModal').addEventListener('click', (e) => { if(e.target === e.currentTarget) closeFreePaymentModal(); });
+      document.getElementById('freeDepositModal').addEventListener('click', (e) => { if(e.target === e.currentTarget) closeFreeDepositModal(); });
+
       loadReservationsWithDeposits();
       loadPropertiesForFilter();
     });
@@ -2567,8 +2643,16 @@ function renderPaymentsTable() {
   const select = document.getElementById('propertyFilterPayments');
   const selectedPropertyId = select ? select.value : '';
   
+  // Réservations directes uniquement (pas Airbnb, Booking, etc.)
+  const PLATFORM_SOURCES = ['airbnb', 'booking', 'vrbo', 'abritel', 'homeaway', 'expedia'];
+  const isDirectReservation = (r) => {
+    if (!r.source) return true;
+    const src = r.source.toLowerCase();
+    return !PLATFORM_SOURCES.some(p => src.includes(p));
+  };
+
   const filtered = allPayments.filter((r) =>
-    !selectedPropertyId || r.propertyId === selectedPropertyId
+    (!selectedPropertyId || r.propertyId === selectedPropertyId) && isDirectReservation(r)
   );
 
   // Séparer : avec paiement en premier, sans paiement ensuite
@@ -2577,7 +2661,7 @@ function renderPaymentsTable() {
   const sorted = [...withPayment, ...withoutPayment];
 
   if (!sorted.length) {
-    container.innerHTML = '<p class="empty-state">Aucune réservation pour ce filtre.</p>';
+    container.innerHTML = '<p class="empty-state">Aucune réservation directe trouvée. Les réservations Airbnb, Booking, etc. sont exclues.</p>';
     return;
   }
 
@@ -2799,6 +2883,113 @@ async function loadPropertiesForPaymentsHistoryFilter() {
     });
     select.addEventListener('change', renderPaymentsHistoryTable);
   } catch (e) { console.error(e); }
+}
+
+// ============================================
+// PAIEMENT LIBRE & CAUTION LIBRE
+// ============================================
+function openFreePaymentModal() {
+  document.getElementById('freePaymentName').value = '';
+  document.getElementById('freePaymentAmount').value = '';
+  document.getElementById('freePaymentDescription').value = '';
+  document.getElementById('freePaymentError').textContent = '';
+  document.getElementById('freePaymentModal').classList.add('active');
+}
+
+function closeFreePaymentModal() {
+  document.getElementById('freePaymentModal').classList.remove('active');
+}
+
+function openFreeDepositModal() {
+  document.getElementById('freeDepositName').value = '';
+  document.getElementById('freeDepositAmount').value = '';
+  document.getElementById('freeDepositError').textContent = '';
+  document.getElementById('freeDepositModal').classList.add('active');
+}
+
+function closeFreeDepositModal() {
+  document.getElementById('freeDepositModal').classList.remove('active');
+}
+
+async function createFreePayment() {
+  const errorEl = document.getElementById('freePaymentError');
+  errorEl.textContent = '';
+  const name = document.getElementById('freePaymentName').value.trim();
+  const amount = parseFloat(document.getElementById('freePaymentAmount').value);
+  const description = document.getElementById('freePaymentDescription').value.trim();
+
+  if (!amount || amount <= 0) {
+    errorEl.textContent = 'Merci de saisir un montant valide.';
+    return;
+  }
+
+  const btn = document.getElementById('freePaymentCreateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Création en cours…';
+
+  try {
+    const res = await fetch(API_BASE + '/payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+      body: JSON.stringify({
+        reservationUid: 'free_' + Date.now(),
+        amount,
+        description: description || (name ? 'Paiement – ' + name : 'Paiement libre'),
+        freeMode: true,
+        clientName: name
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.message || 'Erreur');
+    const checkoutUrl = data.checkoutUrl || data.checkout_url || data.url || data.link;
+    closeFreePaymentModal();
+    if (checkoutUrl) showLinkModal('Lien de paiement créé ✅', checkoutUrl);
+  } catch(e) {
+    errorEl.textContent = e.message || 'Erreur lors de la création.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Générer le lien';
+  }
+}
+
+async function createFreeDeposit() {
+  const errorEl = document.getElementById('freeDepositError');
+  errorEl.textContent = '';
+  const name = document.getElementById('freeDepositName').value.trim();
+  const amount = parseFloat(document.getElementById('freeDepositAmount').value);
+
+  if (!amount || amount <= 0) {
+    errorEl.textContent = 'Merci de saisir un montant valide.';
+    return;
+  }
+
+  const btn = document.getElementById('freeDepositCreateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Création en cours…';
+
+  try {
+    const res = await fetch(API_BASE + '/deposits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+      body: JSON.stringify({
+        reservationUid: 'free_' + Date.now(),
+        amount,
+        freeMode: true,
+        clientName: name
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.message || 'Erreur');
+    const checkoutUrl = data.checkoutUrl || data.checkout_url || data.url;
+    closeFreeDepositModal();
+    if (checkoutUrl) showLinkModal('Caution créée ✅', checkoutUrl);
+    else await loadReservationsWithDeposits();
+  } catch(e) {
+    errorEl.textContent = e.message || 'Erreur lors de la création.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Générer le lien';
+  }
 }
 
 function togglePaymentDetails(reservationUid, event) {
