@@ -11184,22 +11184,28 @@ app.post('/api/deposits',
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
 
-    const { reservationUid, amount } = req.body;
+    const { reservationUid, amount, freeMode, clientName } = req.body;
 
     if (!reservationUid || !amount || amount <= 0) {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
     }
 
-    // Retrouver la réservation dans les réservations du user
-    const result = findReservationByUidForUser(reservationUid, user.id);
-    if (!result) {
-      return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
+    // Retrouver la réservation (sauf en mode libre)
+    let reservation = null;
+    let property = null;
+
+    if (!freeMode && !reservationUid.startsWith('free_')) {
+      const result = findReservationByUidForUser(reservationUid, userId);
+      if (!result) {
+        return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
+      }
+      reservation = result.reservation;
+      property = result.property;
     }
 
-    const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
 
-    // Créer l'objet "caution" en mémoire + fichier JSON
+    // Créer l'objet "caution"
     const depositId = 'dep_' + Date.now().toString(36);
     const deposit = {
       id: depositId,
@@ -11211,8 +11217,8 @@ app.post('/api/deposits',
       checkoutUrl: null,
       createdAt: new Date().toISOString()
     };
-    // ✅ NOUVEAU : Sauvegarder en PostgreSQL
-  const saved = await saveDepositToDB(deposit, user.id, property.id);
+    // Sauvegarder en PostgreSQL
+  const saved = await saveDepositToDB(deposit, userId, property ? property.id : null);
   
   if (!saved) {
     return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -11230,8 +11236,8 @@ app.post('/api/deposits',
         price_data: {
           currency: 'eur',
           product_data: {
-            name: `Caution séjour – ${property ? property.name : 'Logement'}`,
-            description: `Du ${reservation.start} au ${reservation.end}`
+            name: clientName ? `Caution – ${clientName}` : `Caution séjour – ${property ? property.name : 'Logement'}`,
+            description: reservation ? `Du ${reservation.start} au ${reservation.end}` : (clientName || 'Caution libre')
           },
           unit_amount: amountCents
         },
@@ -11308,19 +11314,25 @@ app.post('/api/payments', async (req, res) => {
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
 
-    const { reservationUid, amount, description } = req.body;
+    const { reservationUid, amount, description, freeMode, clientName } = req.body;
 
     if (!reservationUid || !amount || amount <= 0) {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
     }
 
-    // Retrouver la réservation
-    const result = findReservationByUidForUser(reservationUid, user.id);
-    if (!result) {
-      return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
+    // Retrouver la réservation (sauf en mode libre)
+    let reservation = null;
+    let property = null;
+
+    if (!freeMode && !reservationUid.startsWith('free_')) {
+      const result = findReservationByUidForUser(reservationUid, user.id);
+      if (!result) {
+        return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
+      }
+      reservation = result.reservation;
+      property = result.property;
     }
 
-    const { reservation, property } = result;
     const amountCents = Math.round(amount * 100);
     
     // 💰 Calcul de la commission (8% pour la plateforme)
@@ -11342,7 +11354,7 @@ app.post('/api/payments', async (req, res) => {
     };
     
     // Sauvegarder en PostgreSQL
-    const saved = await savePaymentToDB(payment, user.id, property.id);
+    const saved = await savePaymentToDB(payment, user.id, property ? property.id : null);
     
     if (!saved) {
       return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -11358,8 +11370,8 @@ app.post('/api/payments', async (req, res) => {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: description || `Location – ${property.name}`,
-            description: `Du ${reservation.start} au ${reservation.end}`
+            name: description || (clientName ? `Paiement – ${clientName}` : (property ? `Location – ${property.name}` : 'Paiement')),
+            description: reservation ? `Du ${reservation.start} au ${reservation.end}` : (clientName || 'Paiement libre')
           },
           unit_amount: amountCents
         },
@@ -11371,7 +11383,7 @@ app.post('/api/payments', async (req, res) => {
         metadata: {
           payment_id: payment.id,
           reservation_uid: reservationUid,
-          property_id: property.id,
+          property_id: property ? property.id : null,
           user_id: user.id,
           payment_type: 'location'
         }
@@ -11379,7 +11391,7 @@ app.post('/api/payments', async (req, res) => {
       metadata: {
         payment_id: payment.id,
         reservation_uid: reservationUid,
-        property_id: property.id,
+        property_id: property ? property.id : null,
         user_id: user.id,
         payment_type: 'location'
       },
