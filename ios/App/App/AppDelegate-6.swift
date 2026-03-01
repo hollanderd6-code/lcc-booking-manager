@@ -102,6 +102,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             webView.scrollView.refreshControl = nil
             webView.alpha = 0
             webView.navigationDelegate = self
+
+            // ✅ AJOUT : enregistrer le handler tokenSync pour recevoir le token depuis le JS
+            webView.configuration.userContentController
+                .add(TokenSyncHandler(appDelegate: self), name: "tokenSync")
         }
 
         window.rootViewController = capVC
@@ -302,6 +306,18 @@ extension AppDelegate: WKNavigationDelegate {
             window.webkit.messageHandlers.tokenSync && 
             window.webkit.messageHandlers.tokenSync.postMessage(token);
         };
+
+        // ✅ AJOUT : intercepter automatiquement tout setItem('lcc_token', ...) dans localStorage
+        (function() {
+            var _originalSetItem = localStorage.setItem.bind(localStorage);
+            localStorage.setItem = function(key, value) {
+                _originalSetItem(key, value);
+                if (key === 'lcc_token' && value && value !== 'undefined' && value !== 'null') {
+                    window._syncTokenToNative && window._syncTokenToNative(value);
+                    console.log('[Auth] 🔄 Token intercepté et synchronisé vers UserDefaults');
+                }
+            };
+        })();
         """
         webView.evaluateJavaScript(bridgeJS, completionHandler: nil)
         
@@ -365,5 +381,25 @@ extension AppDelegate: MessagingDelegate {
         guard let token = fcmToken else { return }
         print("📱 FCM Token reçu: \(token.prefix(20))...")
         DispatchQueue.main.async { self.injectFCMToken(token) }
+    }
+}
+
+// ============================================
+// TOKEN SYNC HANDLER — reçoit le token depuis le JS et le sauvegarde dans UserDefaults
+// ============================================
+class TokenSyncHandler: NSObject, WKScriptMessageHandler {
+    weak var appDelegate: AppDelegate?
+
+    init(appDelegate: AppDelegate) {
+        self.appDelegate = appDelegate
+    }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        if let token = message.body as? String, !token.isEmpty,
+           token != "undefined", token != "null" {
+            appDelegate?.saveTokenToUserDefaults(token)
+            print("✅ Token synchronisé JS → UserDefaults")
+        }
     }
 }
