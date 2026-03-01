@@ -79,6 +79,40 @@
         </button>
       </form>
 
+      <!-- Bouton Face ID - visible uniquement sur iOS natif si activé -->
+      <div id="faceIdContainer" style="display:none; margin-top: 16px; text-align: center;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <div style="flex:1; height:1px; background: #e5e7eb;"></div>
+          <span style="color: #9ca3af; font-size: 13px;">ou</span>
+          <div style="flex:1; height:1px; background: #e5e7eb;"></div>
+        </div>
+        <button id="faceIdBtn" style="
+          width: 100%;
+          padding: 14px;
+          background: #000;
+          color: white;
+          border: none;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        ">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+            <path d="M8 9.5C8 8.67 8.67 8 9.5 8S11 8.67 11 9.5"/>
+            <path d="M13 9.5C13 8.67 13.67 8 14.5 8S16 8.67 16 9.5"/>
+            <path d="M8.5 14.5s1 2 3.5 2 3.5-2 3.5-2"/>
+            <line x1="12" y1="5" x2="12" y2="7"/>
+            <line x1="12" y1="17" x2="12" y2="19"/>
+          </svg>
+          Se connecter avec Face ID
+        </button>
+      </div>
+
       <div class="auth-footer-text">
         Pas encore de compte ? <a href="/register.html" class="auth-link">Créer un compte</a>
       </div>
@@ -322,6 +356,8 @@
           localStorage.setItem('lcc_token', data.token);
           // ✅ Sync vers UserDefaults iOS pour persistance
           if (window._syncTokenToNative) window._syncTokenToNative(data.token);
+          // Proposer Face ID si dispo
+          if (window._onLoginSuccess) await window._onLoginSuccess(data.token);
 
           // Stocker le type de compte
           const accountType = data.accountType || (data.subAccount ? 'sub' : 'main');
@@ -368,6 +404,97 @@
     }
 
     console.log('🟢 [V3] Script principal END');
+
+    // ============================================================
+    // FACE ID / BIOMÉTRIE
+    // ============================================================
+    const FACE_ID_KEY = 'lcc_faceid_enabled';
+    const FACE_ID_TOKEN_KEY = 'lcc_faceid_token';
+
+    async function isBiometricAvailable() {
+      try {
+        if (!IS_NATIVE || !window.Capacitor) return false;
+        const { BiometricAuth } = await import('https://unpkg.com/@aparajita/capacitor-biometric-auth@latest/dist/esm/index.js').catch(() => null) || {};
+        if (!BiometricAuth) return false;
+        const result = await BiometricAuth.checkBiometry();
+        return result?.isAvailable === true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function authenticateWithFaceID() {
+      try {
+        const { BiometricAuth } = await import('https://unpkg.com/@aparajita/capacitor-biometric-auth@latest/dist/esm/index.js').catch(() => null) || {};
+        if (!BiometricAuth) throw new Error('Plugin indisponible');
+        await BiometricAuth.authenticate({
+          reason: 'Accédez à votre espace Boostinghost',
+          cancelTitle: 'Annuler',
+          allowDeviceCredential: true,
+        });
+        return true;
+      } catch (e) {
+        console.warn('Face ID annulé ou échoué:', e.message);
+        return false;
+      }
+    }
+
+    async function initFaceID() {
+      if (!IS_NATIVE) return;
+
+      const faceIdEnabled = localStorage.getItem(FACE_ID_KEY) === 'true';
+      const savedToken = localStorage.getItem(FACE_ID_TOKEN_KEY);
+
+      // Si Face ID activé et token sauvegardé → déclencher automatiquement
+      if (faceIdEnabled && savedToken) {
+        const container = document.getElementById('faceIdContainer');
+        if (container) container.style.display = 'block';
+
+        // Auto-déclencher après un court délai
+        setTimeout(async () => {
+          const ok = await authenticateWithFaceID();
+          if (ok) {
+            localStorage.setItem('lcc_token', savedToken);
+            if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
+            window.location.href = 'app.html';
+          }
+        }, 500);
+      }
+
+      // Bouton Face ID manuel
+      const faceIdBtn = document.getElementById('faceIdBtn');
+      if (faceIdBtn && faceIdEnabled && savedToken) {
+        document.getElementById('faceIdContainer').style.display = 'block';
+        faceIdBtn.addEventListener('click', async () => {
+          const ok = await authenticateWithFaceID();
+          if (ok) {
+            localStorage.setItem('lcc_token', savedToken);
+            if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
+            window.location.href = 'app.html';
+          }
+        });
+      }
+    }
+
+    // Proposer d'activer Face ID après un login réussi
+    window._onLoginSuccess = async function(token) {
+      if (!IS_NATIVE) return;
+      const alreadyEnabled = localStorage.getItem(FACE_ID_KEY) === 'true';
+      if (alreadyEnabled) return;
+
+      const available = await isBiometricAvailable();
+      if (!available) return;
+
+      const confirm = window.confirm('Activer Face ID pour vous connecter plus rapidement ?');
+      if (confirm) {
+        localStorage.setItem(FACE_ID_KEY, 'true');
+        localStorage.setItem(FACE_ID_TOKEN_KEY, token);
+        console.log('✅ Face ID activé');
+      }
+    };
+
+    // Init Face ID au chargement
+    document.addEventListener('DOMContentLoaded', initFaceID);
   </script>
 
   <style>
