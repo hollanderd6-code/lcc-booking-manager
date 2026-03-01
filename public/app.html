@@ -4783,28 +4783,26 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
   function ensureGenericModal(modalId, titleText) {
   if (document.getElementById(modalId)) return;
 
-  const overlay = document.createElement('div');
-  overlay.id = modalId;
-  overlay.className = 'modal kpi-generic-modal';
-  overlay.innerHTML = `
-    <div class="modal-box kpi-modal-box" style="background:#F5F2EC; box-shadow:0 20px 60px rgba(0,0,0,.2);">
-      <div class="kpi-modal-handle"></div>
-      <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.08);">
-        <h3 style="margin:0; display:flex; align-items:center; gap:10px; font-size:17px;">
-          <i class="fas fa-list"></i> ${titleText}
-        </h3>
-        <button class="btn btn-ghost" data-close="1" style="width:32px;height:32px;border-radius:8px;background:rgba(0,0,0,.07);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+  const modal = document.createElement('div');
+  modal.id = modalId;
+  modal.className = 'booking-modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" id="${modalId}Overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>${titleText}</h2>
+        <button class="modal-close" id="${modalId}Close">
           <i class="fas fa-times"></i>
         </button>
       </div>
-      <div class="modal-body" id="${modalId}Content" style="padding:16px 18px; overflow-y:auto; -webkit-overflow-scrolling:touch;"></div>
+      <div class="reservation-details" id="${modalId}Content"></div>
     </div>
   `;
-  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
 
-  const close = () => { overlay.classList.remove('active'); overlay.style.display = 'none'; };
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelectorAll('[data-close="1"]').forEach(btn => btn.addEventListener('click', close));
+  const close = () => modal.classList.remove('active');
+  document.getElementById(modalId + 'Overlay').addEventListener('click', close);
+  document.getElementById(modalId + 'Close').addEventListener('click', close);
 }
 
 
@@ -9843,79 +9841,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-
-<style>
-/* ============================================
-   📱 KPI GENERIC MODALS → BOTTOM SHEETS
-   ============================================ */
-
-/* Desktop : centré comme avant */
-.kpi-modal-box {
-  border-radius: 16px;
-  width: min(720px, 92vw);
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.kpi-modal-box .modal-body {
-  max-height: calc(80vh - 60px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.kpi-modal-handle { display: none; }
-
-/* Mobile : bottom sheet */
-@media (max-width: 768px) {
-  .kpi-generic-modal {
-    align-items: flex-end !important;
-  }
-
-  .kpi-modal-box {
-    width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 20px 20px 0 0 !important;
-    max-height: 82vh !important;
-    animation: kpiSheetIn 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .kpi-modal-box .modal-body {
-    max-height: calc(82vh - 65px) !important;
-    padding-bottom: 24px !important;
-  }
-
-  /* Poignée */
-  .kpi-modal-handle {
-    display: block;
-    width: 36px;
-    height: 4px;
-    background: rgba(0,0,0,0.15);
-    border-radius: 2px;
-    margin: 10px auto 0;
-  }
-
-  /* Risques : cartes sans débordement */
-  #topRisksModalContent > div {
-    box-sizing: border-box !important;
-    width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  /* Arrivées/Départs : items sans débordement */
-  #todayMovesModalContent > div,
-  #cleaning48hModalContent > div {
-    box-sizing: border-box !important;
-    width: 100% !important;
-    overflow: hidden !important;
-    word-break: break-word !important;
-  }
-}
-
-@keyframes kpiSheetIn {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-</style>
