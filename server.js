@@ -11122,7 +11122,7 @@ app.post('/api/deposits',
     }
 
     // Retrouver la réservation dans les réservations du user
-    const result = findReservationByUidForUser(reservationUid, user.id);
+    const result = findReservationByUidForUser(reservationUid, userId);
     if (!result) {
       return res.status(404).json({ error: 'Réservation non trouvée pour cet utilisateur' });
     }
@@ -11143,7 +11143,7 @@ app.post('/api/deposits',
       createdAt: new Date().toISOString()
     };
     // ✅ NOUVEAU : Sauvegarder en PostgreSQL
-  const saved = await saveDepositToDB(deposit, user.id, property.id);
+  const saved = await saveDepositToDB(deposit, userId, property.id);
   
   if (!saved) {
     return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
@@ -11181,7 +11181,7 @@ app.post('/api/deposits',
       metadata: {
         deposit_id: deposit.id,
         reservation_uid: reservationUid,
-        user_id: user.id
+        user_id: userId
       },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
