@@ -2010,28 +2010,40 @@ function copyDepositLinkByUid(uid) {
           actionsHtml = '<div class="card-hint">Caution déjà gérée</div>';
         }
 
-        // Actions avancées (capture/release) - seulement si pas historique
+        // Actions avancées - toujours affichées si une caution existe
         let advancedActionsHtml = '';
-        if (!isHistory && d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) {
-          const maxAmount = (d.amountCents / 100).toFixed(2);
+        if (!isHistory && d) {
+          const maxAmount = d.amountCents ? (d.amountCents / 100).toFixed(2) : '0.00';
+          const canCapture = d.status === 'paid' || d.status === 'authorized';
+          const canRelease = d.status === 'paid' || d.status === 'authorized';
+          const isPending = d.status === 'pending';
+
           advancedActionsHtml = `
             <div class="deposit-details" id="details-${r.reservationUid}" style="display: none;">
               <div class="details-section">
                 <h4>📋 Informations</h4>
                 <div class="detail-row">
                   <span class="detail-label">ID Caution</span>
-                  <span class="detail-value">${d.id}</span>
+                  <span class="detail-value" style="font-size:11px; word-break:break-all;">${d.id}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Montant autorisé</span>
+                  <span class="detail-label">Montant</span>
                   <span class="detail-value">${maxAmount} €</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Créée le</span>
                   <span class="detail-value">${new Date(d.createdAt || Date.now()).toLocaleString('fr-FR')}</span>
                 </div>
+                ${d.checkoutUrl ? `
+                <div class="detail-row" onclick="event.stopPropagation()">
+                  <span class="detail-label">Lien de paiement</span>
+                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); navigator.clipboard.writeText('${d.checkoutUrl}').then(()=>alert('Lien copié !')).catch(()=>alert('${d.checkoutUrl}'))">
+                    <i class="fas fa-copy"></i> Copier
+                  </button>
+                </div>` : ''}
               </div>
               
+              ${canCapture || canRelease ? `
               <div class="details-actions">
                 <h4>⚡ Actions</h4>
                 
@@ -2060,16 +2072,23 @@ function copyDepositLinkByUid(uid) {
                 <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); releaseDeposit('${d.id}')">
                   <i class="fas fa-check-circle"></i> Libérer (tout ok)
                 </button>
-                <a href="https://dashboard.stripe.com/test/payments" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
+                <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
                   <i class="fas fa-external-link-alt"></i> Voir dans Stripe
                 </a>
-              </div>
+              </div>` : ''}
+              
+              ${isPending ? `
+              <div class="details-actions" style="padding-top:12px; border-top:1px solid var(--border-color);">
+                <p style="font-size:12px; color:#92400e; background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin:0;">
+                  ⏳ En attente du paiement du voyageur. Partagez le lien ci-dessus.
+                </p>
+              </div>` : ''}
             </div>
           `;
         }
 
-        // Icône d'expansion si détails disponibles (pas en historique)
-        const expandIcon = (!isHistory && d && (d.status === 'paid' || d.status === 'authorized' || d.status === 'captured' || d.status === 'released')) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
+        // Icône d'expansion si détails disponibles
+        const expandIcon = (!isHistory && d) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
         // Date d'expiration (seulement si caution PAYÉE et pas historique)
         let expirationBadge = '';
