@@ -316,37 +316,7 @@ async function processArrivalsForToday(pool, io, transporter) {
       }
     }
 
-    if (transporter && successfulSends.length > 0) {
-      for (const send of successfulSends) {
-        if (!send.ownerEmail) continue;
-
-        try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-            to: send.ownerEmail,
-            subject: `Message de bienvenue envoye - ${send.propertyName}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #10B981;">Message de bienvenue envoye</h2>
-                <p>Bonjour ${send.ownerFirstName || ''},</p>
-                <p>Le message de bienvenue automatique a ete envoye a votre voyageur :</p>
-                <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 5px 0;"><strong>Logement :</strong> ${send.propertyName}</p>
-                  <p style="margin: 5px 0;"><strong>Voyageur :</strong> ${send.guestName || 'Non renseigne'}</p>
-                  ${send.guestEmail ? `<p style="margin: 5px 0;"><strong>Email :</strong> ${send.guestEmail}</p>` : ''}
-                </div>
-                <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
-                  Bookingmanage - Gestion simplifiee de vos locations
-                </p>
-              </div>
-            `
-          });
-          console.log(`Email de notification envoye a ${send.ownerEmail}`);
-        } catch (emailError) {
-          console.error('Erreur envoi email:', emailError);
-        }
-      }
-    }
+    // Notification email supprimée
 
     const successCount = results.filter(r => r.success).length;
     console.log(`${successCount}/${results.length} message(s) envoye(s)`);
