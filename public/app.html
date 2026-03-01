@@ -5141,15 +5141,15 @@ const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voya
                 </div>`
               : '';
             
-            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <div style="font-weight:900; font-size:16px; color:${color};">${riskLabel} — ${score}/100</div>
-                <div style="font-weight:600; opacity:0.7;">${prop}</div>
+            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0; box-sizing:border-box; width:100%; overflow:hidden;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px;">
+                <div style="font-weight:900; font-size:15px; color:${color}; flex-shrink:0;">${riskLabel} — ${score}/100</div>
+                <div style="font-weight:600; opacity:0.7; font-size:13px; text-align:right; min-width:0; word-break:break-word;">${prop}</div>
               </div>
-              <div style="opacity:.85; font-size:14px; margin-bottom:4px;">
+              <div style="opacity:.85; font-size:13px; margin-bottom:4px; word-break:break-word;">
                 📅 ${start} → ${end} • 👤 ${name}
               </div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:13px;">${r.riskSummary}</div>` : ''}
+              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:12px;">${r.riskSummary}</div>` : ''}
               ${tagsHtml}
             </div>`;
           }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté pour les réservations à venir.</div>`;
@@ -9842,5 +9842,96 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() { reapplyOrderToDOM(); }, 2000);
 });
 </script>
+
+<style>
+/* ============================================
+   📱 KPI MODALES → BOTTOM SHEETS SUR MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+
+  /* La modale prend tout l'écran en position fixe */
+  .booking-modal {
+    align-items: flex-end !important;
+  }
+
+  /* Le contenu monte du bas comme un bottom sheet */
+  .booking-modal .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    animation: bottomSheetIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) !important;
+    margin: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  @keyframes bottomSheetIn {
+    from { transform: translateY(100%); opacity: 1; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* Poignée visuelle en haut du sheet */
+  .booking-modal .modal-header::before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.15);
+  }
+
+  .booking-modal .modal-header {
+    position: relative;
+    padding-top: 28px !important;
+  }
+
+  /* Header plus compact */
+  .booking-modal .modal-header h2 {
+    font-size: 17px !important;
+  }
+
+  /* Contenu scrollable avec padding bottom */
+  .booking-modal .reservation-details,
+  .booking-modal .modal-body {
+    padding: 16px !important;
+    padding-bottom: 32px !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Les modales de détail de réservation aussi */
+  #detailsModal .modal-content,
+  #newReservationModal .modal-content,
+  #editModal .modal-content,
+  #cleaningTodayModal .modal-content,
+  #todayMovesModal .modal-content,
+  #cleaning48hModal .modal-content,
+  #topRisksModal .modal-content,
+  #occupancyDetailsModal .modal-content,
+  #activePropertiesModal .modal-content,
+  #depositsModal .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85vh !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+  /* Empêcher le débordement latéral dans tout contenu de modale */
+  .booking-modal .modal-content,
+  .booking-modal .reservation-details,
+  .booking-modal .modal-body {
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Safe area bas iPhone */
+  .booking-modal .modal-content {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+}
+</style>
 </body>
 </html>
