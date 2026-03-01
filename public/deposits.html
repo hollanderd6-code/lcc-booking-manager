@@ -2648,11 +2648,28 @@ function renderPaymentsTable() {
   const isDirectReservation = (r) => {
     if (!r.source) return true;
     const src = r.source.toLowerCase();
+    // "manuel", "direct", "" → direct
+    if (src === '' || src === 'direct' || src === 'manuel' || src === 'manual') return true;
     return !PLATFORM_SOURCES.some(p => src.includes(p));
   };
 
+  // Fenêtre de temps : J-15 jusqu'à l'infini (réservations à venir + en cours + récentes)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const j15 = new Date(today);
+  j15.setDate(j15.getDate() - 15);
+
+  const isInWindow = (r) => {
+    if (!r.endDate) return true;
+    const end = new Date(r.endDate);
+    end.setHours(0, 0, 0, 0);
+    return end >= j15; // séjours dont la fin est après J-15
+  };
+
   const filtered = allPayments.filter((r) =>
-    (!selectedPropertyId || r.propertyId === selectedPropertyId) && isDirectReservation(r)
+    (!selectedPropertyId || r.propertyId === selectedPropertyId) &&
+    isDirectReservation(r) &&
+    isInWindow(r)
   );
 
   // Séparer : avec paiement en premier, sans paiement ensuite
