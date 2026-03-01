@@ -1457,7 +1457,7 @@ html[data-theme-v3="1"] .booking-block {
 
 html[data-theme-v3="1"] .booking-block:hover { filter: brightness(1.12) !important; }
 html[data-theme-v3="1"] .booking-block.start { border-top-left-radius: 999px !important; border-bottom-left-radius: 999px !important; left: 3px !important; right: -8px !important; }
-html[data-theme-v3="1"] .booking-block.end { border-top-right-radius: 999px !important; border-bottom-right-radius: 999px !important; left: -8px !important; right: 3px !important; }
+html[data-theme-v3="1"] .booking-block.end { border-top-right-radius: 999px !important; border-bottom-right-radius: 999px !important; left: -8px !important; right: -10px !important; }
 html[data-theme-v3="1"] .booking-block.single { border-radius: 999px !important; right: -6px !important; }
 html[data-theme-v3="1"] .booking-block:not(.single):not(.start):not(.end) { left: -8px !important; right: -8px !important; border-radius: 0 !important; }
 
