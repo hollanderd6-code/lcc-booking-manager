@@ -2635,18 +2635,34 @@ async function createPayment() {
 
     closePaymentModal();
 
-    // Injecter immédiatement dans allPayments pour mise à jour instantanée de la carte
+    // Injecter dans allPayments
     const uid = reservation.reservationUid;
+    const newPayment = {
+      id: paymentObj.id || ('pay_' + Date.now()),
+      amountCents: Math.round(amountValue * 100),
+      status: 'pending',
+      checkoutUrl: checkoutUrl || null,
+      description: description,
+      createdAt: new Date().toISOString()
+    };
+
     const idx = allPayments.findIndex(r => r.reservationUid === uid);
+    console.log('💾 Injection paiement idx:', idx, 'uid:', uid, 'allPayments.length:', allPayments.length);
     if (idx !== -1) {
-      allPayments[idx].payment = {
-        id: paymentObj.id || ('pay_' + Date.now()),
-        amountCents: Math.round(amountValue * 100),
-        status: 'pending',
-        checkoutUrl: checkoutUrl || null,
-        description: description,
-        createdAt: new Date().toISOString()
-      };
+      allPayments[idx].payment = newPayment;
+    } else {
+      // La réservation n'est pas encore dans allPayments (ex: premier chargement raté)
+      // On l'ajoute manuellement
+      allPayments.push({
+        reservationUid: uid,
+        propertyId: reservation.propertyId || '',
+        propertyName: reservation.propertyName || 'Logement',
+        startDate: reservation.startDate,
+        endDate: reservation.endDate,
+        guestName: reservation.guestName || '',
+        source: reservation.source || '',
+        payment: newPayment
+      });
     }
 
     renderPaymentsTable();
@@ -2654,9 +2670,6 @@ async function createPayment() {
     if (checkoutUrl) {
       showLinkModal('Lien de paiement créé ✅', checkoutUrl);
     }
-
-    // Recharger en arrière-plan pour sync avec le serveur
-    loadPayments();
   } catch (e) {
     console.error('Erreur createPayment:', e);
     errorEl.textContent = e.message || 'Erreur lors de la création du paiement.';
