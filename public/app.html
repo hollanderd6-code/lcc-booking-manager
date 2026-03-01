@@ -4800,7 +4800,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
   `;
   document.body.appendChild(modal);
 
-  const close = () => modal.classList.remove('active');
+  const close = () => { modal.classList.remove('active'); modal.style.display = ''; };
   document.getElementById(modalId + 'Overlay').addEventListener('click', close);
   document.getElementById(modalId + 'Close').addEventListener('click', close);
 }
