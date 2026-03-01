@@ -60,8 +60,8 @@
       // Créer la navigation à onglets
       this.createTabNavigation();
       
-      // Configurer pull-to-refresh
-      this.setupPullToRefresh();
+      // Pull-to-refresh désactivé (géré nativement par iOS)
+      // this.setupPullToRefresh();
       
       // Configurer les gestures
       this.setupSwipeGestures();
@@ -202,88 +202,8 @@
     // ============================================
 
     setupPullToRefresh() {
-      let startY = 0;
-      let currentY = 0;
-      let pulling = false;
-      let refreshing = false;
-
-      // Créer l'indicateur
-      const indicator = document.createElement('div');
-      indicator.className = 'pull-refresh-indicator';
-      indicator.innerHTML = '<i class="fas fa-sync-alt"></i>';
-      document.body.insertBefore(indicator, document.body.firstChild);
-
-      const mainContent = document.querySelector('main') || document.querySelector('.container') || document.querySelector('.main-content') || document.body;
-
-      mainContent.addEventListener('touchstart', (e) => {
-        if (window.scrollY === 0 && !refreshing) {
-          startY = e.touches[0].clientY;
-          pulling = true;
-        }
-      }, { passive: true });
-
-      mainContent.addEventListener('touchmove', (e) => {
-        if (!pulling || refreshing) return;
-
-        currentY = e.touches[0].clientY;
-        const diff = currentY - startY;
-
-        if (diff > 0 && diff < this.pullRefreshThreshold * 1.5) {
-          e.preventDefault();
-          const progress = Math.min(diff / this.pullRefreshThreshold, 1);
-          indicator.style.transform = `translateY(${diff * 0.5}px) rotate(${progress * 360}deg)`;
-          indicator.style.opacity = progress;
-
-          if (diff > this.pullRefreshThreshold) {
-            indicator.classList.add('ready');
-          } else {
-            indicator.classList.remove('ready');
-          }
-        }
-      });
-
-      mainContent.addEventListener('touchend', async (e) => {
-        if (!pulling) return;
-        pulling = false;
-
-        const diff = currentY - startY;
-
-        if (diff > this.pullRefreshThreshold && !refreshing) {
-          refreshing = true;
-          indicator.classList.add('refreshing');
-
-          // Haptic feedback
-          await this.vibrate('medium');
-
-          // Émettre événement
-          const event = new CustomEvent('pullRefresh');
-          document.dispatchEvent(event);
-
-          // Attendre le refresh
-          try {
-            await this.refreshData();
-            await this.vibrate('success');
-          } catch (error) {
-            await this.vibrate('error');
-          }
-
-          // Reset
-          setTimeout(() => {
-            indicator.style.transform = 'translateY(0) rotate(0deg)';
-            indicator.style.opacity = '0';
-            indicator.classList.remove('ready', 'refreshing');
-            refreshing = false;
-          }, 300);
-        } else {
-          indicator.style.transform = 'translateY(0) rotate(0deg)';
-          indicator.style.opacity = '0';
-          indicator.classList.remove('ready');
-        }
-
-        currentY = 0;
-      }, { passive: true });
-
-      console.log('✅ Pull-to-refresh configuré');
+      // Désactivé — pull-to-refresh géré nativement par iOS (AppDelegate)
+      console.log('ℹ️ Pull-to-refresh JS désactivé (natif iOS actif)');
     }
 
     async refreshData() {
