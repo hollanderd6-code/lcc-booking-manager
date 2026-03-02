@@ -1195,6 +1195,22 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes payments déjà existantes:', e.message);
     }
 
+    // Migration : préférences notifications pour sous-comptes
+    try {
+      await pool.query(`
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_new_reservation BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_reservation_cancelled BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_cleaning_assigned BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_cleaning_completed BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_deposit_paid BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_payment_received BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS notif_sub_new_message BOOLEAN DEFAULT FALSE;
+      `);
+      console.log('✅ Colonnes notif_sub_* ajoutées à sub_account_permissions');
+    } catch (e) {
+      console.log('ℹ️ Colonnes notif_sub_* déjà existantes:', e.message);
+    }
+
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -1473,16 +1489,13 @@ async function shouldSendNotification(userId, prefKey) {
 
 // ============================================================
 // 🔔 NOTIFICATIONS VERS LES SOUS-COMPTES
-// Envoie une notification push à tous les sous-comptes d'un
-// utilisateur parent qui ont la permission requise ET un token FCM.
-// requiredPermission : colonne DB de sub_account_permissions
-//   ex: 'can_view_calendar', 'can_view_cleaning', 'can_view_messages'
+// requiredPermission : colonne permission (ex: 'can_view_calendar')
+// notifColumn (optionnel) : colonne notif_sub_* à vérifier en plus
 // ============================================================
-async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data) {
+async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn) {
   data = data || {};
   try {
-    const result = await pool.query(
-      `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
+    let q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
        FROM user_fcm_tokens uft
        JOIN sub_accounts sa ON sa.id = uft.sub_account_id
        JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
@@ -1490,9 +1503,9 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
          AND sa.is_active = TRUE
          AND uft.sub_account_id IS NOT NULL
          AND uft.fcm_token IS NOT NULL
-         AND sap.` + requiredPermission + ` = TRUE`,
-      [parentUserId]
-    );
+         AND sap.` + requiredPermission + ` = TRUE`;
+    if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
+    const result = await pool.query(q, [parentUserId]);
 
     if (result.rows.length === 0) {
       console.log('ℹ️ Aucun sous-compte [' + requiredPermission + '] avec token pour user ' + parentUserId);
@@ -2078,6 +2091,26 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             `, [session.payment_intent, paymentId, session.id]);
             
             console.log(`Paiement confirme: ${paymentId || session.id}`);
+
+            // 🔔 Notif sous-comptes : paiement reçu
+            try {
+              const pmtRow = await pool.query(
+                `SELECT p.user_id, pr.name as property_name FROM payments p LEFT JOIN properties pr ON pr.id = p.property_id WHERE p.id = $1 OR p.stripe_session_id = $2 LIMIT 1`,
+                [paymentId, session.id]
+              );
+              if (pmtRow.rows.length > 0) {
+                const { user_id, property_name } = pmtRow.rows[0];
+                const amt = session.amount_total ? (session.amount_total / 100).toFixed(2) + ' €' : '';
+                await sendNotificationToSubAccountsOf(
+                  user_id, 'can_view_payments',
+                  '💳 Paiement reçu' + (property_name ? ` — ${property_name}` : ''),
+                  amt ? `${amt} encaissé` : 'Paiement confirmé',
+                  { type: 'payment_received' },
+                  'notif_sub_payment_received'
+                );
+              }
+            } catch (nErr) { console.error('❌ Notif sous-comptes paiement:', nErr.message); }
+
           } catch (err) {
             console.error('Erreur mise a jour payment:', err);
           }
@@ -2117,6 +2150,25 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
             
+            // 🔔 Notif sous-comptes : caution payée
+            try {
+              const depRow = await pool.query(
+                `SELECT d.user_id, pr.name as property_name, d.amount_cents FROM deposits d LEFT JOIN properties pr ON pr.id = d.property_id WHERE d.id = $1 OR d.stripe_session_id = $2 LIMIT 1`,
+                [depositId, session.id]
+              );
+              if (depRow.rows.length > 0) {
+                const { user_id, property_name, amount_cents } = depRow.rows[0];
+                const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
+                await sendNotificationToSubAccountsOf(
+                  user_id, 'can_view_deposits',
+                  '💰 Caution autorisée' + (property_name ? ` — ${property_name}` : ''),
+                  amt ? `${amt} bloqués` : 'Caution confirmée',
+                  { type: 'deposit_paid' },
+                  'notif_sub_deposit_paid'
+                );
+              }
+            } catch (nErr) { console.error('❌ Notif sous-comptes caution:', nErr.message); }
+
             // 📨 ENVOYER MESSAGE AUTOMATIQUE : CAUTION AUTORISÉE
             if (depositStatus === 'authorized') {
               try {
@@ -3240,7 +3292,8 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
           realUserId, 'can_view_calendar',
           '\uD83C\uDFE0 Nouvelle r\u00E9servation \u2014 ' + _pN,
           _gN + ' \u00B7 ' + (reservation.start || '').slice(0,10) + ' \u2192 ' + (reservation.end || '').slice(0,10),
-          { type: 'new_reservation', propertyId: String(propertyId) }
+          { type: 'new_reservation', propertyId: String(propertyId) },
+          'notif_sub_new_reservation'
         );
       } catch(_e) { console.error('Notif sous-comptes r\u00E9sa iCal:', _e.message); }
     }
@@ -5297,7 +5350,8 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
                 user.id, 'can_view_calendar',
                 '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + property.name,
                 property.name + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
-                { type: 'new_reservation', reservation_id: uid }
+                { type: 'new_reservation', reservation_id: uid },
+                'notif_sub_new_reservation'
               );
             } catch(_e) { console.error('Notif sous-comptes r\u00E9sa manuelle:', _e.message); }
           }
@@ -5945,7 +5999,8 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
               user.id, 'can_view_calendar',
               '\u274C R\u00E9servation annul\u00E9e',
               propertyName + ' - ' + cancelDate,
-              { type: 'reservation_cancelled', reservation_id: uid }
+              { type: 'reservation_cancelled', reservation_id: uid },
+              'notif_sub_reservation_cancelled'
             );
           } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
         }
@@ -8371,10 +8426,11 @@ try {
       console.log(`ℹ️ Sous-compte ${cleaner.sub_account_id} sans token FCM`);
     }
   } else {
-    // ✅ Sinon → notif à tous les sous-comptes can_view_cleaning
+    // ✅ Sinon → notif à tous les sous-comptes can_view_cleaning (rôle cleaner uniquement)
     await sendNotificationToSubAccountsOf(
       user.id, 'can_view_cleaning',
-      title, body, data
+      title, body, data,
+      'notif_sub_cleaning_assigned'
     );
   }
 } catch (notifError) {
@@ -8753,7 +8809,8 @@ app.post('/api/cleaning/checklist', async (req, res) => {
         await sendNotificationToSubAccountsOf(
           cleaner.user_id, 'can_view_cleaning',
           title, body,
-          { type: 'cleaning_completed', checklistId: String(checklistId), propertyId, click_action: '/app.html' }
+          { type: 'cleaning_completed', checklistId: String(checklistId), propertyId, click_action: '/app.html' },
+          'notif_sub_cleaning_completed'
         );
       } catch (saErr) {
         console.error('❌ Notif sous-comptes ménage terminé:', saErr.message);
@@ -14987,6 +15044,17 @@ app.post('/api/chat/send', async (req, res) => {
         // Traiter le message (onboarding + réponses auto)
         const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
         await handleIncomingMessage(savedMessage, conversation, pool, io, { allowPushNotification: msgNotifAllowed });
+
+        // 🔔 Notif sous-comptes : nouveau message
+        try {
+          await sendNotificationToSubAccountsOf(
+            conversation.user_id, 'can_view_messages',
+            '📨 Nouveau message',
+            conversation.guest_name ? `Message de ${conversation.guest_name}` : 'Un voyageur vous a envoyé un message',
+            { type: 'new_message', conversationId: String(conversation.id) },
+            'notif_sub_new_message'
+          );
+        } catch (nErr) { console.error('❌ Notif sous-comptes message:', nErr.message); }
       }
     }
 
