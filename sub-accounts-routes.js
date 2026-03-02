@@ -26,8 +26,10 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         lastName,
         role,
         permissions,
-        propertyIds
+        propertyIds,
+        notifications: notifRaw
       } = req.body;
+      const notifications = notifRaw || {};
 
       if (!email || !password || !firstName || !lastName) {
         return res.status(400).json({ success: false, error: 'Champs obligatoires manquants' });
@@ -226,7 +228,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           can_view_invoices = $21,
           can_manage_invoices = $22,
           can_view_payments = $23,
-          can_manage_payments = $24
+          can_manage_payments = $24,
+          notif_sub_new_reservation = $25,
+          notif_sub_reservation_cancelled = $26,
+          notif_sub_cleaning_assigned = $27,
+          notif_sub_cleaning_completed = $28,
+          notif_sub_deposit_paid = $29,
+          notif_sub_payment_received = $30,
+          notif_sub_new_message = $31
         WHERE sub_account_id = $16
       `, [
         finalPermissions.can_view_calendar,
@@ -252,7 +261,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         finalPermissions.can_view_invoices || false,
         finalPermissions.can_manage_invoices || false,
         finalPermissions.can_view_payments || false,
-        finalPermissions.can_manage_payments || false
+        finalPermissions.can_manage_payments || false,
+        notifications.notif_sub_new_reservation || false,
+        notifications.notif_sub_reservation_cancelled || false,
+        notifications.notif_sub_cleaning_assigned || false,
+        notifications.notif_sub_cleaning_completed || false,
+        notifications.notif_sub_deposit_paid || false,
+        notifications.notif_sub_payment_received || false,
+        notifications.notif_sub_new_message || false
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -290,7 +306,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
   app.put('/api/sub-accounts/:id', authenticateToken, async (req, res) => {
     try {
       const subAccountId = parseInt(req.params.id);
-      const { firstName, lastName, role, propertyIds, permissions } = req.body;
+      const { firstName, lastName, role, propertyIds, permissions, notifications: notifRaw } = req.body;
+      const notifications = notifRaw || {};
       const parentUserId = req.user.id;
       
       console.log('🔄 Modification sous-compte:', { subAccountId, role });
@@ -418,7 +435,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
              can_view_invoices = $21,
              can_manage_invoices = $22,
              can_view_payments = $23,
-             can_manage_payments = $24
+             can_manage_payments = $24,
+             notif_sub_new_reservation = $25,
+             notif_sub_reservation_cancelled = $26,
+             notif_sub_cleaning_assigned = $27,
+             notif_sub_cleaning_completed = $28,
+             notif_sub_deposit_paid = $29,
+             notif_sub_payment_received = $30,
+             notif_sub_new_message = $31
          WHERE sub_account_id = $16`,
         [
           finalPermissions.can_view_calendar,
@@ -444,7 +468,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           finalPermissions.can_view_invoices || false,
           finalPermissions.can_manage_invoices || false,
           finalPermissions.can_view_payments || false,
-          finalPermissions.can_manage_payments || false
+          finalPermissions.can_manage_payments || false,
+          notifications.notif_sub_new_reservation || false,
+          notifications.notif_sub_reservation_cancelled || false,
+          notifications.notif_sub_cleaning_assigned || false,
+          notifications.notif_sub_cleaning_completed || false,
+          notifications.notif_sub_deposit_paid || false,
+          notifications.notif_sub_payment_received || false,
+          notifications.notif_sub_new_message || false
         ]
       );
       
@@ -521,6 +552,13 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sp.can_manage_invoices,
           sp.can_view_payments,
           sp.can_manage_payments,
+          sp.notif_sub_new_reservation,
+          sp.notif_sub_reservation_cancelled,
+          sp.notif_sub_cleaning_assigned,
+          sp.notif_sub_cleaning_completed,
+          sp.notif_sub_deposit_paid,
+          sp.notif_sub_payment_received,
+          sp.notif_sub_new_message,
           
           -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
@@ -549,7 +587,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         can_view_invoices: row.can_view_invoices || false,
         can_manage_invoices: row.can_manage_invoices || false,
         can_view_payments: row.can_view_payments || false,
-        can_manage_payments: row.can_manage_payments || false
+        can_manage_payments: row.can_manage_payments || false,
+        notif_sub_new_reservation: row.notif_sub_new_reservation || false,
+        notif_sub_reservation_cancelled: row.notif_sub_reservation_cancelled || false,
+        notif_sub_cleaning_assigned: row.notif_sub_cleaning_assigned || false,
+        notif_sub_cleaning_completed: row.notif_sub_cleaning_completed || false,
+        notif_sub_deposit_paid: row.notif_sub_deposit_paid || false,
+        notif_sub_payment_received: row.notif_sub_payment_received || false,
+        notif_sub_new_message: row.notif_sub_new_message || false
       }));
 
       res.json({
@@ -695,7 +740,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
             can_view_invoices: subAccount.can_view_invoices || false,
             can_manage_invoices: subAccount.can_manage_invoices || false,
             can_view_payments: subAccount.can_view_payments || false,
-            can_manage_payments: subAccount.can_manage_payments || false
+            can_manage_payments: subAccount.can_manage_payments || false,
+            notif_sub_new_reservation: subAccount.notif_sub_new_reservation || false,
+            notif_sub_reservation_cancelled: subAccount.notif_sub_reservation_cancelled || false,
+            notif_sub_cleaning_assigned: subAccount.notif_sub_cleaning_assigned || false,
+            notif_sub_cleaning_completed: subAccount.notif_sub_cleaning_completed || false,
+            notif_sub_deposit_paid: subAccount.notif_sub_deposit_paid || false,
+            notif_sub_payment_received: subAccount.notif_sub_payment_received || false,
+            notif_sub_new_message: subAccount.notif_sub_new_message || false
           }
         }
       });
