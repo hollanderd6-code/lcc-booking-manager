@@ -181,7 +181,7 @@
     // Si window.mobileApp existe, utiliser le bottom sheet natif
     if (window.mobileApp && window.mobileApp.createBottomSheet) {
       window.mobileApp.createBottomSheet({
-        title: 'Menu',
+        title: '<i class="fas fa-bars" style="color:#1A7A5E;margin-right:8px;"></i>Menu',
         content: `
           <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
             ${menuButtons}
@@ -217,7 +217,7 @@
     // Regénérer le contenu à chaque ouverture
     sheet.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-grip-horizontal" style="color:#1A7A5E;"></i> Menu</h3>
+        <h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-bars" style="color:#1A7A5E;margin-right:8px;"></i>Menu</h3>
         <button onclick="closeMoreMenu()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;width:32px;height:32px;">&times;</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 12px;">
