@@ -88,6 +88,34 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         };
       } else {
         switch(role) {
+          case 'owner':
+            finalPermissions = {
+              can_view_calendar: true,
+              can_edit_reservations: true,
+              can_create_reservations: true,
+              can_delete_reservations: true,
+              can_view_messages: true,
+              can_send_messages: true,
+              can_view_cleaning: true,
+              can_assign_cleaning: true,
+              can_manage_cleaning_staff: true,
+              can_view_finances: true,
+              can_edit_finances: true,
+              can_view_properties: true,
+              can_edit_properties: true,
+              can_access_settings: false,
+              can_manage_team: false,
+              can_view_deposits: true,
+              can_manage_deposits: true,
+              can_view_smart_locks: true,
+              can_manage_smart_locks: true,
+              can_view_invoices: true,
+              can_manage_invoices: true,
+              can_view_payments: true,
+              can_manage_payments: true
+            };
+            break;
+
           case 'manager':
             finalPermissions = {
               can_view_calendar: true,
@@ -104,7 +132,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
               can_view_properties: true,
               can_edit_properties: false,
               can_access_settings: false,
-              can_manage_team: false
+              can_manage_team: false,
+              can_view_deposits: true,
+              can_manage_deposits: true,
+              can_view_smart_locks: false,
+              can_manage_smart_locks: false,
+              can_view_invoices: false,
+              can_manage_invoices: false,
+              can_view_payments: true,
+              can_manage_payments: true
             };
             break;
             
@@ -124,7 +160,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
               can_view_properties: true,
               can_edit_properties: false,
               can_access_settings: false,
-              can_manage_team: false
+              can_manage_team: false,
+              can_view_deposits: false,
+              can_manage_deposits: false,
+              can_view_smart_locks: false,
+              can_manage_smart_locks: false,
+              can_view_invoices: false,
+              can_manage_invoices: false,
+              can_view_payments: false,
+              can_manage_payments: false
             };
             break;
             
@@ -144,7 +188,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
               can_view_properties: true,
               can_edit_properties: false,
               can_access_settings: false,
-              can_manage_team: false
+              can_manage_team: false,
+              can_view_deposits: true,
+              can_manage_deposits: false,
+              can_view_smart_locks: false,
+              can_manage_smart_locks: false,
+              can_view_invoices: true,
+              can_manage_invoices: false,
+              can_view_payments: false,
+              can_manage_payments: false
             };
             break;
         }
@@ -291,63 +343,52 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         };
       } else {
         switch(role) {
+          case 'owner':
+            finalPermissions = {
+              can_view_calendar: true, can_edit_reservations: true, can_create_reservations: true,
+              can_delete_reservations: true, can_view_messages: true, can_send_messages: true,
+              can_view_cleaning: true, can_assign_cleaning: true, can_manage_cleaning_staff: true,
+              can_view_finances: true, can_edit_finances: true, can_view_properties: true,
+              can_edit_properties: true, can_access_settings: false, can_manage_team: false,
+              can_view_deposits: true, can_manage_deposits: true, can_view_smart_locks: true,
+              can_manage_smart_locks: true, can_view_invoices: true, can_manage_invoices: true,
+              can_view_payments: true, can_manage_payments: true
+            };
+            break;
           case 'manager':
             finalPermissions = {
-              can_view_calendar: true,
-              can_edit_reservations: true,
-              can_create_reservations: true,
-              can_delete_reservations: false,
-              can_view_messages: true,
-              can_send_messages: true,
-              can_view_cleaning: true,
-              can_assign_cleaning: true,
-              can_manage_cleaning_staff: false,
-              can_view_finances: false,
-              can_edit_finances: false,
-              can_view_properties: true,
-              can_edit_properties: false,
-              can_access_settings: false,
-              can_manage_team: false
+              can_view_calendar: true, can_edit_reservations: true, can_create_reservations: true,
+              can_delete_reservations: false, can_view_messages: true, can_send_messages: true,
+              can_view_cleaning: true, can_assign_cleaning: true, can_manage_cleaning_staff: false,
+              can_view_finances: false, can_edit_finances: false, can_view_properties: true,
+              can_edit_properties: false, can_access_settings: false, can_manage_team: false,
+              can_view_deposits: true, can_manage_deposits: true, can_view_smart_locks: false,
+              can_manage_smart_locks: false, can_view_invoices: false, can_manage_invoices: false,
+              can_view_payments: true, can_manage_payments: true
             };
             break;
-            
           case 'cleaner':
             finalPermissions = {
-              can_view_calendar: true,
-              can_edit_reservations: false,
-              can_create_reservations: false,
-              can_delete_reservations: false,
-              can_view_messages: false,
-              can_send_messages: false,
-              can_view_cleaning: true,
-              can_assign_cleaning: true,
-              can_manage_cleaning_staff: false,
-              can_view_finances: false,
-              can_edit_finances: false,
-              can_view_properties: true,
-              can_edit_properties: false,
-              can_access_settings: false,
-              can_manage_team: false
+              can_view_calendar: true, can_edit_reservations: false, can_create_reservations: false,
+              can_delete_reservations: false, can_view_messages: false, can_send_messages: false,
+              can_view_cleaning: true, can_assign_cleaning: true, can_manage_cleaning_staff: false,
+              can_view_finances: false, can_edit_finances: false, can_view_properties: true,
+              can_edit_properties: false, can_access_settings: false, can_manage_team: false,
+              can_view_deposits: false, can_manage_deposits: false, can_view_smart_locks: false,
+              can_manage_smart_locks: false, can_view_invoices: false, can_manage_invoices: false,
+              can_view_payments: false, can_manage_payments: false
             };
             break;
-            
           case 'accountant':
             finalPermissions = {
-              can_view_calendar: true,
-              can_edit_reservations: false,
-              can_create_reservations: false,
-              can_delete_reservations: false,
-              can_view_messages: false,
-              can_send_messages: false,
-              can_view_cleaning: false,
-              can_assign_cleaning: false,
-              can_manage_cleaning_staff: false,
-              can_view_finances: true,
-              can_edit_finances: false,
-              can_view_properties: true,
-              can_edit_properties: false,
-              can_access_settings: false,
-              can_manage_team: false
+              can_view_calendar: true, can_edit_reservations: false, can_create_reservations: false,
+              can_delete_reservations: false, can_view_messages: false, can_send_messages: false,
+              can_view_cleaning: false, can_assign_cleaning: false, can_manage_cleaning_staff: false,
+              can_view_finances: true, can_edit_finances: false, can_view_properties: true,
+              can_edit_properties: false, can_access_settings: false, can_manage_team: false,
+              can_view_deposits: true, can_manage_deposits: false, can_view_smart_locks: false,
+              can_manage_smart_locks: false, can_view_invoices: true, can_manage_invoices: false,
+              can_view_payments: false, can_manage_payments: false
             };
             break;
         }
