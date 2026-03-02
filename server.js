@@ -15320,14 +15320,14 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       // Le token FCM peut déjà exister (même iPhone = même token pour compte principal et sous-compte)
       // On utilise ON CONFLICT sur fcm_token pour mettre à jour la ligne existante
       await pool.query(
-        ``INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
- VALUES ($1, NULL, $2, $3, NOW(), NOW())
- ON CONFLICT ON CONSTRAINT idx_user_fcm_tokens_sub_device
- DO UPDATE SET
-   fcm_token = EXCLUDED.fcm_token,
-   updated_at = NOW()`
-        [subAccountId, token, deviceType]
-      );
+  `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
+   VALUES ($1, NULL, $2, $3, NOW(), NOW())
+   ON CONFLICT ON CONSTRAINT idx_user_fcm_tokens_sub_device
+   DO UPDATE SET
+     fcm_token = EXCLUDED.fcm_token,
+     updated_at = NOW()`,   // ← virgule ici
+  [subAccountId, token, deviceType]
+);
 
       console.log(`✅ Token FCM enregistré pour sous-compte ${subAccountId}`);
       return res.json({ success: true, message: 'Token sauvegardé (sous-compte)' });
