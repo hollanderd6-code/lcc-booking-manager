@@ -1183,6 +1183,18 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ sub_account_id cleaners déjà existante:', e.message);
     }
+
+    // Migration : permissions paiements pour sous-comptes
+    try {
+      await pool.query(`
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_payments BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_manage_payments BOOLEAN DEFAULT FALSE;
+      `);
+      console.log('✅ Colonnes can_view_payments / can_manage_payments ajoutées à sub_account_permissions');
+    } catch (e) {
+      console.log('ℹ️ Colonnes payments déjà existantes:', e.message);
+    }
+
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -6771,7 +6783,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 // GET /api/reservations-with-payments
 // Même structure que reservations-with-deposits mais avec payments
 // ============================================
-app.get('/api/reservations-with-payments', authenticateAny, loadSubAccountData(pool), async (req, res) => {
+app.get('/api/reservations-with-payments', authenticateAny, requirePermission(pool, 'can_view_payments'), loadSubAccountData(pool), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -11295,7 +11307,7 @@ await pool.query(`
 // ============================================
 // POST - Créer un PAIEMENT de location (Stripe Connect avec commission 8%)
 // ============================================
-app.post('/api/payments', async (req, res) => {
+app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_payments'), loadSubAccountData(pool), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -11463,7 +11475,7 @@ app.get('/api/deposits',
 });
 
 // GET - Liste des paiements d'un utilisateur
-app.get('/api/payments', async (req, res) => {
+app.get('/api/payments', authenticateAny, requirePermission(pool, 'can_view_payments'), loadSubAccountData(pool), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
