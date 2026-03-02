@@ -2552,6 +2552,8 @@ document.addEventListener('DOMContentLoaded', function() {
         can_manage_team: false,
         can_view_deposits: document.getElementById('perm_canViewDeposits')?.checked || false,
         can_manage_deposits: document.getElementById('perm_canManageDeposits')?.checked || false,
+        can_view_payments: document.getElementById('perm_canViewPayments')?.checked || false,
+        can_manage_payments: document.getElementById('perm_canManagePayments')?.checked || false,
         can_view_smart_locks: document.getElementById('perm_canViewSmartLocks')?.checked || false,
         can_manage_smart_locks: document.getElementById('perm_canManageSmartLocks')?.checked || false
       };
@@ -2634,6 +2636,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('perm_canViewProperties')) document.getElementById('perm_canViewProperties').checked = member.can_view_properties || false;
         if (document.getElementById('perm_canViewDeposits')) document.getElementById('perm_canViewDeposits').checked = member.can_view_deposits || false;
         if (document.getElementById('perm_canManageDeposits')) document.getElementById('perm_canManageDeposits').checked = member.can_manage_deposits || false;
+        if (document.getElementById('perm_canViewPayments')) document.getElementById('perm_canViewPayments').checked = member.can_view_payments || false;
+        if (document.getElementById('perm_canManagePayments')) document.getElementById('perm_canManagePayments').checked = member.can_manage_payments || false;
         if (document.getElementById('perm_canViewSmartLocks')) document.getElementById('perm_canViewSmartLocks').checked = member.can_view_smart_locks || false;
         if (document.getElementById('perm_canManageSmartLocks')) document.getElementById('perm_canManageSmartLocks').checked = member.can_manage_smart_locks || false;
       }
@@ -3099,10 +3103,13 @@ document.addEventListener('DOMContentLoaded', function() {
               </table>
             </div>
 
-            <!-- Cautions -->
+            <!-- Finances (Cautions + Paiements) -->
             <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
-              <div style="font-weight:600; margin-bottom:8px;">🛡️ Cautions</div>
+              <div style="font-weight:600; margin-bottom:8px;"><i class="fas fa-wallet" style="color:#1A7A5E;margin-right:6px;"></i>Finances</div>
               <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td colspan="2" style="padding:4px 0 2px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Cautions</td>
+                </tr>
                 <tr>
                   <td style="width:32px; padding:4px 0; vertical-align:middle;">
                     <input type="checkbox" id="perm_canViewDeposits" style="width:18px;height:18px;cursor:pointer;" />
@@ -3114,6 +3121,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="checkbox" id="perm_canManageDeposits" style="width:18px;height:18px;cursor:pointer;" />
                   </td>
                   <td style="padding:4px 0; vertical-align:middle;">Gérer les cautions (capturer / libérer)</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding:8px 0 2px; font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Paiements</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canViewPayments" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les paiements</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;">
+                    <input type="checkbox" id="perm_canManagePayments" style="width:18px;height:18px;cursor:pointer;" />
+                  </td>
+                  <td style="padding:4px 0; vertical-align:middle;">Créer des paiements / liens de paiement</td>
                 </tr>
               </table>
             </div>
