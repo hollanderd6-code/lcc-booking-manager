@@ -15322,9 +15322,9 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       await pool.query(
         `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
          VALUES ($1, NULL, $2, $3, NOW(), NOW())
-         ON CONFLICT (fcm_token)
+         ON CONFLICT ON CONSTRAINT idx_user_fcm_tokens_sub_device
          DO UPDATE SET
-           sub_account_id = EXCLUDED.sub_account_id,
+           fcm_token = EXCLUDED.fcm_token,
            updated_at = NOW()`,
         [subAccountId, token, deviceType]
       );
