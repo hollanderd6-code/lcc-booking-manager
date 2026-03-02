@@ -14469,6 +14469,17 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               
               console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
             }
+
+            // ✅ Notif sous-comptes : annulation
+            try {
+              await sendNotificationToSubAccountsOf(
+                user.id, 'can_view_calendar',
+                '❌ Réservation annulée',
+                `${property.name} - ${cancelDate}`,
+                { type: 'reservation_cancelled', reservation_id: uid, property_name: property.name },
+                'notif_sub_reservation_cancelled'
+              );
+            } catch(_e) { console.error('Notif sous-comptes annulation sync:', _e.message); }
           }
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
@@ -15318,16 +15329,16 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       console.log(`📱 [sous-compte ${subAccountId}] Enregistrement token FCM (${deviceType})`);
 
       // Le token FCM peut déjà exister (même iPhone = même token pour compte principal et sous-compte)
-      // On utilise ON CONFLICT sur fcm_token pour mettre à jour la ligne existante
+      // On utilise ON CONFLICT ON CONSTRAINT pour mettre à jour la ligne existante
       await pool.query(
-  `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
-   VALUES ($1, NULL, $2, $3, NOW(), NOW())
-   ON CONFLICT ON CONSTRAINT idx_user_fcm_tokens_sub_device
-   DO UPDATE SET
-     fcm_token = EXCLUDED.fcm_token,
-     updated_at = NOW()`,   // ← virgule ici
-  [subAccountId, token, deviceType]
-);
+        `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
+         VALUES ($1, NULL, $2, $3, NOW(), NOW())
+         ON CONFLICT ON CONSTRAINT idx_user_fcm_tokens_sub_device
+         DO UPDATE SET
+           fcm_token = EXCLUDED.fcm_token,
+           updated_at = NOW()`,
+        [subAccountId, token, deviceType]
+      );
 
       console.log(`✅ Token FCM enregistré pour sous-compte ${subAccountId}`);
       return res.json({ success: true, message: 'Token sauvegardé (sous-compte)' });
