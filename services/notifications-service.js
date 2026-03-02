@@ -107,10 +107,16 @@ async function sendNotification(fcmToken, title, body, data = {}) {
       }
     },
     apns: {
+      headers: {
+        'apns-priority': '10',
+        'apns-push-type': 'alert'
+      },
       payload: {
         aps: {
           sound: 'default',
-          badge: 1
+          badge: 1,
+          'content-available': 1,
+          'mutable-content': 1
         }
       }
     }
