@@ -2478,6 +2478,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const customPerms = document.getElementById('customPermissions');
     if (desc) desc.textContent = ROLE_DESCRIPTIONS[this.value] || '';
     if (customPerms) customPerms.style.display = this.value === 'custom' ? 'block' : 'none';
+    // Afficher "Ménage assigné" uniquement pour le rôle cleaner
+    const cleaningRow = document.getElementById('notif_cleaning_assigned_row');
+    if (cleaningRow) {
+      cleaningRow.style.display = this.value === 'cleaner' ? 'flex' : 'none';
+      if (this.value !== 'cleaner') document.getElementById('notif_sub_cleaning_assigned').checked = false;
+    }
   });
   
   async function loadPropertiesForSelect() {
@@ -2530,7 +2536,16 @@ document.addEventListener('DOMContentLoaded', function() {
       firstName: document.getElementById('memberFirstName').value,
       lastName: document.getElementById('memberLastName').value,
       role: role,
-      propertyIds: propertyIds
+      propertyIds: propertyIds,
+      notifications: {
+        notif_sub_new_reservation: document.getElementById('notif_sub_new_reservation')?.checked || false,
+        notif_sub_reservation_cancelled: document.getElementById('notif_sub_reservation_cancelled')?.checked || false,
+        notif_sub_cleaning_assigned: document.getElementById('notif_sub_cleaning_assigned')?.checked || false,
+        notif_sub_cleaning_completed: document.getElementById('notif_sub_cleaning_completed')?.checked || false,
+        notif_sub_deposit_paid: document.getElementById('notif_sub_deposit_paid')?.checked || false,
+        notif_sub_payment_received: document.getElementById('notif_sub_payment_received')?.checked || false,
+        notif_sub_new_message: document.getElementById('notif_sub_new_message')?.checked || false
+      }
     };
     
     if (!editingMemberId) {
@@ -2644,6 +2659,17 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
+      
+      // Restaurer les notifications
+      const notifFields = ['notif_sub_new_reservation','notif_sub_reservation_cancelled','notif_sub_cleaning_assigned','notif_sub_cleaning_completed','notif_sub_deposit_paid','notif_sub_payment_received','notif_sub_new_message'];
+      notifFields.forEach(k => {
+        const el = document.getElementById(k);
+        if (el) el.checked = member[k] || false;
+      });
+      // Afficher/masquer ménage assigné selon rôle
+      const cleaningRow = document.getElementById('notif_cleaning_assigned_row');
+      if (cleaningRow) cleaningRow.style.display = member.role === 'cleaner' ? 'flex' : 'none';
+
       document.getElementById('addTeamMemberModal').style.display = 'flex';
       document.querySelector('.app-container') && (document.querySelector('.app-container').style.overflow = 'visible');
       console.log('✅ Modal édition ouverte');
@@ -3162,6 +3188,58 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
           </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="form-group" style="margin-top:20px;">
+        <label style="font-weight:600; display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <i class="fas fa-bell" style="color:#1A7A5E;"></i>
+          Notifications push
+        </label>
+        <small style="color:#6b7280; display:block; margin-bottom:12px;">Choisissez les alertes que ce membre recevra sur son téléphone.</small>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+
+          <!-- Réservations -->
+          <div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; margin-bottom:2px;">Réservations</div>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;">
+            <input type="checkbox" id="notif_sub_new_reservation" style="width:18px;height:18px;cursor:pointer;">
+            <span>📅 Nouvelle réservation</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;">
+            <input type="checkbox" id="notif_sub_reservation_cancelled" style="width:18px;height:18px;cursor:pointer;">
+            <span>❌ Réservation annulée</span>
+          </label>
+
+          <!-- Ménage -->
+          <div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-top:8px; margin-bottom:2px;">Ménage</div>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;" id="notif_cleaning_assigned_row">
+            <input type="checkbox" id="notif_sub_cleaning_assigned" style="width:18px;height:18px;cursor:pointer;">
+            <span>🧹 Ménage assigné <small style="color:#9ca3af;">(rôle Ménage uniquement)</small></span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;">
+            <input type="checkbox" id="notif_sub_cleaning_completed" style="width:18px;height:18px;cursor:pointer;">
+            <span>✅ Ménage terminé</span>
+          </label>
+
+          <!-- Finances -->
+          <div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-top:8px; margin-bottom:2px;">Finances</div>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;">
+            <input type="checkbox" id="notif_sub_deposit_paid" style="width:18px;height:18px;cursor:pointer;">
+            <span>💰 Caution créée / payée</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;">
+            <input type="checkbox" id="notif_sub_payment_received" style="width:18px;height:18px;cursor:pointer;">
+            <span>💳 Paiement reçu</span>
+          </label>
+
+          <!-- Messages -->
+          <div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-top:8px; margin-bottom:2px;">Messages</div>
+          <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; cursor:pointer;">
+            <input type="checkbox" id="notif_sub_new_message" style="width:18px;height:18px;cursor:pointer;">
+            <span>📨 Nouveau message reçu</span>
+          </label>
+
         </div>
       </div>
 
