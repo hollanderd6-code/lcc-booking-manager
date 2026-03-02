@@ -78,7 +78,7 @@
     if (hasPermission('can_view_deposits') || hasPermission('can_manage_deposits')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-shield-alt"></i> Cautions
+          <i class="fas fa-wallet"></i> Finances
         </button>`;
     }
 
