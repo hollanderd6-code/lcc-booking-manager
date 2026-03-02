@@ -2344,9 +2344,10 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('🟢 Script équipe - Version propre');
   
   const ROLE_DESCRIPTIONS = {
-    manager: 'Accès complet au calendrier, messages et ménages.',
+    owner: 'Accès complet à toutes les fonctionnalités (sauf gestion d\'équipe).',
+    manager: 'Accès au calendrier, messages, ménages, cautions et paiements.',
     cleaner: 'Accès au calendrier (lecture) et gestion des ménages uniquement.',
-    accountant: 'Accès aux factures et au calendrier (lecture).',
+    accountant: 'Accès au calendrier, factures, cautions (lecture) et finances.',
     custom: 'Choisissez manuellement chaque permission.'
   };
   
@@ -2402,7 +2403,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (member.can_view_deposits) permissions.push({ icon: 'shield-alt', label: 'Cautions' });
       if (member.can_view_smart_locks || member.can_manage_smart_locks) permissions.push({ icon: 'lock', label: 'Serrures' });
       
-      const roleLabels = { manager: '👔 Manager', cleaner: '🧹 Femme de ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
+      const roleLabels = { owner: '🏠 Propriétaire', manager: '👔 Manager', cleaner: '🧹 Ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
       
       // ✅ Afficher les propriétés accessibles
       let propertiesHTML = '';
@@ -2990,8 +2991,9 @@ document.addEventListener('DOMContentLoaded', function() {
         <label>Rôle <span style="color:#ef4444;">*</span></label>
         <select id="memberRole" required>
           <option value="">-- Sélectionner un rôle --</option>
+          <option value="owner">🏠 Propriétaire</option>
           <option value="manager">👔 Manager / Assistant</option>
-          <option value="cleaner">🧹 Femme de ménage</option>
+          <option value="cleaner">🧹 Ménage</option>
           <option value="accountant">📊 Comptable</option>
           <option value="custom">🎨 Personnalisé</option>
         </select>
