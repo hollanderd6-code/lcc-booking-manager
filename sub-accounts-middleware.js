@@ -124,7 +124,11 @@ function requirePermission(pool, permission) {
         
         // Factures
         'can_view_invoices': 'can_view_invoices',
-        'can_manage_invoices': 'can_manage_invoices'
+        'can_manage_invoices': 'can_manage_invoices',
+
+        // Paiements directs
+        'can_view_payments': 'can_view_payments',
+        'can_manage_payments': 'can_manage_payments'
       };
       
       const dbPermission = permissionMapping[permission] || permission;
