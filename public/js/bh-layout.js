@@ -110,7 +110,7 @@ function getSidebarHTML() {
       <div class="nav-section-title">Avancé</div>
       ${hasPermission('can_view_deposits') || hasPermission('can_manage_deposits') ? `
       <a class="nav-item" data-page="deposits" href="/deposits.html">
-        <i class="fas fa-shield-alt"></i><span>Cautions</span>
+        <i class="fas fa-wallet"></i><span>Finances</span>
       </a>
       ` : ''}
       ${hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks') ? `
