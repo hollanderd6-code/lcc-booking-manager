@@ -172,7 +172,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           can_view_smart_locks = $19,
           can_manage_smart_locks = $20,
           can_view_invoices = $21,
-          can_manage_invoices = $22
+          can_manage_invoices = $22,
+          can_view_payments = $23,
+          can_manage_payments = $24
         WHERE sub_account_id = $16
       `, [
         finalPermissions.can_view_calendar,
@@ -196,7 +198,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         finalPermissions.can_view_smart_locks || false,
         finalPermissions.can_manage_smart_locks || false,
         finalPermissions.can_view_invoices || false,
-        finalPermissions.can_manage_invoices || false
+        finalPermissions.can_manage_invoices || false,
+        finalPermissions.can_view_payments || false,
+        finalPermissions.can_manage_payments || false
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -371,7 +375,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
              can_view_smart_locks = $19,
              can_manage_smart_locks = $20,
              can_view_invoices = $21,
-             can_manage_invoices = $22
+             can_manage_invoices = $22,
+             can_view_payments = $23,
+             can_manage_payments = $24
          WHERE sub_account_id = $16`,
         [
           finalPermissions.can_view_calendar,
@@ -395,7 +401,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           finalPermissions.can_view_smart_locks || false,
           finalPermissions.can_manage_smart_locks || false,
           finalPermissions.can_view_invoices || false,
-          finalPermissions.can_manage_invoices || false
+          finalPermissions.can_manage_invoices || false,
+          finalPermissions.can_view_payments || false,
+          finalPermissions.can_manage_payments || false
         ]
       );
       
@@ -470,6 +478,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sp.can_manage_smart_locks,
           sp.can_view_invoices,
           sp.can_manage_invoices,
+          sp.can_view_payments,
+          sp.can_manage_payments,
           
           -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
@@ -496,7 +506,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         can_view_smart_locks: row.can_view_smart_locks || false,
         can_manage_smart_locks: row.can_manage_smart_locks || false,
         can_view_invoices: row.can_view_invoices || false,
-        can_manage_invoices: row.can_manage_invoices || false
+        can_manage_invoices: row.can_manage_invoices || false,
+        can_view_payments: row.can_view_payments || false,
+        can_manage_payments: row.can_manage_payments || false
       }));
 
       res.json({
@@ -640,7 +652,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
             can_view_smart_locks: subAccount.can_view_smart_locks || false,
             can_manage_smart_locks: subAccount.can_manage_smart_locks || false,
             can_view_invoices: subAccount.can_view_invoices || false,
-            can_manage_invoices: subAccount.can_manage_invoices || false
+            can_manage_invoices: subAccount.can_manage_invoices || false,
+            can_view_payments: subAccount.can_view_payments || false,
+            can_manage_payments: subAccount.can_manage_payments || false
           }
         }
       });
