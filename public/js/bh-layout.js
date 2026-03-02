@@ -129,7 +129,7 @@ function getSidebarHTML() {
         <i class="fas fa-cog"></i><span>Paramètres</span>
       </a>
       <a class="nav-item" data-page="help" href="/help.html">
-        <i class="fas fa-question-circle"></i><span>Aide</span>
+        <i class="fas fa-headset"></i><span>Support</span>
       </a>
     </div>
     ` : ''}
