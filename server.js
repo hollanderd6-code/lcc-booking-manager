@@ -3201,6 +3201,24 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
+    // ✅ Vérifier chevauchement avant d'importer (évite les faux blocages iCal)
+    const startDate = reservation.start || reservation.startDate;
+    const endDate = reservation.end || reservation.endDate;
+    if (startDate && endDate) {
+      const overlapRes = await pool.query(
+        `SELECT uid FROM reservations
+         WHERE property_id = $1
+           AND uid != $2
+           AND start_date < $4::date
+           AND end_date > $3::date`,
+        [propertyId, reservation.uid, startDate, endDate]
+      );
+      if (overlapRes.rows.length > 0) {
+        console.log(`⚠️ Import ignoré (dates déjà prises): ${reservation.uid}`);
+        return false;
+      }
+    }
+
     // ✅ Utiliser le userId passé en paramètre
     const realUserId = userId;
     
