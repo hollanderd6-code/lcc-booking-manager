@@ -1495,6 +1495,8 @@ async function shouldSendNotification(userId, prefKey) {
 async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn) {
   data = data || {};
   try {
+    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn);
+
     let q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
        FROM user_fcm_tokens uft
        JOIN sub_accounts sa ON sa.id = uft.sub_account_id
@@ -1506,8 +1508,19 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
          AND sap.` + requiredPermission + ` = TRUE`;
     if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
     const result = await pool.query(q, [parentUserId]);
+    console.log('🔍 [SubNotif] rows found:', result.rows.length);
 
     if (result.rows.length === 0) {
+      // Debug sans les filtres token/notif pour voir ce qui bloque
+      try {
+        const debugCols = `sa.id, sa.first_name, sa.is_active, sap.` + requiredPermission
+          + (notifColumn ? `, sap.` + notifColumn : '')
+          + `, uft.fcm_token`;
+        const debugQ = `SELECT ` + debugCols + ` FROM sub_accounts sa LEFT JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id LEFT JOIN user_fcm_tokens uft ON uft.sub_account_id = sa.id WHERE sa.parent_user_id = $1`;
+        const debugR = await pool.query(debugQ, [parentUserId]);
+        console.log('🔍 [SubNotif] Debug (sans filtre):', JSON.stringify(debugR.rows));
+      } catch(de) { console.log('🔍 [SubNotif] Debug query error:', de.message); }
+
       console.log('ℹ️ Aucun sous-compte [' + requiredPermission + '] avec token pour user ' + parentUserId);
       return;
     }
