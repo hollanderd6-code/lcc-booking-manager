@@ -5237,10 +5237,12 @@ app.post('/api/reservations/manual', async (req, res) => {
     const overlapCheck = await pool.query(
       `SELECT uid, guest_name, start_date, end_date FROM reservations
        WHERE property_id = $1
-         AND status != 'cancelled'
-         AND start_date < $3
-         AND end_date > $2`,
-      [propertyId, start, end]
+         AND user_id = $4
+         AND status NOT IN ('cancelled', 'completed')
+         AND start_date < $3::date
+         AND end_date > $2::date
+         AND (end_date - start_date) < INTERVAL '365 days'`,
+      [propertyId, start, end, user.id]
     );
     if (overlapCheck.rows.length > 0) {
       const existing = overlapCheck.rows[0];
@@ -5837,10 +5839,12 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     const overlapCheck = await pool.query(
       `SELECT uid, guest_name, start_date, end_date FROM reservations
        WHERE property_id = $1
-         AND status != 'cancelled'
-         AND start_date < $3
-         AND end_date > $2`,
-      [propertyId, checkIn, checkOut]
+         AND user_id = $4
+         AND status NOT IN ('cancelled', 'completed')
+         AND start_date < $3::date
+         AND end_date > $2::date
+         AND (end_date - start_date) < INTERVAL '365 days'`,
+      [propertyId, checkIn, checkOut, user.id]
     );
     if (overlapCheck.rows.length > 0) {
       const existing = overlapCheck.rows[0];
