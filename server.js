@@ -1758,17 +1758,48 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
  * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
  */
 async function notifyCleanersAboutNewBookings(newReservations) {
-  const useBrevo = !!process.env.BREVO_API_KEY;
-  const transporter = useBrevo ? null : getEmailTransporter();
+  if (!newReservations || newReservations.length === 0) return;
 
-  if (!useBrevo && !transporter) {
-    console.log(
-      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, aucune notification ménage envoyée'
-    );
-    return;
+  // ✅ Push notifications aux cleaners sous-comptes (indépendant de l'email)
+  const byUserPush = new Map();
+  for (const res of newReservations) {
+    if (!res.userId || !res.propertyId) continue;
+    if (!byUserPush.has(res.userId)) byUserPush.set(res.userId, []);
+    byUserPush.get(res.userId).push(res);
+  }
+  for (const [userId, userReservations] of byUserPush.entries()) {
+    let assignmentsMap = {};
+    try { assignmentsMap = await getCleanerAssignmentsMapForUser(userId); } catch(e) { continue; }
+    for (const res of userReservations) {
+      const assignment = assignmentsMap[res.propertyId];
+      if (!assignment || !assignment.sub_account_id) continue;
+      const propertyName = res.propertyName || (res.property && res.property.name) || 'Votre logement';
+      try {
+        const tokenRes = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
+          [assignment.sub_account_id]
+        );
+        if (tokenRes.rows.length > 0) {
+          const tokens = tokenRes.rows.map(r => r.fcm_token);
+          await sendNotificationToMultiple(
+            tokens,
+            '🧹 Nouveau ménage assigné',
+            `${propertyName} — Vous avez un ménage à effectuer`,
+            { type: 'cleaning_assigned', property_name: propertyName }
+          );
+          console.log(`✅ Push ménage envoyé au sous-compte ${assignment.sub_account_id}`);
+        } else {
+          console.log(`ℹ️ Sous-compte ${assignment.sub_account_id} sans token FCM`);
+        }
+      } catch(e) { console.error('❌ Push ménage sous-compte:', e.message); }
+    }
   }
 
-  if (!newReservations || newReservations.length === 0) {
+  // Emails (optionnel, uniquement si email configuré)
+  const useBrevo = !!process.env.BREVO_API_KEY;
+  const transporter = useBrevo ? null : getEmailTransporter();
+  if (!useBrevo && !transporter) {
+    console.log('⚠️  Pas d\'email configuré — push uniquement');
     return;
   }
 
@@ -1889,33 +1920,6 @@ L'équipe Boostinghost`;
   }
 
   await Promise.all(tasks);
-
-  // ✅ NOTIFICATIONS PUSH aux cleaners sous-comptes
-  for (const [userId, userReservations] of byUser.entries()) {
-    let assignmentsMap = {};
-    try { assignmentsMap = await getCleanerAssignmentsMapForUser(userId); } catch(e) { continue; }
-    for (const res of userReservations) {
-      const assignment = assignmentsMap[res.propertyId];
-      if (!assignment || !assignment.sub_account_id) continue;
-      const propertyName = res.propertyName || (res.property && res.property.name) || 'Votre logement';
-      try {
-        const tokenRes = await pool.query(
-          'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
-          [assignment.sub_account_id]
-        );
-        if (tokenRes.rows.length > 0) {
-          const tokens = tokenRes.rows.map(r => r.fcm_token);
-          await sendNotificationToMultiple(
-            tokens,
-            '🧹 Nouveau ménage assigné',
-            `${propertyName} — Vous avez un ménage à effectuer`,
-            { type: 'cleaning_assigned', property_name: propertyName }
-          );
-          console.log(`✅ Push ménage envoyé au sous-compte ${assignment.sub_account_id}`);
-        }
-      } catch(e) { console.error('❌ Push ménage sous-compte:', e.message); }
-    }
-  }
 }
 /**
  * Envoie chaque jour un planning de ménage pour "demain"
