@@ -5278,6 +5278,15 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         } catch (pushError) {
           console.error('❌ Erreur notification push:', pushError.message);
         }
+
+        // ✅ Notification push cleaner sous-compte assigné
+        try {
+          await notifyCleanersAboutNewBookings([{
+            userId: user.id,
+            propertyId: propertyId,
+            propertyName: property.name
+          }]);
+        } catch(e) { console.error('❌ Notif ménage manuelle:', e.message); }
         
       } catch (notifError) {
         console.error('❌ Erreur notifications:', notifError.message);
