@@ -4902,6 +4902,11 @@ async function syncAllCalendars() {
 
       const newIcalReservations = reservations || [];
 
+      // Séparer les vraies résas des blocages Airbnb "Not available"
+      // Les blocages sont gardés pour la détection d'annulation (comparaison UIDs)
+      // mais ne doivent PAS être sauvegardés en DB ni traités comme nouvelles résas
+      const newIcalReal = newIcalReservations.filter(r => !r.isBlock);
+
 // 🛡️ PROTECTION: si le fetch a retourné 0 réservations mais qu'on en avait avant,
 // c'est probablement une erreur réseau/iCal — on skip les annulations
 const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.length > 0;
@@ -4909,8 +4914,8 @@ const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.len
       const oldIds = new Set(oldIcalReservations.map(r => r.uid));
       const newIds = new Set(newIcalReservations.map(r => r.uid));
 
-      // ➕ Nouvelles réservations (présentes dans new mais pas dans old)
-      const trulyNewReservations = newIcalReservations.filter(r => !oldIds.has(r.uid));
+      // ➕ Nouvelles réservations (vraies résas uniquement, pas les blocages)
+      const trulyNewReservations = newIcalReal.filter(r => !oldIds.has(r.uid));
       
       // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
       const now = new Date();
@@ -4948,9 +4953,9 @@ const cancelledForProperty = fetchedEmpty ? [] : oldIcalReservations.filter(r =>
         );
       }
 
-      // SAUVEGARDER DANS POSTGRESQL
-      if (newIcalReservations.length > 0) {
-        await savePropertyReservations(property.id, newIcalReservations, property.userId);
+      // SAUVEGARDER DANS POSTGRESQL (vraies résas uniquement, pas les blocages isBlock)
+      if (newIcalReal.length > 0) {
+        await savePropertyReservations(property.id, newIcalReal, property.userId);
       }
 
       // MARQUER LES RESERVATIONS PASSEES COMME "COMPLETED"
