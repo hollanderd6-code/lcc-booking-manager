@@ -8382,7 +8382,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 
     // Vérifier que le cleaner appartient bien à l'utilisateur
     const cleanerResult = await pool.query(
-      `SELECT id, name, email, phone
+      `SELECT id, name, email, phone, sub_account_id
        FROM cleaners
        WHERE id = $1 AND user_id = $2`,
       [cleanerId, user.id]
