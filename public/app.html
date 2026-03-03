@@ -7041,8 +7041,12 @@ try {
           const endStr   = (booking.end   || booking.endDate   || '').slice(0, 10);
           const cleaningKey = propertyId && startStr && endStr
             ? `${propertyId}_${startStr}_${endStr}` : null;
+          console.log('🧹 DEBUG propertyId:', propertyId);
+          console.log('🧹 DEBUG cleaningKey:', cleaningKey);
+          console.log('🧹 DEBUG assignments keys:', assignments.map(a => a.reservation_key));
           const match = cleaningKey
             ? assignments.find(a => a.reservation_key === cleaningKey) : null;
+          console.log('🧹 DEBUG match:', match);
           if (match) {
             statusText = 'Assigné à ' + (match.cleaner_name || String(match.cleaner_id));
           }
