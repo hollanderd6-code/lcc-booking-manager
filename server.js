@@ -3209,8 +3209,8 @@ async function saveReservationToDB(reservation, propertyId, userId) {
         `SELECT uid FROM reservations
          WHERE property_id = $1
            AND uid != $2
-           AND start_date < $4::date
-           AND end_date > $3::date`,
+           AND start_date::date < $4::date
+           AND end_date::date > $3::date`,
         [propertyId, reservation.uid, startDate, endDate]
       );
       if (overlapRes.rows.length > 0) {
@@ -5257,9 +5257,8 @@ app.post('/api/reservations/manual', async (req, res) => {
        WHERE property_id = $1
          AND user_id = $4
          AND status NOT IN ('cancelled', 'completed')
-         AND start_date < $3::date
-         AND end_date > $2::date
-         AND (end_date - start_date) < INTERVAL '365 days'`,
+         AND start_date::date < $3::date
+         AND end_date::date > $2::date`,
       [propertyId, start, end, user.id]
     );
     if (overlapCheck.rows.length > 0) {
@@ -5859,9 +5858,8 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
        WHERE property_id = $1
          AND user_id = $4
          AND status NOT IN ('cancelled', 'completed')
-         AND start_date < $3::date
-         AND end_date > $2::date
-         AND (end_date - start_date) < INTERVAL '365 days'`,
+         AND start_date::date < $3::date
+         AND end_date::date > $2::date`,
       [propertyId, checkIn, checkOut, user.id]
     );
     if (overlapCheck.rows.length > 0) {
