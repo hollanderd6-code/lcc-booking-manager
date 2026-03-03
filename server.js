@@ -9098,7 +9098,7 @@ app.get('/api/cleaning/checklists',
 // ============================================
 app.get('/api/cleaning/assignments', 
   authenticateAny,
-  requirePermission(pool, 'can_view_cleaning'),
+  requirePermission(pool, 'can_view_calendar'),
   loadSubAccountData(pool),
   async (req, res) => {
   try {
