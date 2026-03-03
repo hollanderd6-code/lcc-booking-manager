@@ -2110,6 +2110,68 @@ function formatDateFr(dateStr) {
   }
 }
 
+
+      // ✅ Migration : pousse les assignations localStorage vers DB
+      // S'exécute au chargement pour rattraper les assignations jamais sauvées en DB
+      async function migrateLocalAssignmentsToDB() {
+        const token = localStorage.getItem('lcc_token');
+        if (!token) return;
+
+        const localAssignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN) || '{}');
+        const localKeys = Object.keys(localAssignments);
+        if (localKeys.length === 0) return;
+
+        // Récupérer les assignations déjà en DB
+        let dbKeys = new Set();
+        try {
+          const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
+            headers: { Authorization: 'Bearer ' + token }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            (data.assignments || []).forEach(row => { if (row.reservation_key) dbKeys.add(row.reservation_key); });
+          }
+        } catch(e) { return; }
+
+        // Trouver les assignations locales absentes de la DB
+        const toMigrate = localKeys.filter(key => !dbKeys.has(key) && localAssignments[key]);
+        if (toMigrate.length === 0) {
+          console.log('✅ Aucune migration necessaire');
+          return;
+        }
+
+        console.log('🔄 Migration de ' + toMigrate.length + ' assignation(s) localStorage vers DB...');
+        let migrated = 0;
+
+        for (const key of toMigrate) {
+          const cleanerId = localAssignments[key];
+          if (!cleanerId) continue;
+
+          // Extraire propertyId : tout sauf les 2 derniers segments séparés par _
+          const parts = key.split('_');
+          if (parts.length < 3) continue;
+          const propertyId = parts.slice(0, parts.length - 2).join('_');
+
+          try {
+            const r = await fetch(`${API_URL}/api/cleaning/assignments`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ reservationKey: key, propertyId, cleanerId })
+            });
+            if (r.ok) {
+              migrated++;
+            } else {
+              const err = await r.json().catch(() => ({}));
+              console.warn('Migration echouee pour ' + key + ':', err.error || r.status);
+            }
+          } catch(e) {
+            console.warn('Erreur migration ' + key + ':', e.message);
+          }
+        }
+
+        console.log('✅ Migration terminee : ' + migrated + '/' + toMigrate.length + ' assignations migrees en DB');
+      }
+
       // ✅ Cleaners par défaut par logement (chargé depuis settings)
       let defaultCleanersMap = {};
 
@@ -2828,6 +2890,8 @@ function formatDateFr(dateStr) {
           loadAssignmentsFromApi(),
           loadDefaultCleanersMap()
         ]);
+        // Migrer les assignations localStorage vers DB (rattraper l'historique)
+        migrateLocalAssignmentsToDB().catch(e => console.warn('Migration:', e.message));
         renderCleaners();
         renderAssignments();
         // Charger les checklists en arrière-plan pour le badge
