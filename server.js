@@ -1535,7 +1535,8 @@ async function getCleanerAssignmentsMapForUser(userId) {
       c.name  AS cleaner_name,
       c.email AS cleaner_email,
       c.phone AS cleaner_phone,
-      c.is_active AS cleaner_active
+      c.is_active AS cleaner_active,
+      c.sub_account_id AS cleaner_sub_account_id
     FROM cleaning_assignments ca
     LEFT JOIN cleaners c ON c.id = ca.cleaner_id
     WHERE ca.user_id = $1
@@ -1552,14 +1553,15 @@ async function getCleanerAssignmentsMapForUser(userId) {
       cleanerId: row.cleaner_id,
       name: row.cleaner_name,
       email: row.cleaner_email,
-      phone: row.cleaner_phone
+      phone: row.cleaner_phone,
+      sub_account_id: row.cleaner_sub_account_id
     };
   }
 
   // Compléter avec les cleaners par défaut pour les logements sans assignation
   try {
     const defaults = await pool.query(
-      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active
+      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active, c.sub_account_id
        FROM property_default_cleaners pdc
        LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
        WHERE pdc.user_id = $1`,
@@ -1574,7 +1576,8 @@ async function getCleanerAssignmentsMapForUser(userId) {
           cleanerId: row.cleaner_id,
           name: row.name,
           email: row.email,
-          phone: row.phone
+          phone: row.phone,
+          sub_account_id: row.sub_account_id
         };
       }
     }
@@ -6086,17 +6089,18 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
           );
           
           console.log(`✅ Notification annulation groupée envoyée à ${fcmTokens.length} appareil(s)`);
-          // ✅ Notif sous-comptes : annulation
-          try {
-            await sendNotificationToSubAccountsOf(
-              user.id, 'can_view_calendar',
-              '\u274C R\u00E9servation annul\u00E9e',
-              propertyName + ' - ' + cancelDate,
-              { type: 'reservation_cancelled', reservation_id: uid },
-              'notif_sub_reservation_cancelled'
-            );
-          } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
         }
+
+        // ✅ Notif sous-comptes annulation (indépendant du token principal)
+        try {
+          await sendNotificationToSubAccountsOf(
+            user.id, 'can_view_calendar',
+            '❌ Réservation annulée',
+            propertyName + ' - ' + cancelDate,
+            { type: 'reservation_cancelled', reservation_id: uid },
+            'notif_sub_reservation_cancelled'
+          );
+        } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
       } catch (notifError) {
         console.error('❌ Erreur notification:', notifError.message);
         // On continue, la suppression a réussi
