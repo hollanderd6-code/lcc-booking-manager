@@ -2210,14 +2210,38 @@ function formatDateFr(dateStr) {
         }
       }
 
+      // Normalise une date en format ISO YYYY-MM-DD
+      // Gere les formats : "2026-03-03", "2026-03-03T00:00:00Z", "Tue Mar 03", "Tue Mar 03 2026"
+      function normalizeDateToISO(dateVal) {
+        if (!dateVal) return '';
+        const s = String(dateVal).trim();
+        // Deja au format ISO YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+        // Format texte "Tue Mar 03" ou "Tue Mar 03 2026" -> passer par Date()
+        try {
+          const d = new Date(s);
+          if (!isNaN(d.getTime())) {
+            const year = d.getFullYear() < 2000 ? new Date().getFullYear() : d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+        } catch(e) {}
+        return s.slice(0, 10);
+      }
+
       function getReservationKey(reservation) {
-  if (!reservation || !reservation.start || !reservation.end) return null;
+  if (!reservation) return null;
+  const rawStart = reservation.start || reservation.startDate;
+  const rawEnd   = reservation.end   || reservation.endDate;
+  if (!rawStart || !rawEnd) return null;
   
   const propertyId = getReservationPropertyId(reservation);
   if (!propertyId) return null;
   
-  const startStr = String(reservation.start).slice(0, 10);
-  const endStr = String(reservation.end).slice(0, 10);
+  const startStr = normalizeDateToISO(rawStart);
+  const endStr   = normalizeDateToISO(rawEnd);
+  if (!startStr || !endStr) return null;
   return `${propertyId}_${startStr}_${endStr}`;
 }
 
