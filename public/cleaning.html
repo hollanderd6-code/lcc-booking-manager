@@ -2152,22 +2152,48 @@ function formatDateFr(dateStr) {
           if (parts.length < 3) continue;
           const propertyId = parts.slice(0, parts.length - 2).join('_');
 
+          // Normaliser les dates de la clé en ISO (gère format texte "Wed Apr 08" et ISO)
+          const rawStart = parts[parts.length - 2];
+          const rawEnd   = parts[parts.length - 1];
+          const isoStart = normalizeDateToISO(rawStart);
+          const isoEnd   = normalizeDateToISO(rawEnd);
+
+          // Ignorer si la date de fin est dans le passé
+          const todayStr = new Date().toISOString().slice(0, 10);
+          if (isoEnd && isoEnd < todayStr) continue;
+
+          // Reconstruire la clé en ISO
+          const normalizedKey = (isoStart && isoEnd)
+            ? propertyId + '_' + isoStart + '_' + isoEnd
+            : key;
+
+          // Ignorer si la clé normalisée est déjà en DB
+          if (dbKeys.has(normalizedKey)) continue;
+
           try {
             const r = await fetch(`${API_URL}/api/cleaning/assignments`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-              body: JSON.stringify({ reservationKey: key, propertyId, cleanerId })
+              body: JSON.stringify({ reservationKey: normalizedKey, propertyId, cleanerId })
             });
             if (r.ok) {
               migrated++;
+              // Mettre à jour le localStorage avec la clé normalisée
+              if (normalizedKey !== key) {
+                localAssignments[normalizedKey] = cleanerId;
+                delete localAssignments[key];
+              }
             } else {
               const err = await r.json().catch(() => ({}));
-              console.warn('Migration echouee pour ' + key + ':', err.error || r.status);
+              console.warn('Migration echouee pour ' + normalizedKey + ':', err.error || r.status);
             }
           } catch(e) {
-            console.warn('Erreur migration ' + key + ':', e.message);
+            console.warn('Erreur migration ' + normalizedKey + ':', e.message);
           }
         }
+
+        // Mettre à jour le localStorage avec les clés normalisées
+        localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(localAssignments));
 
         console.log('✅ Migration terminee : ' + migrated + '/' + toMigrate.length + ' assignations migrees en DB');
       }
