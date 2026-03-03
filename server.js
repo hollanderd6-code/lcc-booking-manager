@@ -14645,6 +14645,19 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
             }
           }
+
+          // ✅ Notif sous-comptes : annulation
+          try {
+            const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+            await sendNotificationToSubAccountsOf(
+              user.id, 'can_view_calendar',
+              '❌ Réservation annulée — ' + property.name,
+              property.name + ' - ' + cancelDate,
+              { type: 'reservation_cancelled', reservation_id: uid },
+              'notif_sub_reservation_cancelled'
+            );
+          } catch(_e) { console.error('Notif sous-comptes annulation delete:', _e.message); }
+
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
         }
