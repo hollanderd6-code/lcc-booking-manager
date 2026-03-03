@@ -1755,17 +1755,45 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
  * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
  */
 async function notifyCleanersAboutNewBookings(newReservations) {
-  const useBrevo = !!process.env.BREVO_API_KEY;
-  const transporter = useBrevo ? null : getEmailTransporter();
+  if (!newReservations || newReservations.length === 0) return;
 
-  if (!useBrevo && !transporter) {
-    console.log(
-      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, aucune notification ménage envoyée'
-    );
-    return;
+  // ✅ Push notifications cleaners sous-comptes (indépendant de l'email)
+  for (const res of newReservations) {
+    const userId = res.userId || res.user_id;
+    const propertyId = res.propertyId || res.property_id;
+    if (!userId || !propertyId) continue;
+
+    let assignmentsMap = {};
+    try { assignmentsMap = await getCleanerAssignmentsMapForUser(userId); } catch(e) { continue; }
+
+    const assignment = assignmentsMap[propertyId];
+    if (!assignment || !assignment.sub_account_id) continue;
+
+    const propertyName = res.propertyName || res.property_name || 'Votre logement';
+    try {
+      const tokenRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
+        [assignment.sub_account_id]
+      );
+      if (tokenRes.rows.length > 0) {
+        await sendNotificationToMultiple(
+          tokenRes.rows.map(r => r.fcm_token),
+          '🧹 Nouveau ménage assigné',
+          `${propertyName} — Vous avez un ménage à effectuer`,
+          { type: 'cleaning_assigned', property_name: propertyName }
+        );
+        console.log(`✅ Push ménage envoyé au sous-compte ${assignment.sub_account_id}`);
+      } else {
+        console.log(`ℹ️ Sous-compte ${assignment.sub_account_id} sans token FCM`);
+      }
+    } catch(e) { console.error('❌ Push ménage sous-compte:', e.message); }
   }
 
-  if (!newReservations || newReservations.length === 0) {
+  // Emails (si configurés)
+  const useBrevo = !!process.env.BREVO_API_KEY;
+  const transporter = useBrevo ? null : getEmailTransporter();
+  if (!useBrevo && !transporter) {
+    console.log('⚠️  Pas d\'email configuré — push uniquement');
     return;
   }
 
@@ -3201,7 +3229,9 @@ async function loadReservationsFromDB() {
  */
 async function saveReservationToDB(reservation, propertyId, userId) {
   try {
-    // ✅ Vérifier chevauchement avant d'importer (évite les faux blocages iCal)
+    const realUserId = userId;
+
+    // ✅ Vérifier chevauchement avant import iCal
     const startDate = reservation.start || reservation.startDate;
     const endDate = reservation.end || reservation.endDate;
     if (startDate && endDate) {
@@ -3211,7 +3241,7 @@ async function saveReservationToDB(reservation, propertyId, userId) {
            AND uid != $2
            AND start_date::date < $4::date
            AND end_date::date > $3::date`,
-        [propertyId, reservation.uid, startDate, endDate]
+        [propertyId, reservation.uid || '', startDate, endDate]
       );
       if (overlapRes.rows.length > 0) {
         console.log(`⚠️ Import ignoré (dates déjà prises): ${reservation.uid}`);
@@ -3219,9 +3249,6 @@ async function saveReservationToDB(reservation, propertyId, userId) {
       }
     }
 
-    // ✅ Utiliser le userId passé en paramètre
-    const realUserId = userId;
-    
     // Vérifier si la réservation existe déjà
     const existingResult = await pool.query(
       'SELECT id FROM reservations WHERE uid = $1',
@@ -5243,12 +5270,12 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => String(p.id) === String(propertyId) && String(p.userId) === String(user.id));
     if (!property) {
       console.log('❌ Logement non trouvé:', propertyId);
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
-    
+
     console.log('✅ Logement trouvé:', property.name);
 
     // ✅ Vérification chevauchement de dates
@@ -5262,13 +5289,10 @@ app.post('/api/reservations/manual', async (req, res) => {
       [propertyId, start, end, user.id]
     );
     if (overlapCheck.rows.length > 0) {
-      const existing = overlapCheck.rows[0];
-      const s = new Date(existing.start_date).toLocaleDateString('fr-FR');
-      const e = new Date(existing.end_date).toLocaleDateString('fr-FR');
-      console.log(`❌ Chevauchement détecté: ${existing.uid} (${s} → ${e})`);
-      return res.status(409).json({
-        error: `Ces dates sont déjà prises (${s} → ${e} — ${existing.guest_name || 'Réservation existante'})`
-      });
+      const ex = overlapCheck.rows[0];
+      const s = new Date(ex.start_date).toLocaleDateString('fr-FR');
+      const e = new Date(ex.end_date).toLocaleDateString('fr-FR');
+      return res.status(409).json({ error: `Ces dates sont déjà prises (${s} → ${e} — ${ex.guest_name || 'Réservation existante'})` });
     }
 
     const uid = 'manual_' + Date.now();
@@ -5397,6 +5421,15 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         } catch (pushError) {
           console.error('❌ Erreur notification push:', pushError.message);
         }
+
+        // ✅ Notif push cleaner sous-compte
+        try {
+          await notifyCleanersAboutNewBookings([{
+            userId: user.id,
+            propertyId: propertyId,
+            propertyName: property.name
+          }]);
+        } catch(e) { console.error('❌ Notif ménage manuelle:', e.message); }
         
       } catch (notifError) {
         console.error('❌ Erreur notifications:', notifError.message);
@@ -5853,7 +5886,7 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     console.log('✅ Logement trouvé:', property.name);
 
     // ✅ Vérification chevauchement de dates
-    const overlapCheck = await pool.query(
+    const overlapCheck2 = await pool.query(
       `SELECT uid, guest_name, start_date, end_date FROM reservations
        WHERE property_id = $1
          AND user_id = $4
@@ -5862,14 +5895,11 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
          AND end_date::date > $2::date`,
       [propertyId, checkIn, checkOut, user.id]
     );
-    if (overlapCheck.rows.length > 0) {
-      const existing = overlapCheck.rows[0];
-      const s = new Date(existing.start_date).toLocaleDateString('fr-FR');
-      const e = new Date(existing.end_date).toLocaleDateString('fr-FR');
-      console.log(`❌ Chevauchement détecté: ${existing.uid}`);
-      return res.status(409).json({
-        error: `Ces dates sont déjà prises (${s} → ${e} — ${existing.guest_name || 'Réservation existante'})`
-      });
+    if (overlapCheck2.rows.length > 0) {
+      const ex = overlapCheck2.rows[0];
+      const s = new Date(ex.start_date).toLocaleDateString('fr-FR');
+      const e = new Date(ex.end_date).toLocaleDateString('fr-FR');
+      return res.status(409).json({ error: `Ces dates sont déjà prises (${s} → ${e} — ${ex.guest_name || 'Réservation existante'})` });
     }
     
     // 4. CRÉATION DE LA RÉSERVATION
@@ -5880,6 +5910,9 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     
     const reservation = {
       uid: uid,
+      userId: user.id,
+      propertyId: propertyId,
+      propertyName: property.name,
       start: checkIn,
       end: checkOut,
       source: platform || 'MANUEL',
