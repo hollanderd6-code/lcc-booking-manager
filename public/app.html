@@ -7037,15 +7037,48 @@ try {
         if (resp.ok) {
           const data = await resp.json();
           const assignments = Array.isArray(data.assignments) ? data.assignments : [];
-          const startStr = (booking.start || booking.startDate || '').slice(0, 10);
-          const endStr   = (booking.end   || booking.endDate   || '').slice(0, 10);
-          const cleaningKey = propertyId && startStr && endStr
-            ? `${propertyId}_${startStr}_${endStr}` : null;
-          console.log('🧹 DEBUG propertyId:', propertyId);
+
+          // Construction robuste de la cle (meme logique que cleaning.html)
+          // Les reservations peuvent avoir start/end OU startDate/endDate selon la source
+          const rawStart = booking.start || booking.startDate || booking.checkIn || booking.checkin || '';
+          const rawEnd   = booking.end   || booking.endDate   || booking.checkOut || booking.checkout || '';
+          const startStr = String(rawStart).slice(0, 10);
+          const endStr   = String(rawEnd).slice(0, 10);
+
+          // propertyId peut aussi venir de booking si la variable locale est null
+          const effectivePropertyId = propertyId
+            || booking.propertyId
+            || booking.property_id
+            || (booking.property && booking.property.id)
+            || null;
+
+          const cleaningKey = effectivePropertyId && startStr && endStr
+            ? `${effectivePropertyId}_${startStr}_${endStr}` : null;
+
+          console.log('🧹 DEBUG propertyId:', effectivePropertyId);
           console.log('🧹 DEBUG cleaningKey:', cleaningKey);
+          console.log('🧹 DEBUG startStr/endStr:', startStr, '/', endStr);
           console.log('🧹 DEBUG assignments keys:', assignments.map(a => a.reservation_key));
-          const match = cleaningKey
+
+          let match = cleaningKey
             ? assignments.find(a => a.reservation_key === cleaningKey) : null;
+
+          // Fallback : matching souple si la cle exacte ne correspond pas
+          if (!match && assignments.length > 0 && effectivePropertyId && startStr && endStr) {
+            match = assignments.find(a => {
+              if (!a.reservation_key) return false;
+              const parts = a.reservation_key.split('_');
+              if (parts.length < 3) return false;
+              const keyEnd    = parts[parts.length - 1];
+              const keyStart  = parts[parts.length - 2];
+              const keyPropId = parts.slice(0, parts.length - 2).join('_');
+              return String(keyPropId) === String(effectivePropertyId)
+                && keyStart === startStr
+                && keyEnd === endStr;
+            });
+            if (match) console.log('🧹 Match trouve par fallback:', match.reservation_key);
+          }
+
           console.log('🧹 DEBUG match:', match);
           if (match) {
             statusText = 'Assigné à ' + (match.cleaner_name || String(match.cleaner_id));
