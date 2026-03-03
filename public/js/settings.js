@@ -322,6 +322,11 @@ if (ownerId) formData.append('ownerId', ownerId);
 
     if (response.ok) {
       showToast(result.message || "Logement enregistré", "success");
+      // ✅ Sauvegarder le cleaner par défaut AVANT de fermer la modale
+      const pidVal = document.getElementById('propertyId')?.value;
+      if (pidVal && typeof window.saveDefaultCleanerExternal === 'function') {
+        await window.saveDefaultCleanerExternal(pidVal);
+      }
       closeEditModal();
       await loadProperties();
     } else {
