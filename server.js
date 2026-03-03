@@ -4872,7 +4872,7 @@ async function syncAllCalendars() {
     }
 
     try {
-      const reservations = await icalService.fetchReservations(property);
+      const reservations = await icalService.fetchReservations(property, pool);
 
       // Ancien état (iCal + manuelles) :
       const previousAllReservations = reservationsStore.properties[property.id] || [];
@@ -10670,7 +10670,7 @@ app.post('/api/properties/test-ical', async (req, res) => {
       icalUrls: [url]
     };
 
-    const reservations = await icalService.fetchReservations(testProperty);
+    const reservations = await icalService.fetchReservations(testProperty, pool);
 
     res.json({
       success: true,
