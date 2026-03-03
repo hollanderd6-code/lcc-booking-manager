@@ -7026,10 +7026,9 @@ try {
   console.warn('Erreur injection risk/checklist modal', e);
 }
 
-    // 5️⃣ Gestion du ménage – lecture directe API
+    // 5️⃣ Gestion du ménage — même clé que cleaning.html : propertyId_start_end
     try {
       let statusText = 'Pas encore assigné';
-
       try {
         const token = localStorage.getItem('lcc_token');
         const resp = await fetch(`${API_URL}/api/cleaning/assignments`, {
@@ -7038,25 +7037,18 @@ try {
         if (resp.ok) {
           const data = await resp.json();
           const assignments = Array.isArray(data.assignments) ? data.assignments : [];
-
-          // Construire la clé au même format que cleaning.html : propertyId_start_end
-          const pid = propertyId;
+          // Clé identique à cleaning.html : propertyId_YYYY-MM-DD_YYYY-MM-DD
           const startStr = (booking.start || booking.startDate || '').slice(0, 10);
           const endStr   = (booking.end   || booking.endDate   || '').slice(0, 10);
-          const cleaningKey = pid && startStr && endStr ? `${pid}_${startStr}_${endStr}` : null;
-
+          const cleaningKey = propertyId && startStr && endStr
+            ? `${propertyId}_${startStr}_${endStr}` : null;
           const match = cleaningKey
-            ? assignments.find(a => a.reservation_key === cleaningKey)
-            : null;
-
+            ? assignments.find(a => a.reservation_key === cleaningKey) : null;
           if (match) {
-            // cleaner_name est déjà dans la réponse API (JOIN cleaners)
-            statusText = 'Assigné à ' + (match.cleaner_name || match.cleaner_id);
+            statusText = 'Assigné à ' + (match.cleaner_name || String(match.cleaner_id));
           }
         }
-      } catch(apiErr) {
-        console.warn('⚠️ Impossible de charger les assignments:', apiErr.message);
-      }
+      } catch(e) { console.warn('⚠️ Assignments API:', e.message); }
 
       // Injection / mise à jour du bloc "Ménage"
       let group = detailsContent.querySelector('[data-cleaning-info="1"]');
