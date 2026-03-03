@@ -6,6 +6,7 @@ const DEFAULT_TZ = process.env.APP_TIMEZONE || 'Europe/Paris';
 
 /**
  * Devine la plateforme en fonction de l'URL iCal
+ * (c'est juste pour afficher AIRBNB / BOOKING / ICAL)
  */
 function detectSourceFromUrl(url) {
   const lower = (url || '').toLowerCase();
@@ -15,19 +16,22 @@ function detectSourceFromUrl(url) {
 }
 
 /**
- * Extraire la plateforme depuis un objet ou string
+ * ✅ NOUVEAU : Extraire la plateforme depuis un objet ou string
  */
 function extractSource(item) {
   if (!item) return 'ICAL';
   
+  // Si c'est un objet avec platform
   if (typeof item === 'object' && item.platform) {
     return item.platform.toUpperCase();
   }
   
+  // Si c'est un objet avec url
   if (typeof item === 'object' && item.url) {
     return detectSourceFromUrl(item.url);
   }
   
+  // Si c'est une string
   if (typeof item === 'string') {
     return detectSourceFromUrl(item);
   }
@@ -35,17 +39,23 @@ function extractSource(item) {
   return 'ICAL';
 }
 
+/**
+ * Essaie d'extraire le nom du voyageur à partir
+ * du SUMMARY / DESCRIPTION de l'événement iCal.
+ */
 function extractGuestName(ev) {
   const summary = (ev.summary || '').toString();
   const description = (ev.description || '').toString();
 
   let guestName = null;
 
+  // Exemple Booking : "Réservation : Jane Dupont"
   let m = summary.match(/Réservation\s*:\s*(.+)$/i);
   if (m) {
     guestName = m[1].trim();
   }
 
+  // Exemple dans la description : "Guest: John Doe"
   if (!guestName) {
     m = description.match(/Guest:\s*([^\n]+)/i);
     if (m) {
@@ -53,6 +63,7 @@ function extractGuestName(ev) {
     }
   }
 
+  // Si vraiment rien, on peut mettre le summary brut
   if (!guestName && summary) {
     guestName = summary.trim();
   }
@@ -60,16 +71,31 @@ function extractGuestName(ev) {
   return guestName;
 }
 
+/**
+ * Transforme un VEVENT iCal en "réservation" pour ton système.
+ * Retourne null si l'événement doit être ignoré.
+ */
 function mapEventToReservation(ev, source) {
   if (!ev.start || !ev.end) return null;
 
   const summary = (ev.summary || '').toString();
   const summaryLower = summary.toLowerCase();
+
+  // 🚫 AIRBNB : ignorer les blocages automatiques "Not available"
+  // Ce sont des créneaux bloqués par Airbnb (chevauchements, maintenance...)
+  // et non de vraies réservations voyageurs
+  if (source === 'AIRBNB' && summaryLower.includes('not available')) {
+    console.log(`⏭️ iCal AIRBNB ignoré (Not available) : ${ev.uid}`);
+    return null;
+  }
   
+  // ✅ Pour Booking : "CLOSED - Not available" = vraie réservation
+  // On garde ces événements et on les marque comme réservations Booking
   let guestName = extractGuestName(ev);
   
+  // Si c'est un blocage Booking, on met un nom générique
   if (source === 'BOOKING' && (summaryLower.includes('closed') || summaryLower.includes('not available'))) {
-    guestName = 'Voyageur Booking';
+    guestName = 'Voyageur Booking';  // Nom générique car Booking cache les infos
   }
 
   const start = moment(ev.start).tz(DEFAULT_TZ).toISOString();
@@ -79,94 +105,96 @@ function mapEventToReservation(ev, source) {
     uid: ev.uid || ev.id || `${source}_${start}_${end}`,
     start,
     end,
-    source,
+    source,                // 'AIRBNB' / 'BOOKING' / 'ICAL'
     platform: source,
-    type: 'ical',
+    type: 'ical',          // pour distinguer des MANUEL / BLOCK
     guestName,
     rawSummary: ev.summary || '',
     rawDescription: ev.description || ''
   };
 }
 
+/**
+ * ✅ CORRIGÉ : Normaliser les URLs iCal (gérer objets ET strings)
+ */
 function normalizeIcalUrls(icalUrls) {
-  console.log('🔍🔍🔍 normalizeIcalUrls APPELÉE avec:', typeof icalUrls, Array.isArray(icalUrls));
-  console.log('🔍🔍🔍 Contenu brut:', JSON.stringify(icalUrls));
+  if (!Array.isArray(icalUrls)) return [];
   
-  if (!Array.isArray(icalUrls)) {
-    console.log('❌ icalUrls n\'est PAS un array ! Type:', typeof icalUrls);
-    return [];
-  }
-  
-  const result = icalUrls
-    .map((item, index) => {
-      console.log(`🔍 Item ${index}:`, typeof item, JSON.stringify(item));
+  return icalUrls
+    .map(item => {
+      if (!item) return null;
       
-      if (!item) {
-        console.log(`  → Item ${index} est null/undefined`);
-        return null;
-      }
-      
+      // ✅ Cas 1 : Objet {url: "...", platform: "..."}
       if (typeof item === 'object' && item.url) {
-        console.log(`  → Item ${index} est un OBJET avec url:`, item.url);
         return {
           url: item.url,
           platform: item.platform || detectSourceFromUrl(item.url)
         };
       }
       
+      // ✅ Cas 2 : String simple "https://..."
       if (typeof item === 'string') {
-        console.log(`  → Item ${index} est une STRING:`, item);
         return {
           url: item,
           platform: detectSourceFromUrl(item)
         };
       }
       
-      console.log(`  → Item ${index} format inconnu !`);
       return null;
     })
     .filter(Boolean);
-  
-  console.log('🔍🔍🔍 normalizeIcalUrls RÉSULTAT:', JSON.stringify(result));
-  return result;
 }
 
-async function fetchReservations(property) {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`🔵 fetchReservations pour: ${property?.name || 'INCONNU'}`);
-  console.log(`🔵 property.icalUrls TYPE:`, typeof property?.icalUrls);
-  console.log(`🔵 property.icalUrls IS ARRAY:`, Array.isArray(property?.icalUrls));
-  console.log(`🔵 property.icalUrls CONTENU:`, JSON.stringify(property?.icalUrls));
-  
+/**
+ * Récupère toutes les réservations iCal d'un logement
+ * en parcourant toutes ses URLs iCal.
+ */
+async function fetchReservations(property, supabase = null) {
   const results = [];
 
   if (!property || !Array.isArray(property.icalUrls) || property.icalUrls.length === 0) {
-    console.log(`⚠️ ${property?.name || 'Inconnu'}: Pas d'icalUrls valide`);
     return results;
   }
 
+  // Charger les UIDs bloqués depuis la DB (si supabase fourni)
+  const blockedUids = new Set();
+  if (supabase) {
+    try {
+      const { data } = await supabase
+        .from('ical_blocked_uids')
+        .select('uid')
+        .or(`property_id.eq.${property.id},property_id.is.null`);
+      if (Array.isArray(data)) {
+        data.forEach(row => blockedUids.add(row.uid));
+      }
+      if (blockedUids.size > 0) {
+        console.log(`🚫 ${blockedUids.size} UID(s) bloqué(s) pour ${property.name}`);
+      }
+    } catch (e) {
+      console.warn('⚠️ Impossible de charger ical_blocked_uids:', e.message);
+    }
+  }
+
+  // ✅ Normaliser les URLs (gérer objets ET strings)
   const normalizedUrls = normalizeIcalUrls(property.icalUrls);
-  
-  console.log(`🔵 URLs normalisées (${normalizedUrls.length}):`, JSON.stringify(normalizedUrls));
 
   for (const item of normalizedUrls) {
-    if (!item || !item.url) {
-      console.log(`⚠️ Item invalide:`, item);
-      continue;
-    }
+    if (!item || !item.url) continue;
     
     const url = item.url;
     const source = item.platform || 'ICAL';
 
-    console.log(`🔵 Fetch ${source}:`, url.substring(0, 80));
-
     try {
       const data = await ical.async.fromURL(url);
       
-      console.log(`✅ Fetch OK pour ${source}`);
-      
       Object.values(data).forEach(ev => {
         if (!ev || ev.type !== 'VEVENT') return;
+
+        // Vérifier si l'UID est bloqué
+        if (ev.uid && blockedUids.has(ev.uid)) {
+          console.log(`🚫 UID bloqué ignoré : ${ev.uid}`);
+          return;
+        }
         
         const res = mapEventToReservation(ev, source);
         if (res) {
@@ -174,17 +202,14 @@ async function fetchReservations(property) {
         }
       });
     } catch (err) {
-      console.error(`❌ Erreur iCal pour ${property.name}:`, err.message);
-      console.error(`   URL problématique:`, url);
+      console.error(`❌ Erreur iCal pour ${property.name} (${url}):`, err.message);
     }
   }
 
-  console.log(`🎯 ${property.name} - TOTAL: ${results.length} réservations`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   return results;
 }
 
 module.exports = {
   fetchReservations,
-  extractSource
+  extractSource  // ✅ Exporter pour utilisation dans server.js
 };
