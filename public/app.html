@@ -7038,50 +7038,49 @@ try {
           const data = await resp.json();
           const assignments = Array.isArray(data.assignments) ? data.assignments : [];
 
-          // Construction robuste de la cle (meme logique que cleaning.html)
-          // Les reservations peuvent avoir start/end OU startDate/endDate selon la source
-          const rawStart = booking.start || booking.startDate || booking.checkIn || booking.checkin || '';
-          const rawEnd   = booking.end   || booking.endDate   || booking.checkOut || booking.checkout || '';
-          const startStr = String(rawStart).slice(0, 10);
-          const endStr   = String(rawEnd).slice(0, 10);
-
-          // propertyId peut aussi venir de booking si la variable locale est null
-          const effectivePropertyId = propertyId
-            || booking.propertyId
-            || booking.property_id
-            || (booking.property && booking.property.id)
-            || null;
-
-          const cleaningKey = effectivePropertyId && startStr && endStr
-            ? `${effectivePropertyId}_${startStr}_${endStr}` : null;
-
-          console.log('🧹 DEBUG propertyId:', effectivePropertyId);
-          console.log('🧹 DEBUG cleaningKey:', cleaningKey);
-          console.log('🧹 DEBUG startStr/endStr:', startStr, '/', endStr);
-          console.log('🧹 DEBUG assignments keys:', assignments.map(a => a.reservation_key));
-
-          let match = cleaningKey
-            ? assignments.find(a => a.reservation_key === cleaningKey) : null;
-
-          // Fallback : matching souple si la cle exacte ne correspond pas
-          if (!match && assignments.length > 0 && effectivePropertyId && startStr && endStr) {
-            match = assignments.find(a => {
-              if (!a.reservation_key) return false;
-              const parts = a.reservation_key.split('_');
-              if (parts.length < 3) return false;
-              const keyEnd    = parts[parts.length - 1];
-              const keyStart  = parts[parts.length - 2];
-              const keyPropId = parts.slice(0, parts.length - 2).join('_');
-              return String(keyPropId) === String(effectivePropertyId)
-                && keyStart === startStr
-                && keyEnd === endStr;
-            });
-            if (match) console.log('🧹 Match trouve par fallback:', match.reservation_key);
+          // Normalise tout format de date vers YYYY-MM-DD
+          function normalizeDateToISO(dateVal) {
+            if (!dateVal) return "";
+            const s = String(dateVal).trim();
+            if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(s)) return s.slice(0, 10);
+            try {
+              const d = new Date(s);
+              if (!isNaN(d.getTime())) {
+                const year = d.getFullYear() < 2000 ? new Date().getFullYear() : d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return year + "-" + month + "-" + day;
+              }
+            } catch(e) {}
+            return s.slice(0, 10);
           }
 
-          console.log('🧹 DEBUG match:', match);
+          const rawStart = booking.start || booking.startDate || booking.checkIn || booking.checkin || "";
+          const rawEnd   = booking.end   || booking.endDate   || booking.checkOut || booking.checkout || "";
+          const startStr = normalizeDateToISO(rawStart);
+          const endStr   = normalizeDateToISO(rawEnd);
+
+          const effectivePropertyId = propertyId || booking.propertyId || booking.property_id || (booking.property && booking.property.id) || null;
+
+          const cleaningKey = effectivePropertyId && startStr && endStr
+            ? effectivePropertyId + "_" + startStr + "_" + endStr : null;
+
+          // Normalise les cles de l API (stockees au format texte type "Tue Mar 03")
+          const normalizedAssignments = assignments.map(function(a) {
+            if (!a.reservation_key) return a;
+            const parts = a.reservation_key.split("_");
+            if (parts.length < 3) return a;
+            const propId = parts.slice(0, parts.length - 2).join("_");
+            const kS = normalizeDateToISO(parts[parts.length - 2]);
+            const kE = normalizeDateToISO(parts[parts.length - 1]);
+            return Object.assign({}, a, {_nk: propId + "_" + kS + "_" + kE});
+          });
+
+          console.log("DEBUG cleaningKey:", cleaningKey);
+          const match = cleaningKey ? normalizedAssignments.find(function(a){return a._nk === cleaningKey;}) : null;
+          console.log("DEBUG match:", match);
           if (match) {
-            statusText = 'Assigné à ' + (match.cleaner_name || String(match.cleaner_id));
+            statusText = "Assigné à " + (match.cleaner_name || String(match.cleaner_id));
           }
         }
       } catch(e) { console.warn('⚠️ Assignments API:', e.message); }
