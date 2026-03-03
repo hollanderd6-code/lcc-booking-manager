@@ -7036,52 +7036,28 @@ try {
         });
         if (resp.ok) {
           const data = await resp.json();
-          const assignments = Array.isArray(data.assignments) ? data.assignments : [];
+          const assignments=Array.isArray(data.assignments)?data.assignments:[];
 
-          // Normalise tout format de date vers YYYY-MM-DD
-          function normalizeDateToISO(dateVal) {
-            if (!dateVal) return "";
-            const s = String(dateVal).trim();
-            if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(s)) return s.slice(0, 10);
-            try {
-              const d = new Date(s);
-              if (!isNaN(d.getTime())) {
-                const year = d.getFullYear() < 2000 ? new Date().getFullYear() : d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, "0");
-                const day = String(d.getDate()).padStart(2, "0");
-                return year + "-" + month + "-" + day;
-              }
-            } catch(e) {}
-            return s.slice(0, 10);
-          }
+          const rawStart=booking.start||booking.startDate||booking.checkIn||booking.checkin||"";
+          const rawEnd=booking.end||booking.endDate||booking.checkOut||booking.checkout||"";
+          const effPropId=propertyId||booking.propertyId||booking.property_id||(booking.property&&booking.property.id)||null;
 
-          const rawStart = booking.start || booking.startDate || booking.checkIn || booking.checkin || "";
-          const rawEnd   = booking.end   || booking.endDate   || booking.checkOut || booking.checkout || "";
-          const startStr = normalizeDateToISO(rawStart);
-          const endStr   = normalizeDateToISO(rawEnd);
+          function toISO(v){if(!v)return"";const s=String(v).trim();if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(s))return s.slice(0,10);const d=new Date(s);if(isNaN(d.getTime()))return s.slice(0,10);const y=d.getFullYear()<100?new Date().getFullYear():d.getFullYear();return y+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 
-          const effectivePropertyId = propertyId || booking.propertyId || booking.property_id || (booking.property && booking.property.id) || null;
+          function toTextDate(iso){if(!iso)return"";const d=new Date(iso+"T12:00:00");if(isNaN(d.getTime()))return"";const dy=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];const mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return dy[d.getDay()]+" "+mo[d.getMonth()]+" "+String(d.getDate()).padStart(2,"0");}
 
-          const cleaningKey = effectivePropertyId && startStr && endStr
-            ? effectivePropertyId + "_" + startStr + "_" + endStr : null;
+          const sISO=toISO(rawStart),eISO=toISO(rawEnd);
+          const sTxt=toTextDate(sISO),eTxt=toTextDate(eISO);
+          const keyISO=effPropId&&sISO&&eISO?effPropId+"_"+sISO+"_"+eISO:null;
+          const keyTxt=effPropId&&sTxt&&eTxt?effPropId+"_"+sTxt+"_"+eTxt:null;
 
-          // Normalise les cles de l API (stockees au format texte type "Tue Mar 03")
-          const normalizedAssignments = assignments.map(function(a) {
-            if (!a.reservation_key) return a;
-            const parts = a.reservation_key.split("_");
-            if (parts.length < 3) return a;
-            const propId = parts.slice(0, parts.length - 2).join("_");
-            const kS = normalizeDateToISO(parts[parts.length - 2]);
-            const kE = normalizeDateToISO(parts[parts.length - 1]);
-            return Object.assign({}, a, {_nk: propId + "_" + kS + "_" + kE});
-          });
+          console.log("DEBUG keyISO:",keyISO);
+          console.log("DEBUG keyTxt:",keyTxt);
+          console.log("DEBUG sample API keys:",assignments.slice(0,5).map(function(a){return a.reservation_key;}));
 
-          console.log("DEBUG cleaningKey:", cleaningKey);
-          const match = cleaningKey ? normalizedAssignments.find(function(a){return a._nk === cleaningKey;}) : null;
-          console.log("DEBUG match:", match);
-          if (match) {
-            statusText = "Assigné à " + (match.cleaner_name || String(match.cleaner_id));
-          }
+          const match=assignments.find(function(a){return a.reservation_key===keyISO||a.reservation_key===keyTxt;});
+          console.log("DEBUG match:",match);
+          if(match){statusText="Assigné à "+(match.cleaner_name||String(match.cleaner_id));}
         }
       } catch(e) { console.warn('⚠️ Assignments API:', e.message); }
 
